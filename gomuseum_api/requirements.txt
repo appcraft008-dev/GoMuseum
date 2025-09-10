@@ -1,0 +1,50 @@
+# FastAPI Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+PyJWT==2.8.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+
+# Cache
+redis==5.0.1
+
+# HTTP Client
+httpx==0.25.2
+aiofiles==23.2.1
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+
+# Validation & Serialization
+pydantic[email]==2.5.1
+pydantic-settings==2.1.0
+email-validator==2.1.0.post1
+
+# AI & ML
+openai==1.3.8
+anthropic==0.7.8
+tiktoken==0.5.2
+
+# Image Processing
+pillow==10.1.0
+opencv-python-headless==4.8.1.78
+
+# Utilities
+python-slugify==8.0.1
+python-dateutil==2.8.2
+pytz==2023.3
+psutil==5.9.6
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+isort==5.12.0
+mypy==1.7.1
+
+# Monitoring
+prometheus-client==0.19.0

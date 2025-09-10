@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter create:*)",
+      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Applications/**)",
+      "Bash(sudo ln:*)",
+      "Bash(export:*)",
+      "Bash(docker:*)",
+      "Bash(curl:*)",
+      "Bash(python test:*)",
+      "Bash(pip3 install:*)",
+      "Bash(./simple_test.sh:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(./start.sh:*)",
+      "Bash(./scripts/start.sh:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

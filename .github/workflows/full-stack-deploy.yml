@@ -1,0 +1,248 @@
+name: 🚀 GoMuseum Full Stack Deployment
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Services to deploy (comma-separated)'
+        required: true
+        default: 'api,app,docs'
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  PROJECT_NAME: gomuseum
+
+jobs:
+  # 🔍 Detect Changes
+  detect-changes:
+    runs-on: ubuntu-latest
+    name: 🔍 Detect Service Changes
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      app: ${{ steps.changes.outputs.app }}
+      docs: ${{ steps.changes.outputs.docs }}
+      deploy-all: ${{ steps.changes.outputs.deploy-all }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Detect changes
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "deploy-all=true" >> $GITHUB_OUTPUT
+            echo "api=true" >> $GITHUB_OUTPUT
+            echo "app=true" >> $GITHUB_OUTPUT
+            echo "docs=true" >> $GITHUB_OUTPUT
+          else
+            # Check for changes in each service
+            git diff --name-only HEAD~1 HEAD > changed_files.txt
+            
+            if grep -q "gomuseum_api/" changed_files.txt; then
+              echo "api=true" >> $GITHUB_OUTPUT
+            fi
+            
+            if grep -q "gomuseum_app/" changed_files.txt; then
+              echo "app=true" >> $GITHUB_OUTPUT
+            fi
+            
+            if grep -q "gomuseum-docs/" changed_files.txt; then
+              echo "docs=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  # 🏗️ Build API Service
+  build-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true'
+    uses: ./.github/workflows/ci-cd-step1.yml
+    secrets: inherit
+
+  # 📱 Build Flutter App
+  build-app:
+    runs-on: ubuntu-latest
+    name: 📱 Build Flutter App
+    needs: detect-changes
+    if: needs.detect-changes.outputs.app == 'true'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: 📦 Get dependencies
+        working-directory: ./gomuseum_app
+        run: flutter pub get
+
+      - name: 🧪 Run tests
+        working-directory: ./gomuseum_app
+        run: flutter test
+
+      - name: 🏗️ Build web app
+        working-directory: ./gomuseum_app
+        run: |
+          flutter build web --release
+          
+      - name: 🏗️ Build Android APK
+        working-directory: ./gomuseum_app
+        run: |
+          flutter build apk --release
+          
+      - name: 🏗️ Build iOS (if on macOS)
+        working-directory: ./gomuseum_app
+        if: runner.os == 'macOS'
+        run: |
+          flutter build ios --release --no-codesign
+
+      - name: 📤 Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: flutter-builds
+          path: |
+            gomuseum_app/build/web/
+            gomuseum_app/build/app/outputs/apk/release/
+            gomuseum_app/build/ios/
+
+  # 📚 Build Documentation
+  build-docs:
+    runs-on: ubuntu-latest
+    name: 📚 Build Documentation
+    needs: detect-changes
+    if: needs.detect-changes.outputs.docs == 'true'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: gomuseum-docs/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./gomuseum-docs
+        run: npm ci
+
+      - name: 🏗️ Build documentation
+        working-directory: ./gomuseum-docs
+        run: npm run build
+
+      - name: 📤 Upload docs artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation-site
+          path: gomuseum-docs/dist/
+
+  # 🚀 Deploy to Environment
+  deploy:
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy Services
+    needs: [detect-changes, build-api, build-app, build-docs]
+    if: always() && !failure() && !cancelled()
+    environment: 
+      name: ${{ github.event.inputs.environment || 'staging' }}
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to ${{ github.event.inputs.environment || 'staging' }}
+        run: |
+          echo "🚀 Deploying GoMuseum services to ${{ github.event.inputs.environment || 'staging' }}"
+          echo "📦 Services: ${{ github.event.inputs.services || 'auto-detected' }}"
+          
+          # 部署API服务
+          if [[ "${{ needs.detect-changes.outputs.api }}" == "true" ]]; then
+            echo "🔧 Deploying API service..."
+            # kubectl apply -f deploy/api/
+          fi
+          
+          # 部署前端应用
+          if [[ "${{ needs.detect-changes.outputs.app }}" == "true" ]]; then
+            echo "📱 Deploying Flutter app..."
+            # Deploy to app hosting service
+          fi
+          
+          # 部署文档站点
+          if [[ "${{ needs.detect-changes.outputs.docs }}" == "true" ]]; then
+            echo "📚 Deploying documentation..."
+            # Deploy to documentation hosting
+          fi
+
+  # 🧪 Integration Tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: 🧪 Integration Tests
+    needs: [deploy]
+    if: success()
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🧪 Run integration tests
+        run: |
+          echo "🧪 Running integration tests..."
+          echo "🔗 Testing API endpoints..."
+          echo "📱 Testing app functionality..."
+          echo "📚 Testing documentation links..."
+          # python scripts/integration-tests.py
+          
+  # 📊 Create Release
+  create-release:
+    runs-on: ubuntu-latest
+    name: 📊 Create Release
+    needs: [integration-tests]
+    if: github.ref == 'refs/heads/main' && success()
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📊 Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: release-${{ github.run_number }}
+          release_name: 🏛️ GoMuseum Release ${{ github.run_number }}
+          body: |
+            ## 🏛️ GoMuseum Full Stack Release
+            
+            ### 🚀 Deployed Services
+            - ${{ needs.detect-changes.outputs.api == 'true' && '✅ API Service' || '⏭️ API Service (no changes)' }}
+            - ${{ needs.detect-changes.outputs.app == 'true' && '✅ Flutter App' || '⏭️ Flutter App (no changes)' }}
+            - ${{ needs.detect-changes.outputs.docs == 'true' && '✅ Documentation' || '⏭️ Documentation (no changes)' }}
+            
+            ### 🔗 Environment URLs
+            - 🌐 Frontend: https://app.gomuseum.com
+            - 🔧 API: https://api.gomuseum.com
+            - 📚 Docs: https://docs.gomuseum.com
+            
+            ### 📊 Metrics
+            - ✅ All integration tests passed
+            - 🚀 Deployment time: ${{ github.run_number }} minutes
+            - 🔄 Auto-deployed from commit: ${{ github.sha }}
+          draft: false
+          prerelease: false

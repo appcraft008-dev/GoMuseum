@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # API Service
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY}/api:step-1-latest
+    container_name: gomuseum-api-staging
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      
+      # Redis
+      REDIS_URL: ${REDIS_URL}
+      
+      # Application
+      ENVIRONMENT: staging
+      DEBUG: "false"
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY}
+      
+      # AI Services
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      
+      # Monitoring
+      PROMETHEUS_ENABLED: "true"
+      LOG_LEVEL: INFO
+      
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - gomuseum-staging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Database
+  postgres:
+    image: postgres:15
+    container_name: gomuseum-db-staging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gomuseum_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-gomuseum}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - gomuseum-staging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gomuseum}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: gomuseum-redis-staging
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_staging_data:/data
+    networks:
+      - gomuseum-staging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: gomuseum-nginx-staging
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.staging.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - api
+    networks:
+      - gomuseum-staging
+    restart: unless-stopped
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: gomuseum-prometheus-staging
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_staging_data:/prometheus
+    networks:
+      - gomuseum-staging
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: gomuseum-grafana-staging
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_staging_data:/var/lib/grafana
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - gomuseum-staging
+    restart: unless-stopped
+
+volumes:
+  postgres_staging_data:
+  redis_staging_data:
+  prometheus_staging_data:
+  grafana_staging_data:
+
+networks:
+  gomuseum-staging:
+    driver: bridge
