@@ -1,0 +1,197 @@
+name: 🏗️ 步骤开发任务
+description: 创建特定开发步骤的任务追踪
+title: "[Step X] "
+labels: ["development", "step-task"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        为GoMuseum的9步骤开发创建任务追踪issue。
+
+  - type: dropdown
+    id: step
+    attributes:
+      label: 开发步骤
+      description: 选择要开发的步骤
+      options:
+        - Step 1 - 项目初始化 & 基础架构
+        - Step 2 - 识别功能 & AI集成
+        - Step 3 - 缓存系统 & 性能优化
+        - Step 4 - 讲解生成 & 多语言支持
+        - Step 5 - 基础UI完善 & 用户体验
+        - Step 6 - 错误处理 & 日志系统
+        - Step 7 - 多级缓存优化 & 智能预加载
+        - Step 8 - 离线包功能 & 数据同步
+        - Step 9 - 支付集成 & 订阅管理
+    validations:
+      required: true
+
+  - type: textarea
+    id: objectives
+    attributes:
+      label: 步骤目标
+      description: 这个步骤要实现的主要目标
+      placeholder: |
+        - 实现XX功能
+        - 集成XX服务
+        - 优化XX性能
+        - 添加XX测试
+    validations:
+      required: true
+
+  - type: textarea
+    id: features
+    attributes:
+      label: 功能特性列表
+      description: 详细的功能特性清单
+      placeholder: |
+        ## 后端功能 (FastAPI)
+        - [ ] 创建XX API端点
+        - [ ] 实现XX中间件
+        - [ ] 添加XX数据模型
+        
+        ## 前端功能 (Flutter)
+        - [ ] 创建XX页面
+        - [ ] 实现XX组件
+        - [ ] 添加XX状态管理
+        
+        ## 测试
+        - [ ] 单元测试
+        - [ ] 集成测试
+        - [ ] E2E测试
+        
+        ## 文档
+        - [ ] API文档更新
+        - [ ] 用户指南更新
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical_requirements
+    attributes:
+      label: 技术要求
+      description: 技术实现的具体要求
+      placeholder: |
+        - 性能要求: 响应时间 < Xs
+        - 准确率要求: > X%
+        - 并发要求: 支持X个用户
+        - 安全要求: 符合XX标准
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依赖关系
+      description: 这个步骤依赖的其他步骤或外部服务
+      placeholder: |
+        - 依赖Step X的XX功能
+        - 需要配置XX外部服务
+        - 需要XX环境变量
+    validations:
+      required: true
+
+  - type: dropdown
+    id: estimated_effort
+    attributes:
+      label: 预估工作量
+      description: 完成这个步骤需要的工作量
+      options:
+        - 小 (1-2天)
+        - 中 (3-5天)
+        - 大 (1-2周)
+        - 特大 (2周以上)
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: 验收标准
+      description: 如何判断这个步骤已经完成
+      placeholder: |
+        - [ ] 所有功能特性已实现
+        - [ ] 所有测试通过
+        - [ ] 性能要求达标
+        - [ ] 代码审查通过
+        - [ ] 文档更新完成
+        - [ ] CI/CD部署成功
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      description: 这个步骤的优先级
+      options:
+        - 低 - 可以延后
+        - 中 - 按计划进行
+        - 高 - 需要优先处理
+        - 紧急 - 阻塞其他步骤
+      default: 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: branch_strategy
+    attributes:
+      label: 分支策略
+      description: 这个步骤的Git分支规划
+      placeholder: |
+        主分支: step-X-main
+        功能分支命名: step-X-feature-name
+        PR目标分支: develop
+      value: |
+        主分支: step-X-main
+        功能分支命名: step-X-feature-name
+        PR目标分支: develop
+
+  - type: textarea
+    id: testing_plan
+    attributes:
+      label: 测试计划
+      description: 详细的测试策略
+      placeholder: |
+        ## 单元测试
+        - 测试XX模块
+        - 覆盖率要求: >80%
+        
+        ## 集成测试
+        - 测试XX集成
+        - 端到端流程测试
+        
+        ## 性能测试
+        - 响应时间测试
+        - 负载测试
+
+  - type: textarea
+    id: deployment_plan
+    attributes:
+      label: 部署计划
+      description: 这个步骤的部署策略
+      placeholder: |
+        - 开发环境自动部署
+        - 测试环境手动触发
+        - 生产环境需要审批
+        - 回滚策略: XX
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: 风险评估
+      description: 可能的风险和缓解措施
+      placeholder: |
+        - 风险1: XX可能失败
+          缓解: XX方案
+        - 风险2: XX性能问题
+          缓解: XX优化
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: 额外说明
+      description: 任何其他重要信息
+      placeholder: 其他需要注意的事项...

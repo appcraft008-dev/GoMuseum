@@ -2,11 +2,11 @@
 
 > **AI-Powered Museum Guide Platform** - 基于人工智能的博物馆导览平台
 
-[![Build Status](https://github.com/your-username/GoMuseum/workflows/CI%2FCD/badge.svg)](https://github.com/your-username/GoMuseum/actions)
-[![API Status](https://img.shields.io/badge/API-Online-brightgreen)](https://api.gomuseum.com/health)
-[![Documentation](https://img.shields.io/badge/docs-latest-blue)](https://docs.gomuseum.com)
+[![Build Status](https://github.com/appcraft008-dev/GoMuseum/workflows/🏛️%20GoMuseum%20渐进式开发%20-%20Step%201%20API基础设施/badge.svg)](https://github.com/appcraft008-dev/GoMuseum/actions)
+[![Release](https://img.shields.io/github/v/release/appcraft008-dev/GoMuseum)](https://github.com/appcraft008-dev/GoMuseum/releases)
+[![Development Step](https://img.shields.io/badge/Development-9%20Steps%20CI/CD%20Ready-success)](https://github.com/appcraft008-dev/GoMuseum/actions)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Step Progress](https://img.shields.io/badge/Development-Step%201%20Complete-success)](https://github.com/your-username/GoMuseum/releases)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://hub.docker.com/r/your-username/gomuseum-api)
 
 ## 📋 项目概述
 
@@ -124,28 +124,45 @@ GoMuseum/
 
 ## 🔄 CI/CD 流程
 
-### 自动化流程
+### ✅ 完整的9步骤CI/CD配置
 
-每次代码推送都会触发完整的CI/CD流水线：
+项目已配置完整的CI/CD流程，支持9个开发步骤的渐进式开发：
 
-### Step-based 发布策略
+| 步骤 | 功能模块 | CI/CD状态 | 触发分支 |
+|------|----------|-----------|----------|
+| Step 1 | 项目初始化 | ✅ 已配置 | `step-1-*` |
+| Step 2 | 识别功能 | ✅ 已配置 | `step-2-*` |
+| Step 3 | 缓存系统 | ✅ 已配置 | `step-3-*` |
+| Step 4 | 讲解生成 | ✅ 已配置 | `step-4-*` |
+| Step 5 | UI完善 | ✅ 已配置 | `step-5-*` |
+| Step 6 | 错误处理 | ✅ 已配置 | `step-6-*` |
+| Step 7 | 缓存优化 | ✅ 已配置 | `step-7-*` |
+| Step 8 | 离线包 | ✅ 已配置 | `step-8-*` |
+| Step 9 | 支付集成 | ✅ 已配置 | `step-9-*` |
 
-- **🔄 每个Step都有独立的CI/CD流程**
-- **🎯 基于变更检测的智能部署**
-- **🛡️ 多环境渐进式发布**
-- **📊 自动化测试和质量门禁**
+### 自动化特性
 
-### 部署命令
+- **🔄 智能分支触发**: 推送到 `step-{N}-*` 自动触发对应CI/CD
+- **🧪 全面测试覆盖**: API测试 + Flutter测试 + 集成测试
+- **🐳 Docker自动构建**: 每个步骤独立的容器镜像
+- **🚀 多环境部署**: development → staging → production
+- **📊 性能监控**: 自动性能测试和报告生成
+
+### 快速使用
 
 ```bash
-# 部署特定Step到staging
-./deploy/scripts/deploy.sh staging 1 api
+# 创建功能分支开始开发
+git checkout -b step-2-recognition-feature
+git push origin step-2-recognition-feature  # 自动触发Step 2 CI/CD
 
-# 部署所有服务到production
-./deploy/scripts/deploy.sh production 1 all
+# 查看构建状态
+gh workflow list
+gh run list
 
-# 使用GitHub Actions
-gh workflow run "GoMuseum Step 1 - API CI/CD" --ref main
+# 手动触发特定环境部署
+gh workflow run "🔍 GoMuseum Step 2 - 识别功能开发" \
+  --ref step-2-recognition-feature \
+  -f deploy_environment=development
 ```
 
 ## 📊 当前状态

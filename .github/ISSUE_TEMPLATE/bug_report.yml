@@ -1,0 +1,144 @@
+name: 🐛 Bug报告
+description: 创建bug报告帮助我们改进项目
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您创建bug报告！请填写以下信息帮助我们快速定位和解决问题。
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查清单
+      description: 请确认您已经完成了以下步骤
+      options:
+        - label: 我已经搜索了现有的issues，确认这不是重复问题
+          required: true
+        - label: 我已经阅读了项目文档和FAQ
+          required: true
+        - label: 我使用的是项目的最新版本
+          required: true
+
+  - type: dropdown
+    id: step
+    attributes:
+      label: 相关步骤
+      description: 这个bug出现在哪个开发步骤？
+      options:
+        - Step 1 - 项目初始化
+        - Step 2 - 识别功能
+        - Step 3 - 缓存系统
+        - Step 4 - 讲解生成
+        - Step 5 - UI完善
+        - Step 6 - 错误处理
+        - Step 7 - 缓存优化
+        - Step 8 - 离线包
+        - Step 9 - 支付集成
+        - CI/CD 系统
+        - 文档相关
+        - 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 组件类型
+      description: 问题出现在哪个组件？
+      options:
+        - Flutter App (前端)
+        - FastAPI (后端)
+        - Docker (容器化)
+        - GitHub Actions (CI/CD)
+        - 数据库 (PostgreSQL/Redis)
+        - AI集成 (OpenAI)
+        - 文档
+        - 部署相关
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清楚简洁地描述这个bug
+      placeholder: 描述发生了什么问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 详细的复现步骤
+      placeholder: |
+        1. 进入 '...'
+        2. 点击 '....'
+        3. 滚动到 '....'
+        4. 看到错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 描述您期望发生的行为
+      placeholder: 应该发生什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 描述实际发生的行为
+      placeholder: 实际发生了什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或日志
+      description: 如果适用，添加截图或错误日志
+      placeholder: 粘贴截图或日志信息
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 请提供环境信息
+      placeholder: |
+        - 操作系统: [e.g. macOS 14, Windows 11, Ubuntu 22.04]
+        - Flutter版本: [e.g. 3.16.0]
+        - Python版本: [e.g. 3.11.5]
+        - 浏览器: [e.g. Chrome 120, Safari 17] (如果相关)
+        - Node.js版本: [e.g. 18.18.0] (如果相关)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      description: 这个问题的紧急程度
+      options:
+        - 低 - 不影响核心功能
+        - 中 - 影响某些功能
+        - 高 - 影响核心功能
+        - 紧急 - 阻塞开发或部署
+      default: 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 额外信息
+      description: 任何其他相关的信息
+      placeholder: 其他可能有助于解决问题的信息
