@@ -234,7 +234,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=step-2-latest,enable={{is_default_branch}}
+            type=raw,value=step-2-latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=step-2-${{ github.run_number }}
 
       - name: 🏗️ Build and test Docker image
@@ -272,7 +272,7 @@ jobs:
     runs-on: ubuntu-latest
     name: 🤖 AI Integration Tests
     needs: [api-quality-checks]
-    if: ${{ secrets.OPENAI_API_KEY != '' }}
+    if: ${{ secrets.OPENAI_API_KEY }}
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 

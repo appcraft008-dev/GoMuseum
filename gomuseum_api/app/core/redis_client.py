@@ -162,3 +162,7 @@ def get_cache_key(prefix: str, *args: str) -> str:
     combined = f"{prefix}:{':'.join(str(arg) for arg in args)}"
     key_hash = hashlib.sha256(combined.encode()).hexdigest()[:16]
     return f"gomuseum:{prefix}:{key_hash}"
+
+def get_redis_client() -> RedisClient:
+    """Get Redis client instance for dependency injection"""
+    return redis_client

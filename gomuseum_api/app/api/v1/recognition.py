@@ -16,6 +16,7 @@ from app.core.api_performance import (
 )
 from app.core.metrics import metrics, timer
 from app.core.memory_optimization import memory_monitor
+from app.core.error_handler import handle_api_error
 
 router = APIRouter()
 
@@ -27,7 +28,7 @@ class RecognitionRequestModel(BaseModel):
     user_id: Optional[str] = None
     language: str = "zh"
 
-@router.post("/recognize", response_model=RecognitionResponse)
+@router.post("/recognition/recognize", response_model=RecognitionResponse)
 async def recognize_artwork(
     request: RecognitionRequestModel,
     db: Session = Depends(get_db)
@@ -102,12 +103,14 @@ async def recognize_artwork(
                 with timer("image_preprocessing"):
                     preprocessed_image = await recognition_optimizer.preprocess_image_async(image_bytes)
                 
-                # High-performance recognition
+                # High-performance recognition with AI integration
                 with timer("ai_recognition"):
-                    recognition_result = await recognition_service.recognize_image(
+                    recognition_result = await recognition_service.recognize_image_enhanced(
                         image_bytes=preprocessed_image,
                         image_hash=image_hash,
-                        language=request.language
+                        language=request.language,
+                        strategy="balanced",  # 使用平衡策略
+                        enable_fallback=True
                     )
                 
                 # Async result caching
@@ -133,12 +136,16 @@ async def recognize_artwork(
                 raise
             except Exception as e:
                 metrics.increment_counter("recognition_unexpected_errors")
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Unexpected error in recognition: {e}", exc_info=True)
-                raise HTTPException(status_code=500, detail="Internal server error")
+                raise handle_api_error(
+                    error=e,
+                    default_message="图像识别服务暂时不可用，请稍后重试",
+                    status_code=500,
+                    context={"endpoint": "recognize", "method": "POST"},
+                    user_id=request.user_id,
+                    request_id=getattr(request, 'request_id', None)
+                )
 
-@router.post("/recognize/upload", response_model=RecognitionResponse)
+@router.post("/recognition/upload", response_model=RecognitionResponse)
 async def recognize_artwork_upload(
     file: UploadFile = File(...),
     language: str = "zh",
@@ -176,11 +183,13 @@ async def recognize_artwork_upload(
         if cached_result:
             return RecognitionResponse(**cached_result)
         
-        # Perform recognition
-        recognition_result = await recognition_service.recognize_image(
+        # Perform enhanced recognition with AI
+        recognition_result = await recognition_service.recognize_image_enhanced(
             image_bytes=image_bytes,
             image_hash=image_hash,
-            language=language
+            language=language,
+            strategy="balanced",
+            enable_fallback=True
         )
         
         # Cache result
@@ -191,13 +200,16 @@ async def recognize_artwork_upload(
     except HTTPException:
         raise
     except Exception as e:
-        # Log unexpected errors without exposing details
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Unexpected error in recognition: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise handle_api_error(
+            error=e,
+            default_message="文件上传识别服务暂时不可用，请稍后重试",
+            status_code=500,
+            context={"endpoint": "upload", "method": "POST"},
+            user_id=user_id,
+            request_id=getattr(file, 'request_id', None)
+        )
 
-@router.get("/recognize/history/{user_id}")
+@router.get("/recognition/history/{user_id}")
 async def get_user_recognition_history(
     user_id: str,
     limit: int = 20,
@@ -214,7 +226,7 @@ async def get_user_recognition_history(
         "offset": offset
     }
 
-@router.get("/recognize/stats")
+@router.get("/recognition/stats")
 async def get_recognition_stats(db: Session = Depends(get_db)):
     """Get recognition statistics"""
     try:
@@ -224,4 +236,104 @@ async def get_recognition_stats(db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get stats: {str(e)}"
+        )
+
+@router.get("/recognition/health")
+async def get_recognition_health(db: Session = Depends(get_db)):
+    """获取增强识别服务健康状态"""
+    try:
+        health_status = await recognition_service.get_enhanced_health_status()
+        
+        # 如果服务不健康，返回503状态码
+        if not health_status.get("healthy", False):
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "message": "Recognition service is unhealthy",
+                    "issues": health_status.get("issues", []),
+                    "details": health_status
+                }
+            )
+        
+        return health_status
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check health: {str(e)}"
+        )
+
+class BatchRecognitionRequest(BaseModel):
+    images: List[str]  # List of base64 encoded images
+    language: str = "zh"
+    strategy: str = "balanced"
+    user_id: Optional[str] = None
+
+@router.post("/recognition/batch", response_model=List[RecognitionResponse])
+async def batch_recognize_artworks(
+    request: BatchRecognitionRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    批量识别艺术品
+    """
+    try:
+        # 验证批量请求数量限制
+        if len(request.images) > 10:
+            raise HTTPException(
+                status_code=400,
+                detail="Maximum 10 images per batch request"
+            )
+        
+        # 解码所有图像
+        image_bytes_list = []
+        for i, base64_image in enumerate(request.images):
+            try:
+                image_bytes = base64.b64decode(base64_image)
+                if len(image_bytes) > 10 * 1024 * 1024:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Image {i+1} too large (max 10MB)"
+                    )
+                image_bytes_list.append(image_bytes)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid image data for image {i+1}: {str(e)}"
+                )
+        
+        # 执行批量识别
+        results = await recognition_service.batch_recognize_images(
+            images=image_bytes_list,
+            strategy=request.strategy,
+            language=request.language
+        )
+        
+        # 转换为响应格式
+        responses = []
+        for result in results:
+            try:
+                responses.append(RecognitionResponse(**result))
+            except Exception as e:
+                # 如果转换失败，添加错误响应
+                responses.append(RecognitionResponse(
+                    success=False,
+                    confidence=0.0,
+                    candidates=[],
+                    processing_time=0.0,
+                    cached=False,
+                    timestamp="",
+                    image_hash="",
+                    error=f"Response conversion failed: {str(e)}"
+                ))
+        
+        return responses
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Batch recognition failed: {str(e)}"
         )

@@ -94,7 +94,7 @@ jobs:
           fi
 
       - name: 📊 Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: ${{ secrets.CODECOV_TOKEN }}
         uses: codecov/codecov-action@v3
         with:
           file: ./gomuseum_api/coverage.xml
@@ -159,7 +159,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=step-1-latest,enable={{is_default_branch}}
+            type=raw,value=step-1-latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=step-1-${{ github.run_number }}
 
       - name: 🏗️ Build and test Docker image

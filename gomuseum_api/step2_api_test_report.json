@@ -1,0 +1,234 @@
+{
+  "success": false,
+  "passed": 7,
+  "total": 10,
+  "success_rate": 70.0,
+  "results": [
+    {
+      "test": "服务器可用性",
+      "success": true,
+      "details": "状态码: 200",
+      "response_data": null,
+      "timestamp": 1757574823.052598
+    },
+    {
+      "test": "识别端点 (正常请求)",
+      "success": true,
+      "details": "状态码: 200, 响应时间: 0.5012650489807129s, 成功: True",
+      "response_data": {
+        "success": true,
+        "confidence": 0.85,
+        "processing_time": 0.5012650489807129,
+        "candidates": [
+          {
+            "artwork_id": "mock-uuid-1",
+            "name": "蒙娜丽莎",
+            "artist": "列奥纳多·达芬奇",
+            "confidence": 0.85,
+            "museum": "卢浮宫",
+            "period": "1503-1519",
+            "image_url": null
+          }
+        ],
+        "cached": false,
+        "timestamp": "2025-09-11T07:13:43.577338",
+        "image_hash": "87018eae724781b4e32cb1b455d882107232c4dcd404d5c62ec29ff6525936da",
+        "model_used": "mock-model"
+      },
+      "timestamp": 1757574823.6154408
+    },
+    {
+      "test": "验证测试 (空图像)",
+      "success": true,
+      "details": "正确拒绝空图像",
+      "response_data": null,
+      "timestamp": 1757574823.644447
+    },
+    {
+      "test": "验证测试 (无效base64)",
+      "success": true,
+      "details": "正确拒绝无效base64",
+      "response_data": null,
+      "timestamp": 1757574823.668991
+    },
+    {
+      "test": "验证测试 (超大图像)",
+      "success": true,
+      "details": "图像未超过限制，测试跳过",
+      "response_data": null,
+      "timestamp": 1757574824.2323341
+    },
+    {
+      "test": "识别端点验证测试",
+      "success": true,
+      "details": "通过 3/3 个测试",
+      "response_data": null,
+      "timestamp": 1757574824.2323442
+    },
+    {
+      "test": "文件上传端点",
+      "success": true,
+      "details": "状态码: 200, 成功: True",
+      "response_data": {
+        "success": true,
+        "confidence": 0.85,
+        "processing_time": 0.5012650489807129,
+        "candidates": [
+          {
+            "artwork_id": "mock-uuid-1",
+            "name": "蒙娜丽莎",
+            "artist": "列奥纳多·达芬奇",
+            "confidence": 0.85,
+            "museum": "卢浮宫",
+            "period": "1503-1519",
+            "image_url": null
+          }
+        ],
+        "cached": true,
+        "timestamp": "2025-09-11T07:13:43.577338",
+        "image_hash": "87018eae724781b4e32cb1b455d882107232c4dcd404d5c62ec29ff6525936da",
+        "model_used": "mock-model"
+      },
+      "timestamp": 1757574824.242087
+    },
+    {
+      "test": "健康检查端点",
+      "success": true,
+      "details": "状态码: 200, 健康状态: True",
+      "response_data": {
+        "healthy": true,
+        "issues": [
+          "Low success rate"
+        ],
+        "timestamp": "2025-09-11T07:13:44.243600",
+        "adapters": {},
+        "image_processor": {
+          "status": "healthy"
+        },
+        "model_selector": {
+          "status": "healthy"
+        },
+        "monitoring": {
+          "status": "degraded",
+          "details": {
+            "healthy": false,
+            "issues": [
+              "Low success rate"
+            ],
+            "stats": {
+              "total_requests": 0,
+              "total_errors": 0,
+              "global_success_rate": 0.0,
+              "global_avg_response_time": 0.0,
+              "active_models": 0,
+              "prometheus_enabled": false,
+              "logging_enabled": true
+            },
+            "timestamp": "2025-09-11T07:13:44.255415"
+          }
+        }
+      },
+      "timestamp": 1757574824.257347
+    },
+    {
+      "test": "统计信息端点",
+      "success": true,
+      "details": "状态码: 200, 包含字段: ['cache_statistics', 'redis_statistics', 'service_status', 'timestamp']",
+      "response_data": {
+        "cache_statistics": {
+          "hits": 1,
+          "misses": 0,
+          "hit_rate": "100.0%",
+          "total_requests": 1
+        },
+        "redis_statistics": {
+          "connected_clients": 5,
+          "used_memory": "1.23M",
+          "keyspace_hits": 26,
+          "keyspace_misses": 76,
+          "total_commands_processed": 830682
+        },
+        "service_status": "operational",
+        "timestamp": "2025-09-11T07:13:44.262093"
+      },
+      "timestamp": 1757574824.2638059
+    },
+    {
+      "test": "批量识别端点",
+      "success": false,
+      "details": "状态码: 422",
+      "response_data": null,
+      "timestamp": 1757574824.268337
+    },
+    {
+      "test": "批量识别验证 (数量限制)",
+      "success": false,
+      "details": "状态码: 422 (预期400)",
+      "response_data": null,
+      "timestamp": 1757574824.27296
+    },
+    {
+      "test": "缓存机制测试",
+      "success": false,
+      "details": "第一次: 0.556s, 第二次: 0.570s, 缓存: False",
+      "response_data": null,
+      "timestamp": 1757574825.500061
+    },
+    {
+      "test": "错误处理 (无效端点)",
+      "success": true,
+      "details": "正确返回404",
+      "response_data": null,
+      "timestamp": 1757574825.503478
+    },
+    {
+      "test": "错误处理 (无效方法)",
+      "success": true,
+      "details": "正确返回405",
+      "response_data": null,
+      "timestamp": 1757574825.506491
+    },
+    {
+      "test": "错误处理机制",
+      "success": true,
+      "details": "通过 2/2 个测试",
+      "response_data": null,
+      "timestamp": 1757574825.506494
+    },
+    {
+      "test": "语言支持 (zh)",
+      "success": true,
+      "details": "状态码: 200",
+      "response_data": null,
+      "timestamp": 1757574826.0637472
+    },
+    {
+      "test": "语言支持 (en)",
+      "success": true,
+      "details": "状态码: 200",
+      "response_data": null,
+      "timestamp": 1757574826.622951
+    },
+    {
+      "test": "语言支持 (fr)",
+      "success": true,
+      "details": "状态码: 200",
+      "response_data": null,
+      "timestamp": 1757574827.176734
+    },
+    {
+      "test": "语言支持 (de)",
+      "success": true,
+      "details": "状态码: 200",
+      "response_data": null,
+      "timestamp": 1757574827.738962
+    },
+    {
+      "test": "多语言支持",
+      "success": true,
+      "details": "支持语言: 4/4",
+      "response_data": null,
+      "timestamp": 1757574827.73897
+    }
+  ]
+}

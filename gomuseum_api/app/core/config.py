@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     port: int = 8000
     allowed_hosts: List[str] = Field(
         default_factory=lambda: 
-        ["localhost", "127.0.0.1"] if os.getenv("ENVIRONMENT", "development") == "development"
+        ["localhost", "127.0.0.1", "testserver"] if os.getenv("ENVIRONMENT", "development") == "development"
         else os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_HOSTS") 
         else ["localhost"]
     )
@@ -70,6 +70,30 @@ class Settings(BaseSettings):
     enable_metrics: bool = True
     log_level: str = "INFO"
     
+    # Database Connection Pool Settings (解决魔数问题)
+    db_pool_size: int = Field(default=20, description="Database connection pool size")
+    db_max_overflow: int = Field(default=30, description="Database max overflow connections") 
+    db_pool_timeout: int = Field(default=30, description="Database pool timeout in seconds")
+    db_pool_recycle: int = Field(default=3600, description="Database pool recycle time in seconds")
+    
+    # HTTP Timeout Settings (解决魔数问题)
+    http_timeout: int = Field(default=30, description="HTTP client timeout in seconds")
+    http_connect_timeout: int = Field(default=10, description="HTTP connect timeout in seconds")
+    http_read_timeout: int = Field(default=30, description="HTTP read timeout in seconds")
+    
+    # Security Settings (解决魔数问题)
+    access_token_expire_minutes: int = Field(default=30, description="Access token expiration in minutes")
+    refresh_token_expire_days: int = Field(default=30, description="Refresh token expiration in days")
+    max_login_attempts: int = Field(default=5, description="Maximum login attempts before lockout")
+    lockout_duration_minutes: int = Field(default=15, description="Account lockout duration in minutes")
+    
+    # Image Processing Settings (解决魔数问题)
+    max_image_size: int = Field(default=10*1024*1024, description="Maximum image size in bytes (10MB)")
+    max_image_resolution: int = Field(default=2048, description="Maximum image resolution")
+    target_image_resolution: int = Field(default=1024, description="Target image resolution")
+    jpeg_quality: int = Field(default=85, description="JPEG compression quality (0-100)")
+    thumbnail_size: int = Field(default=128, description="Thumbnail size in pixels")
+    
     @property
     def database_url_sync(self) -> str:
         """Synchronous database URL for Alembic"""
@@ -85,3 +109,7 @@ class Settings(BaseSettings):
 
 # Create global settings instance
 settings = Settings()
+
+def get_settings() -> Settings:
+    """Get settings instance for dependency injection"""
+    return settings

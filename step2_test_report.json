@@ -1,0 +1,22 @@
+{
+  "total_tests": 10,
+  "passed_tests": 9,
+  "failed_tests": 1,
+  "success_rate": 90.0,
+  "failed_test_names": [
+    "安全性测试"
+  ],
+  "overall_status": "通过",
+  "detailed_results": {
+    "健康检查": true,
+    "单张图片识别": true,
+    "批量识别": true,
+    "API响应格式": true,
+    "缓存机制": true,
+    "图像处理": true,
+    "错误处理": true,
+    "性能测试": true,
+    "Flutter集成": true,
+    "安全性测试": false
+  }
+}

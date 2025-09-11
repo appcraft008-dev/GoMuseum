@@ -179,7 +179,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=raw,value=step-5-latest,enable=${{is_default_branch}}
+            type=raw,value=step-5-latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=step-5-${{ github.run_number }}
 
       - name: 🏗️ Build Step 5 Docker image
