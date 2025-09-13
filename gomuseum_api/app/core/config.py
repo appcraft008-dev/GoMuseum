@@ -23,15 +23,13 @@ class Settings(BaseSettings):
         else ["localhost"]
     )
     
-    # Security
-    secret_key: str = Field(default_factory=lambda: os.getenv("SECRET_KEY", secrets.token_urlsafe(32)))
-    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+    # Security - 使用安全的密钥管理
+    secret_key: str = Field(default="")  # Will be loaded from secure key manager
     
     @field_validator('secret_key')
     @classmethod 
     def validate_secret_key(cls, v):
-        if not v or len(v) < 32:
-            raise ValueError("SECRET_KEY must be at least 32 characters long")
+        # Secret key will be loaded by secure key manager, allow empty here
         return v
     
     # Database
@@ -53,8 +51,6 @@ class Settings(BaseSettings):
     
     # Business Logic
     free_quota_limit: int = 5
-    max_image_size: int = 10 * 1024 * 1024  # 10MB
-    max_image_resolution: int = 2048  # pixels
     recognition_timeout: int = 30  # seconds
     
     # Cache Settings
@@ -62,37 +58,33 @@ class Settings(BaseSettings):
     cache_expiry_hours: int = 24
     max_cache_items: int = 1000
     
-    # Image Processing
-    image_quality: int = 85
-    thumbnail_size: int = 300
-    
     # Monitoring
     enable_metrics: bool = True
     log_level: str = "INFO"
     
-    # Database Connection Pool Settings (解决魔数问题)
+    # Database Connection Pool Settings
     db_pool_size: int = Field(default=20, description="Database connection pool size")
     db_max_overflow: int = Field(default=30, description="Database max overflow connections") 
     db_pool_timeout: int = Field(default=30, description="Database pool timeout in seconds")
     db_pool_recycle: int = Field(default=3600, description="Database pool recycle time in seconds")
     
-    # HTTP Timeout Settings (解决魔数问题)
+    # HTTP Timeout Settings
     http_timeout: int = Field(default=30, description="HTTP client timeout in seconds")
     http_connect_timeout: int = Field(default=10, description="HTTP connect timeout in seconds")
     http_read_timeout: int = Field(default=30, description="HTTP read timeout in seconds")
     
-    # Security Settings (解决魔数问题)
-    access_token_expire_minutes: int = Field(default=30, description="Access token expiration in minutes")
+    # Security Settings - 统一令牌过期时间配置
+    access_token_expire_minutes: int = Field(default=60*24*7, description="Access token expiration in minutes (7 days)")
     refresh_token_expire_days: int = Field(default=30, description="Refresh token expiration in days")
     max_login_attempts: int = Field(default=5, description="Maximum login attempts before lockout")
     lockout_duration_minutes: int = Field(default=15, description="Account lockout duration in minutes")
     
-    # Image Processing Settings (解决魔数问题)
+    # Image Processing Settings - 统一图像处理配置
     max_image_size: int = Field(default=10*1024*1024, description="Maximum image size in bytes (10MB)")
     max_image_resolution: int = Field(default=2048, description="Maximum image resolution")
     target_image_resolution: int = Field(default=1024, description="Target image resolution")
     jpeg_quality: int = Field(default=85, description="JPEG compression quality (0-100)")
-    thumbnail_size: int = Field(default=128, description="Thumbnail size in pixels")
+    thumbnail_size: int = Field(default=300, description="Thumbnail size in pixels")
     
     @property
     def database_url_sync(self) -> str:

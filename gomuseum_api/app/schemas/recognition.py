@@ -46,11 +46,12 @@ class RecognitionResponse(BaseModel):
     processing_time: float = Field(..., description="Processing time in seconds")
     candidates: List[CandidateArtwork] = Field(..., description="List of candidate artworks")
     cached: bool = Field(False, description="Whether result was served from cache")
-    timestamp: datetime = Field(..., description="Recognition timestamp")
+    timestamp: str = Field(..., description="Recognition timestamp in ISO format")
     
     # Additional metadata
     image_hash: Optional[str] = Field(None, description="Hash of the processed image")
     model_used: Optional[str] = Field(None, description="AI model used for recognition")
+    error: Optional[str] = Field(None, description="Error message if recognition failed")
     
     class Config:
         schema_extra = {
@@ -79,7 +80,7 @@ class RecognitionError(BaseModel):
     success: bool = Field(False)
     error_code: str = Field(..., description="Error code")
     error_message: str = Field(..., description="Human-readable error message")
-    timestamp: datetime = Field(..., description="Error timestamp")
+    timestamp: str = Field(..., description="Error timestamp in ISO format")
     
     class Config:
         schema_extra = {

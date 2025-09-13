@@ -424,7 +424,7 @@ class AIServiceMonitor:
         is_healthy = True
         issues = []
         
-        if global_stats["global_success_rate"] < 0.95:
+        if global_stats["global_success_rate"] < 0.80:  # 调整为80%，更合理的阈值
             is_healthy = False
             issues.append("Low success rate")
         

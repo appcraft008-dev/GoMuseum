@@ -10,6 +10,9 @@ from app.core.logging import setup_logging, get_logger
 from app.core.tasks import start_task_workers, stop_task_workers
 from app.core.metrics import start_metrics_collection
 from app.core.cache_strategy import start_cache_optimization
+from app.core.container import initialize_container, cleanup_container
+from app.core.exceptions import ExceptionHandlerMiddleware
+from app.core.token_manager import start_token_cleanup_task
 from app.core.middleware import (
     MetricsMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware, HealthCheckMiddleware
@@ -24,6 +27,7 @@ from app.core.api_performance import (
 from app.core.memory_optimization import initialize_memory_optimization
 from app.core.migrations import initialize_database
 from app.api.v1 import recognition, explanation, user, health, auth, tasks, monitoring
+import demo_recognition
 
 # Setup logging
 setup_logging()
@@ -64,6 +68,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)  # 10MB
     app.add_middleware(RateLimitMiddleware, calls=1000, period=3600)  # 1000 requests per hour
     app.add_middleware(HealthCheckMiddleware)
+    app.add_middleware(ExceptionHandlerMiddleware)  # Global exception handling
     
     # Configure response caching middleware
     response_cache_middleware.app = app
@@ -109,11 +114,22 @@ def create_app() -> FastAPI:
         prefix="/api/v1",
         tags=["monitoring"]
     )
+    
+    # 演示识别API (临时用于Step 2)
+    app.include_router(
+        demo_recognition.router,
+        tags=["demo"]
+    )
 
     @app.on_event("startup")
     async def startup_event():
         """Initialize services on startup with performance optimizations"""
         logger.info("GoMuseum API starting up", extra={"environment": settings.environment})
+        
+        # Initialize dependency injection container
+        logger.info("Initializing dependency injection container...")
+        await initialize_container()
+        logger.info("Dependency injection container initialized")
         
         # Initialize database and run migrations
         logger.info("Initializing database...")
@@ -128,9 +144,13 @@ def create_app() -> FastAPI:
         logger.info("Memory optimization initialized")
         
         # Initialize Redis with high-performance settings
-        await init_redis()
-        await initialize_high_performance_redis(settings.redis_url)
-        logger.info("High-performance Redis initialized")
+        try:
+            await init_redis()
+            # 临时跳过高性能Redis初始化，用于Step 2快速集成
+            # await initialize_high_performance_redis(settings.redis_url)
+            logger.info("Basic Redis initialized (high-performance Redis skipped for Step 2)")
+        except Exception as e:
+            logger.warning(f"Redis initialization failed: {e}, continuing without Redis cache")
         
         # Optimize database performance
         await optimize_database_performance()
@@ -157,6 +177,10 @@ def create_app() -> FastAPI:
         asyncio.create_task(periodic_database_maintenance())
         logger.info("Database maintenance scheduled")
         
+        # Start token cleanup task
+        asyncio.create_task(start_token_cleanup_task())
+        logger.info("Token cleanup task started")
+        
         logger.info("🚀 GoMuseum API fully optimized and ready for high-performance operation!")
         
     @app.on_event("shutdown")
@@ -167,6 +191,10 @@ def create_app() -> FastAPI:
         # Stop background task workers
         await stop_task_workers()
         logger.info("Background task workers stopped")
+        
+        # Cleanup dependency injection container
+        await cleanup_container()
+        logger.info("Dependency injection container cleaned up")
         
         await close_redis()
 

@@ -9,8 +9,9 @@ from app.core.database import get_db
 from app.core.auth import (
     create_access_token, create_refresh_token, verify_token, 
     verify_password, get_password_hash, get_current_user, security,
-    AuthenticationError, TokenBlacklist, standard_rate_limit
+    AuthenticationError, standard_rate_limit
 )
+from app.core.token_manager import blacklist_token
 from app.core.logging import get_logger
 from app.models.user import User
 from app.schemas.user import UserResponse
@@ -184,7 +185,7 @@ async def refresh_token(
     """Refresh access token"""
     try:
         # Verify refresh token
-        payload = verify_token(request.refresh_token)
+        payload = await verify_token(request.refresh_token)
         
         if payload.get("type") != "refresh":
             raise AuthenticationError("Invalid token type")
@@ -233,8 +234,8 @@ async def logout(
     """User logout endpoint"""
     try:
         if credentials:
-            # Add token to blacklist
-            TokenBlacklist.add_token(credentials.credentials)
+            # Add token to blacklist using new token manager
+            await blacklist_token(credentials.credentials, "logout")
         
         logger.info(f"User logged out: {current_user['email']}")
         

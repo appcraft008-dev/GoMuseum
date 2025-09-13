@@ -9,7 +9,7 @@ import asyncio
 
 from app.core.database import get_db
 from app.schemas.recognition import RecognitionRequest, RecognitionResponse, CandidateArtwork
-from app.services.recognition_service import RecognitionService
+from app.core.container import get_recognition_service
 from app.core.api_performance import (
     async_cached, cpu_bound, get_optimized_json_response, 
     recognition_optimizer
@@ -20,8 +20,7 @@ from app.core.error_handler import handle_api_error
 
 router = APIRouter()
 
-# Initialize recognition service
-recognition_service = RecognitionService()
+# Recognition service will be injected via dependency injection
 
 class RecognitionRequestModel(BaseModel):
     image: str  # Base64 encoded image
@@ -31,7 +30,8 @@ class RecognitionRequestModel(BaseModel):
 @router.post("/recognition/recognize", response_model=RecognitionResponse)
 async def recognize_artwork(
     request: RecognitionRequestModel,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    recognition_service = Depends(get_recognition_service)
 ):
     """
     High-performance artwork recognition endpoint
@@ -43,16 +43,76 @@ async def recognize_artwork(
             start_time = time.time()
             
             try:
-                # Input validation with optimized error handling
+                # Enhanced input validation with security checks
                 if not request.image:
                     metrics.increment_counter("recognition_validation_errors")
                     raise HTTPException(status_code=400, detail="Image data required")
                 
-                # Optimized base64 decoding
+                # Validate base64 string length (max ~13.3MB base64 = 10MB binary)
+                if len(request.image) > 15000000:  # ~15M characters for safety
+                    metrics.increment_counter("recognition_input_too_long")
+                    raise HTTPException(
+                        status_code=400, 
+                        detail="Base64 image data too long. Maximum 15M characters allowed."
+                    )
+                
+                # Check for obviously invalid base64 format early
+                if len(request.image) < 100:  # Too short to be a real image
+                    metrics.increment_counter("recognition_validation_errors")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Base64 image data too short to be valid"
+                    )
+                
+                # Validate base64 characters (basic format check)
+                import re
+                if not re.match(r'^[A-Za-z0-9+/]*={0,2}$', request.image):
+                    metrics.increment_counter("recognition_invalid_base64_format")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Invalid base64 format. Contains invalid characters."
+                    )
+                
+                # Check for suspicious patterns (like repeated characters)
+                if len(set(request.image[:1000])) < 5:  # Too few unique characters in first 1000
+                    metrics.increment_counter("recognition_suspicious_pattern")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Invalid image data: suspicious pattern detected"
+                    )
+                
+                # Optimized base64 decoding with timeout protection
                 try:
                     with timer("base64_decode"):
+                        # Add timeout protection for large strings
+                        if len(request.image) > 1000000:  # 1M chars, add extra validation
+                            # For very large strings, validate they're not just padding
+                            actual_data_ratio = (len(request.image.rstrip('=')) / len(request.image))
+                            if actual_data_ratio < 0.7:  # Suspiciously high padding ratio
+                                raise ValueError("Invalid base64 data: excessive padding")
+                        
                         image_bytes = base64.b64decode(request.image)
-                except Exception as e:
+                        
+                        # Validate decoded data has image-like characteristics
+                        if len(image_bytes) < 50:  # Too small to be a real image
+                            raise ValueError("Decoded data too small to be a valid image")
+                        
+                        # Check for common image file signatures
+                        image_signatures = [
+                            b'\xFF\xD8\xFF',  # JPEG
+                            b'\x89PNG',       # PNG
+                            b'GIF8',          # GIF
+                            b'RIFF',          # WebP/other RIFF
+                            b'BM',            # BMP
+                        ]
+                        
+                        has_valid_signature = any(
+                            image_bytes.startswith(sig) for sig in image_signatures
+                        )
+                        
+                        if not has_valid_signature:
+                            raise ValueError("Invalid image format: no valid image signature found")
+                except (ValueError, Exception) as e:
                     metrics.increment_counter("recognition_decode_errors")
                     raise HTTPException(
                         status_code=400,
@@ -105,7 +165,7 @@ async def recognize_artwork(
                 
                 # High-performance recognition with AI integration
                 with timer("ai_recognition"):
-                    recognition_result = await recognition_service.recognize_image_enhanced(
+                    recognition_result = await recognition_service.recognize_artwork(
                         image_bytes=preprocessed_image,
                         image_hash=image_hash,
                         language=request.language,
@@ -113,10 +173,7 @@ async def recognize_artwork(
                         enable_fallback=True
                     )
                 
-                # Async result caching
-                asyncio.create_task(
-                    recognition_service.cache_result(image_hash, recognition_result)
-                )
+                # Note: 缓存功能已内置在recognition_service中，无需单独调用
                 
                 # Performance metrics
                 response_time = time.time() - start_time
@@ -286,10 +343,38 @@ async def batch_recognize_artworks(
                 detail="Maximum 10 images per batch request"
             )
         
-        # 解码所有图像
+        # 解码所有图像 with enhanced validation
         image_bytes_list = []
         for i, base64_image in enumerate(request.images):
             try:
+                # Enhanced validation for each image in batch
+                if not base64_image:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Image {i+1}: Empty image data"
+                    )
+                
+                # Length check for each image
+                if len(base64_image) > 15000000:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Image {i+1}: Base64 data too long (max 15M characters)"
+                    )
+                
+                if len(base64_image) < 100:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Image {i+1}: Base64 data too short to be valid"
+                    )
+                
+                # Format validation for each image
+                import re
+                if not re.match(r'^[A-Za-z0-9+/]*={0,2}$', base64_image):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Image {i+1}: Invalid base64 format"
+                    )
+                
                 image_bytes = base64.b64decode(base64_image)
                 if len(image_bytes) > 10 * 1024 * 1024:
                     raise HTTPException(
@@ -297,6 +382,8 @@ async def batch_recognize_artworks(
                         detail=f"Image {i+1} too large (max 10MB)"
                     )
                 image_bytes_list.append(image_bytes)
+            except HTTPException:
+                raise  # Re-raise HTTP exceptions as-is
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
