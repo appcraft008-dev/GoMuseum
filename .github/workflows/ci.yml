@@ -1,4 +1,4 @@
-# GoMuseum CI/CD 流水线配置（简化版）
+# GoMuseum CI/CD 流水线配置（适配个人用户，无 GHAS）
 name: GoMuseum CI
 
 on:
@@ -7,13 +7,8 @@ on:
   pull_request:
     branches: [ main, staging ]
 
-# 解决 Security Scan 上传权限问题
-permissions:
-  contents: read
-  security-events: write
-
 jobs:
-  # 基础安全扫描
+  # 基础安全扫描（保存为 artifact，而不是上传到 Security tab）
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -31,12 +26,13 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Upload scan results as artifact
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: 'trivy-results.sarif'
+          name: trivy-results
+          path: trivy-results.sarif
 
-  # 构建检查（占位符）
+  # 构建检查（占位符，确保 CI 跑通）
   build-check:
     name: Build Check
     runs-on: ubuntu-latest
