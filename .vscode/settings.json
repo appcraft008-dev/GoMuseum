@@ -1,0 +1,52 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.fixAll": "explicit"
+  },
+  "editor.rulers": [80, 120],
+  "files.associations": {
+    "*.dart": "dart",
+    "*.py": "python"
+  },
+
+  // Dart/Flutter 配置
+  "dart.flutterSdkPath": "/Users/hongyang/flutter",
+  "dart.closingLabels": true,
+  "dart.enableSdkFormatter": true,
+  "dart.lineLength": 80,
+  "dart.enableSnippets": true,
+  "dart.debugExternalLibraries": false,
+  "dart.debugSdkLibraries": false,
+
+  // Python 配置
+  "python.defaultInterpreterPath": "./venv/bin/python",
+  "python.formatting.provider": "black",
+  "python.formatting.blackArgs": ["--line-length=88"],
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.testing.pytestEnabled": true,
+
+  // 文件排除
+  "files.exclude": {
+    "**/build/": true,
+    "**/.dart_tool/": true,
+    "**/ios/Pods/": true,
+    "**/android/.gradle/": true,
+    "**/__pycache__/": true,
+    "**/.pytest_cache/": true,
+    "**/node_modules/": true,
+    "**/.env": true
+  },
+
+  // 搜索排除
+  "search.exclude": {
+    "**/build": true,
+    "**/.dart_tool": true,
+    "**/ios/Pods": true,
+    "**/android/.gradle": true,
+    "**/__pycache__": true,
+    "**/coverage": true
+  }
+}

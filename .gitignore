@@ -1,0 +1,118 @@
+# GoMuseum Git Ignore Rules
+
+# Flutter/Dart 相关
+**/build/
+**/.dart_tool/
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/pubspec.lock
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# Android 相关
+**/android/.gradle/
+**/android/app/build/
+**/android/gradle/
+**/android/.idea/
+**/android/local.properties
+**/android/app/upload-keystore.jks
+**/android/app/debug-keystore.properties
+**/android/app/release-keystore.properties
+
+# iOS 相关
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Runner.xcworkspace/xcshareddata/
+**/ios/Runner.xcodeproj/xcshareddata/
+
+# Web 相关
+**/web/build/
+
+# Python 后端相关
+**/__pycache__/
+**/*.py[cod]
+**/venv/
+**/env/
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+**/.mypy_cache/
+**/.tox/
+**/dist/
+**/build/
+**/*.egg-info/
+
+# 数据库
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# 环境变量和敏感信息
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+**/*.pem
+**/*.key
+**/secrets/
+**/credentials/
+
+# IDE 配置
+.idea/
+.vscode/launch.json
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.log
+
+# 测试和覆盖率
+**/coverage/
+**/test_results/
+**/.nyc_output/
+
+# 临时文件
+**/tmp/
+**/temp/
+**/*.tmp
+**/*.bak
+
+# Docker
+**/.dockerignore
+**/Dockerfile.dev
+
+# 文档生成
+**/docs/_build/
+**/site/
+
+# AI和机器学习
+**/models/
+**/checkpoints/
+**/*.pkl
+**/*.joblib
+
+# 依赖管理
+**/node_modules/
+**/package-lock.json
+**/yarn.lock
+
+# Firebase (如果使用)
+**/.firebase/
+**/firebase-debug.log
+**/firestore-debug.log
+
+# 用户上传和缓存
+**/uploads/
+**/cache/
+**/storage/
+
+# API 密钥和配置
+**/config/secrets.yaml
+**/api_keys.json
