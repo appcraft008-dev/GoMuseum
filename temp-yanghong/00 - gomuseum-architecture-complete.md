@@ -1,12 +1,15 @@
 # GoMuseum 完整产品架构文档 v1.2
 
 ## 使用说明
+
 ```markdown
 本文档配合《Claude Code实施指南》使用：
+
 1. 本文档：提供完整技术规范和设计细节
 2. 实施指南：提供分步骤的开发指令和进度管理
 
 开发流程：
+
 - 每个开发Step开始前，从本文档复制相关章节
 - 提供给Claude Code作为技术规范
 - 然后执行实施指南中的具体指令
@@ -14,6 +17,7 @@
 ```
 
 ## 目录
+
 1. [产品概述](#1-产品概述)
 2. [系统架构](#2-系统架构)
 3. [核心功能模块](#3-核心功能模块)
@@ -31,30 +35,34 @@
 ## 1. 产品概述
 
 ### 1.1 产品定位
+
 GoMuseum 是一款基于AI的智能博物馆导览应用，通过拍照识别、多语言讲解和AI问答，为游客提供个性化的博物馆参观体验。
 
 ### 1.2 核心价值
+
 - **即拍即知**：5秒内完成展品识别和讲解
 - **个性化体验**：根据用户偏好定制讲解内容
 - **离线可用**：支持离线包下载，无网络也能使用
 - **多语言支持**：覆盖6种主要语言
 
 ### 1.3 目标用户
+
 - **主要用户**：博物馆游客（游客、学生、艺术爱好者）
 - **使用场景**：博物馆参观、艺术学习、文化旅游
 - **用户规模**：目标10万+日活用户
 
 ### 1.4 商业模式
+
 ```yaml
 免费模式:
   - 5次免费识别额度
   - 基础讲解功能
-  
+
 付费模式:
   - 按次付费: €1.99/10次
   - 按天通行: €2.99-3.99/天
   - 年度订阅: €19.9/年
-  
+
 推荐奖励:
   - 被推荐人注册: 新用户+5次
   - 推荐人: 未订阅+5次；已订阅+1天使用权
@@ -65,6 +73,7 @@ GoMuseum 是一款基于AI的智能博物馆导览应用，通过拍照识别、
 ## 2. 系统架构
 
 ### 2.1 总体架构图
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    客户端层 (Flutter)                     │
@@ -102,6 +111,7 @@ GoMuseum 是一款基于AI的智能博物馆导览应用，通过拍照识别、
 ### 2.2 技术栈选型
 
 #### 前端技术栈
+
 ```yaml
 框架: Flutter 3.x
 状态管理: Riverpod 2.0
@@ -115,6 +125,7 @@ GoMuseum 是一款基于AI的智能博物馆导览应用，通过拍照识别、
 ```
 
 #### 后端技术栈
+
 ```yaml
 主框架: Python FastAPI / Node.js Express
 数据库: PostgreSQL 14 + Redis 7
@@ -128,19 +139,20 @@ GoMuseum 是一款基于AI的智能博物馆导览应用，通过拍照识别、
 ```
 
 #### AI服务（支持动态切换）
+
 ```yaml
 图像识别（可配置切换）:
   主选: ${AI_VISION_PRIMARY} # 环境变量配置
   备选: ${AI_VISION_BACKUP}
-  
+
 ai_models:
   vision:
     - provider: openai
-      model: gpt-5-vision  # 假设GPT-5已发布
+      model: gpt-5-vision # 假设GPT-5已发布
       cost_per_call: 0.05
       accuracy: 0.95
       enabled: true
-    - provider: openai  
+    - provider: openai
       model: gpt-4-vision-preview
       cost_per_call: 0.03
       accuracy: 0.90
@@ -150,8 +162,8 @@ ai_models:
       cost_per_call: 0.02
       accuracy: 0.88
       enabled: true
-      
-  strategy: "cost_optimized"  # balanced | accuracy_first | cost_optimized
+
+  strategy: 'cost_optimized' # balanced | accuracy_first | cost_optimized
 ```
 
 ---
@@ -161,6 +173,7 @@ ai_models:
 ### 3.1 拍照识别模块
 
 #### 3.1.1 识别流程
+
 ```mermaid
 graph TD
     A[用户拍照] --> B{本地缓存检查}
@@ -178,26 +191,27 @@ graph TD
 ```
 
 #### 3.1.2 核心代码结构
+
 ```dart
 class RecognitionService {
   // 混合识别策略
   Future<RecognitionResult> recognize(File image) async {
     // 1. 本地特征提取
     final features = await extractFeatures(image);
-    
+
     // 2. 缓存查询
     final cached = await checkCache(features);
     if (cached != null) return cached;
-    
+
     // 3. 云端识别（5秒超时）
     final result = await recognizeWithTimeout(image);
-    
+
     // 4. 缓存结果
     await cacheResult(features, result);
-    
+
     // 5. 预加载相关内容
     preloadRelated(result);
-    
+
     return result;
   }
 }
@@ -206,22 +220,24 @@ class RecognitionService {
 ### 3.2 AI讲解生成
 
 #### 3.2.1 内容生成策略
+
 ```python
 class ExplanationGenerator:
     async def generate(self, artwork_id, preferences):
         # 1. 渐进式生成
         yield await self.get_basic_info(artwork_id)  # 立即返回
-        
+
         # 2. 流式生成详细内容
         async for chunk in self.stream_detailed(artwork_id):
             yield chunk
-            
+
         # 3. 生成语音（分句处理）
         audio_url = await self.generate_audio(text)
         yield {'audio_ready': audio_url}
 ```
 
 #### 3.2.2 多语言支持
+
 - 支持语言：EN/FR/DE/ES/IT/中文
 - TTS音色：每种语言3-5种音色可选
 - 内容本地化：考虑文化差异的讲解内容
@@ -229,6 +245,7 @@ class ExplanationGenerator:
 ### 3.3 离线包管理
 
 #### 3.3.1 离线包结构
+
 ```json
 {
   "museum_id": "louvre_001",
@@ -245,20 +262,21 @@ class ExplanationGenerator:
 ```
 
 #### 3.3.2 智能同步策略
+
 ```dart
 class OfflinePackageManager {
   // 基于位置的智能下载
   Future<void> smartSync(Location location) async {
     // 获取附近博物馆
     final nearby = await getNearbyMuseums(location, radius: 5km);
-    
+
     // 优先级排序
     final sorted = prioritize(nearby, factors: [
       'distance',
-      'popularity', 
+      'popularity',
       'user_history'
     ]);
-    
+
     // 后台下载前3个
     for (final museum in sorted.take(3)) {
       backgroundDownload(museum.packageUrl);
@@ -270,6 +288,7 @@ class OfflinePackageManager {
 ### 3.4 用户数据同步
 
 #### 3.4.1 云同步架构
+
 ```yaml
 同步策略:
   - 增量同步: 只传输变更数据
@@ -286,6 +305,7 @@ class OfflinePackageManager {
 ```
 
 #### 3.4.2 设备迁移
+
 ```dart
 // 迁移流程
 class DeviceMigration {
@@ -296,7 +316,7 @@ class DeviceMigration {
     await uploadToTemp(code, data, ttl: 24h);
     return code; // 6位迁移码
   }
-  
+
   // 新设备导入
   Future<void> import(String code) async {
     final data = await downloadFromTemp(code);
@@ -313,28 +333,29 @@ class DeviceMigration {
 ### 4.1 AI模型适配器架构
 
 #### 4.1.1 统一接口设计
+
 ```python
 # ai_service/model_adapter.py
 from abc import ABC, abstractmethod
 
 class VisionModelAdapter(ABC):
     """视觉模型统一接口"""
-    
+
     @abstractmethod
     async def recognize(self, image_data: bytes, **kwargs) -> Dict[str, Any]:
         pass
-    
+
     @abstractmethod
     def get_cost(self) -> float:
         pass
-    
+
     @abstractmethod
     def get_accuracy_score(self) -> float:
         pass
 
 class OpenAIVisionAdapter(VisionModelAdapter):
     """OpenAI适配器（支持GPT-4V, GPT-5V等）"""
-    
+
     def __init__(self, model_name: str):
         self.model_name = model_name
         self.cost_map = {
@@ -350,10 +371,11 @@ class OpenAIVisionAdapter(VisionModelAdapter):
 ```
 
 #### 4.1.2 智能模型选择器
+
 ```python
 class ModelSelector:
     """根据策略动态选择最优模型"""
-    
+
     def select_model(self, task_complexity: str, user_tier: str):
         if self.strategy == 'cost_optimized':
             return self._select_cheapest_adequate_model(task_complexity)
@@ -361,53 +383,55 @@ class ModelSelector:
             return self._select_most_accurate_model()
         else:  # balanced
             return self._select_balanced_model(task_complexity)
-    
+
     def _select_balanced_model(self, complexity: str):
         """平衡成本和准确率"""
         def calculate_score(model):
             cost_score = 1.0 / (model.get_cost() + 0.01)
             accuracy_score = model.get_accuracy_score() * 100
-            
+
             if complexity == 'simple':
                 return cost_score * 0.7 + accuracy_score * 0.3
             elif complexity == 'complex':
                 return cost_score * 0.3 + accuracy_score * 0.7
             else:
                 return cost_score * 0.5 + accuracy_score * 0.5
-        
+
         return max(self.models, key=calculate_score)
 ```
 
 #### 4.1.3 动态配置
+
 ```yaml
 # config/ai_models.yaml
 ai_models:
   vision:
     - provider: openai
-      model: gpt-5-vision  # 新模型
+      model: gpt-5-vision # 新模型
       cost_per_call: 0.05
       accuracy: 0.95
       enabled: ${ENABLE_GPT5:-false}
-      
+
     - provider: openai
       model: gpt-4-vision-preview
       cost_per_call: 0.03
       accuracy: 0.90
       enabled: true
-      
+
   strategy: ${AI_STRATEGY:-balanced}
   daily_budget: 100
-  
+
   auto_switch:
     enabled: true
     rules:
-      - condition: "cost > 80% of daily_budget"
-        action: "switch_to_cheaper_model"
+      - condition: 'cost > 80% of daily_budget'
+        action: 'switch_to_cheaper_model'
 ```
 
 ### 4.2 AI识别优化
 
 #### 4.2.1 提示词工程
+
 ```python
 RECOGNITION_PROMPT = """
 You are an expert art historian. Analyze this museum artwork image.
@@ -428,6 +452,7 @@ Be concise and accurate.
 ```
 
 #### 4.2.2 多级降级策略
+
 ```python
 class FallbackStrategy:
     strategies = [
@@ -437,7 +462,7 @@ class FallbackStrategy:
         (OCRMatching, 0.5),     # 0.5秒超时
         (ManualSearch, 0)       # 立即返回
     ]
-    
+
     async def recognize(self, image):
         start = time.time()
         for strategy, timeout in self.strategies:
@@ -457,17 +482,18 @@ class FallbackStrategy:
 ### 4.3 缓存策略
 
 #### 4.3.1 多级缓存架构
+
 ```yaml
 L1 - 设备本地缓存:
   存储: SQLite
   容量: 200MB
   命中延迟: <100ms
-  
+
 L2 - Redis缓存:
   存储: Redis Cluster
   容量: 10GB
   命中延迟: <500ms
-  
+
 L3 - CDN缓存:
   存储: CloudFlare
   容量: 无限
@@ -475,6 +501,7 @@ L3 - CDN缓存:
 ```
 
 #### 4.3.2 智能缓存管理
+
 ```dart
 class CacheManager {
   // 缓存评分算法
@@ -482,23 +509,23 @@ class CacheManager {
     final age = DateTime.now().difference(item.lastAccessed).inHours;
     final frequency = item.hitCount;
     final size = item.sizeKB;
-    
+
     // 热门展品权重
     final popularity = item.isPopular ? 10.0 : 1.0;
-    
+
     // 当前位置权重
     final proximity = item.museumId == currentMuseum ? 5.0 : 1.0;
-    
+
     // 综合评分
-    return (frequency * popularity * proximity) / 
+    return (frequency * popularity * proximity) /
            (age + 1) / log(size + 1);
   }
-  
+
   // LRU + 评分的混合淘汰
   Future<void> evict() async {
     final items = await getAllItems();
     items.sort((a, b) => calculateScore(a).compareTo(calculateScore(b)));
-    
+
     // 删除评分最低的20%
     final toRemove = items.take(items.length * 0.2);
     await removeItems(toRemove);
@@ -509,6 +536,7 @@ class CacheManager {
 ### 4.4 性能优化
 
 #### 4.4.1 预测性加载
+
 ```dart
 class PredictiveLoader {
   Future<void> preload(String currentArtwork) async {
@@ -518,7 +546,7 @@ class PredictiveLoader {
       BehaviorModel(),       // 基于用户行为
       PopularityModel(),     // 基于热门度
     ]);
-    
+
     // 按概率预加载
     for (final p in predictions.where((p) => p.probability > 0.3)) {
       if (p.probability > 0.7) {
@@ -532,20 +560,21 @@ class PredictiveLoader {
 ```
 
 #### 4.4.2 渐进式加载
+
 ```javascript
 // 前端渐进式渲染
 async function displayArtwork(artworkId) {
   // 1. 立即显示骨架屏
   showSkeleton();
-  
+
   // 2. 显示基础信息（从缓存）
   const basic = await getBasicInfo(artworkId);
   renderBasic(basic);
-  
+
   // 3. 异步加载详细内容
   const detailed = await getDetailedInfo(artworkId);
   renderDetailed(detailed);
-  
+
   // 4. 后台预加载音频
   preloadAudio(artworkId);
 }
@@ -558,6 +587,7 @@ async function displayArtwork(artworkId) {
 ### 5.1 数据库设计
 
 #### 5.1.1 核心数据表
+
 ```sql
 -- 用户表
 CREATE TABLE users (
@@ -647,6 +677,7 @@ CREATE TABLE offline_packages (
 ```
 
 #### 5.1.2 向量数据库Schema
+
 ```python
 # Pinecone索引配置
 index_config = {
@@ -674,6 +705,7 @@ vector_data = {
 ### 5.2 数据迁移策略
 
 #### 5.2.1 版本管理
+
 ```dart
 class DatabaseMigration {
   static const migrations = {
@@ -683,7 +715,7 @@ class DatabaseMigration {
     4: "ALTER TABLE footprints ADD COLUMN sync_status",
     5: "CREATE INDEX idx_sync ON footprints(sync_status)"
   };
-  
+
   static Future<void> migrate(Database db) async {
     final current = await db.getVersion();
     for (int v = current + 1; v <= migrations.length; v++) {
@@ -701,31 +733,33 @@ class DatabaseMigration {
 ### 6.1 并发控制
 
 #### 6.1.1 服务端并发管理
+
 ```python
 class ConcurrencyManager:
     def __init__(self):
         self.gpu_semaphore = Semaphore(10)   # GPU并发限制
         self.cpu_semaphore = Semaphore(50)   # CPU并发限制
         self.queue = asyncio.Queue(maxsize=1000)
-        
+
     async def process_request(self, request):
         # 快速返回任务ID
         task_id = str(uuid.uuid4())
         await self.queue.put((task_id, request))
-        
+
         # 异步处理
         asyncio.create_task(self._process_async(task_id))
-        
+
         return {"task_id": task_id, "status": "processing"}
 ```
 
 #### 6.1.2 客户端请求管理
+
 ```dart
 class RequestManager {
   final _queue = Queue<Request>();
   final _maxConcurrent = 3;
   int _current = 0;
-  
+
   Future<T> request<T>(Request req) async {
     if (_current >= _maxConcurrent) {
       _queue.add(req);
@@ -746,26 +780,28 @@ class RequestManager {
 ### 6.2 负载均衡
 
 #### 6.2.1 服务配置
+
 ```yaml
 # nginx.conf
 upstream api_backend {
-    least_conn;
-    server api1:8000 max_fails=3;
-    server api2:8000 max_fails=3;
-    server api3:8000 max_fails=3;
-    keepalive 100;
+least_conn;
+server api1:8000 max_fails=3;
+server api2:8000 max_fails=3;
+server api3:8000 max_fails=3;
+keepalive 100;
 }
 
 location /api/ {
-    proxy_pass http://api_backend;
-    proxy_connect_timeout 5s;
-    limit_req zone=api burst=20;
+proxy_pass http://api_backend;
+proxy_connect_timeout 5s;
+limit_req zone=api burst=20;
 }
 ```
 
 ### 6.3 性能指标
 
 #### 6.3.1 目标指标
+
 ```yaml
 响应时间:
   P50: < 2秒
@@ -775,11 +811,11 @@ location /api/ {
 并发能力:
   QPS: 1000+
   并发用户: 10000+
-  
+
 可用性:
   SLA: 99.9%
   故障恢复: < 5分钟
-  
+
 缓存效率:
   命中率: > 70%
   热门展品命中率: > 90%
@@ -792,17 +828,19 @@ location /api/ {
 ### 7.1 API成本控制
 
 #### 7.1.1 智能模型选择
+
 ```python
 def select_model(complexity):
     models = {
         'simple': ('gpt-3.5-turbo', 0.002),      # $0.002/1K tokens
-        'medium': ('gpt-4-turbo', 0.01),         # $0.01/1K tokens  
+        'medium': ('gpt-4-turbo', 0.01),         # $0.01/1K tokens
         'complex': ('gpt-4-vision', 0.03)        # $0.03/1K tokens
     }
     return models[complexity]
 ```
 
 #### 7.1.2 批量处理
+
 ```python
 async def batch_process(requests):
     # 批量调用享受折扣
@@ -814,21 +852,22 @@ async def batch_process(requests):
 ### 7.2 成本预算
 
 #### 7.2.1 月度成本估算（动态模型）
+
 ```yaml
 10万用户场景（使用智能模型选择）:
-  AI调用成本: 
+  AI调用成本:
     - GPT-5使用率: 10% × $0.05 = $500
     - GPT-4使用率: 30% × $0.03 = $900
     - Claude使用率: 40% × $0.02 = $800
     - 其他模型: 20% × $0.01 = $200
     - 小计: $2400/月（优化前: $3000/月）
-  
-  服务器: $500/月  
+
+  服务器: $500/月
   存储: $200/月
   CDN: $100/月
   监控: $100/月
   总计: ~$3300/月
-  
+
 每用户成本: $0.033/月（优化20%）
 ```
 
@@ -839,6 +878,7 @@ async def batch_process(requests):
 ### 8.1 容器化部署
 
 #### 8.1.1 Docker配置
+
 ```dockerfile
 # API服务
 FROM python:3.11-slim
@@ -850,6 +890,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0"]
 ```
 
 #### 8.1.2 Kubernetes部署
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -863,31 +904,32 @@ spec:
   template:
     spec:
       containers:
-      - name: api
-        image: gomuseum/api:latest
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
+        - name: api
+          image: gomuseum/api:latest
+          resources:
+            requests:
+              memory: '512Mi'
+              cpu: '500m'
+            limits:
+              memory: '1Gi'
+              cpu: '1000m'
 ```
 
 ### 8.2 监控告警
 
 #### 8.2.1 监控指标
+
 ```yaml
 业务指标:
   - 识别成功率
   - 付费转化率
   - 用户留存率
-  
+
 技术指标:
   - API延迟
   - 错误率
   - 缓存命中率
-  
+
 资源指标:
   - CPU使用率
   - 内存使用率
@@ -895,6 +937,7 @@ spec:
 ```
 
 #### 8.2.2 告警规则
+
 ```python
 alerts = [
     Alert("API延迟 > 5s", level="warning"),
@@ -907,12 +950,13 @@ alerts = [
 ### 8.3 灾难恢复
 
 #### 8.3.1 备份策略
+
 ```yaml
 数据备份:
   频率: 每日全量 + 每小时增量
   保留: 30天
   位置: 多地域备份（3份）
-  
+
 恢复目标:
   RPO: < 1小时（数据丢失）
   RTO: < 4小时（服务恢复）
@@ -925,6 +969,7 @@ alerts = [
 ### 9.1 阶段划分（基于Claude Code Token规划）
 
 #### Phase 0: 项目初始化 (第0-1周 | 6-8个周期)
+
 ```yaml
 目标: 核心功能验证
 Token预算: 280K
@@ -936,17 +981,17 @@ Token预算: 280K
   - 最新且统一软件版本和配置
   - 完善的项目目录结构
   - 统一的环境配置
-
 ```
 
 #### Phase 1: MVP (第1-2周 | 6-8个周期)
+
 ```yaml
 目标: 核心功能验证
 Token预算: 280K
 交互次数: 36-48次
 任务:
   Step 1 - 项目初始化: 30K tokens | 3-5次交互
-  Step 2 - 识别功能: 60K tokens | 8-10次交互  
+  Step 2 - 识别功能: 60K tokens | 8-10次交互
   Step 3 - 讲解生成: 50K tokens | 6-8次交互
   Step 4 - UI完善: 70K tokens | 10-12次交互
   Step 5 - 支付集成: 40K tokens | 5-7次交互
@@ -955,10 +1000,10 @@ Token预算: 280K
   - 识别成功率 > 90%
   - 讲解功能完善
   - 集成谷歌和苹果GPB & IAP支付功能
-
 ```
 
 #### Phase 2: 性能优化 (第3-4周 | 4-8个周期)
+
 ```yaml
 目标: 识别反馈速度优化
 Token预算: 280K
@@ -970,10 +1015,10 @@ Token预算: 280K
 验收:
   - 响应时间 < 5秒
   - 缓存命中率 > 60%
-
 ```
 
 #### Phase 3: 离线功能 (第3-4周 | 3个周期)
+
 ```yaml
 目标: 支持离线包，add-on商业变现
 Token预算: 120K
@@ -988,11 +1033,12 @@ Token预算: 120K
 ```
 
 ### 9.2 开发周期管理
+
 ```yaml
 Claude Pro限制:
   - 每5小时重置: ~300K tokens
   - 建议分配: 60%编码, 30%调试, 10%文档
-  
+
 实际开发时间:
   - MVP完成: 2-3天密集开发
   - 总周期数: 9-11个
@@ -1000,6 +1046,7 @@ Claude Pro限制:
 ```
 
 ### 9.3 里程碑
+
 ```mermaid
 gantt
     title GoMuseum开发计划
@@ -1021,6 +1068,7 @@ gantt
 ### 10.1 技术风险
 
 #### 10.1.1 API服务中断
+
 ```yaml
 风险: OpenAI服务不可用
 概率: 中
@@ -1032,6 +1080,7 @@ gantt
 ```
 
 #### 10.1.2 成本超支
+
 ```yaml
 风险: API调用成本过高
 概率: 高
@@ -1045,6 +1094,7 @@ gantt
 ### 10.2 合规风险
 
 #### 10.2.1 数据隐私
+
 ```yaml
 GDPR合规:
   - 最小化数据收集
@@ -1054,6 +1104,7 @@ GDPR合规:
 ```
 
 #### 10.2.2 版权问题
+
 ```yaml
 内容版权:
   - AI生成内容标注
@@ -1065,6 +1116,7 @@ GDPR合规:
 ### 10.3 应急预案
 
 #### 10.3.1 服务降级预案
+
 ```python
 class EmergencyPlan:
     strategies = {
@@ -1125,7 +1177,7 @@ def test_concurrent_recognition():
     users = 1000
     duration = 60  # seconds
     target_qps = 100
-    
+
     results = run_load_test(users, duration)
     assert results.p95_latency < 5000  # ms
     assert results.error_rate < 0.01
@@ -1134,11 +1186,11 @@ def test_concurrent_recognition():
 def test_cache_hit_rate():
     requests = generate_test_requests(1000)
     hits = 0
-    
+
     for req in requests:
         if cache.get(req.key):
             hits += 1
-    
+
     hit_rate = hits / len(requests)
     assert hit_rate > 0.7
 ```
@@ -1159,30 +1211,30 @@ api:
     max_tokens: 500
     temperature: 0.3
     timeout: 5
-    
+
   claude:
     key: ${CLAUDE_API_KEY}
     model: claude-3-vision
     backup: true
-    
+
 cache:
   redis:
     host: redis.gomuseum.com
     port: 6379
     ttl: 3600
     max_connections: 100
-    
+
   local:
     max_size_mb: 200
     max_items: 1000
-    
+
 database:
   postgres:
     host: db.gomuseum.com
     port: 5432
     database: gomuseum
     pool_size: 20
-    
+
   pinecone:
     api_key: ${PINECONE_API_KEY}
     index: artwork-embeddings
@@ -1199,23 +1251,23 @@ class ErrorCode(Enum):
     RECOGNITION_TIMEOUT = 1002
     RECOGNITION_LOW_CONFIDENCE = 1003
     IMAGE_INVALID = 1004
-    
+
     # 用户相关 (2xxx)
     USER_NOT_FOUND = 2001
     USER_UNAUTHORIZED = 2002
     USER_QUOTA_EXCEEDED = 2003
     USER_SUBSCRIPTION_EXPIRED = 2004
-    
+
     # 支付相关 (3xxx)
     PAYMENT_FAILED = 3001
     PAYMENT_CANCELLED = 3002
     PAYMENT_INVALID_PRODUCT = 3003
-    
+
     # 系统相关 (4xxx)
     SYSTEM_UNAVAILABLE = 4001
     SYSTEM_MAINTENANCE = 4002
     RATE_LIMIT_EXCEEDED = 4003
-    
+
     # 网络相关 (5xxx)
     NETWORK_ERROR = 5001
     NETWORK_TIMEOUT = 5002
@@ -1226,23 +1278,23 @@ class ErrorCode(Enum):
 
 ```sql
 -- 性能优化索引
-CREATE INDEX CONCURRENTLY idx_footprints_user_time 
+CREATE INDEX CONCURRENTLY idx_footprints_user_time
 ON footprints(user_id, recognized_at DESC);
 
-CREATE INDEX CONCURRENTLY idx_artworks_museum 
+CREATE INDEX CONCURRENTLY idx_artworks_museum
 ON artworks(museum_id);
 
-CREATE INDEX CONCURRENTLY idx_cache_expires 
-ON recognition_cache(expires_at) 
+CREATE INDEX CONCURRENTLY idx_cache_expires
+ON recognition_cache(expires_at)
 WHERE expires_at IS NOT NULL;
 
 -- 向量搜索优化
-CREATE INDEX idx_artworks_embedding 
+CREATE INDEX idx_artworks_embedding
 ON artworks USING ivfflat (embeddings vector_cosine_ops)
 WITH (lists = 100);
 
 -- 全文搜索索引
-CREATE INDEX idx_artworks_search 
+CREATE INDEX idx_artworks_search
 ON artworks USING gin(
   to_tsvector('english', name || ' ' || artist || ' ' || description)
 );
@@ -1254,27 +1306,27 @@ ON artworks USING gin(
 # security/security_manager.py
 class SecurityManager:
     """安全管理器"""
-    
+
     @staticmethod
     def sanitize_image(image_data: bytes) -> bytes:
         """图像安全处理"""
         # 1. 检查文件类型
         if not is_valid_image(image_data):
             raise SecurityException("Invalid image format")
-        
+
         # 2. 检查文件大小
         if len(image_data) > 10 * 1024 * 1024:  # 10MB
             raise SecurityException("Image too large")
-        
+
         # 3. 移除EXIF数据（保护隐私）
         clean_image = remove_exif(image_data)
-        
+
         # 4. 扫描恶意内容
         if contains_malicious_content(clean_image):
             raise SecurityException("Malicious content detected")
-        
+
         return clean_image
-    
+
     @staticmethod
     def encrypt_user_data(data: dict) -> bytes:
         """用户数据加密"""
@@ -1282,7 +1334,7 @@ class SecurityManager:
         cipher = Fernet(key)
         json_data = json.dumps(data)
         return cipher.encrypt(json_data.encode())
-    
+
     @staticmethod
     def validate_api_request(request):
         """API请求验证"""
@@ -1290,15 +1342,15 @@ class SecurityManager:
         token = request.headers.get('Authorization')
         if not validate_jwt(token):
             raise UnauthorizedException()
-        
+
         # 2. 检查请求频率
         if is_rate_limited(request.client_ip):
             raise RateLimitException()
-        
+
         # 3. 验证请求签名
         if not verify_signature(request):
             raise InvalidSignatureException()
-        
+
         return True
 ```
 
@@ -1312,7 +1364,7 @@ class TestRecognitionService:
         features = extract_features(image)
         assert len(features) == 1536
         assert all(-1 <= f <= 1 for f in features)
-    
+
     def test_cache_hit(self):
         cache = CacheManager()
         cache.set("test_key", "test_value")
@@ -1322,10 +1374,10 @@ class TestRecognitionService:
 class TestAPIIntegration:
     async def test_recognition_flow(self):
         # 1. 上传图片
-        response = await client.post("/api/v1/recognize", 
+        response = await client.post("/api/v1/recognize",
                                     files={"image": test_image})
         assert response.status_code == 200
-        
+
         # 2. 获取结果
         task_id = response.json()["task_id"]
         result = await wait_for_result(task_id)
@@ -1389,12 +1441,12 @@ kubectl scale deployment/api-service --replicas=5 -n production
     - 提高缓存TTL至2小时
     - 预热Top 100展品
     预期节省: 30% API调用
-    
+
   模型降级:
     - 简单识别用GPT-3.5
     - 复杂场景才用GPT-4V
     预期节省: 40% API成本
-    
+
   批量处理:
     - 合并10个请求批量调用
     - 享受批量折扣
@@ -1405,18 +1457,18 @@ kubectl scale deployment/api-service --replicas=5 -n production
     - 部署MobileNet做初筛
     - 只对低置信度调用API
     预期节省: 50% API调用
-    
+
   用户行为:
     - 分析使用模式
     - 优化预加载策略
     预期节省: 20% 带宽成本
-    
+
 长期优化 (3-6个月):
   自建模型:
     - 训练专用识别模型
     - 减少外部API依赖
     预期节省: 70% API成本
-    
+
 总体目标:
   当前: $0.10/用户/天
   3个月: $0.05/用户/天
@@ -1431,13 +1483,13 @@ kubectl scale deployment/api-service --replicas=5 -n production
     - Flutter客户端开发
     - UI/UX实现
     - 离线功能
-    
+
   后端开发 (2人):
     - API服务开发
     - 数据库设计
     - 缓存系统
     - AI服务集成
-    
+
   AI工程师 (1人):
     - 模型选择与优化
     - Prompt工程
@@ -1455,7 +1507,7 @@ kubectl scale deployment/api-service --replicas=5 -n production
     - 需求管理
     - 用户研究
     - 数据分析
-    
+
   UI/UX设计师:
     - 界面设计
     - 交互设计
@@ -1479,6 +1531,7 @@ kubectl scale deployment/api-service --replicas=5 -n production
 ## 数据保护
 
 ### GDPR合规
+
 - 用户明确同意数据收集
 - 提供数据导出功能
 - 支持账户删除
@@ -1486,6 +1539,7 @@ kubectl scale deployment/api-service --replicas=5 -n production
 - 加密传输和存储
 
 ### 儿童保护 (COPPA)
+
 - 禁止13岁以下用户注册
 - 家长控制功能
 - 内容审核机制
@@ -1493,16 +1547,19 @@ kubectl scale deployment/api-service --replicas=5 -n production
 ## 知识产权
 
 ### 图像版权
+
 - 只处理用户拍摄的照片
 - 不存储原始图像
 - AI生成内容明确标注
 
 ### 内容版权
+
 - 使用公有领域资料
 - 获得必要的授权
 - 提供版权投诉通道
 
 ## 隐私政策要点
+
 1. 数据收集范围
 2. 数据使用目的
 3. 数据共享政策
@@ -1510,6 +1567,7 @@ kubectl scale deployment/api-service --replicas=5 -n production
 5. 联系方式
 
 ## 服务条款要点
+
 1. 服务描述
 2. 用户责任
 3. 免责声明
@@ -1525,12 +1583,12 @@ V2.0 (6个月后):
     - AR展品复原
     - 虚拟导游
     - 3D模型展示
-    
+
   社交功能:
     - 用户社区
     - 展品评论
     - 游记分享
-    
+
   游戏化:
     - 收集徽章
     - 知识问答
@@ -1541,12 +1599,12 @@ V3.0 (12个月后):
     - 个性化路线规划
     - 实时导航
     - 智能推荐
-    
+
   跨馆联动:
     - 全球通票
     - 主题展览
     - 文化之旅
-    
+
   教育功能:
     - 在线课程
     - 专家讲座
@@ -1563,11 +1621,11 @@ V3.0 (12个月后):
 
 ## 文档版本历史
 
-| 版本 | 日期 | 作者 | 变更说明 |
-|------|------|------|----------|
-| 1.0 | 2024-01-15 | Team | 初始版本，完整架构设计 |
-| 1.1 | 2024-01-26 | Team | 添加AI模型适配器，支持动态切换；免费额度调整为5次；优化成本控制策略 |
-| 1.2 | 2024-01-27 | Team | 更新实施路线图为Token规划；免费次数统一为5次；增强版本管理策略 |
+| 版本 | 日期       | 作者 | 变更说明                                                            |
+| ---- | ---------- | ---- | ------------------------------------------------------------------- |
+| 1.0  | 2024-01-15 | Team | 初始版本，完整架构设计                                              |
+| 1.1  | 2024-01-26 | Team | 添加AI模型适配器，支持动态切换；免费额度调整为5次；优化成本控制策略 |
+| 1.2  | 2024-01-27 | Team | 更新实施路线图为Token规划；免费次数统一为5次；增强版本管理策略      |
 
 ---
 
@@ -1582,4 +1640,4 @@ V3.0 (12个月后):
 
 **本文档为GoMuseum产品架构设计的完整版本，包含了从需求分析到技术实现的全部内容。文档将随项目进展持续更新。**
 
-*最后更新：2024年1月27日*
+_最后更新：2024年1月27日_

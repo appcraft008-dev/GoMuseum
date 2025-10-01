@@ -5,6 +5,7 @@
 GoMuseum是一个现代化的博物馆数字化平台，致力于为用户提供沉浸式的文化体验。本项目采用现代Web技术栈，支持多媒体展示、互动体验和离线访问功能。
 
 ### 项目目标
+
 - 构建高性能、可扩展的博物馆数字化平台
 - 提供优质的用户体验和无障碍访问
 - 支持多设备、多场景的使用需求
@@ -15,6 +16,7 @@ GoMuseum是一个现代化的博物馆数字化平台，致力于为用户提供
 ### 代码规范
 
 #### 1. 命名规范
+
 - **文件命名**: 使用kebab-case，如`user-profile.tsx`
 - **变量命名**: 使用camelCase，如`userName`
 - **常量命名**: 使用SCREAMING_SNAKE_CASE，如`API_BASE_URL`
@@ -22,6 +24,7 @@ GoMuseum是一个现代化的博物馆数字化平台，致力于为用户提供
 - **函数命名**: 使用camelCase，动词开头，如`getUserData()`
 
 #### 2. 目录结构规范
+
 ```
 src/
 ├── components/          # 可复用组件
@@ -41,6 +44,7 @@ src/
 #### 3. 代码质量工具配置
 
 **Black格式化配置** (pyproject.toml)
+
 ```toml
 [tool.black]
 line-length = 88
@@ -62,24 +66,26 @@ extend-exclude = '''
 ```
 
 **ESLint配置** (.eslintrc.js)
+
 ```javascript
 module.exports = {
   extends: [
     '@typescript-eslint/recommended',
     'prettier/@typescript-eslint',
     'plugin:react/recommended',
-    'plugin:react-hooks/recommended'
+    'plugin:react-hooks/recommended',
   ],
   rules: {
     '@typescript-eslint/explicit-function-return-type': 'error',
     '@typescript-eslint/no-unused-vars': 'error',
     'react/prop-types': 'off',
-    'react/react-in-jsx-scope': 'off'
-  }
-}
+    'react/react-in-jsx-scope': 'off',
+  },
+};
 ```
 
 **Prettier配置** (.prettierrc)
+
 ```json
 {
   "semi": true,
@@ -94,16 +100,19 @@ module.exports = {
 ### 测试规范
 
 #### 1. 测试文件命名
+
 - 单元测试: `*.test.ts` 或 `*.test.tsx`
 - 集成测试: `*.integration.test.ts`
 - E2E测试: `*.e2e.test.ts`
 
 #### 2. 测试覆盖率要求
+
 - 单元测试覆盖率: ≥80%
 - 集成测试覆盖率: ≥70%
 - 关键业务逻辑: 100%覆盖率
 
 #### 3. 测试结构规范
+
 ```typescript
 describe('ComponentName', () => {
   beforeEach(() => {
@@ -125,6 +134,7 @@ describe('ComponentName', () => {
 ### Git分支管理策略
 
 #### 1. 分支结构
+
 ```
 main (主分支)
 ├── staging (预发布分支)
@@ -138,6 +148,7 @@ main (主分支)
 ```
 
 #### 2. 分支命名规范
+
 - 功能分支: `feature/init/{description}` 或 `feature/bug-fix/{description}`
 - 发布分支: `release/v{version}`
 - 热修复分支: `hotfix/{description}`
@@ -145,6 +156,7 @@ main (主分支)
 #### 3. 分支保护规则
 
 **Main分支保护（独立开发者模式）**
+
 - 禁止直接推送
 - 需要Pull Request (自我审查)
 - 必须通过所有CI检查
@@ -152,12 +164,15 @@ main (主分支)
 - 删除分支保护时需要管理员权限
 
 **Staging分支保护（独立开发者模式）**
+
 - 允许直接推送（快速迭代）
 - 必须通过基础CI检查
 - 自动部署到staging环境
 
 #### 4. 提交信息规范
+
 采用Conventional Commits规范：
+
 ```
 <type>[optional scope]: <description>
 
@@ -167,6 +182,7 @@ main (主分支)
 ```
 
 类型定义：
+
 - `feat`: 新功能
 - `fix`: Bug修复
 - `docs`: 文档更新
@@ -176,6 +192,7 @@ main (主分支)
 - `chore`: 构建工具或辅助工具变动
 
 示例：
+
 ```
 feat(auth): add user authentication system
 
@@ -190,12 +207,14 @@ Closes #123
 ### CI/CD流程
 
 #### 1. CI触发规则
+
 - **Pull Request**: 触发完整CI检查
 - **Push到feature分支**: 触发基础检查
 - **Push到staging**: 触发完整检查 + 部署到staging环境
 - **Push到main**: 触发完整检查 + 部署到production环境
 
 #### 2. CI检查项目
+
 ```yaml
 # .github/workflows/ci.yml
 name: CI
@@ -215,7 +234,7 @@ jobs:
       - run: npm run lint
       - run: npm run test:coverage
       - run: npm run build
-      
+
   security:
     runs-on: ubuntu-latest
     steps:
@@ -225,6 +244,7 @@ jobs:
 ```
 
 #### 3. CD部署流程
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy
@@ -250,6 +270,7 @@ jobs:
 ### 三环境架构
 
 #### 1. Local环境 (开发环境)
+
 - **用途**: 本地开发和调试
 - **数据库**: SQLite / 本地PostgreSQL
 - **缓存**: 本地Redis (可选)
@@ -257,6 +278,7 @@ jobs:
 - **配置**: `.env.local`
 
 #### 2. Staging环境 (预发布环境)
+
 - **用途**: 集成测试和用户验收测试
 - **数据库**: PostgreSQL (测试数据)
 - **缓存**: Redis
@@ -265,6 +287,7 @@ jobs:
 - **域名**: `staging.gomuseum.com`
 
 #### 3. Production环境 (生产环境)
+
 - **用途**: 正式对外服务
 - **数据库**: PostgreSQL (生产数据)
 - **缓存**: Redis Cluster
@@ -276,6 +299,7 @@ jobs:
 ### 2025年技术栈版本清单
 
 #### 前端技术栈
+
 ```json
 {
   "node": "20.11.0",
@@ -293,6 +317,7 @@ jobs:
 ```
 
 #### 后端技术栈
+
 ```json
 {
   "python": "3.11.7",
@@ -307,6 +332,7 @@ jobs:
 ```
 
 #### 开发工具版本
+
 ```json
 {
   "docker": "25.0.2",
@@ -321,6 +347,7 @@ jobs:
 ### 环境依赖安装指导
 
 #### 1. 系统要求检查清单
+
 ```bash
 #!/bin/bash
 # system-check.sh
@@ -351,6 +378,7 @@ echo "=== 检查完成 ==="
 ```
 
 #### 2. Node.js环境安装
+
 ```bash
 # 使用nvm安装Node.js
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
@@ -365,6 +393,7 @@ npm --version
 ```
 
 #### 3. Python环境安装
+
 ```bash
 # 使用pyenv安装Python
 curl https://pyenv.run | bash
@@ -383,6 +412,7 @@ source venv/bin/activate  # Linux/Mac
 ```
 
 #### 4. Docker环境安装
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get update
@@ -401,6 +431,7 @@ docker compose version
 ```
 
 #### 5. 数据库环境安装
+
 ```bash
 # PostgreSQL
 ## Ubuntu/Debian
@@ -426,6 +457,7 @@ redis-cli ping
 ### 环境配置检查清单
 
 #### Pre-Development Checklist
+
 - [ ] Node.js 20.11.0已安装并配置为默认版本
 - [ ] Python 3.11.7已安装在虚拟环境中
 - [ ] Docker和Docker Compose已安装并运行正常
@@ -446,6 +478,7 @@ redis-cli ping
 ### SonarCloud集成
 
 #### 1. 项目配置
+
 ```properties
 # sonar-project.properties
 sonar.projectKey=gomuseum
@@ -458,6 +491,7 @@ sonar.typescript.lcov.reportPaths=coverage/lcov.info
 ```
 
 #### 2. CI集成
+
 ```yaml
 # GitHub Actions中集成SonarCloud
 - name: SonarCloud Scan
@@ -468,6 +502,7 @@ sonar.typescript.lcov.reportPaths=coverage/lcov.info
 ```
 
 #### 3. 质量门禁标准
+
 - 代码覆盖率: ≥80%
 - 重复率: ≤3%
 - 可维护性评级: A
@@ -478,6 +513,7 @@ sonar.typescript.lcov.reportPaths=coverage/lcov.info
 ### CodeCov集成
 
 #### 1. 覆盖率报告生成
+
 ```json
 {
   "scripts": {
@@ -488,6 +524,7 @@ sonar.typescript.lcov.reportPaths=coverage/lcov.info
 ```
 
 #### 2. codecov.yml配置
+
 ```yaml
 coverage:
   status:
@@ -499,20 +536,22 @@ coverage:
       default:
         target: 70%
   ignore:
-    - "**/*.test.*"
-    - "**/*.spec.*"
-    - "**/mocks/**"
+    - '**/*.test.*'
+    - '**/*.spec.*'
+    - '**/mocks/**'
 ```
 
 ### Pre-commit Hooks
 
 #### 1. 安装配置
+
 ```bash
 npm install --save-dev husky lint-staged
 npx husky install
 ```
 
 #### 2. .husky/pre-commit
+
 ```bash
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
@@ -522,23 +561,18 @@ npm run test:staged
 ```
 
 #### 3. package.json配置
+
 ```json
 {
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write",
-      "git add"
-    ],
-    "*.{md,json,yaml,yml}": [
-      "prettier --write",
-      "git add"
-    ]
+    "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write", "git add"],
+    "*.{md,json,yaml,yml}": ["prettier --write", "git add"]
   }
 }
 ```
 
 #### 4. 提交前检查项
+
 - [ ] 代码格式化(Prettier)
 - [ ] 代码质量检查(ESLint)
 - [ ] 类型检查(TypeScript)
@@ -550,18 +584,21 @@ npm run test:staged
 ### 告警通知配置
 
 #### 1. 告警级别定义
+
 - **P0-紧急**: 生产环境服务中断，需立即处理
 - **P1-高优先级**: 核心功能异常，24小时内修复
 - **P2-中优先级**: 一般功能问题，72小时内修复
 - **P3-低优先级**: 优化建议，下个版本处理
 
 #### 2. 通知渠道
+
 - 邮件通知: 所有等级告警
 - Slack通知: P0-P1告警
 - 短信通知: P0告警
 - 钉钉通知: 工作时间P1告警
 
 #### 3. 监控指标
+
 - 构建成功率: >95%
 - 测试覆盖率: >80%
 - 代码质量评分: >B级

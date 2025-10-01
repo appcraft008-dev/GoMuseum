@@ -6,13 +6,15 @@
 
 **目标**: 建立完整的GoMuseum项目基础架构，包括前后端目录结构、配置文件、开发环境和CI/CD管道。
 
-**Agent角色**: 
+**Agent角色**:
+
 - **架构师**: 负责整体项目结构设计和技术选型
 - **DevOps工程师**: 负责CI/CD配置和环境搭建
 - **前端架构师**: 负责React/Next.js项目结构设计
 - **后端架构师**: 负责Django REST API架构设计
 
 **工作量估算**:
+
 - 时间投入: 4-6小时
 - 复杂度: 中等
 - 依赖项: 环境准备完成（参考前置章节）
@@ -20,6 +22,7 @@
 ### 软件安装清单与指导
 
 #### 必需软件清单
+
 - [x] Node.js 20.11.0 + npm 10.4.0
 - [x] Python 3.11.7 + pip
 - [x] Docker 25.0.2 + Docker Compose 2.24.5
@@ -28,12 +31,14 @@
 - [x] Git 2.43.0
 
 #### 开发工具推荐
+
 - [x] VS Code + 推荐插件包
 - [x] Postman/Insomnia (API测试)
 - [x] pgAdmin/DBeaver (数据库管理)
 - [x] Redis Commander (Redis管理)
 
 #### 环境验证脚本
+
 ```bash
 #!/bin/bash
 # verify-environment.sh - 一键环境验证
@@ -48,7 +53,7 @@ verify_version() {
     local cmd=$1
     local expected=$2
     local actual=$($cmd 2>/dev/null || echo "未安装")
-    
+
     if [[ $actual == *"$expected"* ]]; then
         echo "✅ $cmd: $actual" | tee -a $REPORT_FILE
     else
@@ -92,7 +97,7 @@ echo "🎉 环境验证完成！"
 3. 设计数据流和API交互模式
 4. 制定技术架构决策文档
 
-## 🔧 DevOps工程师角色  
+## 🔧 DevOps工程师角色
 请作为DevOps工程师：
 1. 创建Docker开发环境配置
 2. 设置GitHub Actions CI/CD流程
@@ -165,6 +170,7 @@ gomuseum/
 #### 2) 项目目录结构生成
 
 **期望的完整目录结构**:
+
 ```
 gomuseum/
 ├── README.md
@@ -303,9 +309,11 @@ gomuseum/
 ### 总结
 
 #### 输出文件清单
+
 项目初始化完成后，应包含以下关键文件：
 
 **配置文件** (12个):
+
 - package.json (根目录)
 - frontend/package.json
 - backend/requirements.txt
@@ -320,6 +328,7 @@ gomuseum/
 - backend/config/settings.py
 
 **基础架构文件** (15个):
+
 - 前端布局组件和路由配置
 - 后端应用模块结构
 - 数据库模型定义
@@ -328,6 +337,7 @@ gomuseum/
 - 错误处理组件
 
 **开发工具文件** (8个):
+
 - .husky/pre-commit
 - pytest.ini
 - jest.config.js
@@ -338,12 +348,14 @@ gomuseum/
 - scripts/verify-environment.sh
 
 #### 测试用例及代码覆盖率目标
+
 - **前端单元测试**: 组件渲染、Hook逻辑、工具函数
 - **后端单元测试**: 模型验证、API端点、业务逻辑
 - **集成测试**: API交互、数据库操作、认证流程
 - **E2E测试**: 关键用户流程测试
 
 **覆盖率目标**:
+
 - 单元测试覆盖率: ≥80%
 - 集成测试覆盖率: ≥70%
 - 总体代码覆盖率: ≥75%
@@ -351,6 +363,7 @@ gomuseum/
 ### 验收
 
 #### 自动化验收脚本
+
 ```bash
 #!/bin/bash
 # acceptance-test.sh - 项目初始化验收测试
@@ -435,6 +448,7 @@ echo "🎉 项目初始化验收测试完成！"
 ```
 
 #### 手工验收检查清单
+
 - [ ] 项目目录结构完整
 - [ ] 所有配置文件已生成
 - [ ] 前端开发服务器可启动 (npm run dev)
@@ -451,19 +465,22 @@ echo "🎉 项目初始化验收测试完成！"
 ### 版本管理和CI/CD
 
 #### 初始化后的Git工作流
+
 1. **创建初始提交**:
+
    ```bash
    git add .
    git commit -m "feat: initial project setup
-   
+
    - Add frontend Next.js structure
-   - Add backend Django structure  
+   - Add backend Django structure
    - Configure Docker development environment
    - Set up CI/CD workflows
    - Add project documentation"
    ```
 
 2. **创建开发分支**:
+
    ```bash
    git checkout -b feature/init/basic-structure
    git push -u origin feature/init/basic-structure
@@ -475,7 +492,8 @@ echo "🎉 项目初始化验收测试完成！"
    - 配置自动部署到staging环境
 
 #### CI/CD Pipeline激活
-- **触发条件**: Push到feature/init/*分支
+
+- **触发条件**: Push到feature/init/\*分支
 - **执行步骤**:
   1. 代码质量检查 (ESLint, Black)
   2. 单元测试运行
@@ -485,6 +503,7 @@ echo "🎉 项目初始化验收测试完成！"
   6. 部署到staging环境（可选）
 
 #### 下一步计划
+
 项目初始化完成后，开发流程将进入MVP功能开发阶段。
 
 ---
