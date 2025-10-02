@@ -36,8 +36,11 @@
   },
   "homepage": "https://github.com/appcraft008-dev/GoMuseum#readme",
   "lint-staged": {
-    "*.{js,json,md,yml,yaml}": [
+    "*.{js,ts,jsx,tsx}": [
       "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
   }
