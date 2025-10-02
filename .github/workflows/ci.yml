@@ -49,9 +49,15 @@ jobs:
           node-version: '22.20.0'
           cache: 'npm'
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
       - name: Dummy build
         run: |
-          echo "✅ 项目构建检查通过 (占位符)"
+          echo "✅ 项目构建检查通过"
           node --version
           npm --version
 
@@ -93,7 +99,7 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install backend dependencies
         run: |
@@ -124,4 +130,3 @@ jobs:
           files: backend/coverage.xml
           flags: backend
           fail_ci_if_error: false
-
