@@ -80,6 +80,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Create frontend test symlink for SonarCloud
+        run: |
+          # SonarCloud期望frontend/test，但实际路径是frontend/gomuseum_app/test
+          # 创建符号链接以满足SonarCloud的路径验证
+          ln -s gomuseum_app/test frontend/test
+          echo "✅ Created symlink: frontend/test -> frontend/gomuseum_app/test"
+          ls -la frontend/
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
