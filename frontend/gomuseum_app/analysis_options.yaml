@@ -1,0 +1,39 @@
+# analysis_options.yaml
+# 使用 Flutter 官方推荐的 lint 规则 (flutter_lints ^6.0.0)
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # --- 可选的额外规则 ---
+    # 在这里你可以根据团队规范调整，下面是常用的一些例子：
+
+    # 保持一致的代码风格
+    prefer_single_quotes: true          # 建议用单引号而不是双引号
+    always_use_package_imports: true    # 导入时总是使用 package: 前缀
+    avoid_print: true                   # 禁止直接使用 print（推荐用 logger）
+
+    # 代码可读性
+    prefer_const_constructors: true     # 使用 const 构造函数（如果可能）
+    prefer_const_literals_to_create_immutables: true
+    unnecessary_this: true              # 避免不必要的 this
+    unnecessary_late: true              # 避免不必要的 late 变量
+
+    # 类型安全
+    always_declare_return_types: true   # 所有函数都声明返回类型
+    annotate_overrides: true            # 重写方法必须加 @override
+    avoid_dynamic_calls: true           # 避免 dynamic 调用
+
+analyzer:
+  exclude:
+    - "**/build/**"
+    - "**/.dart_tool/**"
+    - "**/generated_plugin_registrant.dart"
+    - "**/ios/**"
+    - "**/android/**"
+
+  errors:
+    # 把 warning 升级为 error（保证 CI 严格）
+    unused_import: error
+    dead_code: error
+    prefer_const_constructors: warning
+

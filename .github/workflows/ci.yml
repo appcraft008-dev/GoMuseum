@@ -43,9 +43,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+          cache: 'npm'
+
       - name: Dummy build
         run: |
           echo "✅ 项目构建检查通过 (占位符)"
+          node --version
+          npm --version
 
   # SonarCloud 分析
   sonarcloud:
@@ -81,6 +89,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 设置 Python 3.11，确保 coverage 正常工作
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -e ".[dev,test]"
+
+      - name: Run backend tests with coverage
+        run: |
+          cd backend
+          pytest -v --cov=app --cov-report=xml:coverage.xml --cov-report=term-missing
+
       # Flutter/Dart 覆盖率（coverage/lcov.info）
       - name: Upload Flutter coverage (if exists)
         if: hashFiles('coverage/lcov.info') != ''
@@ -100,3 +124,4 @@ jobs:
           files: backend/coverage.xml
           flags: backend
           fail_ci_if_error: false
+

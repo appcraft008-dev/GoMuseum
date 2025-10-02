@@ -1,0 +1,7 @@
+organization=appcraft008-dev
+projectKey=appcraft008-dev_GoMuseum
+serverUrl=https://sonarcloud.io
+serverVersion=8.0.0.67939
+dashboardUrl=https://sonarcloud.io/dashboard?id=appcraft008-dev_GoMuseum
+ceTaskId=AZmfaa5IL15mUlbjRXi2
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AZmfaa5IL15mUlbjRXi2

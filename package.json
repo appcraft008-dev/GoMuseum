@@ -4,6 +4,10 @@
   "description": "GoMuseum Project - lint/format/ci setup",
   "main": "index.js",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22.20.0",
+    "npm": ">=10.9.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint . --ext .js",
