@@ -1,27 +1,50 @@
-// eslint.config.js (CommonJS 写法)
-
+// eslint.config.js
 const js = require('@eslint/js');
 const globals = require('globals');
 
-/**
- * ESLint 配置 (CommonJS 版本)
- * - 使用官方推荐规则
- * - 启用 Node.js 全局变量
- */
 module.exports = [
+  // 全局忽略配置必须放在第一位
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/.venv/**',
+      '**/venv/**',
+      '**/__pycache__/**',
+      '**/backend/**',
+      '**/docs/**',
+      '**/coverage/**',
+      '**/htmlcov/**',
+      '**/.git/**',
+      '**/.husky/**',
+      '**/logs/**',
+      '**/*.py',
+      '**/*.pyc',
+      '**/.pytest_cache/**',
+      '**/.dart_tool/**',
+      '**/.flutter-plugins*',
+      '**/build/**',
+      'eslint.config.js',
+      '*.log',
+      '.env*',
+    ],
+  },
   js.configs.recommended,
   {
+    // 只 lint 项目根目录的JS文件和前端目录
+    files: ['*.js', 'scripts/**/*.js', 'frontend/gomuseum_app/**/*.{js,ts,jsx,tsx}'],
+
     languageOptions: {
       globals: {
-        ...globals.node, // Node.js 环境 (console, process 等)
+        ...globals.node,
+        ...globals.browser,
       },
     },
+
     rules: {
-      // 可以根据需要自定义规则：
-      'no-unused-vars': 'warn', // 定义未使用的变量 → 警告
-      'no-undef': 'error', // 使用未定义的变量 → 报错
-      semi: ['error', 'always'], // 强制分号
-      quotes: ['error', 'single'], // 强制单引号
+      'no-unused-vars': 'warn',
+      'no-undef': 'error',
+      semi: ['error', 'always'],
+      quotes: ['error', 'single'],
     },
   },
 ];

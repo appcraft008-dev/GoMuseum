@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Python
+backend/
+*.py
+
+# Build outputs
+dist/
+build/
+coverage/
+htmlcov/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.packages
+pubspec.lock
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Documentation
+docs/
+
+# Cache
+.eslintcache
