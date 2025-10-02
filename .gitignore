@@ -92,11 +92,13 @@ Thumbs.db
 **/docs/_build/
 **/site/
 
-# AI和机器学习
-**/models/
+# AI和机器学习 - 只排除训练模型文件,不排除代码中的models目录
 **/checkpoints/
 **/*.pkl
 **/*.joblib
+**/*.h5
+**/*.pth
+**/*.onnx
 
 # 依赖管理
 **/node_modules/
