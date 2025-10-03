@@ -1,0 +1,46 @@
+name: gomuseum_app
+description: GoMuseum Flutter frontend app
+version: 0.1.0
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 状态管理
+  flutter_riverpod: ^2.4.0
+  riverpod_annotation: ^2.3.0
+
+  # 本地数据库
+  drift: ^2.14.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.0
+  path: ^1.8.3
+
+  # 网络请求
+  dio: ^5.4.0
+
+  # 图片处理
+  image_picker: ^1.0.5
+  camera: ^0.10.5
+
+  # 工具
+  dartz: ^0.10.1
+  crypto: ^3.0.3
+  intl: ^0.18.1
+  equatable: ^2.0.5
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+  # 代码生成
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.3.0
+  drift_dev: ^2.16.0
+
+  # 测试
+  mockito: ^5.4.4
+  mocktail: ^1.0.3
