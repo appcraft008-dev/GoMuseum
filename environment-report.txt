@@ -1,0 +1,13 @@
+GoMuseum环境验证报告 - Wed Oct  1 18:39:25 CEST 2025
+
+=== 核心依赖验证 ===
+✅ node (via nvm): v22.20.0
+✅ npm --version: 10.9.3
+✅ python3 --version: Python 3.11.7
+✅ docker --version: Docker version 28.3.3, build 980b856
+✅ psql --version: psql (PostgreSQL) 16.10 (Homebrew)
+✅ redis-server --version: Redis server v=8.2.1 sha=00000000:1 malloc=libc bits=64 build=dd46127e0d04fdb3
+
+=== Flutter环境验证 ===
+✅ Flutter: Flutter 3.35.5 • channel stable • https://github.com/flutter/flutter.git
+

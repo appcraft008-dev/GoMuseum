@@ -1,16 +1,47 @@
 {
   "name": "gomuseum",
   "version": "1.0.0",
-  "description": "",
+  "description": "GoMuseum Project - lint/format/ci setup",
   "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.20.0",
+    "npm": ">=10.9.0"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "format": "prettier --write .",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "eslint": "^9.36.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.3"
+    "lint-staged": "^16.2.3",
+    "prettier": "^3.6.2",
+    "@eslint/js": "^9.36.0",
+    "globals": "^15.11.0"
+  },
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/appcraft008-dev/GoMuseum.git"
+  },
+  "bugs": {
+    "url": "https://github.com/appcraft008-dev/GoMuseum/issues"
+  },
+  "homepage": "https://github.com/appcraft008-dev/GoMuseum#readme",
+  "lint-staged": {
+    "*.{js,ts,jsx,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

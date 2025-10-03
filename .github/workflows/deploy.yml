@@ -1,0 +1,13 @@
+name: Deploy
+on:
+  workflow_run:
+    workflows: ['CI']
+    types:
+      - completed
+    branches: [main, staging]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "🚀 部署任务执行（Staging/Production 按分支区分）"

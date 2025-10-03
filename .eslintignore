@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+
+# Python
+backend/
+*.py
+*.pyc
+__pycache__/
+.venv/
+venv/
+.pytest_cache/
+
+# Build outputs
+dist/
+build/
+coverage/
+htmlcov/
+*.egg-info/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.husky/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# Documentation
+docs/
+
+# Test reports
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# Cache
+.eslintcache
