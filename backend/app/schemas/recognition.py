@@ -5,7 +5,8 @@ Request and response models with validation
 
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
+from uuid import UUID
 import base64
 
 
@@ -51,10 +52,18 @@ class RecognitionResponse(BaseModel):
     description: str = Field(..., description="Detailed description of the artwork")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score (0-1)")
     timestamp: datetime = Field(default_factory=datetime.now, description="When the recognition was performed")
-    
+
     # Additional fields for cache and performance tracking
     cached: bool = Field(default=False, description="Whether result was served from cache")
     processing_time_ms: int = Field(default=0, description="Processing time in milliseconds")
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_str(cls, v: Union[str, UUID]) -> str:
+        """Convert UUID object to string"""
+        if isinstance(v, UUID):
+            return str(v)
+        return v
 
     class Config:
         from_attributes = True  # Updated from orm_mode in Pydantic v2

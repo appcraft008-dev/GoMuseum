@@ -125,7 +125,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 **验证后端**:
 
-- 浏览器打开: http://localhost:8000/docs
+- 浏览器打开: http://localhost:8000/api/docs
 - 应该看到Swagger API文档界面
 - 点击 `GET /api/health/` → Try it out → Execute
 - 应该返回: `{"status": "ok"}`
@@ -150,7 +150,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 # 运行应用 (选择一个选项)
 
 # 选项1: iOS模拟器
-flutter run -d "iPhone 15 Pro"
+flutter run -d "iPhone 16 Pro"
 
 # 选项2: Android模拟器
 flutter run -d emulator-5554
@@ -705,7 +705,7 @@ Python测试:
 
 ## ✅ 验收签字
 
-**验收人**: **\*\*\*\***\_\_\_**\*\*\*\***
+**验收人**: ********\_\_\_********
 **验收日期**: 2025年10月2日
 **验收类型**: [x] 自动化验收 / [ ] 完整端到端验收
 **验收结果**: [x] 基础通过 / [ ] 完整通过 / [ ] 不通过

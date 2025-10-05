@@ -10,14 +10,14 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - '5432:5432'
 
   redis:
     image: redis:7
     container_name: gomuseum-redis
     restart: always
     ports:
-      - "6379:6379"
+      - '6379:6379'
 
   backend:
     build:
@@ -31,8 +31,16 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/gomuseum
       REDIS_URL: redis://redis:6379/0
+      # AI API Keys - 请替换为您的真实密钥
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # AI Performance Settings
+      AI_STRATEGY_TIMEOUT: ${AI_STRATEGY_TIMEOUT:-30}
+      AI_TOTAL_TIMEOUT: ${AI_TOTAL_TIMEOUT:-60}
+      OPENAI_TIMEOUT: ${OPENAI_TIMEOUT:-30}
+      ANTHROPIC_TIMEOUT: ${ANTHROPIC_TIMEOUT:-30}
     ports:
-      - "8000:8000"
+      - '8000:8000'
 
   frontend:
     build:
@@ -41,8 +49,7 @@ services:
     container_name: gomuseum-frontend
     restart: always
     ports:
-      - "3000:3000"
+      - '3000:3000'
 
 volumes:
   db_data:
-

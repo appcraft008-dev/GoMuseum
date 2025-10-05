@@ -6,7 +6,7 @@ part of 'recognition_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$dioHash() => r'afb294d3961c90622d1e5a24960554953f11ab90';
+String _$dioHash() => r'354d5a3b28c1032f01b7f41f83a57086b97761ad';
 
 /// Dio客户端Provider
 ///
@@ -24,24 +24,6 @@ final dioProvider = AutoDisposeProvider<Dio>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DioRef = AutoDisposeProviderRef<Dio>;
-String _$appDatabaseHash() => r'68c9ad772c198d1a34d2dcccc0a6a35f43092fd5';
-
-/// 数据库Provider
-///
-/// Copied from [appDatabase].
-@ProviderFor(appDatabase)
-final appDatabaseProvider = AutoDisposeProvider<AppDatabase>.internal(
-  appDatabase,
-  name: r'appDatabaseProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$appDatabaseHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef AppDatabaseRef = AutoDisposeProviderRef<AppDatabase>;
 String _$networkInfoHash() => r'2bf44e6bdb28d5de63bc0a507b333a33e83758e9';
 
 /// 网络信息Provider
@@ -83,9 +65,9 @@ final recognitionRemoteDataSourceProvider =
 typedef RecognitionRemoteDataSourceRef
     = AutoDisposeProviderRef<RecognitionRemoteDataSource>;
 String _$recognitionLocalDataSourceHash() =>
-    r'f92112d448eb3baddac9a4ce74e7847644c6188c';
+    r'b90781fe377a15acbf43bf4e8c914543265067de';
 
-/// 本地数据源Provider
+/// 本地数据源Provider - 根据平台选择实现
 ///
 /// Copied from [recognitionLocalDataSource].
 @ProviderFor(recognitionLocalDataSource)

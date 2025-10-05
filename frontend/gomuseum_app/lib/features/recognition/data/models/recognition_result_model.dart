@@ -1,7 +1,7 @@
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
-import 'package:gomuseum_app/features/recognition/data/datasources/recognition_drift_database.dart';
 
 /// RecognitionResult的数据模型(带JSON序列化)
+/// 此模型不依赖任何平台特定代码，可在所有平台使用
 class RecognitionResultModel extends RecognitionResult {
   const RecognitionResultModel({
     required super.id,
@@ -37,33 +37,6 @@ class RecognitionResultModel extends RecognitionResult {
       'confidence': confidence,
       'timestamp': timestamp.toIso8601String(),
     };
-  }
-
-  /// 从Drift数据创建
-  factory RecognitionResultModel.fromDrift(RecognitionResultData data) {
-    return RecognitionResultModel(
-      id: data.id,
-      artworkName: data.artworkName,
-      artist: data.artist,
-      period: data.period,
-      description: data.description,
-      confidence: data.confidence,
-      timestamp: data.timestamp,
-    );
-  }
-
-  /// 转换为Drift数据
-  RecognitionResultsCompanion toDrift(String imageHash) {
-    return RecognitionResultsCompanion.insert(
-      imageHash: imageHash,
-      id: id,
-      artworkName: artworkName,
-      artist: artist,
-      period: period,
-      description: description,
-      confidence: confidence,
-      timestamp: timestamp,
-    );
   }
 
   /// 从Entity创建Model
