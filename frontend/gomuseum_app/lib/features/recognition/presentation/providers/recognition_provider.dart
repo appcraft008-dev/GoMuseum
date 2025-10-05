@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/entities/recognition_result.dart';
 import 'recognition_providers.dart';
@@ -43,7 +43,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   }
 
   /// 识别艺术品
-  Future<void> recognizeArtwork(File imageFile) async {
+  Future<void> recognizeArtwork(XFile imageFile) async {
     state = const RecognitionLoading();
 
     final useCase = ref.read(recognizeArtworkUseCaseProvider);
@@ -58,5 +58,19 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   /// 重置状态
   void resetState() {
     state = const RecognitionInitial();
+  }
+
+  /// 强制重新识别（绕过缓存）
+  Future<void> recognizeArtworkForceFresh(XFile imageFile) async {
+    state = const RecognitionLoading();
+
+    // 直接调用远程数据源，绕过Repository的缓存逻辑
+    final repository = ref.read(recognizeArtworkUseCaseProvider);
+    final result = await repository(imageFile);
+
+    result.fold(
+      (failure) => state = RecognitionError(failure.message),
+      (recognition) => state = RecognitionSuccess(recognition),
+    );
   }
 }

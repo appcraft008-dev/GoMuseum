@@ -24,6 +24,10 @@ dependencies:
   # 图片处理
   image_picker: ^1.0.5
   camera: ^0.10.5
+  cross_file: ^0.3.3
+
+  # HTTP 解析器
+  http_parser: ^4.0.2
 
   # 工具
   dartz: ^0.10.1

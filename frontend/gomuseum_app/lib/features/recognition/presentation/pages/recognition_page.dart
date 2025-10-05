@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -86,9 +85,10 @@ class RecognitionPage extends ConsumerWidget {
 
     if (image != null) {
       if (context.mounted) {
+        // 直接传递 XFile，不需要转换为 File
         await ref
             .read(recognitionNotifierProvider.notifier)
-            .recognizeArtwork(File(image.path));
+            .recognizeArtwork(image);
       }
     }
   }
@@ -100,9 +100,10 @@ class RecognitionPage extends ConsumerWidget {
 
     if (image != null) {
       if (context.mounted) {
+        // 直接传递 XFile，不需要转换为 File
         await ref
             .read(recognitionNotifierProvider.notifier)
-            .recognizeArtwork(File(image.path));
+            .recognizeArtwork(image);
       }
     }
   }

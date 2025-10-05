@@ -3,11 +3,10 @@ Recognition Result Model
 SQLAlchemy model for storing artwork recognition results
 """
 
-from sqlalchemy import Column, String, Float, DateTime, Text, Index
+from sqlalchemy import Column, String, Float, DateTime, Text, Index, func
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 import uuid
-from datetime import datetime
 
 
 class RecognitionResult(Base):
@@ -34,7 +33,7 @@ class RecognitionResult(Base):
     period = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     confidence = Column(Float, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = Column(DateTime, server_default=func.now(), nullable=False, index=True)
 
     # Create composite index for common queries
     __table_args__ = (

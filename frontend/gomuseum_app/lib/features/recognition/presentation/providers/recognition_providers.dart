@@ -1,29 +1,37 @@
+import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/network/network_info.dart';
-import '../../data/datasources/recognition_drift_database.dart';
 import '../../data/datasources/recognition_local_datasource.dart';
 import '../../data/datasources/recognition_remote_datasource.dart';
 import '../../data/repositories/recognition_repository_impl.dart';
 import '../../domain/repositories/recognition_repository.dart';
 import '../../domain/usecases/recognize_artwork.dart';
 
+// 条件导入：根据平台选择数据源实现
+import '../../data/datasources/recognition_local_datasource_impl.dart'
+    if (dart.library.html) '../../data/datasources/recognition_local_datasource_stub.dart';
+
 part 'recognition_providers.g.dart';
 
 /// Dio客户端Provider
 @riverpod
 Dio dio(DioRef ref) {
-  return Dio(BaseOptions(
-    baseUrl: 'http://localhost:8000',
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 5),
-  ));
-}
+  // Android 模拟器需要使用 10.0.2.2 访问宿主机
+  String baseUrl = 'http://localhost:8000';
+  try {
+    if (Platform.isAndroid) {
+      baseUrl = 'http://10.0.2.2:8000';
+    }
+  } catch (e) {
+    // Web 平台会抛出异常，使用默认 localhost
+  }
 
-/// 数据库Provider
-@riverpod
-AppDatabase appDatabase(AppDatabaseRef ref) {
-  return AppDatabase();
+  return Dio(BaseOptions(
+    baseUrl: baseUrl,
+    connectTimeout: const Duration(seconds: 60),
+    receiveTimeout: const Duration(seconds: 60),
+  ));
 }
 
 /// 网络信息Provider
@@ -39,12 +47,12 @@ RecognitionRemoteDataSource recognitionRemoteDataSource(
   return RecognitionRemoteDataSourceImpl(dio: ref.watch(dioProvider));
 }
 
-/// 本地数据源Provider
+/// 本地数据源Provider - 根据平台选择实现
 @riverpod
 RecognitionLocalDataSource recognitionLocalDataSource(
     RecognitionLocalDataSourceRef ref) {
-  return RecognitionLocalDataSourceImpl(
-      database: ref.watch(appDatabaseProvider));
+  // 条件导入会根据平台自动选择正确的实现
+  return RecognitionLocalDataSourceImpl();
 }
 
 /// Repository Provider
