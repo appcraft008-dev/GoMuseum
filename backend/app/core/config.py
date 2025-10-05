@@ -17,15 +17,18 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Database
+    DATABASE_URL: Optional[str] = None
     POSTGRES_USER: str = "gomuseum"
     POSTGRES_PASSWORD: str = "gomuseum123"
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "gomuseum_db"
 
-    @property
-    def DATABASE_URL(self) -> str:
-        """Construct database URL from components"""
+    def get_database_url(self) -> str:
+        """Get database URL, prefer DATABASE_URL env var, fallback to constructed URL"""
+        if self.DATABASE_URL:
+            # Convert asyncpg URL to sync psycopg2 URL
+            return self.DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
         return (
             f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -44,12 +47,12 @@ class Settings(BaseSettings):
 
     # Anthropic Claude (fallback)
     ANTHROPIC_API_KEY: Optional[str] = None
-    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"
-    ANTHROPIC_TIMEOUT: int = 2
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"  # 正确的模型名
+    ANTHROPIC_TIMEOUT: int = 30
 
     # AI Performance
-    AI_STRATEGY_TIMEOUT: int = 3
-    AI_TOTAL_TIMEOUT: int = 5
+    AI_STRATEGY_TIMEOUT: int = 30  # 增加到30秒，给AI足够时间响应
+    AI_TOTAL_TIMEOUT: int = 60  # 总超时60秒
     ENABLE_CLAUDE_FALLBACK: bool = True
 
     # Image Processing

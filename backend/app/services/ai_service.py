@@ -72,8 +72,8 @@ class AIService:
         Recognize artwork from image using AI with fallback strategies
 
         Fallback chain:
-        1. OpenAI GPT-4V (3s timeout)
-        2. Anthropic Claude Vision (2s timeout)
+        1. OpenAI GPT-4V (configurable timeout)
+        2. Anthropic Claude Vision (configurable timeout)
         3. Manual fallback (always succeeds)
 
         Args:
@@ -92,15 +92,16 @@ class AIService:
             AIServiceException: If all strategies fail
         """
         logger.info("AIService.recognize() called - trying multi-tier strategies")
+        logger.info(f"Using strategy timeout: {self.strategy_timeout}s")
 
         strategies = [
-            ("openai", self._recognize_with_openai, 3),
-            ("claude", self._recognize_with_claude, 2),
+            ("openai", self._recognize_with_openai, self.strategy_timeout),
+            ("claude", self._recognize_with_claude, self.strategy_timeout),
         ]
 
         for strategy_name, strategy_func, timeout in strategies:
             try:
-                logger.info(f"Trying recognition strategy: {strategy_name}")
+                logger.info(f"Trying recognition strategy: {strategy_name} with {timeout}s timeout")
                 result = await asyncio.wait_for(
                     strategy_func(base64_image), timeout=timeout
                 )
@@ -109,11 +110,15 @@ class AIService:
                 return result
             except asyncio.TimeoutError:
                 logger.warning(
-                    f"{strategy_name} strategy timed out after {timeout}s"
+                    f"{strategy_name} strategy timed out after {timeout}s - "
+                    f"API call may still be in progress but was interrupted"
                 )
                 continue
             except Exception as e:
-                logger.error(f"{strategy_name} strategy failed: {str(e)}")
+                logger.error(
+                    f"{strategy_name} strategy failed: {str(e)}",
+                    exc_info=True  # 这会打印完整的堆栈跟踪
+                )
                 continue
 
         # All strategies failed, use manual fallback
@@ -153,6 +158,9 @@ Return ONLY valid JSON in this exact format:
 """
 
         try:
+            logger.info(f"Calling OpenAI API with model: {self.model}")
+            logger.info(f"Image data length: {len(base64_image)} chars")
+
             response = await client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -174,8 +182,11 @@ Return ONLY valid JSON in this exact format:
                 temperature=0.2,
             )
 
+            logger.info("OpenAI API call completed successfully")
+
             # Parse JSON response
             content = response.choices[0].message.content
+            logger.info(f"OpenAI response content length: {len(content)} chars")
             # Extract JSON from markdown code blocks if present
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()

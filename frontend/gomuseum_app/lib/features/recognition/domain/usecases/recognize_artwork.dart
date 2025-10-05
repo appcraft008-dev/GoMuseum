@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
@@ -12,7 +12,7 @@ class RecognizeArtwork {
   const RecognizeArtwork({required this.repository});
 
   /// 执行识别
-  Future<Either<Failure, RecognitionResult>> call(File imageFile) async {
+  Future<Either<Failure, RecognitionResult>> call(XFile imageFile) async {
     // 1. 验证图片
     final validationResult = await _validateImage(imageFile);
     if (validationResult != null) {
@@ -36,34 +36,29 @@ class RecognizeArtwork {
   }
 
   /// 验证图片(格式/大小)
-  Future<Failure?> _validateImage(File imageFile) async {
-    // 检查文件是否存在
-    if (!await imageFile.exists()) {
-      return const ValidationFailure('Image file does not exist');
-    }
+  Future<Failure?> _validateImage(XFile imageFile) async {
+    try {
+      // 读取文件字节（XFile 跨平台兼容）
+      final bytes = await imageFile.readAsBytes();
+      if (bytes.isEmpty) {
+        return const ValidationFailure('Image file is empty');
+      }
 
-    // 检查文件大小(<10MB)
-    final fileSize = await imageFile.length();
-    if (fileSize > 10 * 1024 * 1024) {
-      return const ValidationFailure('Image size exceeds 10MB limit');
-    }
+      // 检查文件大小(<10MB)
+      if (bytes.length > 10 * 1024 * 1024) {
+        return const ValidationFailure('Image size exceeds 10MB limit');
+      }
 
-    if (fileSize == 0) {
-      return const ValidationFailure('Image file is empty');
-    }
+      // 检查图片格式(JPEG/PNG)
+      if (!_isValidImageFormat(bytes)) {
+        return const ValidationFailure(
+            'Unsupported image format. Only JPEG and PNG are supported');
+      }
 
-    // 检查图片格式(JPEG/PNG)
-    final bytes = await imageFile.readAsBytes();
-    if (bytes.isEmpty) {
-      return const ValidationFailure('Image bytes are empty');
+      return null;
+    } catch (e) {
+      return ValidationFailure('Failed to read image file: $e');
     }
-
-    if (!_isValidImageFormat(bytes)) {
-      return const ValidationFailure(
-          'Unsupported image format. Only JPEG and PNG are supported');
-    }
-
-    return null;
   }
 
   /// 检查图片格式
@@ -87,7 +82,7 @@ class RecognizeArtwork {
   }
 
   /// 生成图片哈希
-  Future<String> _generateImageHash(File imageFile) async {
+  Future<String> _generateImageHash(XFile imageFile) async {
     final bytes = await imageFile.readAsBytes();
     final digest = sha256.convert(bytes);
     return digest.toString();

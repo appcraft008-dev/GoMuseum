@@ -3,9 +3,16 @@ name: GoMuseum CI
 
 on:
   push:
-    branches: [main, staging, 'feature/**']
+    branches:
+      - main
+      - staging
+      - feature/**
+      - step**
   pull_request:
-    branches: [main, staging]
+    branches:
+      - main
+      - staging
+      - step**
 
 jobs:
   # 基础安全扫描（保存为 artifact，而不是上传到 Security tab）

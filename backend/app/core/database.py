@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # - pool_timeout: Wait up to 30 seconds for available connection
 # - echo: Log SQL queries in debug mode
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.get_database_url(),
     pool_pre_ping=True,
     pool_size=20,  # Base pool size for normal operations
     max_overflow=40,  # Allow up to 60 total connections under peak load
