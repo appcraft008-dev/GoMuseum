@@ -1,13 +1,13 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:dartz/dartz.dart';
 import 'package:crypto/crypto.dart';
-import '../../../../core/error/exceptions.dart';
-import '../../../../core/error/failures.dart';
-import '../../../../core/network/network_info.dart';
-import '../../domain/entities/recognition_result.dart';
-import '../../domain/repositories/recognition_repository.dart';
-import '../datasources/recognition_local_datasource.dart';
-import '../datasources/recognition_remote_datasource.dart';
+import 'package:gomuseum_app/core/error/exceptions.dart';
+import 'package:gomuseum_app/core/error/failures.dart';
+import 'package:gomuseum_app/core/network/network_info.dart';
+import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
+import 'package:gomuseum_app/features/recognition/domain/repositories/recognition_repository.dart';
+import 'package:gomuseum_app/features/recognition/data/datasources/recognition_local_datasource.dart';
+import 'package:gomuseum_app/features/recognition/data/datasources/recognition_remote_datasource.dart';
 
 /// Repository实现
 class RecognitionRepositoryImpl implements RecognitionRepository {

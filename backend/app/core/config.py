@@ -67,6 +67,34 @@ class Settings(BaseSettings):
     # Performance
     REQUEST_TIMEOUT_SECONDS: int = 5
 
+    # === Step 2: Explanation & TTS Configuration ===
+
+    # Supported languages
+    SUPPORTED_LANGUAGES: list = ["en", "fr", "de", "es", "it", "zh"]
+    DEFAULT_LANGUAGE: str = "en"
+
+    # TTS Configuration
+    TTS_MODEL: str = "tts-1"  # tts-1 or tts-1-hd
+    TTS_VOICE: str = "alloy"  # alloy, echo, fable, onyx, nova, shimmer
+    TTS_SPEED: float = 1.0
+    TTS_TIMEOUT: int = 15  # TTS generation timeout
+
+    # Audio Storage
+    AUDIO_STORAGE_PATH: str = "/app/storage/audio"
+    AUDIO_BASE_URL: str = "http://localhost:8000/audio"  # Development
+    CDN_BASE_URL: Optional[str] = None  # Production CDN
+
+    # Cache TTL Configuration
+    EXPLANATION_CACHE_TTL: int = 604800  # 7 days
+    TTS_CACHE_TTL: int = 2592000  # 30 days
+
+    # Detail level token limits
+    DETAIL_LEVEL_TOKENS: dict = {
+        "brief": 150,
+        "standard": 500,
+        "detailed": 1000,
+    }
+
     class Config:
         env_file = ".env"
         case_sensitive = True

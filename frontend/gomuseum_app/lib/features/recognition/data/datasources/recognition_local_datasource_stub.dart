@@ -3,6 +3,7 @@
 ///
 /// 注意：此类使用与原生平台相同的类名 RecognitionLocalDataSourceImpl
 /// 这样条件导入才能正常工作
+library;
 
 import 'package:gomuseum_app/features/recognition/data/models/recognition_result_model.dart';
 import 'package:gomuseum_app/features/recognition/data/datasources/recognition_local_datasource.dart';

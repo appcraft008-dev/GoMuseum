@@ -5,6 +5,7 @@ SQLAlchemy model for storing artwork recognition results
 
 from sqlalchemy import Column, String, Float, DateTime, Text, Index, func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 import uuid
 
@@ -34,6 +35,9 @@ class RecognitionResult(Base):
     description = Column(Text, nullable=False)
     confidence = Column(Float, nullable=False)
     timestamp = Column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+    # Relationships (Step 2: AI Explanation)
+    explanations = relationship("Explanation", back_populates="recognition")
 
     # Create composite index for common queries
     __table_args__ = (

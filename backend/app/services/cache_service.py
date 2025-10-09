@@ -138,6 +138,75 @@ class CacheService:
         except Exception as e:
             logger.error(f"Unexpected error during cache invalidation: {str(e)}")
 
+    def get(self, key: str) -> Optional[any]:
+        """
+        Generic get method for retrieving cached data
+
+        Args:
+            key: Cache key
+
+        Returns:
+            Cached data (deserialized from JSON) or None
+        """
+        if not self.redis_client:
+            logger.warning("Redis client not available, skipping cache lookup")
+            self._miss_count += 1
+            return None
+
+        try:
+            cached_data = self.redis_client.get(key)
+
+            if cached_data:
+                logger.debug(f"Cache hit for key: {key}")
+                self._hit_count += 1
+                try:
+                    return json.loads(cached_data)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to deserialize cached data for key {key}: {str(e)}")
+                    self._miss_count += 1
+                    return None
+            else:
+                logger.debug(f"Cache miss for key: {key}")
+                self._miss_count += 1
+                return None
+
+        except redis.RedisError as e:
+            logger.error(f"Redis error during cache lookup for key {key}: {str(e)}")
+            self._miss_count += 1
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error during cache lookup for key {key}: {str(e)}")
+            self._miss_count += 1
+            return None
+
+    def set(self, key: str, value: any, ttl: Optional[int] = None) -> None:
+        """
+        Generic set method for caching data
+
+        Args:
+            key: Cache key
+            value: Data to cache (will be JSON serialized)
+            ttl: Time to live in seconds (defaults to CACHE_TTL_SECONDS)
+        """
+        if not self.redis_client:
+            logger.warning("Redis client not available, skipping cache write")
+            return
+
+        if ttl is None:
+            ttl = self.ttl
+
+        try:
+            # Serialize to JSON
+            json_data = json.dumps(value, default=str)
+            self.redis_client.setex(key, ttl, json_data)
+            logger.debug(f"Cached data for key: {key} with TTL: {ttl}s")
+
+        except redis.RedisError as e:
+            logger.error(f"Redis error during cache write for key {key}: {str(e)}")
+            # Don't raise exception, cache write failure shouldn't break the app
+        except Exception as e:
+            logger.error(f"Unexpected error during cache write for key {key}: {str(e)}")
+
     def get_cache_stats(self) -> dict:
         """
         Get cache statistics

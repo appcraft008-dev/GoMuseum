@@ -34,3 +34,8 @@ class ValidationFailure extends Failure {
 class TimeoutFailure extends Failure {
   const TimeoutFailure([super.message = 'Request timeout']);
 }
+
+/// 未找到资源错误
+class NotFoundFailure extends Failure {
+  const NotFoundFailure([super.message = 'Resource not found']);
+}

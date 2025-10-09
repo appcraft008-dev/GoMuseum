@@ -1,5 +1,7 @@
 /// Drift数据库相关的转换器扩展
 /// 此文件仅在原生平台导入，Web平台不会使用
+library;
+
 import 'package:gomuseum_app/features/recognition/data/models/recognition_result_model.dart';
 import 'package:gomuseum_app/features/recognition/data/datasources/recognition_drift_database.dart';
 

@@ -42,3 +42,12 @@ class TimeoutException implements Exception {
   @override
   String toString() => 'TimeoutException: $message';
 }
+
+/// 未找到资源异常
+class NotFoundException implements Exception {
+  final String message;
+  const NotFoundException([this.message = 'Resource not found']);
+
+  @override
+  String toString() => 'NotFoundException: $message';
+}

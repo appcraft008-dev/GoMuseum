@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/entities/recognition_result.dart';
+import '../../../explanation/presentation/pages/explanation_page.dart';
 
 /// 识别结果展示组件
 class RecognitionResultWidget extends StatelessWidget {
@@ -13,6 +15,8 @@ class RecognitionResultWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return SingleChildScrollView(
       child: Card(
         elevation: 4,
@@ -34,7 +38,7 @@ class RecognitionResultWidget extends StatelessWidget {
               _buildInfoRow(
                 context,
                 icon: Icons.person,
-                label: 'Artist',
+                label: l10n.artist,
                 value: result.artist,
               ),
               const SizedBox(height: 12),
@@ -43,7 +47,7 @@ class RecognitionResultWidget extends StatelessWidget {
               _buildInfoRow(
                 context,
                 icon: Icons.calendar_today,
-                label: 'Period',
+                label: l10n.period,
                 value: result.period,
               ),
               const SizedBox(height: 12),
@@ -52,7 +56,7 @@ class RecognitionResultWidget extends StatelessWidget {
               _buildInfoRow(
                 context,
                 icon: Icons.analytics,
-                label: 'Confidence',
+                label: l10n.confidence,
                 value: '${(result.confidence * 100).toStringAsFixed(1)}%',
               ),
               const SizedBox(height: 12),
@@ -61,7 +65,7 @@ class RecognitionResultWidget extends StatelessWidget {
               _buildInfoRow(
                 context,
                 icon: Icons.access_time,
-                label: 'Recognized at',
+                label: l10n.recognizedAt,
                 value: DateFormat('yyyy-MM-dd HH:mm').format(result.timestamp),
               ),
               const SizedBox(height: 16),
@@ -70,7 +74,7 @@ class RecognitionResultWidget extends StatelessWidget {
               const Divider(),
               const SizedBox(height: 8),
               Text(
-                'Description',
+                l10n.description,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -80,8 +84,34 @@ class RecognitionResultWidget extends StatelessWidget {
                 result.description,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              const SizedBox(height: 24),
+
+              // 获取详细解释按钮
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _navigateToExplanation(context),
+                  icon: const Icon(Icons.article),
+                  label: Text(l10n.getDetailedExplanation),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToExplanation(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExplanationPage(
+          artworkName: result.artworkName,
+          recognitionId: result.id,
         ),
       ),
     );

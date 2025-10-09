@@ -348,6 +348,182 @@ Return only the JSON object, no other text.
             return False
         return True
 
+    async def generate_content(
+        self, prompt: str, language: str = "en", detail_level: str = "standard"
+    ) -> Dict[str, any]:
+        """
+        Generate text content using AI (for explanations, descriptions, etc.)
+
+        Args:
+            prompt: The prompt for content generation
+            language: Target language code
+            detail_level: Detail level (brief, standard, detailed)
+
+        Returns:
+            Dictionary containing:
+                - content: str (generated text)
+                - word_count: int
+                - source: str (openai|claude|manual)
+
+        Raises:
+            AIServiceException: If all strategies fail
+        """
+        logger.info("AIService.generate_content() called")
+        logger.info(f"Language: {language}, Detail level: {detail_level}")
+
+        # Try OpenAI first, then Claude, then fallback
+        strategies = [
+            ("openai", self._generate_content_with_openai, self.strategy_timeout),
+            ("claude", self._generate_content_with_claude, self.strategy_timeout),
+        ]
+
+        for strategy_name, strategy_func, timeout in strategies:
+            try:
+                logger.info(f"Trying content generation with {strategy_name}")
+                result = await asyncio.wait_for(
+                    strategy_func(prompt, language, detail_level), timeout=timeout
+                )
+                result["source"] = strategy_name
+                logger.info(f"Content generation successful with {strategy_name}")
+                return result
+            except asyncio.TimeoutError:
+                logger.warning(f"{strategy_name} content generation timed out")
+                continue
+            except Exception as e:
+                logger.error(f"{strategy_name} content generation failed: {str(e)}", exc_info=True)
+                continue
+
+        # All strategies failed, use fallback
+        logger.warning("All content generation strategies failed, using fallback")
+        return self._fallback_content_generation(prompt, language)
+
+    async def _generate_content_with_openai(
+        self, prompt: str, language: str, detail_level: str
+    ) -> Dict[str, any]:
+        """
+        Generate content using OpenAI GPT-4
+
+        Args:
+            prompt: Content generation prompt
+            language: Target language
+            detail_level: Detail level
+
+        Returns:
+            Dictionary with content and metadata
+        """
+        client = _get_openai_client()
+        if client is None:
+            raise AIServiceException("OpenAI client not available")
+
+        try:
+            logger.info(f"Calling OpenAI for content generation in {language}")
+
+            # Get token limit based on detail level
+            max_tokens = getattr(settings, "DETAIL_LEVEL_TOKENS", {}).get(
+                detail_level, 500
+            )
+
+            response = await client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert art historian providing museum-quality explanations.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=max_tokens,
+                temperature=0.7,
+            )
+
+            content = response.choices[0].message.content.strip()
+            word_count = len(content.split())
+
+            logger.info(f"OpenAI content generation successful, {word_count} words")
+
+            return {"content": content, "word_count": word_count}
+
+        except Exception as e:
+            logger.error(f"OpenAI content generation failed: {str(e)}")
+            raise AIServiceException(f"OpenAI content generation error: {str(e)}")
+
+    async def _generate_content_with_claude(
+        self, prompt: str, language: str, detail_level: str
+    ) -> Dict[str, any]:
+        """
+        Generate content using Anthropic Claude
+
+        Args:
+            prompt: Content generation prompt
+            language: Target language
+            detail_level: Detail level
+
+        Returns:
+            Dictionary with content and metadata
+        """
+        client = _get_claude_client()
+        if client is None:
+            raise AIServiceException("Claude client not available")
+
+        try:
+            logger.info(f"Calling Claude for content generation in {language}")
+
+            # Get token limit based on detail level
+            max_tokens = getattr(settings, "DETAIL_LEVEL_TOKENS", {}).get(
+                detail_level, 500
+            )
+
+            message = await client.messages.create(
+                model=getattr(settings, "ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"),
+                max_tokens=max_tokens,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"You are an expert art historian. {prompt}",
+                    }
+                ],
+            )
+
+            content = message.content[0].text.strip()
+            word_count = len(content.split())
+
+            logger.info(f"Claude content generation successful, {word_count} words")
+
+            return {"content": content, "word_count": word_count}
+
+        except Exception as e:
+            logger.error(f"Claude content generation failed: {str(e)}")
+            raise AIServiceException(f"Claude content generation error: {str(e)}")
+
+    def _fallback_content_generation(
+        self, prompt: str, language: str
+    ) -> Dict[str, any]:
+        """
+        Fallback content when AI services fail
+
+        Args:
+            prompt: Original prompt
+            language: Target language
+
+        Returns:
+            Generic fallback content
+        """
+        fallback_messages = {
+            "en": "We apologize, but we are currently unable to generate a detailed explanation for this artwork. Please try again later or contact museum staff for assistance.",
+            "fr": "Nous nous excusons, mais nous ne pouvons actuellement pas générer une explication détaillée pour cette œuvre. Veuillez réessayer plus tard ou contacter le personnel du musée.",
+            "de": "Wir entschuldigen uns, aber wir können derzeit keine detaillierte Erklärung für dieses Kunstwerk erstellen. Bitte versuchen Sie es später erneut oder wenden Sie sich an das Museumspersonal.",
+            "es": "Nos disculpamos, pero actualmente no podemos generar una explicación detallada para esta obra de arte. Por favor, inténtelo de nuevo más tarde o contacte al personal del museo.",
+            "it": "Ci scusiamo, ma al momento non siamo in grado di generare una spiegazione dettagliata per quest'opera d'arte. Si prega di riprovare più tardi o contattare il personale del museo.",
+            "zh": "抱歉，我们目前无法为这件艺术品生成详细说明。请稍后重试或联系博物馆工作人员寻求帮助。",
+        }
+
+        content = fallback_messages.get(
+            language,
+            "Unable to generate explanation. Please try again later.",
+        )
+
+        return {"content": content, "word_count": len(content.split()), "source": "fallback"}
+
     async def health_check(self) -> Dict[str, any]:
         """
         Check if AI service is available

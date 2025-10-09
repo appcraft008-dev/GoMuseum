@@ -1,5 +1,7 @@
 /// 原生平台的本地数据源实现
 /// 此文件仅在原生平台(macOS, iOS, Android)导入
+library;
+
 import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognition_result_model.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognition_result_model_drift_extensions.dart';

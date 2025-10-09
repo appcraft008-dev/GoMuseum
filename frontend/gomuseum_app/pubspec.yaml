@@ -4,8 +4,13 @@ version: 0.1.0
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
+flutter:
+  generate: true
+
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # 状态管理
@@ -32,8 +37,16 @@ dependencies:
   # 工具
   dartz: ^0.10.1
   crypto: ^3.0.3
-  intl: ^0.18.1
+  intl: ^0.20.2
   equatable: ^2.0.5
+  logger: ^2.0.2
+
+  # 音频播放
+  just_audio: ^0.9.36
+
+  # 代码生成（freezed用于状态类）
+  freezed_annotation: ^2.4.1
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_lints: ^6.0.0
@@ -44,6 +57,8 @@ dev_dependencies:
   build_runner: ^2.4.8
   riverpod_generator: ^2.3.0
   drift_dev: ^2.16.0
+  freezed: ^2.4.6
+  json_serializable: ^6.7.1
 
   # 测试
   mockito: ^5.4.4
