@@ -6,7 +6,7 @@ part of 'recognition_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$dioHash() => r'354d5a3b28c1032f01b7f41f83a57086b97761ad';
+String _$dioHash() => r'81e4639899c71b4461c17a3a6eba2c4900aeb324';
 
 /// Dio客户端Provider
 ///

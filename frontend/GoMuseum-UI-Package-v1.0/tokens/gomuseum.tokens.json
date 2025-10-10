@@ -1,0 +1,196 @@
+{
+  "$themes": [
+    {
+      "id": "light",
+      "name": "GoMuseum Light",
+      "selectedTokenSets": {
+        "core/color": "source",
+        "core/typography": "source",
+        "core/space": "source",
+        "core/radius": "source",
+        "core/shadow": "source",
+        "component": "enabled"
+      }
+    }
+  ],
+  "core/color": {
+    "brand/primary": {
+      "value": "#2C2C2C",
+      "type": "color"
+    },
+    "brand/accent": {
+      "value": "#C1A46D",
+      "type": "color"
+    },
+    "bg/base": {
+      "value": "#F7F4EF",
+      "type": "color"
+    },
+    "text/primary": {
+      "value": "#1A1A1A",
+      "type": "color"
+    },
+    "text/secondary": {
+      "value": "#5C5C5C",
+      "type": "color"
+    },
+    "border/subtle": {
+      "value": "rgba(0,0,0,0.08)",
+      "type": "color"
+    },
+    "status/success": {
+      "value": "#3BB273",
+      "type": "color"
+    },
+    "status/warn": {
+      "value": "#F4B400",
+      "type": "color"
+    },
+    "status/error": {
+      "value": "#D93025",
+      "type": "color"
+    },
+    "cta/recognize": {
+      "value": "#FFCC00",
+      "type": "color"
+    },
+    "overlay/scrim": {
+      "value": "rgba(0,0,0,0.5)",
+      "type": "color"
+    }
+  },
+  "core/typography": {
+    "font/brand": {
+      "value": "Playfair Display",
+      "type": "fontFamilies"
+    },
+    "font/body": {
+      "value": "Source Han Serif SC, Noto Serif SC, serif",
+      "type": "fontFamilies"
+    },
+    "size/xs": {
+      "value": "12px",
+      "type": "fontSizes"
+    },
+    "size/sm": {
+      "value": "14px",
+      "type": "fontSizes"
+    },
+    "size/md": {
+      "value": "16px",
+      "type": "fontSizes"
+    },
+    "size/lg": {
+      "value": "18px",
+      "type": "fontSizes"
+    },
+    "size/xl": {
+      "value": "22px",
+      "type": "fontSizes"
+    },
+    "size/2xl": {
+      "value": "28px",
+      "type": "fontSizes"
+    },
+    "weight/regular": {
+      "value": "400",
+      "type": "fontWeights"
+    },
+    "weight/medium": {
+      "value": "500",
+      "type": "fontWeights"
+    },
+    "weight/semibold": {
+      "value": "600",
+      "type": "fontWeights"
+    },
+    "weight/bold": {
+      "value": "700",
+      "type": "fontWeights"
+    },
+    "line/normal": {
+      "value": "1.5",
+      "type": "lineHeights"
+    }
+  },
+  "core/space": {
+    "0": {
+      "value": "0",
+      "type": "spacing"
+    },
+    "1": {
+      "value": "4px",
+      "type": "spacing"
+    },
+    "2": {
+      "value": "8px",
+      "type": "spacing"
+    },
+    "3": {
+      "value": "12px",
+      "type": "spacing"
+    },
+    "4": {
+      "value": "16px",
+      "type": "spacing"
+    },
+    "6": {
+      "value": "24px",
+      "type": "spacing"
+    },
+    "8": {
+      "value": "32px",
+      "type": "spacing"
+    },
+    "10": {
+      "value": "40px",
+      "type": "spacing"
+    }
+  },
+  "core/radius": {
+    "sm": {
+      "value": "8px",
+      "type": "borderRadius"
+    },
+    "md": {
+      "value": "12px",
+      "type": "borderRadius"
+    },
+    "lg": {
+      "value": "16px",
+      "type": "borderRadius"
+    },
+    "pill": {
+      "value": "999px",
+      "type": "borderRadius"
+    }
+  },
+  "core/shadow": {
+    "elev/1": {
+      "value": "0px 2px 8px rgba(0,0,0,0.06)",
+      "type": "boxShadow"
+    },
+    "elev/2": {
+      "value": "0px 8px 24px rgba(0,0,0,0.08)",
+      "type": "boxShadow"
+    }
+  },
+  "component": {
+    "btn/height": {
+      "value": "48px",
+      "type": "sizing"
+    },
+    "btn/radius": {
+      "value": "{core/radius/md}",
+      "type": "borderRadius"
+    },
+    "navbar/height": {
+      "value": "64px",
+      "type": "sizing"
+    },
+    "modal/radius": {
+      "value": "{core/radius/lg}",
+      "type": "borderRadius"
+    }
+  }
+}

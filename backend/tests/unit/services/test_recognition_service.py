@@ -711,3 +711,322 @@ class TestGetRecognitionServiceFactory:
         assert service.ai_service == mock_ai_instance
         assert service.cache_service == mock_cache_instance
         assert service.image_service == mock_image_instance
+
+
+class TestRecognitionWithPerceptualHash:
+    """Test three-layer caching with perceptual hash for Step 2 optimization"""
+
+    @pytest.fixture
+    def service_with_mocks(self):
+        """Create RecognitionService with all mocked dependencies"""
+        mock_db = MagicMock()
+        mock_ai_service = MagicMock()
+        mock_cache_service = MagicMock()
+        mock_image_service = MagicMock()
+
+        service = RecognitionService(
+            db=mock_db,
+            ai_service=mock_ai_service,
+            cache_service=mock_cache_service,
+            image_service=mock_image_service
+        )
+
+        return service, mock_db, mock_ai_service, mock_cache_service, mock_image_service
+
+    @pytest.mark.asyncio
+    async def test_exact_file_hash_cache_hit_first(self, service_with_mocks):
+        """should_return_cached_result_from_file_hash_before_checking_perceptual_hash"""
+        # Arrange
+        service, mock_db, mock_ai, mock_cache, mock_image = service_with_mocks
+
+        test_image_data = b"fake_image_bytes"
+        file_hash = "abc123file_hash"
+        perceptual_hash = "8f373e0c183f1e3f"
+
+        # Mock image service
+        mock_image.validate_image.return_value = True
+        mock_image.generate_hash.return_value = file_hash
+        mock_image.generate_perceptual_hash.return_value = perceptual_hash
+
+        # Mock exact file hash cache hit
+        cached_response = RecognitionResponse(
+            id="cached-id-123",
+            artwork_name="Mona Lisa",
+            artist="Leonardo da Vinci",
+            period="Renaissance",
+            description="Famous portrait",
+            confidence=0.95,
+            cached=True,
+            processing_time_ms=50
+        )
+        mock_cache.get_cached_result.return_value = cached_response
+
+        # Act
+        result = await service.recognize_artwork(test_image_data)
+
+        # Assert - 应该返回file hash缓存结果
+        assert result == cached_response
+        assert result.artwork_name == "Mona Lisa"
+
+        # 验证调用顺序: file hash先于perceptual hash
+        mock_cache.get_cached_result.assert_called_once_with(file_hash)
+        # 不应该调用perceptual hash similarity search
+        mock_cache.get_similar_cached_result.assert_not_called()
+        # 不应该调用数据库或AI
+        mock_db.query.assert_not_called()
+        mock_ai.recognize_with_timeout.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_perceptual_hash_cache_hit_different_photo(self, service_with_mocks):
+        """should_find_similar_result_via_perceptual_hash_when_file_hash_misses"""
+        # Arrange
+        service, mock_db, mock_ai, mock_cache, mock_image = service_with_mocks
+
+        test_image_data = b"different_photo_of_same_artwork"
+        file_hash = "new_file_hash_xyz"
+        perceptual_hash = "8f373e0c183f1e3e"  # 相似但不完全相同
+
+        # Mock image service
+        mock_image.validate_image.return_value = True
+        mock_image.generate_hash.return_value = file_hash
+        mock_image.generate_perceptual_hash.return_value = perceptual_hash
+
+        # Mock file hash cache miss
+        mock_cache.get_cached_result.return_value = None
+
+        # Mock perceptual hash similarity cache hit
+        similar_response = RecognitionResponse(
+            id="similar-id-456",
+            artwork_name="Mona Lisa",
+            artist="Leonardo da Vinci",
+            period="Renaissance",
+            description="Same artwork, different photo",
+            confidence=0.94,
+            cached=True,
+            processing_time_ms=80
+        )
+        similarity_score = 0.984  # 98.4% similar
+        mock_cache.get_similar_cached_result.return_value = (similar_response, similarity_score)
+
+        # Act
+        result = await service.recognize_artwork(test_image_data)
+
+        # Assert - 应该返回perceptual hash相似结果
+        assert result == similar_response
+        assert result.artwork_name == "Mona Lisa"
+
+        # 验证调用顺序
+        mock_cache.get_cached_result.assert_called_once_with(file_hash)
+        mock_cache.get_similar_cached_result.assert_called_once_with(
+            perceptual_hash,
+            similarity_threshold=0.90
+        )
+
+        # 应该用新的file hash重新缓存结果 (为了未来更快的查找)
+        assert mock_cache.cache_result.call_count == 1
+        cache_call = mock_cache.cache_result.call_args
+        assert cache_call[0][0] == file_hash
+        assert cache_call[0][1] == similar_response
+        assert cache_call[0][2] == perceptual_hash
+
+        # 不应该调用数据库或AI
+        mock_db.query.assert_not_called()
+        mock_ai.recognize_with_timeout.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_caches_with_both_hashes_after_ai_recognition(self, service_with_mocks):
+        """should_cache_result_with_both_file_hash_and_perceptual_hash_after_ai"""
+        # Arrange
+        service, mock_db, mock_ai, mock_cache, mock_image = service_with_mocks
+
+        test_image_data = b"brand_new_artwork_photo"
+        file_hash = "new_hash_abc"
+        perceptual_hash = "ff00ff00ff00ff00"
+
+        # Mock image service
+        mock_image.validate_image.return_value = True
+        mock_image.generate_hash.return_value = file_hash
+        mock_image.generate_perceptual_hash.return_value = perceptual_hash
+        mock_image.to_base64.return_value = "base64_encoded"
+
+        # Mock all cache misses
+        mock_cache.get_cached_result.return_value = None
+        mock_cache.get_similar_cached_result.return_value = None
+
+        # Mock database miss
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+
+        # Mock AI service
+        ai_result = {
+            "artwork_name": "The Starry Night",
+            "artist": "Vincent van Gogh",
+            "period": "Post-Impressionism",
+            "description": "Swirling night sky painting",
+            "confidence": 0.93
+        }
+        mock_ai.recognize_with_timeout = AsyncMock(return_value=ai_result)
+
+        # Mock database save
+        saved_id = uuid4()
+        mock_db_result = MagicMock(spec=RecognitionResult)
+        mock_db_result.id = saved_id
+        mock_db_result.image_hash = file_hash
+        mock_db_result.artwork_name = ai_result["artwork_name"]
+        mock_db_result.artist = ai_result["artist"]
+        mock_db_result.period = ai_result["period"]
+        mock_db_result.description = ai_result["description"]
+        mock_db_result.confidence = ai_result["confidence"]
+        mock_db_result.timestamp = datetime.now()
+
+        expected_response = RecognitionResponse(
+            id=str(saved_id),
+            artwork_name=ai_result["artwork_name"],
+            artist=ai_result["artist"],
+            period=ai_result["period"],
+            description=ai_result["description"],
+            confidence=ai_result["confidence"]
+        )
+
+        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+            # Act
+            result = await service.recognize_artwork(test_image_data)
+
+            # Assert - 应该完成完整的识别流程
+            assert result.artwork_name == "The Starry Night"
+
+            # 验证三层缓存都被检查了
+            mock_cache.get_cached_result.assert_called_once_with(file_hash)
+            mock_cache.get_similar_cached_result.assert_called_once_with(
+                perceptual_hash,
+                similarity_threshold=0.90
+            )
+            mock_db.query.assert_called_once()
+
+            # 验证AI被调用
+            mock_ai.recognize_with_timeout.assert_called_once_with("base64_encoded")
+
+            # 验证结果被同时缓存到file hash和perceptual hash
+            mock_cache.cache_result.assert_called_once()
+            cache_call = mock_cache.cache_result.call_args
+            assert cache_call[0][0] == file_hash  # file hash
+            assert cache_call[0][1].artwork_name == "The Starry Night"  # result
+            assert cache_call[0][2] == perceptual_hash  # perceptual hash
+
+    @pytest.mark.asyncio
+    async def test_cache_miss_triggers_database_check(self, service_with_mocks):
+        """should_query_database_when_both_cache_layers_miss"""
+        # Arrange
+        service, mock_db, mock_ai, mock_cache, mock_image = service_with_mocks
+
+        test_image_data = b"image_bytes"
+        file_hash = "hash_123"
+        perceptual_hash = "phash_456"
+
+        # Mock image service
+        mock_image.validate_image.return_value = True
+        mock_image.generate_hash.return_value = file_hash
+        mock_image.generate_perceptual_hash.return_value = perceptual_hash
+
+        # Mock both cache layers miss
+        mock_cache.get_cached_result.return_value = None
+        mock_cache.get_similar_cached_result.return_value = None
+
+        # Mock database hit
+        db_id = uuid4()
+        db_result = MagicMock(spec=RecognitionResult)
+        db_result.id = db_id
+        db_result.image_hash = file_hash
+        db_result.artwork_name = "Girl with a Pearl Earring"
+        db_result.artist = "Johannes Vermeer"
+        db_result.period = "Baroque"
+        db_result.description = "Portrait painting"
+        db_result.confidence = 0.91
+        db_result.timestamp = datetime.now()
+        mock_db.query.return_value.filter.return_value.first.return_value = db_result
+
+        expected_response = RecognitionResponse(
+            id=str(db_id),
+            artwork_name="Girl with a Pearl Earring",
+            artist="Johannes Vermeer",
+            period="Baroque",
+            description="Portrait painting",
+            confidence=0.91
+        )
+
+        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+            # Act
+            result = await service.recognize_artwork(test_image_data)
+
+            # Assert - 应该从数据库返回结果
+            assert result.artwork_name == "Girl with a Pearl Earring"
+
+            # 验证所有三层都被检查了
+            mock_cache.get_cached_result.assert_called_once_with(file_hash)
+            mock_cache.get_similar_cached_result.assert_called_once_with(
+                perceptual_hash,
+                similarity_threshold=0.90
+            )
+            mock_db.query.assert_called_once()
+
+            # 验证结果被缓存 (带perceptual hash)
+            mock_cache.cache_result.assert_called_once()
+            cache_call = mock_cache.cache_result.call_args
+            assert cache_call[0][0] == file_hash
+            assert cache_call[0][1].artwork_name == "Girl with a Pearl Earring"
+            assert cache_call[0][2] == perceptual_hash
+
+            # AI不应该被调用 (数据库命中)
+            mock_ai.recognize_with_timeout.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_perceptual_hash_similarity_threshold_respected(self, service_with_mocks):
+        """should_use_90_percent_similarity_threshold_for_perceptual_cache"""
+        # Arrange
+        service, mock_db, mock_ai, mock_cache, mock_image = service_with_mocks
+
+        test_image_data = b"test_image"
+        file_hash = "hash_abc"
+        perceptual_hash = "phash_xyz"
+
+        mock_image.validate_image.return_value = True
+        mock_image.generate_hash.return_value = file_hash
+        mock_image.generate_perceptual_hash.return_value = perceptual_hash
+
+        # Mock file hash miss
+        mock_cache.get_cached_result.return_value = None
+
+        # Mock perceptual hash miss (low similarity)
+        mock_cache.get_similar_cached_result.return_value = None
+
+        # Mock database miss
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+
+        # Mock AI
+        ai_result = {
+            "artwork_name": "Test Artwork",
+            "artist": "Test Artist",
+            "period": "Test Period",
+            "description": "Test Description",
+            "confidence": 0.85
+        }
+        mock_ai.recognize_with_timeout = AsyncMock(return_value=ai_result)
+        mock_image.to_base64.return_value = "base64"
+
+        expected_response = RecognitionResponse(
+            id=str(uuid4()),
+            artwork_name="Test Artwork",
+            artist="Test Artist",
+            period="Test Period",
+            description="Test Description",
+            confidence=0.85
+        )
+
+        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+            # Act
+            await service.recognize_artwork(test_image_data)
+
+            # Assert - 验证相似度阈值为0.90
+            mock_cache.get_similar_cached_result.assert_called_once_with(
+                perceptual_hash,
+                similarity_threshold=0.90
+            )
