@@ -68,15 +68,18 @@ class TestRecognizeArtworkWorkflow:
 
         test_image_data = b"fake_image_bytes"
         test_hash = "abc123hash"
+        test_phash = "0123456789abcdef"
         test_base64 = "base64_encoded_image"
 
         # Mock image service
         mock_image.validate_image.return_value = True
         mock_image.generate_hash.return_value = test_hash
+        mock_image.generate_perceptual_hash.return_value = test_phash
         mock_image.to_base64.return_value = test_base64
 
-        # Mock cache miss
+        # Mock cache miss (both file hash and perceptual hash)
         mock_cache.get_cached_result.return_value = None
+        mock_cache.get_similar_cached_result.return_value = None
 
         # Mock database miss
         mock_db.query.return_value.filter.return_value.first.return_value = None
@@ -169,12 +172,15 @@ class TestRecognizeArtworkWorkflow:
 
         test_image_data = b"fake_image_bytes"
         test_hash = "abc123hash"
+        test_phash = "fedcba9876543210"
 
         mock_image.validate_image.return_value = True
         mock_image.generate_hash.return_value = test_hash
+        mock_image.generate_perceptual_hash.return_value = test_phash
 
-        # Mock cache miss
+        # Mock cache miss (both layers)
         mock_cache.get_cached_result.return_value = None
+        mock_cache.get_similar_cached_result.return_value = None
 
         # Mock database hit - create a proper mock RecognitionResult
         db_id = uuid4()
@@ -207,7 +213,7 @@ class TestRecognizeArtworkWorkflow:
             assert result.artwork_name == "The Scream"
             mock_ai.recognize_with_timeout.assert_not_called()
             mock_db.add.assert_not_called()
-            mock_cache.cache_result.assert_called_once_with(test_hash, result)
+            mock_cache.cache_result.assert_called_once_with(test_hash, result, test_phash)
 
     @pytest.mark.asyncio
     async def test_recognize_artwork_validates_image_first(self, service_with_mocks):
@@ -289,11 +295,14 @@ class TestRecognizeArtworkWorkflow:
 
         test_image_data = b"fake_image_bytes"
         test_hash = "abc123hash"
+        test_phash = "abc123perceptual"
 
         mock_image.validate_image.return_value = True
         mock_image.generate_hash.return_value = test_hash
+        mock_image.generate_perceptual_hash.return_value = test_phash
         mock_image.to_base64.return_value = "base64_data"
         mock_cache.get_cached_result.return_value = None
+        mock_cache.get_similar_cached_result.return_value = None
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
         ai_result = {
