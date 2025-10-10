@@ -10,6 +10,7 @@ from io import BytesIO
 from app.core.exceptions import ValidationException, ImageProcessingException
 from app.core.config import settings
 import logging
+import imagehash
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class ImageService:
     @staticmethod
     def generate_hash(image_data: bytes) -> str:
         """
-        Generate SHA256 hash of image data
+        Generate SHA256 hash of image data (file-based hash)
 
         Args:
             image_data: Raw image bytes
@@ -88,6 +89,98 @@ class ImageService:
             Hexadecimal hash string
         """
         return hashlib.sha256(image_data).hexdigest()
+
+    @staticmethod
+    def generate_perceptual_hash(image_data: bytes, hash_size: int = 8) -> str:
+        """
+        Generate perceptual hash (pHash) for image similarity detection.
+
+        pHash is resilient to:
+        - Scaling and resizing
+        - Rotation (small angles)
+        - Light color adjustments
+        - Compression artifacts
+        - Different camera settings
+
+        Same artwork photographed from different devices/angles will produce
+        similar hashes, enabling cache hits across users.
+
+        Args:
+            image_data: Raw image bytes
+            hash_size: Hash size (default 8x8 = 64 bits). Higher = more precise.
+
+        Returns:
+            Perceptual hash as hexadecimal string (16 chars for hash_size=8)
+
+        Example:
+            >>> img1 = load_image("mona_lisa_iphone.jpg")
+            >>> img2 = load_image("mona_lisa_samsung.jpg")
+            >>> hash1 = generate_perceptual_hash(img1)  # "8f373e0c183f1e3f"
+            >>> hash2 = generate_perceptual_hash(img2)  # "8f373e0c183f1e3e"
+            >>> similarity = hash_similarity(hash1, hash2)  # 0.984 (98.4% similar)
+        """
+        try:
+            img = Image.open(BytesIO(image_data))
+
+            # Convert to RGB if necessary (handles RGBA, grayscale, etc.)
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Generate perceptual hash using average hash algorithm
+            # Average hash is faster than pHash and good enough for artwork recognition
+            phash = imagehash.phash(img, hash_size=hash_size)
+
+            return str(phash)
+
+        except Exception as e:
+            logger.error(f"Failed to generate perceptual hash: {e}")
+            raise ImageProcessingException(
+                "Failed to generate perceptual hash", detail=str(e)
+            )
+
+    @staticmethod
+    def hash_similarity(hash1: str, hash2: str) -> float:
+        """
+        Calculate similarity between two perceptual hashes.
+
+        Uses Hamming distance: counts the number of differing bits.
+
+        Args:
+            hash1: First perceptual hash (hex string)
+            hash2: Second perceptual hash (hex string)
+
+        Returns:
+            Similarity score between 0.0 and 1.0
+            - 1.0 = identical images
+            - 0.9+ = very similar (same artwork, different photo)
+            - 0.7-0.9 = similar (might be related artworks)
+            - <0.7 = different images
+
+        Example:
+            >>> hash1 = "8f373e0c183f1e3f"  # Mona Lisa photo 1
+            >>> hash2 = "8f373e0c183f1e3e"  # Mona Lisa photo 2
+            >>> similarity = hash_similarity(hash1, hash2)
+            >>> print(f"{similarity:.2%}")  # "98.44%"
+        """
+        try:
+            h1 = imagehash.hex_to_hash(hash1)
+            h2 = imagehash.hex_to_hash(hash2)
+
+            # Calculate Hamming distance (number of differing bits)
+            hamming_distance = h1 - h2
+
+            # Convert to similarity (0.0 to 1.0)
+            # hash_size=8 means 64 bits total
+            max_distance = len(str(h1)) * 4  # Each hex char = 4 bits
+
+            similarity = 1.0 - (hamming_distance / max_distance)
+
+            return round(similarity, 4)  # Round to 4 decimal places
+
+        except Exception as e:
+            logger.error(f"Failed to calculate hash similarity: {e}")
+            # Return 0.0 on error (assume different images)
+            return 0.0
 
     @staticmethod
     def compress_image(image_data: bytes, max_width: int = None) -> bytes:

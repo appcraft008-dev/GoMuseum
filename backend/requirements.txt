@@ -1,2 +1,18 @@
 fastapi==0.115.2
+uvicorn[standard]==0.32.1
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
+redis==5.2.0
+pydantic==2.10.3
+pydantic-settings==2.6.1
+python-multipart==0.0.20
+pillow==11.0.0
+openai==1.57.4
+anthropic==0.41.0
+python-dotenv==1.0.1
+httpx==0.28.1
+
+# 图像处理和感知哈希
+ImageHash==4.3.1
 

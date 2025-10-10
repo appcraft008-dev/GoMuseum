@@ -66,17 +66,33 @@ class RecognitionService:
             logger.info("Step 1: Validating image")
             self.image_service.validate_image(image_data)
 
-            # 2. Generate hash
-            logger.info("Step 2: Generating image hash")
+            # 2. Generate hashes (both file-based and perceptual)
+            logger.info("Step 2: Generating image hashes")
             image_hash = self.image_service.generate_hash(image_data)
-            logger.info(f"Image hash: {image_hash}")
+            perceptual_hash = self.image_service.generate_perceptual_hash(image_data)
+            logger.info(f"File hash: {image_hash}, Perceptual hash: {perceptual_hash}")
 
-            # 3. Check cache
-            logger.info("Step 3: Checking cache")
+            # 3. Check exact file hash cache first (fastest)
+            logger.info("Step 3a: Checking exact file hash cache")
             cached_result = self.cache_service.get_cached_result(image_hash)
             if cached_result:
-                logger.info(f"Cache hit for image_hash={image_hash}")
+                logger.info(f"Exact cache hit for file_hash={image_hash}")
                 return cached_result
+
+            # 3b. Check perceptual hash similarity cache (cross-user hits)
+            logger.info("Step 3b: Checking perceptual hash similarity cache")
+            similar_result = self.cache_service.get_similar_cached_result(
+                perceptual_hash, similarity_threshold=0.90
+            )
+            if similar_result:
+                result, similarity = similar_result
+                logger.info(
+                    f"Similarity cache hit! phash={perceptual_hash[:16]}..., "
+                    f"similarity={similarity:.2%}"
+                )
+                # Also cache under exact file hash for faster future lookups
+                self.cache_service.cache_result(image_hash, result, perceptual_hash)
+                return result
 
             # 4. Check database
             logger.info("Step 4: Checking database")
@@ -89,8 +105,8 @@ class RecognitionService:
             if db_result:
                 logger.info(f"Database hit for image_hash={image_hash}")
                 response = RecognitionResponse.model_validate(db_result)
-                # Update cache
-                self.cache_service.cache_result(image_hash, response)
+                # Update cache with both hashes
+                self.cache_service.cache_result(image_hash, response, perceptual_hash)
                 return response
 
             # 5. Call AI recognition
@@ -113,10 +129,10 @@ class RecognitionService:
             self.db.refresh(db_model)
             logger.info(f"Saved recognition result with ID: {db_model.id}")
 
-            # 7. Cache result
-            logger.info("Step 7: Caching result")
+            # 7. Cache result (with both file hash and perceptual hash)
+            logger.info("Step 7: Caching result with both hashes")
             response = RecognitionResponse.model_validate(db_model)
-            self.cache_service.cache_result(image_hash, response)
+            self.cache_service.cache_result(image_hash, response, perceptual_hash)
 
             logger.info(
                 f"Recognition completed successfully for {ai_result['artwork_name']}"

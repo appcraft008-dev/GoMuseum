@@ -28,8 +28,7 @@ class CacheManager {
   /// 获取缓存统计信息
   Future<Map<String, int>> getCacheStats() async {
     final all = await database.select(database.recognitionResults).get();
-    final failed =
-        all.where((r) => r.artworkName == 'Unknown Artwork').length;
+    final failed = all.where((r) => r.artworkName == 'Unknown Artwork').length;
     final success = all.length - failed;
 
     return {

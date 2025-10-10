@@ -8,6 +8,10 @@ import json
 import redis
 from app.services.cache_service import CacheService
 from app.schemas.recognition import RecognitionResponse
+from tests.fixtures.image_helpers import (
+    create_artwork_simulation,
+    create_similar_image
+)
 
 
 class TestCacheService:
@@ -777,3 +781,288 @@ class TestCacheServiceHealthCheck:
 
         # Assert
         assert is_healthy is False
+
+
+class TestPerceptualHashCache:
+    """Test perceptual hash caching functionality for Step 2 cache optimization"""
+
+    @pytest.fixture
+    def cache_service(self):
+        """Create CacheService instance for testing with mocked Redis"""
+        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+            mock_client = MagicMock()
+            mock_redis.return_value = mock_client
+            cache_service = CacheService()
+            cache_service.redis_client = mock_client
+            return cache_service
+
+    def test_caches_result_with_perceptual_hash(self, cache_service):
+        """should_cache_to_both_file_hash_and_perceptual_hash_keys"""
+        # Arrange
+        file_hash = "abc123def456"
+        perceptual_hash = "8f373e0c183f1e3f"
+        result = RecognitionResponse(
+            artwork_name="Mona Lisa",
+            artist="Leonardo da Vinci",
+            period="Renaissance",
+            description="Famous portrait painting",
+            confidence=0.95,
+            cached=False,
+            processing_time_ms=150
+        )
+
+        # Act
+        cache_service.cache_result(file_hash, result, perceptual_hash=perceptual_hash)
+
+        # Assert - 应该调用setex两次 (file hash + perceptual hash)
+        assert cache_service.redis_client.setex.call_count == 2
+
+        # 验证第一次调用 (file hash)
+        first_call = cache_service.redis_client.setex.call_args_list[0]
+        assert first_call[0][0] == f"recognition:{file_hash}"
+        assert first_call[0][1] == cache_service.ttl
+
+        # 验证第二次调用 (perceptual hash)
+        second_call = cache_service.redis_client.setex.call_args_list[1]
+        assert second_call[0][0] == f"phash:{perceptual_hash}"
+        assert second_call[0][1] == cache_service.ttl * 7  # 7倍TTL
+
+    def test_retrieves_similar_cached_result(self, cache_service):
+        """should_find_cached_result_by_perceptual_hash_similarity"""
+        # Arrange - 模拟已缓存的数据
+        cached_phash = "8f373e0c183f1e3f"
+        query_phash = "8f373e0c183f1e3e"  # 非常相似 (1位差异)
+
+        cached_data = {
+            "artwork_name": "Mona Lisa",
+            "artist": "Leonardo da Vinci",
+            "period": "Renaissance",
+            "description": "Famous portrait",
+            "confidence": 0.95,
+            "cached": True,
+            "processing_time_ms": 100
+        }
+
+        # 模拟scan_iter返回缓存的phash键
+        cache_service.redis_client.scan_iter.return_value = [f"phash:{cached_phash}"]
+        cache_service.redis_client.get.return_value = json.dumps(cached_data)
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert
+        assert result is not None
+        recognition_response, similarity = result
+        assert recognition_response.artwork_name == "Mona Lisa"
+        assert similarity >= 0.90  # 应该是非常高的相似度
+        cache_service.redis_client.scan_iter.assert_called_once_with(match="phash:*", count=100)
+
+    def test_similarity_threshold_filtering(self, cache_service):
+        """should_not_return_results_below_similarity_threshold"""
+        # Arrange - 模拟低相似度的缓存数据
+        # 使用完全不同的phash (低相似度)
+        cached_phash = "ffffffffffffffff"  # 全1
+        query_phash = "0000000000000000"    # 全0 (相似度=0%)
+
+        cached_data = {
+            "artwork_name": "Different Artwork",
+            "artist": "Different Artist",
+            "period": "Modern",
+            "description": "Not similar",
+            "confidence": 0.80,
+            "cached": True,
+            "processing_time_ms": 100
+        }
+
+        cache_service.redis_client.scan_iter.return_value = [f"phash:{cached_phash}"]
+        cache_service.redis_client.get.return_value = json.dumps(cached_data)
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert - 应该返回None，因为相似度太低
+        assert result is None
+
+    def test_returns_best_match_when_multiple_similar(self, cache_service):
+        """should_return_most_similar_result_among_multiple_matches"""
+        # Arrange - 模拟多个相似的缓存结果
+        query_phash = "8f373e0c183f1e3f"
+
+        # 三个不同相似度的phash
+        phash_high = "8f373e0c183f1e3e"   # 98.4% 相似 (1位差异)
+        phash_medium = "8f373e0c183f1e0f"  # 93.75% 相似 (4位差异)
+        phash_low = "8f373e0c183f0e3f"     # 93.75% 相似 (4位差异)
+
+        cached_data_high = {
+            "artwork_name": "Best Match",
+            "artist": "Artist A",
+            "period": "Period A",
+            "description": "Highest similarity",
+            "confidence": 0.95,
+            "cached": True,
+            "processing_time_ms": 100
+        }
+
+        cached_data_medium = {
+            "artwork_name": "Medium Match",
+            "artist": "Artist B",
+            "period": "Period B",
+            "description": "Medium similarity",
+            "confidence": 0.90,
+            "cached": True,
+            "processing_time_ms": 100
+        }
+
+        # 模拟scan_iter返回多个键
+        cache_service.redis_client.scan_iter.return_value = [
+            f"phash:{phash_medium}",
+            f"phash:{phash_high}",
+            f"phash:{phash_low}"
+        ]
+
+        # 模拟get返回最高相似度的数据
+        def mock_get(key):
+            if key == f"phash:{phash_high}":
+                return json.dumps(cached_data_high)
+            return json.dumps(cached_data_medium)
+
+        cache_service.redis_client.get.side_effect = mock_get
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert - 应该返回最相似的结果
+        assert result is not None
+        recognition_response, similarity = result
+        assert recognition_response.artwork_name == "Best Match"
+        assert similarity > 0.95  # 最高相似度
+
+    def test_stops_at_perfect_match(self, cache_service):
+        """should_stop_searching_when_finding_99_percent_similar_match"""
+        # Arrange
+        query_phash = "8f373e0c183f1e3f"
+        perfect_phash = "8f373e0c183f1e3f"  # 完全相同 = 100%
+
+        cached_data = {
+            "artwork_name": "Perfect Match",
+            "artist": "Artist",
+            "period": "Period",
+            "description": "Exact same image",
+            "confidence": 0.95,
+            "cached": True,
+            "processing_time_ms": 50
+        }
+
+        # 模拟scan_iter返回完美匹配作为第一个结果
+        # 注意：实际上迭代器可能会继续，但代码应该在找到>0.99时break
+        cache_service.redis_client.scan_iter.return_value = [
+            f"phash:{perfect_phash}",
+            "phash:other_hash_1",
+            "phash:other_hash_2"
+        ]
+        cache_service.redis_client.get.return_value = json.dumps(cached_data)
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert
+        assert result is not None
+        recognition_response, similarity = result
+        assert similarity >= 0.99  # 接近完美匹配
+        # 注意：由于scan_iter是迭代器，我们不能直接验证是否提前退出
+        # 但可以验证结果是否正确
+
+    def test_perceptual_cache_has_longer_ttl(self, cache_service):
+        """should_use_7x_longer_ttl_for_perceptual_hash_cache"""
+        # Arrange
+        file_hash = "file_hash_123"
+        perceptual_hash = "phash_abc123"
+        result = RecognitionResponse(
+            artwork_name="Artwork",
+            artist="Artist",
+            period="Period",
+            description="Description",
+            confidence=0.90,
+            cached=False,
+            processing_time_ms=150
+        )
+        cache_service.ttl = 86400  # 1天
+
+        # Act
+        cache_service.cache_result(file_hash, result, perceptual_hash=perceptual_hash)
+
+        # Assert
+        assert cache_service.redis_client.setex.call_count == 2
+
+        # 验证file hash TTL = 1天
+        file_call = cache_service.redis_client.setex.call_args_list[0]
+        assert file_call[0][1] == 86400
+
+        # 验证perceptual hash TTL = 7天
+        phash_call = cache_service.redis_client.setex.call_args_list[1]
+        assert phash_call[0][1] == 86400 * 7
+
+    def test_handles_no_similar_results_found(self, cache_service):
+        """should_return_none_when_no_similar_cached_results"""
+        # Arrange - 空的scan结果
+        query_phash = "8f373e0c183f1e3f"
+        cache_service.redis_client.scan_iter.return_value = []
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert
+        assert result is None
+
+    def test_handles_redis_error_during_similarity_search(self, cache_service):
+        """should_return_none_and_handle_redis_error_gracefully"""
+        # Arrange
+        query_phash = "8f373e0c183f1e3f"
+        cache_service.redis_client.scan_iter.side_effect = redis.RedisError("Connection lost")
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert
+        assert result is None
+
+    def test_similarity_search_increments_miss_count_when_not_found(self, cache_service):
+        """should_increment_miss_counter_when_no_similar_result"""
+        # Arrange
+        query_phash = "8f373e0c183f1e3f"
+        cache_service.redis_client.scan_iter.return_value = []
+        initial_miss_count = cache_service._miss_count
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert
+        assert result is None
+        assert cache_service._miss_count == initial_miss_count + 1
+
+    def test_similarity_search_increments_hit_count_when_found(self, cache_service):
+        """should_increment_hit_counter_when_similar_result_found"""
+        # Arrange
+        query_phash = "8f373e0c183f1e3f"
+        cached_phash = "8f373e0c183f1e3e"
+
+        cached_data = {
+            "artwork_name": "Cached Artwork",
+            "artist": "Artist",
+            "period": "Period",
+            "description": "Description",
+            "confidence": 0.95,
+            "cached": True,
+            "processing_time_ms": 100
+        }
+
+        cache_service.redis_client.scan_iter.return_value = [f"phash:{cached_phash}"]
+        cache_service.redis_client.get.return_value = json.dumps(cached_data)
+        initial_hit_count = cache_service._hit_count
+
+        # Act
+        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+
+        # Assert
+        assert result is not None
+        assert cache_service._hit_count == initial_hit_count + 1
