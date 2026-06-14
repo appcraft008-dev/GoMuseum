@@ -1,20 +1,38 @@
 # GoMuseum CI/CD 流水线配置（适配个人用户，无 GHAS）
 name: GoMuseum CI
 
+# 去重原则：CI 全量只在 PR(目标 staging/main) 时跑；push 仅 main/staging（合并后，触发部署）
+# feature/* / hotfix/* 的 push 不触发远端 CI——快速反馈交给本地 husky 钩子
 on:
   push:
     branches:
       - main
       - staging
-      - feature/**
-      - step**
   pull_request:
     branches:
       - main
       - staging
-      - step**
+
+# 同一分支新提交自动取消尚在运行的旧流水线，省资源
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # 密钥扫描（gitleaks 专扫硬编码密钥，与 Trivy 漏洞扫描互补）
+  gitleaks:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # 基础安全扫描（保存为 artifact，而不是上传到 Security tab）
   security-scan:
     name: Security Scan
@@ -195,19 +213,21 @@ jobs:
   ci-status:
     name: CI Status Check
     runs-on: ubuntu-latest
-    needs: [security-scan, build-check, backend-tests, flutter-tests, sonarcloud]
+    needs: [security-scan, gitleaks, build-check, backend-tests, flutter-tests, sonarcloud]
     if: always()
 
     steps:
       - name: Check all jobs status
         run: |
           echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo "Secret Scan (gitleaks): ${{ needs.gitleaks.result }}"
           echo "Build Check: ${{ needs.build-check.result }}"
           echo "Backend Tests: ${{ needs.backend-tests.result }}"
           echo "Flutter Tests: ${{ needs.flutter-tests.result }}"
           echo "SonarCloud: ${{ needs.sonarcloud.result }}"
 
           if [ "${{ needs.security-scan.result }}" != "success" ] || \
+             [ "${{ needs.gitleaks.result }}" != "success" ] || \
              [ "${{ needs.build-check.result }}" != "success" ] || \
              [ "${{ needs.backend-tests.result }}" != "success" ] || \
              [ "${{ needs.flutter-tests.result }}" != "success" ]; then

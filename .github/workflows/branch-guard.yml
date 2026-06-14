@@ -1,0 +1,19 @@
+# 守卫：只有 staging 分支可以向 main 提 PR（GitHub 原生分支保护无法限制 PR 来源分支）
+name: Branch Guard
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  only-staging-into-main:
+    name: Only staging may PR into main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify PR head is staging
+        if: github.head_ref != 'staging'
+        run: |
+          echo "::error::禁止：只有 staging 分支可向 main 提 PR（当前 head=${{ github.head_ref }}）。请走 feature/* → staging → main。"
+          exit 1
+      - name: OK
+        if: github.head_ref == 'staging'
+        run: echo "✅ staging → main，符合规范"

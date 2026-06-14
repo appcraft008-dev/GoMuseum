@@ -53,3 +53,53 @@ rules:
 
 - 本文件定义项目范围规则
 - 具体开发可调用 `/agents` 下的专业 agent（如 backend-expert、flutter-architect、devops-specialist），Claude Code 将优先使用全局 agent，若无则按本文件中的角色说明临时扮演
+
+## 分支与 CI/CD 规范
+
+### 分支模型（三层）
+
+- `main`：生产分支，受保护。**禁止直推/force-push**，只接受来自 `staging` 的 PR。
+- `staging`：集成/预发分支，受保护。禁止直推，接受来自 `feature/*`（及 `hotfix/*`）的 PR。
+- `feature/{描述}`：开发分支，可自由 push。命名 `feature/<kebab-描述>`。
+- `hotfix/{描述}`：线上紧急修复分支（见下方生命周期"例外"）。
+
+### PR 流向（唯一允许路径）
+
+    feature/{*}  ──PR──▶  staging  ──PR──▶  main
+
+- 向 `main` 提 PR 的 head **必须是 `staging`**（`branch-guard` workflow 强制，违者 CI 直接失败）。
+- 所有 PR 一律 **Squash Merge**，主干上每个 PR 只留一条干净提交。
+
+### feature 分支生命周期（默认串行开发）
+
+- 默认同一时间只推进**一个** `feature/*`，避免多分支并行混乱。
+- 一个 feature 合并入 `staging` 且 CI/CD 完成后：**立即删除该 feature 分支**
+  （GitHub 合并时勾选自动删除，或 `git push origin --delete <branch>` + 本地 `git branch -d`）。
+- 回到 `staging`、确定下一个特性/修复后，**从最新 `staging` 切出新的 `feature/*`** 再动手。
+- **例外**：不能等的线上紧急修复用 `hotfix/*` 分支并行处理，同样 PR→staging→main，完成即删。
+
+### CI/CD 触发（去重原则：同一份代码只跑一次 CI）
+
+- **CI 仅在 `pull_request`（目标 `staging`/`main`）时全量运行**——合并前的质量门。
+- **`push` 到 `main`/`staging`**（即合并后）触发 CI + **Deploy**（main→生产、staging→预发）。
+- **`feature/*` / `hotfix/*` 的 push 不触发远端 CI**——快速反馈交给本地钩子。
+- 所有 workflow 加 `concurrency: cancel-in-progress`，新提交自动取消同分支旧运行。
+
+### 本地提交前检查（让远端 CI 专注 UC 正确性，而非格式）
+
+- **pre-commit**（仅改动文件，快）：
+  - `backend/**/*.py` → black + isort + flake8
+  - `**/*.dart` → dart format
+  - `*.{js,ts,jsx,tsx,json,md,yml,yaml}` → eslint --fix + prettier
+- **pre-push**（兜底，防未格式化代码上远端）：black --check、dart format --set-exit-if-changed；**不跑全量测试**。
+- 本地需安装：`black isort flake8`（后端）与 Dart/Flutter SDK（前端）；缺失时 pre-push 会跳过对应检查。
+- 严禁提交明文密码/API key/`.env`/虚拟环境（`.venv`）/构建产物；`.gitignore` 与 `.dockerignore` 必须覆盖。
+- CI 用 **gitleaks**（扫密钥）+ **Trivy**（扫依赖漏洞）双重防护。
+
+### 提 PR
+
+- 用 `/pr` slash 命令创建 PR（按当前分支自动选 base：`feature|hotfix → staging`，`staging → main`），无需进 GitHub 页面。
+
+### 受保护分支规则（main 与 staging 一致）
+
+- 必须经 PR、CI 状态检查全绿、分支与 base 同步后方可合并；禁止直推与 force-push。

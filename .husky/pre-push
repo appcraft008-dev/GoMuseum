@@ -1,0 +1,23 @@
+#!/bin/sh
+# 推送前格式兜底：只查不改，发现未格式化即拦截（不跑全量测试，交给远端 CI）
+# 缺少某语言工具时跳过该项（用 command -v 守卫），避免只做某一端的开发者被卡住。
+
+fail=0
+
+if command -v black >/dev/null 2>&1; then
+  echo "[pre-push] 后端 black/isort 检查…"
+  black --check --quiet backend 2>/dev/null || { echo "❌ 后端未格式化：运行  black backend"; fail=1; }
+  isort --check-only --quiet --profile black backend 2>/dev/null || { echo "❌ import 未排序：运行  isort --profile black backend"; fail=1; }
+else
+  echo "[pre-push] (跳过后端：未装 black)"
+fi
+
+if command -v dart >/dev/null 2>&1; then
+  echo "[pre-push] 前端 dart format 检查…"
+  dart format --output=none --set-exit-if-changed frontend/gomuseum_app/lib >/dev/null 2>&1 \
+    || { echo "❌ Dart 未格式化：运行  dart format frontend/gomuseum_app/lib"; fail=1; }
+else
+  echo "[pre-push] (跳过前端：未装 dart)"
+fi
+
+[ "$fail" = "0" ] && echo "[pre-push] ✓ 格式检查通过" || { echo "[pre-push] ✗ 请先格式化再推送"; exit 1; }
