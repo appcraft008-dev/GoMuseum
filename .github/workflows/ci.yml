@@ -1,13 +1,11 @@
 # GoMuseum CI/CD 流水线配置（适配个人用户，无 GHAS）
 name: GoMuseum CI
 
-# 去重原则：CI 全量只在 PR(目标 staging/main) 时跑；push 仅 main/staging（合并后，触发部署）
-# feature/* / hotfix/* 的 push 不触发远端 CI——快速反馈交给本地 husky 钩子
+# 去重原则：CI 全量只在 PR(目标 staging/main) 时跑——合并前的唯一质量门。
+# 合并后的 push 不再跑 CI（部署由 deploy.yml 的 push 触发独立负责；自动同步带 [skip ci]），
+# 避免同一份代码被 push + pull_request 各跑一遍。
+# feature/* / hotfix/* 的 push 不触发远端 CI——快速反馈交给本地 husky 钩子。
 on:
-  push:
-    branches:
-      - main
-      - staging
   pull_request:
     branches:
       - main
