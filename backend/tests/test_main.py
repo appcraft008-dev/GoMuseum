@@ -55,7 +55,8 @@ class TestMainApplication:
         from app.main import app
         
         # Check that the API v1 routes are registered
-        routes = [str(route.path) for route in app.routes]
+        # 用 getattr 兜底：部分挂载型路由（_IncludedRouter 等）无 .path 属性
+        routes = [str(getattr(route, "path", "")) for route in app.routes]
         # API routes should be prefixed with /api/v1
         api_routes = [route for route in routes if route.startswith('/api/v1')]
         assert len(api_routes) > 0
