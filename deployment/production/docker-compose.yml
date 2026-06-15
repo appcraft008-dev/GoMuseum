@@ -1,0 +1,68 @@
+# GoMuseum 生产部署（VPS 单机）
+# API 仅绑定 127.0.0.1:8100，由宿主 nginx 反代并终止 TLS
+services:
+  gomuseum_postgres:
+    image: postgres:16
+    container_name: gomuseum_prod_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - gomuseum_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gomuseum_redis:
+    image: redis:7
+    container_name: gomuseum_prod_redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - gomuseum_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gomuseum_backend:
+    build:
+      context: ../backend  # VPS 布局：/opt/gomuseum/{backend,deploy}
+      dockerfile: Dockerfile
+    container_name: gomuseum_prod_backend
+    restart: always
+    depends_on:
+      gomuseum_postgres:
+        condition: service_healthy
+      gomuseum_redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      POSTGRES_SERVER: gomuseum_postgres
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: gomuseum_redis
+      REDIS_PORT: "6379"
+      TTS_CACHE_DIR: /data/tts_cache
+    volumes:
+      - gomuseum_tts_cache:/data/tts_cache
+    ports:
+      - "127.0.0.1:8100:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health/')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  gomuseum_pg_data:
+  gomuseum_redis_data:
+  gomuseum_tts_cache:
