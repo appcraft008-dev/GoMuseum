@@ -1,0 +1,16 @@
+# gitleaks 配置：保留全部默认规则，仅放行已确认的客户端配置/误报。
+# 说明：
+#  - Podfile.lock 的 *-api-key 命中是 CocoaPods 依赖的 SHA 校验和（如 "FirebaseAuth: <hash>"），非密钥，纯误报。
+#  - google-services.json / GoogleService-Info.plist 是 Firebase 客户端配置，含客户端 API key；
+#    该类 key 设计上嵌入 App 分发，由 App 签名/包名 + Firebase 安全规则限制，Google 官方允许提交，非服务端密钥。
+#  - 服务端密钥/.env/keystore 仍由默认规则严格拦截。
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Firebase 客户端配置与 CocoaPods 校验和（客户端、非服务端密钥）"
+paths = [
+  '''frontend/gomuseum_app/ios/Podfile\.lock''',
+  '''frontend/gomuseum_app/android/app/google-services\.json''',
+  '''frontend/gomuseum_app/ios/Runner/GoogleService-Info\.plist''',
+]
