@@ -1,15 +1,16 @@
 name: Deploy
-run-name: "Deploy → ${{ inputs.target || 'staging' }}"
+run-name: "Deploy → ${{ github.event_name == 'workflow_dispatch' && inputs.target || (github.ref_name == 'main' && 'production' || 'staging') }}"
 
-# 触发模型（借鉴 myPlantMate，去掉 workflow_run 间接触发）：
-#   - push staging → 【自动】部署 staging（PR 合并前 CI 已过，push 到 staging 即代码已通过 CI）
-#   - workflow_dispatch（target=production/staging）→ 【手动】部署。prod 只走这条，
-#     App 审核期间避免误合并直冲生产。
-# 相比旧的 workflow_run：运行直接归属真实分支、不依赖 CI 的 name 字符串匹配、CI/CD 可并行。
+# 全自动 CD（借鉴 myPlantMate）：
+#   - push staging（合并后）→ 自动部署 staging（VPS /opt/gomuseum/staging，端口 8101）
+#   - push main（合并后）   → 自动部署 prod   （VPS /opt/gomuseum/deploy，端口 8100）
+#   - workflow_dispatch     → 手动部署（target=production/staging，按需）
+# path-aware：仅当 backend/ 改动时才部署（只改前端/文档/workflow 不触发，避免 no-op 部署）；
+#             手动 dispatch 强制部署。
 # 依赖仓库 Secrets：VPS_SSH_KEY / VPS_HOST。
 on:
   push:
-    branches: [staging]
+    branches: [main, staging]
   workflow_dispatch:
     inputs:
       target:
@@ -20,18 +21,42 @@ on:
 
 # 同目标串行排队（并发 compose recreate 会留改名残留容器→撞名失败）
 concurrency:
-  group: deploy-${{ inputs.target || 'staging' }}
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
+  # push 时检测 backend 是否改动；dispatch 时跳过（强制部署）
+  changes:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      backend: ${{ steps.f.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: f
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+
   deploy:
-    name: Deploy → ${{ inputs.target || 'staging' }}
+    name: Deploy → ${{ github.event_name == 'workflow_dispatch' && inputs.target || (github.ref_name == 'main' && 'production' || 'staging') }}
+    needs: changes
+    # 手动 dispatch 强制部署；push 仅在 backend 改动时部署
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: 解析部署目标
         id: t
         run: |
-          TARGET="${{ inputs.target || 'staging' }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET="${{ inputs.target }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            TARGET="production"
+          else
+            TARGET="staging"
+          fi
           if [ "$TARGET" = "production" ]; then
             echo "src_dir=/opt/gomuseum/backend"        >> "$GITHUB_OUTPUT"
             echo "compose_dir=/opt/gomuseum/deploy"      >> "$GITHUB_OUTPUT"
