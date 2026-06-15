@@ -119,3 +119,5 @@ Thumbs.db
 # API 密钥和配置
 **/config/secrets.yaml
 **/api_keys.json
+# Python 虚拟环境（之前漏掉 .venv，仅 venv 不够）
+**/.venv/
