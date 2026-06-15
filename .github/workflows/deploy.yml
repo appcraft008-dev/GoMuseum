@@ -7,7 +7,7 @@ name: Deploy
 # 依赖仓库 Secrets：VPS_SSH_KEY（部署私钥）、VPS_HOST（VPS IP）。
 on:
   workflow_run:
-    workflows: ['CI']
+    workflows: ['GoMuseum CI'] # 必须与 ci.yml 的 name 完全一致，否则 Deploy 永不触发
     types: [completed]
     branches: [staging]
   workflow_dispatch:
