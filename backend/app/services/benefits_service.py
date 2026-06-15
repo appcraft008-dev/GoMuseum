@@ -51,6 +51,16 @@ class BenefitsService:
 
         if user_id:
             benefits = query.filter(UserBenefits.user_id == user_id).first()
+            if not benefits and device_id:
+                # 账号首次出现但设备已有匿名记录：归并到账号，避免双份免费额度
+                orphan = query.filter(
+                    UserBenefits.device_id == device_id,
+                    UserBenefits.user_id.is_(None),
+                ).first()
+                if orphan:
+                    orphan.user_id = user_id
+                    self.db.commit()
+                    benefits = orphan
         else:
             benefits = query.filter(UserBenefits.device_id == device_id).first()
 
@@ -68,7 +78,7 @@ class BenefitsService:
         benefits = UserBenefits(
             user_id=user_id,
             device_id=device_id,
-            recognition_quota=5,  # Free tier: 5 recognitions
+            recognition_quota=10,  # Free tier: 10 recognitions (PRD)
             is_premium=False,
             day_pass_active=False,
             referral_bonus_quota=0,

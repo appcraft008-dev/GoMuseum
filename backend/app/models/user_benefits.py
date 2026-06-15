@@ -39,8 +39,8 @@ class UserBenefits(Base):
 
     # Recognition quota
     recognition_quota = Column(
-        Integer, nullable=False, default=5
-    )  # Free tier: 5 recognitions
+        Integer, nullable=False, default=10
+    )  # Free tier: 10 recognitions (PRD)
     total_recognitions_used = Column(Integer, nullable=False, default=0)
 
     # Premium subscription

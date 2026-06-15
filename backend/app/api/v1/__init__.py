@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    auth,
     chat,
     content,
     history,
@@ -12,6 +13,9 @@ from app.api.v1.endpoints import (
 )
 
 api_router = APIRouter()
+
+# Include authentication endpoints (OAuth/login)
+api_router.include_router(auth.router, tags=["authentication"])
 
 # Include recognition endpoints
 api_router.include_router(

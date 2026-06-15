@@ -1,5 +1,6 @@
 # scripts/migrate_pack_to_db.py
 """把现有 museum_packs/<slug>.json 灌入 DB（幂等，复用 object_importer）。"""
+
 import json
 import sys
 from pathlib import Path

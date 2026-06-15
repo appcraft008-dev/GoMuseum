@@ -6,18 +6,21 @@ Handles IAP verification and user benefits management
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.exceptions import ServiceException
+from app.services.auth_service import AuthService
 from app.services.benefits_service import get_benefits_service
 from app.services.iap_verification_service import get_iap_verification_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+security = HTTPBearer()
 
 
 # Request/Response Models
@@ -154,8 +157,8 @@ async def verify_purchase(
 
 @router.get("/benefits", response_model=BenefitsResponse)
 async def get_benefits(
-    user_id: Optional[str] = None,
     device_id: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> BenefitsResponse:
     """
@@ -174,6 +177,8 @@ async def get_benefits(
         curl -X GET "http://localhost:8000/api/v1/payment/benefits?device_id=device_12345"
         ```
     """
+    user = AuthService.get_current_user(db, credentials.credentials)
+    user_id = str(user.id)
     logger.info(f"Getting benefits for user_id={user_id}, device_id={device_id}")
 
     try:
@@ -196,12 +201,13 @@ async def get_benefits(
 
 @router.post("/consume")
 async def consume_recognition(
-    user_id: Optional[str] = None,
     device_id: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
     """
-    Consume one recognition from user's quota
+    Consume one recognition from user's quota (requires auth;
+    user identity comes from the access token, not the query)
 
     Args:
         user_id: User identifier
@@ -216,6 +222,8 @@ async def consume_recognition(
         curl -X POST "http://localhost:8000/api/v1/payment/consume?device_id=device_12345"
         ```
     """
+    user = AuthService.get_current_user(db, credentials.credentials)
+    user_id = str(user.id)
     logger.info(f"Consuming recognition for user_id={user_id}, device_id={device_id}")
 
     try:
