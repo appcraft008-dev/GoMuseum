@@ -115,6 +115,9 @@ Thumbs.db
 **/uploads/
 **/cache/
 **/storage/
+# storage/ 是对象存储抽象源码目录，不应被忽略
+!backend/app/services/storage/
+!backend/tests/unit/storage/
 
 # API 密钥和配置
 **/config/secrets.yaml

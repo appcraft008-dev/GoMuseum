@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     APP_NAME: str = "GoMuseum API"
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
+    ENVIRONMENT: str = "development"  # development / staging / production
+    ALLOWED_ORIGINS: str = "*"  # 逗号分隔的 CORS 白名单，生产必须配置具体域名
+
+    # 内容缓存与 AI 成本控制
+    TTS_CACHE_DIR: str = "./tts_cache"
+    EXPLANATION_CACHE_TTL_DAYS: int = 30
+    OPENAI_DAILY_CALL_LIMIT: int = 2000
+
+    # Security (JWT)
+    SECRET_KEY: str = "gomuseum-jwt-secret-key-change-in-production-2024"
 
     # Database
     DATABASE_URL: Optional[str] = None
@@ -48,8 +58,29 @@ class Settings(BaseSettings):
 
     # Anthropic Claude (fallback)
     ANTHROPIC_API_KEY: Optional[str] = None
-    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"  # 正确的模型名
+    ANTHROPIC_MODEL: str = (
+        "claude-sonnet-4-6"  # 在线视觉模型（旧的 3-5-sonnet-20241022 已 404 下线）
+    )
     ANTHROPIC_TIMEOUT: int = 30
+
+    # OAuth providers
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    APPLE_CLIENT_ID: Optional[str] = None
+    APPLE_TEAM_ID: Optional[str] = None
+    APPLE_KEY_ID: Optional[str] = None
+    APPLE_PRIVATE_KEY_PATH: Optional[str] = None
+
+    # Object storage (images / audio)
+    STORAGE_BACKEND: str = "local"  # "local" | "r2"
+    STORAGE_LOCAL_DIR: str = "var/assets"  # local 实现落盘目录
+    STORAGE_PUBLIC_BASE_URL: str = (
+        "http://localhost:8000/assets"  # local public_url 前缀
+    )
+    R2_ENDPOINT_URL: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET: str = "gomuseum-assets"
+    R2_PUBLIC_BASE_URL: str = ""
 
     # AI Performance
     AI_STRATEGY_TIMEOUT: int = 30  # 增加到30秒，给AI足够时间响应

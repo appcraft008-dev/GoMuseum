@@ -1,0 +1,46 @@
+"""Museum pack endpoints
+
+提供馆包数据（馆藏清单/元信息），数据由 DB 读取（Phase 5 改造）。
+"""
+
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.services.museum_repo import get_museum_pack as repo_pack
+from app.services.museum_repo import (
+    get_object_content,
+)
+from app.services.museum_repo import list_museums as repo_list
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+@router.get("")
+def list_museums(db: Session = Depends(get_db)) -> list[dict]:
+    """已收录馆包列表（不含完整馆藏，供探索页索引）"""
+    return repo_list(db)
+
+
+@router.get("/{slug}/objects/{qid}/content")
+def object_content(
+    slug: str, qid: str, language: str = "zh", db: Session = Depends(get_db)
+) -> dict:
+    """展品讲解（按 tab 分节返回）"""
+    data = get_object_content(db, slug, qid, language)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"object not found: {qid}")
+    return data
+
+
+@router.get("/{slug}")
+def get_museum_pack(slug: str, db: Session = Depends(get_db)) -> dict:
+    """完整馆包：馆元数据 + 按热度排序的馆藏列表"""
+    pack = repo_pack(db, slug)
+    if pack is None:
+        raise HTTPException(status_code=404, detail=f"museum pack not found: {slug}")
+    return pack

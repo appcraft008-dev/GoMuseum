@@ -10,8 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.core.database import SessionLocal
 from app.core.exceptions import AIServiceException
+from app.services.content_cache import get_content_cache
 from app.services.content_generation_service import get_content_generation_service
+from app.services.content_repo import persist_explanation
 from app.services.tts_service import get_tts_service
 
 logger = logging.getLogger(__name__)
@@ -30,6 +33,7 @@ class ExplanationRequest(BaseModel):
         default="en", description="Target language (en, zh, fr, de, es, it)"
     )
     description: Optional[str] = Field(None, description="Optional base description")
+    qid: Optional[str] = Field(None, description="Wikidata QID，用于落库")
 
 
 class ExplanationResponse(BaseModel):
@@ -94,6 +98,18 @@ async def generate_explanation(
         f"Generating explanation for '{request.artwork_name}' in {request.language}"
     )
 
+    cache = get_content_cache()
+    cached = cache.get_explanation(
+        request.artwork_name, request.artist, request.language
+    )
+    if cached:
+        logger.info(
+            f"Explanation cache hit for '{request.artwork_name}' ({request.language})"
+        )
+        return ExplanationResponse(**cached)
+
+    cache.check_openai_budget()
+
     try:
         result = await content_service.generate_explanation(
             artwork_name=request.artwork_name,
@@ -104,6 +120,28 @@ async def generate_explanation(
         )
 
         logger.info(f"Explanation generated successfully for '{request.artwork_name}'")
+
+        if not result.get("fallback"):
+            cache.set_explanation(
+                request.artwork_name, request.artist, request.language, result
+            )
+            if request.qid:
+                try:
+                    db = SessionLocal()
+                    try:
+                        persist_explanation(
+                            db,
+                            request.qid,
+                            request.language,
+                            result,
+                            model="gpt-4o-mini",
+                        )
+                    finally:
+                        db.close()
+                except Exception as persist_err:
+                    logger.warning(
+                        f"Failed to persist explanation for {request.qid}: {persist_err}"
+                    )
 
         return ExplanationResponse(
             title=result["title"],
@@ -157,6 +195,21 @@ async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_se
         f"Generating TTS audio for text (length: {len(request.text)}) in {request.language}"
     )
 
+    cache = get_content_cache()
+    voice_key = request.voice or "default"
+    cached_audio = cache.get_tts(
+        request.text, request.language, voice_key, request.speed
+    )
+    if cached_audio is not None:
+        logger.info(f"TTS cache hit ({len(cached_audio)} bytes)")
+        return StreamingResponse(
+            iter([cached_audio]),
+            media_type="audio/mpeg",
+            headers={"X-Cache": "HIT"},
+        )
+
+    cache.check_openai_budget()
+
     try:
         result = await tts_service.generate_audio(
             text=request.text,
@@ -166,6 +219,14 @@ async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_se
         )
 
         logger.info(f"TTS audio generated: {result['size_bytes']} bytes")
+
+        cache.set_tts(
+            request.text,
+            request.language,
+            voice_key,
+            request.speed,
+            result["audio_data"],
+        )
 
         # Return audio as streaming response
         return StreamingResponse(
