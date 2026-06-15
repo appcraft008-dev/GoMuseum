@@ -6,7 +6,6 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.models.recognition_result import RecognitionResult
 from app.models.recognition_stats import RecognitionStats
-from app.models.user import User
 from app.models.user_benefits import UserBenefits
 
 __all__ = [
@@ -14,7 +13,6 @@ __all__ = [
     "RecognitionStats",
     "AIServiceLog",
     "UserBenefits",
-    "User",
 ]
 __all__ += [
     "Museum",
