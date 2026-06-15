@@ -32,11 +32,13 @@ def upgrade() -> None:
     """
     # Note: We need to alter the column to use server_default instead of default
     # This cannot be done with simple alter_column, so we use raw SQL
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE recognition_results
         ALTER COLUMN timestamp
         SET DEFAULT now();
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
@@ -44,8 +46,10 @@ def downgrade() -> None:
     Revert timestamp column default back to no server default
     (Python application will provide the value)
     """
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE recognition_results
         ALTER COLUMN timestamp
         DROP DEFAULT;
-    """)
+    """
+    )

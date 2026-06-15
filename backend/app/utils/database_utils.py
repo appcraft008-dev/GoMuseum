@@ -65,7 +65,8 @@ class DatabaseUtils:
             >>> sizes = utils.get_table_sizes(db)
             >>> print(f"Table: {sizes['recognition_results']['table_size']}")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 schemaname || '.' || tablename AS table_name,
                 pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
@@ -75,7 +76,8 @@ class DatabaseUtils:
             FROM pg_tables
             WHERE schemaname = 'public'
             ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-        """)
+        """
+        )
 
         result = db.execute(query)
         table_sizes = {}
@@ -113,7 +115,8 @@ class DatabaseUtils:
         """
         where_clause = f"AND indexrelname LIKE '{table_name}%'" if table_name else ""
 
-        query = text(f"""
+        query = text(
+            f"""
             SELECT
                 schemaname,
                 tablename,
@@ -126,7 +129,8 @@ class DatabaseUtils:
             WHERE schemaname = 'public'
             {where_clause}
             ORDER BY idx_scan DESC
-        """)
+        """
+        )
 
         result = db.execute(query)
         indexes = []
@@ -169,7 +173,8 @@ class DatabaseUtils:
             ...     print(f"{query['avg_time_ms']:.2f}ms: {query['query'][:50]}")
         """
         try:
-            query = text(f"""
+            query = text(
+                f"""
                 SELECT
                     query,
                     calls,
@@ -182,7 +187,8 @@ class DatabaseUtils:
                 WHERE mean_exec_time > {min_duration_ms}
                 ORDER BY mean_exec_time DESC
                 LIMIT {limit}
-            """)
+            """
+            )
 
             result = db.execute(query)
             slow_queries = []
@@ -273,13 +279,15 @@ class DatabaseUtils:
             >>> ratios = utils.get_cache_hit_ratio(db)
             >>> print(f"Cache hit ratio: {ratios['cache_hit_ratio']:.2%}")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 sum(heap_blks_read) AS heap_read,
                 sum(heap_blks_hit) AS heap_hit,
                 sum(heap_blks_hit) / nullif(sum(heap_blks_hit) + sum(heap_blks_read), 0) AS ratio
             FROM pg_statio_user_tables
-        """)
+        """
+        )
 
         result = db.execute(query).fetchone()
 
@@ -305,14 +313,16 @@ class DatabaseUtils:
             >>> stats = utils.get_connection_stats(db)
             >>> print(f"Active connections: {stats['active_connections']}")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 state,
                 COUNT(*) as count
             FROM pg_stat_activity
             WHERE datname = current_database()
             GROUP BY state
-        """)
+        """
+        )
 
         result = db.execute(query)
         stats = {"total_connections": 0}
@@ -342,7 +352,8 @@ class DatabaseUtils:
             >>> for item in report:
             ...     print(f"Table {item['table']}: {item['seq_scans']} sequential scans")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 schemaname,
                 tablename,
@@ -356,7 +367,8 @@ class DatabaseUtils:
               AND seq_scan > 0
             ORDER BY seq_scan DESC, seq_tup_read DESC
             LIMIT 20
-        """)
+        """
+        )
 
         result = db.execute(query)
         report = []

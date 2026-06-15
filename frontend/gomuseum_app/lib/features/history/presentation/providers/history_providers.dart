@@ -155,7 +155,8 @@ class History extends _$History {
       },
       (_) {
         // Remove item from list
-        final updatedItems = state.items.where((item) => item.id != id).toList();
+        final updatedItems =
+            state.items.where((item) => item.id != id).toList();
         state = state.copyWith(items: updatedItems);
       },
     );

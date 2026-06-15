@@ -111,8 +111,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Widget _quotaCard(int? quota) {
     final remaining = quota ?? 0;
-    final progress =
-        (remaining / _freeQuotaTotal).clamp(0.0, 1.0).toDouble();
+    final progress = (remaining / _freeQuotaTotal).clamp(0.0, 1.0).toDouble();
     return Container(
       decoration: BoxDecoration(
         color: GmColors.surface,
@@ -245,7 +244,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             GmIcon(icon, size: 19, color: GmColors.sub),
             const SizedBox(width: 13),
             Expanded(
-              child: Text(label, style: GmText.sans(size: 14, color: labelColor)),
+              child:
+                  Text(label, style: GmText.sans(size: 14, color: labelColor)),
             ),
             if (value != null) ...[
               Text(value, style: GmText.sans(size: 12.5, color: GmColors.sub)),
@@ -320,7 +320,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
+            child:
+                Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -354,12 +355,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
+            child:
+                Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('确定',
-                style: GmText.sans(size: 13, color: GmColors.error)),
+            child:
+                Text('确定', style: GmText.sans(size: 13, color: GmColors.error)),
           ),
         ],
       ),

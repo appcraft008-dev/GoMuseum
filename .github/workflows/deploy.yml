@@ -1,18 +1,14 @@
 name: Deploy
+run-name: "Deploy → ${{ inputs.target || 'staging' }}"
 
-# 运行标题直接显示部署目标（自动触发恒为 staging；手动触发显示所选 production/staging），
-# 避免被 workflow_run 归属到 main 而看不出实际部署的是哪个环境。
-run-name: "Deploy → ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || 'staging' }}"
-
-# 触发模型（与团队规范一致）：
-#   - staging：合并进 staging → CI 成功后【自动】部署到 staging 环境（VPS /opt/gomuseum/staging，端口 8101）
-#   - prod   ：不自动。需在 Actions 里【手动】运行本 workflow（workflow_dispatch，target=production）
-#             部署到生产（VPS /opt/gomuseum/deploy，端口 8100）。App 审核期间避免误冲生产。
-# 依赖仓库 Secrets：VPS_SSH_KEY（部署私钥）、VPS_HOST（VPS IP）。
+# 触发模型（借鉴 myPlantMate，去掉 workflow_run 间接触发）：
+#   - push staging → 【自动】部署 staging（PR 合并前 CI 已过，push 到 staging 即代码已通过 CI）
+#   - workflow_dispatch（target=production/staging）→ 【手动】部署。prod 只走这条，
+#     App 审核期间避免误合并直冲生产。
+# 相比旧的 workflow_run：运行直接归属真实分支、不依赖 CI 的 name 字符串匹配、CI/CD 可并行。
+# 依赖仓库 Secrets：VPS_SSH_KEY / VPS_HOST。
 on:
-  workflow_run:
-    workflows: ['GoMuseum CI'] # 必须与 ci.yml 的 name 完全一致，否则 Deploy 永不触发
-    types: [completed]
+  push:
     branches: [staging]
   workflow_dispatch:
     inputs:
@@ -22,27 +18,20 @@ on:
         options: [production, staging]
         default: production
 
+# 同目标串行排队（并发 compose recreate 会留改名残留容器→撞名失败）
 concurrency:
-  group: deploy-${{ github.event.inputs.target || 'staging' }}
+  group: deploy-${{ inputs.target || 'staging' }}
   cancel-in-progress: false
 
 jobs:
   deploy:
+    name: Deploy → ${{ inputs.target || 'staging' }}
     runs-on: ubuntu-latest
-    # 自动路径仅在 CI 成功时部署；手动路径（workflow_dispatch）总是允许
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: 解析部署目标
         id: t
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TARGET="${{ github.event.inputs.target }}"
-            REF="${{ github.ref }}"
-          else
-            TARGET="staging"
-            REF="${{ github.event.workflow_run.head_sha }}"
-          fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          TARGET="${{ inputs.target || 'staging' }}"
           if [ "$TARGET" = "production" ]; then
             echo "src_dir=/opt/gomuseum/backend"        >> "$GITHUB_OUTPUT"
             echo "compose_dir=/opt/gomuseum/deploy"      >> "$GITHUB_OUTPUT"
@@ -50,12 +39,10 @@ jobs:
             echo "src_dir=/opt/gomuseum/staging/backend" >> "$GITHUB_OUTPUT"
             echo "compose_dir=/opt/gomuseum/staging"     >> "$GITHUB_OUTPUT"
           fi
-          echo "▶ 部署目标：$TARGET（ref=$REF）"
+          echo "▶ 部署目标：$TARGET"
 
-      - name: 检出对应代码
+      - name: 检出代码
         uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.t.outputs.ref }}
 
       - name: 配置 SSH
         run: |
@@ -76,4 +63,4 @@ jobs:
       - name: 构建并启动（含 alembic 迁移，--wait 等健康检查）
         run: |
           ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no "root@${{ secrets.VPS_HOST }}" \
-            "cd '${{ steps.t.outputs.compose_dir }}' && docker compose up -d --build --wait && docker compose ps"
+            "cd '${{ steps.t.outputs.compose_dir }}' && docker compose up -d --build --remove-orphans --wait && docker compose ps"

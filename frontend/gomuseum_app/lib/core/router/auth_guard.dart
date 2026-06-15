@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/data/auth_repository.dart';
 
 /// Check if user is authenticated
-Future<String?> authGuard(BuildContext context, GoRouterState state, WidgetRef ref) async {
+Future<String?> authGuard(
+    BuildContext context, GoRouterState state, WidgetRef ref) async {
   final repository = ref.read(authRepositoryProvider);
   final isLoggedIn = await repository.isLoggedIn();
 
