@@ -5,24 +5,30 @@ class UserBenefitsModel extends UserBenefits {
   const UserBenefitsModel({
     required super.hasAccess,
     required super.recognitionQuota,
+    required super.referralBonusQuota,
+    required super.totalQuota,
     required super.isPremium,
     required super.dayPassActive,
-    super.dayPassExpiry,
-    super.premiumExpiry,
+    required super.totalUsed,
+    super.premiumExpiresAt,
+    super.dayPassExpiresAt,
   });
 
-  /// 从JSON创建
+  /// 从JSON创建（字段对齐后端 /payment 权益响应）
   factory UserBenefitsModel.fromJson(Map<String, dynamic> json) {
     return UserBenefitsModel(
       hasAccess: json['has_access'] as bool? ?? false,
       recognitionQuota: json['recognition_quota'] as int? ?? 0,
+      referralBonusQuota: json['referral_bonus_quota'] as int? ?? 0,
+      totalQuota: json['total_quota'] as int? ?? 0,
       isPremium: json['is_premium'] as bool? ?? false,
       dayPassActive: json['day_pass_active'] as bool? ?? false,
-      dayPassExpiry: json['day_pass_expiry'] != null
-          ? DateTime.parse(json['day_pass_expiry'] as String)
+      totalUsed: json['total_used'] as int? ?? 0,
+      premiumExpiresAt: json['premium_expires_at'] != null
+          ? DateTime.parse(json['premium_expires_at'] as String)
           : null,
-      premiumExpiry: json['premium_expiry'] != null
-          ? DateTime.parse(json['premium_expiry'] as String)
+      dayPassExpiresAt: json['day_pass_expires_at'] != null
+          ? DateTime.parse(json['day_pass_expires_at'] as String)
           : null,
     );
   }
@@ -32,10 +38,13 @@ class UserBenefitsModel extends UserBenefits {
     return {
       'has_access': hasAccess,
       'recognition_quota': recognitionQuota,
+      'referral_bonus_quota': referralBonusQuota,
+      'total_quota': totalQuota,
       'is_premium': isPremium,
       'day_pass_active': dayPassActive,
-      'day_pass_expiry': dayPassExpiry?.toIso8601String(),
-      'premium_expiry': premiumExpiry?.toIso8601String(),
+      'total_used': totalUsed,
+      'premium_expires_at': premiumExpiresAt?.toIso8601String(),
+      'day_pass_expires_at': dayPassExpiresAt?.toIso8601String(),
     };
   }
 
@@ -44,10 +53,13 @@ class UserBenefitsModel extends UserBenefits {
     return UserBenefitsModel(
       hasAccess: entity.hasAccess,
       recognitionQuota: entity.recognitionQuota,
+      referralBonusQuota: entity.referralBonusQuota,
+      totalQuota: entity.totalQuota,
       isPremium: entity.isPremium,
       dayPassActive: entity.dayPassActive,
-      dayPassExpiry: entity.dayPassExpiry,
-      premiumExpiry: entity.premiumExpiry,
+      totalUsed: entity.totalUsed,
+      premiumExpiresAt: entity.premiumExpiresAt,
+      dayPassExpiresAt: entity.dayPassExpiresAt,
     );
   }
 }

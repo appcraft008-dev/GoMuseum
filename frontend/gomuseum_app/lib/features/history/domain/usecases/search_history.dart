@@ -14,8 +14,7 @@ class SearchHistory {
     int limit = 20,
   }) async {
     if (query.trim().length < 2) {
-      return Left(
-          ValidationFailure('Search query must be at least 2 characters'));
+      return Left(ValidationFailure('Search query must be at least 2 characters'));
     }
 
     return await repository.searchHistory(

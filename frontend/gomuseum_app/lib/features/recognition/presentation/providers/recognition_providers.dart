@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../../core/network/auth_interceptor.dart';
 import '../../../../core/network/network_info.dart';
 import '../../data/datasources/recognition_local_datasource.dart';
 import '../../data/datasources/recognition_remote_datasource.dart';
@@ -17,21 +18,29 @@ part 'recognition_providers.g.dart';
 /// Dio客户端Provider
 @riverpod
 Dio dio(DioRef ref) {
-  // Android 模拟器需要使用 10.0.2.2 访问宿主机
-  String baseUrl = 'http://localhost:8000';
-  try {
-    if (Platform.isAndroid) {
-      baseUrl = 'http://10.0.2.2:8000';
+  // 发布版通过 --dart-define=API_BASE_URL=https://api.gomuseum.app 指定；
+  // 未指定时本地开发：Android 模拟器用 10.0.2.2 访问宿主机
+  const envUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  String baseUrl = envUrl.isNotEmpty ? envUrl : 'http://localhost:8000';
+  if (envUrl.isEmpty) {
+    try {
+      if (Platform.isAndroid) {
+        baseUrl = 'http://10.0.2.2:8000';
+      }
+    } catch (e) {
+      // Web 平台会抛出异常，使用默认 localhost
     }
-  } catch (e) {
-    // Web 平台会抛出异常，使用默认 localhost
   }
 
-  return Dio(BaseOptions(
+  final options = BaseOptions(
     baseUrl: baseUrl,
     connectTimeout: const Duration(seconds: 60),
     receiveTimeout: const Duration(seconds: 60),
-  ));
+  );
+  final client = Dio(options);
+  // 业务请求自动附带 Bearer token，401 时刷新并重试
+  client.interceptors.add(AuthInterceptor(refreshDio: Dio(options)));
+  return client;
 }
 
 /// 网络信息Provider

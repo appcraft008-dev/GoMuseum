@@ -142,7 +142,8 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(benefitsStateProvider.notifier).refresh(),
+            onPressed: () =>
+                ref.read(benefitsStateProvider.notifier).refresh(),
             tooltip: '刷新',
           ),
         ],

@@ -118,9 +118,12 @@ class BenefitsState extends _$BenefitsState {
             // 消耗成功，更新本地状态
             final currentBenefits = state.value;
             if (currentBenefits != null) {
+              // 后端 remaining_quota 即总剩余额度，UI 展示读 totalQuota
               state = AsyncValue.data(
                 currentBenefits.copyWith(
                   recognitionQuota: consumptionResult.remainingQuota,
+                  totalQuota: consumptionResult.remainingQuota,
+                  totalUsed: currentBenefits.totalUsed + 1,
                 ),
               );
             }
