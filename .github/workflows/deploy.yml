@@ -1,5 +1,9 @@
 name: Deploy
 
+# 运行标题直接显示部署目标（自动触发恒为 staging；手动触发显示所选 production/staging），
+# 避免被 workflow_run 归属到 main 而看不出实际部署的是哪个环境。
+run-name: "Deploy → ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || 'staging' }}"
+
 # 触发模型（与团队规范一致）：
 #   - staging：合并进 staging → CI 成功后【自动】部署到 staging 环境（VPS /opt/gomuseum/staging，端口 8101）
 #   - prod   ：不自动。需在 Actions 里【手动】运行本 workflow（workflow_dispatch，target=production）
