@@ -89,29 +89,8 @@ jobs:
           node --version
           npm --version
 
-  # SonarCloud 分析
-  sonarcloud:
-    name: SonarCloud Analysis
-    runs-on: ubuntu-latest
-    needs: [build-check]
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # 必须：让 Sonar 有完整历史用于比对/注释
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  # SonarCloud 分析：暂移除——项目未在 sonarcloud.io 配置(org/projectKey)，一直红且非门控。
+  # 待配置好账号/项目后再恢复此 job + ci-status 的 needs。
 
   # Python后端测试
   backend-tests:
@@ -216,7 +195,7 @@ jobs:
   ci-status:
     name: CI Status Check
     runs-on: ubuntu-latest
-    needs: [security-scan, gitleaks, build-check, backend-tests, flutter-tests, sonarcloud]
+    needs: [security-scan, gitleaks, build-check, backend-tests, flutter-tests]
     if: always()
 
     steps:
@@ -227,7 +206,6 @@ jobs:
           echo "Build Check: ${{ needs.build-check.result }}"
           echo "Backend Tests: ${{ needs.backend-tests.result }}"
           echo "Flutter Tests: ${{ needs.flutter-tests.result }}"
-          echo "SonarCloud: ${{ needs.sonarcloud.result }}"
 
           if [ "${{ needs.security-scan.result }}" != "success" ] || \
              [ "${{ needs.gitleaks.result }}" != "success" ] || \
