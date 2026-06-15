@@ -1,0 +1,34 @@
+name: Sync main → staging
+
+# 每次合入 main 后，自动把 main 同步回 staging（借鉴 myPlantMate），
+# 取代手动 `git push origin origin/main:staging --force-with-lease`。
+# squash 合并后 staging 与 main commit 分叉（内容相同），ff-only 会失败 →
+# 退回 no-ff 合并（带 [skip ci] 避免触发 staging 的 CI/部署）。
+# 若出现真正内容冲突，job 失败、GitHub 发邮件，再手动处理。
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    name: Merge main into staging
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 配置 git 身份
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 同步 main → staging
+        run: |
+          git checkout staging
+          git merge --ff-only origin/main \
+            || git merge --no-ff origin/main -m "chore: auto-sync main into staging [skip ci]"
+          git push origin staging

@@ -29,7 +29,9 @@ class User {
       isActive: json['is_active'],
       isVerified: json['is_verified'],
       createdAt: DateTime.parse(json['created_at']),
-      lastLoginAt: json['last_login_at'] != null ? DateTime.parse(json['last_login_at']) : null,
+      lastLoginAt: json['last_login_at'] != null
+          ? DateTime.parse(json['last_login_at'])
+          : null,
     );
   }
 }

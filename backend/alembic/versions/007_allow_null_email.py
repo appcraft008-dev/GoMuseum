@@ -28,10 +28,12 @@ def upgrade():
 
 def downgrade():
     # WARNING: this will fail if there are rows with NULL email values
-    op.execute("""
+    op.execute(
+        """
         DELETE FROM users
         WHERE email IS NULL
-        """)
+        """
+    )
     op.alter_column(
         "users",
         "email",

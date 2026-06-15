@@ -206,7 +206,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
             '${_result.artworkName}，${_result.artist}，${_result.period}。${_result.description}',
         'language': _language,
       });
-      final answer = (response.data as Map<String, dynamic>)['answer'] as String?;
+      final answer =
+          (response.data as Map<String, dynamic>)['answer'] as String?;
       if (!mounted) return;
       setState(() {
         _qa.last = _QaEntry(question: q, answer: answer ?? '（未返回回答）');
@@ -287,8 +288,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () =>
-                context.canPop() ? context.pop() : context.go('/'),
+            onTap: () => context.canPop() ? context.pop() : context.go('/'),
             behavior: HitTestBehavior.opaque,
             child: const GmIcon(GmIcons.back, size: 20, color: GmColors.ink),
           ),
@@ -296,7 +296,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
             child: Text(
               '语音导览',
               textAlign: TextAlign.center,
-              style: GmText.sans(size: 11, letterSpacing: 3, color: GmColors.sub),
+              style:
+                  GmText.sans(size: 11, letterSpacing: 3, color: GmColors.sub),
             ),
           ),
           GestureDetector(
@@ -320,7 +321,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
         Text(
           _result.artworkName,
           textAlign: TextAlign.center,
-          style: GmText.serif(size: 22, weight: FontWeight.w700, letterSpacing: 1),
+          style:
+              GmText.serif(size: 22, weight: FontWeight.w700, letterSpacing: 1),
         ),
         const SizedBox(height: 8),
         const GmDiamond(width: 120),
@@ -462,7 +464,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
     if (_loadError != null) {
       return Column(
         children: [
-          Text('讲解生成失败', style: GmText.serif(size: 15, weight: FontWeight.w700)),
+          Text('讲解生成失败',
+              style: GmText.serif(size: 15, weight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(_loadError!,
               textAlign: TextAlign.center,
@@ -527,7 +530,9 @@ class _GuidePageState extends ConsumerState<GuidePage> {
           children: [
             Text('问答',
                 style: GmText.serif(
-                    size: 14, weight: FontWeight.w700, color: GmColors.accentDeep)),
+                    size: 14,
+                    weight: FontWeight.w700,
+                    color: GmColors.accentDeep)),
             const SizedBox(width: 10),
             const Expanded(child: GmHairline()),
           ],
@@ -613,8 +618,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                     style: GmText.sans(size: 13.5),
                     decoration: InputDecoration(
                       hintText: '问问这幅画……',
-                      hintStyle:
-                          GmText.sans(size: 13.5, color: GmColors.faint),
+                      hintStyle: GmText.sans(size: 13.5, color: GmColors.faint),
                       border: InputBorder.none,
                       isDense: true,
                     ),
@@ -642,8 +646,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child:
-                      const GmIcon(GmIcons.mic, size: 20, color: GmColors.ctaInk),
+                  child: const GmIcon(GmIcons.mic,
+                      size: 20, color: GmColors.ctaInk),
                 ),
               ),
             ],

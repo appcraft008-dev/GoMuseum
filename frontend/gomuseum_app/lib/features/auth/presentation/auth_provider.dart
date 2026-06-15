@@ -40,12 +40,15 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
 });
 
 // Auth repository provider
-final Provider<AuthRepository> authRepositoryProvider = Provider<AuthRepository>((ref) {
+final Provider<AuthRepository> authRepositoryProvider =
+    Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(dioProvider));
 });
 
 // Current user state
-final StateNotifierProvider<AuthNotifier, AsyncValue<User?>> currentUserProvider = StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
+final StateNotifierProvider<AuthNotifier, AsyncValue<User?>>
+    currentUserProvider =
+    StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
   return AuthNotifier(ref.watch(authRepositoryProvider));
 });
 
@@ -77,10 +80,12 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
-  Future<bool> register(String email, String password, {String? username}) async {
+  Future<bool> register(String email, String password,
+      {String? username}) async {
     try {
       state = const AsyncValue.loading();
-      final user = await _repository.register(email, password, username: username);
+      final user =
+          await _repository.register(email, password, username: username);
       state = AsyncValue.data(user);
       return true;
     } catch (e) {
@@ -109,7 +114,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<bool> loginWithGoogle(String idToken, {String? username}) async {
     try {
       state = const AsyncValue.loading();
-      final user = await _repository.loginWithGoogle(idToken, username: username);
+      final user =
+          await _repository.loginWithGoogle(idToken, username: username);
       state = AsyncValue.data(user);
       return true;
     } catch (e) {
@@ -122,7 +128,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<bool> loginWithApple(String idToken, {String? username}) async {
     try {
       state = const AsyncValue.loading();
-      final user = await _repository.loginWithApple(idToken, username: username);
+      final user =
+          await _repository.loginWithApple(idToken, username: username);
       state = AsyncValue.data(user);
       return true;
     } catch (e) {
@@ -130,7 +137,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       return false;
     }
   }
-
 
   /// Login as guest user
   Future<bool> loginAsGuest({String? deviceId}) async {

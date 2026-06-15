@@ -47,10 +47,12 @@ def upgrade() -> None:
     op.create_index(
         "ix_recognition_stats_date", "recognition_stats", ["date"], unique=True
     )
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX ix_recognition_stats_date_desc
         ON recognition_stats (date DESC)
-    """)
+    """
+    )
 
     # Add CHECK constraints for recognition_stats
     op.create_check_constraint(
@@ -112,30 +114,38 @@ def upgrade() -> None:
     op.create_index("ix_ai_service_logs_timestamp", "ai_service_logs", ["timestamp"])
 
     # Composite index for strategy + timestamp queries
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX ix_ai_logs_strategy_timestamp
         ON ai_service_logs (strategy_used, timestamp)
-    """)
+    """
+    )
 
     # Composite index for timestamp + response time (for performance analysis)
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX ix_ai_logs_timestamp_response
         ON ai_service_logs (timestamp DESC, response_time)
-    """)
+    """
+    )
 
     # Partial index for errors only
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX ix_ai_logs_errors
         ON ai_service_logs (timestamp, strategy_used)
         WHERE error_message IS NOT NULL
-    """)
+    """
+    )
 
     # Partial index for expensive calls (>$0.01)
-    op.execute("""
+    op.execute(
+        """
         CREATE INDEX ix_ai_logs_expensive_calls
         ON ai_service_logs (timestamp, cost, strategy_used)
         WHERE cost > 0.01
-    """)
+    """
+    )
 
     # Add CHECK constraints for ai_service_logs
     op.create_check_constraint(
