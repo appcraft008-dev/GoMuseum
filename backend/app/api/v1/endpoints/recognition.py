@@ -3,30 +3,31 @@ Recognition API Endpoints
 Handles artwork recognition HTTP requests
 """
 
-from fastapi import (
-    APIRouter,
-    File,
-    UploadFile,
-    Depends,
-    HTTPException,
-    Response,
-)
-from sqlalchemy.orm import Session
 import logging
 
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Response,
+    UploadFile,
+)
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.exceptions import (
+    NotFoundException,
+    ServiceException,
+    TimeoutException,
+    ValidationException,
+)
 from app.schemas.recognition import RecognitionResponse
-from app.services.recognition_service import RecognitionService
 from app.services.ai_service import get_ai_service
 from app.services.cache_service import CacheService
 from app.services.image_service import ImageService
-from app.core.database import get_db
-from app.core.exceptions import (
-    ValidationException,
-    ServiceException,
-    TimeoutException,
-    NotFoundException,
-)
-from app.utils.performance_monitor import monitor_performance, get_performance_monitor
+from app.services.recognition_service import RecognitionService
+from app.utils.performance_monitor import get_performance_monitor, monitor_performance
 
 logger = logging.getLogger(__name__)
 

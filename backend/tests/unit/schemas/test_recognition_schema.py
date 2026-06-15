@@ -2,6 +2,7 @@
 Unit tests for Recognition Schemas
 Tests Pydantic request and response schemas
 """
+
 import pytest
 from pydantic import ValidationError
 
@@ -12,12 +13,12 @@ class TestRecognitionRequestSchema:
     def test_accepts_valid_image_field(self):
         """should_validate_request_with_image_data"""
         # Arrange
-        request_data = {
-            "image": "base64_encoded_image_data"
-        }
+        request_data = {"image": "base64_encoded_image_data"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="RecognitionRequest schema not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="RecognitionRequest schema not implemented"
+        ):
             raise NotImplementedError("RecognitionRequest schema not implemented")
 
     def test_requires_image_field(self):
@@ -26,38 +27,37 @@ class TestRecognitionRequestSchema:
         request_data = {}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Required field validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Required field validation not implemented"
+        ):
             raise NotImplementedError("Required field validation not implemented")
 
     def test_validates_image_is_string(self):
         """should_reject_non_string_image_data"""
         # Arrange
-        request_data = {
-            "image": 12345  # invalid type
-        }
+        request_data = {"image": 12345}  # invalid type
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Type validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Type validation not implemented"
+        ):
             raise NotImplementedError("Type validation not implemented")
 
     def test_validates_image_not_empty(self):
         """should_reject_empty_image_string"""
         # Arrange
-        request_data = {
-            "image": ""
-        }
+        request_data = {"image": ""}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Empty string validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Empty string validation not implemented"
+        ):
             raise NotImplementedError("Empty string validation not implemented")
 
     def test_accepts_optional_user_id_field(self):
         """should_support_optional_user_identification"""
         # Arrange
-        request_data = {
-            "image": "base64_data",
-            "user_id": "user_123"
-        }
+        request_data = {"image": "base64_data", "user_id": "user_123"}
 
         # Act & Assert
         with pytest.raises(NotImplementedError, match="Optional field not implemented"):
@@ -75,11 +75,13 @@ class TestRecognitionResponseSchema:
             "artist": "Leonardo da Vinci",
             "year": 1503,
             "description": "Famous Renaissance portrait",
-            "confidence": 0.95
+            "confidence": 0.95,
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="RecognitionResponse schema not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="RecognitionResponse schema not implemented"
+        ):
             raise NotImplementedError("RecognitionResponse schema not implemented")
 
     def test_validates_confidence_is_float(self):
@@ -87,11 +89,13 @@ class TestRecognitionResponseSchema:
         # Arrange
         response_data = {
             "artwork_title": "Starry Night",
-            "confidence": "not_a_number"  # invalid
+            "confidence": "not_a_number",  # invalid
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Float validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Float validation not implemented"
+        ):
             raise NotImplementedError("Float validation not implemented")
 
     def test_validates_confidence_range(self):
@@ -99,11 +103,13 @@ class TestRecognitionResponseSchema:
         # Arrange
         response_data = {
             "artwork_title": "The Scream",
-            "confidence": 1.5  # out of range
+            "confidence": 1.5,  # out of range
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Range validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Range validation not implemented"
+        ):
             raise NotImplementedError("Range validation not implemented")
 
     def test_allows_nullable_artist(self):
@@ -112,7 +118,7 @@ class TestRecognitionResponseSchema:
         response_data = {
             "artwork_title": "Unknown Painting",
             "artist": None,
-            "confidence": 0.75
+            "confidence": 0.75,
         }
 
         # Act & Assert
@@ -125,7 +131,7 @@ class TestRecognitionResponseSchema:
         response_data = {
             "artwork_title": "Ancient Sculpture",
             "year": None,
-            "confidence": 0.80
+            "confidence": 0.80,
         }
 
         # Act & Assert
@@ -138,11 +144,13 @@ class TestRecognitionResponseSchema:
         response_data = {
             "artwork_title": "Girl with a Pearl Earring",
             "confidence": 0.92,
-            "cached": True
+            "cached": True,
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Cache status field not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Cache status field not implemented"
+        ):
             raise NotImplementedError("Cache status field not implemented")
 
     def test_includes_processing_time_field(self):
@@ -151,11 +159,13 @@ class TestRecognitionResponseSchema:
         response_data = {
             "artwork_title": "The Birth of Venus",
             "confidence": 0.88,
-            "processing_time_ms": 1234
+            "processing_time_ms": 1234,
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Processing time field not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Processing time field not implemented"
+        ):
             raise NotImplementedError("Processing time field not implemented")
 
 
@@ -169,11 +179,13 @@ class TestRecognitionSchemaValidation:
             "artwork_title": "The Persistence of Memory",
             "artist": "Salvador Dalí",
             "year": 1931,
-            "confidence": 0.93
+            "confidence": 0.93,
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="JSON serialization not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="JSON serialization not implemented"
+        ):
             raise NotImplementedError("JSON serialization not implemented")
 
     def test_deserializes_from_json(self):
@@ -182,30 +194,31 @@ class TestRecognitionSchemaValidation:
         json_string = '{"artwork_title": "Guernica", "confidence": 0.89}'
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="JSON deserialization not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="JSON deserialization not implemented"
+        ):
             raise NotImplementedError("JSON deserialization not implemented")
 
     def test_handles_extra_fields_gracefully(self):
         """should_ignore_or_reject_unknown_fields_based_on_config"""
         # Arrange
-        request_data = {
-            "image": "base64_data",
-            "unknown_field": "should_be_ignored"
-        }
+        request_data = {"image": "base64_data", "unknown_field": "should_be_ignored"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Extra fields handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Extra fields handling not implemented"
+        ):
             raise NotImplementedError("Extra fields handling not implemented")
 
     def test_provides_clear_validation_error_messages(self):
         """should_return_descriptive_error_for_invalid_input"""
         # Arrange
-        invalid_data = {
-            "image": None
-        }
+        invalid_data = {"image": None}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Error messaging not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Error messaging not implemented"
+        ):
             raise NotImplementedError("Error messaging not implemented")
 
 
@@ -215,24 +228,23 @@ class TestRecognitionErrorSchema:
     def test_error_response_includes_message(self):
         """should_contain_error_message_field"""
         # Arrange
-        error_data = {
-            "error": "Image validation failed"
-        }
+        error_data = {"error": "Image validation failed"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="ErrorResponse schema not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="ErrorResponse schema not implemented"
+        ):
             raise NotImplementedError("ErrorResponse schema not implemented")
 
     def test_error_response_includes_error_code(self):
         """should_contain_error_code_for_categorization"""
         # Arrange
-        error_data = {
-            "error": "Invalid format",
-            "code": "INVALID_IMAGE_FORMAT"
-        }
+        error_data = {"error": "Invalid format", "code": "INVALID_IMAGE_FORMAT"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Error code field not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Error code field not implemented"
+        ):
             raise NotImplementedError("Error code field not implemented")
 
     def test_error_response_includes_details(self):
@@ -240,7 +252,7 @@ class TestRecognitionErrorSchema:
         # Arrange
         error_data = {
             "error": "Validation failed",
-            "details": ["image field is required"]
+            "details": ["image field is required"],
         }
 
         # Act & Assert

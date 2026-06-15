@@ -2,9 +2,11 @@
 Integration tests for recognition flow
 Tests end-to-end recognition pipeline with real components
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+
 import time
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestRecognitionFlowIntegration:
@@ -17,7 +19,9 @@ class TestRecognitionFlowIntegration:
         image_bytes = b"test_image_data"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Recognition flow not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Recognition flow not implemented"
+        ):
             raise NotImplementedError("Recognition flow not implemented")
 
     @pytest.mark.asyncio
@@ -37,7 +41,9 @@ class TestRecognitionFlowIntegration:
         image_bytes = b"test_image_data"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Database persistence not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Database persistence not implemented"
+        ):
             raise NotImplementedError("Database persistence not implemented")
 
     @pytest.mark.asyncio
@@ -57,7 +63,9 @@ class TestRecognitionFlowIntegration:
         image_bytes = b"test_image_data"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="AI failure handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="AI failure handling not implemented"
+        ):
             raise NotImplementedError("AI failure handling not implemented")
 
 
@@ -119,7 +127,9 @@ class TestRecognitionFlowDataConsistency:
         image_bytes = b"test_image"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Data consistency not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Data consistency not implemented"
+        ):
             raise NotImplementedError("Data consistency not implemented")
 
     @pytest.mark.asyncio
@@ -128,7 +138,9 @@ class TestRecognitionFlowDataConsistency:
         # Arrange - cached result is 25 hours old
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Cache invalidation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Cache invalidation not implemented"
+        ):
             raise NotImplementedError("Cache invalidation not implemented")
 
     @pytest.mark.asyncio
@@ -160,7 +172,9 @@ class TestRecognitionFlowConcurrency:
         image_batch = [b"image_" + str(i).encode() for i in range(10)]
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Concurrent handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Concurrent handling not implemented"
+        ):
             raise NotImplementedError("Concurrent handling not implemented")
 
     @pytest.mark.asyncio
@@ -170,7 +184,9 @@ class TestRecognitionFlowConcurrency:
         image_batch = [b"image_" + str(i).encode() for i in range(100)]
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Queue management not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Queue management not implemented"
+        ):
             raise NotImplementedError("Queue management not implemented")
 
     @pytest.mark.asyncio
@@ -179,7 +195,9 @@ class TestRecognitionFlowConcurrency:
         # Arrange - multiple workers updating same key
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Race condition handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Race condition handling not implemented"
+        ):
             raise NotImplementedError("Race condition handling not implemented")
 
 
@@ -193,7 +211,9 @@ class TestRecognitionFlowMetrics:
         image_bytes = b"test"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Latency tracking not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Latency tracking not implemented"
+        ):
             raise NotImplementedError("Latency tracking not implemented")
 
     @pytest.mark.asyncio
@@ -207,14 +227,18 @@ class TestRecognitionFlowMetrics:
     async def test_tracks_ai_strategy_usage(self):
         """should_record_which_ai_model_was_used"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Strategy metrics not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Strategy metrics not implemented"
+        ):
             raise NotImplementedError("Strategy metrics not implemented")
 
     @pytest.mark.asyncio
     async def test_exports_metrics_to_prometheus(self):
         """should_expose_metrics_for_monitoring_system"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Prometheus export not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Prometheus export not implemented"
+        ):
             raise NotImplementedError("Prometheus export not implemented")
 
 
@@ -228,7 +252,9 @@ class TestRecognitionFlowFallbackStrategies:
         image_bytes = b"test"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Claude fallback not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Claude fallback not implemented"
+        ):
             raise NotImplementedError("Claude fallback not implemented")
 
     @pytest.mark.asyncio
@@ -248,5 +274,7 @@ class TestRecognitionFlowFallbackStrategies:
         image_bytes = b"test"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Timeout enforcement not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Timeout enforcement not implemented"
+        ):
             raise NotImplementedError("Timeout enforcement not implemented")

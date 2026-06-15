@@ -3,12 +3,24 @@ AI Service Log Model
 SQLAlchemy model for tracking AI service calls and performance
 """
 
-from sqlalchemy import Column, String, Float, Integer, DateTime, Text, ForeignKey, CheckConstraint, Index
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from app.core.database import Base
 import uuid
 from datetime import datetime
+
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
+from app.core.database import Base
 
 
 class AIServiceLog(Base):
@@ -31,9 +43,9 @@ class AIServiceLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     recognition_id = Column(
         UUID(as_uuid=True),
-        ForeignKey('recognition_results.id', ondelete='CASCADE'),
+        ForeignKey("recognition_results.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     strategy_used = Column(String(20), nullable=False)
     response_time = Column(Float, nullable=False)  # seconds
@@ -50,33 +62,38 @@ class AIServiceLog(Base):
         # Data integrity constraints
         CheckConstraint(
             "strategy_used IN ('openai', 'claude', 'local', 'manual')",
-            name='check_valid_strategy'
+            name="check_valid_strategy",
         ),
-        CheckConstraint('response_time >= 0', name='check_response_time_positive'),
-        CheckConstraint('tokens_used >= 0 OR tokens_used IS NULL', name='check_tokens_positive'),
-        CheckConstraint('cost >= 0', name='check_cost_positive'),
-        CheckConstraint('timestamp <= NOW()', name='check_timestamp_not_future'),
+        CheckConstraint("response_time >= 0", name="check_response_time_positive"),
+        CheckConstraint(
+            "tokens_used >= 0 OR tokens_used IS NULL", name="check_tokens_positive"
+        ),
+        CheckConstraint("cost >= 0", name="check_cost_positive"),
+        CheckConstraint("timestamp <= NOW()", name="check_timestamp_not_future"),
         # Performance indexes
         # Index for finding logs by strategy and timestamp
-        Index('ix_ai_logs_strategy_timestamp', 'strategy_used', 'timestamp'),
+        Index("ix_ai_logs_strategy_timestamp", "strategy_used", "timestamp"),
         # Index for analyzing recent performance
-        Index('ix_ai_logs_timestamp_response', 'timestamp', 'response_time', postgresql_ops={
-            'timestamp': 'DESC'
-        }),
+        Index(
+            "ix_ai_logs_timestamp_response",
+            "timestamp",
+            "response_time",
+            postgresql_ops={"timestamp": "DESC"},
+        ),
         # Partial index for errors only
         Index(
-            'ix_ai_logs_errors',
-            'timestamp',
-            'strategy_used',
-            postgresql_where=Column('error_message').isnot(None)
+            "ix_ai_logs_errors",
+            "timestamp",
+            "strategy_used",
+            postgresql_where=Column("error_message").isnot(None),
         ),
         # Partial index for expensive calls (>$0.01)
         Index(
-            'ix_ai_logs_expensive_calls',
-            'timestamp',
-            'cost',
-            'strategy_used',
-            postgresql_where=Column('cost') > 0.01
+            "ix_ai_logs_expensive_calls",
+            "timestamp",
+            "cost",
+            "strategy_used",
+            postgresql_where=Column("cost") > 0.01,
         ),
     )
 

@@ -3,9 +3,10 @@ Configuration module for GoMuseum backend
 Loads environment variables and provides application settings
 """
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
 from typing import Optional
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -28,7 +29,7 @@ class Settings(BaseSettings):
         """Get database URL, prefer DATABASE_URL env var, fallback to constructed URL"""
         if self.DATABASE_URL:
             # Convert asyncpg URL to sync psycopg2 URL
-            return self.DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://')
+            return self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
         return (
             f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

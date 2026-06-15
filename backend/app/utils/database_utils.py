@@ -3,11 +3,12 @@ Database utility functions
 Performance analysis and query optimization tools
 """
 
-from sqlalchemy.orm import Session
-from sqlalchemy import text, inspect
-from typing import List, Dict, Any, Optional
 import logging
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import inspect, text
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,8 @@ class DatabaseUtils:
             >>> sizes = utils.get_table_sizes(db)
             >>> print(f"Table: {sizes['recognition_results']['table_size']}")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 schemaname || '.' || tablename AS table_name,
                 pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
@@ -74,24 +76,27 @@ class DatabaseUtils:
             FROM pg_tables
             WHERE schemaname = 'public'
             ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
-        """)
+        """
+        )
 
         result = db.execute(query)
         table_sizes = {}
 
         for row in result:
-            table_name = row[0].split('.')[1]  # Remove schema prefix
+            table_name = row[0].split(".")[1]  # Remove schema prefix
             table_sizes[table_name] = {
-                'total_size': row[1],
-                'table_size': row[2],
-                'index_size': row[3],
-                'total_bytes': row[4]
+                "total_size": row[1],
+                "table_size": row[2],
+                "index_size": row[3],
+                "total_bytes": row[4],
             }
 
         return table_sizes
 
     @staticmethod
-    def get_index_usage(db: Session, table_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_index_usage(
+        db: Session, table_name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Get index usage statistics for tables
 
@@ -110,7 +115,8 @@ class DatabaseUtils:
         """
         where_clause = f"AND indexrelname LIKE '{table_name}%'" if table_name else ""
 
-        query = text(f"""
+        query = text(
+            f"""
             SELECT
                 schemaname,
                 tablename,
@@ -123,26 +129,31 @@ class DatabaseUtils:
             WHERE schemaname = 'public'
             {where_clause}
             ORDER BY idx_scan DESC
-        """)
+        """
+        )
 
         result = db.execute(query)
         indexes = []
 
         for row in result:
-            indexes.append({
-                'schema': row[0],
-                'table': row[1],
-                'index_name': row[2],
-                'index_scans': row[3],
-                'tuples_read': row[4],
-                'tuples_fetched': row[5],
-                'index_size': row[6]
-            })
+            indexes.append(
+                {
+                    "schema": row[0],
+                    "table": row[1],
+                    "index_name": row[2],
+                    "index_scans": row[3],
+                    "tuples_read": row[4],
+                    "tuples_fetched": row[5],
+                    "index_size": row[6],
+                }
+            )
 
         return indexes
 
     @staticmethod
-    def get_slow_queries(db: Session, min_duration_ms: int = 100, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_slow_queries(
+        db: Session, min_duration_ms: int = 100, limit: int = 20
+    ) -> List[Dict[str, Any]]:
         """
         Get slow query statistics from pg_stat_statements
         Requires pg_stat_statements extension to be enabled
@@ -162,7 +173,8 @@ class DatabaseUtils:
             ...     print(f"{query['avg_time_ms']:.2f}ms: {query['query'][:50]}")
         """
         try:
-            query = text(f"""
+            query = text(
+                f"""
                 SELECT
                     query,
                     calls,
@@ -175,21 +187,24 @@ class DatabaseUtils:
                 WHERE mean_exec_time > {min_duration_ms}
                 ORDER BY mean_exec_time DESC
                 LIMIT {limit}
-            """)
+            """
+            )
 
             result = db.execute(query)
             slow_queries = []
 
             for row in result:
-                slow_queries.append({
-                    'query': row[0],
-                    'calls': row[1],
-                    'total_time_ms': float(row[2]),
-                    'avg_time_ms': float(row[3]),
-                    'max_time_ms': float(row[4]),
-                    'stddev_time_ms': float(row[5]),
-                    'rows': row[6]
-                })
+                slow_queries.append(
+                    {
+                        "query": row[0],
+                        "calls": row[1],
+                        "total_time_ms": float(row[2]),
+                        "avg_time_ms": float(row[3]),
+                        "max_time_ms": float(row[4]),
+                        "stddev_time_ms": float(row[5]),
+                        "rows": row[6],
+                    }
+                )
 
             return slow_queries
 
@@ -264,20 +279,22 @@ class DatabaseUtils:
             >>> ratios = utils.get_cache_hit_ratio(db)
             >>> print(f"Cache hit ratio: {ratios['cache_hit_ratio']:.2%}")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 sum(heap_blks_read) AS heap_read,
                 sum(heap_blks_hit) AS heap_hit,
                 sum(heap_blks_hit) / nullif(sum(heap_blks_hit) + sum(heap_blks_read), 0) AS ratio
             FROM pg_statio_user_tables
-        """)
+        """
+        )
 
         result = db.execute(query).fetchone()
 
         return {
-            'heap_blocks_read': result[0] or 0,
-            'heap_blocks_hit': result[1] or 0,
-            'cache_hit_ratio': float(result[2] or 0.0)
+            "heap_blocks_read": result[0] or 0,
+            "heap_blocks_hit": result[1] or 0,
+            "cache_hit_ratio": float(result[2] or 0.0),
         }
 
     @staticmethod
@@ -296,23 +313,25 @@ class DatabaseUtils:
             >>> stats = utils.get_connection_stats(db)
             >>> print(f"Active connections: {stats['active_connections']}")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 state,
                 COUNT(*) as count
             FROM pg_stat_activity
             WHERE datname = current_database()
             GROUP BY state
-        """)
+        """
+        )
 
         result = db.execute(query)
-        stats = {'total_connections': 0}
+        stats = {"total_connections": 0}
 
         for row in result:
-            state = row[0] or 'unknown'
+            state = row[0] or "unknown"
             count = row[1]
-            stats[f'{state}_connections'] = count
-            stats['total_connections'] += count
+            stats[f"{state}_connections"] = count
+            stats["total_connections"] += count
 
         return stats
 
@@ -333,7 +352,8 @@ class DatabaseUtils:
             >>> for item in report:
             ...     print(f"Table {item['table']}: {item['seq_scans']} sequential scans")
         """
-        query = text("""
+        query = text(
+            """
             SELECT
                 schemaname,
                 tablename,
@@ -347,20 +367,23 @@ class DatabaseUtils:
               AND seq_scan > 0
             ORDER BY seq_scan DESC, seq_tup_read DESC
             LIMIT 20
-        """)
+        """
+        )
 
         result = db.execute(query)
         report = []
 
         for row in result:
-            report.append({
-                'schema': row[0],
-                'table': row[1],
-                'seq_scans': row[2],
-                'seq_tuples_read': row[3],
-                'index_scans': row[4] or 0,
-                'avg_seq_tuples_per_scan': float(row[5] or 0),
-                'table_size': row[6]
-            })
+            report.append(
+                {
+                    "schema": row[0],
+                    "table": row[1],
+                    "seq_scans": row[2],
+                    "seq_tuples_read": row[3],
+                    "index_scans": row[4] or 0,
+                    "avg_seq_tuples_per_scan": float(row[5] or 0),
+                    "table_size": row[6],
+                }
+            )
 
         return report

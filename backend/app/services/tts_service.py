@@ -4,13 +4,14 @@ Handles audio generation from text using OpenAI TTS API
 Supports multiple languages and voice options
 """
 
-import logging
+import asyncio
 import hashlib
-from typing import Dict, Optional, BinaryIO
+import io
+import logging
+from typing import BinaryIO, Dict, Optional
+
 from app.core.config import settings
 from app.core.exceptions import AIServiceException
-import asyncio
-import io
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ def _get_openai_client():
     if _openai_client is None:
         try:
             from openai import AsyncOpenAI
+
             _openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             logger.info("OpenAI client initialized for TTS")
         except ImportError:
@@ -39,28 +41,16 @@ def _get_openai_client():
 VOICE_MAPPING = {
     "en": {
         "default": "alloy",
-        "options": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+        "options": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
     },
     "zh": {
         "default": "nova",  # Nova works well for Chinese
-        "options": ["nova", "shimmer", "alloy"]
+        "options": ["nova", "shimmer", "alloy"],
     },
-    "fr": {
-        "default": "shimmer",
-        "options": ["shimmer", "alloy", "nova"]
-    },
-    "de": {
-        "default": "echo",
-        "options": ["echo", "alloy", "onyx"]
-    },
-    "es": {
-        "default": "nova",
-        "options": ["nova", "shimmer", "alloy"]
-    },
-    "it": {
-        "default": "alloy",
-        "options": ["alloy", "shimmer", "nova"]
-    }
+    "fr": {"default": "shimmer", "options": ["shimmer", "alloy", "nova"]},
+    "de": {"default": "echo", "options": ["echo", "alloy", "onyx"]},
+    "es": {"default": "nova", "options": ["nova", "shimmer", "alloy"]},
+    "it": {"default": "alloy", "options": ["alloy", "shimmer", "nova"]},
 }
 
 
@@ -79,7 +69,7 @@ class TTSService:
         text: str,
         language: str = "en",
         voice: Optional[str] = None,
-        speed: float = 1.0
+        speed: float = 1.0,
     ) -> Dict[str, any]:
         """
         Generate audio from text using OpenAI TTS
@@ -102,7 +92,9 @@ class TTSService:
         Raises:
             AIServiceException: If generation fails
         """
-        logger.info(f"Generating TTS audio for text (length: {len(text)}) in {language}")
+        logger.info(
+            f"Generating TTS audio for text (length: {len(text)}) in {language}"
+        )
 
         # Validate language and get voice
         if language not in VOICE_MAPPING:
@@ -112,7 +104,9 @@ class TTSService:
         if voice is None:
             voice = VOICE_MAPPING[language]["default"]
         elif voice not in VOICE_MAPPING[language]["options"]:
-            logger.warning(f"Voice {voice} not recommended for {language}, using default")
+            logger.warning(
+                f"Voice {voice} not recommended for {language}, using default"
+            )
             voice = VOICE_MAPPING[language]["default"]
 
         # Validate speed
@@ -139,9 +133,9 @@ class TTSService:
                     voice=voice,
                     input=text,
                     speed=speed,
-                    response_format="mp3"
+                    response_format="mp3",
                 ),
-                timeout=self.timeout
+                timeout=self.timeout,
             )
 
             # Read audio data
@@ -165,14 +159,12 @@ class TTSService:
                 "voice": voice,
                 "language": language,
                 "text_hash": text_hash,
-                "size_bytes": len(audio_data)
+                "size_bytes": len(audio_data),
             }
 
         except asyncio.TimeoutError:
             logger.error(f"TTS generation timed out after {self.timeout}s")
-            raise AIServiceException(
-                f"TTS generation timed out after {self.timeout}s"
-            )
+            raise AIServiceException(f"TTS generation timed out after {self.timeout}s")
         except Exception as e:
             logger.error(f"TTS generation failed: {str(e)}")
             raise AIServiceException(f"TTS generation failed: {str(e)}")
@@ -182,7 +174,7 @@ class TTSService:
         text: str,
         language: str = "en",
         voice: Optional[str] = None,
-        speed: float = 1.0
+        speed: float = 1.0,
     ):
         """
         Generate audio stream (for real-time streaming)
@@ -218,7 +210,7 @@ class TTSService:
                 voice=voice,
                 input=text,
                 speed=speed,
-                response_format="mp3"
+                response_format="mp3",
             )
 
             # Stream audio chunks
@@ -247,7 +239,7 @@ class TTSService:
         return {
             "language": language,
             "default_voice": VOICE_MAPPING[language]["default"],
-            "available_voices": VOICE_MAPPING[language]["options"]
+            "available_voices": VOICE_MAPPING[language]["options"],
         }
 
     def generate_text_hash(
@@ -255,7 +247,7 @@ class TTSService:
         text: str,
         language: str = "en",
         voice: Optional[str] = None,
-        speed: float = 1.0
+        speed: float = 1.0,
     ) -> str:
         """
         Generate cache key hash for text+params

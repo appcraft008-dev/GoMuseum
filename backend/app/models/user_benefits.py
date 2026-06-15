@@ -3,11 +3,13 @@ User Benefits Model
 SQLAlchemy model for user subscription and recognition benefits
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, func
-from sqlalchemy.dialects.postgresql import UUID
-from app.core.database import Base
 import uuid
 from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, func
+from sqlalchemy.dialects.postgresql import UUID
+
+from app.core.database import Base
 
 
 class UserBenefits(Base):
@@ -36,7 +38,9 @@ class UserBenefits(Base):
     device_id = Column(String(255), nullable=True, index=True)
 
     # Recognition quota
-    recognition_quota = Column(Integer, nullable=False, default=5)  # Free tier: 5 recognitions
+    recognition_quota = Column(
+        Integer, nullable=False, default=5
+    )  # Free tier: 5 recognitions
     total_recognitions_used = Column(Integer, nullable=False, default=0)
 
     # Premium subscription
@@ -52,7 +56,9 @@ class UserBenefits(Base):
 
     # Timestamps
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     def __repr__(self) -> str:
         return (
@@ -73,7 +79,9 @@ class UserBenefits(Base):
             ),
             "day_pass_active": self.day_pass_active,
             "day_pass_expires_at": (
-                self.day_pass_expires_at.isoformat() if self.day_pass_expires_at else None
+                self.day_pass_expires_at.isoformat()
+                if self.day_pass_expires_at
+                else None
             ),
             "referral_bonus_quota": self.referral_bonus_quota,
             "total_recognitions_used": self.total_recognitions_used,
@@ -86,11 +94,19 @@ class UserBenefits(Base):
         now = datetime.utcnow()
 
         # Check day pass
-        if self.day_pass_active and self.day_pass_expires_at and self.day_pass_expires_at > now:
+        if (
+            self.day_pass_active
+            and self.day_pass_expires_at
+            and self.day_pass_expires_at > now
+        ):
             return True
 
         # Check premium subscription
-        if self.is_premium and self.premium_expires_at and self.premium_expires_at > now:
+        if (
+            self.is_premium
+            and self.premium_expires_at
+            and self.premium_expires_at > now
+        ):
             return True
 
         # Check quota (including referral bonus)
@@ -110,8 +126,15 @@ class UserBenefits(Base):
         now = datetime.utcnow()
 
         # Day pass or premium: unlimited recognitions
-        if (self.day_pass_active and self.day_pass_expires_at and self.day_pass_expires_at > now) or \
-           (self.is_premium and self.premium_expires_at and self.premium_expires_at > now):
+        if (
+            self.day_pass_active
+            and self.day_pass_expires_at
+            and self.day_pass_expires_at > now
+        ) or (
+            self.is_premium
+            and self.premium_expires_at
+            and self.premium_expires_at > now
+        ):
             self.total_recognitions_used += 1
             return True
 

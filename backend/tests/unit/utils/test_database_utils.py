@@ -2,10 +2,11 @@
 Comprehensive Unit tests for Database Utilities
 Tests database performance analysis and query optimization tools with full coverage
 """
+
+from unittest.mock import MagicMock, Mock, call, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, Mock
 from sqlalchemy.orm import Session
-from unittest.mock import call
 
 from app.utils.database_utils import DatabaseUtils
 
@@ -56,7 +57,7 @@ class TestDatabaseUtils:
         assert len(result) == 1
         assert "Seq Scan on table1" in result[0]
 
-    @patch('app.utils.database_utils.logger')
+    @patch("app.utils.database_utils.logger")
     def test_explain_query_error_handling(self, mock_logger):
         """Test error handling in explain_query"""
         mock_db = MagicMock(spec=Session)
@@ -70,12 +71,15 @@ class TestDatabaseUtils:
         assert "Database error" in str(exc_info.value)
         mock_logger.error.assert_called_once()
 
-    @patch('app.utils.database_utils.logger')
+    @patch("app.utils.database_utils.logger")
     def test_explain_query_logs_results(self, mock_logger):
         """Test that explain_query logs the results"""
         mock_db = MagicMock(spec=Session)
         mock_result = MagicMock()
-        mock_result.fetchall.return_value = [("Query plan line 1",), ("Query plan line 2",)]
+        mock_result.fetchall.return_value = [
+            ("Query plan line 1",),
+            ("Query plan line 2",),
+        ]
         mock_db.execute.return_value = mock_result
 
         DatabaseUtils.explain_query(mock_db, "SELECT 1")
@@ -88,10 +92,20 @@ class TestDatabaseUtils:
         """Test table size information retrieval"""
         mock_db = MagicMock(spec=Session)
         mock_result = MagicMock()
-        mock_result.__iter__ = Mock(return_value=iter([
-            ("public.recognition_results", "512 MB", "400 MB", "112 MB", 536870912),
-            ("public.ai_service_log", "128 MB", "100 MB", "28 MB", 134217728),
-        ]))
+        mock_result.__iter__ = Mock(
+            return_value=iter(
+                [
+                    (
+                        "public.recognition_results",
+                        "512 MB",
+                        "400 MB",
+                        "112 MB",
+                        536870912,
+                    ),
+                    ("public.ai_service_log", "128 MB", "100 MB", "28 MB", 134217728),
+                ]
+            )
+        )
         mock_db.execute.return_value = mock_result
 
         result = DatabaseUtils.get_table_sizes(mock_db)
@@ -113,10 +127,30 @@ class TestDatabaseUtils:
         """Test index usage statistics for all tables"""
         mock_db = MagicMock(spec=Session)
         mock_result = MagicMock()
-        mock_result.__iter__ = Mock(return_value=iter([
-            ("public", "recognition_results", "idx_recognition_hash", 1000, 5000, 4500, "64 kB"),
-            ("public", "recognition_results", "idx_recognition_created", 500, 2000, 1800, "32 kB"),
-        ]))
+        mock_result.__iter__ = Mock(
+            return_value=iter(
+                [
+                    (
+                        "public",
+                        "recognition_results",
+                        "idx_recognition_hash",
+                        1000,
+                        5000,
+                        4500,
+                        "64 kB",
+                    ),
+                    (
+                        "public",
+                        "recognition_results",
+                        "idx_recognition_created",
+                        500,
+                        2000,
+                        1800,
+                        "32 kB",
+                    ),
+                ]
+            )
+        )
         mock_db.execute.return_value = mock_result
 
         result = DatabaseUtils.get_index_usage(mock_db)
@@ -131,12 +165,26 @@ class TestDatabaseUtils:
         """Test index usage statistics for specific table"""
         mock_db = MagicMock(spec=Session)
         mock_result = MagicMock()
-        mock_result.__iter__ = Mock(return_value=iter([
-            ("public", "recognition_results", "idx_recognition_hash", 1000, 5000, 4500, "64 kB"),
-        ]))
+        mock_result.__iter__ = Mock(
+            return_value=iter(
+                [
+                    (
+                        "public",
+                        "recognition_results",
+                        "idx_recognition_hash",
+                        1000,
+                        5000,
+                        4500,
+                        "64 kB",
+                    ),
+                ]
+            )
+        )
         mock_db.execute.return_value = mock_result
 
-        result = DatabaseUtils.get_index_usage(mock_db, table_name="recognition_results")
+        result = DatabaseUtils.get_index_usage(
+            mock_db, table_name="recognition_results"
+        )
 
         executed_sql = str(mock_db.execute.call_args[0][0])
         assert "recognition_results%" in executed_sql
@@ -147,9 +195,21 @@ class TestDatabaseUtils:
         """Test slow query retrieval"""
         mock_db = MagicMock(spec=Session)
         mock_result = MagicMock()
-        mock_result.__iter__ = Mock(return_value=iter([
-            ("SELECT * FROM large_table", 50, 25000.0, 500.0, 1000.0, 200.0, 1000),
-        ]))
+        mock_result.__iter__ = Mock(
+            return_value=iter(
+                [
+                    (
+                        "SELECT * FROM large_table",
+                        50,
+                        25000.0,
+                        500.0,
+                        1000.0,
+                        200.0,
+                        1000,
+                    ),
+                ]
+            )
+        )
         mock_db.execute.return_value = mock_result
 
         result = DatabaseUtils.get_slow_queries(mock_db, min_duration_ms=100, limit=10)
@@ -157,7 +217,7 @@ class TestDatabaseUtils:
         assert len(result) == 1
         assert "SELECT * FROM large_table" in result[0]["query"]
 
-    @patch('app.utils.database_utils.logger')
+    @patch("app.utils.database_utils.logger")
     def test_get_slow_queries_not_available(self, mock_logger):
         """Test slow queries when pg_stat_statements not available"""
         mock_db = MagicMock(spec=Session)

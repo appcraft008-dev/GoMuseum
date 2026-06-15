@@ -1,7 +1,8 @@
 """API v1 initialization"""
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import recognition, content, chat, history, payment
+
+from app.api.v1.endpoints import chat, content, history, payment, recognition
 
 api_router = APIRouter()
 
@@ -11,23 +12,15 @@ api_router.include_router(
 )
 
 # Include content endpoints (AI explanation + TTS)
-api_router.include_router(
-    content.router, prefix="/content", tags=["content"]
-)
+api_router.include_router(content.router, prefix="/content", tags=["content"])
 
 # Include chat endpoints (Voice Q&A)
-api_router.include_router(
-    chat.router, prefix="/chat", tags=["chat"]
-)
+api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 
 # Include history endpoints
-api_router.include_router(
-    history.router, prefix="/history", tags=["history"]
-)
+api_router.include_router(history.router, prefix="/history", tags=["history"])
 
 # Include payment endpoints (IAP verification & benefits)
-api_router.include_router(
-    payment.router, prefix="/payment", tags=["payment"]
-)
+api_router.include_router(payment.router, prefix="/payment", tags=["payment"])
 
 __all__ = ["api_router"]

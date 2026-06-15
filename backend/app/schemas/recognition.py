@@ -3,11 +3,12 @@ Pydantic schemas for Recognition API
 Request and response models with validation
 """
 
-from pydantic import BaseModel, Field, field_validator
+import base64
 from datetime import datetime
 from typing import Optional, Union
 from uuid import UUID
-import base64
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class RecognitionRequest(BaseModel):
@@ -51,11 +52,17 @@ class RecognitionResponse(BaseModel):
     period: str = Field(..., description="Historical period")
     description: str = Field(..., description="Detailed description of the artwork")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score (0-1)")
-    timestamp: datetime = Field(default_factory=datetime.now, description="When the recognition was performed")
+    timestamp: datetime = Field(
+        default_factory=datetime.now, description="When the recognition was performed"
+    )
 
     # Additional fields for cache and performance tracking
-    cached: bool = Field(default=False, description="Whether result was served from cache")
-    processing_time_ms: int = Field(default=0, description="Processing time in milliseconds")
+    cached: bool = Field(
+        default=False, description="Whether result was served from cache"
+    )
+    processing_time_ms: int = Field(
+        default=0, description="Processing time in milliseconds"
+    )
 
     @field_validator("id", mode="before")
     @classmethod

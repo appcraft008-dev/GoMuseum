@@ -1,11 +1,11 @@
 """Schemas module initialization"""
 
 from app.schemas.recognition import (
-    RecognitionRequest,
-    RecognitionResponse,
-    RecognitionError,
     CacheStats,
     PerformanceStats,
+    RecognitionError,
+    RecognitionRequest,
+    RecognitionResponse,
 )
 
 __all__ = [

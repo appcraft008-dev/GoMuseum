@@ -2,16 +2,18 @@
 Comprehensive Unit tests for Recognition Service
 Tests the core business logic for artwork recognition workflow
 """
-import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4, UUID
-from datetime import datetime
 
-from app.services.recognition_service import RecognitionService, get_recognition_service
-from app.schemas.recognition import RecognitionResponse
+import asyncio
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID, uuid4
+
+import pytest
+
+from app.core.exceptions import NotFoundException, ServiceException, ValidationException
 from app.models.recognition_result import RecognitionResult
-from app.core.exceptions import ServiceException, NotFoundException, ValidationException
+from app.schemas.recognition import RecognitionResponse
+from app.services.recognition_service import RecognitionService, get_recognition_service
 
 
 class TestRecognitionServiceInitialization:
@@ -30,7 +32,7 @@ class TestRecognitionServiceInitialization:
             db=mock_db,
             ai_service=mock_ai_service,
             cache_service=mock_cache_service,
-            image_service=mock_image_service
+            image_service=mock_image_service,
         )
 
         # Assert
@@ -55,7 +57,7 @@ class TestRecognizeArtworkWorkflow:
             db=mock_db,
             ai_service=mock_ai_service,
             cache_service=mock_cache_service,
-            image_service=mock_image_service
+            image_service=mock_image_service,
         )
 
         return service, mock_db, mock_ai_service, mock_cache_service, mock_image_service
@@ -90,7 +92,7 @@ class TestRecognizeArtworkWorkflow:
             "artist": "Leonardo da Vinci",
             "period": "Renaissance",
             "description": "Famous portrait",
-            "confidence": 0.95
+            "confidence": 0.95,
         }
         mock_ai.recognize_with_timeout = AsyncMock(return_value=ai_result)
 
@@ -113,10 +115,12 @@ class TestRecognizeArtworkWorkflow:
             artist=ai_result["artist"],
             period=ai_result["period"],
             description=ai_result["description"],
-            confidence=ai_result["confidence"]
+            confidence=ai_result["confidence"],
         )
 
-        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response) as mock_validate:
+        with patch.object(
+            RecognitionResponse, "model_validate", return_value=expected_response
+        ) as mock_validate:
             # Act
             result = await service.recognize_artwork(test_image_data)
 
@@ -151,7 +155,7 @@ class TestRecognizeArtworkWorkflow:
             artist="Vincent van Gogh",
             period="Post-Impressionism",
             description="Night scene painting",
-            confidence=0.92
+            confidence=0.92,
         )
         mock_cache.get_cached_result.return_value = cached_response
 
@@ -202,10 +206,12 @@ class TestRecognizeArtworkWorkflow:
             artist="Edvard Munch",
             period="Expressionism",
             description="Famous expressionist painting",
-            confidence=0.88
+            confidence=0.88,
         )
 
-        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+        with patch.object(
+            RecognitionResponse, "model_validate", return_value=expected_response
+        ):
             # Act
             result = await service.recognize_artwork(test_image_data)
 
@@ -213,7 +219,9 @@ class TestRecognizeArtworkWorkflow:
             assert result.artwork_name == "The Scream"
             mock_ai.recognize_with_timeout.assert_not_called()
             mock_db.add.assert_not_called()
-            mock_cache.cache_result.assert_called_once_with(test_hash, result, test_phash)
+            mock_cache.cache_result.assert_called_once_with(
+                test_hash, result, test_phash
+            )
 
     @pytest.mark.asyncio
     async def test_recognize_artwork_validates_image_first(self, service_with_mocks):
@@ -252,7 +260,9 @@ class TestRecognizeArtworkWorkflow:
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
         # Mock AI timeout
-        mock_ai.recognize_with_timeout = AsyncMock(side_effect=asyncio.TimeoutError("AI timeout"))
+        mock_ai.recognize_with_timeout = AsyncMock(
+            side_effect=asyncio.TimeoutError("AI timeout")
+        )
 
         # Act & Assert
         with pytest.raises(ServiceException):
@@ -310,7 +320,7 @@ class TestRecognizeArtworkWorkflow:
             "artist": "Pablo Picasso",
             "period": "Cubism",
             "description": "Anti-war painting",
-            "confidence": 0.91
+            "confidence": 0.91,
         }
         mock_ai.recognize_with_timeout = AsyncMock(return_value=ai_result)
 
@@ -322,10 +332,12 @@ class TestRecognizeArtworkWorkflow:
             artist=ai_result["artist"],
             period=ai_result["period"],
             description=ai_result["description"],
-            confidence=ai_result["confidence"]
+            confidence=ai_result["confidence"],
         )
 
-        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+        with patch.object(
+            RecognitionResponse, "model_validate", return_value=expected_response
+        ):
             # Act
             await service.recognize_artwork(test_image_data)
 
@@ -359,7 +371,7 @@ class TestRecognizeArtworkWorkflow:
             "artist": "Test Artist",
             "period": "Test",
             "description": "Test",
-            "confidence": 0.5
+            "confidence": 0.5,
         }
         mock_ai.recognize_with_timeout = AsyncMock(return_value=ai_result)
 
@@ -401,7 +413,7 @@ class TestGetRecognitionById:
             db=mock_db,
             ai_service=MagicMock(),
             cache_service=MagicMock(),
-            image_service=MagicMock()
+            image_service=MagicMock(),
         )
         return service, mock_db
 
@@ -430,10 +442,12 @@ class TestGetRecognitionById:
             artist="Auguste Rodin",
             period="Modern",
             description="Bronze sculpture",
-            confidence=0.89
+            confidence=0.89,
         )
 
-        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+        with patch.object(
+            RecognitionResponse, "model_validate", return_value=expected_response
+        ):
             # Act
             result = service.get_recognition_by_id(str(test_id))
 
@@ -495,7 +509,7 @@ class TestGetRecentRecognitions:
             db=mock_db,
             ai_service=MagicMock(),
             cache_service=MagicMock(),
-            image_service=MagicMock()
+            image_service=MagicMock(),
         )
         return service, mock_db
 
@@ -519,7 +533,9 @@ class TestGetRecentRecognitions:
             mock_result.timestamp = now
             mock_db_results.append(mock_result)
 
-        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = mock_db_results
+        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = (
+            mock_db_results
+        )
 
         # Mock RecognitionResponse.model_validate for list comprehension
         def mock_validate(db_result):
@@ -529,16 +545,20 @@ class TestGetRecentRecognitions:
                 artist=db_result.artist,
                 period=db_result.period,
                 description=db_result.description,
-                confidence=db_result.confidence
+                confidence=db_result.confidence,
             )
 
-        with patch.object(RecognitionResponse, 'model_validate', side_effect=mock_validate):
+        with patch.object(
+            RecognitionResponse, "model_validate", side_effect=mock_validate
+        ):
             # Act
             results = service.get_recent_recognitions()
 
             # Assert
             assert len(results) == 10
-            mock_db.query.return_value.order_by.return_value.limit.assert_called_with(10)
+            mock_db.query.return_value.order_by.return_value.limit.assert_called_with(
+                10
+            )
 
     def test_get_recent_recognitions_custom_limit(self, service_with_mocks):
         """should_respect_custom_limit_parameter"""
@@ -559,7 +579,9 @@ class TestGetRecentRecognitions:
             mock_result.timestamp = now
             mock_db_results.append(mock_result)
 
-        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = mock_db_results
+        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = (
+            mock_db_results
+        )
 
         # Mock RecognitionResponse.model_validate for list comprehension
         def mock_validate(db_result):
@@ -569,10 +591,12 @@ class TestGetRecentRecognitions:
                 artist=db_result.artist,
                 period=db_result.period,
                 description=db_result.description,
-                confidence=db_result.confidence
+                confidence=db_result.confidence,
             )
 
-        with patch.object(RecognitionResponse, 'model_validate', side_effect=mock_validate):
+        with patch.object(
+            RecognitionResponse, "model_validate", side_effect=mock_validate
+        ):
             # Act
             results = service.get_recent_recognitions(limit=5)
 
@@ -585,7 +609,9 @@ class TestGetRecentRecognitions:
         # Arrange
         service, mock_db = service_with_mocks
 
-        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = []
+        mock_db.query.return_value.order_by.return_value.limit.return_value.all.return_value = (
+            []
+        )
 
         # Act
         results = service.get_recent_recognitions()
@@ -620,7 +646,7 @@ class TestGetStatistics:
             db=mock_db,
             ai_service=MagicMock(),
             cache_service=mock_cache,
-            image_service=MagicMock()
+            image_service=MagicMock(),
         )
         return service, mock_db, mock_cache
 
@@ -634,11 +660,7 @@ class TestGetStatistics:
         mock_db.query.return_value.scalar.return_value = 0.87
 
         # Mock cache stats
-        cache_stats = {
-            "total_cached": 15,
-            "hit_rate": 0.65,
-            "redis_available": True
-        }
+        cache_stats = {"total_cached": 15, "hit_rate": 0.65, "redis_available": True}
         mock_cache.get_cache_stats.return_value = cache_stats
 
         # Act
@@ -682,7 +704,7 @@ class TestGetRecognitionServiceFactory:
             db=mock_db,
             ai_service=mock_ai,
             cache_service=mock_cache,
-            image_service=mock_image
+            image_service=mock_image,
         )
 
         # Assert
@@ -692,9 +714,9 @@ class TestGetRecognitionServiceFactory:
         assert service.cache_service == mock_cache
         assert service.image_service == mock_image
 
-    @patch('app.services.ai_service.get_ai_service')
-    @patch('app.services.recognition_service.CacheService')
-    @patch('app.services.recognition_service.ImageService')
+    @patch("app.services.ai_service.get_ai_service")
+    @patch("app.services.recognition_service.CacheService")
+    @patch("app.services.recognition_service.ImageService")
     def test_get_recognition_service_creates_default_dependencies(
         self, mock_image_class, mock_cache_class, mock_get_ai
     ):
@@ -737,7 +759,7 @@ class TestRecognitionWithPerceptualHash:
             db=mock_db,
             ai_service=mock_ai_service,
             cache_service=mock_cache_service,
-            image_service=mock_image_service
+            image_service=mock_image_service,
         )
 
         return service, mock_db, mock_ai_service, mock_cache_service, mock_image_service
@@ -766,7 +788,7 @@ class TestRecognitionWithPerceptualHash:
             description="Famous portrait",
             confidence=0.95,
             cached=True,
-            processing_time_ms=50
+            processing_time_ms=50,
         )
         mock_cache.get_cached_result.return_value = cached_response
 
@@ -812,10 +834,13 @@ class TestRecognitionWithPerceptualHash:
             description="Same artwork, different photo",
             confidence=0.94,
             cached=True,
-            processing_time_ms=80
+            processing_time_ms=80,
         )
         similarity_score = 0.984  # 98.4% similar
-        mock_cache.get_similar_cached_result.return_value = (similar_response, similarity_score)
+        mock_cache.get_similar_cached_result.return_value = (
+            similar_response,
+            similarity_score,
+        )
 
         # Act
         result = await service.recognize_artwork(test_image_data)
@@ -827,8 +852,7 @@ class TestRecognitionWithPerceptualHash:
         # 验证调用顺序
         mock_cache.get_cached_result.assert_called_once_with(file_hash)
         mock_cache.get_similar_cached_result.assert_called_once_with(
-            perceptual_hash,
-            similarity_threshold=0.90
+            perceptual_hash, similarity_threshold=0.90
         )
 
         # 应该用新的file hash重新缓存结果 (为了未来更快的查找)
@@ -843,7 +867,9 @@ class TestRecognitionWithPerceptualHash:
         mock_ai.recognize_with_timeout.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_caches_with_both_hashes_after_ai_recognition(self, service_with_mocks):
+    async def test_caches_with_both_hashes_after_ai_recognition(
+        self, service_with_mocks
+    ):
         """should_cache_result_with_both_file_hash_and_perceptual_hash_after_ai"""
         # Arrange
         service, mock_db, mock_ai, mock_cache, mock_image = service_with_mocks
@@ -871,7 +897,7 @@ class TestRecognitionWithPerceptualHash:
             "artist": "Vincent van Gogh",
             "period": "Post-Impressionism",
             "description": "Swirling night sky painting",
-            "confidence": 0.93
+            "confidence": 0.93,
         }
         mock_ai.recognize_with_timeout = AsyncMock(return_value=ai_result)
 
@@ -893,10 +919,12 @@ class TestRecognitionWithPerceptualHash:
             artist=ai_result["artist"],
             period=ai_result["period"],
             description=ai_result["description"],
-            confidence=ai_result["confidence"]
+            confidence=ai_result["confidence"],
         )
 
-        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+        with patch.object(
+            RecognitionResponse, "model_validate", return_value=expected_response
+        ):
             # Act
             result = await service.recognize_artwork(test_image_data)
 
@@ -906,8 +934,7 @@ class TestRecognitionWithPerceptualHash:
             # 验证三层缓存都被检查了
             mock_cache.get_cached_result.assert_called_once_with(file_hash)
             mock_cache.get_similar_cached_result.assert_called_once_with(
-                perceptual_hash,
-                similarity_threshold=0.90
+                perceptual_hash, similarity_threshold=0.90
             )
             mock_db.query.assert_called_once()
 
@@ -959,10 +986,12 @@ class TestRecognitionWithPerceptualHash:
             artist="Johannes Vermeer",
             period="Baroque",
             description="Portrait painting",
-            confidence=0.91
+            confidence=0.91,
         )
 
-        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+        with patch.object(
+            RecognitionResponse, "model_validate", return_value=expected_response
+        ):
             # Act
             result = await service.recognize_artwork(test_image_data)
 
@@ -972,8 +1001,7 @@ class TestRecognitionWithPerceptualHash:
             # 验证所有三层都被检查了
             mock_cache.get_cached_result.assert_called_once_with(file_hash)
             mock_cache.get_similar_cached_result.assert_called_once_with(
-                perceptual_hash,
-                similarity_threshold=0.90
+                perceptual_hash, similarity_threshold=0.90
             )
             mock_db.query.assert_called_once()
 
@@ -988,7 +1016,9 @@ class TestRecognitionWithPerceptualHash:
             mock_ai.recognize_with_timeout.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_perceptual_hash_similarity_threshold_respected(self, service_with_mocks):
+    async def test_perceptual_hash_similarity_threshold_respected(
+        self, service_with_mocks
+    ):
         """should_use_90_percent_similarity_threshold_for_perceptual_cache"""
         # Arrange
         service, mock_db, mock_ai, mock_cache, mock_image = service_with_mocks
@@ -1016,7 +1046,7 @@ class TestRecognitionWithPerceptualHash:
             "artist": "Test Artist",
             "period": "Test Period",
             "description": "Test Description",
-            "confidence": 0.85
+            "confidence": 0.85,
         }
         mock_ai.recognize_with_timeout = AsyncMock(return_value=ai_result)
         mock_image.to_base64.return_value = "base64"
@@ -1027,15 +1057,16 @@ class TestRecognitionWithPerceptualHash:
             artist="Test Artist",
             period="Test Period",
             description="Test Description",
-            confidence=0.85
+            confidence=0.85,
         )
 
-        with patch.object(RecognitionResponse, 'model_validate', return_value=expected_response):
+        with patch.object(
+            RecognitionResponse, "model_validate", return_value=expected_response
+        ):
             # Act
             await service.recognize_artwork(test_image_data)
 
             # Assert - 验证相似度阈值为0.90
             mock_cache.get_similar_cached_result.assert_called_once_with(
-                perceptual_hash,
-                similarity_threshold=0.90
+                perceptual_hash, similarity_threshold=0.90
             )

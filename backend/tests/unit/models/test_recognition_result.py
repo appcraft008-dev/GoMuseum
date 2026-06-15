@@ -2,9 +2,11 @@
 Unit tests for RecognitionResult model
 Tests SQLAlchemy model and serialization
 """
-import pytest
-from datetime import datetime
+
 import json
+from datetime import datetime
+
+import pytest
 
 
 class TestRecognitionResultModel:
@@ -13,7 +15,9 @@ class TestRecognitionResultModel:
     def test_creates_recognition_result_instance(self):
         """should_instantiate_with_required_fields"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="RecognitionResult model not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="RecognitionResult model not implemented"
+        ):
             raise NotImplementedError("RecognitionResult model not implemented")
 
     def test_has_required_fields(self):
@@ -25,7 +29,9 @@ class TestRecognitionResultModel:
     def test_has_timestamp_fields(self):
         """should_include_created_at_and_updated_at_timestamps"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Timestamp fields not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Timestamp fields not implemented"
+        ):
             raise NotImplementedError("Timestamp fields not implemented")
 
     def test_sets_created_at_automatically(self):
@@ -37,7 +43,9 @@ class TestRecognitionResultModel:
     def test_updates_updated_at_on_modification(self):
         """should_auto_update_updated_at_field_on_changes"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Update timestamp not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Update timestamp not implemented"
+        ):
             raise NotImplementedError("Update timestamp not implemented")
 
 
@@ -50,13 +58,17 @@ class TestRecognitionResultValidation:
         invalid_confidence = 1.5
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Confidence validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Confidence validation not implemented"
+        ):
             raise NotImplementedError("Confidence validation not implemented")
 
     def test_validates_image_hash_not_null(self):
         """should_require_image_hash_field"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Hash validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Hash validation not implemented"
+        ):
             raise NotImplementedError("Hash validation not implemented")
 
     def test_validates_artwork_title_not_empty(self):
@@ -65,13 +77,17 @@ class TestRecognitionResultValidation:
         empty_title = ""
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Title validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Title validation not implemented"
+        ):
             raise NotImplementedError("Title validation not implemented")
 
     def test_allows_nullable_artist_field(self):
         """should_permit_null_artist_for_unknown_artworks"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Nullable field handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Nullable field handling not implemented"
+        ):
             raise NotImplementedError("Nullable field handling not implemented")
 
     def test_allows_nullable_year_field(self):
@@ -93,7 +109,9 @@ class TestRecognitionResultSerialization:
     def test_serializes_to_json(self):
         """should_convert_model_to_json_string"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="JSON serialization not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="JSON serialization not implemented"
+        ):
             raise NotImplementedError("JSON serialization not implemented")
 
     def test_deserializes_from_dict(self):
@@ -105,23 +123,29 @@ class TestRecognitionResultSerialization:
             "artist": "Leonardo da Vinci",
             "year": 1503,
             "description": "Famous portrait",
-            "confidence": 0.95
+            "confidence": 0.95,
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="from_dict method not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="from_dict method not implemented"
+        ):
             raise NotImplementedError("from_dict method not implemented")
 
     def test_handles_datetime_serialization(self):
         """should_convert_datetime_objects_to_iso_format_strings"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Datetime serialization not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Datetime serialization not implemented"
+        ):
             raise NotImplementedError("Datetime serialization not implemented")
 
     def test_excludes_sensitive_fields_from_serialization(self):
         """should_omit_internal_fields_from_public_output"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Field filtering not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Field filtering not implemented"
+        ):
             raise NotImplementedError("Field filtering not implemented")
 
 
@@ -149,21 +173,27 @@ class TestRecognitionResultDatabaseOperations:
     async def test_updates_existing_record(self):
         """should_modify_existing_result_in_database"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Update operation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Update operation not implemented"
+        ):
             raise NotImplementedError("Update operation not implemented")
 
     @pytest.mark.asyncio
     async def test_deletes_record(self):
         """should_remove_result_from_database"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Delete operation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Delete operation not implemented"
+        ):
             raise NotImplementedError("Delete operation not implemented")
 
     @pytest.mark.asyncio
     async def test_enforces_unique_image_hash_constraint(self):
         """should_prevent_duplicate_image_hash_entries"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Unique constraint not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Unique constraint not implemented"
+        ):
             raise NotImplementedError("Unique constraint not implemented")
 
 
@@ -173,7 +203,9 @@ class TestRecognitionResultRelationships:
     def test_has_relationship_to_user_model(self):
         """should_support_foreign_key_to_users_table"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="User relationship not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="User relationship not implemented"
+        ):
             raise NotImplementedError("User relationship not implemented")
 
     def test_supports_cascade_delete(self):

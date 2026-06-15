@@ -3,12 +3,13 @@ Performance Monitor
 Tracks and monitors API request performance metrics
 """
 
-import time
 import logging
+import time
+from collections import deque
 from functools import wraps
 from typing import Callable
+
 import numpy as np
-from collections import deque
 
 logger = logging.getLogger(__name__)
 

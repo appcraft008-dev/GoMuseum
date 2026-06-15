@@ -3,16 +3,18 @@ Recognition Service
 Main business logic for artwork recognition workflow
 """
 
+import logging
 from typing import Optional
+from uuid import UUID
+
 from sqlalchemy.orm import Session
+
+from app.core.exceptions import NotFoundException, ServiceException
 from app.models.recognition_result import RecognitionResult
 from app.schemas.recognition import RecognitionResponse
-from app.services.image_service import ImageService
-from app.services.cache_service import CacheService
 from app.services.ai_service import AIService
-from app.core.exceptions import ServiceException, NotFoundException
-import logging
-from uuid import UUID
+from app.services.cache_service import CacheService
+from app.services.image_service import ImageService
 
 logger = logging.getLogger(__name__)
 

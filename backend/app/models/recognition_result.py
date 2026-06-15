@@ -3,10 +3,12 @@ Recognition Result Model
 SQLAlchemy model for storing artwork recognition results
 """
 
-from sqlalchemy import Column, String, Float, DateTime, Text, Index, func
-from sqlalchemy.dialects.postgresql import UUID
-from app.core.database import Base
 import uuid
+
+from sqlalchemy import Column, DateTime, Float, Index, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+
+from app.core.database import Base
 
 
 class RecognitionResult(Base):

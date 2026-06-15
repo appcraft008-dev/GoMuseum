@@ -5,11 +5,12 @@ Handles user recognition quotas, subscriptions, and benefits management
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import NotFoundException, ServiceException
 from app.models.user_benefits import UserBenefits
-from app.core.exceptions import ServiceException, NotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,7 @@ class BenefitsService:
         self.db = db
 
     def get_or_create_benefits(
-        self,
-        user_id: Optional[str] = None,
-        device_id: Optional[str] = None
+        self, user_id: Optional[str] = None, device_id: Optional[str] = None
     ) -> UserBenefits:
         """
         Get existing benefits or create new one
@@ -56,11 +55,15 @@ class BenefitsService:
             benefits = query.filter(UserBenefits.device_id == device_id).first()
 
         if benefits:
-            logger.info(f"Found existing benefits for user_id={user_id}, device_id={device_id}")
+            logger.info(
+                f"Found existing benefits for user_id={user_id}, device_id={device_id}"
+            )
             return benefits
 
         # Create new benefits with default free tier
-        logger.info(f"Creating new benefits for user_id={user_id}, device_id={device_id}")
+        logger.info(
+            f"Creating new benefits for user_id={user_id}, device_id={device_id}"
+        )
 
         benefits = UserBenefits(
             user_id=user_id,
@@ -69,7 +72,7 @@ class BenefitsService:
             is_premium=False,
             day_pass_active=False,
             referral_bonus_quota=0,
-            total_recognitions_used=0
+            total_recognitions_used=0,
         )
 
         self.db.add(benefits)
@@ -79,9 +82,7 @@ class BenefitsService:
         return benefits
 
     def check_access(
-        self,
-        user_id: Optional[str] = None,
-        device_id: Optional[str] = None
+        self, user_id: Optional[str] = None, device_id: Optional[str] = None
     ) -> Dict[str, any]:
         """
         Check if user has recognition access
@@ -107,17 +108,19 @@ class BenefitsService:
             "day_pass_active": benefits.day_pass_active,
             "total_used": benefits.total_recognitions_used,
             "premium_expires_at": (
-                benefits.premium_expires_at.isoformat() if benefits.premium_expires_at else None
+                benefits.premium_expires_at.isoformat()
+                if benefits.premium_expires_at
+                else None
             ),
             "day_pass_expires_at": (
-                benefits.day_pass_expires_at.isoformat() if benefits.day_pass_expires_at else None
-            )
+                benefits.day_pass_expires_at.isoformat()
+                if benefits.day_pass_expires_at
+                else None
+            ),
         }
 
     def consume_recognition(
-        self,
-        user_id: Optional[str] = None,
-        device_id: Optional[str] = None
+        self, user_id: Optional[str] = None, device_id: Optional[str] = None
     ) -> bool:
         """
         Consume one recognition from user's quota
@@ -139,9 +142,13 @@ class BenefitsService:
 
             if success:
                 self.db.commit()
-                logger.info(f"Recognition consumed for user_id={user_id}, device_id={device_id}")
+                logger.info(
+                    f"Recognition consumed for user_id={user_id}, device_id={device_id}"
+                )
             else:
-                logger.warning(f"No quota available for user_id={user_id}, device_id={device_id}")
+                logger.warning(
+                    f"No quota available for user_id={user_id}, device_id={device_id}"
+                )
 
             return success
 
@@ -154,7 +161,7 @@ class BenefitsService:
         self,
         user_id: Optional[str] = None,
         device_id: Optional[str] = None,
-        quantity: int = 10
+        quantity: int = 10,
     ):
         """
         Add recognition pack to user's quota
@@ -171,9 +178,7 @@ class BenefitsService:
         logger.info(f"Added {quantity} recognitions for user_id={user_id}")
 
     def activate_day_pass(
-        self,
-        user_id: Optional[str] = None,
-        device_id: Optional[str] = None
+        self, user_id: Optional[str] = None, device_id: Optional[str] = None
     ):
         """
         Activate 24-hour day pass
@@ -194,7 +199,7 @@ class BenefitsService:
         self,
         user_id: Optional[str] = None,
         device_id: Optional[str] = None,
-        duration_days: int = 365
+        duration_days: int = 365,
     ):
         """
         Activate premium subscription
@@ -210,13 +215,15 @@ class BenefitsService:
         benefits.premium_expires_at = datetime.utcnow() + timedelta(days=duration_days)
         self.db.commit()
 
-        logger.info(f"Premium activated for user_id={user_id}, duration={duration_days} days")
+        logger.info(
+            f"Premium activated for user_id={user_id}, duration={duration_days} days"
+        )
 
     def add_referral_bonus(
         self,
         user_id: Optional[str] = None,
         device_id: Optional[str] = None,
-        bonus_quota: int = 5
+        bonus_quota: int = 5,
     ):
         """
         Add referral bonus recognitions

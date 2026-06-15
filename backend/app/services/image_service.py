@@ -3,14 +3,16 @@ Image Service
 Handles image validation, preprocessing, and encoding
 """
 
-import hashlib
 import base64
-from PIL import Image
-from io import BytesIO
-from app.core.exceptions import ValidationException, ImageProcessingException
-from app.core.config import settings
+import hashlib
 import logging
+from io import BytesIO
+
 import imagehash
+from PIL import Image
+
+from app.core.config import settings
+from app.core.exceptions import ImageProcessingException, ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -123,8 +125,8 @@ class ImageService:
             img = Image.open(BytesIO(image_data))
 
             # Convert to RGB if necessary (handles RGBA, grayscale, etc.)
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
+            if img.mode != "RGB":
+                img = img.convert("RGB")
 
             # Generate perceptual hash using average hash algorithm
             # Average hash is faster than pHash and good enough for artwork recognition

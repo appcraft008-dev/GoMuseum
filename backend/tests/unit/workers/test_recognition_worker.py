@@ -2,9 +2,11 @@
 Unit tests for Recognition Worker
 Tests async task queue and concurrency control
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+
 import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestRecognitionWorker:
@@ -17,7 +19,9 @@ class TestRecognitionWorker:
         task_data = {"image_id": "123", "image_bytes": b"test"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="RecognitionWorker not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="RecognitionWorker not implemented"
+        ):
             raise NotImplementedError("RecognitionWorker not implemented")
 
     @pytest.mark.asyncio
@@ -27,7 +31,9 @@ class TestRecognitionWorker:
         task_data = {"image_bytes": b"test_image"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Task processing not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Task processing not implemented"
+        ):
             raise NotImplementedError("Task processing not implemented")
 
     @pytest.mark.asyncio
@@ -38,7 +44,9 @@ class TestRecognitionWorker:
         result = {"title": "Mona Lisa", "confidence": 0.95}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Result persistence not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Result persistence not implemented"
+        ):
             raise NotImplementedError("Result persistence not implemented")
 
     @pytest.mark.asyncio
@@ -58,7 +66,9 @@ class TestRecognitionWorker:
         task_id = "task_123"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Task completion not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Task completion not implemented"
+        ):
             raise NotImplementedError("Task completion not implemented")
 
 
@@ -72,7 +82,9 @@ class TestRecognitionWorkerConcurrency:
         # Arrange - simulate 15 tasks
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="GPU concurrency limit not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="GPU concurrency limit not implemented"
+        ):
             raise NotImplementedError("GPU concurrency limit not implemented")
 
     @pytest.mark.asyncio
@@ -82,7 +94,9 @@ class TestRecognitionWorkerConcurrency:
         # Arrange - queue has 1000 tasks already
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Queue size limit not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Queue size limit not implemented"
+        ):
             raise NotImplementedError("Queue size limit not implemented")
 
     @pytest.mark.asyncio
@@ -92,7 +106,7 @@ class TestRecognitionWorkerConcurrency:
         tasks = [
             {"id": "task_1", "timestamp": 1000},
             {"id": "task_2", "timestamp": 2000},
-            {"id": "task_3", "timestamp": 3000}
+            {"id": "task_3", "timestamp": 3000},
         ]
 
         # Act & Assert
@@ -110,7 +124,9 @@ class TestRecognitionWorkerConcurrency:
     async def test_handles_backpressure_gracefully(self):
         """should_reject_or_queue_tasks_when_at_capacity"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Backpressure handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Backpressure handling not implemented"
+        ):
             raise NotImplementedError("Backpressure handling not implemented")
 
 
@@ -134,7 +150,9 @@ class TestRecognitionWorkerErrorHandling:
         failed_task = {"image_bytes": b"test"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Dead letter queue not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Dead letter queue not implemented"
+        ):
             raise NotImplementedError("Dead letter queue not implemented")
 
     @pytest.mark.asyncio
@@ -151,7 +169,9 @@ class TestRecognitionWorkerErrorHandling:
     async def test_handles_worker_shutdown_gracefully(self):
         """should_complete_in_progress_tasks_before_stopping"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Graceful shutdown not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Graceful shutdown not implemented"
+        ):
             raise NotImplementedError("Graceful shutdown not implemented")
 
     @pytest.mark.asyncio
@@ -161,7 +181,9 @@ class TestRecognitionWorkerErrorHandling:
         task_data = {"image_bytes": b"test"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Timeout recovery not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Timeout recovery not implemented"
+        ):
             raise NotImplementedError("Timeout recovery not implemented")
 
 
@@ -171,19 +193,25 @@ class TestRecognitionWorkerMonitoring:
     def test_tracks_queue_length(self):
         """should_expose_current_queue_size_metric"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Queue length tracking not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Queue length tracking not implemented"
+        ):
             raise NotImplementedError("Queue length tracking not implemented")
 
     def test_tracks_active_worker_count(self):
         """should_expose_number_of_concurrent_tasks_metric"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Worker count tracking not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Worker count tracking not implemented"
+        ):
             raise NotImplementedError("Worker count tracking not implemented")
 
     def test_tracks_task_processing_duration(self):
         """should_measure_time_taken_per_task"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Duration tracking not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Duration tracking not implemented"
+        ):
             raise NotImplementedError("Duration tracking not implemented")
 
     def test_tracks_task_success_rate(self):
@@ -195,7 +223,9 @@ class TestRecognitionWorkerMonitoring:
     def test_exposes_prometheus_metrics(self):
         """should_provide_metrics_endpoint_for_monitoring"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Prometheus metrics not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Prometheus metrics not implemented"
+        ):
             raise NotImplementedError("Prometheus metrics not implemented")
 
 
@@ -213,7 +243,9 @@ class TestRecognitionWorkerLifecycle:
     async def test_stops_worker_pool(self):
         """should_shutdown_all_workers_cleanly"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Worker shutdown not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Worker shutdown not implemented"
+        ):
             raise NotImplementedError("Worker shutdown not implemented")
 
     @pytest.mark.asyncio
