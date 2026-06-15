@@ -16,6 +16,7 @@ from app.core.config import settings
 # Import models and database configuration
 from app.core.database import Base
 from app.models import recognition_result  # Import to register model
+from app.models import content, museum, museum_object  # noqa: F401  Step1 模型
 
 # this is the Alembic Config object
 config = context.config
