@@ -27,7 +27,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   // This should match GOOGLE_CLIENT_ID in backend .env
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: '110810284497-qn7co4o0a3rsmj18ls007c9f3pmqe53u.apps.googleusercontent.com',
+    serverClientId:
+        '110810284497-qn7co4o0a3rsmj18ls007c9f3pmqe53u.apps.googleusercontent.com',
   );
 
   @override
@@ -160,7 +161,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         const Expanded(child: GmHairline()),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text(label, style: GmText.sans(size: 11.5, color: GmColors.sub)),
+          child:
+              Text(label, style: GmText.sans(size: 11.5, color: GmColors.sub)),
         ),
         const Expanded(child: GmHairline()),
       ],
@@ -217,6 +219,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      // 0. 先登出缓存的 Google 会话，确保每次都弹账号选择器（支持切换账号）
+      await _googleSignIn.signOut();
+
       // 1. Call Google Sign-In
       final GoogleSignInAccount? account = await _googleSignIn.signIn();
 
@@ -240,10 +245,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
 
       // 3. Call backend API through provider
-      final success = await ref.read(currentUserProvider.notifier).loginWithGoogle(
-        idToken,
-        username: account.displayName,
-      );
+      final success =
+          await ref.read(currentUserProvider.notifier).loginWithGoogle(
+                idToken,
+                username: account.displayName,
+              );
 
       if (success && mounted) {
         context.go('/');
@@ -316,14 +322,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       // 3. Build username from full name if available
       String? username;
       if (credential.givenName != null || credential.familyName != null) {
-        username = '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
+        username =
+            '${credential.givenName ?? ''} ${credential.familyName ?? ''}'
+                .trim();
       }
 
       // 4. Call backend API through provider
-      final success = await ref.read(currentUserProvider.notifier).loginWithApple(
-        idToken,
-        username: username,
-      );
+      final success =
+          await ref.read(currentUserProvider.notifier).loginWithApple(
+                idToken,
+                username: username,
+              );
 
       if (success && mounted) {
         context.go('/');
@@ -358,7 +367,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
     }
   }
-
 
   Future<void> _handleGuestLogin() async {
     setState(() => _isLoading = true);
