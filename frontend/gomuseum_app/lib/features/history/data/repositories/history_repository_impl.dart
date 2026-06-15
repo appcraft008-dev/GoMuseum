@@ -28,11 +28,11 @@ class HistoryRepositoryImpl implements HistoryRepository {
       return Right(entities);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        return Left(NotFoundFailure('History not found'));
+        return Left(ServerFailure('History not found'));
       }
       return Left(ServerFailure(e.message ?? 'Server error'));
     } catch (e) {
-      return Left(UnexpectedFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -52,7 +52,7 @@ class HistoryRepositoryImpl implements HistoryRepository {
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error'));
     } catch (e) {
-      return Left(UnexpectedFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -66,7 +66,7 @@ class HistoryRepositoryImpl implements HistoryRepository {
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error'));
     } catch (e) {
-      return Left(UnexpectedFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -77,11 +77,11 @@ class HistoryRepositoryImpl implements HistoryRepository {
       return const Right(null);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        return Left(NotFoundFailure('History item not found'));
+        return Left(ServerFailure('History item not found'));
       }
       return Left(ServerFailure(e.message ?? 'Server error'));
     } catch (e) {
-      return Left(UnexpectedFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
   }
 }

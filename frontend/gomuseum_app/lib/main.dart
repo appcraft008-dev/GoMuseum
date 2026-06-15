@@ -1,11 +1,33 @@
+import 'dart:ui';
+
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'theme/app_theme.dart';
 import 'core/router/app_router.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase Crashlytics + Analytics（配置缺失时静默跳过，不影响应用启动）
+  try {
+    await Firebase.initializeApp();
+    await FirebaseCrashlytics.instance
+        .setCrashlyticsCollectionEnabled(!kDebugMode);
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+    await FirebaseAnalytics.instance
+        .setAnalyticsCollectionEnabled(!kDebugMode);
+  } catch (e) {
+    debugPrint('Firebase init skipped: $e');
+  }
 
   runApp(
     const ProviderScope(
@@ -19,6 +41,8 @@ class GoMuseumApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(goRouterProvider);
+
     return MaterialApp.router(
       title: 'GoMuseum',
 
@@ -27,8 +51,8 @@ class GoMuseumApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme(),
       themeMode: ThemeMode.system,
 
-      // 路由配置
-      routerConfig: goRouter,
+      // 路由配置 - 带认证守卫
+      routerConfig: router,
 
       // 国际化配置
       localizationsDelegates: const [

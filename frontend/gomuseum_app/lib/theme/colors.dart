@@ -109,12 +109,10 @@ class AppColors {
   // ==================== 透明度变体 ====================
 
   /// 获取带透明度的主色
-  static Color primaryWithOpacity(double opacity) =>
-      primary.withOpacity(opacity);
+  static Color primaryWithOpacity(double opacity) => primary.withOpacity(opacity);
 
   /// 获取带透明度的辅色
-  static Color secondaryWithOpacity(double opacity) =>
-      secondary.withOpacity(opacity);
+  static Color secondaryWithOpacity(double opacity) => secondary.withOpacity(opacity);
 
   // ==================== 便捷访问器 ====================
 

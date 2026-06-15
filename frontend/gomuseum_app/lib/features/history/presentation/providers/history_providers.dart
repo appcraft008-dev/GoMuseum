@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:dio/dio.dart';
+import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import '../../data/datasources/history_remote_datasource.dart';
 import '../../data/repositories/history_repository_impl.dart';
 import '../../domain/repositories/history_repository.dart';
@@ -10,23 +11,16 @@ import '../../domain/entities/history_item.dart';
 
 part 'history_providers.g.dart';
 
-/// Dio provider for history module
-@riverpod
-Dio historyDio(HistoryDioRef ref) {
-  return Dio(BaseOptions(
-    baseURL: 'http://localhost:8000/api/v1',
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
-}
-
 /// History remote datasource provider
+///
+/// 复用 Recognition 模块的平台感知 Dio（Android 模拟器走 10.0.2.2），
+/// baseUrl 传相对路径让 Dio 自行拼接宿主地址。
 @riverpod
 HistoryRemoteDataSource historyRemoteDataSource(
   HistoryRemoteDataSourceRef ref,
 ) {
-  final dio = ref.watch(historyDioProvider);
-  return HistoryRemoteDataSourceImpl(dio: dio);
+  final Dio dio = ref.watch(dioProvider);
+  return HistoryRemoteDataSourceImpl(dio: dio, baseUrl: '/api/v1');
 }
 
 /// History repository provider
@@ -91,8 +85,9 @@ class HistoryState {
 class History extends _$History {
   @override
   HistoryState build() {
-    loadHistory();
-    return const HistoryState();
+    // build 返回前 state 未初始化，必须推迟到微任务再加载
+    Future.microtask(loadHistory);
+    return const HistoryState(isLoading: true);
   }
 
   Future<void> loadHistory({
@@ -160,8 +155,7 @@ class History extends _$History {
       },
       (_) {
         // Remove item from list
-        final updatedItems =
-            state.items.where((item) => item.id != id).toList();
+        final updatedItems = state.items.where((item) => item.id != id).toList();
         state = state.copyWith(items: updatedItems);
       },
     );

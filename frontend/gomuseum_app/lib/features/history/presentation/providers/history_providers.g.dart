@@ -6,28 +6,13 @@ part of 'history_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$historyDioHash() => r'baa9a7722b4d962909904f26974eace53b5237ce';
-
-/// Dio provider for history module
-///
-/// Copied from [historyDio].
-@ProviderFor(historyDio)
-final historyDioProvider = AutoDisposeProvider<Dio>.internal(
-  historyDio,
-  name: r'historyDioProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$historyDioHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef HistoryDioRef = AutoDisposeProviderRef<Dio>;
 String _$historyRemoteDataSourceHash() =>
-    r'7b5f2bc6382555a17f21acfbe04366303ceb9dc5';
+    r'c50cdb6281d9f6530dcc8bd09db50e44bb0cc2c8';
 
 /// History remote datasource provider
+///
+/// 复用 Recognition 模块的平台感知 Dio（Android 模拟器走 10.0.2.2），
+/// baseUrl 传相对路径让 Dio 自行拼接宿主地址。
 ///
 /// Copied from [historyRemoteDataSource].
 @ProviderFor(historyRemoteDataSource)

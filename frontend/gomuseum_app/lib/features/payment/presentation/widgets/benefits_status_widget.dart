@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../providers/benefits_provider.dart';
 
 /// 权益状态Widget
@@ -55,7 +54,7 @@ class BenefitsStatusWidget extends ConsumerWidget {
                 icon: Icons.today,
                 title: '日卡',
                 value: benefits.dayPassActive
-                    ? _formatExpiry(benefits.dayPassExpiry)
+                    ? _formatExpiry(benefits.dayPassExpiresAt)
                     : '未激活',
                 isActive: benefits.dayPassActive,
               ),
@@ -65,7 +64,7 @@ class BenefitsStatusWidget extends ConsumerWidget {
                 icon: Icons.star,
                 title: '高级会员',
                 value: benefits.isPremium
-                    ? _formatExpiry(benefits.premiumExpiry)
+                    ? _formatExpiry(benefits.premiumExpiresAt)
                     : '未开通',
                 isActive: benefits.isPremium,
               ),
