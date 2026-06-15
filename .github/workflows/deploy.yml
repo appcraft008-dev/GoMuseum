@@ -9,5 +9,14 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # 只在 CI 成功后部署（PR 不触发：workflow_run 的分支是 PR head，不在 [main,staging]）
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - run: echo "🚀 部署任务执行（Staging/Production 按分支区分）"
+      - name: Resolve target env
+        run: |
+          BR="${{ github.event.workflow_run.head_branch }}"
+          if [ "$BR" = "main" ]; then echo "TARGET=production"; else echo "TARGET=staging"; fi >> "$GITHUB_ENV"
+      # TODO(部署自动化): 实装 SSH→VPS 拉取对应分支代码 + docker compose up -d --build
+      #   staging → /opt/gomuseum/staging（端口 8101），main → /opt/gomuseum/deploy（端口 8100）
+      #   需先在 GitHub 仓库 Secrets 配置 VPS_SSH_KEY / VPS_HOST（由仓库管理员设置）
+      - run: echo "🚀 部署占位：$TARGET（实际部署逻辑待接入 VPS SSH 密钥后实装）"
