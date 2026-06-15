@@ -31,7 +31,7 @@ async def test_openai():
         result = await service._recognize_with_openai(TEST_IMAGE_BASE64)
 
         print("\n✅ OpenAI API 连接成功!")
-        print(f"识别结果:")
+        print("识别结果:")
         print(f"  作品名称: {result.get('artwork_name', 'N/A')}")
         print(f"  艺术家: {result.get('artist', 'N/A')}")
         print(f"  时期: {result.get('period', 'N/A')}")
@@ -66,16 +66,14 @@ async def test_claude():
 
         service = AIService()
 
-        print(
-            f"Model: {getattr(settings, 'ANTHROPIC_MODEL', 'claude-3-5-sonnet-20241022')}"
-        )
+        print(f"Model: {getattr(settings, 'ANTHROPIC_MODEL', 'claude-sonnet-4-6')}")
         print(f"API Key: {settings.ANTHROPIC_API_KEY[:20]}...")
         print("\n发送测试请求...")
 
         result = await service._recognize_with_claude(TEST_IMAGE_BASE64)
 
         print("\n✅ Claude API 连接成功!")
-        print(f"识别结果:")
+        print("识别结果:")
         print(f"  作品名称: {result.get('artwork_name', 'N/A')}")
         print(f"  艺术家: {result.get('artist', 'N/A')}")
         print(f"  时期: {result.get('period', 'N/A')}")
@@ -110,7 +108,7 @@ async def test_fallback_strategy():
 
         result = await service.recognize(TEST_IMAGE_BASE64)
 
-        print(f"\n✅ AI识别成功!")
+        print("\n✅ AI识别成功!")
         print(f"  使用策略: {result.get('source', 'unknown')}")
         print(f"  作品名称: {result.get('artwork_name', 'N/A')}")
         print(f"  艺术家: {result.get('artist', 'N/A')}")
