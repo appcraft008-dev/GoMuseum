@@ -63,12 +63,10 @@ class TestMainApplication:
         """Test that API v1 router is included with correct prefix"""
         from app.main import app
 
-        # Check that the API v1 routes are registered
-        # 用 getattr 兜底：部分挂载型路由（_IncludedRouter 等）无 .path 属性
-        routes = [str(getattr(route, "path", "")) for route in app.routes]
-        # API routes should be prefixed with /api/v1
-        api_routes = [route for route in routes if route.startswith("/api/v1")]
-        assert len(api_routes) > 0
+        # 用 OpenAPI schema 检查已注册路径，跨 FastAPI 版本稳定
+        # （不依赖 app.routes 内部对象类型，include_router 的子路由也能反映出来）
+        api_paths = [p for p in app.openapi()["paths"] if p.startswith("/api/v1")]
+        assert len(api_paths) > 0
 
     def test_root_endpoint(self):
         """Test root endpoint returns correct response"""
