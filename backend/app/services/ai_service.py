@@ -162,64 +162,83 @@ Return ONLY valid JSON in this exact format:
 }
 """
 
-        try:
-            logger.info(f"Calling OpenAI API with model: {self.model}")
-            logger.info(f"Image data length: {len(base64_image)} chars")
+        required_keys = [
+            "artwork_name",
+            "artist",
+            "period",
+            "description",
+            "confidence",
+        ]
 
-            response = await client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}",
-                                    "detail": "high",
+        # GPT-4o 偶发返回空内容/非法 JSON（瞬时抖动或拒答），重试 1 次以免单次抖动直接失败
+        max_attempts = 2
+        last_error: Exception = AIServiceException("OpenAI 无可用响应")
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(
+                    f"Calling OpenAI API with model: {self.model} "
+                    f"(attempt {attempt}/{max_attempts})"
+                )
+                logger.info(f"Image data length: {len(base64_image)} chars")
+
+                response = await client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{base64_image}",
+                                        "detail": "high",
+                                    },
                                 },
-                            },
-                        ],
-                    }
-                ],
-                max_tokens=500,
-                temperature=0.2,
-            )
+                            ],
+                        }
+                    ],
+                    max_tokens=500,
+                    temperature=0.2,
+                )
 
-            logger.info("OpenAI API call completed successfully")
+                logger.info("OpenAI API call completed successfully")
 
-            # Parse JSON response
-            content = response.choices[0].message.content
-            logger.info(f"OpenAI response content length: {len(content)} chars")
-            # Extract JSON from markdown code blocks if present
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
+                # Parse JSON response
+                content = response.choices[0].message.content
+                if not content or not content.strip():
+                    raise AIServiceException("OpenAI returned empty content")
+                logger.info(f"OpenAI response content length: {len(content)} chars")
+                # Extract JSON from markdown code blocks if present
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
 
-            result = json.loads(content)
+                result = json.loads(content)
 
-            # Validate required keys
-            required_keys = [
-                "artwork_name",
-                "artist",
-                "period",
-                "description",
-                "confidence",
-            ]
-            if not all(key in result for key in required_keys):
-                raise ValueError("Missing required keys in OpenAI response")
+                # Validate required keys
+                if not all(key in result for key in required_keys):
+                    raise ValueError("Missing required keys in OpenAI response")
 
-            logger.info(f"OpenAI recognition: {result['artwork_name']}")
-            return result
+                logger.info(f"OpenAI recognition: {result['artwork_name']}")
+                return result
 
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse OpenAI response as JSON: {e}")
-            raise AIServiceException(f"Invalid JSON response from OpenAI: {e}")
-        except Exception as e:
-            logger.error(f"OpenAI recognition failed: {str(e)}")
-            raise AIServiceException(f"OpenAI API error: {str(e)}")
+            except json.JSONDecodeError as e:
+                last_error = AIServiceException(
+                    f"Invalid JSON response from OpenAI: {e}"
+                )
+                logger.warning(
+                    f"OpenAI JSON parse failed (attempt {attempt}/{max_attempts}): {e}"
+                )
+            except Exception as e:
+                last_error = AIServiceException(f"OpenAI API error: {str(e)}")
+                logger.warning(
+                    f"OpenAI recognition failed (attempt {attempt}/{max_attempts}): {e}"
+                )
+
+        # 重试用尽，交给上层切换到 Claude 兜底
+        raise last_error
 
     async def _recognize_with_claude(self, base64_image: str) -> Dict[str, any]:
         """
@@ -248,9 +267,7 @@ Return only the JSON object, no other text.
 
         try:
             message = await client.messages.create(
-                model=getattr(
-                    settings, "ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"
-                ),
+                model=getattr(settings, "ANTHROPIC_MODEL", "claude-sonnet-4-6"),
                 max_tokens=500,
                 messages=[
                     {
