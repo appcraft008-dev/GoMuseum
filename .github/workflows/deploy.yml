@@ -1,22 +1,75 @@
 name: Deploy
+
+# 触发模型（与团队规范一致）：
+#   - staging：合并进 staging → CI 成功后【自动】部署到 staging 环境（VPS /opt/gomuseum/staging，端口 8101）
+#   - prod   ：不自动。需在 Actions 里【手动】运行本 workflow（workflow_dispatch，target=production）
+#             部署到生产（VPS /opt/gomuseum/deploy，端口 8100）。App 审核期间避免误冲生产。
+# 依赖仓库 Secrets：VPS_SSH_KEY（部署私钥）、VPS_HOST（VPS IP）。
 on:
   workflow_run:
     workflows: ['CI']
-    types:
-      - completed
-    branches: [main, staging]
+    types: [completed]
+    branches: [staging]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '部署目标环境'
+        type: choice
+        options: [production, staging]
+        default: production
+
+concurrency:
+  group: deploy-${{ github.event.inputs.target || 'staging' }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # 只在 CI 成功后部署（PR 不触发：workflow_run 的分支是 PR head，不在 [main,staging]）
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # 自动路径仅在 CI 成功时部署；手动路径（workflow_dispatch）总是允许
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Resolve target env
+      - name: 解析部署目标
+        id: t
         run: |
-          BR="${{ github.event.workflow_run.head_branch }}"
-          if [ "$BR" = "main" ]; then echo "TARGET=production"; else echo "TARGET=staging"; fi >> "$GITHUB_ENV"
-      # TODO(部署自动化): 实装 SSH→VPS 拉取对应分支代码 + docker compose up -d --build
-      #   staging → /opt/gomuseum/staging（端口 8101），main → /opt/gomuseum/deploy（端口 8100）
-      #   需先在 GitHub 仓库 Secrets 配置 VPS_SSH_KEY / VPS_HOST（由仓库管理员设置）
-      - run: echo "🚀 部署占位：$TARGET（实际部署逻辑待接入 VPS SSH 密钥后实装）"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET="${{ github.event.inputs.target }}"
+            REF="${{ github.ref }}"
+          else
+            TARGET="staging"
+            REF="${{ github.event.workflow_run.head_sha }}"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          if [ "$TARGET" = "production" ]; then
+            echo "src_dir=/opt/gomuseum/backend"        >> "$GITHUB_OUTPUT"
+            echo "compose_dir=/opt/gomuseum/deploy"      >> "$GITHUB_OUTPUT"
+          else
+            echo "src_dir=/opt/gomuseum/staging/backend" >> "$GITHUB_OUTPUT"
+            echo "compose_dir=/opt/gomuseum/staging"     >> "$GITHUB_OUTPUT"
+          fi
+          echo "▶ 部署目标：$TARGET（ref=$REF）"
+
+      - name: 检出对应代码
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.t.outputs.ref }}
+
+      - name: 配置 SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: 同步后端源码到 VPS
+        # 排除虚拟环境/缓存/运行时音频；compose 目录的 .env 不在 backend/ 内，不受影响
+        run: |
+          rsync -az --delete \
+            --exclude '.venv/' --exclude '__pycache__/' --exclude '*.pyc' \
+            --exclude 'tts_cache/' --exclude '.pytest_cache/' --exclude 'app/storage/' \
+            -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no" \
+            backend/ "root@${{ secrets.VPS_HOST }}:${{ steps.t.outputs.src_dir }}/"
+
+      - name: 构建并启动（含 alembic 迁移，--wait 等健康检查）
+        run: |
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no "root@${{ secrets.VPS_HOST }}" \
+            "cd '${{ steps.t.outputs.compose_dir }}' && docker compose up -d --build --wait && docker compose ps"
