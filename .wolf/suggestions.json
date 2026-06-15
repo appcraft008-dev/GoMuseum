@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-06-15T02:00:58.392Z",
+  "achievements": [
+    "完成 Step1 数据与存储地基：新增 ObjectStorage 抽象层 + LocalObjectStorage/R2ObjectStorage 双实现及工厂 (get_object_storage)，R2 对象存储已联通",
+    "建立 DB 模型层与迁移：Museum / MuseumObject / ObjectImage + 内容分区表共 6 张表迁移落地，含 section_types 与 painting 分类种子数据",
+    "打通内容数据流：Wikidata 幂等导入(按 qid/库存号 upsert)、Redis 讲解迁移入库、DB-backed museum pack 序列化器(保持响应 shape 兼容)、object content-by-tab 端点",
+    "完成 CI/CD 治理(commit 972e518c)：PR-only CI、branch-guard 强制 PR 流向、husky pre-push 钩子、/pr slash 命令，并以 husky 替换旧 .pre-commit-config.yaml",
+    "安全/性能修复：消除 museums 端点 N+1 查询、收敛 R2 超时(bug-037)、修复 trivy action 引用、授予 gitleaks pull-requests:read 权限"
+  ],
+  "improvements": [
+    "museums 端点已从 DB 读取且 shape 不变——补一组对比测试(旧 Redis pack vs 新 DB pack)固化兼容性契约，防回归",
+    "R2 超时已 bound 且 live test 改为 opt-in——在 CI 中显式标记/跳过 live R2 用例，避免凭证缺失导致偶发失败",
+    "Wikidata 导入的 SPARQL 多值处理已加固——为多值/缺值边界补单测，覆盖率向 CLAUDE.md 目标(单元≥80%)靠拢",
+    "CI 工具链已统一到 husky，建议删除/归档残留的 pre-commit 相关文档引用，保持单一事实来源"
+  ],
+  "next_tasks": [
+    "按 step1-branch-and-rules：将 feature/step1-data-foundation 与最新 main 对齐后走 PR→staging→main 合并，合并即删分支",
+    "当前 feature/devops-branch-ci-rules 落后 main 4 个提交、领先 6 个——合并前先 rebase/同步 main(受保护分支规则要求与 base 同步方可合并)",
+    "Step1 完成后兑现用户承诺：正式梳理并文档化 Git Flow 分支规则(已部分落入 CLAUDE.md，需校验 branch-guard 实际行为)",
+    "推进 UI 重做方案B(任务#1–#15)：基于 docs/design/claude-design-bundle 暖纸手册主题重写 Flutter presentation 层，先做核心体验闭环",
+    "验证新 CI 治理端到端有效：用一个测试 PR 确认 PR-only 触发、branch-guard 拦截非法 base、deploy 仅在 push main/staging 触发"
+  ],
+  "risks": [
+    "仓库根目录堆积 ~25 个临时状态文件(ACCEPTANCE_SUMMARY_*.md、ci-test.md、trigger.txt、sonar-test.md、ci-verify.txt 等)——污染仓库、混淆真实文档，应清理或归档至 docs/",
+    "venv/ 与 node_modules/ 出现在工作区根目录，backend/tts_cache 与 .wolf/ 为未跟踪态——确认 .gitignore/.dockerignore 已覆盖，严防误提交(CLAUDE.md 明令禁止)",
+    "bug-037(R2 超时)虽已 bound 但属外部依赖风险点——生产需监控 R2 调用超时率与重试,缺失告警将影响图片/内容加载",
+    "Step1 分支从 feature/step3-ui-develop 切出而非 main(当时 main 领先 36 提交)——存在合并冲突与历史漂移风险,务必先对齐 main 再合",
+    "DB 迁移与既有 Redis 数据并存期:迁移脚本若在 Redis 不可用时未正确 abort(af72c255 已修)需回归验证,避免双写不一致"
+  ]
+}

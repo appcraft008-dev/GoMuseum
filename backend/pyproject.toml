@@ -33,7 +33,8 @@ dependencies = [
     "pillow>=10.0.0",
     "python-dotenv>=1.0.0",
     "httpx>=0.25.0",
-    "imagehash>=4.3.0"
+    "imagehash>=4.3.0",
+    "boto3>=1.34.0"
 ]
 
 [tool.setuptools.packages.find]
