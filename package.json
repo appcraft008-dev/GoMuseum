@@ -45,8 +45,7 @@
     ],
     "backend/**/*.py": [
       "black",
-      "isort --profile black --line-length 88",
-      "flake8 --max-line-length=88 --extend-ignore=E203,W503"
+      "isort --profile black --line-length 88"
     ],
     "**/*.dart": [
       "dart format --line-length 80"

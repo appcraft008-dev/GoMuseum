@@ -10,8 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.core.database import SessionLocal
 from app.core.exceptions import AIServiceException
 from app.services.content_generation_service import get_content_generation_service
+from app.services.content_repo import persist_explanation
 from app.services.tts_service import get_tts_service
 
 logger = logging.getLogger(__name__)
@@ -30,6 +32,9 @@ class ExplanationRequest(BaseModel):
         default="en", description="Target language (en, zh, fr, de, es, it)"
     )
     description: Optional[str] = Field(None, description="Optional base description")
+    qid: Optional[str] = Field(
+        None, description="Wikidata QID；提供时把讲解永久落库到 object_content_section"
+    )
 
 
 class ExplanationResponse(BaseModel):
@@ -104,6 +109,21 @@ async def generate_explanation(
         )
 
         logger.info(f"Explanation generated successfully for '{request.artwork_name}'")
+
+        # 讲解永久落库（best-effort）：提供了 qid 且非兜底结果时写入 DB；
+        # 失败仅告警，绝不影响已成功生成的用户响应。
+        if request.qid and not result.get("fallback"):
+            db = SessionLocal()
+            try:
+                persist_explanation(
+                    db, request.qid, request.language, result, model="gpt-4o-mini"
+                )
+            except Exception as persist_err:  # noqa: BLE001
+                logger.warning(
+                    f"persist_explanation failed for qid={request.qid}: {persist_err}"
+                )
+            finally:
+                db.close()
 
         return ExplanationResponse(
             title=result["title"],

@@ -70,34 +70,28 @@ def upgrade() -> None:
 
     # Partial indexes for high-value queries
     # Index for high-confidence results (confidence >= 0.8)
-    op.execute(
-        """
+    op.execute("""
         CREATE INDEX ix_recognition_high_confidence
         ON recognition_results (timestamp DESC, confidence DESC)
         WHERE confidence >= 0.8
-    """
-    )
+    """)
 
     # Note: Removed the 24-hour partial index because NOW() is not IMMUTABLE
     # and cannot be used in index predicates. Use the regular timestamp index instead.
 
     # GIN index for full-text search on description (supports multiple languages)
     # Create a text search configuration column first
-    op.execute(
-        """
+    op.execute("""
         ALTER TABLE recognition_results
         ADD COLUMN description_tsv tsvector
         GENERATED ALWAYS AS (to_tsvector('english', description)) STORED
-    """
-    )
+    """)
 
     # Create GIN index on the tsvector column
-    op.execute(
-        """
+    op.execute("""
         CREATE INDEX ix_recognition_description_fts
         ON recognition_results USING GIN (description_tsv)
-    """
-    )
+    """)
 
     # Composite index for artist search with timestamp ordering
     op.create_index(
@@ -116,12 +110,10 @@ def downgrade() -> None:
     op.drop_index("ix_recognition_description_fts", table_name="recognition_results")
 
     # Drop the generated tsvector column
-    op.execute(
-        """
+    op.execute("""
         ALTER TABLE recognition_results
         DROP COLUMN description_tsv
-    """
-    )
+    """)
 
     op.drop_index("ix_recognition_high_confidence", table_name="recognition_results")
     op.drop_index("ix_recognition_artwork_name", table_name="recognition_results")
