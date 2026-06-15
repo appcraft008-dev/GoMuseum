@@ -124,3 +124,6 @@ Thumbs.db
 **/api_keys.json
 # Python 虚拟环境（之前漏掉 .venv，仅 venv 不够）
 **/.venv/
+
+# TTS 音频运行时缓存
+**/tts_cache/

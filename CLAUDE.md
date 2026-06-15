@@ -74,7 +74,9 @@ rules:
 
 - 默认同一时间只推进**一个** `feature/*`，避免多分支并行混乱。
 - 一个 feature 合并入 `staging` 且 CI/CD 完成后：**立即删除该 feature 分支**
-  （GitHub 合并时勾选自动删除，或 `git push origin --delete <branch>` + 本地 `git branch -d`）。
+  （合并时用 `gh pr merge --delete-branch`，或 `git push origin --delete <branch>` + 本地 `git branch -d`）。
+  ⚠️ 仓库级 `delete_branch_on_merge` 已**关闭**——否则 `staging→main` 合并会把 `staging` 也删掉。
+  feature 分支靠合并时的 `--delete-branch` 逐个删，`staging`/`main` 永不自动删。
 - 回到 `staging`、确定下一个特性/修复后，**从最新 `staging` 切出新的 `feature/*`** 再动手。
 - **例外**：不能等的线上紧急修复用 `hotfix/*` 分支并行处理，同样 PR→staging→main，完成即删。
 
@@ -87,12 +89,13 @@ rules:
 
 ### 本地提交前检查（让远端 CI 专注 UC 正确性，而非格式）
 
-- **pre-commit**（仅改动文件，快）：
-  - `backend/**/*.py` → black + isort + flake8
+- **pre-commit**（仅改动文件，快，只做**格式化**不做 lint）：
+  - `backend/**/*.py` → black + isort
   - `**/*.dart` → dart format
   - `*.{js,ts,jsx,tsx,json,md,yml,yaml}` → eslint --fix + prettier
+  - （flake8 等 lint 不放进阻塞钩子：存量代码违规多、且 CI 不跑 flake8；需要时单独跑 `flake8 backend`。）
 - **pre-push**（兜底，防未格式化代码上远端）：black --check、dart format --set-exit-if-changed；**不跑全量测试**。
-- 本地需安装：`black isort flake8`（后端）与 Dart/Flutter SDK（前端）；缺失时 pre-push 会跳过对应检查。
+- 本地需安装：`black isort`（后端）与 Dart/Flutter SDK（前端）；缺失时 pre-push 会跳过对应检查。
 - 严禁提交明文密码/API key/`.env`/虚拟环境（`.venv`）/构建产物；`.gitignore` 与 `.dockerignore` 必须覆盖。
 - CI 用 **gitleaks**（扫密钥）+ **Trivy**（扫依赖漏洞）双重防护。
 
