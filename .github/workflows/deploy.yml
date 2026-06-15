@@ -41,7 +41,8 @@ jobs:
               - 'backend/**'
 
   deploy:
-    name: Deploy → ${{ github.event_name == 'workflow_dispatch' && inputs.target || (github.ref_name == 'main' && 'production' || 'staging') }}
+    # 静态名（skipped 的 job 不渲染 name 表达式会显示原始字符串；目标看 run-name/解析步骤）
+    name: Deploy
     needs: changes
     # 手动 dispatch 强制部署；push 仅在 backend 改动时部署
     if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true') }}
