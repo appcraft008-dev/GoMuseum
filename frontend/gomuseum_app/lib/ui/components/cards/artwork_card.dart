@@ -72,8 +72,10 @@ class ArtworkCard extends StatelessWidget {
                         Expanded(
                           child: LinearProgressIndicator(
                             value: confidence,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            backgroundColor:
+                                AppColors.primary.withValues(alpha: 0.2),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary),
                           ),
                         ),
                         SizedBox(width: AppDimensions.spacing8),

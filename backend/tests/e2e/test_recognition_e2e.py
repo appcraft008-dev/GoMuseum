@@ -2,9 +2,11 @@
 End-to-end tests for recognition feature
 Tests complete user scenarios from upload to result
 """
-import pytest
-from unittest.mock import AsyncMock, patch
+
 import base64
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 
 class TestRecognitionE2E:
@@ -15,10 +17,12 @@ class TestRecognitionE2E:
         """should_complete_full_recognition_workflow"""
         # Arrange - simulate user uploading Mona Lisa image
         image_bytes = b"fake_mona_lisa_image"
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="E2E recognition flow not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="E2E recognition flow not implemented"
+        ):
             raise NotImplementedError("E2E recognition flow not implemented")
 
     @pytest.mark.asyncio
@@ -28,7 +32,9 @@ class TestRecognitionE2E:
         unique_image = b"never_seen_before_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="First-time flow not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="First-time flow not implemented"
+        ):
             raise NotImplementedError("First-time flow not implemented")
 
     @pytest.mark.asyncio
@@ -38,7 +44,9 @@ class TestRecognitionE2E:
         image_bytes = b"repeated_artwork_image"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Cache retrieval not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Cache retrieval not implemented"
+        ):
             raise NotImplementedError("Cache retrieval not implemented")
 
     @pytest.mark.asyncio
@@ -48,7 +56,9 @@ class TestRecognitionE2E:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Database persistence not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Database persistence not implemented"
+        ):
             raise NotImplementedError("Database persistence not implemented")
 
     @pytest.mark.asyncio
@@ -72,7 +82,9 @@ class TestRecognitionE2EValidation:
         empty_image = b""
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Empty validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Empty validation not implemented"
+        ):
             raise NotImplementedError("Empty validation not implemented")
 
     @pytest.mark.asyncio
@@ -82,7 +94,9 @@ class TestRecognitionE2EValidation:
         oversized_image = b"x" * (11 * 1024 * 1024)
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Size validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Size validation not implemented"
+        ):
             raise NotImplementedError("Size validation not implemented")
 
     @pytest.mark.asyncio
@@ -92,7 +106,9 @@ class TestRecognitionE2EValidation:
         bmp_image = bytes([0x42, 0x4D]) + b"fake_bmp_data"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Format validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Format validation not implemented"
+        ):
             raise NotImplementedError("Format validation not implemented")
 
     @pytest.mark.asyncio
@@ -102,7 +118,9 @@ class TestRecognitionE2EValidation:
         corrupted_image = b"not_a_valid_image"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Corruption detection not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Corruption detection not implemented"
+        ):
             raise NotImplementedError("Corruption detection not implemented")
 
 
@@ -126,7 +144,9 @@ class TestRecognitionE2EPerformance:
         image_bytes = b"cached_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Cache performance not validated"):
+        with pytest.raises(
+            NotImplementedError, match="Cache performance not validated"
+        ):
             raise NotImplementedError("Cache performance not validated")
 
     @pytest.mark.asyncio
@@ -136,7 +156,9 @@ class TestRecognitionE2EPerformance:
         images = [b"artwork_" + str(i).encode() for i in range(10)]
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Concurrent performance not validated"):
+        with pytest.raises(
+            NotImplementedError, match="Concurrent performance not validated"
+        ):
             raise NotImplementedError("Concurrent performance not validated")
 
 
@@ -150,7 +172,9 @@ class TestRecognitionE2EAIFallback:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Claude fallback not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Claude fallback not implemented"
+        ):
             raise NotImplementedError("Claude fallback not implemented")
 
     @pytest.mark.asyncio
@@ -170,7 +194,9 @@ class TestRecognitionE2EAIFallback:
         image_bytes = b"problematic_image"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Complete failure handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Complete failure handling not implemented"
+        ):
             raise NotImplementedError("Complete failure handling not implemented")
 
 
@@ -184,7 +210,9 @@ class TestRecognitionE2EResponseFormat:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Response format not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Response format not implemented"
+        ):
             raise NotImplementedError("Response format not implemented")
 
     @pytest.mark.asyncio
@@ -204,7 +232,9 @@ class TestRecognitionE2EResponseFormat:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Processing time not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Processing time not implemented"
+        ):
             raise NotImplementedError("Processing time not implemented")
 
     @pytest.mark.asyncio
@@ -214,7 +244,9 @@ class TestRecognitionE2EResponseFormat:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Schema validation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Schema validation not implemented"
+        ):
             raise NotImplementedError("Schema validation not implemented")
 
 
@@ -228,7 +260,9 @@ class TestRecognitionE2EErrorScenarios:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Timeout handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Timeout handling not implemented"
+        ):
             raise NotImplementedError("Timeout handling not implemented")
 
     @pytest.mark.asyncio
@@ -238,7 +272,9 @@ class TestRecognitionE2EErrorScenarios:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="DB failure handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="DB failure handling not implemented"
+        ):
             raise NotImplementedError("DB failure handling not implemented")
 
     @pytest.mark.asyncio
@@ -248,7 +284,9 @@ class TestRecognitionE2EErrorScenarios:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Redis failure handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Redis failure handling not implemented"
+        ):
             raise NotImplementedError("Redis failure handling not implemented")
 
     @pytest.mark.asyncio
@@ -258,7 +296,9 @@ class TestRecognitionE2EErrorScenarios:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Rate limit handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Rate limit handling not implemented"
+        ):
             raise NotImplementedError("Rate limit handling not implemented")
 
 
@@ -272,7 +312,9 @@ class TestRecognitionE2EUserExperience:
         invalid_image = b"not_an_image"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Error messaging not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Error messaging not implemented"
+        ):
             raise NotImplementedError("Error messaging not implemented")
 
     @pytest.mark.asyncio
@@ -282,7 +324,9 @@ class TestRecognitionE2EUserExperience:
         image_bytes = b"test_artwork"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Request deduplication not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Request deduplication not implemented"
+        ):
             raise NotImplementedError("Request deduplication not implemented")
 
     @pytest.mark.asyncio

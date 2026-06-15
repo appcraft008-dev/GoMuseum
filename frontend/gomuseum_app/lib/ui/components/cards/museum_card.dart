@@ -69,13 +69,15 @@ class MuseumCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusSmall),
                         ),
                         child: Text(
                           '${distance!.toStringAsFixed(1)} km',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Colors.white,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Colors.white,
+                                  ),
                         ),
                       ),
                     ),
@@ -105,9 +107,10 @@ class MuseumCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             address,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -125,9 +128,10 @@ class MuseumCard extends StatelessWidget {
                         SizedBox(width: AppDimensions.spacing4),
                         Text(
                           openingHours,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
                         ),
                       ],
                     ),

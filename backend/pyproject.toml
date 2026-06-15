@@ -93,7 +93,8 @@ profile = "black"
 multi_line_output = 3
 line_length = 88
 known_first_party = ["app"]
-skip = ["migrations"]
+skip = ["migrations", ".venv"]
+skip_gitignore = true
 
 [tool.flake8]
 max-line-length = 88

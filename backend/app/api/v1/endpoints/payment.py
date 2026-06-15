@@ -3,16 +3,17 @@ Payment API Endpoints
 Handles IAP verification and user benefits management
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from typing import Optional
-import logging
 
 from app.core.database import get_db
-from app.services.iap_verification_service import get_iap_verification_service
-from app.services.benefits_service import get_benefits_service
 from app.core.exceptions import ServiceException
+from app.services.benefits_service import get_benefits_service
+from app.services.iap_verification_service import get_iap_verification_service
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +23,19 @@ router = APIRouter()
 # Request/Response Models
 class VerifyReceiptRequest(BaseModel):
     """Request model for receipt verification"""
+
     platform: str = Field(..., description="Platform: ios or android")
     receipt_data: str = Field(..., description="Receipt data or purchase token")
     product_id: str = Field(..., description="Product identifier")
     user_id: Optional[str] = Field(None, description="User ID (if authenticated)")
-    device_id: Optional[str] = Field(None, description="Device ID (for anonymous users)")
+    device_id: Optional[str] = Field(
+        None, description="Device ID (for anonymous users)"
+    )
 
 
 class VerifyReceiptResponse(BaseModel):
     """Response model for receipt verification"""
+
     verified: bool
     product_id: str
     transaction_id: Optional[str]
@@ -40,6 +45,7 @@ class VerifyReceiptResponse(BaseModel):
 
 class BenefitsResponse(BaseModel):
     """Response model for user benefits"""
+
     has_access: bool
     recognition_quota: int
     referral_bonus_quota: int
@@ -55,8 +61,8 @@ class BenefitsResponse(BaseModel):
 async def verify_purchase(
     request: VerifyReceiptRequest,
     db: Session = Depends(get_db),
-    iap_service = Depends(get_iap_verification_service),
-    benefits_service = Depends(lambda db=Depends(get_db): get_benefits_service(db))
+    iap_service=Depends(get_iap_verification_service),
+    benefits_service=Depends(lambda db=Depends(get_db): get_benefits_service(db)),
 ) -> VerifyReceiptResponse:
     """
     Verify in-app purchase receipt and apply benefits
@@ -82,7 +88,9 @@ async def verify_purchase(
                  }'
         ```
     """
-    logger.info(f"Verifying {request.platform} purchase for product: {request.product_id}")
+    logger.info(
+        f"Verifying {request.platform} purchase for product: {request.product_id}"
+    )
 
     try:
         # Verify receipt based on platform
@@ -93,12 +101,15 @@ async def verify_purchase(
             verification = await iap_service.verify_google_receipt(
                 purchase_token=request.receipt_data,
                 product_id=request.product_id,
-                subscription=is_subscription
+                subscription=is_subscription,
             )
         else:
             raise HTTPException(
                 status_code=400,
-                detail={"error": "InvalidPlatform", "detail": f"Platform must be 'ios' or 'android'"}
+                detail={
+                    "error": "InvalidPlatform",
+                    "detail": f"Platform must be 'ios' or 'android'",
+                },
             )
 
         if not verification.get("valid"):
@@ -108,7 +119,7 @@ async def verify_purchase(
                 product_id=request.product_id,
                 transaction_id=None,
                 benefits_applied=False,
-                message=verification.get("error", "Receipt verification failed")
+                message=verification.get("error", "Receipt verification failed"),
             )
 
         # Apply benefits based on product ID
@@ -116,7 +127,7 @@ async def verify_purchase(
             product_id=request.product_id,
             user_id=request.user_id,
             device_id=request.device_id,
-            benefits_service=benefits_service
+            benefits_service=benefits_service,
         )
 
         logger.info(f"Purchase verified and benefits applied: {request.product_id}")
@@ -126,20 +137,18 @@ async def verify_purchase(
             product_id=verification["product_id"],
             transaction_id=verification.get("transaction_id"),
             benefits_applied=benefits_applied,
-            message="Purchase verified and benefits applied successfully"
+            message="Purchase verified and benefits applied successfully",
         )
 
     except ServiceException as e:
         logger.error(f"Service error: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail={"error": "ServiceError", "detail": str(e)}
+            status_code=500, detail={"error": "ServiceError", "detail": str(e)}
         )
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "detail": str(e)}
+            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
 
 
@@ -147,7 +156,7 @@ async def verify_purchase(
 async def get_benefits(
     user_id: Optional[str] = None,
     device_id: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> BenefitsResponse:
     """
     Get user benefits and quota information
@@ -176,14 +185,12 @@ async def get_benefits(
     except ServiceException as e:
         logger.error(f"Service error: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail={"error": "ServiceError", "detail": str(e)}
+            status_code=500, detail={"error": "ServiceError", "detail": str(e)}
         )
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "detail": str(e)}
+            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
 
 
@@ -191,7 +198,7 @@ async def get_benefits(
 async def consume_recognition(
     user_id: Optional[str] = None,
     device_id: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Consume one recognition from user's quota
@@ -218,7 +225,10 @@ async def consume_recognition(
         if not success:
             raise HTTPException(
                 status_code=403,
-                detail={"error": "QuotaExceeded", "detail": "No recognition quota available"}
+                detail={
+                    "error": "QuotaExceeded",
+                    "detail": "No recognition quota available",
+                },
             )
 
         # Get updated benefits
@@ -227,7 +237,7 @@ async def consume_recognition(
         return {
             "success": True,
             "message": "Recognition consumed successfully",
-            "remaining_quota": benefits["total_quota"]
+            "remaining_quota": benefits["total_quota"],
         }
 
     except HTTPException:
@@ -235,22 +245,17 @@ async def consume_recognition(
     except ServiceException as e:
         logger.error(f"Service error: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail={"error": "ServiceError", "detail": str(e)}
+            status_code=500, detail={"error": "ServiceError", "detail": str(e)}
         )
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "detail": str(e)}
+            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
 
 
 def _apply_benefits(
-    product_id: str,
-    user_id: Optional[str],
-    device_id: Optional[str],
-    benefits_service
+    product_id: str, user_id: Optional[str], device_id: Optional[str], benefits_service
 ) -> bool:
     """
     Apply benefits based on purchased product

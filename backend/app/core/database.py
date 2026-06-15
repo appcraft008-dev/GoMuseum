@@ -3,12 +3,14 @@ Database configuration and session management
 SQLAlchemy setup for PostgreSQL with optimized connection pooling
 """
 
+import logging
+from typing import Generator
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from typing import Generator
+from sqlalchemy.orm import Session, sessionmaker
+
 from app.core.config import settings
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +31,7 @@ engine = create_engine(
     pool_timeout=30,  # Wait up to 30 seconds for connection
     echo=settings.DEBUG,
     # Additional PostgreSQL-specific optimizations
-    connect_args={
-        "options": "-c statement_timeout=30000"  # 30 second query timeout
-    }
+    connect_args={"options": "-c statement_timeout=30000"},  # 30 second query timeout
 )
 
 
@@ -45,13 +45,16 @@ def receive_connect(dbapi_conn, connection_record):
 @event.listens_for(engine, "checkout")
 def receive_checkout(dbapi_conn, connection_record, connection_proxy):
     """Log when connections are checked out from the pool"""
-    logger.debug(f"Connection checked out from pool. Pool status: {engine.pool.status()}")
+    logger.debug(
+        f"Connection checked out from pool. Pool status: {engine.pool.status()}"
+    )
 
 
 @event.listens_for(engine, "checkin")
 def receive_checkin(dbapi_conn, connection_record):
     """Log when connections are returned to the pool"""
     logger.debug("Connection returned to pool")
+
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

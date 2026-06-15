@@ -20,14 +20,14 @@ final goRouter = GoRouter(
       name: 'home',
       builder: (context, state) => const HomePage(),
     ),
-    
+
     // 相机页
     GoRoute(
       path: '/camera',
       name: 'camera',
       builder: (context, state) => const CameraPage(),
     ),
-    
+
     // 识别结果页
     GoRoute(
       path: '/result/:id',
@@ -37,21 +37,21 @@ final goRouter = GoRouter(
         return ResultPage(artworkId: id);
       },
     ),
-    
+
     // 探索页
     GoRoute(
       path: '/explore',
       name: 'explore',
       builder: (context, state) => const ExplorePage(),
     ),
-    
+
     // 历史页
     GoRoute(
       path: '/history',
       name: 'history',
       builder: (context, state) => const HistoryPage(),
     ),
-    
+
     // 设置页
     GoRoute(
       path: '/settings',
@@ -59,7 +59,7 @@ final goRouter = GoRouter(
       builder: (context, state) => const SettingsPage(),
     ),
   ],
-  
+
   // 错误处理
   errorBuilder: (context, state) => Scaffold(
     appBar: AppBar(title: const Text('页面未找到')),

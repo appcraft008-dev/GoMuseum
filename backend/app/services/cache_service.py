@@ -4,12 +4,14 @@ Handles Redis caching for recognition results with perceptual hash similarity ma
 """
 
 import json
+import logging
+from typing import List, Optional, Tuple
+
 import redis
-from typing import Optional, List, Tuple
+
 from app.core.config import settings
 from app.schemas.recognition import RecognitionResponse
 from app.services.image_service import ImageService
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +135,7 @@ class CacheService:
                 cached_phash = key.split(":", 1)[1]
 
                 # Calculate similarity
-                similarity = ImageService.hash_similarity(
-                    perceptual_hash, cached_phash
-                )
+                similarity = ImageService.hash_similarity(perceptual_hash, cached_phash)
 
                 # Track best match
                 if similarity >= similarity_threshold and similarity > best_similarity:

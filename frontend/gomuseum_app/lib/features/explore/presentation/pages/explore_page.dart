@@ -24,18 +24,20 @@ class ExplorePage extends StatelessWidget {
                 hintText: '搜索博物馆或艺术品',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusMedium),
                 ),
               ),
             ),
           ),
-          
+
           // 筛选标签
           SizedBox(
             height: 50,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacing16),
+              padding:
+                  EdgeInsets.symmetric(horizontal: AppDimensions.spacing16),
               children: [
                 _buildFilterChip(context, '全部', true),
                 _buildFilterChip(context, '博物馆', false),
@@ -44,7 +46,7 @@ class ExplorePage extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // 结果列表
           Expanded(
             child: ListView.builder(
@@ -54,7 +56,8 @@ class ExplorePage extends StatelessWidget {
                 return Padding(
                   padding: EdgeInsets.only(bottom: AppDimensions.spacing16),
                   child: MuseumCard(
-                    imageUrl: 'https://picsum.photos/400/225?random=${index + 20}',
+                    imageUrl:
+                        'https://picsum.photos/400/225?random=${index + 20}',
                     name: '博物馆 ${index + 1}',
                     address: '地址 ${index + 1}',
                     openingHours: '09:00 - 18:00',

@@ -4,12 +4,13 @@ Handles communication with OpenAI GPT-4 Vision API for artwork recognition
 Multi-tier fallback strategy: GPT-4V → Claude → Manual
 """
 
-import logging
+import asyncio
 import json
+import logging
 from typing import Dict, Optional
+
 from app.core.config import settings
 from app.core.exceptions import AIServiceException, TimeoutException
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ def _get_openai_client():
     if _openai_client is None:
         try:
             from openai import AsyncOpenAI
+
             _openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             logger.info("OpenAI client initialized")
         except ImportError:
@@ -41,6 +43,7 @@ def _get_claude_client():
     if _claude_client is None:
         try:
             import anthropic
+
             if settings.ANTHROPIC_API_KEY:
                 _claude_client = anthropic.AsyncAnthropic(
                     api_key=settings.ANTHROPIC_API_KEY
@@ -101,7 +104,9 @@ class AIService:
 
         for strategy_name, strategy_func, timeout in strategies:
             try:
-                logger.info(f"Trying recognition strategy: {strategy_name} with {timeout}s timeout")
+                logger.info(
+                    f"Trying recognition strategy: {strategy_name} with {timeout}s timeout"
+                )
                 result = await asyncio.wait_for(
                     strategy_func(base64_image), timeout=timeout
                 )
@@ -117,7 +122,7 @@ class AIService:
             except Exception as e:
                 logger.error(
                     f"{strategy_name} strategy failed: {str(e)}",
-                    exc_info=True  # 这会打印完整的堆栈跟踪
+                    exc_info=True,  # 这会打印完整的堆栈跟踪
                 )
                 continue
 
@@ -243,7 +248,9 @@ Return only the JSON object, no other text.
 
         try:
             message = await client.messages.create(
-                model=getattr(settings, "ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"),
+                model=getattr(
+                    settings, "ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"
+                ),
                 max_tokens=500,
                 messages=[
                     {

@@ -4,12 +4,13 @@ Handles AI-powered artwork explanation generation in multiple languages
 Uses OpenAI GPT-4 for creating rich, contextual content
 """
 
-import logging
+import asyncio
 import json
+import logging
 from typing import Dict, Optional
+
 from app.core.config import settings
 from app.core.exceptions import AIServiceException
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ def _get_openai_client():
     if _openai_client is None:
         try:
             from openai import AsyncOpenAI
+
             _openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             logger.info("OpenAI client initialized for content generation")
         except ImportError:
@@ -57,7 +59,7 @@ Return ONLY valid JSON in this format:
     "artistic_analysis": "3-4 sentences about artistic techniques and style",
     "cultural_significance": "2-3 sentences about cultural impact",
     "interesting_facts": ["fact 1", "fact 2", "fact 3"]
-}}"""
+}}""",
     },
     "zh": {
         "system": "你是一位专业的艺术史学家和博物馆导览员。请用中文提供引人入胜、富有信息量的艺术品讲解。",
@@ -80,7 +82,7 @@ Return ONLY valid JSON in this format:
     "artistic_analysis": "3-4句关于艺术技法和风格的分析",
     "cultural_significance": "2-3句关于文化影响的说明",
     "interesting_facts": ["趣事1", "趣事2", "趣事3"]
-}}"""
+}}""",
     },
     "fr": {
         "system": "Vous êtes un historien d'art expert et un guide de musée. Fournissez des explications captivantes et informatives sur les œuvres d'art.",
@@ -103,7 +105,7 @@ Retournez UNIQUEMENT un JSON valide dans ce format :
     "artistic_analysis": "3-4 phrases sur les techniques et le style artistiques",
     "cultural_significance": "2-3 phrases sur l'impact culturel",
     "interesting_facts": ["fait 1", "fait 2", "fait 3"]
-}}"""
+}}""",
     },
     "de": {
         "system": "Sie sind ein Experte für Kunstgeschichte und Museumsführer. Bieten Sie fesselnde und informative Erklärungen zu Kunstwerken.",
@@ -126,7 +128,7 @@ Geben Sie NUR gültiges JSON in diesem Format zurück:
     "artistic_analysis": "3-4 Sätze über künstlerische Techniken und Stil",
     "cultural_significance": "2-3 Sätze über kulturelle Bedeutung",
     "interesting_facts": ["Fakt 1", "Fakt 2", "Fakt 3"]
-}}"""
+}}""",
     },
     "es": {
         "system": "Eres un experto historiador de arte y guía de museo. Proporciona explicaciones atractivas e informativas sobre obras de arte.",
@@ -149,7 +151,7 @@ Devuelve SOLO JSON válido en este formato:
     "artistic_analysis": "3-4 oraciones sobre técnicas y estilo artísticos",
     "cultural_significance": "2-3 oraciones sobre el impacto cultural",
     "interesting_facts": ["hecho 1", "hecho 2", "hecho 3"]
-}}"""
+}}""",
     },
     "it": {
         "system": "Sei un esperto storico dell'arte e guida museale. Fornisci spiegazioni coinvolgenti e informative sulle opere d'arte.",
@@ -172,8 +174,8 @@ Restituisci SOLO JSON valido in questo formato:
     "artistic_analysis": "3-4 frasi su tecniche e stile artistici",
     "cultural_significance": "2-3 frasi sull'impatto culturale",
     "interesting_facts": ["fatto 1", "fatto 2", "fatto 3"]
-}}"""
-    }
+}}""",
+    },
 }
 
 
@@ -193,7 +195,7 @@ class ContentGenerationService:
         artist: str,
         period: str,
         language: str = "en",
-        description: Optional[str] = None
+        description: Optional[str] = None,
     ) -> Dict[str, any]:
         """
         Generate detailed explanation for an artwork
@@ -235,9 +237,7 @@ class ContentGenerationService:
             template = PROMPT_TEMPLATES[language]
             system_prompt = template["system"]
             user_prompt = template["user"].format(
-                artwork_name=artwork_name,
-                artist=artist,
-                period=period
+                artwork_name=artwork_name, artist=artist, period=period
             )
 
             # Add base description if available
@@ -251,12 +251,12 @@ class ContentGenerationService:
                     model=self.model,
                     messages=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
+                        {"role": "user", "content": user_prompt},
                     ],
                     max_tokens=1500,
                     temperature=0.7,
                 ),
-                timeout=self.timeout
+                timeout=self.timeout,
             )
 
             # Parse response
@@ -288,11 +288,7 @@ class ContentGenerationService:
             return self._generate_fallback(artwork_name, artist, period, language)
 
     def _generate_fallback(
-        self,
-        artwork_name: str,
-        artist: str,
-        period: str,
-        language: str
+        self, artwork_name: str, artist: str, period: str, language: str
     ) -> Dict[str, any]:
         """Generate fallback content when AI is unavailable"""
         fallback_texts = {
@@ -304,8 +300,8 @@ class ContentGenerationService:
                 "interesting_facts": [
                     f"Created by {artist}",
                     f"Belongs to the {period} period",
-                    "Recognized as a significant work in art history"
-                ]
+                    "Recognized as a significant work in art history",
+                ],
             },
             "zh": {
                 "summary": f"{artist}创作于{period}时期的著名艺术品。",
@@ -315,9 +311,9 @@ class ContentGenerationService:
                 "interesting_facts": [
                     f"由{artist}创作",
                     f"属于{period}时期",
-                    "被认为是艺术史上的重要作品"
-                ]
-            }
+                    "被认为是艺术史上的重要作品",
+                ],
+            },
         }
 
         # Default to English if language not in fallback
@@ -332,7 +328,7 @@ class ContentGenerationService:
             "interesting_facts": texts["interesting_facts"],
             "language": language,
             "generated_at": asyncio.get_event_loop().time(),
-            "fallback": True
+            "fallback": True,
         }
 
 

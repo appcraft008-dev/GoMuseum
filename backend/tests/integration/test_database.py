@@ -2,9 +2,11 @@
 Integration tests for database operations
 Tests PostgreSQL connection and recognition_results table CRUD
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 class TestDatabaseConnection:
@@ -14,28 +16,36 @@ class TestDatabaseConnection:
     async def test_establishes_connection_to_postgresql(self):
         """should_connect_to_database_successfully"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Database connection not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Database connection not implemented"
+        ):
             raise NotImplementedError("Database connection not implemented")
 
     @pytest.mark.asyncio
     async def test_connection_pool_configuration(self):
         """should_configure_connection_pool_with_appropriate_size"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Connection pool not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Connection pool not implemented"
+        ):
             raise NotImplementedError("Connection pool not implemented")
 
     @pytest.mark.asyncio
     async def test_handles_connection_timeout(self):
         """should_timeout_and_retry_on_connection_failure"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Connection timeout not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Connection timeout not implemented"
+        ):
             raise NotImplementedError("Connection timeout not implemented")
 
     @pytest.mark.asyncio
     async def test_closes_connections_gracefully(self):
         """should_cleanup_database_connections_on_shutdown"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Connection cleanup not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Connection cleanup not implemented"
+        ):
             raise NotImplementedError("Connection cleanup not implemented")
 
 
@@ -52,11 +62,13 @@ class TestRecognitionResultsTableCRUD:
             "artist": "Leonardo da Vinci",
             "year": 1503,
             "description": "Famous portrait",
-            "confidence": 0.95
+            "confidence": 0.95,
         }
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Create operation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Create operation not implemented"
+        ):
             raise NotImplementedError("Create operation not implemented")
 
     @pytest.mark.asyncio
@@ -84,13 +96,12 @@ class TestRecognitionResultsTableCRUD:
         """should_modify_existing_record_fields"""
         # Arrange
         result_id = 1
-        updated_data = {
-            "confidence": 0.98,
-            "description": "Updated description"
-        }
+        updated_data = {"confidence": 0.98, "description": "Updated description"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Update operation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Update operation not implemented"
+        ):
             raise NotImplementedError("Update operation not implemented")
 
     @pytest.mark.asyncio
@@ -100,7 +111,9 @@ class TestRecognitionResultsTableCRUD:
         result_id = 1
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Delete operation not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Delete operation not implemented"
+        ):
             raise NotImplementedError("Delete operation not implemented")
 
 
@@ -118,10 +131,7 @@ class TestRecognitionResultsTableSchema:
     async def test_image_hash_column_has_unique_constraint(self):
         """should_prevent_duplicate_image_hash_entries"""
         # Arrange - try to insert duplicate hash
-        duplicate_data = {
-            "image_hash": "duplicate_hash",
-            "artwork_title": "Test"
-        }
+        duplicate_data = {"image_hash": "duplicate_hash", "artwork_title": "Test"}
 
         # Act & Assert
         with pytest.raises(NotImplementedError, match="Unique constraint not enforced"):
@@ -138,10 +148,7 @@ class TestRecognitionResultsTableSchema:
     async def test_confidence_column_accepts_float_values(self):
         """should_store_decimal_confidence_scores"""
         # Arrange
-        data_with_confidence = {
-            "image_hash": "test",
-            "confidence": 0.857
-        }
+        data_with_confidence = {"image_hash": "test", "confidence": 0.857}
 
         # Act & Assert
         with pytest.raises(NotImplementedError, match="Float storage not verified"):
@@ -151,10 +158,7 @@ class TestRecognitionResultsTableSchema:
     async def test_timestamps_auto_populate_on_insert(self):
         """should_set_created_at_and_updated_at_automatically"""
         # Arrange
-        data = {
-            "image_hash": "test",
-            "artwork_title": "Test Artwork"
-        }
+        data = {"image_hash": "test", "artwork_title": "Test Artwork"}
 
         # Act & Assert
         with pytest.raises(NotImplementedError, match="Auto timestamp not implemented"):
@@ -167,7 +171,9 @@ class TestRecognitionResultsTableSchema:
         result_id = 1
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Timestamp update not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Timestamp update not implemented"
+        ):
             raise NotImplementedError("Timestamp update not implemented")
 
 
@@ -181,7 +187,9 @@ class TestDatabaseTransactions:
         data = {"image_hash": "test", "artwork_title": "Test"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Transaction commit not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Transaction commit not implemented"
+        ):
             raise NotImplementedError("Transaction commit not implemented")
 
     @pytest.mark.asyncio
@@ -190,7 +198,9 @@ class TestDatabaseTransactions:
         # Arrange - operation that will fail
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Transaction rollback not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Transaction rollback not implemented"
+        ):
             raise NotImplementedError("Transaction rollback not implemented")
 
     @pytest.mark.asyncio
@@ -220,7 +230,9 @@ class TestDatabasePerformance:
         image_hash = "test_hash"
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Query performance not validated"):
+        with pytest.raises(
+            NotImplementedError, match="Query performance not validated"
+        ):
             raise NotImplementedError("Query performance not validated")
 
     @pytest.mark.asyncio
@@ -265,7 +277,9 @@ class TestDatabaseMigrations:
     async def test_can_rollback_migrations(self):
         """should_support_downgrading_database_schema"""
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Migration rollback not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Migration rollback not implemented"
+        ):
             raise NotImplementedError("Migration rollback not implemented")
 
 
@@ -286,7 +300,9 @@ class TestDatabaseErrorHandling:
         data = {"image_hash": "duplicate", "artwork_title": "Test"}
 
         # Act & Assert
-        with pytest.raises(NotImplementedError, match="Constraint error handling not implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Constraint error handling not implemented"
+        ):
             raise NotImplementedError("Constraint error handling not implemented")
 
     @pytest.mark.asyncio

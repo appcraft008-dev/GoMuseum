@@ -2,16 +2,18 @@
 Test helper functions for generating test images
 Provides utilities for creating images with different similarity levels
 """
-from PIL import Image, ImageEnhance, ImageFilter
+
 from io import BytesIO
 from typing import Tuple
+
+from PIL import Image, ImageEnhance, ImageFilter
 
 
 def create_test_image(
     width: int = 100,
     height: int = 100,
     color: Tuple[int, int, int] = (255, 0, 0),
-    format: str = "JPEG"
+    format: str = "JPEG",
 ) -> bytes:
     """
     Create a solid color test image
@@ -29,7 +31,7 @@ def create_test_image(
         >>> red_image = create_test_image(100, 100, (255, 0, 0))
         >>> blue_image = create_test_image(200, 200, (0, 0, 255), "PNG")
     """
-    img = Image.new('RGB', (width, height), color=color)
+    img = Image.new("RGB", (width, height), color=color)
     buffer = BytesIO()
     img.save(buffer, format=format, quality=85)
     return buffer.getvalue()
@@ -40,7 +42,7 @@ def create_gradient_image(
     height: int = 200,
     start_color: Tuple[int, int, int] = (0, 0, 0),
     end_color: Tuple[int, int, int] = (255, 255, 255),
-    format: str = "JPEG"
+    format: str = "JPEG",
 ) -> bytes:
     """
     Create a gradient test image from start_color to end_color
@@ -55,7 +57,7 @@ def create_gradient_image(
     Returns:
         Image data as bytes
     """
-    img = Image.new('RGB', (width, height))
+    img = Image.new("RGB", (width, height))
     pixels = img.load()
 
     for y in range(height):
@@ -76,7 +78,7 @@ def create_pattern_image(
     width: int = 200,
     height: int = 200,
     pattern: str = "checkerboard",
-    format: str = "JPEG"
+    format: str = "JPEG",
 ) -> bytes:
     """
     Create a patterned test image (checkerboard, stripes, etc.)
@@ -90,7 +92,7 @@ def create_pattern_image(
     Returns:
         Image data as bytes
     """
-    img = Image.new('RGB', (width, height))
+    img = Image.new("RGB", (width, height))
     pixels = img.load()
 
     if pattern == "checkerboard":
@@ -122,7 +124,7 @@ def create_similar_image(
     contrast: float = 1.0,
     blur: float = 0.0,
     rotation: float = 0.0,
-    format: str = "JPEG"
+    format: str = "JPEG",
 ) -> bytes:
     """
     Create a similar version of an image with adjustments
@@ -153,8 +155,8 @@ def create_similar_image(
     img = Image.open(BytesIO(original_image_bytes))
 
     # Convert to RGB if necessary
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
+    if img.mode != "RGB":
+        img = img.convert("RGB")
 
     # Apply brightness adjustment
     if brightness != 1.0:
@@ -181,9 +183,7 @@ def create_similar_image(
 
 
 def create_resized_image(
-    original_image_bytes: bytes,
-    scale: float = 0.5,
-    format: str = "JPEG"
+    original_image_bytes: bytes, scale: float = 0.5, format: str = "JPEG"
 ) -> bytes:
     """
     Create a resized version of an image
@@ -209,9 +209,7 @@ def create_resized_image(
 
 
 def create_compressed_image(
-    original_image_bytes: bytes,
-    quality: int = 50,
-    format: str = "JPEG"
+    original_image_bytes: bytes, quality: int = 50, format: str = "JPEG"
 ) -> bytes:
     """
     Create a compressed version of an image with different quality
@@ -245,10 +243,11 @@ def create_artwork_simulation(seed: int = 42) -> bytes:
         Simulated artwork image as bytes
     """
     import random
+
     random.seed(seed)
 
     width, height = 300, 300
-    img = Image.new('RGB', (width, height))
+    img = Image.new("RGB", (width, height))
     pixels = img.load()
 
     # Create a multi-colored pattern

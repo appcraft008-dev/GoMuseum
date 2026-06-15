@@ -1,7 +1,8 @@
 # backend/app/main.py
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
 
 from app.api.v1 import api_router
 from app.core.database import init_db

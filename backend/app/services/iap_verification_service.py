@@ -3,10 +3,12 @@ IAP Verification Service
 Handles Apple App Store and Google Play Store receipt verification
 """
 
-import logging
-import httpx
 import json
+import logging
 from typing import Dict, Optional
+
+import httpx
+
 from app.core.config import settings
 from app.core.exceptions import ServiceException
 
@@ -20,13 +22,13 @@ class IAPVerificationService:
         """Initialize IAP verification service"""
         self.apple_verify_url_production = "https://buy.itunes.apple.com/verifyReceipt"
         self.apple_verify_url_sandbox = "https://sandbox.itunes.apple.com/verifyReceipt"
-        self.google_package_name = getattr(settings, "GOOGLE_PACKAGE_NAME", "com.gomuseum.app")
+        self.google_package_name = getattr(
+            settings, "GOOGLE_PACKAGE_NAME", "com.gomuseum.app"
+        )
         logger.info("IAPVerificationService initialized")
 
     async def verify_apple_receipt(
-        self,
-        receipt_data: str,
-        use_sandbox: bool = False
+        self, receipt_data: str, use_sandbox: bool = False
     ) -> Dict[str, any]:
         """
         Verify Apple App Store receipt
@@ -50,23 +52,20 @@ class IAPVerificationService:
         logger.info("Verifying Apple receipt")
 
         verify_url = (
-            self.apple_verify_url_sandbox if use_sandbox
+            self.apple_verify_url_sandbox
+            if use_sandbox
             else self.apple_verify_url_production
         )
 
         payload = {
             "receipt-data": receipt_data,
             "password": getattr(settings, "APPLE_SHARED_SECRET", ""),
-            "exclude-old-transactions": True
+            "exclude-old-transactions": True,
         }
 
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    verify_url,
-                    json=payload,
-                    timeout=30.0
-                )
+                response = await client.post(verify_url, json=payload, timeout=30.0)
 
                 result = response.json()
                 status = result.get("status")
@@ -74,7 +73,9 @@ class IAPVerificationService:
                 # Status 21007 means sandbox receipt in production - retry with sandbox
                 if status == 21007 and not use_sandbox:
                     logger.info("Sandbox receipt detected, retrying with sandbox URL")
-                    return await self.verify_apple_receipt(receipt_data, use_sandbox=True)
+                    return await self.verify_apple_receipt(
+                        receipt_data, use_sandbox=True
+                    )
 
                 # Status 0 means valid
                 if status == 0:
@@ -89,15 +90,17 @@ class IAPVerificationService:
                             "purchase_date": receipt.get("purchase_date_ms"),
                             "expires_date": receipt.get("expires_date_ms"),
                             "is_subscription": "expires_date_ms" in receipt,
-                            "platform": "ios"
+                            "platform": "ios",
                         }
 
-                logger.warning(f"Apple receipt verification failed with status {status}")
+                logger.warning(
+                    f"Apple receipt verification failed with status {status}"
+                )
                 return {
                     "valid": False,
                     "status": status,
                     "error": self._get_apple_error_message(status),
-                    "platform": "ios"
+                    "platform": "ios",
                 }
 
         except httpx.TimeoutException:
@@ -108,10 +111,7 @@ class IAPVerificationService:
             raise ServiceException(f"Apple receipt verification failed: {str(e)}")
 
     async def verify_google_receipt(
-        self,
-        purchase_token: str,
-        product_id: str,
-        subscription: bool = False
+        self, purchase_token: str, product_id: str, subscription: bool = False
     ) -> Dict[str, any]:
         """
         Verify Google Play Store receipt
@@ -160,7 +160,9 @@ class IAPVerificationService:
 
             # For MVP, return mock verification
             # TODO: Implement real Google Play verification
-            logger.warning("Google Play verification not fully implemented - using mock")
+            logger.warning(
+                "Google Play verification not fully implemented - using mock"
+            )
 
             return {
                 "valid": True,
@@ -170,7 +172,7 @@ class IAPVerificationService:
                 "purchase_state": 0,  # 0 = Purchased
                 "is_subscription": subscription,
                 "platform": "android",
-                "mock": True  # Indicates this is mock verification
+                "mock": True,  # Indicates this is mock verification
             }
 
         except Exception as e:
@@ -189,13 +191,10 @@ class IAPVerificationService:
             21007: "Receipt is from sandbox but sent to production",
             21008: "Receipt is from production but sent to sandbox",
             21009: "Internal data access error",
-            21010: "User account cannot be found or has been deleted"
+            21010: "User account cannot be found or has been deleted",
         }
 
-        return status_messages.get(
-            status,
-            f"Unknown status code: {status}"
-        )
+        return status_messages.get(status, f"Unknown status code: {status}")
 
 
 # Singleton instance

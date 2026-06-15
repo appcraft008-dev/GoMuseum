@@ -3,12 +3,13 @@ History API Endpoints
 Handles user recognition history and footprints
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
-from typing import Optional, List
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, desc
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.recognition_result import RecognitionResult
@@ -24,7 +25,7 @@ async def get_recent_history(
     limit: int = Query(default=20, le=100, description="Maximum number of results"),
     offset: int = Query(default=0, ge=0, description="Number of results to skip"),
     days: Optional[int] = Query(default=None, description="Filter by last N days"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> List[RecognitionResponse]:
     """
     Get recent recognition history
@@ -69,7 +70,7 @@ async def get_recent_history(
                 period=result.period,
                 description=result.description,
                 confidence=result.confidence,
-                timestamp=result.timestamp
+                timestamp=result.timestamp,
             )
             for result in results
         ]
@@ -77,8 +78,7 @@ async def get_recent_history(
     except Exception as e:
         logger.error(f"Error retrieving history: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "detail": str(e)}
+            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
 
 
@@ -86,7 +86,7 @@ async def get_recent_history(
 async def search_history(
     query: str = Query(..., min_length=2, description="Search query"),
     limit: int = Query(default=20, le=100),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> List[RecognitionResponse]:
     """
     Search recognition history
@@ -135,7 +135,7 @@ async def search_history(
                 period=result.period,
                 description=result.description,
                 confidence=result.confidence,
-                timestamp=result.timestamp
+                timestamp=result.timestamp,
             )
             for result in results
         ]
@@ -143,15 +143,14 @@ async def search_history(
     except Exception as e:
         logger.error(f"Error searching history: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "detail": str(e)}
+            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
 
 
 @router.get("/stats")
 async def get_history_stats(
     days: Optional[int] = Query(default=30, description="Time period in days"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Get history statistics
@@ -212,22 +211,18 @@ async def get_history_stats(
             "unique_artists": unique_artists,
             "average_confidence": round(avg_confidence, 3),
             "period_start": cutoff_date.isoformat(),
-            "period_end": datetime.utcnow().isoformat()
+            "period_end": datetime.utcnow().isoformat(),
         }
 
     except Exception as e:
         logger.error(f"Error getting statistics: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "detail": str(e)}
+            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
 
 
 @router.delete("/{recognition_id}")
-async def delete_history_item(
-    recognition_id: str,
-    db: Session = Depends(get_db)
-):
+async def delete_history_item(recognition_id: str, db: Session = Depends(get_db)):
     """
     Delete a specific recognition from history
 
@@ -255,7 +250,10 @@ async def delete_history_item(
         if not result:
             raise HTTPException(
                 status_code=404,
-                detail={"error": "NotFound", "detail": f"Recognition {recognition_id} not found"}
+                detail={
+                    "error": "NotFound",
+                    "detail": f"Recognition {recognition_id} not found",
+                },
             )
 
         db.delete(result)
@@ -265,7 +263,7 @@ async def delete_history_item(
 
         return {
             "success": True,
-            "message": f"Recognition {recognition_id} deleted successfully"
+            "message": f"Recognition {recognition_id} deleted successfully",
         }
 
     except HTTPException:
@@ -274,8 +272,7 @@ async def delete_history_item(
         logger.error(f"Error deleting history item: {str(e)}", exc_info=True)
         db.rollback()
         raise HTTPException(
-            status_code=500,
-            detail={"error": "InternalServerError", "detail": str(e)}
+            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
 
 

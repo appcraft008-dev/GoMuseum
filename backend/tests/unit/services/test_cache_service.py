@@ -2,16 +2,16 @@
 Unit tests for Cache Service
 Tests Redis caching functionality
 """
-import pytest
-from unittest.mock import MagicMock, patch
+
 import json
+from unittest.mock import MagicMock, patch
+
+import pytest
 import redis
-from app.services.cache_service import CacheService
+
 from app.schemas.recognition import RecognitionResponse
-from tests.fixtures.image_helpers import (
-    create_artwork_simulation,
-    create_similar_image
-)
+from app.services.cache_service import CacheService
+from tests.fixtures.image_helpers import create_artwork_simulation, create_similar_image
 
 
 class TestCacheService:
@@ -20,7 +20,7 @@ class TestCacheService:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -31,10 +31,10 @@ class TestCacheService:
         """should_create_consistent_hash_key_from_image_bytes"""
         # Arrange
         image_hash = "abc123def456"
-        
+
         # Act
         cache_key = cache_service._get_cache_key(image_hash)
-        
+
         # Assert
         assert cache_key == "recognition:abc123def456"
         assert cache_key.startswith("recognition:")
@@ -43,11 +43,11 @@ class TestCacheService:
         """should_generate_identical_key_for_identical_images"""
         # Arrange
         image_hash = "same_hash_123"
-        
+
         # Act
         key1 = cache_service._get_cache_key(image_hash)
         key2 = cache_service._get_cache_key(image_hash)
-        
+
         # Assert
         assert key1 == key2
 
@@ -56,11 +56,11 @@ class TestCacheService:
         # Arrange
         hash1 = "hash_image_1"
         hash2 = "hash_image_2"
-        
+
         # Act
         key1 = cache_service._get_cache_key(hash1)
         key2 = cache_service._get_cache_key(hash2)
-        
+
         # Assert
         assert key1 != key2
         assert key1 == "recognition:hash_image_1"
@@ -73,7 +73,7 @@ class TestCacheServiceRead:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -91,7 +91,7 @@ class TestCacheServiceRead:
             "description": "Famous portrait",
             "confidence": 0.95,
             "cached": True,
-            "processing_time_ms": 100
+            "processing_time_ms": 100,
         }
         cache_service.redis_client.get.return_value = json.dumps(cached_data)
 
@@ -103,7 +103,9 @@ class TestCacheServiceRead:
         assert result.artwork_name == "Mona Lisa"
         assert result.artist == "Leonardo da Vinci"
         assert result.cached is True
-        cache_service.redis_client.get.assert_called_once_with("recognition:test_hash_123")
+        cache_service.redis_client.get.assert_called_once_with(
+            "recognition:test_hash_123"
+        )
 
     def test_returns_none_when_cache_miss(self, cache_service):
         """should_return_none_when_key_not_found_in_redis"""
@@ -116,21 +118,25 @@ class TestCacheServiceRead:
 
         # Assert
         assert result is None
-        cache_service.redis_client.get.assert_called_once_with("recognition:non_existent_hash")
+        cache_service.redis_client.get.assert_called_once_with(
+            "recognition:non_existent_hash"
+        )
 
     def test_deserializes_json_cached_data(self, cache_service):
         """should_parse_json_string_from_redis_to_dict"""
         # Arrange
         image_hash = "test_key"
-        cached_json = json.dumps({
-            "artwork_name": "The Starry Night",
-            "artist": "Vincent van Gogh",
-            "period": "Post-Impressionism",
-            "description": "Swirling night sky",
-            "confidence": 0.89,
-            "cached": True,
-            "processing_time_ms": 120
-        })
+        cached_json = json.dumps(
+            {
+                "artwork_name": "The Starry Night",
+                "artist": "Vincent van Gogh",
+                "period": "Post-Impressionism",
+                "description": "Swirling night sky",
+                "confidence": 0.89,
+                "cached": True,
+                "processing_time_ms": 120,
+            }
+        )
         cache_service.redis_client.get.return_value = cached_json
 
         # Act
@@ -145,7 +151,9 @@ class TestCacheServiceRead:
         """should_return_none_and_log_error_on_redis_failure"""
         # Arrange
         image_hash = "test_key"
-        cache_service.redis_client.get.side_effect = redis.RedisError("Connection failed")
+        cache_service.redis_client.get.side_effect = redis.RedisError(
+            "Connection failed"
+        )
 
         # Act
         result = cache_service.get_cached_result(image_hash)
@@ -165,7 +173,9 @@ class TestCacheServiceRead:
         # Assert
         assert result is None
         # Should also call delete to invalidate corrupted data
-        cache_service.redis_client.delete.assert_called_once_with("recognition:test_key")
+        cache_service.redis_client.delete.assert_called_once_with(
+            "recognition:test_key"
+        )
 
 
 class TestCacheServiceWrite:
@@ -174,7 +184,7 @@ class TestCacheServiceWrite:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -192,7 +202,7 @@ class TestCacheServiceWrite:
             description="Famous painting",
             confidence=0.95,
             cached=False,
-            processing_time_ms=200
+            processing_time_ms=200,
         )
 
         # Act
@@ -215,7 +225,7 @@ class TestCacheServiceWrite:
             description="Famous scream",
             confidence=0.88,
             cached=False,
-            processing_time_ms=150
+            processing_time_ms=150,
         )
 
         # Act
@@ -240,7 +250,7 @@ class TestCacheServiceWrite:
             description="Pearl earring portrait",
             confidence=0.92,
             cached=False,
-            processing_time_ms=180
+            processing_time_ms=180,
         )
         cache_service.ttl = 86400  # 24 hours
 
@@ -262,7 +272,7 @@ class TestCacheServiceWrite:
             description="Test description",
             confidence=0.5,
             cached=False,
-            processing_time_ms=100
+            processing_time_ms=100,
         )
         cache_service.redis_client.setex.side_effect = redis.RedisError("Write failed")
 
@@ -279,7 +289,7 @@ class TestCacheServiceMetrics:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -297,7 +307,7 @@ class TestCacheServiceMetrics:
             "description": "Test description",
             "confidence": 0.8,
             "cached": True,
-            "processing_time_ms": 100
+            "processing_time_ms": 100,
         }
         cache_service.redis_client.get.return_value = json.dumps(cached_data)
 
@@ -364,8 +374,10 @@ class TestCacheServiceConnectionFailure:
     def test_cache_service_handles_redis_connection_failure(self):
         """should_gracefully_degrade_when_redis_connection_fails"""
         # Arrange & Act
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
-            mock_redis.return_value.ping.side_effect = redis.RedisError("Connection refused")
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
+            mock_redis.return_value.ping.side_effect = redis.RedisError(
+                "Connection refused"
+            )
             cache_service = CacheService()
 
         # Assert
@@ -374,7 +386,7 @@ class TestCacheServiceConnectionFailure:
     def test_cache_service_handles_redis_initialization_exception(self):
         """should_set_redis_client_to_none_on_init_exception"""
         # Arrange & Act
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_redis.side_effect = Exception("Network error")
             cache_service = CacheService()
 
@@ -388,8 +400,10 @@ class TestCacheServiceRedisUnavailable:
     @pytest.fixture
     def cache_service_no_redis(self):
         """Create CacheService instance with no Redis connection"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
-            mock_redis.return_value.ping.side_effect = redis.RedisError("Connection failed")
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
+            mock_redis.return_value.ping.side_effect = redis.RedisError(
+                "Connection failed"
+            )
             return CacheService()
 
     def test_get_cached_result_handles_redis_unavailable(self, cache_service_no_redis):
@@ -416,7 +430,7 @@ class TestCacheServiceRedisUnavailable:
             description="Test description",
             confidence=0.9,
             cached=False,
-            processing_time_ms=100
+            processing_time_ms=100,
         )
 
         # Act - should not raise exception
@@ -475,7 +489,7 @@ class TestCacheServiceReadExceptions:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -523,7 +537,9 @@ class TestCacheServiceReadExceptions:
         # Assert
         assert result is None
         assert cache_service._miss_count == initial_miss_count + 1
-        cache_service.redis_client.delete.assert_called_once_with("recognition:test_hash")
+        cache_service.redis_client.delete.assert_called_once_with(
+            "recognition:test_hash"
+        )
 
 
 class TestCacheServiceWriteExceptions:
@@ -532,7 +548,7 @@ class TestCacheServiceWriteExceptions:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -550,7 +566,7 @@ class TestCacheServiceWriteExceptions:
             description="Test description",
             confidence=0.85,
             cached=False,
-            processing_time_ms=150
+            processing_time_ms=150,
         )
         cache_service.redis_client.setex.side_effect = redis.RedisError("Write timeout")
 
@@ -571,9 +587,11 @@ class TestCacheServiceWriteExceptions:
             description="Test description",
             confidence=0.75,
             cached=False,
-            processing_time_ms=200
+            processing_time_ms=200,
         )
-        cache_service.redis_client.setex.side_effect = Exception("Unexpected serialization error")
+        cache_service.redis_client.setex.side_effect = Exception(
+            "Unexpected serialization error"
+        )
 
         # Act - should not raise exception
         cache_service.cache_result(image_hash, result)
@@ -588,7 +606,7 @@ class TestCacheServiceInvalidation:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -605,7 +623,9 @@ class TestCacheServiceInvalidation:
         cache_service.invalidate_cache(image_hash)
 
         # Assert
-        cache_service.redis_client.delete.assert_called_once_with("recognition:test_hash")
+        cache_service.redis_client.delete.assert_called_once_with(
+            "recognition:test_hash"
+        )
 
     def test_invalidate_cache_key_not_found(self, cache_service):
         """should_handle_when_cache_key_not_found"""
@@ -617,13 +637,17 @@ class TestCacheServiceInvalidation:
         cache_service.invalidate_cache(image_hash)
 
         # Assert
-        cache_service.redis_client.delete.assert_called_once_with("recognition:non_existent_hash")
+        cache_service.redis_client.delete.assert_called_once_with(
+            "recognition:non_existent_hash"
+        )
 
     def test_invalidate_cache_handles_redis_error(self, cache_service):
         """should_handle_redis_error_during_invalidation"""
         # Arrange
         image_hash = "test_hash"
-        cache_service.redis_client.delete.side_effect = redis.RedisError("Connection lost")
+        cache_service.redis_client.delete.side_effect = redis.RedisError(
+            "Connection lost"
+        )
 
         # Act - should not raise exception
         cache_service.invalidate_cache(image_hash)
@@ -650,7 +674,7 @@ class TestCacheServiceStats:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -662,7 +686,9 @@ class TestCacheServiceStats:
         # Arrange
         cache_service._hit_count = 10
         cache_service._miss_count = 5
-        cache_service.redis_client.scan_iter.side_effect = redis.RedisError("Connection error")
+        cache_service.redis_client.scan_iter.side_effect = redis.RedisError(
+            "Connection error"
+        )
 
         # Act
         stats = cache_service.get_cache_stats()
@@ -683,7 +709,7 @@ class TestCacheServiceClearAll:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -696,7 +722,7 @@ class TestCacheServiceClearAll:
         cache_service.redis_client.scan_iter.return_value = [
             "recognition:hash1",
             "recognition:hash2",
-            "recognition:hash3"
+            "recognition:hash3",
         ]
         cache_service.redis_client.delete.return_value = 3
 
@@ -705,7 +731,9 @@ class TestCacheServiceClearAll:
 
         # Assert
         assert deleted == 3
-        cache_service.redis_client.scan_iter.assert_called_once_with(match="recognition:*")
+        cache_service.redis_client.scan_iter.assert_called_once_with(
+            match="recognition:*"
+        )
         cache_service.redis_client.delete.assert_called_once()
 
     def test_clear_all_cache_no_keys(self, cache_service):
@@ -718,13 +746,17 @@ class TestCacheServiceClearAll:
 
         # Assert
         assert deleted == 0
-        cache_service.redis_client.scan_iter.assert_called_once_with(match="recognition:*")
+        cache_service.redis_client.scan_iter.assert_called_once_with(
+            match="recognition:*"
+        )
         cache_service.redis_client.delete.assert_not_called()
 
     def test_clear_all_cache_redis_error(self, cache_service):
         """should_return_zero_on_redis_error"""
         # Arrange
-        cache_service.redis_client.scan_iter.side_effect = redis.RedisError("Connection lost")
+        cache_service.redis_client.scan_iter.side_effect = redis.RedisError(
+            "Connection lost"
+        )
 
         # Act
         deleted = cache_service.clear_all_cache()
@@ -739,7 +771,7 @@ class TestCacheServiceHealthCheck:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -763,7 +795,9 @@ class TestCacheServiceHealthCheck:
     def test_health_check_redis_ping_fails(self, cache_service):
         """should_return_false_when_redis_ping_fails"""
         # Arrange
-        cache_service.redis_client.ping.side_effect = redis.RedisError("Connection lost")
+        cache_service.redis_client.ping.side_effect = redis.RedisError(
+            "Connection lost"
+        )
 
         # Act
         is_healthy = cache_service.health_check()
@@ -789,7 +823,7 @@ class TestPerceptualHashCache:
     @pytest.fixture
     def cache_service(self):
         """Create CacheService instance for testing with mocked Redis"""
-        with patch('app.services.cache_service.redis.Redis') as mock_redis:
+        with patch("app.services.cache_service.redis.Redis") as mock_redis:
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
             cache_service = CacheService()
@@ -808,7 +842,7 @@ class TestPerceptualHashCache:
             description="Famous portrait painting",
             confidence=0.95,
             cached=False,
-            processing_time_ms=150
+            processing_time_ms=150,
         )
 
         # Act
@@ -840,7 +874,7 @@ class TestPerceptualHashCache:
             "description": "Famous portrait",
             "confidence": 0.95,
             "cached": True,
-            "processing_time_ms": 100
+            "processing_time_ms": 100,
         }
 
         # 模拟scan_iter返回缓存的phash键
@@ -848,21 +882,25 @@ class TestPerceptualHashCache:
         cache_service.redis_client.get.return_value = json.dumps(cached_data)
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert
         assert result is not None
         recognition_response, similarity = result
         assert recognition_response.artwork_name == "Mona Lisa"
         assert similarity >= 0.90  # 应该是非常高的相似度
-        cache_service.redis_client.scan_iter.assert_called_once_with(match="phash:*", count=100)
+        cache_service.redis_client.scan_iter.assert_called_once_with(
+            match="phash:*", count=100
+        )
 
     def test_similarity_threshold_filtering(self, cache_service):
         """should_not_return_results_below_similarity_threshold"""
         # Arrange - 模拟低相似度的缓存数据
         # 使用完全不同的phash (低相似度)
         cached_phash = "ffffffffffffffff"  # 全1
-        query_phash = "0000000000000000"    # 全0 (相似度=0%)
+        query_phash = "0000000000000000"  # 全0 (相似度=0%)
 
         cached_data = {
             "artwork_name": "Different Artwork",
@@ -871,14 +909,16 @@ class TestPerceptualHashCache:
             "description": "Not similar",
             "confidence": 0.80,
             "cached": True,
-            "processing_time_ms": 100
+            "processing_time_ms": 100,
         }
 
         cache_service.redis_client.scan_iter.return_value = [f"phash:{cached_phash}"]
         cache_service.redis_client.get.return_value = json.dumps(cached_data)
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert - 应该返回None，因为相似度太低
         assert result is None
@@ -889,9 +929,9 @@ class TestPerceptualHashCache:
         query_phash = "8f373e0c183f1e3f"
 
         # 三个不同相似度的phash
-        phash_high = "8f373e0c183f1e3e"   # 98.4% 相似 (1位差异)
+        phash_high = "8f373e0c183f1e3e"  # 98.4% 相似 (1位差异)
         phash_medium = "8f373e0c183f1e0f"  # 93.75% 相似 (4位差异)
-        phash_low = "8f373e0c183f0e3f"     # 93.75% 相似 (4位差异)
+        phash_low = "8f373e0c183f0e3f"  # 93.75% 相似 (4位差异)
 
         cached_data_high = {
             "artwork_name": "Best Match",
@@ -900,7 +940,7 @@ class TestPerceptualHashCache:
             "description": "Highest similarity",
             "confidence": 0.95,
             "cached": True,
-            "processing_time_ms": 100
+            "processing_time_ms": 100,
         }
 
         cached_data_medium = {
@@ -910,14 +950,14 @@ class TestPerceptualHashCache:
             "description": "Medium similarity",
             "confidence": 0.90,
             "cached": True,
-            "processing_time_ms": 100
+            "processing_time_ms": 100,
         }
 
         # 模拟scan_iter返回多个键
         cache_service.redis_client.scan_iter.return_value = [
             f"phash:{phash_medium}",
             f"phash:{phash_high}",
-            f"phash:{phash_low}"
+            f"phash:{phash_low}",
         ]
 
         # 模拟get返回最高相似度的数据
@@ -929,7 +969,9 @@ class TestPerceptualHashCache:
         cache_service.redis_client.get.side_effect = mock_get
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert - 应该返回最相似的结果
         assert result is not None
@@ -950,7 +992,7 @@ class TestPerceptualHashCache:
             "description": "Exact same image",
             "confidence": 0.95,
             "cached": True,
-            "processing_time_ms": 50
+            "processing_time_ms": 50,
         }
 
         # 模拟scan_iter返回完美匹配作为第一个结果
@@ -958,12 +1000,14 @@ class TestPerceptualHashCache:
         cache_service.redis_client.scan_iter.return_value = [
             f"phash:{perfect_phash}",
             "phash:other_hash_1",
-            "phash:other_hash_2"
+            "phash:other_hash_2",
         ]
         cache_service.redis_client.get.return_value = json.dumps(cached_data)
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert
         assert result is not None
@@ -984,7 +1028,7 @@ class TestPerceptualHashCache:
             description="Description",
             confidence=0.90,
             cached=False,
-            processing_time_ms=150
+            processing_time_ms=150,
         )
         cache_service.ttl = 86400  # 1天
 
@@ -1009,7 +1053,9 @@ class TestPerceptualHashCache:
         cache_service.redis_client.scan_iter.return_value = []
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert
         assert result is None
@@ -1018,15 +1064,21 @@ class TestPerceptualHashCache:
         """should_return_none_and_handle_redis_error_gracefully"""
         # Arrange
         query_phash = "8f373e0c183f1e3f"
-        cache_service.redis_client.scan_iter.side_effect = redis.RedisError("Connection lost")
+        cache_service.redis_client.scan_iter.side_effect = redis.RedisError(
+            "Connection lost"
+        )
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert
         assert result is None
 
-    def test_similarity_search_increments_miss_count_when_not_found(self, cache_service):
+    def test_similarity_search_increments_miss_count_when_not_found(
+        self, cache_service
+    ):
         """should_increment_miss_counter_when_no_similar_result"""
         # Arrange
         query_phash = "8f373e0c183f1e3f"
@@ -1034,7 +1086,9 @@ class TestPerceptualHashCache:
         initial_miss_count = cache_service._miss_count
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert
         assert result is None
@@ -1053,7 +1107,7 @@ class TestPerceptualHashCache:
             "description": "Description",
             "confidence": 0.95,
             "cached": True,
-            "processing_time_ms": 100
+            "processing_time_ms": 100,
         }
 
         cache_service.redis_client.scan_iter.return_value = [f"phash:{cached_phash}"]
@@ -1061,7 +1115,9 @@ class TestPerceptualHashCache:
         initial_hit_count = cache_service._hit_count
 
         # Act
-        result = cache_service.get_similar_cached_result(query_phash, similarity_threshold=0.90)
+        result = cache_service.get_similar_cached_result(
+            query_phash, similarity_threshold=0.90
+        )
 
         # Assert
         assert result is not None
