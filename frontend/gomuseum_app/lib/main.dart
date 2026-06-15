@@ -23,8 +23,7 @@ Future<void> main() async {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };
-    await FirebaseAnalytics.instance
-        .setAnalyticsCollectionEnabled(!kDebugMode);
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(!kDebugMode);
   } catch (e) {
     debugPrint('Firebase init skipped: $e');
   }

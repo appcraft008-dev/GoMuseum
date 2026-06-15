@@ -243,12 +243,13 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
+            child:
+                Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('删除',
-                style: GmText.sans(size: 13, color: GmColors.error)),
+            child:
+                Text('删除', style: GmText.sans(size: 13, color: GmColors.error)),
           ),
         ],
       ),

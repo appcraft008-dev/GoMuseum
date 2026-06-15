@@ -28,7 +28,8 @@ class AuthRepository {
   }
 
   /// Register new user
-  Future<User> register(String email, String password, {String? username}) async {
+  Future<User> register(String email, String password,
+      {String? username}) async {
     final response = await _dio.post(
       '/api/v1/auth/register',
       data: {
@@ -129,7 +130,6 @@ class AuthRepository {
 
     return User.fromJson(response.data['user']);
   }
-
 
   /// Login as guest user（device_id 用于同设备复用游客账号，防止重装刷额度）
   Future<User> loginAsGuest({String? deviceId}) async {

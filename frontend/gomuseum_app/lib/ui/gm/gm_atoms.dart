@@ -20,7 +20,9 @@ class GmDiamond extends StatelessWidget {
       width: width,
       child: Row(
         children: [
-          const Expanded(child: SizedBox(height: 1, child: ColoredBox(color: GmColors.faint))),
+          const Expanded(
+              child: SizedBox(
+                  height: 1, child: ColoredBox(color: GmColors.faint))),
           const SizedBox(width: 8),
           Transform.rotate(
             angle: 0.785398, // 45°
@@ -31,7 +33,9 @@ class GmDiamond extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const Expanded(child: SizedBox(height: 1, child: ColoredBox(color: GmColors.faint))),
+          const Expanded(
+              child: SizedBox(
+                  height: 1, child: ColoredBox(color: GmColors.faint))),
         ],
       ),
     );
@@ -71,7 +75,8 @@ class GmSectionHead extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           label,
-          style: GmText.sans(size: 12, letterSpacing: 3, weight: FontWeight.w600),
+          style:
+              GmText.sans(size: 12, letterSpacing: 3, weight: FontWeight.w600),
         ),
         const SizedBox(width: 12),
         const Expanded(child: GmHairline()),
@@ -80,7 +85,8 @@ class GmSectionHead extends StatelessWidget {
           GestureDetector(
             onTap: onNoteTap,
             behavior: HitTestBehavior.opaque,
-            child: Text(note!, style: GmText.sans(size: 11.5, color: GmColors.sub)),
+            child: Text(note!,
+                style: GmText.sans(size: 11.5, color: GmColors.sub)),
           ),
         ],
       ],
@@ -135,7 +141,8 @@ class GmToggle extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: const DecoratedBox(
-          decoration: BoxDecoration(color: GmColors.surface, shape: BoxShape.circle),
+          decoration:
+              BoxDecoration(color: GmColors.surface, shape: BoxShape.circle),
           child: SizedBox(width: 18, height: 18),
         ),
       ),

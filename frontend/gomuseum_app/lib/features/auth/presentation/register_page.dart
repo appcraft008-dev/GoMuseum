@@ -172,7 +172,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final success = await ref.read(currentUserProvider.notifier).register(
           _emailController.text,
           _passwordController.text,
-          username: _usernameController.text.isEmpty ? null : _usernameController.text,
+          username: _usernameController.text.isEmpty
+              ? null
+              : _usernameController.text,
         );
 
     setState(() => _isLoading = false);

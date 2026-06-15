@@ -429,7 +429,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 12),
-          Text('正在识别…', style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+          Text('正在识别…',
+              style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
         ],
       ),
       const SizedBox(height: 8),
@@ -496,7 +497,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
                 Text(
                   '$confidence%',
                   style: GmText.serif(
-                      size: 18, weight: FontWeight.w700, color: GmColors.accentDeep),
+                      size: 18,
+                      weight: FontWeight.w700,
+                      color: GmColors.accentDeep),
                 ),
                 const SizedBox(height: 2),
                 Text('置信度', style: GmText.sans(size: 10, color: GmColors.sub)),
