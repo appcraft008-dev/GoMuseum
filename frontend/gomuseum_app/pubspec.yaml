@@ -1,6 +1,6 @@
 name: gomuseum_app
 description: GoMuseum Flutter frontend app
-version: 0.1.0
+version: 0.1.0+3
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
@@ -45,7 +45,7 @@ dependencies:
   just_audio: ^0.9.36
 
   # 语音识别
-  speech_to_text: ^6.6.0
+  speech_to_text: ^7.3.0
   permission_handler: ^11.1.0
 
   # 应用内购买
@@ -57,7 +57,26 @@ dependencies:
   # 国际化
   easy_localization: ^3.0.3
 
+  # 认证和安全存储
+  flutter_secure_storage: ^9.0.0
+
+  # Firebase
+  firebase_core: ^3.0.0
+  firebase_auth: ^5.0.0
+  firebase_crashlytics: ^4.3.0
+  firebase_analytics: ^11.4.0
+
+  # 社交登录
+  google_sign_in: ^6.2.0
+  sign_in_with_apple: ^7.0.1
+
+  # JWT解码
+  dart_jsonwebtoken: ^2.12.1
+  google_fonts: ^8.1.0
+  flutter_svg: ^2.3.0
+
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.1
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
@@ -74,3 +93,13 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/art/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/app_icon.png
+  adaptive_icon_background: '#F3EDDF'
+  adaptive_icon_foreground: assets/icon/app_icon_foreground.png
+  remove_alpha_ios: true

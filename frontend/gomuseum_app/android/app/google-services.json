@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "178084966893",
+    "project_id": "gomuseum-29a6a",
+    "storage_bucket": "gomuseum-29a6a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:178084966893:android:96b4dfcef514618eca77e4",
+        "android_client_info": {
+          "package_name": "com.gomuseum.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA51t_39euLKyxCnL0zhU_hc4I_VEMywY0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
