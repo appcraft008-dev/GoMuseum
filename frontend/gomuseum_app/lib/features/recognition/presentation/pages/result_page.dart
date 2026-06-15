@@ -45,7 +45,7 @@ class ResultPage extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // 信息卡片
             Padding(
               padding: EdgeInsets.all(AppDimensions.spacing16),
@@ -74,7 +74,8 @@ class ResultPage extends StatelessWidget {
                       Expanded(
                         child: LinearProgressIndicator(
                           value: 0.95,
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                          backgroundColor:
+                              AppColors.primary.withValues(alpha: 0.2),
                         ),
                       ),
                       SizedBox(width: AppDimensions.spacing8),
@@ -87,9 +88,9 @@ class ResultPage extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const Divider(),
-            
+
             // 讲解内容
             Padding(
               padding: EdgeInsets.all(AppDimensions.spacing16),

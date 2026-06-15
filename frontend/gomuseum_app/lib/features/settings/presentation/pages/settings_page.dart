@@ -30,9 +30,9 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
-          
+
           const Divider(),
-          
+
           // 通用设置
           _buildSection(
             context,
@@ -67,9 +67,9 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
-          
+
           const Divider(),
-          
+
           // 关于
           _buildSection(
             context,

@@ -133,7 +133,9 @@ class _ExplanationPageState extends ConsumerState<ExplanationPage> {
               onPressed: _handlePlayPause,
               iconSize: 64,
               icon: Icon(
-                _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                _isPlaying
+                    ? Icons.pause_circle_filled
+                    : Icons.play_circle_filled,
                 color: const Color(GMColors.brandPrimary),
               ),
             ),
@@ -150,10 +152,12 @@ class _ExplanationPageState extends ConsumerState<ExplanationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Voice Q&A', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Voice Q&A',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: _isListening || _isProcessing ? null : _handleVoiceQuestion,
+              onPressed:
+                  _isListening || _isProcessing ? null : _handleVoiceQuestion,
               icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
               label: Text(_isListening ? 'Listening...' : 'Ask Question'),
               style: ElevatedButton.styleFrom(
@@ -182,7 +186,8 @@ class _ExplanationPageState extends ConsumerState<ExplanationPage> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Text(widget.description, style: const TextStyle(fontSize: 14, height: 1.6)),
+        child: Text(widget.description,
+            style: const TextStyle(fontSize: 14, height: 1.6)),
       ),
     );
   }

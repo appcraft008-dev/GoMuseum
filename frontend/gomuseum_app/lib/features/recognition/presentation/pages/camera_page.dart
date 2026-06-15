@@ -29,7 +29,7 @@ class CameraPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // 顶部工具栏
           SafeArea(
             child: Padding(
@@ -51,7 +51,7 @@ class CameraPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // 底部控制栏
           Positioned(
             bottom: 0,

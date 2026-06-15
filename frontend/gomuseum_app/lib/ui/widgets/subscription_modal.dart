@@ -43,11 +43,14 @@ class _SubscriptionModalState extends ConsumerState<SubscriptionModal> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Subscribe', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text('Subscribe',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           if (_isLoading) const CircularProgressIndicator(),
           if (!_isLoading) ..._iapService.products.map((p) => _buildProduct(p)),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
         ],
       ),
     );

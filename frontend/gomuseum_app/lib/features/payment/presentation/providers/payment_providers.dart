@@ -39,7 +39,6 @@ GetUserBenefits getUserBenefitsUseCase(GetUserBenefitsUseCaseRef ref) {
 
 /// ConsumeRecognition UseCase Provider
 @riverpod
-ConsumeRecognition consumeRecognitionUseCase(
-    ConsumeRecognitionUseCaseRef ref) {
+ConsumeRecognition consumeRecognitionUseCase(ConsumeRecognitionUseCaseRef ref) {
   return ConsumeRecognition(repository: ref.watch(paymentRepositoryProvider));
 }

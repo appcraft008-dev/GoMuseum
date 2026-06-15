@@ -42,14 +42,14 @@ class _HomePageState extends State<HomePage> {
         children: [
           // Hero区域 - 扫描艺术品按钮
           _buildHeroSection(),
-          
+
           SizedBox(height: AppDimensions.spacing24),
-          
+
           // 附近博物馆
           _buildNearbyMuseums(),
-          
+
           SizedBox(height: AppDimensions.spacing24),
-          
+
           // 热门艺术品
           _buildPopularArtworks(),
         ],
@@ -136,7 +136,8 @@ class _HomePageState extends State<HomePage> {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacing16),
             itemCount: 5,
-            separatorBuilder: (_, __) => SizedBox(width: AppDimensions.spacing12),
+            separatorBuilder: (_, __) =>
+                SizedBox(width: AppDimensions.spacing12),
             itemBuilder: (context, index) {
               return MuseumCard(
                 imageUrl: 'https://picsum.photos/400/225?random=$index',
