@@ -4,6 +4,7 @@
 注意：若一条数据既无 qid 又无 inventory_number，则无法定位既有行，每次都会插入新行。
 来自 Wikidata 的数据总有 qid，故该情况只会出现在手工直接调用且剥离了两者时。
 """
+
 import logging
 import uuid
 
