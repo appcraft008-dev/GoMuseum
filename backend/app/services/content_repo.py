@@ -73,3 +73,18 @@ def persist_section_audio(
     db.add(row)
     db.commit()
     return key
+
+
+def get_section_audio_key(
+    db: Session, qid: str, language: str, section_code: str
+) -> str | None:
+    """返回该 section 已落库的 audio_key；对象不存在/无行/无音频均返回 None。"""
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return None
+    row = (
+        db.query(ObjectContentSection)
+        .filter_by(object_id=obj.id, language=language, section_code=section_code)
+        .one_or_none()
+    )
+    return row.audio_key if row else None

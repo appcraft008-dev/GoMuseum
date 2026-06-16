@@ -7,7 +7,7 @@ from app.core.database import Base
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
-from app.services.content_repo import persist_section_audio
+from app.services.content_repo import get_section_audio_key, persist_section_audio
 from app.services.object_importer import upsert_museum, upsert_object
 
 
@@ -98,3 +98,17 @@ def test_persist_section_audio_upsert_updates_existing_row(session):
     )
     assert len(rows) == 1
     assert rows[0].audio_key == "object-audio/Q1/en/overview.mp3"
+
+
+def test_get_section_audio_key_returns_key_after_persist(session):
+    storage = FakeStorage()
+    persist_section_audio(session, "Q1", "en", "overview", b"MP3", storage)
+    assert (
+        get_section_audio_key(session, "Q1", "en", "overview")
+        == "object-audio/Q1/en/overview.mp3"
+    )
+
+
+def test_get_section_audio_key_none_when_absent(session):
+    assert get_section_audio_key(session, "Q1", "en", "overview") is None
+    assert get_section_audio_key(session, "Q404", "en", "overview") is None
