@@ -13,7 +13,12 @@ from pydantic import BaseModel, Field
 from app.core.database import SessionLocal
 from app.core.exceptions import AIServiceException
 from app.services.content_generation_service import get_content_generation_service
-from app.services.content_repo import persist_explanation
+from app.services.content_repo import (
+    get_section_audio_key,
+    persist_explanation,
+    persist_section_audio,
+)
+from app.services.storage import get_object_storage
 from app.services.tts_service import get_tts_service
 
 logger = logging.getLogger(__name__)
@@ -57,6 +62,13 @@ class TTSRequest(BaseModel):
     language: str = Field(default="en", description="Language code")
     voice: Optional[str] = Field(None, description="Voice name (optional)")
     speed: float = Field(default=1.0, ge=0.25, le=4.0, description="Speech speed")
+    qid: Optional[str] = Field(
+        None,
+        description="Wikidata QID；与 section_code 同时提供时音频落库并返回 audio_url",
+    )
+    section_code: Optional[str] = Field(
+        None, description="内容段落 code（如 overview）；section 模式必填"
+    )
 
 
 class TTSInfoResponse(BaseModel):
@@ -67,6 +79,13 @@ class TTSInfoResponse(BaseModel):
     language: str
     text_hash: str
     size_bytes: int
+
+
+class AudioUrlResponse(BaseModel):
+    """section 模式 TTS 响应：音频已落库，返回 R2 URL"""
+
+    audio_url: str
+    cached: bool
 
 
 @router.post("/explanation", response_model=ExplanationResponse)
@@ -149,7 +168,7 @@ async def generate_explanation(
         )
 
 
-@router.post("/tts/generate", response_class=StreamingResponse)
+@router.post("/tts/generate")
 async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_service)):
     """
     Generate TTS audio from text
@@ -173,6 +192,38 @@ async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_se
              --output audio.mp3
         ```
     """
+    # section 模式：qid + section_code 同时存在 → 落库 R2 + 返回 audio_url（懒写复用）
+    if request.qid and request.section_code:
+        db = SessionLocal()
+        try:
+            storage = get_object_storage()
+            existing = get_section_audio_key(
+                db, request.qid, request.language, request.section_code
+            )
+            if existing:
+                return AudioUrlResponse(
+                    audio_url=storage.public_url(existing), cached=True
+                )
+            result = await tts_service.generate_audio(
+                text=request.text, language=request.language
+            )
+            key = persist_section_audio(
+                db,
+                request.qid,
+                request.language,
+                request.section_code,
+                result["audio_data"],
+                storage,
+            )
+            if key is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail={"error": "ObjectNotFound", "qid": request.qid},
+                )
+            return AudioUrlResponse(audio_url=storage.public_url(key), cached=False)
+        finally:
+            db.close()
+
     logger.info(
         f"Generating TTS audio for text (length: {len(request.text)}) in {request.language}"
     )
