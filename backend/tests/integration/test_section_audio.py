@@ -85,3 +85,16 @@ def test_persist_section_audio_upload_failure_writes_no_key(session):
         .one_or_none()
     )
     assert row is None or row.audio_key is None
+
+
+def test_persist_section_audio_upsert_updates_existing_row(session):
+    storage = FakeStorage()
+    persist_section_audio(session, "Q1", "en", "overview", b"v1", storage)
+    persist_section_audio(session, "Q1", "en", "overview", b"v2", storage)
+    rows = (
+        session.query(ObjectContentSection)
+        .filter_by(language="en", section_code="overview")
+        .all()
+    )
+    assert len(rows) == 1
+    assert rows[0].audio_key == "object-audio/Q1/en/overview.mp3"

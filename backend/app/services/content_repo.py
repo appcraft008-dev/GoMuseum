@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.content import ObjectContentSection
 from app.models.museum_object import MuseumObject
+from app.services.storage.base import ObjectStorage
 
 FIELD_MAP = {
     "summary": "overview",
@@ -46,7 +47,7 @@ def persist_section_audio(
     language: str,
     section_code: str,
     audio_bytes: bytes,
-    storage,
+    storage: ObjectStorage,
 ) -> str | None:
     """把一段已生成的音频落库：传 R2 + 写 object_content_sections.audio_key。
 
