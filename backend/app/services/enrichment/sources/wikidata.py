@@ -27,6 +27,13 @@ SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?in
 
 _PAGE = 200  # 每页；大馆翻页
 
+# category_filter(Wikidata QID) → canonical 类型名；未知 QID 回退 painting
+_CATEGORY_BY_QID = {
+    "Q3305213": "painting",
+    "Q860861": "sculpture",
+    "Q125191": "photograph",
+}
+
 
 class WikidataSource(Source):
     name = "wikidata"
@@ -45,6 +52,7 @@ class WikidataSource(Source):
         return r.json()["results"]["bindings"]
 
     def fetch(self, cfg: MuseumConfig) -> Iterable[ObjectContribution]:
+        category = _CATEGORY_BY_QID.get(cfg.category_filter, "painting")
         seen: set[str] = set()
         fetched = 0
         offset = 0
@@ -70,7 +78,7 @@ class WikidataSource(Source):
                     qid=qid,
                     raw=row,
                     fields={
-                        "category": "painting",
+                        "category": category,
                         "title_zh": _v(row, "label_zh"),
                         "title_en": _v(row, "label_en"),
                         "artist_zh": _v(row, "creator_zh"),

@@ -44,3 +44,26 @@ def test_fetch_yields_contributions_with_qid_fields_raw(monkeypatch):
     assert c.fields["popularity"] == 120
     assert c.fields["category"] == "painting"
     assert c.raw["item"]["value"].endswith("Q12418")
+
+
+def test_category_derived_from_category_filter(monkeypatch):
+    sculpture_cfg = MuseumConfig(
+        slug="x",
+        name_zh="x",
+        name_en="x",
+        city_zh="x",
+        city_en="x",
+        country="FR",
+        wikidata_qid="Q1",
+        category_filter="Q860861",  # 雕塑
+        fetch_limit=1,
+        sample_size=1,
+        sample_qids=[],
+    )
+    src = WikidataSource()
+    monkeypatch.setattr(src, "_run_query", lambda sparql: FAKE_ROWS)
+    monkeypatch.setattr(
+        "app.services.enrichment.sources.wikidata.time.sleep", lambda s: None
+    )
+    out = list(src.fetch(sculpture_cfg))
+    assert out[0].fields["category"] == "sculpture"  # 按 category_filter 映射，非硬编码

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.core.database import SessionLocal  # noqa: E402
 from app.services.enrichment.catalog import MuseumCatalog  # noqa: E402
 from app.services.enrichment.fetcher import Fetcher  # noqa: E402
-from app.services.enrichment.loader import load  # noqa: E402
+from app.services.enrichment.loader import load, select_sample  # noqa: E402
 from app.services.enrichment.pack_store import PackStore  # noqa: E402
 from app.services.enrichment.report import build_report  # noqa: E402
 from app.services.enrichment.sources.wikidata import WikidataSource  # noqa: E402
@@ -64,7 +64,11 @@ def cmd_load(slug: str, pack_key: str, sample: bool) -> None:
         db.close()
     print(f"✓ 入库 {n} 件 (sample={sample})")
     if sample:
-        print(build_report(slug, pack["objects"], as_markdown=True))
+        # 报告反映实际灌入 staging 的样本（与 loader 同一筛选逻辑），而非全量
+        reported = select_sample(
+            pack["objects"], pack["_sample"]["size"], pack["_sample"]["qids"]
+        )
+        print(build_report(slug, reported, as_markdown=True))
 
 
 def main(argv=None) -> None:
