@@ -138,9 +138,9 @@ class TTSService:
                 timeout=self.timeout,
             )
 
-            # Read audio data
+            # Read audio data（openai 2.x 的 iter_bytes() 是同步生成器，不能 async for）
             audio_data = b""
-            async for chunk in response.iter_bytes(chunk_size=8192):
+            for chunk in response.iter_bytes(chunk_size=8192):
                 audio_data += chunk
 
             # Estimate duration (rough estimate: ~150 words per minute at speed 1.0)
@@ -213,8 +213,8 @@ class TTSService:
                 response_format="mp3",
             )
 
-            # Stream audio chunks
-            async for chunk in response.iter_bytes(chunk_size=4096):
+            # Stream audio chunks（openai 2.x 的 iter_bytes() 是同步生成器，不能 async for）
+            for chunk in response.iter_bytes(chunk_size=4096):
                 yield chunk
 
             logger.info("TTS audio stream completed")
