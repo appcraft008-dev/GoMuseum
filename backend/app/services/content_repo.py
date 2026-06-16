@@ -38,3 +38,32 @@ def persist_explanation(
         db.add(row)
     db.commit()
     return True
+
+
+def persist_section_audio(
+    db: Session,
+    qid: str,
+    language: str,
+    section_code: str,
+    audio_bytes: bytes,
+    storage,
+) -> str | None:
+    """把一段已生成的音频落库：传 R2 + 写 object_content_sections.audio_key。
+
+    返回 audio_key；qid 不存在返回 None。上传失败时异常上抛，绝不写 audio_key
+    （避免指向缺失对象的悬空指针）。
+    """
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return None
+    key = f"object-audio/{qid}/{language}/{section_code}.mp3"
+    storage.put(key, audio_bytes, "audio/mpeg")  # 失败则下方不执行，不写 key
+    row = db.query(ObjectContentSection).filter_by(
+        object_id=obj.id, language=language, section_code=section_code
+    ).one_or_none() or ObjectContentSection(
+        object_id=obj.id, language=language, section_code=section_code
+    )
+    row.audio_key = key
+    db.add(row)
+    db.commit()
+    return key
