@@ -32,8 +32,9 @@
 
 **非目标（留 v2+）**：
 - Wikidata/Wikipedia 之外的馆开放数据连接器（Joconde/Europeana/Met）——接口预留，v1 不实现。
-- 中文以外语言（v1 只做中文）。
+- 文字高亮、逐句级 provenance（见 §13b，前向兼容预留，不实现）。
 - Wikipedia pageviews / App 埋点作为人气信号（v1 用现成 sitelinks）。
+（注：多语言**不是**非目标——它是 v1 核心，英语轴心 + 配置驱动翻译，见 §13。）
 - 专门的后台 worker 容器（v1 用进程内异步 + Redis 锁，契约预留可平滑升级）。
 - 管理后台 UI（人工只审 staging 报告，不建 admin 界面）。
 
@@ -95,22 +96,26 @@ MuseumObject.sources → +Wikipedia正文 → 分段body草稿 → 蕴含校验+
 
 ## 7. grounded 生成服务（`ContentEnricher`，统一一份）
 
-**输入**：一个 MuseumObject（含 sources 事实）+ 该对象的 Wikipedia 正文摘录 + 目标语言（zh）。
+**输入**：一个 MuseumObject（含 sources 事实）+ 该对象**最丰富语言源**的 Wikipedia 正文摘录
+（如奥赛优先 fr，+ en）+ 目标语言集。
 **处理**：
 1. 组装"材料包"（结构化事实 + Wikipedia 正文），明确标注每条来源。
-2. 一次 LLM 调用产出**全部 6 段**草稿（system prompt 强约束：只依据材料、分段、缺料则留空该段）。
-3. 逐段过**蕴含校验**（见 §8）。
-4. 返回 `{section_code: body|None, provenance, model, status}`。
+2. **英语轴心生成**：一次 LLM 调用产出**英语**全部 6 段草稿（system prompt 强约束：只依据材料、
+   分段、缺料则留空该段）。
+3. 逐段过**蕴含校验**（见 §8）→ 得到已验证的英语权威正文。
+4. **翻译铺语言**：对配置语言集里的其余语言，逐语言**翻译该权威正文** + 译文忠实校验。
+5. 返回 `{language: {section_code: body|None}, provenance, model, status}`。
 **输出落库**：新增/扩展 `content_repo` 落库函数，按 (object, language, section_code) upsert
 body + status + model（`source=ai_generated`、`generated_at`）；对象级 provenance 写 `sources`；
 body 为 None 的段不发布（标 `needs_review` 或不建行）。
-**幂等**：已 `published` 的段默认跳过，除非 `--force` 或源更新。
+**幂等**：已 `published` 的 (段, 语言) 默认跳过，除非 `--force` 或源更新；加语言只补缺的。
+**统一一份、两触发**：批量 CLI 与懒生成端点都调它（懒生成可按当前语言优先、其余语言后台续翻）。
 
 ## 8. 质量门
 
 - **自动蕴含校验**：对每段 body，第二次 LLM 调用（便宜模型）逐句判断"能否由材料推出"，
   剔除不支持句。剔除后该段太薄/空 → 标 `needs_review`，**不发布**。
-- **完整性/格式检查**（纯代码）：无 null、无空白乱码、语言正确（中文段确为中文）。
+- **完整性/格式检查**（纯代码）：无 null、无空白乱码、语言正确（各语言段确为该语言）。
 - **人工只审形式安全**：staging 跑样本生成 → 产出**审阅报告**（`report.py` 扩展：列每段前若干字、
   哪些标 needs_review、覆盖率），人眼扫"有无空段/乱码/冒犯"，**不审事实对错**。
 - **用户反馈兜底**：被报错的 (object, language, section) 置回 `needs_review` 触发重生成（v1 预留状态，
@@ -124,7 +129,8 @@ body 为 None 的段不发布（标 `needs_review` 或不建行）。
   蕴含校验同样用便宜模型。顶配模型只在开发期调 prompt / 抽验时用。
 - **批量 API 折扣**：离线批量走 batch 接口（约 5 折）。
 - **按人气分层**：top-N 预生成；长尾懒生成（首次打开才花钱，没人看不花）。
-- **量级**：Orsay 246 件 × (1 生成 + 1 校验) ≈ 一次性 $10–30 量级（中文单语）。
+- **量级**：英语权威正文每件**只生成+校验一次**；其余语言是廉价翻译+译文校验。Orsay 246 件 ×
+  (1 英语生成 + 1 校验 + N 翻译 + N 译文校验)，便宜模型 + 批量折扣，全语言一次性**百元美金以内量级**，永久落库。
 - **运行时是 API，不是 Claude 订阅会话**：机制必须可自动化 + 支持懒生成运行时，订阅会话无法当
   生产运行时（且不符订阅用途）。**Claude（开发助手）用于开发期打磨 prompt、抽验样本、设计校验**，
   不当批量生成运行时。
@@ -158,24 +164,54 @@ body 为 None 的段不发布（标 `needs_review` 或不建行）。
 ## 12. 音频
 
 - body 定稿（`published`）后，按段调 **已上线的 `persist_section_audio`**（[[tts-audio-persistence]]）
-  生成 TTS → 落 R2 + 写 `audio_key`。
+  生成 TTS（OpenAI `tts-1`，mp3）→ 落 R2 + 写 `audio_key`。
+- **文件粒度 = 每 (对象, 语言, 段落) 一个 mp3**（key `object-audio/{qid}/{lang}/{section}.mp3`）。
+  不同语言/段落 = 不同文字 = 各一份；一段只存**一份规范音频**（`audio_key` 不编码 voice/speed）。
+- **音色统一品牌讲解员**：OpenAI 语音是**跨语言通用音色**（念哪种语言由文字决定，不由语音决定），
+  故全语言默认用**同一把品牌音色**（一致、可识别）；`VOICE_MAPPING` 是纯配置，换音色/给某语言配
+  不同音色 = 改配置、零代码；**新语言无音色映射 → 优雅退回全局默认音色**。
 - 批量：`onboard <slug> tts` 阶段；懒生成：body 落库后同一后台任务续跑 TTS。
 - body 变更（重生成）→ 现有 `persist_explanation` 已会清 `audio_key`，音频随之重生成。
+- **播放速率**：纯前端播放控制（just_audio `setSpeed`，本机变速，不重生成、不产生新文件、不碰后端）。
+  详情页播放器给 0.75/1/1.25/1.5x 控件，富化机制/数据为它**零额外工作**。
 
-## 13. 多语言（v1 中文）
+## 13. 多语言（英语轴心 + 配置驱动翻译）
 
-- v1 只生成中文。生成素材：zh.wikipedia 优先，无则英文条目做素材、输出中文。
-- **标签/标题补全**归"事实补全"：`title_zh` 等缺失（今日事故根因，见 [[enrichment-data-frontend-contract]]）
-  在生成前补（中文 Wikipedia 标题优先，无则英文音译/保留）。后端 `museum_repo` 已有 title_zh 兜底，
-  本机制从源头补全减少兜底依赖。
-- v2 扩展英/法等语言：同一机制按 `--lang` 重跑。
+**主市场是欧洲多语言（en/fr/de/es/it…），中文是开发/次要语言。** 架构 = **接地生成一次 + 翻译铺语言**：
+
+- **英语轴心（canonical）**：每对象**接地素材取最丰富语言源**（如奥赛法国艺术优先 fr.wikipedia +
+  英文维基 + Wikidata 一起喂给模型），产出**一份英语权威正文**，**蕴含校验一次**（正确性建立）。
+- **其余语言 = 翻译该权威正文** + 一道"译文是否忠于原文"的校验防漂移。各语言事实一致。
+- **语言全参数化 + 配置驱动**：目标语言是参数，语言集合放配置（全局默认 + `museums.yaml` 覆盖），
+  代码**零硬编码语言**；校验/落库/音频/详情页全部按语言循环。
+- **加语言 = 零代码、幂等**：扩配置列表 + 重跑，已生成语言跳过、只补缺的。可"一上来配全套一次跑全"，
+  也可"先 en+fr 验证、再扩列表重跑补齐"——都不改代码。加非默认集里的语言**无任何特殊**（同一代码路径；
+  唯一触点 TTS 音色已优雅降级）。
+- **标签/标题补全**归"事实补全"：`title_zh`/`title_xx` 等缺失（今日事故根因，见
+  [[enrichment-data-frontend-contract]]）在生成前补（对应语言 Wikipedia 标题优先）。后端 `museum_repo`
+  已有 title_zh 兜底，本机制从源头补全减少兜底依赖。
+- **默认语言集是运营旋钮、非架构**：示例默认 `en, fr, de, es, it, zh`，随时可改、零代码影响。
+- **人工审仍只审形式安全**（语言对不对/有无乱码，非母语可判），多语言不重新引入"人审对错"难题。
+
+## 13b. 前向兼容扩展点（现在不建，但样板不得阻断）
+
+以下功能 v1 不实现，但样板必须保证"以后加不破坏架构、可对所有已建馆回填"：
+
+- **文字高亮（朗读时高亮当前词/句）**：需"文字↔音频时间轴对齐数据"。设计为**纯叠加产物**——
+  每段一个可选 marks 文件（R2 同级 `object-audio/{qid}/{lang}/{section}.marks.json`），
+  **body 与 mp3 原封不动**。对齐用 **forced-alignment（事后对齐既有"音频+已知文字"，如 WhisperX/aeneas），
+  不依赖 TTS 返回时间戳**——故可对**所有已生成的馆就地回填，无需重跑 body/音频**。前端播放器已暴露
+  `positionStream`，高亮 = 当前位置 + marks → 高亮词句。**v1 仅保留约定（按段存音频、body 为干净纯文本、
+  预留同级 marks），不写代码、不做任何阻断它的设计。**
+- 不变量：音频按段落存、body 为可对齐纯文本、key 方案支持同级兄弟产物——已天然满足。
 
 ## 14. 管线形态与 CLI
 
 沿用 v1 onboard CLI，加阶段：
 - `onboard <slug> seed-sections`（或直接跑 `seed_sections.py`）：导入段落骨架（staging+prod 各一次）。
-- `onboard <slug> generate --target ... [--top-n] [--lang] [--force]`：批量生成 body。
-- `onboard <slug> tts --target ... [--top-n] [--lang]`：为 published 段生成音频。
+- `onboard <slug> generate --target ... [--top-n] [--langs ...] [--force]`：批量生成（英语轴心 + 翻译铺
+  配置语言集）。`--langs` 缺省取配置默认集；幂等只补缺语言。
+- `onboard <slug> tts --target ... [--top-n] [--langs ...]`：为 published 段按语言生成音频。
 - **金丝雀流程**：staging 跑样本（top-N 小样）→ `report.py` 审阅报告人工审形式安全 → prod 全量。
 - **幂等**：已 published 跳过（除非 --force）。
 - 容器内执行：`docker exec gomuseum_{staging,prod}_backend python scripts/onboard.py ...`。
@@ -184,17 +220,20 @@ body 为 None 的段不发布（标 `needs_review` 或不建行）。
 
 - **入口**：馆藏清单（`MuseumPage`）点藏品 → **改为 push 详情页**（现状 push `/guide` 实时重生成，
   浪费且不落库）。识别流（拍照）仍走 guide。
-- **页面**：消费 `GET /museums/{slug}/objects/{qid}/content?language=zh` → 分 tab 展示各段
+- **页面**：消费 `GET /museums/{slug}/objects/{qid}/content?language={当前语言}` → 分 tab 展示各段
   `{section_code,label,icon,body,audio_url}`；每段一个**播放键**：`audio_url` 有则
   `TtsService.play(audio_url)`（R2 直链可直接播）；段 body 为空/`needs_review` → 显示"待完善"。
+- **语言**：取 App 当前语言（i18n locale）传 `language` 参数；后端按语言返回对应译文。
+- **播放器控件**：播放/暂停 + 速率 0.75/1/1.25/1.5x（`TtsService.setSpeed`，纯本机变速）。
 - **生成中态**：响应 `status: generating` → 显示"讲解生成中"，定时重拉直至 published。
 - 复用既有 `TtsService`、go_router；新增详情页 + 数据层（Clean Architecture）。
 
 ## 16. 可复制性（样板的关键）
 
 **复制到新馆 = 配置 + 跑命令，无主流程改动**：
-- **每馆配置**（`museums.yaml`）：slug、Wikidata 馆 QID、类别过滤、fetch/sample 规模、语言。
-- **通用机制**：源连接器、生成器、校验、状态机、CLI、详情页——全部馆无关。
+- **全局配置**：目标语言集（默认 `en,fr,de,es,it,zh`）、品牌音色、模型档位——馆无关、随时可改。
+- **每馆配置**（`museums.yaml`）：slug、Wikidata 馆 QID、类别过滤、fetch/sample 规模、语言集覆盖（可选）。
+- **通用机制**：源连接器、生成器、翻译、校验、状态机、CLI、详情页——全部馆无关、语言无关。
 - 加新馆：`museums.yaml` 加一条 → `onboard <new> fetch/seed-sections/generate/tts` → staging 审 → prod。
 - 加新源（如 Joconde）：实现一个 `Source` 连接器，按合并优先级接入，主流程不动。
 
@@ -212,8 +251,9 @@ body 为 None 的段不发布（标 `needs_review` 或不建行）。
 
 机制较大，按依赖分期，每期可独立交付、测试：
 1. **骨架 + WikipediaSource + 事实补全**：seed_sections 上 prod；WikipediaSource 连接器；标签补全。
-2. **grounded 生成器 + 蕴含校验 + 落库**：`ContentEnricher`；批量 CLI `generate`；金丝雀报告。
-3. **TTS 阶段**：CLI `tts` 批量；接已上线 `persist_section_audio`。
+2. **grounded 生成器（英语轴心 + 翻译铺语言）+ 蕴含/译文校验 + 落库**：`ContentEnricher`；
+   批量 CLI `generate`；金丝雀报告。
+3. **TTS 阶段**：CLI `tts` 批量（按语言、统一品牌音色）；接已上线 `persist_section_audio`。
 4. **懒生成端点**：状态机 + 异步后台 + Redis 锁 + 轮询契约。
 5. **前端分段详情页**：消费 object_content；播放；生成中态；馆藏入口改向。
 
