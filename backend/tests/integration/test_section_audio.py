@@ -7,7 +7,11 @@ from app.core.database import Base
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
-from app.services.content_repo import get_section_audio_key, persist_section_audio
+from app.services.content_repo import (
+    get_section_audio_key,
+    persist_explanation,
+    persist_section_audio,
+)
 from app.services.object_importer import upsert_museum, upsert_object
 
 
@@ -112,3 +116,9 @@ def test_get_section_audio_key_returns_key_after_persist(session):
 def test_get_section_audio_key_none_when_absent(session):
     assert get_section_audio_key(session, "Q1", "en", "overview") is None
     assert get_section_audio_key(session, "Q404", "en", "overview") is None
+
+
+def test_get_section_audio_key_none_when_row_has_no_audio(session):
+    # persist_explanation 写了 body 但没有音频 → 行存在、audio_key 为 NULL
+    persist_explanation(session, "Q1", "en", {"summary": "s", "interesting_facts": []})
+    assert get_section_audio_key(session, "Q1", "en", "overview") is None
