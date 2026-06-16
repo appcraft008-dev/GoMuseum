@@ -112,7 +112,11 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
           ),
         );
         if (response.statusCode == 200) {
-          return (response.data as Map)['audio_url'] as String;
+          final url = (response.data as Map)['audio_url'] as String?;
+          if (url == null) {
+            throw const ServerException('Missing audio_url in response');
+          }
+          return url;
         }
         throw ServerException(
             'Server returned status code: ${response.statusCode}');
@@ -164,6 +168,8 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       } else {
         throw ServerException('Server error: ${e.message}');
       }
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException('Unexpected error: $e');
     }
