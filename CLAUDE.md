@@ -80,15 +80,30 @@ rules:
 - 回到 `staging`、确定下一个特性/修复后，**从最新 `staging` 切出新的 `feature/*`** 再动手。
 - **例外**：不能等的线上紧急修复用 `hotfix/*` 分支并行处理，同样 PR→staging→main，完成即删。
 
-### CI/CD 触发（去重原则：同一份代码只跑一次 CI）
+### CI/CD 触发（按改动分流的 CI + 全自动 path-aware 部署）
 
-- **CI 仅在 `pull_request`（目标 `staging`/`main`）时全量运行**——合并前的质量门。
-- **`push` 到 `main`/`staging`**（即合并后）触发 CI + **Deploy**（main→生产、staging→预发）。
-- **`feature/*` / `hotfix/*` 的 push 不触发远端 CI**——快速反馈交给本地钩子。
-- 所有 workflow 加 `concurrency: cancel-in-progress`，新提交自动取消同分支旧运行。
+**CI（只在 PR 上跑，按改动分流）**
+
+- **CI 仅在 `pull_request`（目标 `staging`/`main`）时跑**——合并前的唯一质量门；合并后的 push **不再重复跑 CI**（去重）。
+- **按改动分流**：`changes` job（`dorny/paths-filter`）检测改了 backend/frontend/workflow；`backend-tests` 仅在后端(或 workflow)改动时跑、`flutter-tests` 仅在前端(或 workflow)改动时跑；`ci-status` 把 **skipped 视为通过**。gitleaks/Trivy/build-check 无条件跑（安全扫描 + PR 锚点）。
+- `feature/*` / `hotfix/*` 的 push 不触发远端 CI——快速反馈交给本地钩子。
+- CI 用 `concurrency: cancel-in-progress: true`（同分支新提交取消旧 CI）。
+
+**CD（push 触发，自动 + path-aware）**
+
+- **push `staging`（合并后）→ 自动部署 staging**（端口 8101）；**push `main`（合并后）→ 自动部署 prod**（端口 8100）。
+- **path-aware**：仅当 `backend/**` 改动时才部署（只改前端/文档/workflow 不触发，避免 no-op）；`workflow_dispatch` 手动部署对任一环境**强制执行**（兜底）。
+- Deploy 用 `concurrency: cancel-in-progress: false`（同目标串行，防并发 compose recreate 撞名残留）。
+
+**自动同步**
+
+- 合入 `main` 后，`sync-main-to-staging` 自动把 main 同步回 staging（带 `[skip ci]`），**取代手动 force-sync**。
+
+> ⚠️ GitHub 坑：改 `.github/workflows/` 本身的提交/PR 有时不自动触发任何 workflow——补推一个**不改 workflow 的普通提交**（如 `git commit --allow-empty`）重触发即可。
 
 ### 本地提交前检查（让远端 CI 专注 UC 正确性，而非格式）
 
+- ⚠️ husky 钩子必须**可执行**（`chmod +x .husky/pre-commit .husky/pre-push`）；否则被 git 忽略、格式化静默不跑，导致一路 `--no-verify`。
 - **pre-commit**（仅改动文件，快，只做**格式化**不做 lint）：
   - `backend/**/*.py` → black + isort
   - `**/*.dart` → dart format
