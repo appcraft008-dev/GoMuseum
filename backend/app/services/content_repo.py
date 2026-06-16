@@ -28,11 +28,16 @@ def persist_explanation(
     for code, body in sections.items():
         if not body:
             continue
-        row = db.query(ObjectContentSection).filter_by(
-            object_id=obj.id, language=language, section_code=code
-        ).one_or_none() or ObjectContentSection(
+        existing = (
+            db.query(ObjectContentSection)
+            .filter_by(object_id=obj.id, language=language, section_code=code)
+            .one_or_none()
+        )
+        row = existing or ObjectContentSection(
             object_id=obj.id, language=language, section_code=code
         )
+        if existing is not None and existing.body != body:
+            row.audio_key = None  # body 变更 → 旧音频失效，下次请求重生成
         row.body, row.status, row.source = body, "published", "ai_generated"
         row.model = model
         row.generated_at = datetime.now(timezone.utc)
