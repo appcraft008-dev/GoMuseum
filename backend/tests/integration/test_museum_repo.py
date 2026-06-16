@@ -97,3 +97,23 @@ def test_pack_shape(session):
         "image",
         "popularity",
     }
+
+
+def test_pack_title_zh_falls_back_when_null(session):
+    # 富化数据常缺中文标题；title_zh 必须永不为 null（否则前端强转崩）
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q2", "title_zh": None, "title_en": "Sunrise", "attributes": {}},
+    )
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q3", "title_zh": None, "title_en": None, "attributes": {}},
+    )
+    session.commit()
+    by_qid = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}
+    assert by_qid["Q2"]["title_zh"] == "Sunrise"  # 回退 title_en
+    assert by_qid["Q3"]["title_zh"] == "Q3"  # 再回退 qid
+    assert all(a["title_zh"] is not None for a in by_qid.values())

@@ -63,7 +63,9 @@ def get_museum_pack(db: Session, slug: str) -> dict | None:
     artworks = [
         {
             "qid": o.qid,
-            "title_zh": o.title_zh,
+            # title_zh 永不为 null：富化数据常缺中文标题，回退 title_en→qid，
+            # 否则前端 `title_zh as String` 强转会崩（馆藏列表整页加载失败）。
+            "title_zh": o.title_zh or o.title_en or o.qid,
             "title_en": o.title_en,
             "artist_zh": o.artist_zh,
             "artist_en": o.artist_en,
