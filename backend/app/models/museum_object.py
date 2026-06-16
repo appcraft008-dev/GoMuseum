@@ -46,6 +46,13 @@ class MuseumObject(Base):
     attributes = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), default=dict
     )
+    # 各源原始包 + provenance：{"wikidata": {"raw": {...}, "fetched_at": "..."}}
+    sources = Column(
+        MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")),
+        nullable=False,
+        default=dict,
+        server_default="{}",
+    )
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False

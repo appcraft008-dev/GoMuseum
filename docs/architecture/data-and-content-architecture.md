@@ -164,11 +164,11 @@ Wikidata ──抓取──▶ museum_packs/<slug>.json (含原始 JSONB)
 
 ## 10. 待确认/后续细化
 
-1. `museum_object` 通用 schema 的最终字段集 + JSONB 整包列命名。
-2. `SectionType` 的初始集合与"facts 派生 section"vs"LLM 叙事 section"的边界。
-3. 富化管线的工程化：现有 `build_museum_pack.py` + `migrate_pack_to_db.py` → 是否拆成「抓取 / 投影入库 / 懒生成」三段，加抽样报告与金丝雀。
-4. `seed_staging_sample` 脚本的样本清单标准。
-5. R2 语音缓存的 key 规约（藏品QID + 语言 + 文本hash）与跨环境共享策略。
-6. 多语言策略（Wikidata 标签语言覆盖 + LLM 叙事的语言生成）。
+1. ~~`museum_object` 通用 schema 的最终字段集 + JSONB 整包列命名。~~ **✅ v1 已落地**：加 `sources` JSONB 存各源原始包，`attributes` 留作 canonical 补充属性。见 `specs/2026-06-16-museum-enrichment-pipeline-v1-design.md`。
+2. `SectionType` 的初始集合与"facts 派生 section"vs"LLM 叙事 section"的边界。（留 v2/B）
+3. ~~富化管线的工程化：拆成「抓取 / 投影入库 / 懒生成」三段，加抽样报告与金丝雀。~~ **✅ v1 已落地**：`backend/app/services/enrichment/`（Fetcher→R2 pack→Loader）+ `scripts/onboard.py` + 抽样报告 + staging 样本/prod 全量金丝雀。懒生成留 v2/B。
+4. ~~`seed_staging_sample` 脚本的样本清单标准。~~ **✅ v1 已落地**：`museums.yaml` 的 `sample_size`(热度 top-N) + `sample_qids`(固定边界 QID)。
+5. R2 语音缓存的 key 规约（藏品QID + 语言 + 文本hash）与跨环境共享策略。（随 v2/B 懒 TTS）
+6. 多语言策略（Wikidata 标签语言覆盖 + LLM 叙事的语言生成）。（随 v2/B）
 
-> 下一步：本设计稿评审通过后，针对 §9 逐项进入 spec → plan → 实现。
+> v1（规模化上馆管线，§10 第 1/3/4 项）已实现，见 `specs/2026-06-16-museum-enrichment-pipeline-v1-design.md` + `plans/2026-06-16-museum-enrichment-pipeline-v1.md`。v2/B（内容做厚：叙事 section 生成 + 懒 TTS，§10 第 2/5/6 项）待后续 brainstorm→spec→plan。
