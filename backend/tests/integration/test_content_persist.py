@@ -52,3 +52,36 @@ def test_persist_explanation(session):
     codes = {r.section_code for r in rows}
     assert codes == {"overview", "background", "analysis", "significance", "facts"}
     assert persist_explanation(session, "Q404", "en", payload) is False  # 无此展品
+
+
+def test_persist_explanation_clears_audio_on_body_change(session):
+    payload = {"summary": "s1", "interesting_facts": []}
+    persist_explanation(session, "Q1", "en", payload)
+    row = (
+        session.query(ObjectContentSection)
+        .filter_by(language="en", section_code="overview")
+        .one()
+    )
+    row.audio_key = "object-audio/Q1/en/overview.mp3"
+    session.commit()
+
+    persist_explanation(session, "Q1", "en", {"summary": "s2", "interesting_facts": []})
+    session.refresh(row)
+    assert row.body == "s2"
+    assert row.audio_key is None
+
+
+def test_persist_explanation_keeps_audio_on_same_body(session):
+    payload = {"summary": "same", "interesting_facts": []}
+    persist_explanation(session, "Q1", "en", payload)
+    row = (
+        session.query(ObjectContentSection)
+        .filter_by(language="en", section_code="overview")
+        .one()
+    )
+    row.audio_key = "object-audio/Q1/en/overview.mp3"
+    session.commit()
+
+    persist_explanation(session, "Q1", "en", payload)
+    session.refresh(row)
+    assert row.audio_key == "object-audio/Q1/en/overview.mp3"

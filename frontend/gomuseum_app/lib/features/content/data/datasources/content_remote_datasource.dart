@@ -20,6 +20,8 @@ abstract class ContentRemoteDataSource {
     required String language,
     String? voice,
     double? speed,
+    String? qid,
+    String? sectionCode,
   });
 }
 
@@ -86,8 +88,40 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
     required String language,
     String? voice,
     double? speed,
+    String? qid,
+    String? sectionCode,
   }) async {
     try {
+      // section 模式：qid + sectionCode → 后端落库并返回 JSON audio_url
+      if (qid != null && sectionCode != null) {
+        final response = await dio.post(
+          '/api/v1/content/tts/generate',
+          data: {
+            'text': text,
+            'language': language,
+            'qid': qid,
+            'section_code': sectionCode,
+          },
+          options: Options(
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            sendTimeout: const Duration(seconds: 60),
+            receiveTimeout: const Duration(seconds: 60),
+          ),
+        );
+        if (response.statusCode == 200) {
+          final url = (response.data as Map)['audio_url'] as String?;
+          if (url == null) {
+            throw const ServerException('Missing audio_url in response');
+          }
+          return url;
+        }
+        throw ServerException(
+            'Server returned status code: ${response.statusCode}');
+      }
+
       final requestData = {
         'text': text,
         'language': language,
@@ -134,6 +168,8 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       } else {
         throw ServerException('Server error: ${e.message}');
       }
+    } on ServerException {
+      rethrow;
     } catch (e) {
       throw ServerException('Unexpected error: $e');
     }
