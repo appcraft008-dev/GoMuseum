@@ -178,7 +178,8 @@ async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_se
         tts_service: TTS service (injected)
 
     Returns:
-        Audio file as streaming response (MP3 format)
+        - section 模式（带 qid + section_code）：JSON {audio_url, cached}，音频已落库 R2。
+        - ad-hoc 模式（无 qid/section_code）：mp3 流式响应。
 
     Example:
         ```bash
@@ -204,6 +205,8 @@ async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_se
                 return AudioUrlResponse(
                     audio_url=storage.public_url(existing), cached=True
                 )
+            # section 模式刻意只生成规范版（默认 voice + speed 1.0），忽略 voice/speed：
+            # audio_key 不编码 voice/speed，否则同一 section 会产生多份音频、缓存键冲突。
             result = await tts_service.generate_audio(
                 text=request.text, language=request.language
             )
