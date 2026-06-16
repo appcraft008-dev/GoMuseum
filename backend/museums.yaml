@@ -1,0 +1,13 @@
+# 馆配置：加一个馆 = 加一段
+museums:
+  orsay:
+    name_zh: 奥赛博物馆
+    name_en: Musée d'Orsay
+    city_zh: 巴黎
+    city_en: Paris
+    country: FR
+    wikidata_qid: Q23402
+    category_filter: Q3305213   # 绘画；以后加雕塑 Q860861 等
+    fetch_limit: 300
+    sample_size: 30
+    sample_qids: []
