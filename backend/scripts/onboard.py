@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.config import settings  # noqa: E402
 from app.core.database import SessionLocal  # noqa: E402
 from app.services.enrichment.catalog import MuseumCatalog  # noqa: E402
 from app.services.enrichment.fetcher import Fetcher  # noqa: E402
@@ -24,6 +25,10 @@ from app.services.enrichment.sources.wikidata import WikidataSource  # noqa: E40
 from app.services.storage import get_object_storage  # noqa: E402
 
 CATALOG_PATH = Path(__file__).resolve().parents[1] / "museums.yaml"
+
+# --target → 期望的容器 ENVIRONMENT；load 在哪个 DB 取决于在哪个容器跑（SessionLocal
+# 用容器自身 DATABASE_URL），故用 ENVIRONMENT 守卫，防在错环境的容器里误执行。
+_ENV_BY_TARGET = {"prod": "production", "staging": "staging"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,7 +54,15 @@ def cmd_fetch(slug: str) -> None:
     print(f"✓ pack 已写入: {key}")
 
 
-def cmd_load(slug: str, pack_key: str, sample: bool) -> None:
+def cmd_load(slug: str, pack_key: str, sample: bool, target: str) -> None:
+    # 守卫：--target 必须匹配当前容器的 ENVIRONMENT，否则可能误把 prod 数据灌进 staging（反之亦然）
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。"
+            f"请在 {expected} 环境的容器内运行此命令。"
+        )
     ps = PackStore(get_object_storage())
     if not pack_key:
         raise SystemExit("请用 --pack <key> 指定 pack")
@@ -76,7 +89,7 @@ def main(argv=None) -> None:
     if ns.command == "fetch":
         cmd_fetch(ns.slug)
     else:
-        cmd_load(ns.slug, ns.pack, ns.sample)
+        cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 
 
 if __name__ == "__main__":
