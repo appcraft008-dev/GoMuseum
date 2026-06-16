@@ -3441,4 +3441,4 @@ test = ["factory-boy", "faker", "fakeredis", "httpx", "pytest", "pytest-asyncio"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "dc45be413f1688e52caaaa022046d1074c684bc448b7910f2be3df3e69cce628"
+content-hash = "86419ccd83c59a8e425b7fd35840f0a1e324659852d5f7009147021703901072"
