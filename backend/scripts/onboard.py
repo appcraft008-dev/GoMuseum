@@ -48,8 +48,19 @@ def _catalog() -> MuseumCatalog:
 
 
 def cmd_fetch(slug: str) -> None:
+    from app.services.enrichment.http_client import PoliteSession
+    from app.services.enrichment.registry import SourceRegistry
+    from app.services.enrichment.sources.joconde import JocondeSource
+    from app.services.enrichment.sources.wikipedia import WikipediaSource
+
+    ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
+    session = PoliteSession(user_agent=ua, min_interval=1.0)
     ps = PackStore(get_object_storage())
-    fetcher = Fetcher(catalog=_catalog(), sources=[WikidataSource()], pack_store=ps)
+    spine = WikidataSource()
+    registry = SourceRegistry(
+        [JocondeSource(session=session), WikipediaSource(session=session)]
+    )
+    fetcher = Fetcher(catalog=_catalog(), spine=spine, registry=registry, pack_store=ps)
     key = fetcher.fetch(slug)
     print(f"✓ pack 已写入: {key}")
 

@@ -19,6 +19,8 @@ class MuseumConfig:
     fetch_limit: int
     sample_size: int
     sample_qids: list[str] = field(default_factory=list)
+    categories: list[str] = field(default_factory=list)
+    country_lang: str | None = None
 
 
 class MuseumCatalog:
@@ -42,6 +44,8 @@ class MuseumCatalog:
                 fetch_limit=int(m["fetch_limit"]),
                 sample_size=int(m["sample_size"]),
                 sample_qids=list(m.get("sample_qids") or []),
+                categories=list(m.get("categories") or [m["category_filter"]]),
+                country_lang=m.get("country_lang"),
             )
         return cls(configs)
 

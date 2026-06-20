@@ -14,3 +14,15 @@ def test_source_is_abstract():
 
     assert hasattr(Source, "fetch")
     assert inspect.isabstract(Source)
+
+
+def test_source_enrich_default_returns_none():
+    from app.services.enrichment.sources.base import Source
+
+    class Spine(Source):
+        name = "x"
+
+        def fetch(self, cfg):
+            return []
+
+    assert Spine().enrich("Q1", {"P347": "REF"}, {}) is None
