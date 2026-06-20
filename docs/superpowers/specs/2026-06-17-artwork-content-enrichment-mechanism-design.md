@@ -271,7 +271,11 @@ body=None 段不发布（标 `needs_review`/不建行）。
 **契约清单（本任务交付）**：
 - **藏品列表端点（新增，分页 + 类别筛 + 热门排序）**：现状 `/museums/{slug}` 一次性返回全部 artworks
   （多类别跑全后上千条、巨型响应、今日崩于解析 246 条）。新增**加法式**端点
-  `GET /museums/{slug}/objects?category=&sort=popularity&limit=50&offset=0`（不动老端点 → 老 App 不破）。
+  `GET /museums/{slug}/objects?category=&sort=popularity&limit=50&offset=0` → `{items:[{qid,title,artist,year,thumbnail}],total,limit,offset}`
+  （不动老端点 → 老 App 不破；`category=all`/省略=跨类别混排）。
+- **馆信息含类别 facet（新增，给前端建类别 tab）**：`GET /museums/{slug}?language={lang}` **加法式**补
+  `categories:[{code,label,count}]`（label 按语言本地化，含合成项 `all`）——前端据此渲染类别 tab，**不写死类别**；
+  老 `artworks` 字段保留（老 App 不破）。
 - **详情内容端点（扩展，完整 shape 见下）**：`GET .../objects/{qid}/content?language={lang}` 返回
   `{qid,category,language,status,title,images[],facts{},tabs[]}`：
   - `status`：`absent|generating|published|needs_review`（对象 absent → 前端轮询直至 published）。
