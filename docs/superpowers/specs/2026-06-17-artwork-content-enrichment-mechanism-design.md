@@ -1,0 +1,593 @@
+# 藏品内容富化机制 — 设计文档
+
+> 创建于 2026-06-17（2026-06-17 大修订：类别泛化、识别接入、懒生成机制、分页、合规约束）。
+> 把"事实"加工成"有质量的分段讲解 + 音频"的**可复制机制**。以奥赛为样板，目标是一套完整、
+> 牢固、可无大改复制到所有博物馆的基础模板。上接富化管线 v1（事实/元数据，见
+> [[enrichment-pipeline-v1]]）与 TTS 音频落库基础设施（[[tts-audio-persistence]]）。
+> 架构原则承 `docs/architecture/data-and-content-architecture.md`。
+>
+> ⚠️ **本任务范围 = 后端数据架构 + 前向兼容 API 契约**（奥赛样板一键复制到其他馆的价值全在这一层，
+> 不依赖前端）。**前端呈现（UI/交互）是独立下游任务**，消费本契约。判据（见 CLAUDE.md 架构约束）：
+> 纯呈现不碰后端；只有"需要新数据/新功能"才动契约，且契约改动**只许加法、前向兼容已装 App**。
+> 前端呈现想法另记于 `docs/superpowers/specs/2026-06-17-orsay-frontend-presentation-notes.md`，
+> 待该文档讨论后，**对照本契约，把"牵动契约"的前端改动回填进本文档**。
+
+## 1. 背景与问题
+
+富化管线 v1 把藏品**事实/元数据**（标题、作者、年代、材质、藏地、`sources`）规模化入库，
+但**没有生成讲解叙事**。实测 prod：`/api/v1/museums/orsay/objects/{qid}/content` 返回
+`{"tabs": []}`——点进藏品一段讲解都没有。缺三层：**段落骨架**（`section_types`/`category_sections`
+未 seed 进 prod）、**讲解正文 body**（未生成）、**音频**（落库设施已就绪、缺内容）。
+
+**核心认知**：内容富化**不是"拉一次数据源就完备"，本质是质量工程**；且管理员/开发者**不是艺术史
+专家、无法人工审核内容正确性**——否决"靠人审对错"的所有方案，质量必须**设计进生成流程**。
+
+本机制以奥赛为**样板点**：不仅富化奥赛，更是**复制到所有馆的基础模板**，故必须完整、牢固、
+零改动可复制。
+
+## 2. 目标与非目标
+
+**目标**：可复制的藏品内容富化机制——
+- 事实接地（grounded）生成分段讲解 body + 音频，正确性靠构造保证；多语言（英语轴心 + 翻译）。
+- **类别泛化**：绘画/雕塑/摄影/装饰艺术…统一机制，零改动支持新类别。
+- 三种内容触发：批量预生成（按类别 top-N）+ 懒生成（长尾按需）+ 识别命中即服务。
+- 环境感知（staging 样本审形式安全 → prod 全量）、幂等、按馆/按类别可配置。
+- **暴露前向兼容的 API 契约**供前端消费（详情内容、分页/类别筛/热门排序列表、识别命中服务、懒生成 status）；
+  契约只许加法、不破已装 App。
+- **端到端契约验证**（API/契约测试 + 必要时极薄消费者），避免"闭门造契约"。
+
+**非目标（留 v2+）**：
+- 馆开放数据连接器：**v1 实现 JocondeSource（验证接缝）**；Europeana/Met/各国国家库等其余连接器留 v2
+  （注册表 + 自动发现地基 v1 就绪，v2 加插件零改主流程）。
+- 文字高亮、逐句级 provenance（§16，前向兼容预留）。
+- Wikipedia pageviews / App 埋点人气信号（v1 用现成 sitelinks）。
+- 专门后台 worker 容器（v1 用进程内异步 + Redis 锁，契约预留可平滑升级）。
+- 管理后台 UI（人工只审 staging 报告）。
+- **未命中作品的自动收录/生成**（仅记录累积，人工择优再加，见 §12）。
+- **前端呈现（UI/交互）整体移出本任务**——类别 tab、详情分段 tab、自动连播、无限滚动、速率控件、
+  未收录提示页等是**独立下游前端任务**，消费本契约。前端想法见 frontend-presentation-notes。
+  （本任务只负责"数据/契约够不够"，不负责"长什么样"。）
+
+## 3. 第一原则：正确性靠"构造"，不靠"人审对错"
+
+1. **严格 grounded 生成**：只喂来源明确的材料（Wikidata 事实 + Wikipedia 正文），指令"只依据材料、
+   不许用自身知识补充"。产出是"把材料改写成讲解"，不是"凭印象讲"。
+2. **原创表达、不照搬（合规）**：Wikipedia 正文是 CC-BY-SA。生成**只取事实、用原创表达重写**，
+   **不贴着原文句式改写**（避免衍生作品/版权问题）；App 内可放数据来源致谢。事实本身不受版权保护。
+3. **留 provenance**：记录所依据源材料（Wikipedia 页 id/url + 哪些事实），v1 落对象级
+   `MuseumObject.sources` JSONB；段级用现有 `status`/`model`/`source`/`generated_at`。逐句级留 v2。
+4. **自动事实一致性门（机器审）**：生成后 LLM **蕴含校验**——逐句判"能否由材料推出"，删不支持句。
+5. **宁缺毋滥**：源数据太薄 → 只写确凿一小段甚至标"待完善"；**绝不脑补凑字**。
+6. **人只审形式安全**（非专家可操作）：空段/乱码/语言错/冒犯——**不审事实对错**。
+7. **用户反馈兜底**：App"报错/纠正"入口，懂行或在场的人报错 → 重生成/复核。单管理员做不到、群体能。
+
+## 4. 架构总览
+
+```
+事实层(v1)            事实补全           grounded生成(英语轴心)   质量门            翻译       音频     落库
+MuseumObject.sources →+Wikipedia正文 → 分段body草稿(类别感知) →蕴含校验+宁缺毋滥→ 各语言译文+忠实校验→TTS→ object_content_sections
+(Wikidata骨架,多类别) +标签补全                                (删不支持句/标待完善)              (R2 audio_key)
+
+触发：① 批量预生成(按类别top-N)  ② 懒生成(长尾首开,异步续跑)  ③ 识别命中→匹配qid→秒出/懒生成
+```
+
+- **生成器统一一份**（`ContentEnricher`），批量 CLI / 懒生成端点 / 识别流都经它，幂等。
+- 管线沿用 v1 形态：onboard CLI 加 **GENERATE**（补全+生成+校验+落 body）与 **TTS** 阶段，
+  staging 样本金丝雀 → prod 全量。
+
+## 5. 数据源策略
+
+- **Wikidata（骨架，多类别）**：提供结构化事实（作者/年代/材质/尺寸/藏地/depicts/sitelinks）
+  + **对象类别**（P31 instance-of）。抓取**支持一个馆多类别**（不再单一 category_filter；
+  奥赛含绘画/雕塑/摄影/装饰艺术等）。
+- **Wikipedia 正文（叙事血肉）**：新增 `WikipediaSource`——按对象 sitelink 找对应 Wikipedia 页，拉**正文摘录**。
+- **接地"源语言"≠ 生成"轴心语言"（关键区分）**：
+  - **源语言（喂模型的素材，越多越全、成本极低）**：**永远抓 `英语 + 馆所在国语言`（+ 其他存在的语言版本）**
+    作接地素材。每件多拉一两篇 Wikipedia（且缓存），不增加贵的生成部分。这是"内容更丰富"的来源。
+  - **轴心生成语言（§7）保持单一**：默认英语、按馆可配。**不生成多份权威正文**（否则贵的"接地生成+蕴含校验"
+    翻倍、且各份不一致无从翻译）。
+- **馆开放数据（v1 含一个真实连接器：JocondeSource，验证可扩展接缝）**：
+  - **JocondeSource（v1 实现）**：法国国家藏品库，`data.culture.gouv.fr` 的 `base-joconde-extrait`
+    opendatasoft REST API（72 万件，按 REF 可查）。对奥赛藏品返回**权威法语一手数据**——材质/尺寸/年代/
+    来源流转/展览史/参考文献/馆藏编号，比 Wikidata 丰富，且法语描述喂"馆国语言"接地。
+  - **自动发现（地基 v1，§18b）**：对象 Wikidata 的 **P347(Joconde ID)** 即发现钩子——有 P347 → 自动路由
+    JocondeSource，**零管理员配置**。合并按 **§5b 权威性判定**（馆方/官方库对物的事实最权威）。
+  - **实测排除 Orsay 自有 P4659**：`musee-orsay.fr` 是网页 + 反爬(403)、无干净 API，违"只用官方 API 不绕限制"，不用。
+  - **图片**：Joconde-extrait 仅 `presence_image` 标志、不含图 URL → 图仍走 Wikimedia（图片可选）；
+    "源自带官方图(CC0)"待接 Met/Rijksmuseum 等时充分验证。
+  - **其余馆开放数据（v2 加分源）**：Europeana（聚合数千欧洲馆，最高杠杆）、Met/Rijksmuseum/各国国家库——
+    每个写一次 `Source` 连接器接入注册表，**经各自 Wikidata 外部 ID 属性自动发现、零改主流程、对所有适用馆自动生效**。
+- **礼貌抓取防被封（多馆规模化必需；方向=当好客户端，不是绕限制）**：主力源 Wikimedia 是开放 API、欢迎正当使用，
+  正确做法是**守规矩到它没理由限我**，**绝不绕限制**（换 IP/代理轮换违反 ToS、风险永久封项目）。连接器须：
+  ① **描述性 User-Agent**（项目名+联系方式，Wikimedia 强制，缺了直接封）；② **限速**（令牌桶，限 QPS+并发）；
+  ③ **退避重试**（429/503 指数退避+抖动，遵守 `Retry-After`）；④ **缓存**（源数据本地/R2 缓存，按对象+源+日期，
+  重跑/生成/翻译/再生成都不再抓——既礼貌又省时省钱）；⑤ **批量**（一查多实体/多标题）；⑥ **熔断**（端点开始封禁
+  即停下告警，别把临时限流怼成永久封）；⑦ **只用官方 API、不爬 HTML**。
+- **覆盖率现实**：非每件都有 Wikipedia 条目/图。有→内容厚；无→宁缺毋滥出薄内容或标待完善。
+  **图片可选**（见 §18b）：无 Wikimedia 图也入库，不因缺图而抓空馆。
+- **QID 重定向/合并**：Wikidata 条目会被合并、旧 QID 重定向到新 QID。抓取/re-fetch 时**跟随 redirect、把旧 QID 归并到新**，
+  避免按 qid 主键产生孤儿行/重复。
+
+## 5b. 权威性判定与合并（多源冲突怎么取舍）
+
+**标准（按字段判，不是单一全局排序——因为不同源擅长不同事）**，依次看：
+1. **离"第一手知识"最近**：**关于物本身的事实**（馆藏编号/尺寸/材质/来源流转/现藏地/入藏）→ **持有并编目该物的博物馆
+   最权威**（Joconde/官方库是金标准）；**广义背景**（作者生平/艺术史意义/流派影响）→ 馆方目录常很简短，**策展级参考/
+   Wikipedia 综述可能更全**，不该被馆方目录盖过。
+2. **策展/专业度**：专业策展（馆方/国家库）> 有引用众包（Wikipedia）> 结构化众包（Wikidata）。
+3. **可核验性**：有出处 > 无出处断言。
+4. **时效**（会变的字段如现藏地/借展）：更近更新者胜。
+5. **人工修正（manual）在最顶**：凌驾一切，连馆方都不能盖。
+
+**落地规则（v1 务实）**：
+- **声明式源优先级（配置、零改动）**：默认 `manual > 持有馆/官方库 > Wikipedia > Wikidata`，**逐字段、仅当高权威该字段
+  非空才覆盖**（空值不盖好数据）。加新源 = 配置里给它一个权威档位。
+- **按字段类型覆写（可选配置）**：少数"默认排序不对"的字段（如作者生平偏参考源）可在配置覆写优先级；v1 先用默认全局排序。
+- **冲突标记、不静默覆盖**：两个**权威相当**的源对同一字段给**不同非空值** → **留痕 + 标记**（记下两值/标 needs_review），
+  不悄悄选一个（防"看着权威其实错"的值被propagate）。
+- **源合并既更新结构化事实、又喂接地**：馆方权威结构化字段（材质/尺寸/来源流转）**回写对象 `attributes`/字段**
+  （改善筛选/展示），不只喂叙事生成；每源原始包留 `sources` JSONB 可回溯。
+
+## 6. 段落骨架（按类别配置化，多类别 seed）
+
+骨架 = `section_types`（段落词表）+ `category_sections`（每类别有哪些段落、排序）。**按类别定义、
+配置化**，不只绘画。现有 `seed_sections.py` 已定义绘画 6 段，需**扩成多类别**：
+
+| 类别 | 段落集（示例默认，配置可调） |
+|---|---|
+| painting 绘画 | overview / artist / background / analysis / significance / facts |
+| sculpture 雕塑 | overview / artist / material-technique（材质工艺）/ background / significance / facts |
+| photograph 摄影 | overview / photographer / context（拍摄背景）/ significance / facts |
+| decorative 装饰艺术/器物 | overview / maker / material-technique / use（用途）/ significance / facts |
+| **未知/其他** | overview / background / significance / facts（**通用兜底集**，防空白） |
+
+- `section_types` 是并集（各类别复用同名段落），`category_sections` 定义每类别用哪些 + 排序。
+- **未知类别兜底**：对象 P31 不在已知映射 → 落"通用兜底集"，不致空 tabs。
+- **类别配置是单一真相源**（§18b）：seed / 抓取 / 生成器 / prompt **共用同一份"类别→段落集 / P31→类别"配置**，
+  避免漂移；加新类别 = 改配置、零代码。
+- **段落标签多语言**：`section_types` 标签需覆盖全部目标语言（现仅 zh/en，§18b 补全），否则法语页 tab 标签退回英文。
+- **机制第一步**：扩 `seed_sections.py` 为多类别（读单一真相源配置），在 staging + prod 跑，让多类别
+  `object_content` 能返回 tabs。生成器据对象类别取对应段落集。
+
+## 7. grounded 生成服务（`ContentEnricher`，统一一份、类别感知）
+
+**输入**：MuseumObject（含 sources 事实 + **类别**）+ 最丰富语言源 Wikipedia 正文摘录 + 目标语言集。
+**处理**：
+1. 组装"材料包"（结构化事实 + Wikipedia 正文），标注每条来源。
+2. **轴心生成**：一次 LLM 调用产出**轴心语言**（默认英语、**按馆可配**，§18b）全部段落草稿
+   （段落集**按对象类别**从单一真相源配置取，§18b；system prompt 强约束：只依据材料、**类别感知**
+   （雕塑讲材质工艺/体量、摄影讲拍摄背景，泛化不硬编码单一类别）、**原创表达不照搬**、缺料留空段）。
+3. 逐段**蕴含校验**（§8）→ 已验证英语权威正文。
+4. **翻译铺语言**：对配置语言集其余语言，逐语言翻译权威正文 + 译文忠实校验。
+5. **预生成推荐问答（§12b）**：基于已验证材料，每件产出 3–4 个"问题+预回答"（同样 grounded + 蕴含校验 +
+   多语言），落库供详情页 chips 秒出。
+6. 返回 `{language: {section_code: body|None}}, suggested_questions, provenance, model, status, content_version`。
+**落库**：新增/扩展 `content_repo` 函数，按 (object, language, section_code) upsert
+body + status + model + **content_version**（`source=ai_generated`、`generated_at`）；对象级 provenance 写 `sources`；
+body=None 段不发布（标 `needs_review`/不建行）。
+**幂等**：已 `published` 的 (段,语言) 默认跳过，除非 `--force`/源更新/**content_version 落后**；加语言只补缺。
+**统一一份、三触发**：批量 CLI、懒生成端点、识别流都调它。
+
+## 8. 质量门（分层检查体系）
+
+**哲学**：管理员审不了事实对错 → 质量靠**自动闸（每件都过）+ 质量报告（看整体）+ 人工抽样校准（不全审）+
+用户反馈（规模化真值）**。
+
+**A. 每件自动闸（挡坏内容，失败→`needs_review` 不发布）**——给每件/每段算**质量分**，聚合：
+1. **接地/蕴含分**：逐句"能否由材料推出"（便宜模型），删不支持句；删太多→低分。
+2. **事实一致性**：叙事 body 与结构化硬事实对账（body 说的年代/作者/尺寸 vs facts），矛盾→扣分/标审。
+3. **完整性**：该有段落齐、无空段/null。
+4. **格式/语言**：langdetect 各语言段确为该语言、无乱码/残留标记、长度合理。
+5. **译文忠实**：每语言译文 vs 英语轴心做蕴含，防漂移/丢事实。
+6. **安全**：moderation 无冒犯/不当。
+→ 低分自动 `needs_review`、不发布。
+
+**B. 每轮质量报告（staging，金丝雀过关才上 prod）**——`report.py` 升级为**质量指标**（非仅计数）：
+覆盖率、`needs_review` %、**接地分分布**、**源冲突数**（§5b）、各语言覆盖、缺图/缺音频数。
+
+**C. 人工抽样（窄，只三件，不全审）**：① 形式安全（空段/乱码/冒犯，非母语可看）；② **校准自动裁判**
+（抽样看蕴含裁判判得对不对，防系统性犯错）；③ 名作读通顺（读感，**不审事实**）。
+
+**D. 金标准/回归集**：一小撮已知答案对象——验抓取/解析对；**prompt/模型改了在此组重跑对比，防质量退化无人知**。
+
+**E. 上线后真值**：用户内容报错（§3 端点）→ `needs_review` → 重生成（**懂行的人才是终审**）；监控反馈率/
+needs_review 率/重生成率（§19）；**跨源一致性当信号**（Wikidata+Joconde+Wikipedia 三方一致=高可信、冲突=警报）。
+
+## 9. 成本策略
+
+- **一次性 + 永久落库**：body/audio 每件只生成一次，之后读 DB/R2，零重复调用。
+- **便宜模型**：grounded 生成/蕴含校验/翻译用 gpt-4o-mini / Claude Haiku 档；顶配仅开发期调 prompt/抽验。
+- **批量 API 折扣**：离线批量走 batch 接口（约 5 折）。
+- **预生成范围 = 人气阈值 + 下限 + 上限（自适应每馆每类别，非手填绝对数）**：
+  - **阈值**（主）：预生成所有 **sitelinks ≥ 阈值** 的作品（museum-agnostic 全局配置）——名作多的馆预生成多、
+    小馆少；**类别天然分流**（雕塑/摄影 Wikipedia 覆盖少→过阈值少，自动复现"绘画多其他少"，不手填）。
+  - **下限**：每馆至少预生成 top K（如 80），保证小馆也有一批秒出。
+  - **上限**：每馆封顶 M（如 1500），超大馆超出走懒生成、封顶成本。
+  - **懒生成兜底**：阈值偏保守也只是多点懒生成、不出空白，**容错**。
+  - **最终需求驱动**：上线后用真实浏览/识别事件预生成"用户真看的"，sitelinks 代理逐步退役（§10）。
+  - 奥赛"绘画~500/其他~300"= 这套规则跑出的结果 / per-museum override 示例，**非写死魔法数**。
+  - 不为未经市场验证的全量买单。
+- **运行时是 API，不是 Claude 订阅会话**：机制须可自动化 + 支持懒生成运行时。Claude（开发助手）
+  仅开发期打磨 prompt、抽验样本、设计校验，不当批量生成运行时。
+- **量级**：英语权威正文每件只生成+校验一次，其余语言廉价翻译。按 top-N 范围 + 便宜模型 + 批量折扣，
+  一次性可控（百元美金量级），永久落库。
+- **全局花费护栏（运营安全网）**：除懒生成限速外，设**全局 AI 花费上限 + 超阈告警 + 急停开关**，
+  防 bug 死循环/被刷导致账单失控。
+
+## 10. 人气信号 / top-N
+
+- **v1：Wikidata sitelinks 数**（已入库 `MuseumObject.popularity`，`museum_repo` 已按它降序）作人气代理。
+- **预生成范围按 sitelinks 阈值 + 下限 + 上限**（§9，自适应每馆每类别，非手填绝对数）。
+- sitelinks 高 ≈ 有丰富 Wikipedia 条目 ≈ 用户最想看——三者重合，预生成既选中最爱看的、又最能生成好内容。
+- **future（需求驱动）**：上线后 App 浏览/识别埋点（§12 事件）→ 预生成"用户真看的"，sitelinks 代理逐步退役；
+  Wikipedia pageviews 亦可作中间信号。
+
+## 11. 内容触发 + 生成状态机
+
+**生成状态**（`object_content_sections.status`）：
+`absent`（未生成）→ `generating`（生成中）→ `published` / `needs_review`（待人工/待完善）。
+
+**① 批量预生成（CLI）**：`onboard <slug> generate --target ... [--preheat threshold|--top-n N] [--langs ...] [--force]`
+按类别 top-N 遍历 → `ContentEnricher` → 落库；随后 `onboard <slug> tts` 为 published 段按语言生成音频。
+
+**② 懒生成（端点，做牢、渐进、续跑、有护栏）**：
+1. 详情页/识别命中请求内容，对象为 `absent`。
+2. 端点**立即返回** `status: generating` + **元数据/图**（v1 已在库，0 等待）；同时**异步后台任务**
+   （FastAPI BackgroundTasks，LLM 为 I/O 等待型、不占事件循环）跑 `ContentEnricher` + TTS。
+3. **渐进出**：**先生成用户当前语言文字**（英语轴心→当前语言），**一段好就显示一段**；**音频跟文字之后**
+   （某段音频好该段播放键才亮）；其余语言不阻塞、后台补或留后。
+4. **续跑(关键)**：后台任务**与客户端连接解耦**——用户**等不及返回/停止轮询，生成照常跑完并落库**，
+   下次他回来或别的用户都秒出（一次触发、永久受益，哪怕触发者没等到）。
+5. **Redis 去重锁**（`qid:lang`）：并发只生成一次。**成本护栏**：按用户/全局对懒触发 Redis 限速，防刷生成。
+6. **可平滑升级**：将来换专门 worker 容器，对外契约（status + 轮询）不变。
+7. **幂等/防重**：`generating` + 锁防重复入队；失败/卡死/容器重启中途 → 超时回退 `absent` 可重试。
+
+**③ 批量与懒生成统一并发控制（防撞车）**：批量 CLI 与懒生成**共用同一套 status + Redis 锁**——批量不只是
+"published 才跳过"，还要**遇 `generating` 让行**；二者对同一 (qid,lang) 不会同时生成、不重复花钱。
+
+## 12. 识别流接入（命中秒出 / 长尾懒生成 / 未命中记录）
+
+识别流（拍照→识别）**必须接这套机制**，否则机制无意义。现有前端已是"top-3 候选+置信度+缩略图+确认+搜索兜底"
+（合理够用），本任务负责**后端契约 + 匹配逻辑**：
+1. 识别返回**作品名 + 作者**（非 qid）→ **匹配到库内 qid**（名字/作者归一化匹配，**带置信门槛**：低于门槛宁可
+   当未命中，也不**张冠李戴**）。**后端返回 top-N 候选** `{matched_qid, 名称, 作者, 馆, 缩略图, 置信度}` 供前端列表确认。
+2. **置信度地板**：最高候选低于阈值 → 不默认选中、提示"不太确定，请核对或搜索"。
+3. **当前馆收窄（准确率大杀器）**：已知用户在哪个馆（扫码/选馆/定位）时，**候选限定该馆藏品集**——候选从全球
+   几十万缩到几千，匹配准得多。
+4. **用户确认是真防线**：缩略图让用户拿眼前实物比对再信内容（缩略图够清晰）。
+5. **命中且已预生成 → 秒出**；**命中长尾未生成 → 懒生成**（§11② 渐进，一次性）。
+6. **未命中库（含随手拍非藏品）/ 搜索未果 → 返回"未收录" + 反馈入口**；**后端记录识别出的标签文本**
+   （作品名/作者，**不存用户原图**，守 GDPR/路线图"识别完即丢原图"）；**聚合去重计数**，累积到阈值
+   **人工择优**把真藏品加进库再富化——**不自动为未命中生成**（省钱 + 防垃圾）。
+- **老 guide 流**（实时合成整段、不落库）：两入口（浏览/识别）改走新内容后已无用，**先标 deprecated 保留
+  作兜底，新流跑稳后再清**（不在过渡期删工作代码）。
+- **识别事件记录（多用途地基）**：识别（命中&未命中）产出事件 `{user, qid|label, museum, ts, outcome}`——
+  一鱼多吃：未命中聚合（本节）、**人气信号**（App 埋点取代 sitelinks，§10 future）、**质量监控**（§19）、
+  **用户足迹/历史**（独立功能）。本任务只确立"识别要产出此事件"；事件存储 + 历史查询端点 + 足迹地图 UI =
+  **独立"用户历史"功能，不在本内容任务**。
+
+## 12b. 对话式追问（多轮接地问答）
+
+详情页"问问这幅画"+ 推荐问题 chips + 麦克风。**最高价值也最高幻觉风险**，故严守接地。
+
+- **原则：接地 only + 诚实"资料未涵盖"**——对**单件作品的 grounding 语料**（硬事实 + Wikipedia 正文 +
+  已生成分段，**均已在库**：`sources` JSONB + `object_content_sections`）做 RAG；材料没覆盖 → 诚实说"资料未提到/
+  我不确定"，**绝不凭模型知识编**。**范围=单件作品**；跨作品/通用问题（"还有谁画过卧室""什么是印象派"）→
+  诚实"帮不上，试试问这幅画" → 留 v2。
+- **多轮（v1）**：**客户端持对话历史**（后端无状态、收 `messages` 数组），护栏：① grounding + 限本作品的
+  system prompt（每轮都接地、跑题礼貌拉回、安全）；② **轮数上限**（~6–10，封顶成本/上下文）；③ 按用户限速 +
+  全局花费护栏（§9）；④ **prompt 缓存** grounding 前缀（同作品跨轮/跨用户复用，成本压平）。
+- **推荐问题 chips**：每件**预生成 3–4 个"问题+预回答"**（随 generate 阶段产出、grounded + 蕴含校验 + 多语言、
+  落库）→ 秒出、免费、安全 + 内容钩子。点 chip 出预回答；继续追问走多轮 `/ask`。
+- **语音**：问 = STT（设备/Whisper，前端）；答 = 文字为主，**可选朗读 = 复用已有 ad-hoc `/tts/generate` 流式**。
+  - **答案音频纯临时**：后端**不写 R2/DB、流完即忘**；设备仅播放时临时缓冲、播完即弃。**两端不留持久文件、无清理任务**。
+  - **延迟**：TTS ~1–3s，**流式起播 + 答案文字先出**（朗读是可选次要动作、不阻塞）。
+  - **生命周期**：前端**离开页/开始新识别/切页时 `player.stop()` + 释放缓冲**（标准播放器生命周期，OS 回收）。
+  - **可选未来优化**：推荐 chips 答案是共享的，若朗读 chip 很热门，可把 **chip 答案音频落库共享**（像分段音频）；
+    **自由提问答案必须临时**。v1 全部临时。
+- **成本**：prompt 缓存 + chips 覆盖常见问 + 自由问按 `(qid,归一问题,语言)` 缓存首答 + 限速 + 全局护栏。
+
+## 13. 音频
+
+- body `published` 后按段调**已上线 `persist_section_audio`**（[[tts-audio-persistence]]）生成 TTS
+  （OpenAI `tts-1`，mp3）→ 落 R2 + 写 `audio_key`。
+- **文件粒度 = 每 (对象,语言,段落) 一个 mp3**（`object-audio/{qid}/{lang}/{section}.mp3`）；一段只存
+  **一份规范音频**（`audio_key` 不编码 voice/speed）。
+- **音色统一品牌讲解员**：OpenAI 语音跨语言通用（念哪种语言由文字定），全语言默认同一把品牌音色；
+  `VOICE_MAPPING` 纯配置，换音色/给某语言配不同音色=改配置零代码；**新语言无映射→优雅退回全局默认音色**。
+- 批量 `onboard tts`；懒生成 body 落库后同一后台任务续跑 TTS。body 变更→ 现有逻辑清 `audio_key` 重生成。
+- **播放速率**：纯前端本机变速（just_audio `setSpeed`），不重生成、不产生新文件、不碰后端。
+
+## 14. 多语言（英语轴心 + 配置驱动翻译）
+
+**主市场是欧洲多语言（en/fr/de/es/it…），中文是开发/次要语言。** = **接地生成一次 + 翻译铺语言**：
+- **英语轴心**：取最丰富语言源生成英语权威正文，蕴含校验一次（正确性建立）。
+- **其余语言 = 翻译权威正文 + 译文忠实校验**，各语言事实一致。
+- **语言全参数化 + 配置驱动**：目标语言是参数，语言集放配置（全局默认 + `museums.yaml` 覆盖），
+  代码零硬编码语言；校验/落库/音频/详情页按语言循环。
+- **加语言 = 零代码、幂等**：扩配置列表 + 重跑，已生成跳过、只补缺。可"一次配全套跑全"或"先少后扩重跑"。
+  加非默认集语言无任何特殊（唯一触点 TTS 音色已优雅降级）。
+- **标签/标题补全**归"事实补全"：`title_xx` 缺失（今日事故根因，见 [[enrichment-data-frontend-contract]]）
+  生成前补（对应语言 Wikipedia 标题优先）。
+- **标题/专名不裸翻译**：作品标题有惯例——**优先保留原文标题 + 若该语言有既定译名则用既定译名**
+  （"Mona Lisa"/"La Gioconda"、"Le Déjeuner sur l'herbe"），**不对标题硬翻**。正文（body）正常翻译，标题/人名/地名按惯例。
+- **默认语言集是运营旋钮、非架构**：示例 `en,fr,de,es,it,zh`，随时改、零代码影响。
+- **人工审仍只审形式安全**（语言对不对/乱码，非母语可判），多语言不重引入"人审对错"。
+
+## 15. 对外 API 契约（本任务交付；前端呈现独立）
+
+前端消费这套契约渲染馆藏列表与详情页（入口：列表点藏品 / 识别命中 → 详情页）。**契约只许加法、
+前向兼容已装 App**（见 CLAUDE.md 架构约束）。
+
+**契约清单（本任务交付）**：
+- **藏品列表端点（新增，分页 + 类别筛 + 热门排序）**：现状 `/museums/{slug}` 一次性返回全部 artworks
+  （多类别跑全后上千条、巨型响应、今日崩于解析 246 条）。新增**加法式**端点
+  `GET /museums/{slug}/objects?category=&sort=popularity&limit=50&offset=0` → `{items:[{qid,title,artist,year,thumbnail}],total,limit,offset}`
+  （不动老端点 → 老 App 不破；`category=all`/省略=跨类别混排）。
+- **馆信息含类别 facet + 坐标 + 实用信息（新增）**：`GET /museums/{slug}?language={lang}` **加法式**补
+  `categories:[{code,label,count}]`（label 本地化、含 `all`，建类别 tab、不写死）
+  + `coordinates:[lat,lng]`（馆经纬度，Wikidata P625/Joconde，供地图/距离/附近）
+  + `opening_hours`、`official_url`（馆级实用信息；开放时间来自 Wikidata/官方、变化慢；**门票价格易变不可靠 → 存稳定的
+  官网/购票 URL，不硬存价格**）；老 `artworks` 保留（老 App 不破）。距离 xx km 由前端用坐标本地算。
+- **藏品搜索端点（确认含馆藏编号）**：见下"搜索端点"——支持**名/作者/馆藏编号(展签编号)**；编号 = Joconde
+  `numero_inventaire`/Wikidata P217（已抓），需**格式归一**（忽略空格/大小写）。
+- **详情内容端点（扩展，完整 shape 见下）**：`GET .../objects/{qid}/content?language={lang}` 返回
+  `{qid,category,language,status,title,images[],facts{},tabs[]}`：
+  - `status`：`absent|generating|published|needs_review`（对象 absent → 前端轮询直至 published）。
+  - `title`：原文标题（§14 不裸翻译）。
+  - `images[]`：`{url,credit}` **语言无关**；v1 一张（P18），**数组留多图/swipe 前向兼容**；`credit` 图片署名（合规）。
+  - `facts{}`：硬事实（§15 facts 条）；描述型按 language 本地化、数值型语言无关。
+  - `tabs[]`：**按 sort_order 有序**分段 `{section_code,label,icon,body,audio_url}`；body 空/`needs_review` → "待完善"。
+  - 所有新增字段（status/title/images/facts）**加法式**，不破老解析。
+- **识别→内容**（后端逻辑，§12）：返回 **top-N 候选** `{matched_qid, 名称, 作者, 馆, 缩略图, 置信度}`
+  （供前端确认列表）+ 命中后内容可用性（秒出/generating）；未命中返回"未收录"。
+- **藏品搜索端点（新增）**：识别"都不是?搜索"兜底需要——按名/作者/馆藏编号检索某馆藏品，返回候选
+  `{qid,名称,作者,缩略图}`。加法式新端点（如 `GET /museums/{slug}/objects/search?q=`）。
+- **内容报错端点（新增，落地 §3/§19 用户反馈兜底）**：详情页"报错/纠正" → `POST .../content/feedback`
+  `{qid, language, section_code?, issue}` → 把该 (对象,语言,段落) 标 `needs_review` → 触发重生成。
+  （注：home 的**通用 App 反馈**=bug/建议，走 mailto 或通用反馈端点，**非内容机制**，不在此。）
+- **对话式追问端点（新增，§12b）**：`POST .../content/ask`
+  `{qid, language, messages:[{role,content},…]}`（客户端持历史、后端无状态）→
+  `{answer, grounded:bool, turn_limit_reached:bool}`。**接地 only**（grounded=false 即诚实不知道）。答案朗读
+  **复用 ad-hoc `/tts/generate`**（不新增端点）。
+- **推荐问题（进 `object_content`，§12b）**：`object_content` 加法式补 `suggested_questions:[{question,answer}]`
+  （预生成预回答、多语言、随 generate 阶段产出）。点 chip 出 `answer`；追问走 `/ask`。
+- **硬事实 facts（新增到详情契约）**：详情页要"墙签速览 + 作品信息全表"，现 `object_content` 只返叙事分段、
+  无硬事实 → **加法式补结构化 `facts`**（同 `object_content` 返回或同级端点）：作者/年代/创作地/流派、媒材/
+  技法/尺寸/载体、馆藏编号/现藏地、主题/铭文签名、来源流转/入藏/法律归属、展览史/参考文献、作者生卒地、图。
+  **多语言**：数值/编码型（尺寸/年代/编号）语言无关；描述型（媒材/来源/展览）按语言本地化（接 §18b-2）。
+  数据已在 `MuseumObject` 字段 + `attributes`（JocondeSource 回写，§5b）；契约把它们装配成 facts 暴露。
+
+**前端呈现（不在本任务，移交前端任务；数据契约已支撑、后端零改动）**：
+- 见 `docs/superpowers/specs/2026-06-17-orsay-frontend-presentation-notes.md`。
+- 待该文档讨论 → 对照本契约 → 若某前端想法**需要新数据/字段**，把那个**契约改动**回填进本 §15。
+
+## 16. 前向兼容扩展点（现在不建，但样板不得阻断）
+
+- **文字高亮（朗读时高亮当前词/句）**：需"文字↔音频时间轴对齐"。设计为**纯叠加产物**——每段可选 marks 文件
+  （R2 同级 `.../{section}.marks.json`），**body 与 mp3 原封不动**。对齐用 **forced-alignment**（事后对齐既有
+  音频+文字，如 WhisperX/aeneas，**不依赖 TTS 返回时间戳**）→ 可对**所有已建馆就地回填，无需重跑**。
+  前端播放器已暴露 `positionStream`。**v1 仅保留约定（按段存音频、body 为干净纯文本、预留同级 marks），
+  不写代码、不做阻断它的设计。**
+- 不变量：音频按段落存、body 为可对齐纯文本、key 支持同级兄弟产物——已天然满足。
+
+## 17. 管线形态与 CLI
+
+沿用 v1 onboard CLI，加阶段：
+- `onboard <slug> seed-sections`：导入**多类别**段落骨架（staging+prod 各一次）。
+- `onboard <slug> fetch`：**多类别**抓取（Wikidata 多 category）。
+- `onboard <slug> generate --target ... [--preheat threshold] [--langs ...] [--force]`：按人气阈值+下限+上限预生成（§9）；`--top-n N` 仅手动覆盖。
+- `onboard <slug> tts --target ... [--top-n ...] [--langs ...]`：为 published 段按语言生成音频。
+- **金丝雀**：staging 跑样本 → `report.py` 人工审形式安全 → prod 全量（top-N）。幂等：已 published 跳过。
+- 容器内：`docker exec gomuseum_{staging,prod}_backend python scripts/onboard.py ...`。
+
+## 18. 可复制性（样板的关键）
+
+**复制到新馆 = 配置 + 跑命令，无主流程改动**：
+- **全局配置（单一真相源）**：`P31→类别` + `类别→段落集`（§18b-1）、目标语言集（默认 `en,fr,de,es,it,zh`）、
+  段落标签多语言、品牌音色、模型档位、**预生成规则（sitelinks 阈值/下限 floor/上限 cap，§9）**、轴心语言默认 en——馆无关、随时改。
+- **每馆配置**（`museums.yaml`）：slug、Wikidata 馆 QID、**馆所在国语言**（接地源语言用）、抓取类别集（或自动发现）、
+  规模、语言集/top-N/轴心语言 覆盖（可选）。
+- **通用机制**：源连接器、生成器、翻译、校验、状态机、识别匹配、CLI、列表/详情端点——全部馆无关、
+  类别无关、语言无关。
+- 加新馆：`museums.yaml` 加一条 → `onboard <new> fetch/seed-sections/generate/tts` → staging 审 → prod。
+- 加新类别：全局配置加该类别段落集（无代码）。
+- 加新源：实现一个 `Source` 连接器注册即接入——**经各自 Wikidata 外部 ID 属性自动发现、对所有适用馆自动生效**，
+  主流程零改。"国家级藏品库 via Wikidata 外部 ID"模式可泛化（法 Joconde/P347、德/西/意各有其库与属性，Europeana 聚合兜底）。
+
+## 18b. 零改动通用化硬前提（换任意馆都不改代码的必要项）
+
+> 🔴 **范围边界（诚实声明）**：整套架构**以 Wikidata 为脊柱**（按 P195 抓藏品、按 QID 主键、靠 Wikidata 外部 ID
+> 发现馆源）。**"零改动复制"成立的范围 = "在 Wikidata 有像样收录的馆"**（卢浮宫/大都会/奥赛等大馆 OK）。
+> **小馆/地方馆/新馆在 Wikidata 几乎没有藏品 → 抓出来是空的，需以"馆方自有 API 为脊柱"另案摄入（不同架构，非零改动）。**
+> 这是架构边界，不是 bug——避免对"复制到任意馆"过度承诺。
+
+样板要对**非绘画馆、非中英语言、图少馆、超大馆**都成立，以下是硬前提（缺则换馆要改代码 = 破功）：
+
+1. **类别配置单一真相源**：`P31 QID → 类别` 与 `类别 → 段落集` 做成**一份配置**（非硬编码、非各处各写），
+   被 fetch / seed-sections / 生成器 / prompt 共同读。**加新类别（陶瓷/书法/器物/文物…）= 改配置、零代码**。
+   未知类别 → 通用兜底集。生成 prompt 据"类别 + 段落集 + 类别描述"参数化，不写死绘画。
+2. **多语言标签补全**：`section_types` 段落标签、`Museum` 馆名/城市现仅 zh/en 两列 → 需覆盖**全部目标语言**，
+   否则非中英语言页标签/馆名退回英文。段落标签（约十几个固定词）→ i18n 配置/一次性翻译；
+   馆名/城市 → 从 **Wikidata 多语言 label** 拉。
+3. **图片可选**：抓取不再**强制 P18**（无 Wikimedia 图也入库），详情页图缺时占位/无图布局。否则图少的馆抓空。
+4. **抓取对超大馆可扩展**：大馆（卢浮宫/大都会数十万件）—— 抓取在 **SPARQL 层就按 sitelinks 降序、按类别取 top-N**
+   （而非全量拉回再筛），处理 SPARQL 超时/分页/限额。
+5. **类别自动发现（可选优化）**：理想是从藏品集 P31 **自动发现**该馆有哪些类别，免手工在 museums.yaml 列；
+   手工列也是 config（不破功），v1 可手工、自动发现留增强。
+6. **源自动发现注册表（地基 v1，连接器陆续加）**：`Source` 连接器进**注册表**，每个声明 `probe(对象/馆)`；
+   抓取时**读对象 Wikidata 外部 ID 属性**（P347→Joconde、P3634→Met、P350→RKD、…）**自动路由到已注册连接器**，
+   **零管理员配置、有就插上**。`official`（馆方）> Wikipedia > Wikidata 合并优先级；源自带官方图时优先用。
+   **v1 跑通 Wikidata+Wikipedia+JocondeSource 三连接器验证整条接缝**；v2 加 Europeana/Met 等只是注册新插件、
+   主流程零改、对所有适用馆自动生效。**这是"零改动扩展"被真实验证的关键**——不止抽象，而是跑过一个真馆源。
+
+## 19. 工程与合规约束（汇总）
+
+- **版权（B）**：生成只取事实、原创表达，不照搬 Wikipedia 句式；App 内数据来源致谢。
+- **礼貌抓取防被封（C，方向=当好客户端不绕限制）**：详见 §5——描述性 User-Agent（强制）+ 限速 + 退避（遵守
+  Retry-After）+ 缓存 + 批量 + 熔断 + 只用官方 API；**明确不做 IP/代理轮换等规避**（违反 Wikimedia ToS、风险永久封）。
+- **图片版权/法域（D，已知边界）**：图依赖 Wikimedia 图（图片可选，§18b-3）。奥赛多 1950 前公有领域 OK；
+  **现代艺术馆**（蓬皮杜等）图常受版权 → 无图。且"公有领域画作的忠实照片"权属**按法域不同**（美国 PD、部分欧盟可能有权），
+  跨国复制涉法律，超本任务范围，提醒知此边界。
+- **隐私**：识别未命中只记标签文本、不存用户原图（GDPR）。
+- **内容版本**：`content_version` 标记生成版本，prompt/模型升级后据此识别需重生成的内容，支持跨馆批量重跑。
+- **AI 内容披露**：内容**标注由 AI 生成/辅助** + "信息仅供参考"免责（部分法域/应用商店要求）。
+- **范围边界**：Wikidata 脊柱边界见 §18b 顶部声明（零改动仅对 Wikidata 有像样收录的馆成立）。
+- **付费门控 / 用户权益（边界，独立子系统，未来加法）**：内容（讲解+语音）很可能即付费功能本身；本任务只
+  "生产内容"、不"门控"。**用户/权益/计费是独立子系统**（权益分层、注册排名、配额、早期用户计划如"前 N 名
+  终身/一年/半年免费、条件=提 ≥5 条建议"、按用户计数通用反馈）——**不影响内容机制契约**。唯一交点：内容端点
+  （`object_content`/`/ask`/识别）将来被权益**加法式门控**（免费受限 vs 权益畅听），端点 forward-compat 接住即可，
+  门控逻辑住外部子系统。
+- **离线/弱网（前端/未来）**：博物馆弱网常见；数据模型（内容落库 + R2 音频 URL）**支撑将来"离线下载整馆"**，
+  离线 UX 属前端/未来。
+- **珍贵内容备份**：生成内容（body+音频）是花钱+人工校正的珍贵资产（区别于可复现事实）→ 确保 DB 备份 +
+  R2 持久 + 可导出。
+- **软性考量（记一笔，非代码硬伤）**：① 轴心语言默认 en、**按馆可配**（非西方艺术若本国语言源/效果更优可改，
+  §18b-1）；② **识别准确率跨类别未验证**——识别评测仅在绘画做过，立体物识别率可能低、需重测（质量非代码）；
+  ③ **源更新后再生成**：Wikipedia 改了如何重生成留 v2（无"源变检测"）；④ **上线后质量监控**：除金丝雀，
+  跟踪各馆/各段反馈率、needs_review 率、重生成率，知道机制好不好用；⑤ **蕴含校验器自身会错**（LLM-as-judge
+  有假阴假阳）——小样本人工抽查校准；⑥ **音频单独失败**：body 成功但 TTS 失败 → 文字照常服务、音频下次
+  （批量/播放时）补生成；⑦ **架构决策回流** `docs/architecture/data-and-content-architecture.md` 保持权威一致。
+
+## 20. 测试策略
+
+- **生成器（类别感知）**：mock LLM + 固定材料包 + 不同类别 → 断言取对应段落集、缺料段 None、provenance、
+  原创性（不等于源文）、content_version。
+- **蕴含/译文校验**：mock 判定器 → 剔不支持句、剔空标 needs_review、译文忠实。
+- **质量分/闸（§8A）**：mock 各检查 → 事实一致性（body 年代≠facts→标审）、格式/语言、低分→needs_review。
+- **金标准/回归集（§8D）**：固定已知答案对象集 → 抓取/解析断言；prompt 改后回归对比。
+- **多类别骨架/兜底**：seed 多类别；未知类别落通用兜底集。
+- **状态机/懒生成/续跑**：`absent`→generating+入队；Redis 锁去重 + 限速护栏；后台任务客户端断开仍落库；
+  超时回退 absent。
+- **识别接入**：命中（高置信）→ 内容；低置信→未命中；未命中→记标签（不存图）+ 聚合计数。
+- **列表端点**：分页 limit/offset、类别筛、popularity 排序。
+- **CLI**：按类别 top-N、幂等跳过、--force/版本落后重生成。
+- **金丝雀报告**：覆盖率/needs_review 计数。
+
+## 21. 实现分期（写计划时拆为多份）
+
+按依赖分期，每期独立交付、测试：
+1. **源地基 + 三连接器**：`Source` 注册表 + `probe` + **Wikidata 外部 ID 自动路由** + `official` 合并优先级；
+   连接器 **Wikidata + WikipediaSource（多源语言 en+馆国语言）+ JocondeSource（P347 自动发现，data.culture.gouv.fr）**；
+   多类别骨架（单一真相源配置 + 段落标签多语言）+ 多类别抓取（图片可选、SPARQL 层 top-N/分页）+ 事实/标签补全
+   （馆名/城市从 Wikidata 多语言 label）+ **礼貌抓取（UA/限速/退避/缓存/批量/熔断；不绕限制）**。
+2. **grounded 生成器（类别感知 + 英语轴心 + 翻译）+ 蕴含/译文校验 + 落库 + content_version**；批量 CLI
+   `generate`（按类别 top-N）；金丝雀报告。
+3. **TTS 阶段**：CLI `tts`（按语言、品牌音色）；接 `persist_section_audio`。
+4. **懒生成端点**：状态机 + 异步续跑 + Redis 锁/限速 + 渐进 + 轮询契约。
+5. **识别流接入（后端）**：识别→qid 匹配（置信门槛）+ 命中服务 + 未命中记录聚合。
+6. **API：分页 + 类别筛 + 热门排序列表端点**（加法式新端点）。
+
+> **前端呈现是独立下游任务**（不在本任务分期）：馆藏分类列表（类别 tab/滚动）+ 分段详情页
+> （tab/每段语音/自动连播/速率）+ 入口改向 + 未收录提示页。消费上述契约，后端零改动。
+> 见 frontend-presentation-notes，讨论后单独立项 + 写计划。
+
+## 22. 验收标准
+
+- staging 跑奥赛**多类别** top-N 样本 → 报告无空段/乱码、各类别段落集正确、needs_review 合理、人工审通过。
+- prod 按预生成规则（sitelinks 阈值+下限+上限，§9）生成后，`object_content` 对预生成范围内多类别藏品返回非空有序 tabs，
+  body 接地原创可溯源、音频可播。
+- **长尾**藏品首次打开/识别 → 触发懒生成、渐进显示；用户中途离开生成仍落库；二次访问秒出。
+- **识别**命中预生成藏品秒出；命中长尾懒生成；未命中返回未收录 + 后端记录聚合。
+- 同藏品二次请求 body/audio 复用、零重复 LLM/TTS 调用。
+- 列表端点分页 + 类别筛 + 热门排序正确，大馆不再单响应返回全部。
+- 加一个假想新馆/新类别（仅改配置 + 跑命令）走通 fetch→seed→generate→tts，无需改主流程代码。
+- **零改动通用化验收**：① 新增一个类别（仅改单一真相源配置）→ seed/生成都认它；② 切一种非中英语言 →
+  段落标签/馆名都本地化（非退回英文）；③ 构造无图对象 → 仍入库、详情占位；④ 礼貌抓取：带 UA、限速、
+  命中缓存不重复抓、429 退避。
+- **源可扩展接缝验收（真实跑通）**：奥赛对象经 **P347 自动发现 JocondeSource**、拉到权威法语事实、
+  以 `official` 优先级合并入 sources；mock 一个新连接器声明 `probe` 覆盖某馆 → 注册即自动参与，主流程零改。
+
+---
+
+# 附录 A. API 契约附录（claude design + 后端的单一接口基线）
+
+> 本附录把 §15 散落的契约汇成精确 shape，供前端（claude design）对着 mock 建、后端照着实现。
+> 全部前缀 `/api/v1`。约定：① 所有新端点/字段**加法式**，不破已装 App；② 字段**可能缺失/为空 → 前端占位、
+> 禁裸强转**（CLAUDE.md）；③ 描述型文本按 `language` 本地化，数值/编码型语言无关。
+
+## A1. `GET /museums` — 馆列表（首页"附近"用）
+```jsonc
+[ { "slug":"orsay", "name":"奥赛博物馆", "city":"巴黎", "country":"FR",
+    "coordinates":[48.8599,2.3266], "artwork_count":1400 } ]
+```
+（距离由前端用 `coordinates` + 用户定位本地算。）
+
+## A2. `GET /museums/{slug}?language=zh` — 馆详情（建类别 tab + 实用信息）
+```jsonc
+{ "slug":"orsay", "name":"奥赛博物馆", "city":"巴黎", "country":"FR",
+  "coordinates":[48.8599,2.3266],
+  "opening_hours":"周二–周日 9:30–18:00", "official_url":"https://www.musee-orsay.fr",
+  "categories":[ {"code":"all","label":"全部","count":1400},
+                 {"code":"painting","label":"绘画","count":500},
+                 {"code":"sculpture","label":"雕塑","count":300},
+                 {"code":"photograph","label":"摄影","count":300},
+                 {"code":"decorative","label":"装饰艺术","count":300} ]
+  // 旧字段 artworks 保留（老 App 不破）；门票价格不硬存，走 official_url
+}
+```
+
+## A3. `GET /museums/{slug}/objects?category=painting&sort=popularity&limit=50&offset=0` — 分页藏品列表
+```jsonc
+{ "items":[ {"qid":"Q3879260","title":"在阿尔勒的卧室","artist":"梵高","year":"1889",
+             "thumbnail":"https://pub-…r2.dev/…/thumb.jpg"} ],
+  "total":500, "limit":50, "offset":0 }
+```
+（`category=all` 或省略 = 跨类别混排；无限滚动用 `offset` 递增。）
+
+## A4. `GET /museums/{slug}/objects/search?q=RF2740&language=zh` — 搜索（名/作者/展签编号）
+```jsonc
+{ "items":[ {"qid":"Q3879260","title":"…","artist":"…","thumbnail":"https://…"} ] }
+```
+（编号=Joconde `numero_inventaire`/Wikidata P217，**格式归一**忽略空格/大小写。）
+
+## A5. `GET /museums/{slug}/objects/{qid}/content?language=fr` — 详情内容（核心）
+```jsonc
+{ "qid":"Q3879260", "category":"painting", "language":"fr",
+  "status":"published",                       // absent|generating|published|needs_review
+  "title":"Étude : torse, effet de soleil",   // 原文标题，不裸翻译
+  "images":[ {"url":"https://…/img.jpg","credit":"Wikimedia Commons / Domaine public"} ],
+  "facts":{ "artist":"Pierre-Auguste Renoir","date":"vers 1876","medium":"huile sur toile",
+            "dimensions":"81 × 64,8 cm","inventory":"RF 2740","location":"musée d'Orsay",
+            "provenance":"ancienne coll. G. Caillebotte…","exhibitions":["2e expo impressionniste, 1876"],
+            "bibliography":["DAULTE 201"],"artist_life":"Limoges, 1841 – Cagnes-sur-Mer, 1919" },
+  "tabs":[ {"section_code":"overview","label":"Aperçu","icon":"…","body":"…",
+            "audio_url":"https://…/overview.mp3"} ],   // 按 sort_order；body 空/needs_review→前端"待完善"
+  "suggested_questions":[ {"question":"Pourquoi la perspective est-elle déformée ?","answer":"…"} ]
+}
+```
+（对象 `absent` → 返回 `status:"generating"` + 已有 title/images/facts，前端轮询直至 published。）
+
+## A6. `POST /content/ask` — 对话式追问（多轮、接地 only）
+```jsonc
+// 请求（客户端持历史；后端无状态）
+{ "qid":"Q3879260", "language":"fr",
+  "messages":[ {"role":"user","content":"Pourquoi la perspective est-elle déformée ?"},
+               {"role":"assistant","content":"…"},
+               {"role":"user","content":"Combien de temps y a-t-il vécu ?"} ] }
+// 响应
+{ "answer":"…", "grounded":true, "turn_limit_reached":false }
+```
+（`grounded:false` = 诚实"资料未涵盖"；答案朗读用 A8 ad-hoc TTS。）
+
+## A7. `POST /content/feedback` — 内容报错（§3 用户反馈兜底）
+```jsonc
+{ "qid":"Q3879260", "language":"fr", "section_code":"background", "issue":"年代写错了" }
+// → { "ok":true }  （标该 (对象,语言,段落) needs_review → 触发重生成）
+```
+
+## A8. `POST /content/tts/generate` — TTS（已上线）
+- **section 模式**（带 `qid`+`section_code`）：落库返回 `{audio_url,cached}`（[[tts-audio-persistence]]）。
+- **ad-hoc 模式**（仅 `text`）：流式 mp3，**用于 Q&A 答案朗读**（不落库、即用即弃）。
+
+## A9. `POST /recognition/recognize` — 识别（返回候选供确认）
+```jsonc
+// 响应（top-N 候选 + 内容可用性）
+{ "candidates":[ {"matched_qid":"Q3879260","title":"在阿尔勒的卧室","artist":"梵高",
+                  "museum":"奥赛博物馆","thumbnail":"https://…","confidence":0.94} ],
+  "low_confidence":false }   // 最高候选低于阈值=true → 前端提示核对/搜索
+// 未命中库 → candidates:[] + 前端显"未收录"+反馈；后端记标签文本(不存原图)聚合
+```
+（命中作品的内容经 A5 取；命中长尾 absent→懒生成；可选 `museum_slug` 参数按当前馆收窄候选。）
+
+> **门控（未来加法）**：A5/A6/识别等将来被用户权益**加法式门控**（§19），逻辑住外部用户/权益子系统，本契约不含。
