@@ -38,3 +38,12 @@ def test_cache_key_includes_source_and_day():
     assert any(
         "joconde" in k and "REF9" in k and "2026-06-20" in k for k in storage.objects
     )
+
+
+def test_day_defaults_to_today_utc():
+    from datetime import datetime, timezone
+
+    storage = FakeStorage()
+    SourceCache(storage).get_or_fetch("wikidata", "Q9", lambda: {"x": 1})
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    assert any(today in k for k in storage.objects)

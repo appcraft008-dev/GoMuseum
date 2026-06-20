@@ -17,6 +17,9 @@ class SourceCache:
         return f"source-cache/{source}/{self._day}/{ident}.json"
 
     def get_or_fetch(self, source: str, ident: str, fetch: Callable[[], dict]) -> dict:
+        """缓存命中则返回,否则 fetch 并写缓存。
+        ⚠️ check-then-act 无锁,假定**富化管线串行调用**(onboard CLI 单进程)。
+        并发调用同一 (source,ident,day) 可能重复 fetch/覆盖——本机制不在并发下使用。"""
         key = self._key(source, ident)
         cached = self._storage.get(key)
         if cached is not None:
