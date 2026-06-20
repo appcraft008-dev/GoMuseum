@@ -17,6 +17,7 @@ from app.services.enrichment.catalog import MuseumConfig
 from app.services.enrichment.fetcher import Fetcher
 from app.services.enrichment.loader import load
 from app.services.enrichment.pack_store import PackStore
+from app.services.enrichment.registry import SourceRegistry
 from app.services.enrichment.sources.wikidata import WikidataSource
 
 CFG = MuseumConfig(
@@ -105,7 +106,12 @@ def _build_pack(monkeypatch) -> tuple[PackStore, str]:
     )
 
     ps = PackStore(_MemStorage())
-    key = Fetcher(catalog=_OneCatalog(), sources=[src], pack_store=ps).fetch("orsay")
+    key = Fetcher(
+        catalog=_OneCatalog(),
+        spine=src,
+        registry=SourceRegistry([]),
+        pack_store=ps,
+    ).fetch("orsay")
     return ps, key
 
 
