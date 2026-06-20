@@ -198,8 +198,15 @@ needs_review 率/重生成率（§19）；**跨源一致性当信号**（Wikidat
 - **一次性 + 永久落库**：body/audio 每件只生成一次，之后读 DB/R2，零重复调用。
 - **便宜模型**：grounded 生成/蕴含校验/翻译用 gpt-4o-mini / Claude Haiku 档；顶配仅开发期调 prompt/抽验。
 - **批量 API 折扣**：离线批量走 batch 接口（约 5 折）。
-- **按类别 top-N 分层（v1 实际范围）**：**绘画 top 500 + 其他类别各 top 300** 预生成；**其余长尾懒生成**
-  （正好验证懒生成有效）。不为未经市场验证的全量买单。
+- **预生成范围 = 人气阈值 + 下限 + 上限（自适应每馆每类别，非手填绝对数）**：
+  - **阈值**（主）：预生成所有 **sitelinks ≥ 阈值** 的作品（museum-agnostic 全局配置）——名作多的馆预生成多、
+    小馆少；**类别天然分流**（雕塑/摄影 Wikipedia 覆盖少→过阈值少，自动复现"绘画多其他少"，不手填）。
+  - **下限**：每馆至少预生成 top K（如 80），保证小馆也有一批秒出。
+  - **上限**：每馆封顶 M（如 1500），超大馆超出走懒生成、封顶成本。
+  - **懒生成兜底**：阈值偏保守也只是多点懒生成、不出空白，**容错**。
+  - **最终需求驱动**：上线后用真实浏览/识别事件预生成"用户真看的"，sitelinks 代理逐步退役（§10）。
+  - 奥赛"绘画~500/其他~300"= 这套规则跑出的结果 / per-museum override 示例，**非写死魔法数**。
+  - 不为未经市场验证的全量买单。
 - **运行时是 API，不是 Claude 订阅会话**：机制须可自动化 + 支持懒生成运行时。Claude（开发助手）
   仅开发期打磨 prompt、抽验样本、设计校验，不当批量生成运行时。
 - **量级**：英语权威正文每件只生成+校验一次，其余语言廉价翻译。按 top-N 范围 + 便宜模型 + 批量折扣，
@@ -209,17 +216,18 @@ needs_review 率/重生成率（§19）；**跨源一致性当信号**（Wikidat
 
 ## 10. 人气信号 / top-N
 
-- **v1：Wikidata sitelinks 数**（已入库 `MuseumObject.popularity`，`museum_repo` 已按它降序）。
-  top-N 现成；**按类别各取 top-N**（绘画 500 / 其他 300）。
-- sitelinks 高 ≈ 有丰富 Wikipedia 条目 ≈ 用户最想看——三者重合，top-N 既选中最爱看的、又最能生成好内容。
-- **future**：Wikipedia pageviews、App 埋点逐步取代代理值。
+- **v1：Wikidata sitelinks 数**（已入库 `MuseumObject.popularity`，`museum_repo` 已按它降序）作人气代理。
+- **预生成范围按 sitelinks 阈值 + 下限 + 上限**（§9，自适应每馆每类别，非手填绝对数）。
+- sitelinks 高 ≈ 有丰富 Wikipedia 条目 ≈ 用户最想看——三者重合，预生成既选中最爱看的、又最能生成好内容。
+- **future（需求驱动）**：上线后 App 浏览/识别埋点（§12 事件）→ 预生成"用户真看的"，sitelinks 代理逐步退役；
+  Wikipedia pageviews 亦可作中间信号。
 
 ## 11. 内容触发 + 生成状态机
 
 **生成状态**（`object_content_sections.status`）：
 `absent`（未生成）→ `generating`（生成中）→ `published` / `needs_review`（待人工/待完善）。
 
-**① 批量预生成（CLI）**：`onboard <slug> generate --target ... [--top-n painting=500,other=300] [--langs ...] [--force]`
+**① 批量预生成（CLI）**：`onboard <slug> generate --target ... [--preheat threshold|--top-n N] [--langs ...] [--force]`
 按类别 top-N 遍历 → `ContentEnricher` → 落库；随后 `onboard <slug> tts` 为 published 段按语言生成音频。
 
 **② 懒生成（端点，做牢、渐进、续跑、有护栏）**：
@@ -368,7 +376,7 @@ needs_review 率/重生成率（§19）；**跨源一致性当信号**（Wikidat
 沿用 v1 onboard CLI，加阶段：
 - `onboard <slug> seed-sections`：导入**多类别**段落骨架（staging+prod 各一次）。
 - `onboard <slug> fetch`：**多类别**抓取（Wikidata 多 category）。
-- `onboard <slug> generate --target ... [--top-n painting=500,other=300] [--langs ...] [--force]`：按类别 top-N 生成。
+- `onboard <slug> generate --target ... [--preheat threshold] [--langs ...] [--force]`：按人气阈值+下限+上限预生成（§9）；`--top-n N` 仅手动覆盖。
 - `onboard <slug> tts --target ... [--top-n ...] [--langs ...]`：为 published 段按语言生成音频。
 - **金丝雀**：staging 跑样本 → `report.py` 人工审形式安全 → prod 全量（top-N）。幂等：已 published 跳过。
 - 容器内：`docker exec gomuseum_{staging,prod}_backend python scripts/onboard.py ...`。
@@ -377,7 +385,7 @@ needs_review 率/重生成率（§19）；**跨源一致性当信号**（Wikidat
 
 **复制到新馆 = 配置 + 跑命令，无主流程改动**：
 - **全局配置（单一真相源）**：`P31→类别` + `类别→段落集`（§18b-1）、目标语言集（默认 `en,fr,de,es,it,zh`）、
-  段落标签多语言、品牌音色、模型档位、top-N 默认（painting=500,other=300）、轴心语言默认 en——馆无关、随时改。
+  段落标签多语言、品牌音色、模型档位、**预生成规则（sitelinks 阈值/下限 floor/上限 cap，§9）**、轴心语言默认 en——馆无关、随时改。
 - **每馆配置**（`museums.yaml`）：slug、Wikidata 馆 QID、**馆所在国语言**（接地源语言用）、抓取类别集（或自动发现）、
   规模、语言集/top-N/轴心语言 覆盖（可选）。
 - **通用机制**：源连接器、生成器、翻译、校验、状态机、识别匹配、CLI、列表/详情端点——全部馆无关、
@@ -477,7 +485,7 @@ needs_review 率/重生成率（§19）；**跨源一致性当信号**（Wikidat
 ## 22. 验收标准
 
 - staging 跑奥赛**多类别** top-N 样本 → 报告无空段/乱码、各类别段落集正确、needs_review 合理、人工审通过。
-- prod 全量（绘画 500 + 其他各 300）生成后，`object_content` 对多类别 top-N 返回非空有序 tabs，
+- prod 按预生成规则（sitelinks 阈值+下限+上限，§9）生成后，`object_content` 对预生成范围内多类别藏品返回非空有序 tabs，
   body 接地原创可溯源、音频可播。
 - **长尾**藏品首次打开/识别 → 触发懒生成、渐进显示；用户中途离开生成仍落库；二次访问秒出。
 - **识别**命中预生成藏品秒出；命中长尾懒生成；未命中返回未收录 + 后端记录聚合。
