@@ -168,14 +168,30 @@ body=None 段不发布（标 `needs_review`/不建行）。
 **幂等**：已 `published` 的 (段,语言) 默认跳过，除非 `--force`/源更新/**content_version 落后**；加语言只补缺。
 **统一一份、三触发**：批量 CLI、懒生成端点、识别流都调它。
 
-## 8. 质量门
+## 8. 质量门（分层检查体系）
 
-- **自动蕴含校验**：每段 body 第二次 LLM 调用（便宜模型）逐句判"能否由材料推出"，删不支持句；
-  剔后太薄/空 → 标 `needs_review`，不发布。
-- **完整性/格式检查**（纯代码）：无 null、无乱码、各语言段确为该语言。
-- **人工只审形式安全**：staging 跑样本 → `report.py` 审阅报告（每段前若干字、needs_review、覆盖率），
-  人眼扫空段/乱码/冒犯，**不审事实对错**。
-- **用户反馈兜底**：被报错 (object,lang,section) 置回 `needs_review` 触发重生成（v1 预留状态）。
+**哲学**：管理员审不了事实对错 → 质量靠**自动闸（每件都过）+ 质量报告（看整体）+ 人工抽样校准（不全审）+
+用户反馈（规模化真值）**。
+
+**A. 每件自动闸（挡坏内容，失败→`needs_review` 不发布）**——给每件/每段算**质量分**，聚合：
+1. **接地/蕴含分**：逐句"能否由材料推出"（便宜模型），删不支持句；删太多→低分。
+2. **事实一致性**：叙事 body 与结构化硬事实对账（body 说的年代/作者/尺寸 vs facts），矛盾→扣分/标审。
+3. **完整性**：该有段落齐、无空段/null。
+4. **格式/语言**：langdetect 各语言段确为该语言、无乱码/残留标记、长度合理。
+5. **译文忠实**：每语言译文 vs 英语轴心做蕴含，防漂移/丢事实。
+6. **安全**：moderation 无冒犯/不当。
+→ 低分自动 `needs_review`、不发布。
+
+**B. 每轮质量报告（staging，金丝雀过关才上 prod）**——`report.py` 升级为**质量指标**（非仅计数）：
+覆盖率、`needs_review` %、**接地分分布**、**源冲突数**（§5b）、各语言覆盖、缺图/缺音频数。
+
+**C. 人工抽样（窄，只三件，不全审）**：① 形式安全（空段/乱码/冒犯，非母语可看）；② **校准自动裁判**
+（抽样看蕴含裁判判得对不对，防系统性犯错）；③ 名作读通顺（读感，**不审事实**）。
+
+**D. 金标准/回归集**：一小撮已知答案对象——验抓取/解析对；**prompt/模型改了在此组重跑对比，防质量退化无人知**。
+
+**E. 上线后真值**：用户内容报错（§3 端点）→ `needs_review` → 重生成（**懂行的人才是终审**）；监控反馈率/
+needs_review 率/重生成率（§19）；**跨源一致性当信号**（Wikidata+Joconde+Wikipedia 三方一致=高可信、冲突=警报）。
 
 ## 9. 成本策略
 
@@ -430,6 +446,8 @@ body=None 段不发布（标 `needs_review`/不建行）。
 - **生成器（类别感知）**：mock LLM + 固定材料包 + 不同类别 → 断言取对应段落集、缺料段 None、provenance、
   原创性（不等于源文）、content_version。
 - **蕴含/译文校验**：mock 判定器 → 剔不支持句、剔空标 needs_review、译文忠实。
+- **质量分/闸（§8A）**：mock 各检查 → 事实一致性（body 年代≠facts→标审）、格式/语言、低分→needs_review。
+- **金标准/回归集（§8D）**：固定已知答案对象集 → 抓取/解析断言；prompt 改后回归对比。
 - **多类别骨架/兜底**：seed 多类别；未知类别落通用兜底集。
 - **状态机/懒生成/续跑**：`absent`→generating+入队；Redis 锁去重 + 限速护栏；后台任务客户端断开仍落库；
   超时回退 absent。
@@ -471,3 +489,97 @@ body=None 段不发布（标 `needs_review`/不建行）。
   命中缓存不重复抓、429 退避。
 - **源可扩展接缝验收（真实跑通）**：奥赛对象经 **P347 自动发现 JocondeSource**、拉到权威法语事实、
   以 `official` 优先级合并入 sources；mock 一个新连接器声明 `probe` 覆盖某馆 → 注册即自动参与，主流程零改。
+
+---
+
+# 附录 A. API 契约附录（claude design + 后端的单一接口基线）
+
+> 本附录把 §15 散落的契约汇成精确 shape，供前端（claude design）对着 mock 建、后端照着实现。
+> 全部前缀 `/api/v1`。约定：① 所有新端点/字段**加法式**，不破已装 App；② 字段**可能缺失/为空 → 前端占位、
+> 禁裸强转**（CLAUDE.md）；③ 描述型文本按 `language` 本地化，数值/编码型语言无关。
+
+## A1. `GET /museums` — 馆列表（首页"附近"用）
+```jsonc
+[ { "slug":"orsay", "name":"奥赛博物馆", "city":"巴黎", "country":"FR",
+    "coordinates":[48.8599,2.3266], "artwork_count":1400 } ]
+```
+（距离由前端用 `coordinates` + 用户定位本地算。）
+
+## A2. `GET /museums/{slug}?language=zh` — 馆详情（建类别 tab + 实用信息）
+```jsonc
+{ "slug":"orsay", "name":"奥赛博物馆", "city":"巴黎", "country":"FR",
+  "coordinates":[48.8599,2.3266],
+  "opening_hours":"周二–周日 9:30–18:00", "official_url":"https://www.musee-orsay.fr",
+  "categories":[ {"code":"all","label":"全部","count":1400},
+                 {"code":"painting","label":"绘画","count":500},
+                 {"code":"sculpture","label":"雕塑","count":300},
+                 {"code":"photograph","label":"摄影","count":300},
+                 {"code":"decorative","label":"装饰艺术","count":300} ]
+  // 旧字段 artworks 保留（老 App 不破）；门票价格不硬存，走 official_url
+}
+```
+
+## A3. `GET /museums/{slug}/objects?category=painting&sort=popularity&limit=50&offset=0` — 分页藏品列表
+```jsonc
+{ "items":[ {"qid":"Q3879260","title":"在阿尔勒的卧室","artist":"梵高","year":"1889",
+             "thumbnail":"https://pub-…r2.dev/…/thumb.jpg"} ],
+  "total":500, "limit":50, "offset":0 }
+```
+（`category=all` 或省略 = 跨类别混排；无限滚动用 `offset` 递增。）
+
+## A4. `GET /museums/{slug}/objects/search?q=RF2740&language=zh` — 搜索（名/作者/展签编号）
+```jsonc
+{ "items":[ {"qid":"Q3879260","title":"…","artist":"…","thumbnail":"https://…"} ] }
+```
+（编号=Joconde `numero_inventaire`/Wikidata P217，**格式归一**忽略空格/大小写。）
+
+## A5. `GET /museums/{slug}/objects/{qid}/content?language=fr` — 详情内容（核心）
+```jsonc
+{ "qid":"Q3879260", "category":"painting", "language":"fr",
+  "status":"published",                       // absent|generating|published|needs_review
+  "title":"Étude : torse, effet de soleil",   // 原文标题，不裸翻译
+  "images":[ {"url":"https://…/img.jpg","credit":"Wikimedia Commons / Domaine public"} ],
+  "facts":{ "artist":"Pierre-Auguste Renoir","date":"vers 1876","medium":"huile sur toile",
+            "dimensions":"81 × 64,8 cm","inventory":"RF 2740","location":"musée d'Orsay",
+            "provenance":"ancienne coll. G. Caillebotte…","exhibitions":["2e expo impressionniste, 1876"],
+            "bibliography":["DAULTE 201"],"artist_life":"Limoges, 1841 – Cagnes-sur-Mer, 1919" },
+  "tabs":[ {"section_code":"overview","label":"Aperçu","icon":"…","body":"…",
+            "audio_url":"https://…/overview.mp3"} ],   // 按 sort_order；body 空/needs_review→前端"待完善"
+  "suggested_questions":[ {"question":"Pourquoi la perspective est-elle déformée ?","answer":"…"} ]
+}
+```
+（对象 `absent` → 返回 `status:"generating"` + 已有 title/images/facts，前端轮询直至 published。）
+
+## A6. `POST /content/ask` — 对话式追问（多轮、接地 only）
+```jsonc
+// 请求（客户端持历史；后端无状态）
+{ "qid":"Q3879260", "language":"fr",
+  "messages":[ {"role":"user","content":"Pourquoi la perspective est-elle déformée ?"},
+               {"role":"assistant","content":"…"},
+               {"role":"user","content":"Combien de temps y a-t-il vécu ?"} ] }
+// 响应
+{ "answer":"…", "grounded":true, "turn_limit_reached":false }
+```
+（`grounded:false` = 诚实"资料未涵盖"；答案朗读用 A8 ad-hoc TTS。）
+
+## A7. `POST /content/feedback` — 内容报错（§3 用户反馈兜底）
+```jsonc
+{ "qid":"Q3879260", "language":"fr", "section_code":"background", "issue":"年代写错了" }
+// → { "ok":true }  （标该 (对象,语言,段落) needs_review → 触发重生成）
+```
+
+## A8. `POST /content/tts/generate` — TTS（已上线）
+- **section 模式**（带 `qid`+`section_code`）：落库返回 `{audio_url,cached}`（[[tts-audio-persistence]]）。
+- **ad-hoc 模式**（仅 `text`）：流式 mp3，**用于 Q&A 答案朗读**（不落库、即用即弃）。
+
+## A9. `POST /recognition/recognize` — 识别（返回候选供确认）
+```jsonc
+// 响应（top-N 候选 + 内容可用性）
+{ "candidates":[ {"matched_qid":"Q3879260","title":"在阿尔勒的卧室","artist":"梵高",
+                  "museum":"奥赛博物馆","thumbnail":"https://…","confidence":0.94} ],
+  "low_confidence":false }   // 最高候选低于阈值=true → 前端提示核对/搜索
+// 未命中库 → candidates:[] + 前端显"未收录"+反馈；后端记标签文本(不存原图)聚合
+```
+（命中作品的内容经 A5 取；命中长尾 absent→懒生成；可选 `museum_slug` 参数按当前馆收窄候选。）
+
+> **门控（未来加法）**：A5/A6/识别等将来被用户权益**加法式门控**（§19），逻辑住外部用户/权益子系统，本契约不含。
