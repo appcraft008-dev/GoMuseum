@@ -272,9 +272,14 @@ body=None 段不发布（标 `needs_review`/不建行）。
 - **藏品列表端点（新增，分页 + 类别筛 + 热门排序）**：现状 `/museums/{slug}` 一次性返回全部 artworks
   （多类别跑全后上千条、巨型响应、今日崩于解析 246 条）。新增**加法式**端点
   `GET /museums/{slug}/objects?category=&sort=popularity&limit=50&offset=0`（不动老端点 → 老 App 不破）。
-- **详情内容端点（已有）**：`GET .../objects/{qid}/content?language={lang}` → **按 sort_order 有序**分段
-  `{section_code,label,icon,body,audio_url,status}`；段 body 空/`needs_review` → 前端可显"待完善"；
-  对象 `absent` → `status: generating`（前端轮询直至 published）。新增字段（如 status）**加法式**。
+- **详情内容端点（扩展，完整 shape 见下）**：`GET .../objects/{qid}/content?language={lang}` 返回
+  `{qid,category,language,status,title,images[],facts{},tabs[]}`：
+  - `status`：`absent|generating|published|needs_review`（对象 absent → 前端轮询直至 published）。
+  - `title`：原文标题（§14 不裸翻译）。
+  - `images[]`：`{url,credit}` **语言无关**；v1 一张（P18），**数组留多图/swipe 前向兼容**；`credit` 图片署名（合规）。
+  - `facts{}`：硬事实（§15 facts 条）；描述型按 language 本地化、数值型语言无关。
+  - `tabs[]`：**按 sort_order 有序**分段 `{section_code,label,icon,body,audio_url}`；body 空/`needs_review` → "待完善"。
+  - 所有新增字段（status/title/images/facts）**加法式**，不破老解析。
 - **识别→内容**（后端逻辑，§12）：返回 **top-N 候选** `{matched_qid, 名称, 作者, 馆, 缩略图, 置信度}`
   （供前端确认列表）+ 命中后内容可用性（秒出/generating）；未命中返回"未收录"。
 - **藏品搜索端点（新增）**：识别"都不是?搜索"兜底需要——按名/作者/馆藏编号检索某馆藏品，返回候选
