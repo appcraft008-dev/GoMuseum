@@ -58,3 +58,33 @@ def test_circuit_breaker_raises_after_repeated_failures():
     s = PoliteSession(user_agent="UA", max_retries=2, sleep=lambda _: None)
     with pytest.raises(RuntimeError, match="耗尽重试"):
         s.get_json("https://x", _transport=fake_get)
+
+
+def test_non_retryable_status_raises_immediately_no_retry():
+    calls = {"n": 0}
+    sleeps = []
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        calls["n"] += 1
+        return _FakeResp(404, body=b"not found")
+
+    s = PoliteSession(user_agent="UA", max_retries=3, sleep=sleeps.append)
+    with pytest.raises(RuntimeError, match="404"):
+        s.get_json("https://x", _transport=fake_get)
+    assert calls["n"] == 1  # 立即抛,不重试
+    assert sleeps == []  # 不退避
+
+
+def test_fallback_delay_when_no_retry_after():
+    calls = {"n": 0}
+    sleeps = []
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _FakeResp(503)  # 无 Retry-After
+        return _FakeResp(200, body=b'{"ok":1}')
+
+    s = PoliteSession(user_agent="UA", max_retries=2, sleep=sleeps.append)
+    assert s.get_json("https://x", _transport=fake_get) == {"ok": 1}
+    assert sleeps == [2.0]  # fallback = 2.0*(attempt0+1)
