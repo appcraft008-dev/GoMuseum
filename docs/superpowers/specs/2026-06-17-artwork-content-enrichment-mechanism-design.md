@@ -235,6 +235,10 @@ body=None 段不发布（标 `needs_review`/不建行）。
    **人工择优**把真藏品加进库再富化——**不自动为未命中生成**（省钱 + 防垃圾）。
 - **老 guide 流**（实时合成整段、不落库）：两入口（浏览/识别）改走新内容后已无用，**先标 deprecated 保留
   作兜底，新流跑稳后再清**（不在过渡期删工作代码）。
+- **识别事件记录（多用途地基）**：识别（命中&未命中）产出事件 `{user, qid|label, museum, ts, outcome}`——
+  一鱼多吃：未命中聚合（本节）、**人气信号**（App 埋点取代 sitelinks，§10 future）、**质量监控**（§19）、
+  **用户足迹/历史**（独立功能）。本任务只确立"识别要产出此事件"；事件存储 + 历史查询端点 + 足迹地图 UI =
+  **独立"用户历史"功能，不在本内容任务**。
 
 ## 13. 音频
 
@@ -273,9 +277,9 @@ body=None 段不发布（标 `needs_review`/不建行）。
   （多类别跑全后上千条、巨型响应、今日崩于解析 246 条）。新增**加法式**端点
   `GET /museums/{slug}/objects?category=&sort=popularity&limit=50&offset=0` → `{items:[{qid,title,artist,year,thumbnail}],total,limit,offset}`
   （不动老端点 → 老 App 不破；`category=all`/省略=跨类别混排）。
-- **馆信息含类别 facet（新增，给前端建类别 tab）**：`GET /museums/{slug}?language={lang}` **加法式**补
-  `categories:[{code,label,count}]`（label 按语言本地化，含合成项 `all`）——前端据此渲染类别 tab，**不写死类别**；
-  老 `artworks` 字段保留（老 App 不破）。
+- **馆信息含类别 facet + 坐标（新增）**：`GET /museums/{slug}?language={lang}` **加法式**补
+  `categories:[{code,label,count}]`（label 按语言本地化、含合成项 `all`，前端据此建类别 tab、不写死）
+  + `coordinates:[lat,lng]`（馆经纬度，来自 Wikidata P625/Joconde，供地图/附近用）；老 `artworks` 保留（老 App 不破）。
 - **详情内容端点（扩展，完整 shape 见下）**：`GET .../objects/{qid}/content?language={lang}` 返回
   `{qid,category,language,status,title,images[],facts{},tabs[]}`：
   - `status`：`absent|generating|published|needs_review`（对象 absent → 前端轮询直至 published）。
