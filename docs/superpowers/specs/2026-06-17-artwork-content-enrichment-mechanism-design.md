@@ -277,9 +277,13 @@ body=None 段不发布（标 `needs_review`/不建行）。
   （多类别跑全后上千条、巨型响应、今日崩于解析 246 条）。新增**加法式**端点
   `GET /museums/{slug}/objects?category=&sort=popularity&limit=50&offset=0` → `{items:[{qid,title,artist,year,thumbnail}],total,limit,offset}`
   （不动老端点 → 老 App 不破；`category=all`/省略=跨类别混排）。
-- **馆信息含类别 facet + 坐标（新增）**：`GET /museums/{slug}?language={lang}` **加法式**补
-  `categories:[{code,label,count}]`（label 按语言本地化、含合成项 `all`，前端据此建类别 tab、不写死）
-  + `coordinates:[lat,lng]`（馆经纬度，来自 Wikidata P625/Joconde，供地图/附近用）；老 `artworks` 保留（老 App 不破）。
+- **馆信息含类别 facet + 坐标 + 实用信息（新增）**：`GET /museums/{slug}?language={lang}` **加法式**补
+  `categories:[{code,label,count}]`（label 本地化、含 `all`，建类别 tab、不写死）
+  + `coordinates:[lat,lng]`（馆经纬度，Wikidata P625/Joconde，供地图/距离/附近）
+  + `opening_hours`、`official_url`（馆级实用信息；开放时间来自 Wikidata/官方、变化慢；**门票价格易变不可靠 → 存稳定的
+  官网/购票 URL，不硬存价格**）；老 `artworks` 保留（老 App 不破）。距离 xx km 由前端用坐标本地算。
+- **藏品搜索端点（确认含馆藏编号）**：见下"搜索端点"——支持**名/作者/馆藏编号(展签编号)**；编号 = Joconde
+  `numero_inventaire`/Wikidata P217（已抓），需**格式归一**（忽略空格/大小写）。
 - **详情内容端点（扩展，完整 shape 见下）**：`GET .../objects/{qid}/content?language={lang}` 返回
   `{qid,category,language,status,title,images[],facts{},tabs[]}`：
   - `status`：`absent|generating|published|needs_review`（对象 absent → 前端轮询直至 published）。
