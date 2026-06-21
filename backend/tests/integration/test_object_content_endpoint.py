@@ -81,3 +81,12 @@ def test_object_content_slug_mismatch(client):
     """Object exists but under a different museum slug → 404."""
     r = client.get("/api/v1/museums/louvre/objects/Q1/content?language=zh")
     assert r.status_code == 404
+
+
+def test_object_content_labels_localized_fr(client):
+    r = client.get("/api/v1/museums/orsay/objects/Q1/content?language=fr")
+    assert r.status_code == 200
+    tabs = r.json()["tabs"]
+    overview = next((t for t in tabs if t["section_code"] == "overview"), None)
+    assert overview is not None
+    assert overview["label"] == "Aperçu"

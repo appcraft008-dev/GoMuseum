@@ -1,5 +1,6 @@
 from app.services.enrichment.catalog import MuseumConfig
 from app.services.enrichment.fetcher import Fetcher
+from app.services.enrichment.registry import SourceRegistry
 from app.services.enrichment.sources.base import ObjectContribution
 
 CFG = MuseumConfig(
@@ -36,7 +37,12 @@ class FakePackStore:
 
 def test_fetch_builds_pack_with_museum_and_objects():
     ps = FakePackStore()
-    f = Fetcher(catalog=FakeCatalog(), sources=[FakeSource()], pack_store=ps)
+    f = Fetcher(
+        catalog=FakeCatalog(),
+        spine=FakeSource(),
+        registry=SourceRegistry([]),
+        pack_store=ps,
+    )
     key = f.fetch("orsay")
     assert key.endswith(".json")
     pack = ps.saved
@@ -47,3 +53,111 @@ def test_fetch_builds_pack_with_museum_and_objects():
     assert q1["title_zh"] == "起源"
     assert q1["image"]["source_url"] == "http://x/a.jpg"
     assert q1["sources"]["wikidata"]["raw"] == {"r": 1}
+
+
+def test_two_phase_routes_enrichment_by_external_id():
+    from app.services.enrichment.fetcher import Fetcher
+    from app.services.enrichment.registry import SourceRegistry
+    from app.services.enrichment.sources.base import ObjectContribution, Source
+
+    class FakeSpine(Source):
+        name = "wikidata"
+
+        def fetch(self, cfg):
+            yield ObjectContribution(
+                source="wikidata",
+                qid="Q1",
+                fields={
+                    "title_en": "A",
+                    "external_ids": {"P347": "REF1"},
+                    "popularity": 5,
+                },
+                raw={},
+            )
+
+    class FakeJoconde(Source):
+        name = "joconde"
+
+        def probe(self, external_ids):
+            return "P347" in external_ids
+
+        def enrich(self, qid, external_ids, context):
+            return ObjectContribution(
+                source="official",
+                qid=qid,
+                fields={"medium_fr": "huile"},
+                raw={},
+            )
+
+        def fetch(self, cfg):
+            return []
+
+    class FakeStore:
+        def __init__(self):
+            self.pack = None
+
+        def put(self, slug, pack):
+            self.pack = pack
+            return "key"
+
+    store = FakeStore()
+    f = Fetcher(
+        catalog=FakeCatalog(),
+        spine=FakeSpine(),
+        registry=SourceRegistry([FakeJoconde()]),
+        pack_store=store,
+    )
+    f.fetch("orsay")
+    obj = store.pack["objects"][0]
+    assert obj["qid"] == "Q1"
+    assert obj["attributes"]["medium_fr"] == "huile"
+    assert set(obj["sources"].keys()) >= {"wikidata", "official"}
+
+
+def test_enrich_context_carries_wiki_titles():
+    from app.services.enrichment.fetcher import Fetcher
+    from app.services.enrichment.registry import SourceRegistry
+    from app.services.enrichment.sources.base import ObjectContribution, Source
+
+    seen = {}
+
+    class Spine(Source):
+        name = "wikidata"
+
+        def fetch(self, cfg):
+            yield ObjectContribution(
+                source="wikidata",
+                qid="Q1",
+                fields={
+                    "title_en": "A",
+                    "external_ids": {},
+                    "wiki_titles": {"en": "T"},
+                    "popularity": 1,
+                },
+                raw={},
+            )
+
+    class Wiki(Source):
+        name = "wikipedia"
+
+        def probe(self, ext):
+            return True
+
+        def enrich(self, qid, ext, context):
+            seen["ctx"] = context
+            return None
+
+        def fetch(self, cfg):
+            return []
+
+    class Store:
+        def put(self, slug, pack):
+            return "k"
+
+    Fetcher(
+        catalog=FakeCatalog(),
+        spine=Spine(),
+        registry=SourceRegistry([Wiki()]),
+        pack_store=Store(),
+    ).fetch("orsay")
+    assert seen["ctx"]["wiki_titles"] == {"en": "T"}

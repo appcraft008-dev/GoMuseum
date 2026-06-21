@@ -21,3 +21,13 @@ class Source(ABC):
     @abstractmethod
     def fetch(self, cfg: MuseumConfig) -> Iterable[ObjectContribution]:
         """抓某馆 → 逐 object 产出贡献。"""
+
+    def probe(self, external_ids: dict) -> bool:
+        """该源是否适用于带这些 Wikidata 外部 ID 的对象。
+        默认 True(如 Wikidata/Wikipedia 普适);按外部 ID 路由的源(如 Joconde)重写。"""
+        return True
+
+    def enrich(self, qid: str, external_ids: dict, context: dict):
+        """per-object 富化：给定对象 qid + 外部ID + 上下文 → 返回一条 ObjectContribution 或 None。
+        脊柱源（Wikidata）默认 None；富化源（Joconde/Wikipedia）重写。"""
+        return None
