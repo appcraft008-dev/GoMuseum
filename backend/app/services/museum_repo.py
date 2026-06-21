@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.content import CategorySection, ObjectContentSection, SectionType
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.services.enrichment.category_config import section_label
 from app.services.storage import get_object_storage
 
 _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
@@ -118,7 +119,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         tabs.append(
             {
                 "section_code": cs.section_code,
-                "label": st.label_zh if language == "zh" else st.label_en,
+                "label": section_label(cs.section_code, language),
                 "icon": st.icon,
                 "body": row.body if row else None,
                 "audio_url": (
