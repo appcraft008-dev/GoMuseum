@@ -90,6 +90,21 @@ def get_section_audio_key(
     return row.audio_key if row else None
 
 
+def _upsert_section(db, obj, language, code, body, status, model):
+    """查/建 (obj,lang,section) 行并赋值。供 persist_generated_sections / persist_gated_sections 复用。"""
+    row = (
+        db.query(ObjectContentSection)
+        .filter_by(object_id=obj.id, language=language, section_code=code)
+        .one_or_none()
+    ) or ObjectContentSection(object_id=obj.id, language=language, section_code=code)
+    row.body = body
+    row.status = status
+    row.source = "ai_generated"
+    row.model = model
+    row.generated_at = datetime.now(timezone.utc)
+    db.add(row)
+
+
 def persist_generated_sections(
     db: Session, qid: str, language: str, sections: dict, model: str | None = None
 ) -> int:
@@ -101,19 +116,27 @@ def persist_generated_sections(
     for code, body in sections.items():
         if not body:
             continue
-        row = (
-            db.query(ObjectContentSection)
-            .filter_by(object_id=obj.id, language=language, section_code=code)
-            .one_or_none()
-        ) or ObjectContentSection(
-            object_id=obj.id, language=language, section_code=code
-        )
-        row.body = body
-        row.status = "published"
-        row.source = "ai_generated"
-        row.model = model
-        row.generated_at = datetime.now(timezone.utc)
-        db.add(row)
+        _upsert_section(db, obj, language, code, body, "published", model)
         n += 1
     db.commit()
     return n
+
+
+def persist_gated_sections(
+    db, qid: str, language: str, results: dict, model: str | None = None
+):
+    """把质量闸结果落库（按 obj/lang/section upsert）。published 与 needs_review 段都建行，
+    body 可为 None（needs_review 占位）。返回 (published_count, needs_review_count)。未知 qid → (0,0)。
+    """
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return (0, 0)
+    pub = nr = 0
+    for code, r in results.items():
+        _upsert_section(db, obj, language, code, r.body, r.status, model)
+        if r.status == "published":
+            pub += 1
+        else:
+            nr += 1
+    db.commit()
+    return (pub, nr)
