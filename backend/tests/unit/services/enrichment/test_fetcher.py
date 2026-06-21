@@ -112,3 +112,52 @@ def test_two_phase_routes_enrichment_by_external_id():
     assert obj["qid"] == "Q1"
     assert obj["attributes"]["medium_fr"] == "huile"
     assert set(obj["sources"].keys()) >= {"wikidata", "official"}
+
+
+def test_enrich_context_carries_wiki_titles():
+    from app.services.enrichment.fetcher import Fetcher
+    from app.services.enrichment.registry import SourceRegistry
+    from app.services.enrichment.sources.base import ObjectContribution, Source
+
+    seen = {}
+
+    class Spine(Source):
+        name = "wikidata"
+
+        def fetch(self, cfg):
+            yield ObjectContribution(
+                source="wikidata",
+                qid="Q1",
+                fields={
+                    "title_en": "A",
+                    "external_ids": {},
+                    "wiki_titles": {"en": "T"},
+                    "popularity": 1,
+                },
+                raw={},
+            )
+
+    class Wiki(Source):
+        name = "wikipedia"
+
+        def probe(self, ext):
+            return True
+
+        def enrich(self, qid, ext, context):
+            seen["ctx"] = context
+            return None
+
+        def fetch(self, cfg):
+            return []
+
+    class Store:
+        def put(self, slug, pack):
+            return "k"
+
+    Fetcher(
+        catalog=FakeCatalog(),
+        spine=Spine(),
+        registry=SourceRegistry([Wiki()]),
+        pack_store=Store(),
+    ).fetch("orsay")
+    assert seen["ctx"]["wiki_titles"] == {"en": "T"}

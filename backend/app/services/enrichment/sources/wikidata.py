@@ -13,10 +13,12 @@ SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
 USER_AGENT = "GoMuseum/0.1 (enrichment; contact: dev@gomuseum.app)"
 
 QUERY = """
-SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde WHERE {{
+SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl WHERE {{
   VALUES ?cat {{ {cat_values} }}
   ?item wdt:P195 wd:{museum} . ?item wdt:P31 ?cat . ?item wdt:P31 ?p31 .
   ?item wikibase:sitelinks ?links .
+  OPTIONAL {{ ?al_en schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?sitelink_en . }}
+  OPTIONAL {{ ?al_cl schema:about ?item ; schema:isPartOf <https://{country_lang}.wikipedia.org/> ; schema:name ?sitelink_cl . }}
   OPTIONAL {{ ?item wdt:P18 ?image }}
   OPTIONAL {{ ?item rdfs:label ?label_zh . FILTER(LANG(?label_zh)="zh") }}
   OPTIONAL {{ ?item rdfs:label ?label_en . FILTER(LANG(?label_en)="en") }}
@@ -60,6 +62,7 @@ class WikidataSource(Source):
                 QUERY.format(
                     museum=cfg.wikidata_qid,
                     cat_values=cat_values,
+                    country_lang=(cfg.country_lang or "fr"),
                     limit=page,
                     offset=offset,
                 )
@@ -76,6 +79,13 @@ class WikidataSource(Source):
                 jo = _v(row, "joconde")
                 if jo:
                     ext["P347"] = jo
+                titles = {}
+                se = _v(row, "sitelink_en")
+                if se:
+                    titles["en"] = se.rsplit("/", 1)[-1]
+                scl = _v(row, "sitelink_cl")
+                if scl:
+                    titles[cfg.country_lang or "fr"] = scl.rsplit("/", 1)[-1]
                 yield ObjectContribution(
                     source="wikidata",
                     qid=qid,
@@ -91,6 +101,7 @@ class WikidataSource(Source):
                         "popularity": int(_v(row, "links") or 0),
                         "image_url": _v(row, "image"),
                         "external_ids": ext,
+                        "wiki_titles": titles,
                     },
                 )
             fetched += len(rows)

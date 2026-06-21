@@ -8,6 +8,7 @@ CFG = MuseumConfig(
     city_zh="巴黎",
     city_en="Paris",
     country="FR",
+    country_lang="fr",
     wikidata_qid="Q23402",
     category_filter="Q3305213",
     categories=["Q3305213"],
@@ -92,3 +93,26 @@ def test_image_optional_and_external_ids_and_category(monkeypatch):
     assert c.fields["category"] == "sculpture"
     assert c.fields.get("image_url") is None
     assert c.fields["external_ids"] == {"P347": "000PE004070"}
+
+
+def test_captures_sitelink_titles(monkeypatch):
+    rows = [
+        {
+            "item": {"value": "http://www.wikidata.org/entity/Q1"},
+            "label_en": {"value": "A"},
+            "links": {"value": "5"},
+            "p31": {"value": "http://www.wikidata.org/entity/Q3305213"},
+            "sitelink_en": {"value": "https://en.wikipedia.org/wiki/Bedroom_in_Arles"},
+            "sitelink_cl": {
+                "value": "https://fr.wikipedia.org/wiki/La_Chambre_à_Arles"
+            },
+        }
+    ]
+    src = WikidataSource()
+    monkeypatch.setattr(src, "_run_query", lambda sparql: rows)
+    monkeypatch.setattr(
+        "app.services.enrichment.sources.wikidata.time.sleep", lambda s: None
+    )
+    c = list(src.fetch(CFG))[0]
+    assert c.fields["wiki_titles"]["en"] == "Bedroom_in_Arles"
+    assert c.fields["wiki_titles"]["fr"] == "La_Chambre_à_Arles"
