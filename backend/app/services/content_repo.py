@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models.content import ObjectContentSection
+from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
 from app.models.museum_object import MuseumObject
 from app.services.storage.base import ObjectStorage
 
@@ -140,3 +140,34 @@ def persist_gated_sections(
             nr += 1
     db.commit()
     return (pub, nr)
+
+
+def persist_suggested_questions(
+    db, qid: str, language: str, items: list, model: str | None = None
+) -> int:
+    """整组替换某 (对象,语言) 的推荐问答。items=[{question,answer,status?}]。返回 published 数。未知 qid→0。"""
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return 0
+    db.query(ObjectSuggestedQuestion).filter_by(
+        object_id=obj.id, language=language
+    ).delete()
+    n = 0
+    for i, it in enumerate(items):
+        status = it.get("status", "published")
+        db.add(
+            ObjectSuggestedQuestion(
+                object_id=obj.id,
+                language=language,
+                sort=i,
+                question=it["question"],
+                answer=it["answer"],
+                status=status,
+                model=model,
+                generated_at=datetime.now(timezone.utc),
+            )
+        )
+        if status == "published":
+            n += 1
+    db.commit()
+    return n

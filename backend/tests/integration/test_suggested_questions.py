@@ -49,3 +49,46 @@ def test_suggested_question_roundtrip(session):
     assert got.answer == "Because ..."
     assert got.language == "en" and got.sort == 0
     assert got.status == "published"
+
+
+def test_persist_suggested_questions_replaces_group(session):
+    from app.services.content_repo import persist_suggested_questions
+
+    n = persist_suggested_questions(
+        session,
+        "Q1",
+        "en",
+        [
+            {"question": "Q-a", "answer": "A-a"},
+            {"question": "Q-b", "answer": "A-b", "status": "needs_review"},
+        ],
+        model="gpt-4o-mini",
+    )
+    assert n == 1  # 仅 published 计数
+    rows = (
+        session.query(ObjectSuggestedQuestion)
+        .filter_by(language="en")
+        .order_by(ObjectSuggestedQuestion.sort)
+        .all()
+    )
+    assert [r.sort for r in rows] == [0, 1]
+    assert rows[0].question == "Q-a" and rows[0].status == "published"
+    assert rows[1].status == "needs_review"
+    assert rows[0].model == "gpt-4o-mini"
+
+    persist_suggested_questions(
+        session, "Q1", "en", [{"question": "Q-x", "answer": "A-x"}]
+    )
+    rows2 = session.query(ObjectSuggestedQuestion).filter_by(language="en").all()
+    assert len(rows2) == 1 and rows2[0].question == "Q-x"
+
+
+def test_persist_suggested_questions_unknown_qid(session):
+    from app.services.content_repo import persist_suggested_questions
+
+    assert (
+        persist_suggested_questions(
+            session, "Q404", "en", [{"question": "a", "answer": "b"}]
+        )
+        == 0
+    )
