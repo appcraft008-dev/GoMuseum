@@ -52,3 +52,14 @@ def test_cmd_generate_aborts_on_env_mismatch(monkeypatch):
         onboard.cmd_generate(
             "orsay", qid=None, langs=None, force=False, limit=None, target="prod"
         )
+
+
+def test_parser_report_command():
+    ns = build_parser().parse_args(["orsay", "report", "--langs", "en,fr"])
+    assert ns.command == "report"
+    assert ns.langs == "en,fr"
+
+
+def test_parser_report_langs_optional():
+    ns = build_parser().parse_args(["orsay", "report"])
+    assert ns.command == "report" and ns.langs is None

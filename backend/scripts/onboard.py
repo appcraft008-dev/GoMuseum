@@ -46,6 +46,8 @@ def build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--langs", default=None)
     ge.add_argument("--force", action="store_true")
     ge.add_argument("--limit", type=int, default=None)
+    rp = sub.add_parser("report")
+    rp.add_argument("--langs", default=None)
     return p
 
 
@@ -159,12 +161,31 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     print(f"✓ generate 完成: {out}")
 
 
+def cmd_report(slug: str, langs: str | None) -> None:
+    from app.services.enrichment.content_report import build_quality_report
+    from app.services.enrichment.lang_config import resolve_languages
+
+    override = (
+        [s.strip() for s in langs.split(",")]
+        if langs
+        else _catalog().get(slug).languages
+    )
+    target_langs = resolve_languages(override)
+    db = SessionLocal()
+    try:
+        print(build_quality_report(db, slug, target_langs, as_markdown=True))
+    finally:
+        db.close()
+
+
 def main(argv=None) -> None:
     ns = build_parser().parse_args(argv)
     if ns.command == "fetch":
         cmd_fetch(ns.slug)
     elif ns.command == "generate":
         cmd_generate(ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target)
+    elif ns.command == "report":
+        cmd_report(ns.slug, ns.langs)
     else:
         cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 
