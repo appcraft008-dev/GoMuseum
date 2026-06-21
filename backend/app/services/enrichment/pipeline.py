@@ -6,7 +6,10 @@ from __future__ import annotations
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
-from app.services.content_repo import persist_gated_sections
+from app.services.content_repo import (
+    persist_gated_sections,
+    persist_suggested_questions,
+)
 from app.services.enrichment.category_config import sections_for
 from app.services.enrichment.content_enricher import build_material
 
@@ -45,7 +48,16 @@ def _has_published_en(db, object_id) -> bool:
 
 
 def generate_object(
-    db, qid, *, enricher, gate, translator, target_langs, model, force=False
+    db,
+    qid,
+    *,
+    enricher,
+    gate,
+    translator,
+    target_langs,
+    model,
+    force=False,
+    qa_suggester=None,
 ) -> dict:
     """单件：生成→质量闸→落英语→翻译→按语言落库。幂等跳过已发布英语（除非 force）。"""
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
@@ -73,7 +85,14 @@ def generate_object(
     counts = {"en": (pub_en, nr_en)}
     for lang, results in by_lang.items():
         counts[lang] = persist_gated_sections(db, qid, lang, results, model)
-    return {"qid": qid, "counts": counts}
+    result = {"qid": qid, "counts": counts}
+    if qa_suggester is not None:
+        qa_by_lang = qa_suggester.suggest(material, facts, o.category, target_langs)
+        result["qa"] = {
+            lang: persist_suggested_questions(db, qid, lang, items, model)
+            for lang, items in qa_by_lang.items()
+        }
+    return result
 
 
 def generate_museum(
@@ -87,6 +106,7 @@ def generate_museum(
     model,
     force=False,
     limit=None,
+    qa_suggester=None,
 ) -> dict:
     """按馆批量：popularity 降序逐件 generate_object，聚合。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
@@ -109,6 +129,7 @@ def generate_museum(
             target_langs=target_langs,
             model=model,
             force=force,
+            qa_suggester=qa_suggester,
         )
         for o in q.all()
     ]

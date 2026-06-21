@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
-from app.models.content import ObjectContentSection
+from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.quality import SectionQuality
@@ -23,6 +23,7 @@ def session():
             MuseumObject.__table__,
             ObjectImage.__table__,
             ObjectContentSection.__table__,
+            ObjectSuggestedQuestion.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -142,3 +143,49 @@ def test_generate_museum_unknown_slug(session):
         model="m",
     )
     assert out["error"] == "unknown museum"
+
+
+class _FakeQA:
+    def suggest(self, material, facts, category, target_langs):
+        return {
+            "en": [{"question": "Q?", "answer": "A.", "status": "published"}],
+            "fr": [{"question": "Q-fr?", "answer": "A-fr.", "status": "published"}],
+        }
+
+
+def test_generate_object_persists_suggested_questions(session):
+    from app.models.content import ObjectSuggestedQuestion
+    from app.services.enrichment.pipeline import generate_object
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "fr"],
+        model="gpt-4o-mini",
+        qa_suggester=_FakeQA(),
+    )
+    assert out["qa"] == {"en": 1, "fr": 1}
+    rows = session.query(ObjectSuggestedQuestion).all()
+    assert {r.language for r in rows} == {"en", "fr"}
+    en = next(r for r in rows if r.language == "en")
+    assert en.question == "Q?" and en.answer == "A." and en.status == "published"
+
+
+def test_generate_object_without_qa_suggester_unchanged(session):
+    from app.models.content import ObjectSuggestedQuestion
+    from app.services.enrichment.pipeline import generate_object
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "fr"],
+        model="m",
+    )
+    assert "qa" not in out
+    assert session.query(ObjectSuggestedQuestion).count() == 0

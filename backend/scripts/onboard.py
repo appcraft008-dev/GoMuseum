@@ -118,6 +118,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     )
     from app.services.enrichment.lang_config import resolve_languages
     from app.services.enrichment.pipeline import generate_museum, generate_object
+    from app.services.enrichment.qa_suggester import QASuggester
     from app.services.enrichment.quality import QualityGate
     from app.services.enrichment.translator import ContentTranslator
 
@@ -130,6 +131,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     enricher = ContentEnricher(default_complete)
     gate = QualityGate(default_complete)
     translator = ContentTranslator(default_complete)
+    qa_suggester = QASuggester(default_complete, gate, translator)
 
     db = SessionLocal()
     try:
@@ -143,6 +145,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
                 target_langs=target_langs,
                 model="gpt-4o-mini",
                 force=force,
+                qa_suggester=qa_suggester,
             )
         else:
             out = generate_museum(
@@ -155,6 +158,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
                 model="gpt-4o-mini",
                 force=force,
                 limit=limit,
+                qa_suggester=qa_suggester,
             )
     finally:
         db.close()
