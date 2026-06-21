@@ -75,3 +75,13 @@ class QualityGate:
             conflicts=conflicts,
             score=score,
         )
+
+    def gate(self, material: str, facts: str, sections: dict) -> dict:
+        """逐段过闸。sections 里 body 为 None/空的段视为 absent，跳过不进结果。
+        返回 {section_code: SectionQuality}。"""
+        results = {}
+        for code, body in sections.items():
+            if not body:
+                continue
+            results[code] = self.check_section(material, facts, body)
+        return results

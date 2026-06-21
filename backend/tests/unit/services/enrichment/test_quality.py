@@ -71,3 +71,30 @@ def test_check_section_all_dropped_returns_none_body():
     assert r.body is None
     assert r.grounding_ratio == 0.0
     assert r.status == "needs_review"
+
+
+def test_gate_runs_each_section_and_skips_absent():
+    # overview 全支持→published；artist 全删→needs_review；analysis 输入为 None→跳过不进结果
+    class _Router:
+        def __call__(self, system, user):
+            import json as _json
+
+            if "entail" in system.lower():
+                return (
+                    _json.dumps({"verdicts": [True]})
+                    if "Overview sentence." in user
+                    else _json.dumps({"verdicts": [False]})
+                )
+            return _json.dumps({"conflicts": []})
+
+    gate = QualityGate(_Router())
+    sections = {
+        "overview": "Overview sentence.",
+        "artist": "Fabricated artist sentence.",
+        "analysis": None,
+    }
+    out = gate.gate("material", "facts", sections)
+    assert set(out.keys()) == {"overview", "artist"}
+    assert out["overview"].status == "published"
+    assert out["artist"].status == "needs_review"
+    assert out["artist"].body is None
