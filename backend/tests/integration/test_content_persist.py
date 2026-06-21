@@ -116,3 +116,59 @@ def test_persist_generated_unknown_qid_returns_zero(session):
         persist_generated_sections(session, "Q404", "en", {"overview": "x"}, model="m")
         == 0
     )
+
+
+def test_persist_gated_sections_writes_published_and_needs_review(session):
+    from app.models.content import ObjectContentSection
+    from app.services.content_repo import persist_gated_sections
+    from app.services.enrichment.quality import SectionQuality
+
+    results = {
+        "overview": SectionQuality(
+            body="Good grounded text.",
+            status="published",
+            grounding_ratio=1.0,
+            conflicts=[],
+            score=1.0,
+        ),
+        "artist": SectionQuality(
+            body=None,
+            status="needs_review",
+            grounding_ratio=0.0,
+            conflicts=[],
+            score=0.0,
+        ),
+    }
+    pub, nr = persist_gated_sections(session, "Q1", "en", results, model="gpt-4o-mini")
+    assert (pub, nr) == (1, 1)
+    rows = {
+        r.section_code: r
+        for r in session.query(ObjectContentSection).filter_by(language="en").all()
+    }
+    assert rows["overview"].status == "published"
+    assert rows["overview"].body == "Good grounded text."
+    assert rows["overview"].source == "ai_generated"
+    assert rows["artist"].status == "needs_review"
+    assert rows["artist"].body is None
+
+
+def test_persist_gated_unknown_qid_returns_zeros(session):
+    from app.services.content_repo import persist_gated_sections
+    from app.services.enrichment.quality import SectionQuality
+
+    r = {
+        "overview": SectionQuality(
+            body="x", status="published", grounding_ratio=1.0, conflicts=[], score=1.0
+        )
+    }
+    assert persist_gated_sections(session, "Q404", "en", r, model="m") == (0, 0)
+
+
+def test_persist_generated_sections_still_works(session):
+    # 回归：抽 _upsert_section 后旧函数行为不变
+    from app.services.content_repo import persist_generated_sections
+
+    n = persist_generated_sections(
+        session, "Q1", "en", {"overview": "Body.", "artist": None}, model="m"
+    )
+    assert n == 1
