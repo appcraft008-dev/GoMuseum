@@ -23,3 +23,32 @@ def test_parser_load_staging_sample():
     )
     assert ns.command == "load" and ns.target == "staging"
     assert ns.pack == "k.json" and ns.sample is True
+
+
+def test_parser_generate_command():
+    ns = build_parser().parse_args(
+        [
+            "orsay",
+            "generate",
+            "--target",
+            "staging",
+            "--qid",
+            "Q1",
+            "--langs",
+            "en,fr",
+            "--force",
+            "--limit",
+            "5",
+        ]
+    )
+    assert ns.command == "generate"
+    assert ns.target == "staging" and ns.qid == "Q1"
+    assert ns.langs == "en,fr" and ns.force is True and ns.limit == 5
+
+
+def test_cmd_generate_aborts_on_env_mismatch(monkeypatch):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    with pytest.raises(SystemExit, match="ENVIRONMENT"):
+        onboard.cmd_generate(
+            "orsay", qid=None, langs=None, force=False, limit=None, target="prod"
+        )
