@@ -5,7 +5,12 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.content import CategorySection, ObjectContentSection, SectionType
+from app.models.content import (
+    CategorySection,
+    ObjectContentSection,
+    ObjectSuggestedQuestion,
+    SectionType,
+)
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.category_config import section_label
@@ -127,4 +132,17 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
                 ),
             }
         )
-    return {"qid": qid, "category": obj.category, "language": language, "tabs": tabs}
+    suggested = [
+        {"question": q.question, "answer": q.answer}
+        for q in db.query(ObjectSuggestedQuestion)
+        .filter_by(object_id=obj.id, language=language, status="published")
+        .order_by(ObjectSuggestedQuestion.sort)
+        .all()
+    ]
+    return {
+        "qid": qid,
+        "category": obj.category,
+        "language": language,
+        "tabs": tabs,
+        "suggested_questions": suggested,
+    }

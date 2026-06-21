@@ -69,3 +69,32 @@ class ObjectContentSection(Base):
             f"<ObjectContentSection(object_id={self.object_id}, "
             f"language={self.language}, section_code={self.section_code})>"
         )
+
+
+class ObjectSuggestedQuestion(Base):
+    __tablename__ = "object_suggested_questions"
+    __table_args__ = (
+        UniqueConstraint("object_id", "language", "sort", name="uq_sq_obj_lang_sort"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    object_id = Column(
+        UUID(as_uuid=True), ForeignKey("museum_objects.id"), nullable=False, index=True
+    )
+    language = Column(String(8), nullable=False)
+    sort = Column(Integer, nullable=False, default=0)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    status = Column(String(16), default="published")  # published | needs_review
+    model = Column(String(64), nullable=True)
+    generated_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ObjectSuggestedQuestion(object_id={self.object_id}, "
+            f"language={self.language}, sort={self.sort})>"
+        )

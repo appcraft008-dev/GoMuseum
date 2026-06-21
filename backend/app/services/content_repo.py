@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models.content import ObjectContentSection
+from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
 from app.models.museum_object import MuseumObject
 from app.services.storage.base import ObjectStorage
 
@@ -88,3 +88,86 @@ def get_section_audio_key(
         .one_or_none()
     )
     return row.audio_key if row else None
+
+
+def _upsert_section(db, obj, language, code, body, status, model):
+    """查/建 (obj,lang,section) 行并赋值。供 persist_generated_sections / persist_gated_sections 复用。"""
+    row = (
+        db.query(ObjectContentSection)
+        .filter_by(object_id=obj.id, language=language, section_code=code)
+        .one_or_none()
+    ) or ObjectContentSection(object_id=obj.id, language=language, section_code=code)
+    row.body = body
+    row.status = status
+    row.source = "ai_generated"
+    row.model = model
+    row.generated_at = datetime.now(timezone.utc)
+    db.add(row)
+
+
+def persist_generated_sections(
+    db: Session, qid: str, language: str, sections: dict, model: str | None = None
+) -> int:
+    """把生成的分段 body 落库（按 obj/lang/section upsert）。body 为 None/空的段不发布。返回发布数。"""
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return 0
+    n = 0
+    for code, body in sections.items():
+        if not body:
+            continue
+        _upsert_section(db, obj, language, code, body, "published", model)
+        n += 1
+    db.commit()
+    return n
+
+
+def persist_gated_sections(
+    db, qid: str, language: str, results: dict, model: str | None = None
+):
+    """把质量闸结果落库（按 obj/lang/section upsert）。published 与 needs_review 段都建行，
+    body 可为 None（needs_review 占位）。返回 (published_count, needs_review_count)。未知 qid → (0,0)。
+    """
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return (0, 0)
+    pub = nr = 0
+    for code, r in results.items():
+        _upsert_section(db, obj, language, code, r.body, r.status, model)
+        if r.status == "published":
+            pub += 1
+        else:
+            nr += 1
+    db.commit()
+    return (pub, nr)
+
+
+def persist_suggested_questions(
+    db, qid: str, language: str, items: list, model: str | None = None
+) -> int:
+    """整组替换某 (对象,语言) 的推荐问答。items=[{question,answer,status?}]。返回 published 数。未知 qid→0。"""
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return 0
+    db.query(ObjectSuggestedQuestion).filter_by(
+        object_id=obj.id, language=language
+    ).delete()
+    n = 0
+    for i, it in enumerate(items):
+        status = it.get("status", "published")
+        db.add(
+            ObjectSuggestedQuestion(
+                object_id=obj.id,
+                language=language,
+                sort=i,
+                question=it["question"],
+                answer=it["answer"],
+                status=status,
+                model=model,
+                generated_at=datetime.now(timezone.utc),
+            )
+        )
+        if status == "published":
+            n += 1
+    db.commit()
+    return n

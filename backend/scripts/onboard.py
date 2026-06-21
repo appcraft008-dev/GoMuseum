@@ -40,6 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
     lo.add_argument("--target", choices=["staging", "prod"], required=True)
     lo.add_argument("--pack", default=None)
     lo.add_argument("--sample", action="store_true")
+    ge = sub.add_parser("generate")
+    ge.add_argument("--target", choices=["staging", "prod"], required=True)
+    ge.add_argument("--qid", default=None)
+    ge.add_argument("--langs", default=None)
+    ge.add_argument("--force", action="store_true")
+    ge.add_argument("--limit", type=int, default=None)
+    rp = sub.add_parser("report")
+    rp.add_argument("--langs", default=None)
     return p
 
 
@@ -95,10 +103,93 @@ def cmd_load(slug: str, pack_key: str, sample: bool, target: str) -> None:
         print(build_report(slug, reported, as_markdown=True))
 
 
+def cmd_generate(slug, qid, langs, force, limit, target) -> None:
+    # 守卫：--target 必须匹配当前容器 ENVIRONMENT（与 cmd_load 同，先于构造 LLM 组件）
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+
+    from app.services.enrichment.content_enricher import (
+        ContentEnricher,
+        default_complete,
+    )
+    from app.services.enrichment.lang_config import resolve_languages
+    from app.services.enrichment.pipeline import generate_museum, generate_object
+    from app.services.enrichment.qa_suggester import QASuggester
+    from app.services.enrichment.quality import QualityGate
+    from app.services.enrichment.translator import ContentTranslator
+
+    override = (
+        [s.strip() for s in langs.split(",")]
+        if langs
+        else _catalog().get(slug).languages
+    )
+    target_langs = resolve_languages(override)
+    enricher = ContentEnricher(default_complete)
+    gate = QualityGate(default_complete)
+    translator = ContentTranslator(default_complete)
+    qa_suggester = QASuggester(default_complete, gate, translator)
+
+    db = SessionLocal()
+    try:
+        if qid:
+            out = generate_object(
+                db,
+                qid,
+                enricher=enricher,
+                gate=gate,
+                translator=translator,
+                target_langs=target_langs,
+                model="gpt-4o-mini",
+                force=force,
+                qa_suggester=qa_suggester,
+            )
+        else:
+            out = generate_museum(
+                db,
+                slug,
+                enricher=enricher,
+                gate=gate,
+                translator=translator,
+                target_langs=target_langs,
+                model="gpt-4o-mini",
+                force=force,
+                limit=limit,
+                qa_suggester=qa_suggester,
+            )
+    finally:
+        db.close()
+    print(f"✓ generate 完成: {out}")
+
+
+def cmd_report(slug: str, langs: str | None) -> None:
+    from app.services.enrichment.content_report import build_quality_report
+    from app.services.enrichment.lang_config import resolve_languages
+
+    override = (
+        [s.strip() for s in langs.split(",")]
+        if langs
+        else _catalog().get(slug).languages
+    )
+    target_langs = resolve_languages(override)
+    db = SessionLocal()
+    try:
+        print(build_quality_report(db, slug, target_langs, as_markdown=True))
+    finally:
+        db.close()
+
+
 def main(argv=None) -> None:
     ns = build_parser().parse_args(argv)
     if ns.command == "fetch":
         cmd_fetch(ns.slug)
+    elif ns.command == "generate":
+        cmd_generate(ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target)
+    elif ns.command == "report":
+        cmd_report(ns.slug, ns.langs)
     else:
         cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 
