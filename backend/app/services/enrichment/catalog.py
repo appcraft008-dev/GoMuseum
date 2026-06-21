@@ -21,6 +21,7 @@ class MuseumConfig:
     sample_qids: list[str] = field(default_factory=list)
     categories: list[str] = field(default_factory=list)
     country_lang: str | None = None
+    languages: list[str] = field(default_factory=list)
 
 
 class MuseumCatalog:
@@ -46,6 +47,7 @@ class MuseumCatalog:
                 sample_qids=list(m.get("sample_qids") or []),
                 categories=list(m.get("categories") or [m["category_filter"]]),
                 country_lang=m.get("country_lang"),
+                languages=list(m.get("languages") or []),
             )
         return cls(configs)
 

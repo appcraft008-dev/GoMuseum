@@ -50,3 +50,37 @@ _FACT_CONSISTENCY_SYSTEM = (
 def build_fact_consistency_prompt(facts: str, body: str):
     user = f"FACTS:\n{facts}\n\nBODY:\n{body}"
     return _FACT_CONSISTENCY_SYSTEM, user
+
+
+from app.services.enrichment.lang_config import LANG_NAMES
+
+_TRANSLATION_SYSTEM = (
+    "You are a professional art translator. Translate the given English artwork explanation "
+    "into {lang}. Rules: (1) Be FAITHFUL — do NOT add, remove, or alter any fact. "
+    "(2) Keep proper names, artist names, and work TITLES in their original form or the "
+    "established exonym in the target language; do NOT literally translate titles. "
+    "(3) Natural, fluent {lang}. Return ONLY the translated text, no commentary, no quotes."
+)
+
+
+def build_translation_prompt(en_body: str, target_lang: str):
+    lang = LANG_NAMES.get(target_lang, target_lang)
+    system = _TRANSLATION_SYSTEM.format(lang=lang)
+    user = f"English:\n{en_body}"
+    return system, user
+
+
+_FAITHFULNESS_SYSTEM = (
+    "You are a translation quality judge. You are given an English SOURCE and its {lang} "
+    "TRANSLATION. Decide whether the translation is faithful: it must convey exactly the "
+    "same facts with nothing added and nothing omitted (wording/fluency differences are "
+    'fine). Return STRICT JSON: {{"faithful": true|false, "issues": ["..."]}} '
+    "(issues empty if faithful). No commentary."
+)
+
+
+def build_faithfulness_prompt(en_body: str, translated: str, target_lang: str):
+    lang = LANG_NAMES.get(target_lang, target_lang)
+    system = _FAITHFULNESS_SYSTEM.format(lang=lang)
+    user = f"SOURCE (English):\n{en_body}\n\nTRANSLATION ({lang}):\n{translated}"
+    return system, user
