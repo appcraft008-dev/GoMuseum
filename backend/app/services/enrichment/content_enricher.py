@@ -74,3 +74,28 @@ class ContentEnricher:
             v = parsed.get(code)
             out[code] = v.strip() if isinstance(v, str) and v.strip() else None
         return out
+
+
+def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:
+    """默认 LLM 调用（OpenAI，便宜模型）。grounded 生成是受约束改写，不需顶配。"""
+    import asyncio
+
+    from app.services.content_generation_service import _get_openai_client
+
+    client = _get_openai_client()
+    if client is None:
+        raise RuntimeError("OpenAI client 不可用")
+
+    async def _run():
+        resp = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            temperature=0.3,
+            response_format={"type": "json_object"},
+        )
+        return resp.choices[0].message.content
+
+    return asyncio.run(_run())
