@@ -110,3 +110,35 @@ def test_generate_object_force_regenerates(session):
 
 def test_generate_object_absent_qid(session):
     assert _run(session, "Q404")["skipped"] == "absent"
+
+
+def test_generate_museum_runs_over_objects(session):
+    from app.services.enrichment.pipeline import generate_museum
+
+    out = generate_museum(
+        session,
+        "orsay",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "fr"],
+        model="gpt-4o-mini",
+    )
+    assert out["objects"] == 1
+    assert out["results"][0]["qid"] == "Q1"
+    assert session.query(ObjectContentSection).filter_by(language="en").count() == 1
+
+
+def test_generate_museum_unknown_slug(session):
+    from app.services.enrichment.pipeline import generate_museum
+
+    out = generate_museum(
+        session,
+        "nope",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert out["error"] == "unknown museum"

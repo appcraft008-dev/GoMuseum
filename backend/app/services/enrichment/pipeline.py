@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from app.models.content import ObjectContentSection
+from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
 from app.services.content_repo import persist_gated_sections
 from app.services.enrichment.category_config import sections_for
@@ -72,3 +73,42 @@ def generate_object(
     for lang, results in by_lang.items():
         counts[lang] = persist_gated_sections(db, qid, lang, results, model)
     return {"qid": qid, "counts": counts}
+
+
+def generate_museum(
+    db,
+    slug,
+    *,
+    enricher,
+    gate,
+    translator,
+    target_langs,
+    model,
+    force=False,
+    limit=None,
+) -> dict:
+    """按馆批量：popularity 降序逐件 generate_object，聚合。"""
+    m = db.query(Museum).filter_by(slug=slug).one_or_none()
+    if not m:
+        return {"slug": slug, "error": "unknown museum"}
+    q = (
+        db.query(MuseumObject)
+        .filter_by(museum_id=m.id)
+        .order_by(MuseumObject.popularity.desc())
+    )
+    if limit:
+        q = q.limit(limit)
+    results = [
+        generate_object(
+            db,
+            o.qid,
+            enricher=enricher,
+            gate=gate,
+            translator=translator,
+            target_langs=target_langs,
+            model=model,
+            force=force,
+        )
+        for o in q.all()
+    ]
+    return {"slug": slug, "objects": len(results), "results": results}
