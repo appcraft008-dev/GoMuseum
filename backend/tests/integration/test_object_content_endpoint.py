@@ -7,7 +7,12 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
-from app.models.content import CategorySection, ObjectContentSection, SectionType
+from app.models.content import (
+    CategorySection,
+    ObjectContentSection,
+    ObjectSuggestedQuestion,
+    SectionType,
+)
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.object_importer import upsert_museum, upsert_object
@@ -27,6 +32,7 @@ def client():
             SectionType.__table__,
             CategorySection.__table__,
             ObjectContentSection.__table__,
+            ObjectSuggestedQuestion.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
