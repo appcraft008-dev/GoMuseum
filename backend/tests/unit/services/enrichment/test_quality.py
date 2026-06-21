@@ -98,3 +98,11 @@ def test_gate_runs_each_section_and_skips_absent():
     assert out["overview"].status == "published"
     assert out["artist"].status == "needs_review"
     assert out["artist"].body is None
+
+
+def test_quality_gate_constructible_with_default_complete():
+    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.quality import QualityGate
+
+    gate = QualityGate(default_complete)  # 不调用，只验证可构造、签名兼容
+    assert callable(gate._complete)
