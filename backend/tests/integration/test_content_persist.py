@@ -172,3 +172,31 @@ def test_persist_generated_sections_still_works(session):
         session, "Q1", "en", {"overview": "Body.", "artist": None}, model="m"
     )
     assert n == 1
+
+
+def test_translate_object_output_persists_per_language(session):
+    import json as _json
+
+    from app.services.content_repo import persist_gated_sections
+    from app.services.enrichment.translator import ContentTranslator
+
+    def router(system, user):
+        if "translate" in system.lower():
+            return "Texte traduit."
+        return _json.dumps({"faithful": True, "issues": []})
+
+    by_lang = ContentTranslator(router).translate_object(
+        {"overview": "English overview."}, ["en", "fr"]
+    )
+    # 按语言落库
+    for lang, results in by_lang.items():
+        persist_gated_sections(session, "Q1", lang, results, model="gpt-4o-mini")
+
+    rows = {
+        (r.language, r.section_code): r
+        for r in session.query(ObjectContentSection).all()
+    }
+    assert ("fr", "overview") in rows
+    assert rows[("fr", "overview")].body == "Texte traduit."
+    assert rows[("fr", "overview")].status == "published"
+    assert ("en", "overview") not in rows
