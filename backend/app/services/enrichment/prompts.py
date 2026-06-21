@@ -21,3 +21,32 @@ def build_generation_prompt(material: str, sections: list[str], category: str):
         f"Material:\n{material}"
     )
     return _SYSTEM, user
+
+
+_ENTAILMENT_SYSTEM = (
+    "You are a fact-checking judge. You are given source MATERIAL and a numbered list of "
+    "SENTENCES taken from an artwork explanation. For EACH sentence decide whether it is "
+    "entailed (fully supported) by the material. Judge USING ONLY the material; a sentence "
+    "that adds any fact not present in the material is NOT supported, even if it is true in "
+    'the real world. Return STRICT JSON: {"verdicts": [true, false, ...]} with one boolean '
+    "per sentence in the SAME order. No commentary."
+)
+
+
+def build_entailment_prompt(material: str, sentences: list[str]):
+    numbered = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(sentences))
+    user = f"MATERIAL:\n{material}\n\nSENTENCES:\n{numbered}"
+    return _ENTAILMENT_SYSTEM, user
+
+
+_FACT_CONSISTENCY_SYSTEM = (
+    "You are a fact-checking judge. You are given structured FACTS about an artwork and a "
+    "narrative BODY. List every statement in the body that CONTRADICTS the facts (e.g. wrong "
+    "year, wrong artist, wrong dimensions). Ignore extra detail that does not contradict. "
+    'Return STRICT JSON: {"conflicts": ["...", ...]} (empty list if none). No commentary.'
+)
+
+
+def build_fact_consistency_prompt(facts: str, body: str):
+    user = f"FACTS:\n{facts}\n\nBODY:\n{body}"
+    return _FACT_CONSISTENCY_SYSTEM, user
