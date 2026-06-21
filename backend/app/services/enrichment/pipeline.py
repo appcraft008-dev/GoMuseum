@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from app.models.content import ObjectContentSection
+from app.models.museum_object import MuseumObject
 from app.services.content_repo import persist_gated_sections
 from app.services.enrichment.category_config import sections_for
 from app.services.enrichment.content_enricher import build_material
@@ -29,3 +31,44 @@ def _facts_text(obj: dict) -> str:
         if v:
             lines.append(f"- {label}: {v}")
     return "\n".join(lines)
+
+
+def _has_published_en(db, object_id) -> bool:
+    return (
+        db.query(ObjectContentSection)
+        .filter_by(object_id=object_id, language="en", status="published")
+        .first()
+        is not None
+    )
+
+
+def generate_object(
+    db, qid, *, enricher, gate, translator, target_langs, model, force=False
+) -> dict:
+    """单件：生成→质量闸→落英语→翻译→按语言落库。幂等跳过已发布英语（除非 force）。"""
+    o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not o:
+        return {"qid": qid, "skipped": "absent"}
+    if not force and _has_published_en(db, o.id):
+        return {"qid": qid, "skipped": "exists"}
+
+    obj = _row_to_obj(o)
+    material = build_material(obj)
+    facts = _facts_text(obj)
+    sections = sections_for(o.category)
+
+    draft = enricher.generate_canonical(obj, sections)
+    gated_en = gate.gate(material, facts, draft)
+    pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
+
+    en_published = {
+        code: r.body
+        for code, r in gated_en.items()
+        if r.status == "published" and r.body
+    }
+    by_lang = translator.translate_object(en_published, target_langs)
+
+    counts = {"en": (pub_en, nr_en)}
+    for lang, results in by_lang.items():
+        counts[lang] = persist_gated_sections(db, qid, lang, results, model)
+    return {"qid": qid, "counts": counts}
