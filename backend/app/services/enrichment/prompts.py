@@ -41,8 +41,12 @@ def build_entailment_prompt(material: str, sentences: list[str]):
 
 _FACT_CONSISTENCY_SYSTEM = (
     "You are a fact-checking judge. You are given structured FACTS about an artwork and a "
-    "narrative BODY. List every statement in the body that CONTRADICTS the facts (e.g. wrong "
-    "year, wrong artist, wrong dimensions). Ignore extra detail that does not contradict. "
+    "narrative BODY. List ONLY statements that DIRECTLY contradict a fact — asserting a "
+    "different value for the SAME fact (e.g. a different artist, or a different creation "
+    "date than the FACTS' year). Do NOT flag information the facts simply omit. In "
+    "particular, a year tied to a DIFFERENT event (exhibition, acquisition, restoration, "
+    "discovery) is NOT a conflict with the creation year — only flag a date when the body "
+    "states a different value for the SAME fact. "
     'Return STRICT JSON: {"conflicts": ["...", ...]} (empty list if none). No commentary.'
 )
 

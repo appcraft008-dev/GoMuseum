@@ -37,6 +37,16 @@ def test_fact_consistency_prompt_lists_conflicts_json():
     assert "1863" in user and "1900" in user
 
 
+def test_fact_consistency_prompt_excuses_event_years():
+    # 校准：创作年 vs 首展/收购/修复/发现年不算冲突（避免判官把不同事件的年份误报）
+    from app.services.enrichment.prompts import build_fact_consistency_prompt
+
+    system, _ = build_fact_consistency_prompt("- Year: 1863", "Exhibited in 1865.")
+    blob = system.lower()
+    assert "exhibition" in blob or "acquisition" in blob
+    assert "same fact" in blob
+
+
 def test_translation_prompt_demands_faithful_and_keeps_proper_names():
     from app.services.enrichment.prompts import build_translation_prompt
 
