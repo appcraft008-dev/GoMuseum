@@ -4,7 +4,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
-from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
+from app.models.content import (
+    CategorySection,
+    ObjectContentSection,
+    ObjectSuggestedQuestion,
+    SectionType,
+)
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.object_importer import upsert_museum, upsert_object
@@ -23,6 +28,8 @@ def session():
             ObjectImage.__table__,
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
+            SectionType.__table__,
+            CategorySection.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -92,3 +99,28 @@ def test_persist_suggested_questions_unknown_qid(session):
         )
         == 0
     )
+
+
+def test_get_object_content_includes_suggested_questions(session):
+    from app.services.content_repo import persist_suggested_questions
+    from app.services.museum_repo import get_object_content
+
+    persist_suggested_questions(
+        session,
+        "Q1",
+        "en",
+        [
+            {"question": "Q-pub", "answer": "A-pub"},
+            {"question": "Q-nr", "answer": "A-nr", "status": "needs_review"},
+        ],
+    )
+    content = get_object_content(session, "orsay", "Q1", "en")
+    assert "suggested_questions" in content
+    assert content["suggested_questions"] == [{"question": "Q-pub", "answer": "A-pub"}]
+
+
+def test_get_object_content_suggested_questions_empty_when_none(session):
+    from app.services.museum_repo import get_object_content
+
+    content = get_object_content(session, "orsay", "Q1", "fr")
+    assert content["suggested_questions"] == []
