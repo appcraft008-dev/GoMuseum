@@ -10,7 +10,8 @@ from app.services.content_repo import persist_gated_sections
 from app.services.enrichment.category_config import sections_for
 from app.services.enrichment.content_enricher import build_material
 
-_FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Year", "year")]
+# 标"Creation year"消歧：避免 fact-consistency 判官把首展/收购/修复年误判为与创作年冲突。
+_FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
 
 
 def _row_to_obj(o) -> dict:

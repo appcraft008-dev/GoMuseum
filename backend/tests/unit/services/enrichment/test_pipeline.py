@@ -29,7 +29,7 @@ def test_facts_text_lists_present_hard_facts_only():
     facts = _facts_text(obj)
     assert "- Title: Olympia" in facts
     assert "- Artist: Manet" in facts
-    assert "- Year: 1863" in facts
+    assert "- Creation year: 1863" in facts
 
 
 def test_facts_text_skips_missing():
