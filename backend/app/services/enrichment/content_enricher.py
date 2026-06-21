@@ -77,7 +77,12 @@ class ContentEnricher:
 
 
 def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:
-    """默认 LLM 调用（OpenAI，便宜模型）。grounded 生成是受约束改写，不需顶配。"""
+    """默认 LLM 调用（OpenAI，便宜模型）。grounded 生成是受约束改写，不需顶配。
+
+    不强制 OpenAI 的 json_object 响应格式：JSON 类调用方（生成/质量闸/译文忠实）统一靠
+    prompt「Return STRICT JSON」+ 容错解析 `_parse_json` 兜底，纯文本调用方（翻译段）也能用
+    同一个 complete。json_object 模式会要求 messages 含 "json"，翻译 prompt 无此词会 400。
+    """
     import asyncio
 
     from app.services.content_generation_service import _get_openai_client
@@ -94,7 +99,6 @@ def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:
                 {"role": "user", "content": user},
             ],
             temperature=0.3,
-            response_format={"type": "json_object"},
         )
         return resp.choices[0].message.content
 
