@@ -34,8 +34,9 @@ class Fetcher:
             qid = spine_contrib.qid
             ext = spine_contrib.fields.get("external_ids", {}) or {}
             contribs = [spine_contrib]
+            context = {"wiki_titles": spine_contrib.fields.get("wiki_titles", {})}
             for src in self._registry.route(ext):
-                c = src.enrich(qid, ext, {})
+                c = src.enrich(qid, ext, context)
                 if c is not None:
                     contribs.append(c)
             merged = merge_contributions(contribs)
