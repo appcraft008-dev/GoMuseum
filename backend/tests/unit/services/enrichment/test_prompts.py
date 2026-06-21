@@ -80,3 +80,17 @@ def test_qa_prompt_grounded_json_pairs():
     assert "json" in blob and "qa" in blob
     assert "question" in blob and "answer" in blob
     assert "[FACTS]\n- Title: Olympia" in user
+
+
+def test_qa_prompt_encodes_chip_quality_standard():
+    from app.services.enrichment.prompts import build_qa_prompt
+
+    system, _ = build_qa_prompt("[FACTS]", "painting")
+    s = system.lower()
+    # 红线：禁墙签硬事实（标题/作者/年代/馆藏地…）
+    assert "wall label" in s
+    assert "never ask" in s or "do not ask" in s
+    # 好奇心驱动
+    assert "curious" in s or "why/how" in s
+    # 宁缺毋滥（少出胜过 trivia 凑数）
+    assert "fewer" in s or "empty list" in s

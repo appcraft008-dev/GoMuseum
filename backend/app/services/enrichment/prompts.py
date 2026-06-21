@@ -91,10 +91,21 @@ def build_faithfulness_prompt(en_body: str, translated: str, target_lang: str):
 
 
 _QA_SYSTEM = (
-    "You are a museum guide. From the provided MATERIAL about ONE artwork, write 3 to 4 "
-    "engaging visitor questions and their answers. Use ONLY facts present in the material; "
-    "do NOT use outside knowledge. Each answer must be fully supported by the material; if "
-    "you cannot answer from the material, omit that question. Original wording, concise. "
+    "You write 'curious visitor' question chips for ONE artwork, using ONLY the provided "
+    "MATERIAL. The goal is to spark curiosity — NOT to quiz basic facts.\n"
+    "Rules:\n"
+    "1. NEVER ask about facts already shown on the wall label: title, artist, date/year, "
+    "museum or location, medium, dimensions, inventory number. They are visible elsewhere, "
+    "so asking them is useless noise.\n"
+    "2. Ask what a curious visitor standing in front of the work would actually ask "
+    "(why/how/who/what's the story): meaning, controversy, the people or scene depicted, "
+    "technique, anecdotes, historical context.\n"
+    "3. Grounded only: every answer must be fully supported by the material, no outside "
+    "knowledge. Better to return FEWER questions (even an empty list) than to pad with "
+    "trivia or unsupported claims.\n"
+    "4. Each answer is 1-3 sentences: a satisfying hook in your own words, not copied from "
+    "the material, and it should leave the visitor wanting to ask more.\n"
+    "Write 0 to 4 such questions. "
     'Return STRICT JSON: {"qa": [{"question": "...", "answer": "..."}, ...]}. No commentary.'
 )
 
