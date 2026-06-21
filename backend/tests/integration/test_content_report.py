@@ -86,3 +86,15 @@ def test_quality_report_unknown_museum(session):
     from app.services.enrichment.content_report import build_quality_report
 
     assert build_quality_report(session, "nope", ["en"])["error"] == "unknown museum"
+
+
+def test_quality_report_markdown(session):
+    from app.services.enrichment.content_report import build_quality_report
+
+    md = build_quality_report(session, "orsay", ["en", "fr"], as_markdown=True)
+    assert isinstance(md, str)
+    assert "# 内容质量报告: orsay" in md
+    assert "对象数: 3" in md
+    assert "已发布但缺音频: 2" in md
+    assert "- en:" in md and "- fr:" in md
+    assert "needs_review" in md
