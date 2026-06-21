@@ -53,15 +53,18 @@ def test_check_section_all_supported_no_conflict_publishes():
     assert r.score == 1.0
 
 
-def test_check_section_fact_conflict_forces_review():
-    body = "Olympia was painted in 1900."
+def test_check_section_grounded_publishes_regardless_of_facts():
+    # 接地是唯一硬闸：每句被材料支持(grounding=1.0)即 published；
+    # 不再做阻塞性 fact-consistency（对 Joconde 事件年高频误报、误杀已接地内容）。
+    body = "The painting was first exhibited in 1869."
     gate = QualityGate(
-        _FakeComplete(verdicts=[True], conflicts=["body says 1900, facts say 1863"])
+        _FakeComplete(verdicts=[True], conflicts=["bogus year conflict"])
     )
-    r = gate.check_section("material", "- Year: 1863", body)
-    assert r.conflicts == ["body says 1900, facts say 1863"]
-    assert r.status == "needs_review"
-    assert r.score == 0.5
+    r = gate.check_section("material", "- Creation year: 1868", body)
+    assert r.status == "published"
+    assert r.grounding_ratio == 1.0
+    assert r.score == 1.0
+    assert r.conflicts == []  # 不再做事实对账，conflicts 恒空
 
 
 def test_check_section_all_dropped_returns_none_body():
