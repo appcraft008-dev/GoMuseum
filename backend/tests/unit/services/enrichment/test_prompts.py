@@ -69,3 +69,14 @@ def test_faithfulness_prompt_returns_json_verdict():
     assert "json" in blob
     assert "issues" in blob
     assert "Olympia est un tableau de 1863." in user
+
+
+def test_qa_prompt_grounded_json_pairs():
+    from app.services.enrichment.prompts import build_qa_prompt
+
+    system, user = build_qa_prompt("[FACTS]\n- Title: Olympia", "painting")
+    blob = (system + user).lower()
+    assert "only" in blob and "material" in blob
+    assert "json" in blob and "qa" in blob
+    assert "question" in blob and "answer" in blob
+    assert "[FACTS]\n- Title: Olympia" in user
