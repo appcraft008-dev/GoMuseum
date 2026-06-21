@@ -88,3 +88,17 @@ def build_faithfulness_prompt(en_body: str, translated: str, target_lang: str):
     system = _FAITHFULNESS_SYSTEM.format(lang=lang)
     user = f"SOURCE (English):\n{en_body}\n\nTRANSLATION ({lang}):\n{translated}"
     return system, user
+
+
+_QA_SYSTEM = (
+    "You are a museum guide. From the provided MATERIAL about ONE artwork, write 3 to 4 "
+    "engaging visitor questions and their answers. Use ONLY facts present in the material; "
+    "do NOT use outside knowledge. Each answer must be fully supported by the material; if "
+    "you cannot answer from the material, omit that question. Original wording, concise. "
+    'Return STRICT JSON: {"qa": [{"question": "...", "answer": "..."}, ...]}. No commentary.'
+)
+
+
+def build_qa_prompt(material: str, category: str):
+    user = f"Artwork category: {category}\n\nMATERIAL:\n{material}"
+    return _QA_SYSTEM, user
