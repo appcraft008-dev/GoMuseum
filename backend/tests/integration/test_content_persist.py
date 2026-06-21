@@ -85,3 +85,34 @@ def test_persist_explanation_keeps_audio_on_same_body(session):
     persist_explanation(session, "Q1", "en", payload)
     session.refresh(row)
     assert row.audio_key == "object-audio/Q1/en/overview.mp3"
+
+
+def test_persist_generated_sections_upsert(session):
+    from app.services.content_repo import persist_generated_sections
+
+    n = persist_generated_sections(
+        session,
+        "Q1",
+        "en",
+        {"overview": "An overview.", "artist": None},  # artist None → 不建行
+        model="gpt-4o-mini",
+    )
+    assert n == 1  # 只发布有内容的 overview
+    rows = {
+        r.section_code: r
+        for r in session.query(ObjectContentSection).filter_by(language="en").all()
+    }
+    assert rows["overview"].body == "An overview."
+    assert rows["overview"].status == "published"
+    assert rows["overview"].model == "gpt-4o-mini"
+    assert rows["overview"].source == "ai_generated"
+    assert "artist" not in rows  # 空段不建行
+
+
+def test_persist_generated_unknown_qid_returns_zero(session):
+    from app.services.content_repo import persist_generated_sections
+
+    assert (
+        persist_generated_sections(session, "Q404", "en", {"overview": "x"}, model="m")
+        == 0
+    )

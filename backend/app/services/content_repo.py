@@ -88,3 +88,32 @@ def get_section_audio_key(
         .one_or_none()
     )
     return row.audio_key if row else None
+
+
+def persist_generated_sections(
+    db: Session, qid: str, language: str, sections: dict, model: str | None = None
+) -> int:
+    """把生成的分段 body 落库（按 obj/lang/section upsert）。body 为 None/空的段不发布。返回发布数。"""
+    obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if not obj:
+        return 0
+    n = 0
+    for code, body in sections.items():
+        if not body:
+            continue
+        row = (
+            db.query(ObjectContentSection)
+            .filter_by(object_id=obj.id, language=language, section_code=code)
+            .one_or_none()
+        ) or ObjectContentSection(
+            object_id=obj.id, language=language, section_code=code
+        )
+        row.body = body
+        row.status = "published"
+        row.source = "ai_generated"
+        row.model = model
+        row.generated_at = datetime.now(timezone.utc)
+        db.add(row)
+        n += 1
+    db.commit()
+    return n
