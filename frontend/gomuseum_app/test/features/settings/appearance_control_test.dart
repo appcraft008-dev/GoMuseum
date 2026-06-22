@@ -10,7 +10,6 @@ import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/auth/data/auth_repository.dart';
-import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/payment/domain/entities/user_benefits.dart';
 
