@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
 /// 附近博物馆种子数据（馆方接口接入前的演示内容）
@@ -63,6 +65,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     final benefits = ref.watch(benefitsStateProvider);
     final quota = benefits.value?.totalQuota;
 
@@ -77,7 +80,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 padding: const EdgeInsets.only(top: 16),
                 child: Column(
                   children: [
-                    _masthead(),
+                    _masthead(gm),
                     const SizedBox(height: 22),
                     _slogan(),
                     Padding(
@@ -91,7 +94,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _quotaLine(quota),
+                    _quotaLine(gm, quota),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(26, 24, 26, 0),
                       child: GmSectionHead(
@@ -103,7 +106,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                     const SizedBox(height: 14),
                     _museumCards(),
-                    _pageDots(),
+                    _pageDots(gm),
                   ],
                 ),
               ),
@@ -114,7 +117,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _masthead() {
+  Widget _masthead(GmPalette gm) {
     return Column(
       children: [
         Text(
@@ -127,7 +130,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         const SizedBox(height: 9),
         Text(
           '随身博物馆导览手册 · 巴黎',
-          style: GmText.sans(size: 11, letterSpacing: 3, color: GmColors.sub),
+          style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
         ),
       ],
     );
@@ -141,17 +144,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _quotaLine(int? quota) {
+  Widget _quotaLine(GmPalette gm, int? quota) {
     return Text.rich(
       TextSpan(
-        style: GmText.sans(size: 12, color: GmColors.sub),
+        style: GmText.sans(size: 12, color: gm.sub),
         children: [
           const TextSpan(text: '免费识别还剩 '),
           TextSpan(
             text: quota?.toString() ?? '—',
             style: GmText.sans(
               size: 12,
-              color: GmColors.accent,
+              color: gm.accent,
               weight: FontWeight.w600,
             ),
           ),
@@ -199,7 +202,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.dispose();
   }
 
-  Widget _pageDots() {
+  Widget _pageDots(GmPalette gm) {
     return Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 12),
       child: Row(
@@ -212,7 +215,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               width: i == _cardPage ? 16 : 4,
               height: 4,
               decoration: BoxDecoration(
-                color: i == _cardPage ? GmColors.accent : GmColors.faint,
+                color: i == _cardPage ? gm.accent : gm.faint,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -259,13 +262,14 @@ class _MuseumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 268,
         decoration: BoxDecoration(
-          color: GmColors.surface,
-          border: Border.all(color: GmColors.line),
+          color: gm.surface,
+          border: Border.all(color: gm.line),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -294,7 +298,7 @@ class _MuseumCard extends StatelessWidget {
                         museum.status,
                         style: GmText.sans(
                           size: 11.5,
-                          color: GmColors.accent,
+                          color: gm.accent,
                           weight: FontWeight.w600,
                         ),
                       ),
@@ -302,7 +306,7 @@ class _MuseumCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(museum.meta,
-                      style: GmText.sans(size: 12, color: GmColors.sub)),
+                      style: GmText.sans(size: 12, color: gm.sub)),
                   if (museum.topWorks.isNotEmpty) ...[
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 11),
@@ -319,7 +323,7 @@ class _MuseumCard extends StatelessWidget {
                           child: Text(
                             museum.topWorksLabel ?? '',
                             style: GmText.sans(
-                                size: 11, color: GmColors.sub, height: 1.5),
+                                size: 11, color: gm.sub, height: 1.5),
                           ),
                         ),
                       ],
