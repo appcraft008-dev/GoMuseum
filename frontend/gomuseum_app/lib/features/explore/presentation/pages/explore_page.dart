@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/explore/data/museum_pack.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
 class _ExploreMuseum {
@@ -96,6 +98,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     final museums = _filtered;
     final showFeature = museums.isNotEmpty && museums.first.cover != null;
     // 巴黎首卡使用真实奥赛馆包数据（加载中/失败时回退种子数据）
@@ -122,9 +125,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
               ),
             ),
             const SizedBox(height: 14),
-            _searchBox(),
+            _searchBox(gm),
             const SizedBox(height: 12),
-            _cityChips(),
+            _cityChips(gm),
             const SizedBox(height: 22),
             GmSectionHead(
               number: '01',
@@ -136,16 +139,17 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 padding: const EdgeInsets.symmetric(vertical: 28),
                 child: Center(
                   child: Text('没有匹配的博物馆',
-                      style: GmText.sans(size: 12.5, color: GmColors.sub)),
+                      style: GmText.sans(size: 12.5, color: gm.sub)),
                 ),
               )
             else ...[
               if (showFeature) ...[
                 const SizedBox(height: 13),
-                _featureCard(museums.first, pack: orsayPack),
+                _featureCard(gm, museums.first, pack: orsayPack),
               ],
               for (var i = showFeature ? 1 : 0; i < museums.length; i++)
-                _listRow('${(i + 1).toString().padLeft(2, '0')}', museums[i]),
+                _listRow(
+                    gm, '${(i + 1).toString().padLeft(2, '0')}', museums[i]),
             ],
           ],
         ),
@@ -153,24 +157,24 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _searchBox() {
+  Widget _searchBox(GmPalette gm) {
     return Container(
       height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: GmColors.surface,
-        border: Border.all(color: GmColors.line),
+        color: gm.surface,
+        border: Border.all(color: gm.line),
       ),
       child: Row(
         children: [
-          const GmIcon(GmIcons.search, size: 18, color: GmColors.faint),
+          GmIcon(GmIcons.search, size: 18, color: gm.faint),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               style: GmText.sans(size: 13.5),
               decoration: InputDecoration(
                 hintText: '搜索城市、博物馆或艺术品',
-                hintStyle: GmText.sans(size: 13.5, color: GmColors.faint),
+                hintStyle: GmText.sans(size: 13.5, color: gm.faint),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -182,7 +186,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _cityChips() {
+  Widget _cityChips(GmPalette gm) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -194,16 +198,16 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
                 decoration: BoxDecoration(
-                  color: city == _city ? GmColors.ctaBg : Colors.transparent,
+                  color: city == _city ? gm.ctaBg : Colors.transparent,
                   border: Border.all(
-                    color: city == _city ? GmColors.ctaBg : GmColors.line,
+                    color: city == _city ? gm.ctaBg : gm.line,
                   ),
                 ),
                 child: Text(
                   city,
                   style: GmText.sans(
                     size: 12.5,
-                    color: city == _city ? GmColors.ctaInk : GmColors.sub,
+                    color: city == _city ? gm.ctaInk : gm.sub,
                   ),
                 ),
               ),
@@ -215,13 +219,13 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _featureCard(_ExploreMuseum museum, {MuseumPack? pack}) {
+  Widget _featureCard(GmPalette gm, _ExploreMuseum museum, {MuseumPack? pack}) {
     return GestureDetector(
       onTap: pack != null ? () => context.push('/museum/${pack.slug}') : null,
       child: Container(
         decoration: BoxDecoration(
-          color: GmColors.surface,
-          border: Border.all(color: GmColors.line),
+          color: gm.surface,
+          border: Border.all(color: gm.line),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,7 +254,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                         museum.openNote ?? '',
                         style: GmText.sans(
                             size: 11.5,
-                            color: GmColors.accent,
+                            color: gm.accent,
                             weight: FontWeight.w600),
                       ),
                     ],
@@ -258,17 +262,15 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const GmIcon(GmIcons.ticket,
-                          size: 14, color: GmColors.faint),
+                      GmIcon(GmIcons.ticket, size: 14, color: gm.faint),
                       const SizedBox(width: 5),
                       Text(museum.ticketNote ?? '',
-                          style: GmText.sans(size: 12, color: GmColors.sub)),
+                          style: GmText.sans(size: 12, color: gm.sub)),
                       const SizedBox(width: 14),
-                      const GmIcon(GmIcons.pin,
-                          size: 14, color: GmColors.faint),
+                      GmIcon(GmIcons.pin, size: 14, color: gm.faint),
                       const SizedBox(width: 5),
                       Text(museum.distance ?? '',
-                          style: GmText.sans(size: 12, color: GmColors.sub)),
+                          style: GmText.sans(size: 12, color: gm.sub)),
                     ],
                   ),
                   const Padding(
@@ -297,11 +299,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                         pack != null
                             ? '含 ${pack.artworkCount} 件已收录讲解'
                             : (museum.collectionNote ?? ''),
-                        style: GmText.sans(size: 11, color: GmColors.sub),
+                        style: GmText.sans(size: 11, color: gm.sub),
                       ),
                       const Spacer(),
-                      const GmIcon(GmIcons.chevR,
-                          size: 17, color: GmColors.faint),
+                      GmIcon(GmIcons.chevR, size: 17, color: gm.faint),
                     ],
                   ),
                 ],
@@ -313,11 +314,11 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _listRow(String number, _ExploreMuseum museum) {
+  Widget _listRow(GmPalette gm, String number, _ExploreMuseum museum) {
     return Container(
       height: 58,
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: GmColors.line)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: gm.line)),
       ),
       child: Row(
         children: [
@@ -325,7 +326,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
             number,
             style: GmText.serif(
                 size: 13,
-                color: GmColors.faint,
+                color: gm.faint,
                 weight: FontWeight.w700,
                 letterSpacing: 2),
           ),
@@ -339,11 +340,11 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     style: GmText.serif(size: 15, weight: FontWeight.w600)),
                 const SizedBox(height: 3),
                 Text(museum.meta,
-                    style: GmText.sans(size: 11.5, color: GmColors.sub)),
+                    style: GmText.sans(size: 11.5, color: gm.sub)),
               ],
             ),
           ),
-          const GmIcon(GmIcons.chevR, size: 17, color: GmColors.faint),
+          GmIcon(GmIcons.chevR, size: 17, color: gm.faint),
         ],
       ),
     );
