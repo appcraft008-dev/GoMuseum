@@ -14,7 +14,6 @@ import 'package:gomuseum_app/features/content/data/models/object_list_model.dart
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
-import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
@@ -349,15 +348,6 @@ class _ObjectGrid extends ConsumerWidget {
                 onTap: () => context.push(
                   '/guide',
                   extra: GuideArgs(
-                    result: RecognitionResult(
-                      id: items[i].qid,
-                      artworkName: items[i].title,
-                      artist: items[i].artist,
-                      period: items[i].year ?? '',
-                      description: '',
-                      confidence: 1.0,
-                      timestamp: DateTime.now(),
-                    ),
                     slug: slug,
                     qid: items[i].qid,
                   ),
