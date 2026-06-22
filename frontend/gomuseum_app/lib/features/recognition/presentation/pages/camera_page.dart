@@ -13,6 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
 class CameraPage extends ConsumerStatefulWidget {
@@ -126,9 +128,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   void _showTagSearchSheet() {
+    final gm = context.gm;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -145,7 +148,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
             const SizedBox(height: 6),
             Text(
               '禁拍照展区可输入展签编号、作品名或作者名',
-              style: GmText.sans(size: 12, color: GmColors.sub),
+              style: GmText.sans(size: 12, color: gm.sub),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -153,15 +156,15 @@ class _CameraPageState extends ConsumerState<CameraPage>
               style: GmText.sans(size: 13.5),
               decoration: InputDecoration(
                 hintText: '如：INV 3692 / 在阿尔的卧室',
-                hintStyle: GmText.sans(size: 13.5, color: GmColors.faint),
+                hintStyle: GmText.sans(size: 13.5, color: gm.faint),
                 filled: true,
-                fillColor: GmColors.surface,
-                enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: GmColors.line),
+                fillColor: gm.surface,
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: gm.line),
                   borderRadius: BorderRadius.zero,
                 ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: GmColors.accent),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: gm.accent),
                   borderRadius: BorderRadius.zero,
                 ),
               ),
@@ -180,9 +183,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   void _showQuotaExhaustedSheet() {
+    final gm = context.gm;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -196,7 +200,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
             const SizedBox(height: 8),
             Text(
               '升级后可继续畅听全馆讲解',
-              style: GmText.sans(size: 12.5, color: GmColors.sub),
+              style: GmText.sans(size: 12.5, color: gm.sub),
             ),
             const SizedBox(height: 16),
             GmTicketButton(
@@ -218,6 +222,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     final state = ref.watch(recognitionNotifierProvider);
 
     return Scaffold(
+      // 取景器背景使用固定深色，非主题色
       backgroundColor: GmColors.scanBg,
       body: Column(
         children: [
@@ -244,6 +249,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
                     child: Text(
                       _cameraError!,
                       textAlign: TextAlign.center,
+                      // 取景器文字使用固定浅色
                       style: GmText.sans(size: 13, color: GmColors.scanInk),
                     ),
                   )
@@ -281,11 +287,13 @@ class _CameraPageState extends ConsumerState<CameraPage>
                     height: 68,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
+                      // 取景框快门使用固定浅色描边
                       border: Border.all(color: GmColors.scanInk, width: 3),
                     ),
                     padding: const EdgeInsets.all(5),
                     child: const DecoratedBox(
                       decoration: BoxDecoration(
+                        // 取景框快门内圆使用固定浅色
                         color: GmColors.scanInk,
                         shape: BoxShape.circle,
                       ),
@@ -327,13 +335,15 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Widget _roundButton(GmIcons icon, VoidCallback onTap, {bool active = false}) {
+    // active 时使用主题 accent，inactive 时用半透明深色（固定取景器色）
+    final color = active ? context.gm.accent : const Color(0x80171310);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: active ? GmColors.accent : const Color(0x80171310),
+          color: color,
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
@@ -343,6 +353,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   List<Widget> _cornerBrackets() {
+    // 四角框线使用固定取景器浅色，不随主题切换
     const side = BorderSide(color: GmColors.scanInk, width: 2.5);
     Widget bracket({
       double? top,
@@ -383,11 +394,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Widget _bottomPanel(RecognitionState state) {
+    final gm = context.gm;
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: GmColors.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      decoration: BoxDecoration(
+        color: gm.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
       ),
       padding: const EdgeInsets.fromLTRB(22, 10, 22, 18),
       child: SafeArea(
@@ -401,16 +413,16 @@ class _CameraPageState extends ConsumerState<CameraPage>
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: GmColors.line,
+                  color: gm.line,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 13),
             ...switch (state) {
-              RecognitionLoading() => _loadingContent(),
-              RecognitionSuccess() => _successContent(state),
-              RecognitionError(:final message) => _errorContent(message),
+              RecognitionLoading() => _loadingContent(gm),
+              RecognitionSuccess() => _successContent(gm, state),
+              RecognitionError(:final message) => _errorContent(gm, message),
               _ => const <Widget>[],
             },
           ],
@@ -419,7 +431,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     );
   }
 
-  List<Widget> _loadingContent() {
+  List<Widget> _loadingContent(GmPalette gm) {
     return [
       Row(
         children: [
@@ -434,13 +446,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
         ],
       ),
       const SizedBox(height: 8),
-      Text('AI 正在比对馆藏与公开艺术数据库',
-          style: GmText.sans(size: 12, color: GmColors.sub)),
+      Text('AI 正在比对馆藏与公开艺术数据库', style: GmText.sans(size: 12, color: gm.sub)),
       const SizedBox(height: 10),
     ];
   }
 
-  List<Widget> _successContent(RecognitionSuccess state) {
+  List<Widget> _successContent(GmPalette gm, RecognitionSuccess state) {
     final result = state.result;
     final confidence = (result.confidence * 100).round();
     return [
@@ -450,8 +461,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
       Container(
         padding: const EdgeInsets.all(11),
         decoration: BoxDecoration(
-          color: GmColors.surface,
-          border: Border.all(color: GmColors.accent, width: 1.5),
+          color: gm.surface,
+          border: Border.all(color: gm.accent, width: 1.5),
         ),
         child: Row(
           children: [
@@ -461,7 +472,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
               child: _captured != null
                   ? Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: GmColors.line),
+                        border: Border.all(color: gm.line),
                         image: DecorationImage(
                           image: FileImage(File(_captured!.path)),
                           fit: BoxFit.cover,
@@ -484,7 +495,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
                   const SizedBox(height: 4),
                   Text(
                     '${result.artist} · ${result.period}',
-                    style: GmText.sans(size: 12, color: GmColors.sub),
+                    style: GmText.sans(size: 12, color: gm.sub),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -497,12 +508,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
                 Text(
                   '$confidence%',
                   style: GmText.serif(
-                      size: 18,
-                      weight: FontWeight.w700,
-                      color: GmColors.accentDeep),
+                      size: 18, weight: FontWeight.w700, color: gm.accentDeep),
                 ),
                 const SizedBox(height: 2),
-                Text('置信度', style: GmText.sans(size: 10, color: GmColors.sub)),
+                Text('置信度', style: GmText.sans(size: 10, color: gm.sub)),
               ],
             ),
           ],
@@ -523,18 +532,18 @@ class _CameraPageState extends ConsumerState<CameraPage>
           },
           child: Text(
             '都不是？搜索作品名或展签编号 →',
-            style: GmText.sans(size: 12.5, color: GmColors.accent),
+            style: GmText.sans(size: 12.5, color: gm.accent),
           ),
         ),
       ),
     ];
   }
 
-  List<Widget> _errorContent(String message) {
+  List<Widget> _errorContent(GmPalette gm, String message) {
     return [
       Text('识别失败', style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 6),
-      Text(message, style: GmText.sans(size: 12, color: GmColors.sub)),
+      Text(message, style: GmText.sans(size: 12, color: gm.sub)),
       const SizedBox(height: 14),
       GmTicketButton(label: '重新拍摄', icon: GmIcons.camera, onTap: _retake),
     ];

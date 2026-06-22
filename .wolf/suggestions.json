@@ -1,30 +1,36 @@
 {
-  "generated_at": "2026-06-15T02:00:58.392Z",
+  "generated_at": "2026-06-22T02:00:55.682Z",
   "achievements": [
-    "完成 Step1 数据与存储地基：新增 ObjectStorage 抽象层 + LocalObjectStorage/R2ObjectStorage 双实现及工厂 (get_object_storage)，R2 对象存储已联通",
-    "建立 DB 模型层与迁移：Museum / MuseumObject / ObjectImage + 内容分区表共 6 张表迁移落地，含 section_types 与 painting 分类种子数据",
-    "打通内容数据流：Wikidata 幂等导入(按 qid/库存号 upsert)、Redis 讲解迁移入库、DB-backed museum pack 序列化器(保持响应 shape 兼容)、object content-by-tab 端点",
-    "完成 CI/CD 治理(commit 972e518c)：PR-only CI、branch-guard 强制 PR 流向、husky pre-push 钩子、/pr slash 命令，并以 husky 替换旧 .pre-commit-config.yaml",
-    "安全/性能修复：消除 museums 端点 N+1 查询、收敛 R2 超时(bug-037)、修复 trivy action 引用、授予 gitleaks pull-requests:read 权限"
+    "内容富化 Phase 2 全链路完成并上 prod（PR #56–67）：2a 接地英语轴心生成 → 2b 蕴含/事实一致性质量闸 → 2c 翻译铺语言（en/fr/de/es/it/zh）→ 2d-1 编排管线 → 2d-3 质量报告 → 2d-2 建议问答；在 staging 用真 LLM/真 DB 端到端跑通（《奥林匹亚》Q737062）",
+    "端到端真跑抓到并修复 2 个真 bug：default_complete 硬编码 response_format=json_object 致翻译撞 OpenAI 400（PR #60），以及 fact-consistency 判官把事件年（首展/收购 1865/1890）误判为创作年（1863）冲突的校准（PR #61/#62）",
+    "建议问答 chip 质量标准修正（PR #66）：禁止复述墙签硬事实、好奇心驱动 why/how/who、宁缺毋滥（0–4 非固定），墙签 trivia 全消失",
+    "通用全量目录主干架构定稿（spec 2026-06-22-universal-catalog-spine-design.md）：两层解耦——目录层（CatalogSource 注册表，列几千 stub + 身份去重）+ 内容层（content_status: stub→generating→ready，TOP-N 预生成、其余懒生成）",
+    "Catalog Phase A 合入 staging（PR #71，commit dee19f24）：CatalogSource 抽象 + WikidataCatalog 重构 + content_status 列（迁移 a3b3）+ identity.merge_stubs 去重骨架 + backfill，纯加法行为不变，11 测试绿",
+    "架构硬约束写入项目 CLAUDE.md：前后端解耦·契约为边界、契约前向兼容·加法优先、AI 内容接地不脑补/人审形式不审事实/生成一次永久落库"
   ],
   "improvements": [
-    "museums 端点已从 DB 读取且 shape 不变——补一组对比测试(旧 Redis pack vs 新 DB pack)固化兼容性契约，防回归",
-    "R2 超时已 bound 且 live test 改为 opt-in——在 CI 中显式标记/跳过 live R2 用例，避免凭证缺失导致偶发失败",
-    "Wikidata 导入的 SPARQL 多值处理已加固——为多值/缺值边界补单测，覆盖率向 CLAUDE.md 目标(单元≥80%)靠拢",
-    "CI 工具链已统一到 husky，建议删除/归档残留的 pre-commit 相关文档引用，保持单一事实来源"
+    "根目录大量临时/历史文件待清理：ACCEPTANCE_SUMMARY_*.md（7 份）、ci-test*.md/.txt、sonar*-test.md、pr-test.md、trigger.txt、20251004-claude-sesion.md 等，污染仓库根",
+    "backend/.venv 与 .coverage（~38k tok）疑似被 anatomy 追踪/未充分 gitignore，应确认 .gitignore/.dockerignore 完整覆盖虚拟环境与构建产物",
+    "质量闸的接地分（score）与源冲突数（conflicts）目前未落库，质量报告只能算覆盖率/needs_review%，应加 DB 列让 §8B 报告完整可观测",
+    "判官噪声为 LLM-as-judge 固有问题——与其无限调 prompt，应优先建立金标准回归集（§8D）作为兜底校准基线",
+    "default_complete 这类真实 LLM 适配器层无法被注入式单测覆盖，应补少量端到端冒烟测试（真跑一次 generate）纳入流程"
   ],
   "next_tasks": [
-    "按 step1-branch-and-rules：将 feature/step1-data-foundation 与最新 main 对齐后走 PR→staging→main 合并，合并即删分支",
-    "当前 feature/devops-branch-ci-rules 落后 main 4 个提交、领先 6 个——合并前先 rebase/同步 main(受保护分支规则要求与 base 同步方可合并)",
-    "Step1 完成后兑现用户承诺：正式梳理并文档化 Git Flow 分支规则(已部分落入 CLAUDE.md，需校验 branch-guard 实际行为)",
-    "推进 UI 重做方案B(任务#1–#15)：基于 docs/design/claude-design-bundle 暖纸手册主题重写 Flutter presentation 层，先做核心体验闭环",
-    "验证新 CI 治理端到端有效：用一个测试 PR 确认 PR-only 触发、branch-guard 拦截非法 base、deploy 仅在 push main/staging 触发"
+    "Catalog Phase A 上 prod（staging→main PR，含迁移 a3b3，部署后跑 backfill）——目前停在 staging 未上 prod",
+    "Catalog Phase B：Fetcher 重接线 + 真去重（(拥有馆,馆藏号)>QID>模糊）+ 列目录/抓材料解耦",
+    "Catalog Phase C（EuropeanaCatalog）→ Phase D（懒生成接线，依赖识别 spec）",
+    "决策暂停中的 prod 全量上馆：A=现在放全量先覆盖（材料厚化后重生成）vs B=先提厚连接器（Wikipedia 全文 + Joconde description/sujet）再放——注意新架构下'全量富化'已变为铺 stub + TOP-N 预生成",
+    "前端分段藏品详情页（tts-audio-persistence 的待建消费者）：后端 per-section 音频/内容契约已就绪，前端尚无消费者；需定'body 未生成时'策略",
+    "补 2b 遗留闸：§8A-4 langdetect 语言检测、§8A-6 moderation 安全审、§8D 金标准回归集",
+    "识别机制独立 brainstorm（recognition-mechanism），是 Phase D 懒生成的前置依赖"
   ],
   "risks": [
-    "仓库根目录堆积 ~25 个临时状态文件(ACCEPTANCE_SUMMARY_*.md、ci-test.md、trigger.txt、sonar-test.md、ci-verify.txt 等)——污染仓库、混淆真实文档，应清理或归档至 docs/",
-    "venv/ 与 node_modules/ 出现在工作区根目录，backend/tts_cache 与 .wolf/ 为未跟踪态——确认 .gitignore/.dockerignore 已覆盖，严防误提交(CLAUDE.md 明令禁止)",
-    "bug-037(R2 超时)虽已 bound 但属外部依赖风险点——生产需监控 R2 调用超时率与重试,缺失告警将影响图片/内容加载",
-    "Step1 分支从 feature/step3-ui-develop 切出而非 main(当时 main 领先 36 提交)——存在合并冲突与历史漂移风险,务必先对齐 main 再合",
-    "DB 迁移与既有 Redis 数据并存期:迁移脚本若在 Redis 不可用时未正确 abort(af72c255 已修)需回归验证,避免双写不一致"
+    "契约前向兼容是最高优先级红线——2026-06-16 事故（title_zh 变 null 破已装 App 的 as String 强转致馆藏页全崩）；任何新字段必须加法、Flutter 侧禁裸 as String、后端给回退",
+    "加依赖后必须 cd backend && poetry lock 重生成 poetry.lock，否则 Docker 部署挂（pyyaml 已踩坑 #42→#43，CI 用 pip 装不暴露但部署会挂）——复发性高",
+    "staging 现有对象多为旧管线 v1 数据（attributes 空，无 extract/Joconde），真端到端验证需先 onboard fetch+load 再 generate，否则验的是空材料",
+    "改函数行为（如 get_object_content）后 grep 范围必须含 tests/，否则 fixture 漏建表致 CI 'no such table'（1b、2d-2a 两次踩同一坑）",
+    "判官偏严不偏松会压低发布覆盖率（金丝雀 needs_review 仍 43%，其中多为合理薄材料而非 bug）——覆盖率提升的真瓶颈是材料厚度，不是 prompt",
+    "改 .github/workflows/ 的提交有时不触发任何 workflow，需补一个不改 workflow 的空提交重触发",
+    "迁移 a3b3 已在 staging 自动 apply 但未上 prod；prod 全量数据生成成本一次性落库，放量前需确认质量闸与材料就绪，避免重付费返工"
   ]
 }

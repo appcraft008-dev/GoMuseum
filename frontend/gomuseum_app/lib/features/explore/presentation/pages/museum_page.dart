@@ -1,83 +1,96 @@
-/// 馆藏清单页 — 暖纸手册风格目录列表
+/// 馆藏列表页 — 暖纸手册 §8 CollectionListScreen
 ///
-/// 展示馆包内按热度排序的馆藏，点击任意作品直接进入讲解页
-///（禁拍照场景 / 到馆前预习的主要入口）。
+/// 顶栏：← + 馆名 + 藏品数 + 搜索图标
+/// 分类 Tab 横滑：数据来自 A2 GET /museums/{slug} → categories
+/// 2列网格：A3 GET /museums/{slug}/objects 无限滚动
+/// content_status=stub → 「待完善」角标
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:gomuseum_app/features/explore/data/museum_pack.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
+import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
-import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
-class MuseumPage extends ConsumerWidget {
+class MuseumPage extends ConsumerStatefulWidget {
   const MuseumPage({super.key, required this.slug});
 
   final String slug;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pack = ref.watch(museumPackProvider(slug));
+  ConsumerState<MuseumPage> createState() => _MuseumPageState();
+}
+
+class _MuseumPageState extends ConsumerState<MuseumPage> {
+  String _selectedCategory = 'all';
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      final notifier = ref.read(
+          objectListProvider((slug: widget.slug, category: _selectedCategory))
+              .notifier);
+      final state = ref.read(
+          objectListProvider((slug: widget.slug, category: _selectedCategory)));
+      if (state.hasMore && !state.loading) {
+        notifier.loadMore();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final detailAsync = ref.watch(museumDetailProvider(widget.slug));
 
     return Scaffold(
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => context.canPop()
-                        ? context.pop()
-                        : context.go('/explore'),
-                    behavior: HitTestBehavior.opaque,
-                    child: const GmIcon(GmIcons.back,
-                        size: 20, color: GmColors.ink),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '馆藏目录',
-                      textAlign: TextAlign.center,
-                      style: GmText.sans(
-                          size: 11, letterSpacing: 3, color: GmColors.sub),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                ],
+            // Top bar
+            _TopBar(
+              slug: widget.slug,
+              detailAsync: detailAsync,
+            ),
+            // Category tabs
+            detailAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (detail) => _CategoryTabs(
+                categories: detail.categories,
+                selected: _selectedCategory,
+                onSelect: (code) {
+                  if (code == _selectedCategory) return;
+                  setState(() => _selectedCategory = code);
+                },
               ),
             ),
+            // Grid
             Expanded(
-              child: pack.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('馆藏加载失败',
-                            style: GmText.serif(
-                                size: 15, weight: FontWeight.w700)),
-                        const SizedBox(height: 8),
-                        Text('$e',
-                            maxLines: 3,
-                            textAlign: TextAlign.center,
-                            style: GmText.sans(size: 11, color: GmColors.sub)),
-                        const SizedBox(height: 14),
-                        GmTicketButton(
-                          label: '重试',
-                          height: 38,
-                          onTap: () => ref.invalidate(museumPackProvider(slug)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                data: (data) => _list(context, data),
+              child: _ObjectGrid(
+                slug: widget.slug,
+                category: _selectedCategory,
+                scrollController: _scrollController,
               ),
             ),
           ],
@@ -85,104 +98,452 @@ class MuseumPage extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _list(BuildContext context, MuseumPack pack) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(26, 8, 26, 20),
-      itemCount: pack.artworks.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+// ---------------------------------------------------------------------------
+// Top bar
+// ---------------------------------------------------------------------------
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.slug, required this.detailAsync});
+
+  final String slug;
+  final AsyncValue<MuseumDetail> detailAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+
+    final String museumName;
+    final String? countLabel;
+
+    switch (detailAsync) {
+      case AsyncData(:final value):
+        museumName = value.name;
+        final total = value.categories.isEmpty
+            ? null
+            : value.categories
+                .where((c) => c.code == 'all')
+                .map((c) => c.count)
+                .firstOrNull;
+        countLabel = total != null ? '$total 件收录藏品' : null;
+      case AsyncError():
+        museumName = slug;
+        countLabel = null;
+      case AsyncLoading():
+        museumName = '';
+        countLabel = null;
+      default:
+        museumName = slug;
+        countLabel = null;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          GestureDetector(
+            onTap: () =>
+                context.canPop() ? context.pop() : context.go('/explore'),
+            behavior: HitTestBehavior.opaque,
+            child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
+          ),
+          Expanded(
             child: Column(
               children: [
-                Text(
-                  pack.nameZh,
-                  style: GmText.serif(
-                      size: 21, weight: FontWeight.w700, letterSpacing: 4),
-                ),
-                const SizedBox(height: 8),
-                const GmDiamond(width: 110),
-                const SizedBox(height: 8),
-                Text(
-                  '${pack.artworkCount} 件馆藏 · 已收录讲解 · 按热度排序',
-                  style: GmText.sans(
-                      size: 11.5, letterSpacing: 1, color: GmColors.sub),
-                ),
+                if (museumName.isNotEmpty)
+                  Text(
+                    museumName,
+                    textAlign: TextAlign.center,
+                    style: GmText.serif(
+                        size: 16, weight: FontWeight.w700, letterSpacing: 0.5),
+                  ),
+                if (countLabel != null)
+                  Text(
+                    countLabel,
+                    style:
+                        GmText.sans(size: 10, letterSpacing: 1, color: gm.sub),
+                  ),
               ],
             ),
-          );
-        }
-        final art = pack.artworks[index - 1];
-        return _artworkRow(context, index, art);
-      },
+          ),
+          // Search — placeholder (search page is out of scope for this task)
+          GmIcon(GmIcons.search, size: 20, color: gm.ink),
+        ],
+      ),
     );
   }
+}
 
-  Widget _artworkRow(BuildContext context, int number, MuseumPackArtwork art) {
-    final thumb = art.thumb(200);
-    return InkWell(
-      onTap: () => context.push(
-        '/guide',
-        extra: GuideArgs(
-          result: RecognitionResult(
-            id: art.qid,
-            artworkName: art.titleZh,
-            artist: art.artistZh,
-            period: art.periodZh,
-            description: art.year != null ? '创作于${art.year}年' : '',
-            confidence: 1.0,
-            timestamp: DateTime.now(),
-          ),
-          imageUrl: thumb,
+// ---------------------------------------------------------------------------
+// Category tabs
+// ---------------------------------------------------------------------------
+class _CategoryTabs extends StatelessWidget {
+  const _CategoryTabs({
+    required this.categories,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<MuseumCategory> categories;
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+
+    // If backend returns no categories, show a single 「全部」 tab
+    final tabs = categories.isNotEmpty
+        ? categories
+        : [const MuseumCategory(code: 'all', label: '全部', count: 0)];
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: gm.line),
+          bottom: BorderSide(color: gm.line, width: 1.5),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: GmColors.line)),
-        ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
         child: Row(
           children: [
+            for (final cat in tabs)
+              GestureDetector(
+                onTap: () => onSelect(cat.code),
+                behavior: HitTestBehavior.opaque,
+                child: _TabItem(
+                  cat: cat,
+                  active: cat.code == selected,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabItem extends StatelessWidget {
+  const _TabItem({required this.cat, required this.active});
+
+  final MuseumCategory cat;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(15, 8, 15, 6),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: active ? gm.accent : Colors.transparent,
+            width: 2.5,
+          ),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            cat.label,
+            style: GmText.serif(
+              size: 13,
+              weight: active ? FontWeight.w700 : FontWeight.w400,
+              color: active ? gm.accentDeep : gm.sub,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${cat.count}',
+            style: GmText.sans(size: 9.5, color: gm.faint),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2-col object grid with infinite scroll
+// ---------------------------------------------------------------------------
+class _ObjectGrid extends ConsumerWidget {
+  const _ObjectGrid({
+    required this.slug,
+    required this.category,
+    required this.scrollController,
+  });
+
+  final String slug;
+  final String category;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gm = context.gm;
+    final state =
+        ref.watch(objectListProvider((slug: slug, category: category)));
+    final items = state.items;
+
+    if (items.isEmpty && state.loading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: gm.accent,
+          strokeWidth: 2,
+        ),
+      );
+    }
+
+    if (items.isEmpty && state.error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Text(
-              number.toString().padLeft(2, '0'),
-              style: GmText.serif(
-                  size: 13,
-                  color: GmColors.faint,
-                  weight: FontWeight.w700,
-                  letterSpacing: 2),
+              '加载失败，请重试',
+              style: GmText.sans(size: 13, color: gm.sub),
             ),
-            const SizedBox(width: 12),
-            GmInnerImage(
-              image: thumb != null ? NetworkImage(thumb) : null,
-              width: 46,
-              height: 46,
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => ref
+                  .read(objectListProvider((slug: slug, category: category))
+                      .notifier)
+                  .loadInitial(),
+              child: Text(
+                '重试',
+                style: GmText.sans(size: 13, color: gm.accent),
+              ),
             ),
-            const SizedBox(width: 13),
-            Expanded(
+          ],
+        ),
+      );
+    }
+
+    if (items.isEmpty && !state.loading) {
+      return Center(
+        child: Text(
+          '暂无藏品',
+          style: GmText.sans(size: 13, color: gm.sub),
+        ),
+      );
+    }
+
+    return CustomScrollView(
+      controller: scrollController,
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.72,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => _ObjectCard(
+                item: items[i],
+                onTap: () => context.push(
+                  '/guide',
+                  extra: GuideArgs(
+                    slug: slug,
+                    qid: items[i].qid,
+                  ),
+                ),
+              ),
+              childCount: items.length,
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: _BottomState(state: state),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Card
+// ---------------------------------------------------------------------------
+class _ObjectCard extends StatelessWidget {
+  const _ObjectCard({required this.item, required this.onTap});
+
+  final ObjectListItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: gm.surface,
+          border: Border.all(color: gm.line),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Thumbnail 116dp
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+              child: Stack(
+                children: [
+                  _Thumbnail(url: item.thumbnail),
+                  if (item.isStub)
+                    const Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _StubBadge(),
+                    ),
+                ],
+              ),
+            ),
+            // Text area
+            Padding(
+              padding: const EdgeInsets.fromLTRB(9, 7, 9, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    art.titleZh,
-                    style: GmText.serif(size: 14.5, weight: FontWeight.w600),
-                    maxLines: 1,
+                    item.title,
+                    style: GmText.serif(
+                      size: 12.5,
+                      weight: FontWeight.w600,
+                      color: gm.ink,
+                    ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    [art.artistZh, if (art.year != null) art.year!].join(' · '),
-                    style: GmText.sans(size: 11.5, color: GmColors.sub),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  const SizedBox(height: 4),
+                  if (item.artist.isNotEmpty)
+                    Text(
+                      item.artist,
+                      style: GmText.sans(size: 10.5, color: gm.sub),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                 ],
               ),
             ),
-            const GmIcon(GmIcons.headphones, size: 17, color: GmColors.faint),
           ],
         ),
       ),
     );
+  }
+}
+
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({required this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url != null) {
+      return SizedBox(
+        height: 116,
+        width: double.infinity,
+        child: Image.network(
+          url!,
+          height: 116,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, progress) =>
+              progress == null ? child : const _Placeholder(),
+          errorBuilder: (_, __, ___) => const _Placeholder(),
+        ),
+      );
+    }
+    return const _Placeholder();
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  const _Placeholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Container(
+      height: 116,
+      width: double.infinity,
+      color: gm.chipBg,
+      child: Center(
+        child: GmIcon(GmIcons.photo, size: 28, color: gm.faint),
+      ),
+    );
+  }
+}
+
+class _StubBadge extends StatelessWidget {
+  const _StubBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      color: gm.chipBg,
+      child: Text(
+        '待完善',
+        style: GmText.sans(size: 9.5, color: gm.sub),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bottom state: loading spinner or done state
+// ---------------------------------------------------------------------------
+class _BottomState extends StatelessWidget {
+  const _BottomState({required this.state});
+
+  final ObjectListState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    if (state.loading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: gm.accent,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '正在加载·已显示 ${state.items.length}/${state.total}',
+              style: GmText.sans(size: 11, color: gm.sub),
+            ),
+          ],
+        ),
+      );
+    }
+    if (!state.hasMore && state.items.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+        child: Column(
+          children: [
+            const GmDiamond(width: 160),
+            const SizedBox(height: 8),
+            Text(
+              '已全部加载·共 ${state.total} 件',
+              style: GmText.sans(size: 11.5, color: gm.faint),
+            ),
+          ],
+        ),
+      );
+    }
+    return const SizedBox(height: 20);
   }
 }

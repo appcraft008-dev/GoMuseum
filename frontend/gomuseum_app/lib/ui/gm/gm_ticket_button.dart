@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
@@ -28,24 +29,24 @@ class GmTicketButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dashColor = GmColors.ctaInk.withValues(alpha: 0.45);
+    final gm = context.gm;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: GmColors.ctaBg,
+          color: gm.ctaBg,
           borderRadius: BorderRadius.circular(4),
         ),
         padding: const EdgeInsets.all(7),
         child: CustomPaint(
-          painter: _DashedBorderPainter(color: dashColor),
+          painter: _DashedBorderPainter(color: gm.ctaDash),
           child: SizedBox(
             height: height,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (icon != null) ...[
-                  GmIcon(icon!, size: fontSize + 8, color: GmColors.ctaInk),
+                  GmIcon(icon!, size: fontSize + 8, color: gm.ctaInk),
                   const SizedBox(width: 11),
                 ],
                 Text(
@@ -53,7 +54,7 @@ class GmTicketButton extends StatelessWidget {
                   style: GmText.serif(
                     size: fontSize,
                     weight: FontWeight.w600,
-                    color: GmColors.ctaInk,
+                    color: gm.ctaInk,
                     letterSpacing: 1.8,
                   ),
                 ),
@@ -62,7 +63,7 @@ class GmTicketButton extends StatelessWidget {
                   GmIcon(
                     trailingIcon!,
                     size: fontSize + 3,
-                    color: GmColors.ctaInk.withValues(alpha: 0.7),
+                    color: gm.ctaInk.withValues(alpha: 0.7),
                   ),
                 ],
               ],
