@@ -22,6 +22,8 @@ def test_enrich_maps_french_fields():
                             "materiaux_techniques": "peinture à l'huile;toile",
                             "mesures": "81 H ; 64.8 L",
                             "numero_inventaire": "RF 2740",
+                            "sujet_represente": "torse,nu,figure",
+                            "periode_de_creation": "4e quart 19e siècle",
                         }
                     }
                 ]
@@ -36,6 +38,8 @@ def test_enrich_maps_french_fields():
     assert c.fields["medium_fr"] == "peinture à l'huile;toile"
     assert c.fields["inventory_number"] == "RF 2740"
     assert "000PE004070" in str(captured["params"])
+    assert c.fields["subjects_fr"] == "torse,nu,figure"
+    assert c.fields["period_fr"] == "4e quart 19e siècle"
 
 
 def test_enrich_returns_none_without_p347():
