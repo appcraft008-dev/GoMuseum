@@ -38,6 +38,8 @@ class JocondeSource(Source):
             "provenance_fr": f.get("ancienne_appartenance"),
             "exhibitions_fr": f.get("exposition"),
             "bibliography_fr": f.get("bibliographie"),
+            "subjects_fr": f.get("sujet_represente"),
+            "period_fr": f.get("periode_de_creation"),
         }
         return ObjectContribution(
             source="official", qid=qid, fields=fields, raw={"joconde": f}
