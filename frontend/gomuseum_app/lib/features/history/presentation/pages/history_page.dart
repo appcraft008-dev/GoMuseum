@@ -11,6 +11,8 @@ import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/history/domain/entities/history_item.dart';
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
 class HistoryPage extends ConsumerStatefulWidget {
@@ -26,12 +28,13 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     final history = ref.watch(historyProvider);
 
     return SafeArea(
       bottom: false,
       child: RefreshIndicator(
-        color: GmColors.accent,
+        color: gm.accent,
         onRefresh: () => ref.read(historyProvider.notifier).refresh(),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -48,11 +51,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               const SizedBox(height: 8),
               Text(
                 _statsLine(history.items),
-                style: GmText.sans(
-                    size: 11.5, letterSpacing: 1, color: GmColors.sub),
+                style: GmText.sans(size: 11.5, letterSpacing: 1, color: gm.sub),
               ),
               const SizedBox(height: 4),
-              ..._content(history),
+              ..._content(gm, history),
             ],
           ),
         ),
@@ -70,7 +72,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     return '${items.length} 件作品 · $days 天';
   }
 
-  List<Widget> _content(HistoryState history) {
+  List<Widget> _content(GmPalette gm, HistoryState history) {
     if (history.isLoading && history.items.isEmpty) {
       return const [
         Padding(
@@ -90,7 +92,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               const SizedBox(height: 6),
               Text(history.error!,
                   textAlign: TextAlign.center,
-                  style: GmText.sans(size: 12, color: GmColors.sub)),
+                  style: GmText.sans(size: 12, color: gm.sub)),
               const SizedBox(height: 14),
               GmTicketButton(
                 label: '重试',
@@ -108,10 +110,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              const GmIcon(GmIcons.pin, size: 40, color: GmColors.faint),
+              GmIcon(GmIcons.pin, size: 40, color: gm.faint),
               const SizedBox(height: 12),
               Text('识别过的展品会自动记录在这里',
-                  style: GmText.sans(size: 12.5, color: GmColors.sub)),
+                  style: GmText.sans(size: 12.5, color: gm.sub)),
               const SizedBox(height: 16),
               GmTicketButton(
                 label: '去识别第一件作品',
@@ -138,7 +140,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         ),
       ));
       for (final item in entry.value) {
-        widgets.add(_itemRow(item));
+        widgets.add(_itemRow(gm, item));
       }
     }
     return widgets;
@@ -164,13 +166,13 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     return '${t.month}月${t.day}日';
   }
 
-  Widget _itemRow(HistoryItem item) {
+  Widget _itemRow(GmPalette gm, HistoryItem item) {
     final starred = _starred.contains(item.id);
     final time =
         '${item.timestamp.hour.toString().padLeft(2, '0')}:${item.timestamp.minute.toString().padLeft(2, '0')}';
     return InkWell(
       onTap: () => _openGuide(item),
-      onLongPress: () => _confirmDelete(item),
+      onLongPress: () => _confirmDelete(gm, item),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
@@ -190,7 +192,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                   const SizedBox(height: 3),
                   Text(
                     '$time · ${item.artist}',
-                    style: GmText.sans(size: 11.5, color: GmColors.sub),
+                    style: GmText.sans(size: 11.5, color: gm.sub),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -205,7 +207,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               child: GmIcon(
                 GmIcons.star,
                 size: 18,
-                color: starred ? GmColors.accent : GmColors.line,
+                color: starred ? gm.accent : gm.line,
                 fill: starred,
               ),
             ),
@@ -232,19 +234,18 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     );
   }
 
-  Future<void> _confirmDelete(HistoryItem item) async {
+  Future<void> _confirmDelete(GmPalette gm, HistoryItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: GmColors.surface,
+        backgroundColor: gm.surface,
         title: Text('删除这条足迹？',
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(item.artworkName, style: GmText.sans(size: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child:
-                Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
+            child: Text('取消', style: GmText.sans(size: 13, color: gm.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
