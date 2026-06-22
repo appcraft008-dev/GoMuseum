@@ -42,6 +42,9 @@ class MuseumObject(Base):
     period_zh = Column(String(128))
     period_en = Column(String(128))
     popularity = Column(Integer, default=0, index=True)
+    content_status = Column(
+        String(16), nullable=False, default="stub", server_default="stub"
+    )  # stub | generating | ready | empty
     # MutableDict 让原地修改 attributes（如 obj.attributes["k"]=v）也能被 SQLAlchemy 检测到
     attributes = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), default=dict
