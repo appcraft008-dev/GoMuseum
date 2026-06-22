@@ -202,11 +202,12 @@ class _GuidePageState extends ConsumerState<GuidePage>
     });
     try {
       await _tts.play(url);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _audioLoading = false;
           _audioReady = true;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _audioLoading = false);
     }
@@ -286,11 +287,12 @@ class _GuidePageState extends ConsumerState<GuidePage>
         try {
           final playable = await _materializeAudio(url);
           await _legacyTts.play(playable);
-          if (mounted)
+          if (mounted) {
             setState(() {
               _legacyAudioLoading = false;
               _legacyAudioReady = true;
             });
+          }
         } catch (e) {
           if (mounted) setState(() => _legacyAudioLoading = false);
         }
