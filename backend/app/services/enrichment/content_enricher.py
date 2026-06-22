@@ -23,6 +23,8 @@ _ATTR_FACT_KEYS = [
     "bibliography_fr",
     "title_fr",
     "artist_fr",
+    "subjects_fr",
+    "period_fr",
 ]
 
 

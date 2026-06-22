@@ -58,3 +58,18 @@ def test_generate_canonical_tolerates_unkeyed_or_extra():
     out = enr.generate_canonical(obj, sections=["overview", "artist"])
     assert out["overview"] == "Hi"
     assert out["artist"] is None
+
+
+def test_build_material_includes_new_joconde_fields():
+    obj = {
+        "qid": "Q1",
+        "title_en": "X",
+        "category": "painting",
+        "attributes": {
+            "subjects_fr": "torse,nu,figure",
+            "period_fr": "4e quart 19e siècle",
+        },
+    }
+    mat = build_material(obj)
+    assert "torse,nu,figure" in mat
+    assert "4e quart 19e siècle" in mat
