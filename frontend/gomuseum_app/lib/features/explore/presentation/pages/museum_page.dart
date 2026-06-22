@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/explore/data/museum_pack.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
 class MuseumPage extends ConsumerWidget {
@@ -19,10 +21,11 @@ class MuseumPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final gm = context.gm;
     final pack = ref.watch(museumPackProvider(slug));
 
     return Scaffold(
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -35,15 +38,14 @@ class MuseumPage extends ConsumerWidget {
                         ? context.pop()
                         : context.go('/explore'),
                     behavior: HitTestBehavior.opaque,
-                    child: const GmIcon(GmIcons.back,
-                        size: 20, color: GmColors.ink),
+                    child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
                   ),
                   Expanded(
                     child: Text(
                       '馆藏目录',
                       textAlign: TextAlign.center,
                       style: GmText.sans(
-                          size: 11, letterSpacing: 3, color: GmColors.sub),
+                          size: 11, letterSpacing: 3, color: gm.sub),
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -66,7 +68,7 @@ class MuseumPage extends ConsumerWidget {
                         Text('$e',
                             maxLines: 3,
                             textAlign: TextAlign.center,
-                            style: GmText.sans(size: 11, color: GmColors.sub)),
+                            style: GmText.sans(size: 11, color: gm.sub)),
                         const SizedBox(height: 14),
                         GmTicketButton(
                           label: '重试',
@@ -77,7 +79,7 @@ class MuseumPage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                data: (data) => _list(context, data),
+                data: (data) => _list(context, gm, data),
               ),
             ),
           ],
@@ -86,7 +88,7 @@ class MuseumPage extends ConsumerWidget {
     );
   }
 
-  Widget _list(BuildContext context, MuseumPack pack) {
+  Widget _list(BuildContext context, GmPalette gm, MuseumPack pack) {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(26, 8, 26, 20),
       itemCount: pack.artworks.length + 1,
@@ -106,20 +108,21 @@ class MuseumPage extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   '${pack.artworkCount} 件馆藏 · 已收录讲解 · 按热度排序',
-                  style: GmText.sans(
-                      size: 11.5, letterSpacing: 1, color: GmColors.sub),
+                  style:
+                      GmText.sans(size: 11.5, letterSpacing: 1, color: gm.sub),
                 ),
               ],
             ),
           );
         }
         final art = pack.artworks[index - 1];
-        return _artworkRow(context, index, art);
+        return _artworkRow(context, gm, index, art);
       },
     );
   }
 
-  Widget _artworkRow(BuildContext context, int number, MuseumPackArtwork art) {
+  Widget _artworkRow(
+      BuildContext context, GmPalette gm, int number, MuseumPackArtwork art) {
     final thumb = art.thumb(200);
     return InkWell(
       onTap: () => context.push(
@@ -139,8 +142,8 @@ class MuseumPage extends ConsumerWidget {
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: GmColors.line)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: gm.line)),
         ),
         child: Row(
           children: [
@@ -148,7 +151,7 @@ class MuseumPage extends ConsumerWidget {
               number.toString().padLeft(2, '0'),
               style: GmText.serif(
                   size: 13,
-                  color: GmColors.faint,
+                  color: gm.faint,
                   weight: FontWeight.w700,
                   letterSpacing: 2),
             ),
@@ -172,14 +175,14 @@ class MuseumPage extends ConsumerWidget {
                   const SizedBox(height: 3),
                   Text(
                     [art.artistZh, if (art.year != null) art.year!].join(' · '),
-                    style: GmText.sans(size: 11.5, color: GmColors.sub),
+                    style: GmText.sans(size: 11.5, color: gm.sub),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            const GmIcon(GmIcons.headphones, size: 17, color: GmColors.faint),
+            GmIcon(GmIcons.headphones, size: 17, color: gm.faint),
           ],
         ),
       ),
