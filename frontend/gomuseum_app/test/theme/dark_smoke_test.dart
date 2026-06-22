@@ -27,6 +27,6 @@ void main() {
 
     // Scaffold 应已渲染
     final scaffold = find.byType(Scaffold);
-    expect(scaffold, isNotNull);
+    expect(scaffold, findsOneWidget);
   });
 }

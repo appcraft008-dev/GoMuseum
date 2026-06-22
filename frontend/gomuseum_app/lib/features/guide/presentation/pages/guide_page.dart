@@ -308,7 +308,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
             child: GmIcon(
               GmIcons.star,
               size: 20,
-              color: context.gm.accent,
+              color: gm.accent,
               fill: _starred,
             ),
           ),
