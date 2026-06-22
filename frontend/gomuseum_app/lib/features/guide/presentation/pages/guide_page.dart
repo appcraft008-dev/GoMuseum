@@ -17,6 +17,7 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -237,8 +238,9 @@ class _GuidePageState extends ConsumerState<GuidePage> {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return Scaffold(
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -283,6 +285,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
   }
 
   Widget _topBar(BuildContext context) {
+    final gm = context.gm;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
       child: Row(
@@ -290,14 +293,13 @@ class _GuidePageState extends ConsumerState<GuidePage> {
           GestureDetector(
             onTap: () => context.canPop() ? context.pop() : context.go('/'),
             behavior: HitTestBehavior.opaque,
-            child: const GmIcon(GmIcons.back, size: 20, color: GmColors.ink),
+            child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
           ),
           Expanded(
             child: Text(
               '语音导览',
               textAlign: TextAlign.center,
-              style:
-                  GmText.sans(size: 11, letterSpacing: 3, color: GmColors.sub),
+              style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
             ),
           ),
           GestureDetector(
@@ -306,7 +308,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
             child: GmIcon(
               GmIcons.star,
               size: 20,
-              color: GmColors.accent,
+              color: context.gm.accent,
               fill: _starred,
             ),
           ),
@@ -316,6 +318,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
   }
 
   Widget _titleBlock() {
+    final gm = context.gm;
     return Column(
       children: [
         Text(
@@ -330,13 +333,14 @@ class _GuidePageState extends ConsumerState<GuidePage> {
         Text(
           '${_result.artist} · ${_result.period}',
           textAlign: TextAlign.center,
-          style: GmText.sans(size: 12, color: GmColors.sub),
+          style: GmText.sans(size: 12, color: gm.sub),
         ),
       ],
     );
   }
 
   Widget _player() {
+    final gm = context.gm;
     return StreamBuilder<Duration>(
       stream: _tts.positionStream,
       builder: (context, positionSnap) {
@@ -356,18 +360,18 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                   child: Container(
                     width: 48,
                     height: 48,
-                    decoration: const BoxDecoration(
-                      color: GmColors.ctaBg,
+                    decoration: BoxDecoration(
+                      color: gm.ctaBg,
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
                     child: _audioLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: GmColors.ctaInk,
+                              color: gm.ctaInk,
                             ),
                           )
                         : StreamBuilder<PlayerState>(
@@ -377,7 +381,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                               return GmIcon(
                                 playing ? GmIcons.pause : GmIcons.play,
                                 size: 19,
-                                color: GmColors.ctaInk,
+                                color: gm.ctaInk,
                                 strokeWidth: 2,
                               );
                             },
@@ -391,10 +395,10 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          Container(height: 2, color: GmColors.line),
+                          Container(height: 2, color: gm.line),
                           FractionallySizedBox(
                             widthFactor: progress,
-                            child: Container(height: 2, color: GmColors.accent),
+                            child: Container(height: 2, color: gm.accent),
                           ),
                           Positioned(
                             left: 0,
@@ -405,8 +409,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                               child: Container(
                                 width: 9,
                                 height: 9,
-                                decoration: const BoxDecoration(
-                                  color: GmColors.accentDeep,
+                                decoration: BoxDecoration(
+                                  color: gm.accentDeep,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -419,11 +423,9 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(_format(position),
-                              style:
-                                  GmText.sans(size: 11, color: GmColors.sub)),
+                              style: GmText.sans(size: 11, color: gm.sub)),
                           Text(_format(duration),
-                              style:
-                                  GmText.sans(size: 11, color: GmColors.sub)),
+                              style: GmText.sans(size: 11, color: gm.sub)),
                         ],
                       ),
                     ],
@@ -436,13 +438,13 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: GmColors.surface,
-                      border: Border.all(color: GmColors.line),
+                      color: gm.surface,
+                      border: Border.all(color: gm.line),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       '${_speeds[_speedIndex]}×',
-                      style: GmText.sans(size: 11.5, color: GmColors.sub),
+                      style: GmText.sans(size: 11.5, color: gm.sub),
                     ),
                   ),
                 ),
@@ -461,6 +463,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
   }
 
   Widget _body() {
+    final gm = context.gm;
     if (_loadError != null) {
       return Column(
         children: [
@@ -469,7 +472,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
           const SizedBox(height: 6),
           Text(_loadError!,
               textAlign: TextAlign.center,
-              style: GmText.sans(size: 12, color: GmColors.sub)),
+              style: GmText.sans(size: 12, color: gm.sub)),
           const SizedBox(height: 12),
           GmTicketButton(label: '重试', onTap: _loadExplanation, height: 38),
         ],
@@ -483,8 +486,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 12),
-            Text('正在为你撰写讲解…',
-                style: GmText.sans(size: 12, color: GmColors.sub)),
+            Text('正在为你撰写讲解…', style: GmText.sans(size: 12, color: gm.sub)),
           ],
         ),
       );
@@ -508,9 +510,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
             children: [
               Text('看点',
                   style: GmText.serif(
-                      size: 14,
-                      weight: FontWeight.w700,
-                      color: GmColors.accentDeep)),
+                      size: 14, weight: FontWeight.w700, color: gm.accentDeep)),
               const SizedBox(width: 10),
               const Expanded(child: GmHairline()),
             ],
@@ -523,6 +523,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
   }
 
   Widget _qaList() {
+    final gm = context.gm;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -530,9 +531,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
           children: [
             Text('问答',
                 style: GmText.serif(
-                    size: 14,
-                    weight: FontWeight.w700,
-                    color: GmColors.accentDeep)),
+                    size: 14, weight: FontWeight.w700, color: gm.accentDeep)),
             const SizedBox(width: 10),
             const Expanded(child: GmHairline()),
           ],
@@ -542,7 +541,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
             decoration: BoxDecoration(
-              color: GmColors.chipBg,
+              color: gm.chipBg,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(entry.question, style: GmText.sans(size: 12)),
@@ -557,7 +556,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                   child: CircularProgressIndicator(strokeWidth: 1.6),
                 ),
                 const SizedBox(width: 8),
-                Text('思考中…', style: GmText.sans(size: 12, color: GmColors.sub)),
+                Text('思考中…', style: GmText.sans(size: 12, color: gm.sub)),
               ],
             )
           else
@@ -572,6 +571,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
   }
 
   Widget _qaInput() {
+    final gm = context.gm;
     const suggestions = ['这幅画好在哪里？', '画家当时经历了什么？'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
@@ -590,7 +590,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 13, vertical: 7),
                         decoration: BoxDecoration(
-                          color: GmColors.chipBg,
+                          color: gm.chipBg,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(q, style: GmText.sans(size: 12)),
@@ -608,8 +608,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                   height: 46,
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   decoration: BoxDecoration(
-                    color: GmColors.surface,
-                    border: Border.all(color: GmColors.line),
+                    color: gm.surface,
+                    border: Border.all(color: gm.line),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   alignment: Alignment.centerLeft,
@@ -618,7 +618,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                     style: GmText.sans(size: 13.5),
                     decoration: InputDecoration(
                       hintText: '问问这幅画……',
-                      hintStyle: GmText.sans(size: 13.5, color: GmColors.faint),
+                      hintStyle: GmText.sans(size: 13.5, color: gm.faint),
                       border: InputBorder.none,
                       isDense: true,
                     ),
@@ -641,13 +641,12 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                 child: Container(
                   width: 46,
                   height: 46,
-                  decoration: const BoxDecoration(
-                    color: GmColors.ctaBg,
+                  decoration: BoxDecoration(
+                    color: gm.ctaBg,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const GmIcon(GmIcons.mic,
-                      size: 20, color: GmColors.ctaInk),
+                  child: GmIcon(GmIcons.mic, size: 20, color: gm.ctaInk),
                 ),
               ),
             ],
