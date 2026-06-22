@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 
 /// 菱形分隔 ◆：两侧 1px 细线 + 中央 4.5px 旋转 45° 赤陶方块
@@ -16,26 +17,25 @@ class GmDiamond extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return SizedBox(
       width: width,
       child: Row(
         children: [
-          const Expanded(
-              child: SizedBox(
-                  height: 1, child: ColoredBox(color: GmColors.faint))),
+          Expanded(
+              child: SizedBox(height: 1, child: ColoredBox(color: gm.faint))),
           const SizedBox(width: 8),
           Transform.rotate(
             angle: 0.785398, // 45°
-            child: const SizedBox(
+            child: SizedBox(
               width: 4.5,
               height: 4.5,
-              child: ColoredBox(color: GmColors.accent),
+              child: ColoredBox(color: gm.accent),
             ),
           ),
           const SizedBox(width: 8),
-          const Expanded(
-              child: SizedBox(
-                  height: 1, child: ColoredBox(color: GmColors.faint))),
+          Expanded(
+              child: SizedBox(height: 1, child: ColoredBox(color: gm.faint))),
         ],
       ),
     );
@@ -49,18 +49,22 @@ class GmSectionHead extends StatelessWidget {
     required this.number,
     required this.label,
     this.note,
-    this.numberColor = GmColors.accent,
+    this.numberColor,
     this.onNoteTap,
   });
 
   final String number;
   final String label;
   final String? note;
-  final Color numberColor;
+
+  /// null → 使用 context.gm.accent（主题自适应）
+  final Color? numberColor;
   final VoidCallback? onNoteTap;
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
+    final effectiveNumberColor = numberColor ?? gm.accent;
     return Row(
       children: [
         Text(
@@ -68,7 +72,7 @@ class GmSectionHead extends StatelessWidget {
           style: GmText.serif(
             size: 13,
             weight: FontWeight.w700,
-            color: numberColor,
+            color: effectiveNumberColor,
             letterSpacing: 2,
           ),
         ),
@@ -85,8 +89,7 @@ class GmSectionHead extends StatelessWidget {
           GestureDetector(
             onTap: onNoteTap,
             behavior: HitTestBehavior.opaque,
-            child: Text(note!,
-                style: GmText.sans(size: 11.5, color: GmColors.sub)),
+            child: Text(note!, style: GmText.sans(size: 11.5, color: gm.sub)),
           ),
         ],
       ],
@@ -96,26 +99,32 @@ class GmSectionHead extends StatelessWidget {
 
 /// 发丝线
 class GmHairline extends StatelessWidget {
-  const GmHairline({super.key, this.color = GmColors.line});
+  const GmHairline({super.key, this.color});
 
-  final Color color;
+  /// null → 使用 context.gm.line（主题自适应）
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(height: 1, child: ColoredBox(color: color));
+    final effectiveColor = color ?? context.gm.line;
+    return SizedBox(height: 1, child: ColoredBox(color: effectiveColor));
   }
 }
 
 /// 小标签（大写、宽字距）
 class GmEyebrow extends StatelessWidget {
-  const GmEyebrow(this.text, {super.key, this.color = GmColors.sub});
+  const GmEyebrow(this.text, {super.key, this.color});
 
   final String text;
-  final Color color;
+
+  /// null → 使用 context.gm.sub（主题自适应）
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return Text(text.toUpperCase(), style: GmText.eyebrow(color: color));
+    final effectiveColor = color ?? context.gm.sub;
+    return Text(text.toUpperCase(),
+        style: GmText.eyebrow(color: effectiveColor));
   }
 }
 
@@ -128,6 +137,7 @@ class GmToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return GestureDetector(
       onTap: onChanged == null ? null : () => onChanged!(!value),
       child: AnimatedContainer(
@@ -137,13 +147,12 @@ class GmToggle extends StatelessWidget {
         padding: const EdgeInsets.all(2.5),
         alignment: value ? Alignment.centerRight : Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: value ? GmColors.accent : GmColors.line,
+          color: value ? gm.accent : gm.line,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: const DecoratedBox(
-          decoration:
-              BoxDecoration(color: GmColors.surface, shape: BoxShape.circle),
-          child: SizedBox(width: 18, height: 18),
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: gm.surface, shape: BoxShape.circle),
+          child: const SizedBox(width: 18, height: 18),
         ),
       ),
     );
