@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
@@ -85,6 +86,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               value: '沉稳 · 女声',
               onTap: () => _comingSoon('音色选择'),
             ),
+            _appearanceRow(gm),
             const SizedBox(height: 12),
             const GmSectionHead(number: '02', label: '账户'),
             const SizedBox(height: 4),
@@ -291,6 +293,58 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           const SizedBox(width: 13),
           Expanded(child: Text(label, style: GmText.sans(size: 14))),
           GmToggle(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+
+  /// 外观分段控件：浅色 / 深色 / 跟随系统
+  /// 激活态：ctaBg 底 + ctaInk 文字；非激活：transparent
+  /// 无圆角（border-radius: 0，暖纸设计语言）。
+  Widget _appearanceRow(GmPalette gm) {
+    const segments = [
+      (label: '浅色', mode: ThemeMode.light),
+      (label: '深色', mode: ThemeMode.dark),
+      (label: '跟随系统', mode: ThemeMode.system),
+    ];
+    final current = ref.watch(themeModeProvider);
+
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          GmIcon(GmIcons.sliders, size: 19, color: gm.sub),
+          const SizedBox(width: 13),
+          Text('外观', style: GmText.sans(size: 14, color: gm.ink)),
+          const Spacer(),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: gm.line),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: segments.map((seg) {
+                final isActive = current == seg.mode;
+                return GestureDetector(
+                  onTap: () =>
+                      ref.read(themeModeProvider.notifier).setMode(seg.mode),
+                  child: Container(
+                    color: isActive ? gm.ctaBg : Colors.transparent,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    child: Text(
+                      seg.label,
+                      style: GmText.serif(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: isActive ? gm.ctaInk : gm.sub,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
       ),
     );
