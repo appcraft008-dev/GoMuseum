@@ -325,19 +325,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               mainAxisSize: MainAxisSize.min,
               children: segments.map((seg) {
                 final isActive = current == seg.mode;
-                return GestureDetector(
-                  onTap: () =>
-                      ref.read(themeModeProvider.notifier).setMode(seg.mode),
-                  child: Container(
-                    color: isActive ? gm.ctaBg : Colors.transparent,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    child: Text(
-                      seg.label,
-                      style: GmText.serif(
-                        size: 12,
-                        weight: FontWeight.w600,
-                        color: isActive ? gm.ctaInk : gm.sub,
+                return Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onTap: () =>
+                        ref.read(themeModeProvider.notifier).setMode(seg.mode),
+                    child: Container(
+                      height: 40,
+                      color: isActive ? gm.ctaBg : Colors.transparent,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      alignment: Alignment.center,
+                      child: Text(
+                        seg.label,
+                        style: GmText.serif(
+                          size: 12,
+                          weight: FontWeight.w600,
+                          color: isActive ? gm.ctaInk : gm.sub,
+                        ),
                       ),
                     ),
                   ),
