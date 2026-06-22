@@ -47,6 +47,30 @@ class _FakeDs implements CatalogRemoteDataSource {
   }
 }
 
+class _ThrowingDs implements CatalogRemoteDataSource {
+  @override
+  Future<MuseumDetail> getMuseumDetail(
+          {required String slug, String language = 'zh'}) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<ObjectContent> getObjectContent(
+          {required String slug,
+          required String qid,
+          String language = 'zh'}) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<ObjectListPage> getObjects(
+      {required String slug,
+      String? category,
+      String sort = 'popularity',
+      int limit = 50,
+      int offset = 0}) async {
+    throw Exception('network error');
+  }
+}
+
 void main() {
   test('loadMore 递增 offset，hasMore 到底变 false', () async {
     final ds = _FakeDs();
@@ -59,5 +83,14 @@ void main() {
     await n.loadMore();
     expect(n.state.items.length, 120);
     expect(n.state.hasMore, isFalse);
+  });
+
+  test('loadInitial 失败时 error 非空，items 为空，loading 为 false', () async {
+    final ds = _ThrowingDs();
+    final n = ObjectListNotifier(ds: ds, slug: 'orsay', category: 'all');
+    await n.loadInitial();
+    expect(n.state.error, isNotNull);
+    expect(n.state.items, isEmpty);
+    expect(n.state.loading, isFalse);
   });
 }

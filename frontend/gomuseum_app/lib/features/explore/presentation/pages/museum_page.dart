@@ -297,6 +297,31 @@ class _ObjectGrid extends ConsumerWidget {
       );
     }
 
+    if (items.isEmpty && state.error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '加载失败，请重试',
+              style: GmText.sans(size: 13, color: gm.sub),
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => ref
+                  .read(objectListProvider((slug: slug, category: category))
+                      .notifier)
+                  .loadInitial(),
+              child: Text(
+                '重试',
+                style: GmText.sans(size: 13, color: gm.accent),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (items.isEmpty && !state.loading) {
       return Center(
         child: Text(
@@ -375,7 +400,17 @@ class _ObjectCard extends StatelessWidget {
             // Thumbnail 116dp
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-              child: _Thumbnail(url: item.thumbnail),
+              child: Stack(
+                children: [
+                  _Thumbnail(url: item.thumbnail),
+                  if (item.isStub)
+                    const Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _StubBadge(),
+                    ),
+                ],
+              ),
             ),
             // Text area
             Padding(
@@ -383,25 +418,15 @@ class _ObjectCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Stack(
-                    children: [
-                      Text(
-                        item.title,
-                        style: GmText.serif(
-                          size: 12.5,
-                          weight: FontWeight.w600,
-                          color: gm.ink,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (item.isStub)
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: _StubBadge(),
-                        ),
-                    ],
+                  Text(
+                    item.title,
+                    style: GmText.serif(
+                      size: 12.5,
+                      weight: FontWeight.w600,
+                      color: gm.ink,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   if (item.artist.isNotEmpty)
@@ -437,15 +462,19 @@ class _Thumbnail extends StatelessWidget {
           height: 116,
           width: double.infinity,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _Placeholder(),
+          loadingBuilder: (_, child, progress) =>
+              progress == null ? child : const _Placeholder(),
+          errorBuilder: (_, __, ___) => const _Placeholder(),
         ),
       );
     }
-    return _Placeholder();
+    return const _Placeholder();
   }
 }
 
 class _Placeholder extends StatelessWidget {
+  const _Placeholder();
+
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
@@ -461,6 +490,8 @@ class _Placeholder extends StatelessWidget {
 }
 
 class _StubBadge extends StatelessWidget {
+  const _StubBadge();
+
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
