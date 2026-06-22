@@ -28,7 +28,7 @@ def upsert_museum(db: Session, m: dict) -> Museum:
     return obj
 
 
-def _find_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject | None:
+def find_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject | None:
     if art.get("qid"):
         hit = db.query(MuseumObject).filter_by(qid=art["qid"]).one_or_none()
         if hit:
@@ -43,7 +43,7 @@ def _find_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject |
 
 
 def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
-    obj = _find_object(db, museum_id, art) or MuseumObject(museum_id=museum_id)
+    obj = find_object(db, museum_id, art) or MuseumObject(museum_id=museum_id)
     # 跨馆 qid 撞车保护：按 qid 命中了别馆的行时，不静默改其归属，仅告警（极少见，P195 通常单值）
     if obj.museum_id is not None and obj.museum_id != museum_id:
         logger.warning(

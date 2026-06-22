@@ -12,6 +12,7 @@ from app.services.content_repo import (
 )
 from app.services.enrichment.category_config import sections_for
 from app.services.enrichment.content_enricher import build_material
+from app.services.enrichment.material import fetch_object_material
 
 # 标"Creation year"消歧：避免 fact-consistency 判官把首展/收购/修复年误判为与创作年冲突。
 _FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
@@ -58,6 +59,7 @@ def generate_object(
     model,
     force=False,
     qa_suggester=None,
+    registry=None,
 ) -> dict:
     """单件：生成→质量闸→落英语→翻译→按语言落库。幂等跳过已发布英语（除非 force）。"""
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
@@ -65,6 +67,18 @@ def generate_object(
         return {"qid": qid, "skipped": "absent"}
     if not force and _has_published_en(db, o.id):
         return {"qid": qid, "skipped": "exists"}
+
+    if registry is not None and o.content_status == "stub":
+        attrs = o.attributes or {}
+        fetched = fetch_object_material(
+            o.qid,
+            attrs.get("external_ids") or {},
+            attrs.get("wiki_titles") or {},
+            registry,
+        )
+        if fetched:
+            o.attributes = {**attrs, **fetched}
+            db.flush()
 
     obj = _row_to_obj(o)
     material = build_material(obj)
@@ -74,6 +88,8 @@ def generate_object(
     draft = enricher.generate_canonical(obj, sections)
     gated_en = gate.gate(material, facts, draft)
     pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
+    o.content_status = "ready" if pub_en > 0 else "empty"
+    db.flush()
 
     en_published = {
         code: r.body
@@ -107,6 +123,7 @@ def generate_museum(
     force=False,
     limit=None,
     qa_suggester=None,
+    registry=None,
 ) -> dict:
     """按馆批量：popularity 降序逐件 generate_object，聚合。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
@@ -130,6 +147,7 @@ def generate_museum(
             model=model,
             force=force,
             qa_suggester=qa_suggester,
+            registry=registry,
         )
         for o in q.all()
     ]

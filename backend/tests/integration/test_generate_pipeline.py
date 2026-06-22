@@ -189,3 +189,105 @@ def test_generate_object_without_qa_suggester_unchanged(session):
     )
     assert "qa" not in out
     assert session.query(ObjectSuggestedQuestion).count() == 0
+
+
+class _FakeRegistry:
+    def __init__(self):
+        self.calls = []
+
+    def route(self, external_ids):
+        from app.services.enrichment.sources.base import ObjectContribution, Source
+
+        outer = self
+
+        class _Src(Source):
+            name = "wikipedia"
+
+            def fetch(self, cfg):
+                return []
+
+            def enrich(self, qid, ext, ctx):
+                outer.calls.append(qid)
+                return ObjectContribution(
+                    source="wikipedia",
+                    qid=qid,
+                    fields={"extract_en": "fetched"},
+                    raw={},
+                )
+
+        return [_Src()]
+
+
+def test_generate_object_fetches_material_for_stub_and_marks_ready(session):
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.content_status = "stub"
+    o.attributes = {"external_ids": {}, "wiki_titles": {"en": "X"}}
+    session.commit()
+
+    reg = _FakeRegistry()
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "fr"],
+        model="gpt-4o-mini",
+        registry=reg,
+    )
+    assert "counts" in out and reg.calls == ["Q1"]
+    o2 = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o2.content_status == "ready"
+    assert o2.attributes["extract_en"] == "fetched"
+
+
+def test_generate_object_marks_empty_when_nothing_published(session):
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    class _RejectGate:
+        def gate(self, material, facts, draft):
+            return {
+                "overview": SectionQuality(
+                    body=None, status="needs_review", grounding_ratio=0.0
+                )
+            }
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_RejectGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert out["counts"]["en"] == (0, 1)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.content_status == "empty"
+
+
+def test_generate_object_no_registry_skips_material_fetch(session):
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.content_status = "stub"
+    session.commit()
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert "counts" in out
+    assert (
+        session.query(MuseumObject).filter_by(qid="Q1").one().content_status == "ready"
+    )

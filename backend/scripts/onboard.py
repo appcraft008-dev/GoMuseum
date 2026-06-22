@@ -40,6 +40,8 @@ def build_parser() -> argparse.ArgumentParser:
     lo.add_argument("--target", choices=["staging", "prod"], required=True)
     lo.add_argument("--pack", default=None)
     lo.add_argument("--sample", action="store_true")
+    ca = sub.add_parser("catalog")
+    ca.add_argument("--target", choices=["staging", "prod"], required=True)
     ge = sub.add_parser("generate")
     ge.add_argument("--target", choices=["staging", "prod"], required=True)
     ge.add_argument("--qid", default=None)
@@ -103,6 +105,36 @@ def cmd_load(slug: str, pack_key: str, sample: bool, target: str) -> None:
         print(build_report(slug, reported, as_markdown=True))
 
 
+def cmd_catalog(slug: str, target: str) -> None:
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+    from app.services.enrichment.catalog_loader import load_stubs
+    from app.services.enrichment.identity import merge_stubs
+    from app.services.enrichment.sources.wikidata_catalog import WikidataCatalog
+
+    cfg = _catalog().get(slug)
+    stubs = merge_stubs(list(WikidataCatalog().list(cfg)))
+    museum = {
+        "slug": cfg.slug,
+        "qid": cfg.wikidata_qid,
+        "name_zh": cfg.name_zh,
+        "name_en": cfg.name_en,
+        "city_zh": cfg.city_zh,
+        "city_en": cfg.city_en,
+        "country": cfg.country,
+    }
+    db = SessionLocal()
+    try:
+        out = load_stubs(db, museum, stubs)
+    finally:
+        db.close()
+    print(f"✓ catalog 落库: {out}")
+
+
 def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     # 守卫：--target 必须匹配当前容器 ENVIRONMENT（与 cmd_load 同，先于构造 LLM 组件）
     expected = _ENV_BY_TARGET[target]
@@ -133,6 +165,17 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     translator = ContentTranslator(default_complete)
     qa_suggester = QASuggester(default_complete, gate, translator)
 
+    from app.services.enrichment.http_client import PoliteSession
+    from app.services.enrichment.registry import SourceRegistry
+    from app.services.enrichment.sources.joconde import JocondeSource
+    from app.services.enrichment.sources.wikipedia import WikipediaSource
+
+    ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
+    session = PoliteSession(user_agent=ua, min_interval=1.0)
+    registry = SourceRegistry(
+        [JocondeSource(session=session), WikipediaSource(session=session)]
+    )
+
     db = SessionLocal()
     try:
         if qid:
@@ -146,6 +189,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
                 model="gpt-4o-mini",
                 force=force,
                 qa_suggester=qa_suggester,
+                registry=registry,
             )
         else:
             out = generate_museum(
@@ -159,6 +203,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
                 force=force,
                 limit=limit,
                 qa_suggester=qa_suggester,
+                registry=registry,
             )
     finally:
         db.close()
@@ -186,6 +231,8 @@ def main(argv=None) -> None:
     ns = build_parser().parse_args(argv)
     if ns.command == "fetch":
         cmd_fetch(ns.slug)
+    elif ns.command == "catalog":
+        cmd_catalog(ns.slug, ns.target)
     elif ns.command == "generate":
         cmd_generate(ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target)
     elif ns.command == "report":

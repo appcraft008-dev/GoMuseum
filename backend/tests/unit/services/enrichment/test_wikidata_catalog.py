@@ -49,3 +49,21 @@ def test_wikidata_catalog_dedups_and_stops_on_empty_page():
     cat = WikidataCatalog(run_query=fake)
     out = list(cat.list(_Cfg()))
     assert [s.qid for s in out] == ["Q1"]
+
+
+def test_wikidata_catalog_extracts_routing():
+    cell = lambda v: {"value": v}
+    row = _row("Q775407", "The Balcony", 12, inv="RF 2772")
+    row["joconde"] = cell("000PE026604")
+    row["sitelink_en"] = cell("https://en.wikipedia.org/wiki/The_Balcony")
+    row["sitelink_cl"] = cell("https://fr.wikipedia.org/wiki/Le_Balcon")
+    cat = WikidataCatalog(run_query=lambda sparql: [row])
+    s = list(cat.list(_Cfg()))[0]
+    assert s.external_ids == {"P347": "000PE026604"}
+    assert s.wiki_titles == {"en": "The_Balcony", "fr": "Le_Balcon"}
+
+
+def test_wikidata_catalog_routing_empty_when_absent():
+    cat = WikidataCatalog(run_query=lambda sparql: [_row("Q1", "A", 5)])
+    s = list(cat.list(_Cfg()))[0]
+    assert s.external_ids == {} and s.wiki_titles == {}
