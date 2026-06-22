@@ -21,6 +21,12 @@ class StubRecord:
     owning_museum: str
     source: str
     raw: dict = field(default_factory=dict)
+    external_ids: dict = field(
+        default_factory=dict
+    )  # 跨源 ID（如 P347），供生成时路由富化源
+    wiki_titles: dict = field(
+        default_factory=dict
+    )  # 各语言维基条目标题，供 Wikipedia 富化
 
 
 class CatalogSource(ABC):
