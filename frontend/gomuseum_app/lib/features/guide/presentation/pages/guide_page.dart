@@ -24,7 +24,12 @@ import 'package:path_provider/path_provider.dart';
 
 /// 讲解页路由参数
 class GuideArgs {
-  const GuideArgs({required this.result, this.imagePath, this.imageUrl});
+  const GuideArgs(
+      {required this.result,
+      this.imagePath,
+      this.imageUrl,
+      this.slug,
+      this.qid});
 
   final RecognitionResult result;
 
@@ -33,6 +38,13 @@ class GuideArgs {
 
   /// 网络图片（馆藏目录流程，Wikimedia 缩略图）
   final String? imageUrl;
+
+  /// 馆 slug（馆藏列表流程）
+  // Task 12 consumes slug/qid to fetch A5 ObjectContent via objectContentProvider
+  final String? slug;
+
+  /// 藏品 qid（馆藏列表流程）
+  final String? qid;
 }
 
 /// 问答记录
