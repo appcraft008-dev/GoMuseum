@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'auth_provider.dart';
 
@@ -22,8 +24,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return Scaffold(
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -39,8 +42,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       GestureDetector(
                         onTap: () => context.pop(),
                         behavior: HitTestBehavior.opaque,
-                        child: const GmIcon(GmIcons.back,
-                            size: 20, color: GmColors.ink),
+                        child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
                       ),
                     ],
                   ),
@@ -55,6 +57,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   const Center(child: GmDiamond(width: 110)),
                   const SizedBox(height: 32),
                   _gmField(
+                    gm: gm,
                     controller: _emailController,
                     hint: '邮箱',
                     keyboardType: TextInputType.emailAddress,
@@ -68,11 +71,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 14),
                   _gmField(
+                    gm: gm,
                     controller: _usernameController,
                     hint: '用户名（可选）',
                   ),
                   const SizedBox(height: 14),
                   _gmField(
+                    gm: gm,
                     controller: _passwordController,
                     hint: '密码',
                     obscure: true,
@@ -84,6 +89,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 14),
                   _gmField(
+                    gm: gm,
                     controller: _confirmPasswordController,
                     hint: '确认密码',
                     obscure: true,
@@ -112,7 +118,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     child: Text(
                       '已有账号？登录',
                       textAlign: TextAlign.center,
-                      style: GmText.sans(size: 12.5, color: GmColors.accent),
+                      style: GmText.sans(size: 12.5, color: gm.accent),
                     ),
                   ),
                 ],
@@ -125,6 +131,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Widget _gmField({
+    required GmPalette gm,
     required TextEditingController controller,
     required String hint,
     TextInputType? keyboardType,
@@ -139,17 +146,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       style: GmText.sans(size: 13.5),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GmText.sans(size: 13.5, color: GmColors.faint),
+        hintStyle: GmText.sans(size: 13.5, color: gm.faint),
         filled: true,
-        fillColor: GmColors.surface,
+        fillColor: gm.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: GmColors.line),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: gm.line),
           borderRadius: BorderRadius.zero,
         ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: GmColors.accent),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: gm.accent),
           borderRadius: BorderRadius.zero,
         ),
         errorBorder: const OutlineInputBorder(

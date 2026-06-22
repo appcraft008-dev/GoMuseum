@@ -6,9 +6,12 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -26,6 +29,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     final authState = ref.watch(currentUserProvider);
     final benefits = ref.watch(benefitsStateProvider);
 
@@ -50,47 +54,54 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            _quotaCard(benefits.value?.totalQuota),
+            _quotaCard(gm, benefits.value?.totalQuota),
             const SizedBox(height: 20),
             const GmSectionHead(number: '01', label: '通用'),
             const SizedBox(height: 4),
             _row(
+              gm: gm,
               icon: GmIcons.globe,
               label: '讲解语言',
               value: '简体中文',
               onTap: () => _comingSoon('多语言切换'),
             ),
             _row(
+              gm: gm,
               icon: GmIcons.download,
               label: '离线馆包',
               value: '即将上线',
               onTap: () => _comingSoon('离线馆包'),
             ),
             _toggleRow(
+              gm: gm,
               icon: GmIcons.photo,
               label: '自动保存照片',
               value: _autoSavePhoto,
               onChanged: (v) => setState(() => _autoSavePhoto = v),
             ),
             _row(
+              gm: gm,
               icon: GmIcons.volume,
               label: 'TTS 音色',
               value: '沉稳 · 女声',
               onTap: () => _comingSoon('音色选择'),
             ),
+            _appearanceRow(gm),
             const SizedBox(height: 12),
             const GmSectionHead(number: '02', label: '账户'),
             const SizedBox(height: 4),
-            ..._accountRows(authState),
+            ..._accountRows(gm, authState),
             const SizedBox(height: 12),
             const GmSectionHead(number: '03', label: '支持与法律'),
             const SizedBox(height: 4),
             _row(
+              gm: gm,
               icon: GmIcons.heart,
               label: '鼓励我们',
               onTap: () => _comingSoon('应用商店评分'),
             ),
             _row(
+              gm: gm,
               icon: GmIcons.shield,
               label: '隐私政策',
               onTap: _showPrivacyPolicy,
@@ -99,7 +110,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             Center(
               child: Text(
                 'GoMuseum 0.1.0 · MVP',
-                style: GmText.sans(size: 11, color: GmColors.faint),
+                style: GmText.sans(size: 11, color: gm.faint),
               ),
             ),
             const SizedBox(height: 10),
@@ -109,18 +120,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _quotaCard(int? quota) {
+  Widget _quotaCard(GmPalette gm, int? quota) {
     final remaining = quota ?? 0;
     final progress = (remaining / _freeQuotaTotal).clamp(0.0, 1.0).toDouble();
     return Container(
       decoration: BoxDecoration(
-        color: GmColors.surface,
-        border: Border.all(color: GmColors.line),
+        color: gm.surface,
+        border: Border.all(color: gm.line),
       ),
       padding: const EdgeInsets.all(6),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: GmColors.faint, width: 1),
+          border: Border.all(color: gm.faint, width: 1),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
@@ -131,7 +142,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 children: [
                   Text('免费识别额度',
                       style: GmText.sans(
-                          size: 11.5, letterSpacing: 1, color: GmColors.sub)),
+                          size: 11.5, letterSpacing: 1, color: gm.sub)),
                   const SizedBox(height: 4),
                   Text.rich(
                     TextSpan(
@@ -140,7 +151,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       children: [
                         TextSpan(
                           text: '/ $_freeQuotaTotal 次',
-                          style: GmText.serif(size: 13, color: GmColors.faint),
+                          style: GmText.serif(size: 13, color: gm.faint),
                         ),
                       ],
                     ),
@@ -148,10 +159,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   const SizedBox(height: 9),
                   Stack(
                     children: [
-                      Container(height: 3, color: GmColors.chipBg),
+                      Container(height: 3, color: gm.chipBg),
                       FractionallySizedBox(
                         widthFactor: progress,
-                        child: Container(height: 3, color: GmColors.accent),
+                        child: Container(height: 3, color: gm.accent),
                       ),
                     ],
                   ),
@@ -164,14 +175,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                color: GmColors.ctaBg,
+                color: gm.ctaBg,
                 child: Text(
                   '升级',
                   style: GmText.serif(
                       size: 13,
                       weight: FontWeight.w600,
                       letterSpacing: 2,
-                      color: GmColors.ctaInk),
+                      color: gm.ctaInk),
                 ),
               ),
             ),
@@ -181,12 +192,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  List<Widget> _accountRows(AsyncValue<User?> authState) {
+  List<Widget> _accountRows(GmPalette gm, AsyncValue<User?> authState) {
     return authState.when(
       data: (user) {
         if (user == null) {
           return [
             _row(
+              gm: gm,
               icon: GmIcons.user,
               label: '登录 / 绑定账号',
               value: '未登录',
@@ -196,17 +208,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         }
         return [
           _row(
+            gm: gm,
             icon: GmIcons.user,
             label: user.username ?? '用户',
             value: user.email ?? '未绑定邮箱',
           ),
           _row(
+            gm: gm,
             icon: GmIcons.close,
             label: '登出',
             labelColor: GmColors.error,
             onTap: _handleLogout,
           ),
           _row(
+            gm: gm,
             icon: GmIcons.shield,
             label: '删除账号',
             labelColor: GmColors.error,
@@ -215,10 +230,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ];
       },
       loading: () => [
-        _row(icon: GmIcons.user, label: '加载中…'),
+        _row(gm: gm, icon: GmIcons.user, label: '加载中…'),
       ],
       error: (_, __) => [
         _row(
+          gm: gm,
           icon: GmIcons.user,
           label: '登录 / 绑定账号',
           value: '未登录',
@@ -229,30 +245,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _row({
+    required GmPalette gm,
     required GmIcons icon,
     required String label,
     String? value,
-    Color labelColor = GmColors.ink,
+
+    /// null → gm.ink；传入固定色（如 GmColors.error）时使用传入值
+    Color? labelColor,
     VoidCallback? onTap,
   }) {
+    final effectiveLabelColor = labelColor ?? gm.ink;
     return InkWell(
       onTap: onTap,
       child: SizedBox(
         height: 48,
         child: Row(
           children: [
-            GmIcon(icon, size: 19, color: GmColors.sub),
+            GmIcon(icon, size: 19, color: gm.sub),
             const SizedBox(width: 13),
             Expanded(
-              child:
-                  Text(label, style: GmText.sans(size: 14, color: labelColor)),
+              child: Text(label,
+                  style: GmText.sans(size: 14, color: effectiveLabelColor)),
             ),
             if (value != null) ...[
-              Text(value, style: GmText.sans(size: 12.5, color: GmColors.sub)),
+              Text(value, style: GmText.sans(size: 12.5, color: gm.sub)),
               const SizedBox(width: 8),
             ],
-            if (onTap != null)
-              const GmIcon(GmIcons.chevR, size: 16, color: GmColors.faint),
+            if (onTap != null) GmIcon(GmIcons.chevR, size: 16, color: gm.faint),
           ],
         ),
       ),
@@ -260,6 +279,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _toggleRow({
+    required GmPalette gm,
     required GmIcons icon,
     required String label,
     required bool value,
@@ -269,10 +289,66 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       height: 48,
       child: Row(
         children: [
-          GmIcon(icon, size: 19, color: GmColors.sub),
+          GmIcon(icon, size: 19, color: gm.sub),
           const SizedBox(width: 13),
           Expanded(child: Text(label, style: GmText.sans(size: 14))),
           GmToggle(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+
+  /// 外观分段控件：浅色 / 深色 / 跟随系统
+  /// 激活态：ctaBg 底 + ctaInk 文字；非激活：transparent
+  /// 无圆角（border-radius: 0，暖纸设计语言）。
+  Widget _appearanceRow(GmPalette gm) {
+    const segments = [
+      (label: '浅色', mode: ThemeMode.light),
+      (label: '深色', mode: ThemeMode.dark),
+      (label: '跟随系统', mode: ThemeMode.system),
+    ];
+    final current = ref.watch(themeModeProvider);
+
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          GmIcon(GmIcons.sliders, size: 19, color: gm.sub),
+          const SizedBox(width: 13),
+          Text('外观', style: GmText.sans(size: 14, color: gm.ink)),
+          const Spacer(),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: gm.line),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: segments.map((seg) {
+                final isActive = current == seg.mode;
+                return Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onTap: () =>
+                        ref.read(themeModeProvider.notifier).setMode(seg.mode),
+                    child: Container(
+                      height: 40,
+                      color: isActive ? gm.ctaBg : Colors.transparent,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      alignment: Alignment.center,
+                      child: Text(
+                        seg.label,
+                        style: GmText.serif(
+                          size: 12,
+                          weight: FontWeight.w600,
+                          color: isActive ? gm.ctaInk : gm.sub,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
       ),
     );
@@ -285,10 +361,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   void _showPrivacyPolicy() {
+    final gm = context.gm;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: GmColors.surface,
+        backgroundColor: gm.surface,
         title: Text('隐私政策',
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(
@@ -307,10 +384,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _handleDeleteAccount() async {
+    final gm = context.gm;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: GmColors.surface,
+        backgroundColor: gm.surface,
         title: Text('永久删除账号？',
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(
@@ -320,8 +398,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child:
-                Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
+            child: Text('取消', style: GmText.sans(size: 13, color: gm.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -345,18 +422,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _handleLogout() async {
+    final gm = context.gm;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: GmColors.surface,
+        backgroundColor: gm.surface,
         title: Text('确认登出',
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text('确定要登出吗？', style: GmText.sans(size: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child:
-                Text('取消', style: GmText.sans(size: 13, color: GmColors.sub)),
+            child: Text('取消', style: GmText.sans(size: 13, color: gm.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),

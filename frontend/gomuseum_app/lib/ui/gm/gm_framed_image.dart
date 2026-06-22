@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 
 /// 占位底色（图片缺失/加载中）
 const Color _placeholder = Color(0xFFD8D2C2);
@@ -26,10 +26,11 @@ class GmFramedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return Container(
       decoration: BoxDecoration(
-        color: GmColors.surface,
-        border: Border.all(color: GmColors.line),
+        color: gm.surface,
+        border: Border.all(color: gm.line),
       ),
       padding: framePadding,
       child: GmInnerImage(image: image, height: height),
@@ -52,12 +53,13 @@ class GmInnerImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return Container(
       height: height,
       width: width ?? double.infinity,
       decoration: BoxDecoration(
         color: _placeholder,
-        border: Border.all(color: GmColors.line),
+        border: Border.all(color: gm.line),
         image: image == null
             ? null
             : DecorationImage(image: image!, fit: BoxFit.cover),
@@ -75,14 +77,15 @@ class GmThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: _placeholder,
-        border: Border.all(color: GmColors.surface, width: 2),
-        boxShadow: const [
-          BoxShadow(color: GmColors.line, spreadRadius: 1, blurRadius: 0),
+        border: Border.all(color: gm.surface, width: 2),
+        boxShadow: [
+          BoxShadow(color: gm.line, spreadRadius: 1, blurRadius: 0),
         ],
         image: image == null
             ? null

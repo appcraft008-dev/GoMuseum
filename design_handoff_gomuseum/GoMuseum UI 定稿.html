@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GoMuseum · 定稿 · 暖纸手册</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700;900&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  #root { height: 100vh; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel" src="gm-shared.jsx"></script>
+<script type="text/babel" src="screens-final.jsx"></script>
+<script type="text/babel">
+function Device({ children, label, dark }) {
+  return (
+    <div data-screen-label={label} style={{ padding: 18 }}>
+      <AndroidDevice bg={dark ? '#201A12' : 'transparent'} shadow={false} dark={dark}>
+        {children}
+      </AndroidDevice>
+    </div>
+  );
+}
+
+function App() {
+  const W = 412 + 36 + 16;
+  const H = 892 + 36 + 16;
+  return (
+    <DesignCanvas>
+      <DCSection id="auth" title="登录 · 注册流程"
+        subtitle="按现有 App 截图 1:1 还原——GOMUSEUM 刊头 + 门票式登录按钮 + 第三方 / 游客登录；同一组件支持明暗两套皮肤">
+        <DCArtboard id="fin-login" label="登录页 · 亮色" width={W} height={H}>
+          <Device label="登录页"><FinalLogin /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-login" label="登录页 · 夜版" width={W} height={H}>
+          <Device label="登录页·夜版" dark><FinalLogin t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="core" title="核心主流程"
+        subtitle="核心三页：首页（B 风格 + 横滑博物馆卡片）→ 拍照识别 → 讲解页（B 风格 + TTS/正文/AI 问答）；底部导航中央为大识别按钮">
+        <DCArtboard id="fin-home" label="首页" width={W} height={H}>
+          <Device label="首页"><FinalHome /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-city" label="城市选择 · 下拉搜索" width={W} height={H}>
+          <Device label="城市选择"><FinalCityPicker /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-capture" label="取景拍照页" width={W} height={H}>
+          <Device label="取景页"><FinalCapture /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-scan" label="拍照识别 · 候选确认" width={W} height={H}>
+          <Device label="识别页"><FinalScan /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-guide" label="讲解页 · 默认态" width={W} height={H}>
+          <Device label="讲解页"><FinalGuide /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-guide-info" label="讲解页 · 作品信息展开" width={W} height={H}>
+          <Device label="讲解页·信息展开"><FinalGuideInfo /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-guide-chat" label="讲解页 · AI 聊天面板" width={W} height={H}>
+          <Device label="讲解页·AI聊天"><FinalGuideChat /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-guide-chat" label="讲解页 · AI 聊天面板 · 夜版" width={W} height={H}>
+          <Device label="讲解页·AI聊天·夜版" dark><FinalGuideChat t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="rest" title="其余页面"
+        subtitle="探索 / 足迹 / 设置 — 统一暖纸手册风格与目录编号体系">
+        <DCArtboard id="fin-explore" label="探索" width={W} height={H}>
+          <Device label="探索页"><FinalExplore /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-collection" label="馆藏列表 · 加载中" width={W} height={H}>
+          <Device label="馆藏列表页"><FinalCollection /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-collection-end" label="馆藏列表 · 已全部加载" width={W} height={H}>
+          <Device label="馆藏列表页·完成"><FinalCollection loaded={true} /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-footprints" label="足迹" width={W} height={H}>
+          <Device label="足迹页"><FinalFootprints /></Device>
+        </DCArtboard>
+        <DCArtboard id="fin-settings" label="设置" width={W} height={H}>
+          <Device label="设置页"><FinalSettings /></Device>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="dark" title="夜版 · 暖纸手册 · 暗色主题"
+        subtitle="同一套版式与组件，深褐纸底 + 提亮赤陶色 — 适合昨厅环境与夜场参观">
+        <DCArtboard id="dark-home" label="首页 · 夜版" width={W} height={H}>
+          <Device label="首页·夜版" dark><FinalHome t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-scan" label="拍照识别 · 夜版" width={W} height={H}>
+          <Device label="识别页·夜版" dark><FinalScan t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-guide" label="讲解页 · 夜版" width={W} height={H}>
+          <Device label="讲解页·夜版" dark><FinalGuide t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-explore" label="探索 · 夜版" width={W} height={H}>
+          <Device label="探索页·夜版" dark><FinalExplore t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-collection" label="馆藏列表 · 夜版" width={W} height={H}>
+          <Device label="馆藏列表页·夜版" dark><FinalCollection t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-footprints" label="足迹 · 夜版" width={W} height={H}>
+          <Device label="足迹页·夜版" dark><FinalFootprints t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+        <DCArtboard id="dark-settings" label="设置 · 夜版" width={W} height={H}>
+          <Device label="设置页·夜版" dark><FinalSettings t={GM_THEMES.BD} /></Device>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

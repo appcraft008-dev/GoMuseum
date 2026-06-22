@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'dart:io' show Platform;
@@ -33,8 +35,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     return Scaffold(
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
@@ -57,11 +60,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 Text(
                   '随身博物馆导览手册',
                   textAlign: TextAlign.center,
-                  style: GmText.sans(
-                      size: 11, letterSpacing: 3, color: GmColors.sub),
+                  style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
                 ),
                 const SizedBox(height: 40),
                 _gmField(
+                  gm: gm,
                   controller: _emailController,
                   hint: '邮箱',
                   keyboardType: TextInputType.emailAddress,
@@ -69,6 +72,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 const SizedBox(height: 14),
                 _gmField(
+                  gm: gm,
                   controller: _passwordController,
                   hint: '密码',
                   obscure: true,
@@ -94,19 +98,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   child: Text(
                     '还没有账号？注册',
                     textAlign: TextAlign.center,
-                    style: GmText.sans(size: 12.5, color: GmColors.accent),
+                    style: GmText.sans(size: 12.5, color: gm.accent),
                   ),
                 ),
                 const SizedBox(height: 24),
                 _divider('或使用以下方式登录'),
                 const SizedBox(height: 18),
-                _socialButton('使用 Google 登录', _handleGoogleLogin),
+                _socialButton(gm, '使用 Google 登录', _handleGoogleLogin),
                 const SizedBox(height: 10),
-                _socialButton('使用 Apple 登录', _handleAppleLogin),
+                _socialButton(gm, '使用 Apple 登录', _handleAppleLogin),
                 const SizedBox(height: 18),
                 _divider('或'),
                 const SizedBox(height: 18),
-                _socialButton('游客登录', _handleGuestLogin, emphasized: true),
+                _socialButton(gm, '游客登录', _handleGuestLogin, emphasized: true),
               ],
             ),
           ),
@@ -116,6 +120,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Widget _gmField({
+    required GmPalette gm,
     required TextEditingController controller,
     required String hint,
     TextInputType? keyboardType,
@@ -130,17 +135,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       style: GmText.sans(size: 13.5),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GmText.sans(size: 13.5, color: GmColors.faint),
+        hintStyle: GmText.sans(size: 13.5, color: gm.faint),
         filled: true,
-        fillColor: GmColors.surface,
+        fillColor: gm.surface,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: GmColors.line),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: gm.line),
           borderRadius: BorderRadius.zero,
         ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: GmColors.accent),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: gm.accent),
           borderRadius: BorderRadius.zero,
         ),
         errorBorder: const OutlineInputBorder(
@@ -156,20 +161,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Widget _divider(String label) {
+    final gm = context.gm;
     return Row(
       children: [
         const Expanded(child: GmHairline()),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child:
-              Text(label, style: GmText.sans(size: 11.5, color: GmColors.sub)),
+          child: Text(label, style: GmText.sans(size: 11.5, color: gm.sub)),
         ),
         const Expanded(child: GmHairline()),
       ],
     );
   }
 
-  Widget _socialButton(String label, VoidCallback onTap,
+  Widget _socialButton(GmPalette gm, String label, VoidCallback onTap,
       {bool emphasized = false}) {
     return GestureDetector(
       onTap: _isLoading ? null : onTap,
@@ -177,14 +182,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         height: 46,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: emphasized ? GmColors.chipBg : GmColors.surface,
-          border: Border.all(color: GmColors.line),
+          color: emphasized ? gm.chipBg : gm.surface,
+          border: Border.all(color: gm.line),
         ),
         child: Text(
           label,
           style: GmText.sans(
             size: 13.5,
-            color: GmColors.ink,
+            color: gm.ink,
             weight: emphasized ? FontWeight.w600 : FontWeight.w400,
           ),
         ),

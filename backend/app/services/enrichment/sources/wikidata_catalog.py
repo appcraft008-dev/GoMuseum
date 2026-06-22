@@ -59,6 +59,17 @@ class WikidataCatalog(CatalogSource):
                     continue
                 seen.add(qid)
                 p31 = (row.get("p31", {}) or {}).get("value", "").rsplit("/", 1)[-1]
+                ext = {}
+                jo = _wd._v(row, "joconde")
+                if jo:
+                    ext["P347"] = jo
+                titles = {}
+                se = _wd._v(row, "sitelink_en")
+                if se:
+                    titles["en"] = se.rsplit("/", 1)[-1]
+                scl = _wd._v(row, "sitelink_cl")
+                if scl:
+                    titles[cfg.country_lang or "fr"] = scl.rsplit("/", 1)[-1]
                 yield StubRecord(
                     inventory_number=_wd._v(row, "inventory"),
                     qid=qid,
@@ -71,6 +82,8 @@ class WikidataCatalog(CatalogSource):
                     owning_museum=cfg.slug,
                     source="wikidata",
                     raw=row,
+                    external_ids=ext,
+                    wiki_titles=titles,
                 )
             fetched += len(rows)
             offset += len(rows)

@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
@@ -25,9 +26,10 @@ class GmNavScan extends StatelessWidget {
   /// 中央按钮上浮高度
   static const double _overhang = 26;
 
-  Widget _tab(int index, String label, GmIcons icon) {
+  Widget _tab(BuildContext context, int index, String label, GmIcons icon) {
+    final gm = context.gm;
     final on = index == currentIndex;
-    final color = on ? GmColors.accentDeep : GmColors.faint;
+    final color = on ? gm.accentDeep : gm.faint;
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -54,6 +56,7 @@ class GmNavScan extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gm = context.gm;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     return SizedBox(
       height: _barHeight + _overhang + bottomInset,
@@ -67,17 +70,17 @@ class GmNavScan extends StatelessWidget {
             height: _barHeight + bottomInset,
             child: Container(
               padding: EdgeInsets.only(bottom: bottomInset),
-              decoration: const BoxDecoration(
-                color: GmColors.bg,
-                border: Border(top: BorderSide(color: GmColors.line)),
+              decoration: BoxDecoration(
+                color: gm.bg,
+                border: Border(top: BorderSide(color: gm.line)),
               ),
               child: Row(
                 children: [
-                  _tab(0, '首页', GmIcons.home),
-                  _tab(1, '探索', GmIcons.compass),
+                  _tab(context, 0, '首页', GmIcons.home),
+                  _tab(context, 1, '探索', GmIcons.compass),
                   const SizedBox(width: 92),
-                  _tab(3, '足迹', GmIcons.pin),
-                  _tab(4, '设置', GmIcons.sliders),
+                  _tab(context, 3, '足迹', GmIcons.pin),
+                  _tab(context, 4, '设置', GmIcons.sliders),
                 ],
               ),
             ),
@@ -99,9 +102,9 @@ class GmNavScan extends StatelessWidget {
                         width: 60,
                         height: 60,
                         decoration: BoxDecoration(
-                          color: GmColors.ctaBg,
+                          color: gm.ctaBg,
                           shape: BoxShape.circle,
-                          border: Border.all(color: GmColors.bg, width: 4),
+                          border: Border.all(color: gm.bg, width: 4),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x472C2316),
@@ -111,10 +114,10 @@ class GmNavScan extends StatelessWidget {
                           ],
                         ),
                         alignment: Alignment.center,
-                        child: const GmIcon(
+                        child: GmIcon(
                           GmIcons.camera,
                           size: 26,
-                          color: GmColors.ctaInk,
+                          color: gm.ctaInk,
                           strokeWidth: 1.7,
                         ),
                       ),
@@ -125,9 +128,7 @@ class GmNavScan extends StatelessWidget {
                           size: 10.5,
                           letterSpacing: 1.5,
                           weight: FontWeight.w600,
-                          color: currentIndex == 2
-                              ? GmColors.accentDeep
-                              : GmColors.sub,
+                          color: currentIndex == 2 ? gm.accentDeep : gm.sub,
                         ),
                       ),
                     ],

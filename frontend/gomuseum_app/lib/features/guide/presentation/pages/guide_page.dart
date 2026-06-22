@@ -1,9 +1,13 @@
-/// GoMuseum 讲解页 — 暖纸手册定稿（FinalGuide）
+/// GoMuseum 讲解页 — 暖纸手册定稿
 ///
-/// 装裱画框 + 居中衬线标题 + TTS 播放器 + 讲解正文（含「看点」分隔）
-/// + AI 问答（建议问题 chips + 输入框 + 麦克风）。
+/// 双入口：
+///   A. slug+qid 入口 → A5 ObjectContent（Hero 折叠 / 墙签 / 信息表 / tabs / 待完善）
+///   B. RecognitionResult 入口 → 旧 AI 生成路径（识别流程，保留兼容）
+///
+/// AI 问答底栏（session B 交互）→ 本文件只留静态挂载点壳。
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -11,36 +15,76 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/services/tts_service.dart';
+import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/domain/entities/explanation.dart';
 import 'package:gomuseum_app/features/content/domain/usecases/generate_explanation.dart';
 import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// 讲解页路由参数
-class GuideArgs {
-  const GuideArgs({required this.result, this.imagePath, this.imageUrl});
+// ---------------------------------------------------------------------------
+// Route args
+// ---------------------------------------------------------------------------
 
-  final RecognitionResult result;
+/// 讲解页路由参数。
+///
+/// 两种入口（互斥）：
+///   1. `slug` + `qid` → A5 ObjectContent 路径（馆藏列表点卡）
+///   2. `result` → 识别路径（旧 AI 生成流程）
+///
+/// [result] 设为可选；当 slug+qid 均有值时忽略 result。
+class GuideArgs {
+  const GuideArgs({
+    this.result,
+    this.imagePath,
+    this.imageUrl,
+    this.slug,
+    this.qid,
+  }) : assert(
+          (slug != null && qid != null) || result != null,
+          'GuideArgs 需提供 (slug+qid) 或 result 其中一种',
+        );
+
+  /// 识别结果（识别路径；slug+qid 路径可为 null）
+  final RecognitionResult? result;
 
   /// 本地拍摄照片路径（识别流程）
   final String? imagePath;
 
   /// 网络图片（馆藏目录流程，Wikimedia 缩略图）
   final String? imageUrl;
+
+  /// 馆 slug（馆藏列表流程）
+  final String? slug;
+
+  /// 藏品 qid（馆藏列表流程）
+  final String? qid;
+
+  /// 是否走 A5 内容路径
+  bool get useA5 => slug != null && qid != null;
 }
 
-/// 问答记录
+// ---------------------------------------------------------------------------
+// Legacy QA entry (recognition path)
+// ---------------------------------------------------------------------------
+
 class _QaEntry {
   const _QaEntry({required this.question, this.answer});
 
   final String question;
   final String? answer;
 }
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 class GuidePage extends ConsumerStatefulWidget {
   const GuidePage({super.key, required this.args});
@@ -51,42 +95,132 @@ class GuidePage extends ConsumerStatefulWidget {
   ConsumerState<GuidePage> createState() => _GuidePageState();
 }
 
-class _GuidePageState extends ConsumerState<GuidePage> {
-  final TtsService _tts = TtsService();
-  final TextEditingController _questionController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-
-  Explanation? _explanation;
-  String? _loadError;
+class _GuidePageState extends ConsumerState<GuidePage>
+    with TickerProviderStateMixin {
+  // ── shared
   bool _starred = false;
 
-  /// TTS 音频准备状态
+  // ── A5 path: tab controller
+  TabController? _tabController;
+  int _tabIndex = 0;
+
+  // ── A5 path: TTS per tab
+  final TtsService _tts = TtsService();
   bool _audioLoading = false;
   bool _audioReady = false;
   static const _speeds = [1.0, 1.25, 1.5, 0.75];
   int _speedIndex = 0;
+  String? _currentAudioUrl;
 
+  // ── A5 path: facts accordion
+  bool _factsExpanded = false;
+
+  // ── A5 path: generating poll
+  Timer? _pollTimer;
+
+  // ── legacy recognition path
+  final TtsService _legacyTts = TtsService();
+  final TextEditingController _questionController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  Explanation? _explanation;
+  String? _loadError;
+  bool _legacyAudioLoading = false;
+  bool _legacyAudioReady = false;
+  int _legacySpeedIndex = 0;
   final List<_QaEntry> _qa = [];
   bool _asking = false;
 
-  RecognitionResult get _result => widget.args.result;
-
-  /// MVP 中文优先；多语言切换接入设置页后改为读取语言设置
+  // ── language
   String get _language => 'zh';
 
   @override
   void initState() {
     super.initState();
-    _loadExplanation();
+    if (!widget.args.useA5) {
+      _loadExplanation();
+    }
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
+    _tabController?.dispose();
     _tts.dispose();
+    _legacyTts.dispose();
     _questionController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
+
+  // ── A5: poll while status == generating
+  void _startPolling({required String slug, required String qid}) {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      ref.invalidate(objectContentProvider((slug: slug, qid: qid)));
+    });
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  // ── A5: build/rebuild TabController when tab count changes
+  void _syncTabController(int count) {
+    if (_tabController?.length != count) {
+      _tabController?.dispose();
+      _tabController = TabController(length: count, vsync: this);
+      _tabIndex = 0;
+      _tabController!.addListener(() {
+        if (!_tabController!.indexIsChanging) {
+          setState(() => _tabIndex = _tabController!.index);
+        }
+      });
+    }
+  }
+
+  // ── A5: TTS for current tab
+  Future<void> _toggleTabPlay(String url) async {
+    if (_tts.isPlaying && _currentAudioUrl == url) {
+      await _tts.pause();
+      setState(() {});
+      return;
+    }
+    if (_currentAudioUrl == url && _audioReady) {
+      await _tts.resume();
+      setState(() {});
+      return;
+    }
+    if (_audioLoading) return;
+
+    // switching tabs → stop previous
+    await _tts.stop();
+    setState(() {
+      _audioLoading = true;
+      _audioReady = false;
+      _currentAudioUrl = url;
+    });
+    try {
+      await _tts.play(url);
+      if (mounted) {
+        setState(() {
+          _audioLoading = false;
+          _audioReady = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _audioLoading = false);
+    }
+  }
+
+  Future<void> _cycleSpeed() async {
+    setState(() => _speedIndex = (_speedIndex + 1) % _speeds.length);
+    await _tts.setSpeed(_speeds[_speedIndex]);
+  }
+
+  // ── Legacy path methods ──────────────────────────────────────────────────
+
+  RecognitionResult get _result => widget.args.result!;
 
   Future<void> _loadExplanation() async {
     setState(() {
@@ -115,25 +249,25 @@ class _GuidePageState extends ConsumerState<GuidePage> {
       e.summary,
       e.historicalContext,
       e.artisticAnalysis,
-      e.culturalSignificance,
+      e.culturalSignificance
     ].where((s) => s.trim().isNotEmpty).join('\n\n');
   }
 
-  Future<void> _togglePlay() async {
+  Future<void> _toggleLegacyPlay() async {
     if (_explanation == null) return;
-    if (_tts.isPlaying) {
-      await _tts.pause();
+    if (_legacyTts.isPlaying) {
+      await _legacyTts.pause();
       setState(() {});
       return;
     }
-    if (_audioReady) {
-      await _tts.resume();
+    if (_legacyAudioReady) {
+      await _legacyTts.resume();
       setState(() {});
       return;
     }
-    if (_audioLoading) return;
+    if (_legacyAudioLoading) return;
 
-    setState(() => _audioLoading = true);
+    setState(() => _legacyAudioLoading = true);
     final useCase = ref.read(generateTtsAudioUseCaseProvider);
     final result = await useCase(GenerateTtsAudioParams(
       text: _fullNarration,
@@ -142,7 +276,7 @@ class _GuidePageState extends ConsumerState<GuidePage> {
     if (!mounted) return;
     await result.fold(
       (failure) async {
-        setState(() => _audioLoading = false);
+        setState(() => _legacyAudioLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('语音生成失败：${failure.message}')),
@@ -152,26 +286,20 @@ class _GuidePageState extends ConsumerState<GuidePage> {
       (url) async {
         try {
           final playable = await _materializeAudio(url);
-          await _tts.play(playable);
+          await _legacyTts.play(playable);
           if (mounted) {
             setState(() {
-              _audioLoading = false;
-              _audioReady = true;
+              _legacyAudioLoading = false;
+              _legacyAudioReady = true;
             });
           }
         } catch (e) {
-          if (mounted) {
-            setState(() => _audioLoading = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('音频播放失败：$e')),
-            );
-          }
+          if (mounted) setState(() => _legacyAudioLoading = false);
         }
       },
     );
   }
 
-  /// data: URI 的 base64 音频落盘为临时文件，其余按 URL 直接播放
   Future<String> _materializeAudio(String url) async {
     if (!url.startsWith('data:audio')) return url;
     final base64Data = url.substring(url.indexOf(',') + 1);
@@ -183,9 +311,10 @@ class _GuidePageState extends ConsumerState<GuidePage> {
     return 'file://${file.path}';
   }
 
-  Future<void> _cycleSpeed() async {
-    setState(() => _speedIndex = (_speedIndex + 1) % _speeds.length);
-    await _tts.setSpeed(_speeds[_speedIndex]);
+  Future<void> _cycleLegacySpeed() async {
+    setState(
+        () => _legacySpeedIndex = (_legacySpeedIndex + 1) % _speeds.length);
+    await _legacyTts.setSpeed(_speeds[_legacySpeedIndex]);
   }
 
   Future<void> _ask(String question) async {
@@ -197,7 +326,6 @@ class _GuidePageState extends ConsumerState<GuidePage> {
       _qa.add(_QaEntry(question: q));
     });
     _scrollToBottom();
-
     try {
       final dio = ref.read(dioProvider);
       final response = await dio.post('/api/v1/chat/ask', data: {
@@ -235,14 +363,100 @@ class _GuidePageState extends ConsumerState<GuidePage> {
     });
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    if (widget.args.useA5) {
+      return _buildA5Page(context);
+    }
+    return _buildLegacyPage(context);
+  }
+
+  // =========================================================================
+  // A5 Content Path
+  // =========================================================================
+
+  Widget _buildA5Page(BuildContext context) {
+    final gm = context.gm;
+    final slug = widget.args.slug!;
+    final qid = widget.args.qid!;
+    final contentAsync =
+        ref.watch(objectContentProvider((slug: slug, qid: qid)));
+
+    return contentAsync.when(
+      loading: () => _A5LoadingScaffold(gm: gm, onBack: () => _goBack(context)),
+      error: (err, _) => _A5ErrorScaffold(
+        gm: gm,
+        onBack: () => _goBack(context),
+        onRetry: () =>
+            ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
+      ),
+      data: (content) {
+        // Handle status-based states
+        if (content.status == ContentStatus.generating) {
+          _startPolling(slug: slug, qid: qid);
+          return _A5GeneratingScaffold(gm: gm, onBack: () => _goBack(context));
+        } else {
+          _stopPolling();
+        }
+
+        if (content.status == ContentStatus.empty ||
+            content.status == ContentStatus.stub) {
+          return _A5EmptyScaffold(gm: gm, onBack: () => _goBack(context));
+        }
+
+        // Ready: full rendering
+        _syncTabController(content.tabs.length);
+
+        return Scaffold(
+          backgroundColor: gm.bg,
+          body: NestedScrollView(
+            headerSliverBuilder: (context, _) => [
+              _A5HeroSliverAppBar(
+                content: content,
+                starred: _starred,
+                onBack: () => _goBack(context),
+                onToggleStar: () => setState(() => _starred = !_starred),
+              ),
+            ],
+            body: _A5Body(
+              content: content,
+              tabController: _tabController,
+              tabIndex: _tabIndex,
+              tts: _tts,
+              audioLoading: _audioLoading,
+              audioReady: _audioReady,
+              currentAudioUrl: _currentAudioUrl,
+              speedIndex: _speedIndex,
+              speeds: _speeds,
+              factsExpanded: _factsExpanded,
+              onToggleFacts: () =>
+                  setState(() => _factsExpanded = !_factsExpanded),
+              onToggleTabPlay: _toggleTabPlay,
+              onCycleSpeed: _cycleSpeed,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _goBack(BuildContext context) =>
+      context.canPop() ? context.pop() : context.go('/');
+
+  // =========================================================================
+  // Legacy Recognition Path
+  // =========================================================================
+
+  Widget _buildLegacyPage(BuildContext context) {
+    final gm = context.gm;
     return Scaffold(
-      backgroundColor: GmColors.bg,
+      backgroundColor: gm.bg,
       body: SafeArea(
         child: Column(
           children: [
-            _topBar(context),
+            _legacyTopBar(context),
             Expanded(
               child: SingleChildScrollView(
                 controller: _scrollController,
@@ -260,88 +474,80 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                       height: 186,
                     ),
                     const SizedBox(height: 12),
-                    _titleBlock(),
+                    _legacyTitleBlock(),
                     const SizedBox(height: 16),
-                    _player(),
+                    _legacyPlayer(),
                     const SizedBox(height: 10),
                     const GmHairline(),
                     const SizedBox(height: 12),
-                    _body(),
+                    _legacyBody(),
                     if (_qa.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      _qaList(),
+                      _legacyQaList(),
                     ],
                   ],
                 ),
               ),
             ),
-            _qaInput(),
+            _legacyQaInput(),
           ],
         ),
       ),
     );
   }
 
-  Widget _topBar(BuildContext context) {
+  Widget _legacyTopBar(BuildContext context) {
+    final gm = context.gm;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.canPop() ? context.pop() : context.go('/'),
+            onTap: () => _goBack(context),
             behavior: HitTestBehavior.opaque,
-            child: const GmIcon(GmIcons.back, size: 20, color: GmColors.ink),
+            child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
           ),
           Expanded(
-            child: Text(
-              '语音导览',
-              textAlign: TextAlign.center,
-              style:
-                  GmText.sans(size: 11, letterSpacing: 3, color: GmColors.sub),
-            ),
+            child: Text('语音导览',
+                textAlign: TextAlign.center,
+                style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub)),
           ),
           GestureDetector(
             onTap: () => setState(() => _starred = !_starred),
             behavior: HitTestBehavior.opaque,
-            child: GmIcon(
-              GmIcons.star,
-              size: 20,
-              color: GmColors.accent,
-              fill: _starred,
-            ),
+            child: GmIcon(GmIcons.star,
+                size: 20, color: gm.accent, fill: _starred),
           ),
         ],
       ),
     );
   }
 
-  Widget _titleBlock() {
+  Widget _legacyTitleBlock() {
+    final gm = context.gm;
     return Column(
       children: [
-        Text(
-          _result.artworkName,
-          textAlign: TextAlign.center,
-          style:
-              GmText.serif(size: 22, weight: FontWeight.w700, letterSpacing: 1),
-        ),
+        Text(_result.artworkName,
+            textAlign: TextAlign.center,
+            style: GmText.serif(
+                size: 22, weight: FontWeight.w700, letterSpacing: 1)),
         const SizedBox(height: 8),
         const GmDiamond(width: 120),
         const SizedBox(height: 7),
-        Text(
-          '${_result.artist} · ${_result.period}',
-          textAlign: TextAlign.center,
-          style: GmText.sans(size: 12, color: GmColors.sub),
-        ),
+        Text('${_result.artist} · ${_result.period}',
+            textAlign: TextAlign.center,
+            style: GmText.sans(size: 12, color: gm.sub)),
       ],
     );
   }
 
-  Widget _player() {
+  Widget _legacyPlayer() {
+    final gm = context.gm;
     return StreamBuilder<Duration>(
-      stream: _tts.positionStream,
+      stream: _legacyTts.positionStream,
       builder: (context, positionSnap) {
         return StreamBuilder<Duration?>(
-          stream: _tts.durationStream,
+          stream: _legacyTts.durationStream,
           builder: (context, durationSnap) {
             final position = positionSnap.data ?? Duration.zero;
             final duration = durationSnap.data ?? Duration.zero;
@@ -352,78 +558,63 @@ class _GuidePageState extends ConsumerState<GuidePage> {
             return Row(
               children: [
                 GestureDetector(
-                  onTap: _togglePlay,
+                  onTap: _toggleLegacyPlay,
                   child: Container(
                     width: 48,
                     height: 48,
-                    decoration: const BoxDecoration(
-                      color: GmColors.ctaBg,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration:
+                        BoxDecoration(color: gm.ctaBg, shape: BoxShape.circle),
                     alignment: Alignment.center,
-                    child: _audioLoading
-                        ? const SizedBox(
+                    child: _legacyAudioLoading
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: GmColors.ctaInk,
-                            ),
-                          )
+                                strokeWidth: 2, color: gm.ctaInk))
                         : StreamBuilder<PlayerState>(
-                            stream: _tts.playerStateStream,
+                            stream: _legacyTts.playerStateStream,
                             builder: (context, snap) {
                               final playing = snap.data?.playing ?? false;
                               return GmIcon(
-                                playing ? GmIcons.pause : GmIcons.play,
-                                size: 19,
-                                color: GmColors.ctaInk,
-                                strokeWidth: 2,
-                              );
-                            },
-                          ),
+                                  playing ? GmIcons.pause : GmIcons.play,
+                                  size: 19,
+                                  color: gm.ctaInk,
+                                  strokeWidth: 2);
+                            }),
                   ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(height: 2, color: GmColors.line),
-                          FractionallySizedBox(
+                      Stack(clipBehavior: Clip.none, children: [
+                        Container(height: 2, color: gm.line),
+                        FractionallySizedBox(
                             widthFactor: progress,
-                            child: Container(height: 2, color: GmColors.accent),
-                          ),
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            top: -3.5,
-                            child: Align(
-                              alignment: Alignment(progress * 2 - 1, 0),
-                              child: Container(
+                            child: Container(height: 2, color: gm.accent)),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          top: -3.5,
+                          child: Align(
+                            alignment: Alignment(progress * 2 - 1, 0),
+                            child: Container(
                                 width: 9,
                                 height: 9,
-                                decoration: const BoxDecoration(
-                                  color: GmColors.accentDeep,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
+                                decoration: BoxDecoration(
+                                    color: gm.accentDeep,
+                                    shape: BoxShape.circle)),
                           ),
-                        ],
-                      ),
+                        ),
+                      ]),
                       const SizedBox(height: 7),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(_format(position),
-                              style:
-                                  GmText.sans(size: 11, color: GmColors.sub)),
-                          Text(_format(duration),
-                              style:
-                                  GmText.sans(size: 11, color: GmColors.sub)),
+                          Text(_formatDuration(position),
+                              style: GmText.sans(size: 11, color: gm.sub)),
+                          Text(_formatDuration(duration),
+                              style: GmText.sans(size: 11, color: gm.sub)),
                         ],
                       ),
                     ],
@@ -431,19 +622,16 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                 ),
                 const SizedBox(width: 14),
                 GestureDetector(
-                  onTap: _cycleSpeed,
+                  onTap: _cycleLegacySpeed,
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: GmColors.surface,
-                      border: Border.all(color: GmColors.line),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '${_speeds[_speedIndex]}×',
-                      style: GmText.sans(size: 11.5, color: GmColors.sub),
-                    ),
+                        color: gm.surface,
+                        border: Border.all(color: gm.line),
+                        borderRadius: BorderRadius.circular(999)),
+                    child: Text('${_speeds[_legacySpeedIndex]}×',
+                        style: GmText.sans(size: 11.5, color: gm.sub)),
                   ),
                 ),
               ],
@@ -454,49 +642,36 @@ class _GuidePageState extends ConsumerState<GuidePage> {
     );
   }
 
-  String _format(Duration d) {
-    final m = d.inMinutes;
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  Widget _body() {
+  Widget _legacyBody() {
+    final gm = context.gm;
     if (_loadError != null) {
-      return Column(
-        children: [
-          Text('讲解生成失败',
-              style: GmText.serif(size: 15, weight: FontWeight.w700)),
-          const SizedBox(height: 6),
-          Text(_loadError!,
-              textAlign: TextAlign.center,
-              style: GmText.sans(size: 12, color: GmColors.sub)),
-          const SizedBox(height: 12),
-          GmTicketButton(label: '重试', onTap: _loadExplanation, height: 38),
-        ],
-      );
+      return Column(children: [
+        Text('讲解生成失败', style: GmText.serif(size: 15, weight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Text(_loadError!,
+            textAlign: TextAlign.center,
+            style: GmText.sans(size: 12, color: gm.sub)),
+        const SizedBox(height: 12),
+        GmTicketButton(label: '重试', onTap: _loadExplanation, height: 38),
+      ]);
     }
     final e = _explanation;
     if (e == null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 28),
-        child: Column(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 12),
-            Text('正在为你撰写讲解…',
-                style: GmText.sans(size: 12, color: GmColors.sub)),
-          ],
-        ),
+        child: Column(children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 12),
+          Text('正在为你撰写讲解…', style: GmText.sans(size: 12, color: gm.sub)),
+        ]),
       );
     }
-
     final intro = [e.summary, e.historicalContext]
         .where((s) => s.trim().isNotEmpty)
         .join('\n\n');
     final highlight = [e.artisticAnalysis, e.culturalSignificance]
         .where((s) => s.trim().isNotEmpty)
         .join('\n\n');
-
     final paragraphStyle = GmText.sans(size: 13.5, height: 1.9);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,17 +679,13 @@ class _GuidePageState extends ConsumerState<GuidePage> {
         Text(intro, style: paragraphStyle, textAlign: TextAlign.justify),
         if (highlight.isNotEmpty) ...[
           const SizedBox(height: 11),
-          Row(
-            children: [
-              Text('看点',
-                  style: GmText.serif(
-                      size: 14,
-                      weight: FontWeight.w700,
-                      color: GmColors.accentDeep)),
-              const SizedBox(width: 10),
-              const Expanded(child: GmHairline()),
-            ],
-          ),
+          Row(children: [
+            Text('看点',
+                style: GmText.serif(
+                    size: 14, weight: FontWeight.w700, color: gm.accentDeep)),
+            const SizedBox(width: 10),
+            const Expanded(child: GmHairline()),
+          ]),
           const SizedBox(height: 9),
           Text(highlight, style: paragraphStyle, textAlign: TextAlign.justify),
         ],
@@ -522,56 +693,47 @@ class _GuidePageState extends ConsumerState<GuidePage> {
     );
   }
 
-  Widget _qaList() {
+  Widget _legacyQaList() {
+    final gm = context.gm;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('问答',
-                style: GmText.serif(
-                    size: 14,
-                    weight: FontWeight.w700,
-                    color: GmColors.accentDeep)),
-            const SizedBox(width: 10),
-            const Expanded(child: GmHairline()),
-          ],
-        ),
+        Row(children: [
+          Text('问答',
+              style: GmText.serif(
+                  size: 14, weight: FontWeight.w700, color: gm.accentDeep)),
+          const SizedBox(width: 10),
+          const Expanded(child: GmHairline()),
+        ]),
         for (final entry in _qa) ...[
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
             decoration: BoxDecoration(
-              color: GmColors.chipBg,
-              borderRadius: BorderRadius.circular(999),
-            ),
+                color: gm.chipBg, borderRadius: BorderRadius.circular(999)),
             child: Text(entry.question, style: GmText.sans(size: 12)),
           ),
           const SizedBox(height: 8),
           if (entry.answer == null)
-            Row(
-              children: [
-                const SizedBox(
+            Row(children: [
+              const SizedBox(
                   width: 12,
                   height: 12,
-                  child: CircularProgressIndicator(strokeWidth: 1.6),
-                ),
-                const SizedBox(width: 8),
-                Text('思考中…', style: GmText.sans(size: 12, color: GmColors.sub)),
-              ],
-            )
+                  child: CircularProgressIndicator(strokeWidth: 1.6)),
+              const SizedBox(width: 8),
+              Text('思考中…', style: GmText.sans(size: 12, color: gm.sub)),
+            ])
           else
-            Text(
-              entry.answer!,
-              style: GmText.sans(size: 13, height: 1.8),
-              textAlign: TextAlign.justify,
-            ),
+            Text(entry.answer!,
+                style: GmText.sans(size: 13, height: 1.8),
+                textAlign: TextAlign.justify),
         ],
       ],
     );
   }
 
-  Widget _qaInput() {
+  Widget _legacyQaInput() {
+    final gm = context.gm;
     const suggestions = ['这幅画好在哪里？', '画家当时经历了什么？'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
@@ -590,9 +752,8 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 13, vertical: 7),
                         decoration: BoxDecoration(
-                          color: GmColors.chipBg,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
+                            color: gm.chipBg,
+                            borderRadius: BorderRadius.circular(999)),
                         child: Text(q, style: GmText.sans(size: 12)),
                       ),
                     ),
@@ -601,59 +762,910 @@ class _GuidePageState extends ConsumerState<GuidePage> {
                 ],
               ),
             ),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 46,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  decoration: BoxDecoration(
-                    color: GmColors.surface,
-                    border: Border.all(color: GmColors.line),
-                    borderRadius: BorderRadius.circular(999),
+          Row(children: [
+            Expanded(
+              child: Container(
+                height: 46,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                decoration: BoxDecoration(
+                    color: gm.surface,
+                    border: Border.all(color: gm.line),
+                    borderRadius: BorderRadius.circular(999)),
+                alignment: Alignment.centerLeft,
+                child: TextField(
+                  controller: _questionController,
+                  style: GmText.sans(size: 13.5),
+                  decoration: InputDecoration(
+                    hintText: '问问这幅画……',
+                    hintStyle: GmText.sans(size: 13.5, color: gm.faint),
+                    border: InputBorder.none,
+                    isDense: true,
                   ),
-                  alignment: Alignment.centerLeft,
-                  child: TextField(
-                    controller: _questionController,
-                    style: GmText.sans(size: 13.5),
-                    decoration: InputDecoration(
-                      hintText: '问问这幅画……',
-                      hintStyle: GmText.sans(size: 13.5, color: GmColors.faint),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: _ask,
-                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: _ask,
                 ),
               ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: () {
-                  if (_questionController.text.trim().isNotEmpty) {
-                    _ask(_questionController.text);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('语音问答即将开放，先打字问问吧')),
-                    );
-                  }
-                },
-                child: Container(
-                  width: 46,
-                  height: 46,
-                  decoration: const BoxDecoration(
-                    color: GmColors.ctaBg,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const GmIcon(GmIcons.mic,
-                      size: 20, color: GmColors.ctaInk),
-                ),
+            ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: () {
+                if (_questionController.text.trim().isNotEmpty) {
+                  _ask(_questionController.text);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('语音问答即将开放，先打字问问吧')),
+                  );
+                }
+              },
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration:
+                    BoxDecoration(color: gm.ctaBg, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: GmIcon(GmIcons.mic, size: 20, color: gm.ctaInk),
               ),
-            ],
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// A5 path — extracted widgets (keep guide_page.dart self-contained)
+// =============================================================================
+
+String _formatDuration(Duration d) {
+  final m = d.inMinutes;
+  final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+  return '$m:$s';
+}
+
+// ---------------------------------------------------------------------------
+// State scaffolds
+// ---------------------------------------------------------------------------
+
+class _A5LoadingScaffold extends StatelessWidget {
+  const _A5LoadingScaffold({required this.gm, required this.onBack});
+  final dynamic gm;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.gm;
+    return Scaffold(
+      backgroundColor: palette.bg,
+      body: SafeArea(
+        child: Column(children: [
+          _SimpleTopBar(onBack: onBack),
+          Expanded(
+              child: Center(
+            child: CircularProgressIndicator(
+                color: palette.accent, strokeWidth: 2),
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
+class _A5GeneratingScaffold extends StatelessWidget {
+  const _A5GeneratingScaffold({required this.gm, required this.onBack});
+  final dynamic gm;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.gm;
+    return Scaffold(
+      backgroundColor: palette.bg,
+      body: SafeArea(
+        child: Column(children: [
+          _SimpleTopBar(onBack: onBack),
+          Expanded(
+              child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              CircularProgressIndicator(color: palette.accent, strokeWidth: 2),
+              const SizedBox(height: 16),
+              Text('正在生成讲解…', style: GmText.sans(size: 13, color: palette.sub)),
+            ]),
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
+class _A5EmptyScaffold extends StatelessWidget {
+  const _A5EmptyScaffold({required this.gm, required this.onBack});
+  final dynamic gm;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.gm;
+    return Scaffold(
+      backgroundColor: palette.bg,
+      body: SafeArea(
+        child: Column(children: [
+          _SimpleTopBar(onBack: onBack),
+          Expanded(
+              child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                '该作品暂无可接地讲解（待完善）',
+                textAlign: TextAlign.center,
+                style: GmText.sans(size: 14, color: palette.sub),
+              ),
+            ),
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
+class _A5ErrorScaffold extends StatelessWidget {
+  const _A5ErrorScaffold(
+      {required this.gm, required this.onBack, required this.onRetry});
+  final dynamic gm;
+  final VoidCallback onBack;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.gm;
+    return Scaffold(
+      backgroundColor: palette.bg,
+      body: SafeArea(
+        child: Column(children: [
+          _SimpleTopBar(onBack: onBack),
+          Expanded(
+              child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('加载失败',
+                  style: GmText.serif(size: 15, weight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              GmTicketButton(label: '重试', onTap: onRetry, height: 38),
+            ]),
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
+class _SimpleTopBar extends StatelessWidget {
+  const _SimpleTopBar({required this.onBack});
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+      child: Row(children: [
+        GestureDetector(
+          onTap: onBack,
+          behavior: HitTestBehavior.opaque,
+          child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
+        ),
+        const Spacer(),
+      ]),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hero collapsing SliverAppBar
+// ---------------------------------------------------------------------------
+
+class _A5HeroSliverAppBar extends StatelessWidget {
+  const _A5HeroSliverAppBar({
+    required this.content,
+    required this.starred,
+    required this.onBack,
+    required this.onToggleStar,
+  });
+
+  final ObjectContent content;
+  final bool starred;
+  final VoidCallback onBack;
+  final VoidCallback onToggleStar;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final hasImage = content.images.isNotEmpty;
+    final imageUrl = hasImage ? content.images.first.url : null;
+    final credit = hasImage ? content.images.first.credit : null;
+
+    return SliverAppBar(
+      expandedHeight: 286,
+      pinned: true,
+      backgroundColor: gm.bg,
+      leading: GestureDetector(
+        onTap: onBack,
+        behavior: HitTestBehavior.opaque,
+        child: Center(child: GmIcon(GmIcons.back, size: 20, color: gm.ink)),
+      ),
+      title: Text(
+        content.title,
+        style: GmText.serif(size: 14.5, weight: FontWeight.w700),
+        overflow: TextOverflow.ellipsis,
+      ),
+      centerTitle: true,
+      actions: [
+        GestureDetector(
+          onTap: onToggleStar,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child:
+                GmIcon(GmIcons.star, size: 20, color: gm.accent, fill: starred),
+          ),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.parallax,
+        background: hasImage
+            ? _HeroImage(
+                imageUrl: imageUrl!, credit: credit, title: content.title)
+            : _HeroPlaceholder(title: content.title),
+      ),
+    );
+  }
+}
+
+class _HeroImage extends StatelessWidget {
+  const _HeroImage(
+      {required this.imageUrl, required this.credit, required this.title});
+
+  final String imageUrl;
+  final String? credit;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, progress) =>
+              progress == null ? child : ColoredBox(color: context.gm.chipBg),
+          errorBuilder: (_, __, ___) => ColoredBox(
+              color: context.gm.chipBg,
+              child: Center(
+                  child: GmIcon(GmIcons.photo,
+                      size: 40, color: context.gm.faint))),
+        ),
+        // Bottom gradient scrim
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 160,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: GmFixed.heroScrim,
+                stops: GmFixed.heroScrimStops,
+              ),
+            ),
+          ),
+        ),
+        // Title overlay
+        Positioned(
+          bottom: 42,
+          left: 20,
+          right: credit != null ? 80 : 20,
+          child: Text(
+            title,
+            style: GmText.serif(
+                size: 22, weight: FontWeight.w700, color: GmFixed.heroTitle),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        // Credit bottom-right
+        if (credit != null)
+          Positioned(
+            bottom: 10,
+            right: 12,
+            child: Text(
+              credit!,
+              style: GmText.sans(size: 9, color: GmFixed.heroCredit),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _HeroPlaceholder extends StatelessWidget {
+  const _HeroPlaceholder({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return ColoredBox(
+      color: gm.surface,
+      child: Stack(fit: StackFit.expand, children: [
+        Center(child: GmIcon(GmIcons.photo, size: 48, color: gm.faint)),
+        Positioned(
+          bottom: 42,
+          left: 20,
+          right: 20,
+          child: Text(title,
+              style: GmText.serif(
+                  size: 22, weight: FontWeight.w700, color: gm.ink),
+              maxLines: 2),
+        ),
+      ]),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main scrollable body (wall label + facts + tabs + AI shell)
+// ---------------------------------------------------------------------------
+
+class _A5Body extends StatelessWidget {
+  const _A5Body({
+    required this.content,
+    required this.tabController,
+    required this.tabIndex,
+    required this.tts,
+    required this.audioLoading,
+    required this.audioReady,
+    required this.currentAudioUrl,
+    required this.speedIndex,
+    required this.speeds,
+    required this.factsExpanded,
+    required this.onToggleFacts,
+    required this.onToggleTabPlay,
+    required this.onCycleSpeed,
+  });
+
+  final ObjectContent content;
+  final TabController? tabController;
+  final int tabIndex;
+  final TtsService tts;
+  final bool audioLoading;
+  final bool audioReady;
+  final String? currentAudioUrl;
+  final int speedIndex;
+  final List<double> speeds;
+  final bool factsExpanded;
+  final VoidCallback onToggleFacts;
+  final Future<void> Function(String url) onToggleTabPlay;
+  final Future<void> Function() onCycleSpeed;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Wall label
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: _WallLabel(facts: content.facts),
+          ),
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(height: 1, color: gm.line),
+          ),
+          const SizedBox(height: 4),
+
+          // Facts accordion
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _FactsAccordion(
+              facts: content.facts,
+              expanded: factsExpanded,
+              onToggle: onToggleFacts,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(height: 1, color: gm.line),
+
+          // Tabs
+          if (content.tabs.isNotEmpty && tabController != null) ...[
+            _TabBar(tabController: tabController!, tabs: content.tabs),
+            Container(height: 1, color: gm.line),
+            _TabContent(
+              tabs: content.tabs,
+              tabIndex: tabIndex,
+              tts: tts,
+              audioLoading: audioLoading,
+              audioReady: audioReady,
+              currentAudioUrl: currentAudioUrl,
+              speedIndex: speedIndex,
+              speeds: speeds,
+              onToggleTabPlay: onToggleTabPlay,
+              onCycleSpeed: onCycleSpeed,
+            ),
+          ],
+
+          // TODO(session-B): AiChatSheet 挂载点 — 多轮对话 A6 + 朗读 A8 + 报错 A7
+          _AiChatShell(suggestedQuestions: content.suggestedQuestions),
+
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Wall label: single-line flowing, no field labels (notes #10)
+// ---------------------------------------------------------------------------
+
+class _WallLabel extends StatelessWidget {
+  const _WallLabel({required this.facts});
+  final ObjectFacts facts;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+
+    // Truncate medium if overly long (>14 chars)
+    String? medium = facts.medium;
+    if (medium != null && medium.length > 14) {
+      medium = '${medium.substring(0, 12)}…';
+    }
+
+    final parts = <String>[
+      if (facts.artist?.isNotEmpty == true) facts.artist!,
+      if (facts.date?.isNotEmpty == true) facts.date!,
+      if (medium?.isNotEmpty == true) medium!,
+      if (facts.dimensions?.isNotEmpty == true) facts.dimensions!,
+    ];
+
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    return Text(
+      parts.join(' · '),
+      style: GmText.sans(size: 12.5, color: gm.sub),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Facts accordion: ▸ 作品信息 (default collapsed) → full table
+// ---------------------------------------------------------------------------
+
+class _FactsAccordion extends StatelessWidget {
+  const _FactsAccordion({
+    required this.facts,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final ObjectFacts facts;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onToggle,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(children: [
+              Text(expanded ? '▾ 作品信息' : '▸ 作品信息',
+                  style: GmText.sans(
+                      size: 12.5, color: gm.sub, weight: FontWeight.w600)),
+            ]),
+          ),
+        ),
+        if (expanded) _FactsTable(facts: facts),
+      ],
+    );
+  }
+}
+
+class _FactsTable extends StatelessWidget {
+  const _FactsTable({required this.facts});
+  final ObjectFacts facts;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+
+    final rows = <_FactRow>[
+      if (facts.inventory?.isNotEmpty == true)
+        _FactRow('馆藏编号', facts.inventory!),
+      if (facts.location?.isNotEmpty == true) _FactRow('现藏地', facts.location!),
+      if (facts.provenance?.isNotEmpty == true)
+        _FactRow('来源流转', facts.provenance!),
+      if (facts.exhibitions.isNotEmpty)
+        _FactRow('展览史', facts.exhibitions.join('；')),
+      if (facts.bibliography.isNotEmpty)
+        _FactRow('参考文献', facts.bibliography.join('；')),
+      if (facts.artistLife?.isNotEmpty == true)
+        _FactRow('作者', facts.artistLife!),
+    ];
+
+    if (rows.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text('暂无详细信息', style: GmText.sans(size: 12, color: gm.faint)),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < rows.length; i++) ...[
+            _FactRowWidget(row: rows[i]),
+            if (i < rows.length - 1) Container(height: 1, color: gm.line),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FactRow {
+  const _FactRow(this.label, this.value);
+  final String label;
+  final String value;
+}
+
+class _FactRowWidget extends StatelessWidget {
+  const _FactRowWidget({required this.row});
+  final _FactRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(row.label,
+                style: GmText.sans(size: 11.5, color: gm.faint)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(row.value, style: GmText.sans(size: 12, color: gm.ink)),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tabs bar
+// ---------------------------------------------------------------------------
+
+class _TabBar extends StatelessWidget {
+  const _TabBar({required this.tabController, required this.tabs});
+  final TabController tabController;
+  final List<ObjectTab> tabs;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Material(
+      color: gm.bg,
+      child: TabBar(
+        controller: tabController,
+        isScrollable: tabs.length > 3,
+        labelStyle: GmText.serif(size: 12.5, weight: FontWeight.w700),
+        unselectedLabelStyle: GmText.serif(size: 12.5, weight: FontWeight.w400),
+        labelColor: gm.accentDeep,
+        unselectedLabelColor: gm.sub,
+        indicatorColor: gm.accent,
+        indicatorWeight: 2.5,
+        dividerColor: Colors.transparent,
+        tabs: [for (final t in tabs) Tab(text: t.label)],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tab content (body text + TTS player per tab)
+// ---------------------------------------------------------------------------
+
+class _TabContent extends StatelessWidget {
+  const _TabContent({
+    required this.tabs,
+    required this.tabIndex,
+    required this.tts,
+    required this.audioLoading,
+    required this.audioReady,
+    required this.currentAudioUrl,
+    required this.speedIndex,
+    required this.speeds,
+    required this.onToggleTabPlay,
+    required this.onCycleSpeed,
+  });
+
+  final List<ObjectTab> tabs;
+  final int tabIndex;
+  final TtsService tts;
+  final bool audioLoading;
+  final bool audioReady;
+  final String? currentAudioUrl;
+  final int speedIndex;
+  final List<double> speeds;
+  final Future<void> Function(String url) onToggleTabPlay;
+  final Future<void> Function() onCycleSpeed;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    if (tabIndex >= tabs.length) return const SizedBox.shrink();
+    final tab = tabs[tabIndex];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // TTS player (only if tab has audio_url)
+          if (tab.audioUrl != null)
+            _TtsPlayer(
+              tts: tts,
+              audioUrl: tab.audioUrl!,
+              audioLoading: audioLoading,
+              audioReady: audioReady,
+              currentAudioUrl: currentAudioUrl,
+              speedIndex: speedIndex,
+              speeds: speeds,
+              onTogglePlay: () => onToggleTabPlay(tab.audioUrl!),
+              onCycleSpeed: onCycleSpeed,
+            ),
+          if (tab.audioUrl != null) const SizedBox(height: 12),
+
+          // Body text
+          if (tab.hasBody)
+            Text(
+              tab.body!,
+              style: GmText.sans(size: 13.5, height: 1.9),
+              textAlign: TextAlign.justify,
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text('待完善',
+                  style: GmText.sans(size: 13, color: gm.faint),
+                  textAlign: TextAlign.center),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TtsPlayer extends StatelessWidget {
+  const _TtsPlayer({
+    required this.tts,
+    required this.audioUrl,
+    required this.audioLoading,
+    required this.audioReady,
+    required this.currentAudioUrl,
+    required this.speedIndex,
+    required this.speeds,
+    required this.onTogglePlay,
+    required this.onCycleSpeed,
+  });
+
+  final TtsService tts;
+  final String audioUrl;
+  final bool audioLoading;
+  final bool audioReady;
+  final String? currentAudioUrl;
+  final int speedIndex;
+  final List<double> speeds;
+  final VoidCallback onTogglePlay;
+  final Future<void> Function() onCycleSpeed;
+
+  bool get _isThisTab => currentAudioUrl == audioUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return StreamBuilder<Duration>(
+      stream: tts.positionStream,
+      builder: (context, posSnap) {
+        return StreamBuilder<Duration?>(
+          stream: tts.durationStream,
+          builder: (context, durSnap) {
+            final position =
+                (_isThisTab ? posSnap.data : null) ?? Duration.zero;
+            final duration =
+                (_isThisTab ? durSnap.data : null) ?? Duration.zero;
+            final progress = duration.inMilliseconds == 0
+                ? 0.0
+                : (position.inMilliseconds / duration.inMilliseconds)
+                    .clamp(0.0, 1.0);
+
+            return Row(children: [
+              GestureDetector(
+                onTap: onTogglePlay,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration:
+                      BoxDecoration(color: gm.ctaBg, shape: BoxShape.circle),
+                  alignment: Alignment.center,
+                  child: (_isThisTab && audioLoading)
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: gm.ctaInk))
+                      : StreamBuilder<PlayerState>(
+                          stream: tts.playerStateStream,
+                          builder: (context, snap) {
+                            final playing =
+                                _isThisTab && (snap.data?.playing ?? false);
+                            return GmIcon(
+                                playing ? GmIcons.pause : GmIcons.play,
+                                size: 18,
+                                color: gm.ctaInk,
+                                strokeWidth: 2);
+                          }),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                  child: Column(children: [
+                Stack(clipBehavior: Clip.none, children: [
+                  Container(height: 2, color: gm.line),
+                  FractionallySizedBox(
+                      widthFactor: progress,
+                      child: Container(height: 2, color: gm.accent)),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: -3.5,
+                    child: Align(
+                      alignment: Alignment(progress * 2 - 1, 0),
+                      child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                              color: gm.accentDeep, shape: BoxShape.circle)),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 7),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_formatDuration(position),
+                          style: GmText.sans(size: 11, color: gm.sub)),
+                      Text(_formatDuration(duration),
+                          style: GmText.sans(size: 11, color: gm.sub)),
+                    ]),
+              ])),
+              const SizedBox(width: 14),
+              GestureDetector(
+                onTap: onCycleSpeed,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                      color: gm.surface,
+                      border: Border.all(color: gm.line),
+                      borderRadius: BorderRadius.circular(999)),
+                  child: Text('${speeds[speedIndex]}×',
+                      style: GmText.sans(size: 11.5, color: gm.sub)),
+                ),
+              ),
+            ]);
+          },
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AI chat static shell (Session B mounts the real sheet here)
+// ---------------------------------------------------------------------------
+
+// TODO(session-B): AiChatSheet 挂载点 — 多轮对话 A6 + 朗读 A8 + 报错 A7
+// Session B: replace _AiChatShell with AiChatSheet widget from
+//   lib/features/guide/presentation/widgets/ai_chat_sheet.dart
+class _AiChatShell extends StatelessWidget {
+  const _AiChatShell({required this.suggestedQuestions});
+  final List<SuggestedQuestion> suggestedQuestions;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(height: 1, color: gm.line),
+        const SizedBox(height: 10),
+
+        // Suggested question chips (static, no-op taps for now)
+        if (suggestedQuestions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final sq in suggestedQuestions)
+                  GestureDetector(
+                    onTap: () {
+                      // TODO(session-B): 触发多轮对话
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      color: gm.chipBg,
+                      child: Text(sq.question,
+                          style: GmText.sans(size: 12, color: gm.ink)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+        const SizedBox(height: 10),
+
+        // Input affordance (static)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          child: Row(children: [
+            Expanded(
+              child: Container(
+                height: 46,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                decoration: BoxDecoration(
+                    color: gm.surface, border: Border.all(color: gm.line)),
+                alignment: Alignment.centerLeft,
+                child: Text('问问这幅画',
+                    style: GmText.sans(size: 13.5, color: gm.faint)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 46,
+              height: 46,
+              color: gm.ctaBg,
+              alignment: Alignment.center,
+              child: GmIcon(GmIcons.mic, size: 20, color: gm.ctaInk),
+            ),
+          ]),
+        ),
+      ],
     );
   }
 }
