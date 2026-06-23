@@ -38,12 +38,16 @@ class ObjectListState {
 
 class ObjectListNotifier extends StateNotifier<ObjectListState> {
   ObjectListNotifier(
-      {required this.ds, required this.slug, required this.category})
+      {required this.ds,
+      required this.slug,
+      required this.category,
+      required this.language})
       : super(const ObjectListState());
 
   final CatalogRemoteDataSource ds;
   final String slug;
   final String category;
+  final String language;
   static const _limit = 50;
 
   Future<void> loadInitial() async {
@@ -60,7 +64,11 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
   Future<void> _fetch(int offset, {bool replace = false}) async {
     try {
       final page = await ds.getObjects(
-          slug: slug, category: category, limit: _limit, offset: offset);
+          slug: slug,
+          category: category,
+          limit: _limit,
+          offset: offset,
+          language: language);
       final merged = replace ? page.items : [...state.items, ...page.items];
       state = state.copyWith(
         items: merged,
@@ -75,9 +83,12 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
   }
 }
 
-final objectListProvider = StateNotifierProvider.family<ObjectListNotifier,
-    ObjectListState, ({String slug, String category})>((ref, a) {
+final objectListProvider = StateNotifierProvider.family<
+    ObjectListNotifier,
+    ObjectListState,
+    ({String slug, String category, String language})>((ref, a) {
   final ds = ref.watch(catalogDataSourceProvider);
-  return ObjectListNotifier(ds: ds, slug: a.slug, category: a.category)
+  return ObjectListNotifier(
+      ds: ds, slug: a.slug, category: a.category, language: a.language)
     ..loadInitial();
 });

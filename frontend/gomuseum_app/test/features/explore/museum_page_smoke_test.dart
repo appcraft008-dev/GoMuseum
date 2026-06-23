@@ -40,6 +40,7 @@ class _FakeCatalogDs implements CatalogRemoteDataSource {
     String sort = 'popularity',
     int limit = 50,
     int offset = 0,
+    String language = 'zh',
   }) async {
     return ObjectListPage(
       items: [

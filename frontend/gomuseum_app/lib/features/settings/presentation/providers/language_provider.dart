@@ -4,6 +4,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'language_provider.g.dart';
 
+/// 讲解内容支持的语言（前端写死，与后端已生成的语言集对齐）。顺序即 UI 展示顺序。
+const List<Locale> kSupportedLocales = [
+  Locale('zh'),
+  Locale('en'),
+  Locale('fr'),
+];
+
+const Map<String, String> _kLanguageNames = {
+  'zh': '简体中文',
+  'en': 'English',
+  'fr': 'Français',
+};
+
+/// Locale → 展示名（未知语言回退其 code）。
+String languageDisplayName(Locale locale) =>
+    _kLanguageNames[locale.languageCode] ?? locale.languageCode;
+
 @riverpod
 class Language extends _$Language {
   static const String _key = 'selected_language';
