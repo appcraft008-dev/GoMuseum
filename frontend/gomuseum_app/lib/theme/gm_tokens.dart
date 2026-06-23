@@ -62,10 +62,14 @@ class GmText {
   GmText._();
 
   /// 衬线标题样式
+  ///
+  /// `color` 缺省为 null —— 不烘焙固定色，由环境 `DefaultTextStyle`
+  /// （即主题 `textTheme` 的 onSurface/ink）决定，从而随亮/暗主题切换。
+  /// 旧版默认 `GmColors.ink`（亮色墨）会在暗色模式下变成近黑文字看不清。
   static TextStyle serif({
     double size = 16,
     FontWeight weight = FontWeight.w400,
-    Color color = GmColors.ink,
+    Color? color,
     double? letterSpacing,
     double? height,
   }) {
@@ -79,10 +83,12 @@ class GmText {
   }
 
   /// 无衬线正文样式
+  ///
+  /// `color` 缺省为 null —— 同 [serif]，随主题继承，避免暗色下烘焙亮色墨。
   static TextStyle sans({
     double size = 14,
     FontWeight weight = FontWeight.w400,
-    Color color = GmColors.ink,
+    Color? color,
     double? letterSpacing,
     double? height,
   }) {
