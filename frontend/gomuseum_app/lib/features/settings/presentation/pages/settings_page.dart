@@ -10,6 +10,7 @@ import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -32,6 +33,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final gm = context.gm;
     final authState = ref.watch(currentUserProvider);
     final benefits = ref.watch(benefitsStateProvider);
+    final currentLocale = ref.watch(languageProvider);
 
     return SafeArea(
       bottom: false,
@@ -62,8 +64,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               gm: gm,
               icon: GmIcons.globe,
               label: '讲解语言',
-              value: '简体中文',
-              onTap: () => _comingSoon('多语言切换'),
+              value: languageDisplayName(currentLocale),
+              onTap: _pickLanguage,
             ),
             _row(
               gm: gm,
@@ -352,6 +354,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickLanguage() async {
+    final gm = context.gm;
+    final current = ref.read(languageProvider);
+    final picked = await showModalBottomSheet<Locale>(
+      context: context,
+      backgroundColor: gm.bg,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            for (final loc in kSupportedLocales)
+              ListTile(
+                title: Text(languageDisplayName(loc),
+                    style: GmText.sans(size: 15, color: gm.ink)),
+                trailing: loc.languageCode == current.languageCode
+                    ? GmIcon(GmIcons.check, size: 18, color: gm.ink)
+                    : null,
+                onTap: () => Navigator.of(ctx).pop(loc),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      await ref.read(languageProvider.notifier).setLanguage(picked);
+    }
   }
 
   void _comingSoon(String feature) {

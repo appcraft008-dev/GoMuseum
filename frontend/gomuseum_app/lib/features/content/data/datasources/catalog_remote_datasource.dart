@@ -13,6 +13,7 @@ abstract class CatalogRemoteDataSource {
     String sort,
     int limit,
     int offset,
+    String language,
   });
   Future<ObjectContent> getObjectContent({
     required String slug,
@@ -40,12 +41,14 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
     String sort = 'popularity',
     int limit = 50,
     int offset = 0,
+    String language = 'zh',
   }) async {
     final r = await dio.get('/api/v1/museums/$slug/objects', queryParameters: {
       if (category != null && category != 'all') 'category': category,
       'sort': sort,
       'limit': limit,
       'offset': offset,
+      'language': language,
     });
     return ObjectListPage.fromJson(r.data as Map<String, dynamic>);
   }

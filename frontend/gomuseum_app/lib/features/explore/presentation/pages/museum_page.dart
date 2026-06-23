@@ -14,6 +14,7 @@ import 'package:gomuseum_app/features/content/data/models/object_list_model.dart
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
@@ -46,11 +47,12 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
   void _onScroll() {
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 200) {
-      final notifier = ref.read(
-          objectListProvider((slug: widget.slug, category: _selectedCategory))
-              .notifier);
-      final state = ref.read(
-          objectListProvider((slug: widget.slug, category: _selectedCategory)));
+      final lang = ref.read(languageProvider).languageCode;
+      final notifier = ref.read(objectListProvider(
+              (slug: widget.slug, category: _selectedCategory, language: lang))
+          .notifier);
+      final state = ref.read(objectListProvider(
+          (slug: widget.slug, category: _selectedCategory, language: lang)));
       if (state.hasMore && !state.loading) {
         notifier.loadMore();
       }
@@ -283,8 +285,9 @@ class _ObjectGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final gm = context.gm;
-    final state =
-        ref.watch(objectListProvider((slug: slug, category: category)));
+    final lang = ref.watch(languageProvider).languageCode;
+    final state = ref.watch(
+        objectListProvider((slug: slug, category: category, language: lang)));
     final items = state.items;
 
     if (items.isEmpty && state.loading) {
@@ -308,7 +311,8 @@ class _ObjectGrid extends ConsumerWidget {
             const SizedBox(height: 10),
             GestureDetector(
               onTap: () => ref
-                  .read(objectListProvider((slug: slug, category: category))
+                  .read(objectListProvider(
+                          (slug: slug, category: category, language: lang))
                       .notifier)
                   .loadInitial(),
               child: Text(

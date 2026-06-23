@@ -14,6 +14,7 @@ from app.services.museum_repo import (
     get_object_content,
 )
 from app.services.museum_repo import list_museums as repo_list
+from app.services.museum_repo import list_objects as repo_list_objects
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,31 @@ def object_content(
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
     return data
+
+
+@router.get("/{slug}/objects")
+def list_objects(
+    slug: str,
+    language: str = "zh",
+    category: str | None = None,
+    sort: str = "popularity",
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+) -> dict:
+    """分页藏品列表（A2/A3 列表页）"""
+    page = repo_list_objects(
+        db,
+        slug,
+        language=language,
+        category=category,
+        sort=sort,
+        limit=limit,
+        offset=offset,
+    )
+    if page is None:
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
+    return page
 
 
 @router.get("/{slug}")

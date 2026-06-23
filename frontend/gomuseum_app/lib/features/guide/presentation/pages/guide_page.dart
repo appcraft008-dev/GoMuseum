@@ -24,6 +24,7 @@ import 'package:gomuseum_app/features/content/presentation/providers/catalog_pro
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:just_audio/just_audio.dart';
@@ -131,7 +132,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
   bool _asking = false;
 
   // ── language
-  String get _language => 'zh';
+  String get _language => ref.read(languageProvider).languageCode;
 
   @override
   void initState() {
