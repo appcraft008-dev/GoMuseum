@@ -5,6 +5,7 @@ import 'package:gomuseum_app/features/content/data/datasources/catalog_remote_da
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 
 final catalogDataSourceProvider = Provider<CatalogRemoteDataSource>((ref) {
   return CatalogRemoteDataSourceImpl(dio: ref.watch(dioProvider));
@@ -12,14 +13,18 @@ final catalogDataSourceProvider = Provider<CatalogRemoteDataSource>((ref) {
 
 final museumDetailProvider =
     FutureProvider.family<MuseumDetail, String>((ref, slug) {
-  return ref.watch(catalogDataSourceProvider).getMuseumDetail(slug: slug);
+  final lang = ref.watch(languageProvider).languageCode;
+  return ref
+      .watch(catalogDataSourceProvider)
+      .getMuseumDetail(slug: slug, language: lang);
 });
 
 final objectContentProvider =
     FutureProvider.family<ObjectContent, ({String slug, String qid})>((ref, a) {
+  final lang = ref.watch(languageProvider).languageCode;
   return ref
       .watch(catalogDataSourceProvider)
-      .getObjectContent(slug: a.slug, qid: a.qid);
+      .getObjectContent(slug: a.slug, qid: a.qid, language: lang);
 });
 
 /// A1 GET /api/v1/museums → flat list of all museums.

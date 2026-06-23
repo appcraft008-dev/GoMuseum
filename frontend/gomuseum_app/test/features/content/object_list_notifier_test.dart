@@ -27,7 +27,8 @@ class _FakeDs implements CatalogRemoteDataSource {
       String? category,
       String sort = 'popularity',
       int limit = 50,
-      int offset = 0}) async {
+      int offset = 0,
+      String language = 'zh'}) async {
     calls++;
     const total = 120;
     final actualCount = (total - offset).clamp(0, limit);
@@ -66,7 +67,8 @@ class _ThrowingDs implements CatalogRemoteDataSource {
       String? category,
       String sort = 'popularity',
       int limit = 50,
-      int offset = 0}) async {
+      int offset = 0,
+      String language = 'zh'}) async {
     throw Exception('network error');
   }
 }
@@ -74,7 +76,8 @@ class _ThrowingDs implements CatalogRemoteDataSource {
 void main() {
   test('loadMore 递增 offset，hasMore 到底变 false', () async {
     final ds = _FakeDs();
-    final n = ObjectListNotifier(ds: ds, slug: 'orsay', category: 'all');
+    final n = ObjectListNotifier(
+        ds: ds, slug: 'orsay', category: 'all', language: 'en');
     await n.loadInitial();
     expect(n.state.items.length, 50);
     expect(n.state.hasMore, isTrue);
@@ -87,7 +90,8 @@ void main() {
 
   test('loadInitial 失败时 error 非空，items 为空，loading 为 false', () async {
     final ds = _ThrowingDs();
-    final n = ObjectListNotifier(ds: ds, slug: 'orsay', category: 'all');
+    final n = ObjectListNotifier(
+        ds: ds, slug: 'orsay', category: 'all', language: 'en');
     await n.loadInitial();
     expect(n.state.error, isNotNull);
     expect(n.state.items, isEmpty);
