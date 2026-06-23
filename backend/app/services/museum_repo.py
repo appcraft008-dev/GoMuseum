@@ -146,3 +146,69 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         "tabs": tabs,
         "suggested_questions": suggested,
     }
+
+
+def list_objects(
+    db: Session,
+    slug: str,
+    *,
+    language: str = "zh",
+    category: str | None = None,
+    sort: str = "popularity",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict | None:
+    """分页藏品列表（供 A2/A3 列表页）。未知馆→None。纯元数据 + content_status。"""
+    m = db.query(Museum).filter_by(slug=slug).one_or_none()
+    if not m:
+        return None
+    q = db.query(MuseumObject).filter_by(museum_id=m.id)
+    if category and category != "all":
+        q = q.filter(MuseumObject.category == category)
+    total = q.count()
+    q = q.order_by(MuseumObject.popularity.desc())
+    objs = q.limit(limit).offset(offset).all()
+
+    obj_ids = [o.id for o in objs]
+    images_by_obj: dict = {}
+    if obj_ids:
+        for img in (
+            db.query(ObjectImage)
+            .filter(ObjectImage.object_id.in_(obj_ids), ObjectImage.role == "primary")
+            .all()
+        ):
+            images_by_obj[img.object_id] = img
+    storage = get_object_storage()
+
+    def _thumb(obj_id):
+        img = images_by_obj.get(obj_id)
+        if img and img.image_key:
+            return storage.public_url(img.image_key)
+        return img.source_url if img else None
+
+    def _title(o):
+        if language == "zh":
+            return o.title_zh or o.title_en or o.qid
+        if language == "fr":
+            return (o.attributes or {}).get("title_fr") or o.title_en or o.qid
+        return o.title_en or o.title_zh or o.qid
+
+    def _artist(o):
+        if language == "zh":
+            return o.artist_zh or o.artist_en or ""
+        if language == "fr":
+            return (o.attributes or {}).get("artist_fr") or o.artist_en or ""
+        return o.artist_en or o.artist_zh or ""
+
+    items = [
+        {
+            "qid": o.qid,
+            "title": _title(o),
+            "artist": _artist(o),
+            "year": o.year,
+            "thumbnail": _thumb(o.id),
+            "content_status": o.content_status,
+        }
+        for o in objs
+    ]
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
