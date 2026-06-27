@@ -64,9 +64,11 @@ def list_objects(
 
 
 @router.get("/{slug}")
-def get_museum_pack(slug: str, db: Session = Depends(get_db)) -> dict:
+def get_museum_pack(
+    slug: str, language: str = "zh", db: Session = Depends(get_db)
+) -> dict:
     """完整馆包：馆元数据 + 按热度排序的馆藏列表"""
-    pack = repo_pack(db, slug)
+    pack = repo_pack(db, slug, language)
     if pack is None:
         raise HTTPException(status_code=404, detail=f"museum pack not found: {slug}")
     return pack
