@@ -61,11 +61,16 @@ class GmColors {
 class GmText {
   GmText._();
 
+  /// CJK 回退字体族名（懒加载注册）。拉丁字形由主字体渲染，
+  /// 中日韩字形自动回退到这些 …SC 字体——按字形选字体、无需判断语言。
+  static final String _serifCjkFamily = GoogleFonts.notoSerifSc().fontFamily!;
+  static final String _sansCjkFamily = GoogleFonts.notoSansSc().fontFamily!;
+
   /// 衬线标题样式
   ///
-  /// `color` 缺省为 null —— 不烘焙固定色，由环境 `DefaultTextStyle`
-  /// （即主题 `textTheme` 的 onSurface/ink）决定，从而随亮/暗主题切换。
-  /// 旧版默认 `GmColors.ink`（亮色墨）会在暗色模式下变成近黑文字看不清。
+  /// 拉丁字母用 **Noto Serif**（优雅拉丁衬线），中文自动回退 **Noto Serif SC**，
+  /// 解决「中英共用 SC 体导致拉丁字母不好看」。
+  /// `color` 缺省 null —— 不烘焙固定色，随主题 `DefaultTextStyle`(ink) 切换明暗。
   static TextStyle serif({
     double size = 16,
     FontWeight weight = FontWeight.w400,
@@ -73,18 +78,17 @@ class GmText {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.notoSerifSc(
+    return GoogleFonts.notoSerif(
       fontSize: size,
       fontWeight: weight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ).copyWith(fontFamilyFallback: [_serifCjkFamily]);
   }
 
-  /// 无衬线正文样式
-  ///
-  /// `color` 缺省为 null —— 同 [serif]，随主题继承，避免暗色下烘焙亮色墨。
+  /// 无衬线正文样式：拉丁用 **Noto Sans**，中文回退 **Noto Sans SC**。
+  /// `color` 缺省 null —— 同 [serif]，随主题继承。
   static TextStyle sans({
     double size = 14,
     FontWeight weight = FontWeight.w400,
@@ -92,13 +96,13 @@ class GmText {
     double? letterSpacing,
     double? height,
   }) {
-    return GoogleFonts.notoSansSc(
+    return GoogleFonts.notoSans(
       fontSize: size,
       fontWeight: weight,
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    );
+    ).copyWith(fontFamilyFallback: [_sansCjkFamily]);
   }
 
   /// 小标签（GMEyebrow）：11px / 字距 2.2 / sub 色

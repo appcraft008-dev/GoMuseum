@@ -15,7 +15,9 @@ const _fakeMuseums = [
   MuseumSummary(
     slug: 'orsay',
     name: '奥赛博物馆',
+    nameEn: '奥赛博物馆',
     city: '巴黎',
+    cityEn: '巴黎',
     country: 'FR',
     coordinates: [48.8599, 2.3266],
     artworkCount: 86,
@@ -23,7 +25,9 @@ const _fakeMuseums = [
   MuseumSummary(
     slug: 'louvre',
     name: '卢浮宫',
+    nameEn: '卢浮宫',
     city: '巴黎',
+    cityEn: '巴黎',
     country: 'FR',
     coordinates: [48.8606, 2.3376],
     artworkCount: 200,
@@ -31,7 +35,9 @@ const _fakeMuseums = [
   MuseumSummary(
     slug: 'vangogh',
     name: '梵高博物馆',
+    nameEn: '梵高博物馆',
     city: '阿姆斯特丹',
+    cityEn: '阿姆斯特丹',
     country: 'NL',
     coordinates: [52.3584, 4.8811],
     artworkCount: 42,

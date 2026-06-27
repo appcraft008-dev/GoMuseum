@@ -76,6 +76,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
             _TopBar(
               slug: widget.slug,
               detailAsync: detailAsync,
+              lang: ref.watch(languageProvider).languageCode,
             ),
             // Category tabs
             detailAsync.when(
@@ -109,10 +110,12 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
 // Top bar
 // ---------------------------------------------------------------------------
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.slug, required this.detailAsync});
+  const _TopBar(
+      {required this.slug, required this.detailAsync, required this.lang});
 
   final String slug;
   final AsyncValue<MuseumDetail> detailAsync;
+  final String lang;
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +127,7 @@ class _TopBar extends StatelessWidget {
 
     switch (detailAsync) {
       case AsyncData(:final value):
-        museumName = value.name;
+        museumName = value.localizedName(lang);
         final total = value.categories.isEmpty
             ? null
             : value.categories

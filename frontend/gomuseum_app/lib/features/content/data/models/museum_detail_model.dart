@@ -22,6 +22,7 @@ class MuseumDetail extends Equatable {
   const MuseumDetail({
     required this.slug,
     required this.name,
+    required this.nameEn,
     required this.city,
     required this.country,
     required this.coordinates,
@@ -31,7 +32,12 @@ class MuseumDetail extends Equatable {
   });
 
   final String slug;
+
+  /// 中文名（name → name_zh → slug）。
   final String name;
+
+  /// 英文/拉丁名（name_en → name_zh → slug）。
+  final String nameEn;
   final String city;
   final String country;
   final List<double> coordinates; // [lat, lng]，缺则空
@@ -39,12 +45,16 @@ class MuseumDetail extends Equatable {
   final String? officialUrl;
   final List<MuseumCategory> categories;
 
+  /// 按 UI 语言取馆名：zh→中文名；其余→英文/拉丁名。
+  String localizedName(String lang) => lang == 'zh' ? name : nameEn;
+
   factory MuseumDetail.fromJson(Map<String, dynamic> j) {
     final slug = j['slug'] as String? ?? '';
+    final nameZh = j['name'] as String? ?? j['name_zh'] as String? ?? slug;
     return MuseumDetail(
       slug: slug,
-      // 加法兼容：新 name → 旧 name_zh → slug
-      name: j['name'] as String? ?? j['name_zh'] as String? ?? slug,
+      name: nameZh,
+      nameEn: j['name_en'] as String? ?? nameZh,
       city: j['city'] as String? ?? j['city_zh'] as String? ?? '',
       country: j['country'] as String? ?? '',
       coordinates: (j['coordinates'] as List?)
@@ -65,6 +75,7 @@ class MuseumDetail extends Equatable {
   List<Object?> get props => [
         slug,
         name,
+        nameEn,
         city,
         country,
         coordinates,
