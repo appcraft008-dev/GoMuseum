@@ -14,6 +14,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/services/tts_service.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
@@ -1037,6 +1038,8 @@ class _HeroImage extends StatelessWidget {
         Image.network(
           imageUrl,
           fit: BoxFit.cover,
+          // Wikimedia 按 UA 限流：带合规 UA 避免 403（见 image_request.dart）
+          headers: kImageRequestHeaders,
           loadingBuilder: (_, child, progress) =>
               progress == null ? child : ColoredBox(color: context.gm.chipBg),
           errorBuilder: (_, __, ___) => ColoredBox(
