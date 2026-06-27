@@ -20,6 +20,38 @@ _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
 
 _LEGACY_SOURCE = "Wikidata/Wikimedia Commons (public data)"
 
+_CATEGORY_LABELS = {
+    "painting": {"zh": "绘画", "en": "Painting", "fr": "Peinture"},
+    "sculpture": {"zh": "雕塑", "en": "Sculpture", "fr": "Sculpture"},
+    "photography": {"zh": "摄影", "en": "Photography", "fr": "Photographie"},
+    "decorative_arts": {
+        "zh": "装饰艺术",
+        "en": "Decorative Arts",
+        "fr": "Arts décoratifs",
+    },
+    "unknown": {"zh": "其他", "en": "Other", "fr": "Autre"},
+}
+_ALL_LABEL = {"zh": "全部", "en": "All", "fr": "Tout"}
+
+
+def _category_label(code: str, lang: str) -> str:
+    m = _CATEGORY_LABELS.get(code, {})
+    return m.get(lang) or m.get("en") or code
+
+
+def _pick(lang: str, zh, en, fr, fallback=""):
+    """按语言选值，带回退链。zh→zh/en；fr→fr/en；其它→en/zh。"""
+    if lang == "zh":
+        return zh or en or fallback
+    if lang == "fr":
+        return fr or en or fallback
+    return en or zh or fallback
+
+
+def _split_hash(s):
+    """Joconde 多值字段用 '#' 分隔 → list；空→[]。"""
+    return [p.strip() for p in s.split("#") if p.strip()] if s else []
+
 
 def list_museums(db: Session) -> list[dict]:
     rows = (
@@ -37,7 +69,7 @@ def list_museums(db: Session) -> list[dict]:
     return out
 
 
-def get_museum_pack(db: Session, slug: str) -> dict | None:
+def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None:
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return None
@@ -83,6 +115,20 @@ def get_museum_pack(db: Session, slug: str) -> dict | None:
         }
         for o in objs
     ]
+    cat_rows = (
+        db.query(MuseumObject.category, func.count())
+        .filter_by(museum_id=m.id)
+        .group_by(MuseumObject.category)
+        .all()
+    )
+    total = sum(c for _, c in cat_rows)
+    categories = [
+        {"code": "all", "label": _ALL_LABEL.get(language, "全部"), "count": total}
+    ] + [
+        {"code": code, "label": _category_label(code, language), "count": cnt}
+        for code, cnt in sorted(cat_rows, key=lambda x: -x[1])
+    ]
+
     pack = {f: getattr(m, f) for f in _PACK_FIELDS}
     pack.update(
         {
@@ -90,6 +136,7 @@ def get_museum_pack(db: Session, slug: str) -> dict | None:
             "source": _LEGACY_SOURCE,
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "artwork_count": len(artworks),
+            "categories": categories,
             "artworks": artworks,
         }
     )
@@ -139,10 +186,40 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         .order_by(ObjectSuggestedQuestion.sort)
         .all()
     ]
+    attrs = obj.attributes or {}
+    images = [
+        {
+            "url": storage.public_url(i.image_key) if i.image_key else i.source_url,
+            "credit": i.credit,
+        }
+        for i in db.query(ObjectImage)
+        .filter_by(object_id=obj.id)
+        .order_by(ObjectImage.sort)
+        .all()
+        if i.image_key or i.source_url
+    ]
+    facts = {
+        "artist": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
+        "date": obj.year,
+        "medium": attrs.get("medium_fr"),
+        "dimensions": attrs.get("dimensions"),
+        "inventory": obj.inventory_number,
+        "location": _pick(language, museum.name_zh, museum.name_en, museum.name_en),
+        "provenance": attrs.get("provenance_fr"),
+        "artist_life": None,  # ponytail: 未存作者生平，接 Wikidata 作者源后再补
+        "exhibitions": _split_hash(attrs.get("exhibitions_fr")),
+        "bibliography": _split_hash(attrs.get("bibliography_fr")),
+    }
     return {
         "qid": qid,
         "category": obj.category,
         "language": language,
+        "status": obj.content_status,
+        "title": _pick(
+            language, obj.title_zh, obj.title_en, attrs.get("title_fr"), qid
+        ),
+        "images": images,
+        "facts": facts,
         "tabs": tabs,
         "suggested_questions": suggested,
     }
