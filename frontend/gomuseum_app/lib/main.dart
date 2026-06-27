@@ -10,6 +10,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/theme_mode_provider.dart';
+import 'features/settings/presentation/providers/language_provider.dart';
+import 'l10n/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,8 +56,10 @@ class GoMuseumApp extends ConsumerWidget {
       // 路由配置 - 带认证守卫
       routerConfig: router,
 
-      // 国际化配置
+      // 国际化配置 —— UI 语言跟随设置页选择（languageProvider 持久化）
+      locale: ref.watch(languageProvider),
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

@@ -5,6 +5,7 @@
 // Asserts the grid renders and find.text('待完善') appears for the stub card.
 
 import 'package:flutter/material.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/datasources/catalog_remote_datasource.dart';
@@ -84,6 +85,9 @@ Widget _wrap() => ProviderScope(
         catalogDataSourceProvider.overrideWithValue(_FakeCatalogDs()),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: MuseumPage(slug: 'orsay'),
       ),
     );

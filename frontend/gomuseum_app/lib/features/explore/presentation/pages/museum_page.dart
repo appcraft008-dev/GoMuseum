@@ -17,6 +17,7 @@ import 'package:gomuseum_app/features/content/presentation/providers/catalog_pro
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
@@ -116,6 +117,7 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
 
     final String museumName;
     final String? countLabel;
@@ -129,7 +131,7 @@ class _TopBar extends StatelessWidget {
                 .where((c) => c.code == 'all')
                 .map((c) => c.count)
                 .firstOrNull;
-        countLabel = total != null ? '$total 件收录藏品' : null;
+        countLabel = total != null ? l10n.recordedCount(total) : null;
       case AsyncError():
         museumName = slug;
         countLabel = null;
@@ -196,11 +198,12 @@ class _CategoryTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
 
     // If backend returns no categories, show a single 「全部」 tab
     final tabs = categories.isNotEmpty
         ? categories
-        : [const MuseumCategory(code: 'all', label: '全部', count: 0)];
+        : [MuseumCategory(code: 'all', label: l10n.all, count: 0)];
 
     return Container(
       decoration: BoxDecoration(
@@ -287,6 +290,7 @@ class _ObjectGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final lang = ref.watch(languageProvider).languageCode;
     final state = ref.watch(
         objectListProvider((slug: slug, category: category, language: lang)));
@@ -307,7 +311,7 @@ class _ObjectGrid extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '加载失败，请重试',
+              l10n.loadFailedRetry,
               style: GmText.sans(size: 13, color: gm.sub),
             ),
             const SizedBox(height: 10),
@@ -318,7 +322,7 @@ class _ObjectGrid extends ConsumerWidget {
                       .notifier)
                   .loadInitial(),
               child: Text(
-                '重试',
+                l10n.retry,
                 style: GmText.sans(size: 13, color: gm.accent),
               ),
             ),
@@ -330,7 +334,7 @@ class _ObjectGrid extends ConsumerWidget {
     if (items.isEmpty && !state.loading) {
       return Center(
         child: Text(
-          '暂无藏品',
+          l10n.noArtworks,
           style: GmText.sans(size: 13, color: gm.sub),
         ),
       );
@@ -511,7 +515,7 @@ class _StubBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       color: gm.chipBg,
       child: Text(
-        '待完善',
+        AppLocalizations.of(context)!.toBeRefined,
         style: GmText.sans(size: 9.5, color: gm.sub),
       ),
     );
@@ -529,6 +533,7 @@ class _BottomState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     if (state.loading) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -544,7 +549,7 @@ class _BottomState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '正在加载·已显示 ${state.items.length}/${state.total}',
+              l10n.loadingShown(state.items.length, state.total),
               style: GmText.sans(size: 11, color: gm.sub),
             ),
           ],
@@ -559,7 +564,7 @@ class _BottomState extends StatelessWidget {
             const GmDiamond(width: 160),
             const SizedBox(height: 8),
             Text(
-              '已全部加载·共 ${state.total} 件',
+              l10n.allLoaded(state.total),
               style: GmText.sans(size: 11.5, color: gm.faint),
             ),
           ],

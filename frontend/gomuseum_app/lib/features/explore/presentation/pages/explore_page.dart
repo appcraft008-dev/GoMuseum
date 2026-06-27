@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -50,6 +51,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final async = ref.watch(museumsListProvider);
 
     return SafeArea(
@@ -67,7 +69,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('加载失败', style: GmText.sans(size: 14, color: gm.sub)),
+                Text(l10n.loadFailed,
+                    style: GmText.sans(size: 14, color: gm.sub)),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: () => ref.invalidate(museumsListProvider),
@@ -77,7 +80,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     decoration: BoxDecoration(
                       color: gm.ctaBg,
                     ),
-                    child: Text('重试',
+                    child: Text(l10n.retry,
                         style: GmText.sans(size: 13, color: gm.ctaInk)),
                   ),
                 ),
@@ -109,7 +112,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     child: Column(
                       children: [
                         Text(
-                          '探 索',
+                          l10n.exploreTitle,
                           style: GmText.serif(
                               size: 21,
                               weight: FontWeight.w700,
@@ -121,21 +124,21 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _searchBox(gm),
+                  _searchBox(gm, l10n),
                   const SizedBox(height: 12),
                   _cityChips(gm, cities),
                   const SizedBox(height: 22),
                   GmSectionHead(
                     number: '01',
-                    label: _city ?? '全部',
-                    note: '${museums.length} 家博物馆',
+                    label: _city ?? l10n.all,
+                    note: l10n.museumCount(museums.length),
                   ),
                   if (museums.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 28),
                       child: Center(
                         child: Text(
-                          all.isEmpty ? '暂无博物馆' : '没有匹配的博物馆',
+                          all.isEmpty ? l10n.noMuseums : l10n.noMatchedMuseums,
                           style: GmText.sans(size: 12.5, color: gm.sub),
                         ),
                       ),
@@ -143,7 +146,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   else ...[
                     // 首馆用大卡，其余用列表行
                     const SizedBox(height: 13),
-                    _featureCard(gm, museums.first),
+                    _featureCard(gm, l10n, museums.first),
                     for (var i = 1; i < museums.length; i++)
                       _listRow(
                           gm, (i + 1).toString().padLeft(2, '0'), museums[i]),
@@ -161,7 +164,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     return ColoredBox(color: gm.bg, child: body);
   }
 
-  Widget _searchBox(GmPalette gm) {
+  Widget _searchBox(GmPalette gm, AppLocalizations l10n) {
     return Container(
       height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -177,7 +180,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
             child: TextField(
               style: GmText.sans(size: 13.5),
               decoration: InputDecoration(
-                hintText: '搜索城市、博物馆或艺术品',
+                hintText: l10n.searchCityMuseumArtwork,
                 hintStyle: GmText.sans(size: 13.5, color: gm.faint),
                 border: InputBorder.none,
                 isDense: true,
@@ -223,7 +226,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _featureCard(GmPalette gm, MuseumSummary museum) {
+  Widget _featureCard(
+      GmPalette gm, AppLocalizations l10n, MuseumSummary museum) {
     return GestureDetector(
       onTap: () => context.push('/museum/${museum.slug}'),
       child: Container(
@@ -276,7 +280,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                         GmIcon(GmIcons.ticket, size: 14, color: gm.faint),
                         const SizedBox(width: 5),
                         Text(
-                          '含 ${museum.artworkCount} 件藏品',
+                          l10n.artworkCountLabel(museum.artworkCount),
                           style: GmText.sans(size: 12, color: gm.sub),
                         ),
                       ],

@@ -3,6 +3,7 @@
 /// Smoke test: override museumsListProvider with fake data from 2 cities,
 /// verify museum names render and city chips appear.
 import 'package:flutter/material.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
@@ -41,7 +42,11 @@ void main() {
         overrides: [
           museumsListProvider.overrideWith((_) async => fakeData),
         ],
-        child: const MaterialApp(home: Scaffold(body: ExplorePage())),
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(body: ExplorePage())),
       );
 
   testWidgets('A1 smoke: 刊头渲染', (tester) async {

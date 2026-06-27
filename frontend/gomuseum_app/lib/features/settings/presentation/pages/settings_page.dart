@@ -11,6 +11,7 @@ import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -31,6 +32,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(currentUserProvider);
     final benefits = ref.watch(benefitsStateProvider);
     final currentLocale = ref.watch(languageProvider);
@@ -46,7 +48,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 children: [
                   Text(
-                    '设 置',
+                    l10n.settingsTitle,
                     style: GmText.serif(
                         size: 21, weight: FontWeight.w700, letterSpacing: 4),
                   ),
@@ -58,54 +60,54 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const SizedBox(height: 16),
             _quotaCard(gm, benefits.value?.totalQuota),
             const SizedBox(height: 20),
-            const GmSectionHead(number: '01', label: '通用'),
+            GmSectionHead(number: '01', label: l10n.secGeneral),
             const SizedBox(height: 4),
             _row(
               gm: gm,
               icon: GmIcons.globe,
-              label: '讲解语言',
+              label: l10n.guideLanguage,
               value: languageDisplayName(currentLocale),
               onTap: _pickLanguage,
             ),
             _row(
               gm: gm,
               icon: GmIcons.download,
-              label: '离线馆包',
-              value: '即将上线',
-              onTap: () => _comingSoon('离线馆包'),
+              label: l10n.offlinePacks,
+              value: l10n.comingSoonShort,
+              onTap: () => _comingSoon(l10n.offlinePacks),
             ),
             _toggleRow(
               gm: gm,
               icon: GmIcons.photo,
-              label: '自动保存照片',
+              label: l10n.autoSavePhoto,
               value: _autoSavePhoto,
               onChanged: (v) => setState(() => _autoSavePhoto = v),
             ),
             _row(
               gm: gm,
               icon: GmIcons.volume,
-              label: 'TTS 音色',
-              value: '沉稳 · 女声',
-              onTap: () => _comingSoon('音色选择'),
+              label: l10n.ttsVoice,
+              value: l10n.ttsVoiceValue,
+              onTap: () => _comingSoon(l10n.ttsVoiceSelect),
             ),
             _appearanceRow(gm),
             const SizedBox(height: 12),
-            const GmSectionHead(number: '02', label: '账户'),
+            GmSectionHead(number: '02', label: l10n.secAccount),
             const SizedBox(height: 4),
             ..._accountRows(gm, authState),
             const SizedBox(height: 12),
-            const GmSectionHead(number: '03', label: '支持与法律'),
+            GmSectionHead(number: '03', label: l10n.secSupport),
             const SizedBox(height: 4),
             _row(
               gm: gm,
               icon: GmIcons.heart,
-              label: '鼓励我们',
-              onTap: () => _comingSoon('应用商店评分'),
+              label: l10n.encourageUs,
+              onTap: () => _comingSoon(l10n.appStoreRating),
             ),
             _row(
               gm: gm,
               icon: GmIcons.shield,
-              label: '隐私政策',
+              label: l10n.privacyPolicy,
               onTap: _showPrivacyPolicy,
             ),
             const SizedBox(height: 28),
@@ -123,6 +125,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Widget _quotaCard(GmPalette gm, int? quota) {
+    final l10n = AppLocalizations.of(context)!;
     final remaining = quota ?? 0;
     final progress = (remaining / _freeQuotaTotal).clamp(0.0, 1.0).toDouble();
     return Container(
@@ -142,21 +145,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('免费识别额度',
+                  Text(l10n.freeQuota,
                       style: GmText.sans(
                           size: 11.5, letterSpacing: 1, color: gm.sub)),
                   const SizedBox(height: 4),
-                  Text.rich(
-                    TextSpan(
-                      text: '剩余 ${quota?.toString() ?? '—'} ',
-                      style: GmText.serif(size: 18, weight: FontWeight.w700),
-                      children: [
-                        TextSpan(
-                          text: '/ $_freeQuotaTotal 次',
-                          style: GmText.serif(size: 13, color: gm.faint),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    l10n.quotaValue(quota?.toString() ?? '—', _freeQuotaTotal),
+                    style: GmText.serif(size: 17, weight: FontWeight.w700),
                   ),
                   const SizedBox(height: 9),
                   Stack(
@@ -179,7 +174,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
                 color: gm.ctaBg,
                 child: Text(
-                  '升级',
+                  l10n.upgrade,
                   style: GmText.serif(
                       size: 13,
                       weight: FontWeight.w600,
@@ -195,6 +190,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   List<Widget> _accountRows(GmPalette gm, AsyncValue<User?> authState) {
+    final l10n = AppLocalizations.of(context)!;
     return authState.when(
       data: (user) {
         if (user == null) {
@@ -202,8 +198,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             _row(
               gm: gm,
               icon: GmIcons.user,
-              label: '登录 / 绑定账号',
-              value: '未登录',
+              label: l10n.loginBind,
+              value: l10n.notLoggedIn,
               onTap: () => context.push('/login'),
             ),
           ];
@@ -212,34 +208,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _row(
             gm: gm,
             icon: GmIcons.user,
-            label: user.username ?? '用户',
-            value: user.email ?? '未绑定邮箱',
+            label: user.username ?? l10n.userDefault,
+            value: user.email ?? l10n.noEmailBound,
           ),
           _row(
             gm: gm,
             icon: GmIcons.close,
-            label: '登出',
+            label: l10n.logout,
             labelColor: GmColors.error,
             onTap: _handleLogout,
           ),
           _row(
             gm: gm,
             icon: GmIcons.shield,
-            label: '删除账号',
+            label: l10n.deleteAccount,
             labelColor: GmColors.error,
             onTap: _handleDeleteAccount,
           ),
         ];
       },
       loading: () => [
-        _row(gm: gm, icon: GmIcons.user, label: '加载中…'),
+        _row(gm: gm, icon: GmIcons.user, label: l10n.loadingShort),
       ],
       error: (_, __) => [
         _row(
           gm: gm,
           icon: GmIcons.user,
-          label: '登录 / 绑定账号',
-          value: '未登录',
+          label: l10n.loginBind,
+          value: l10n.notLoggedIn,
           onTap: () => context.push('/login'),
         ),
       ],
@@ -304,10 +300,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   /// 激活态：ctaBg 底 + ctaInk 文字；非激活：transparent
   /// 无圆角（border-radius: 0，暖纸设计语言）。
   Widget _appearanceRow(GmPalette gm) {
-    const segments = [
-      (label: '浅色', mode: ThemeMode.light),
-      (label: '深色', mode: ThemeMode.dark),
-      (label: '跟随系统', mode: ThemeMode.system),
+    final l10n = AppLocalizations.of(context)!;
+    final segments = [
+      (label: l10n.themeLight, mode: ThemeMode.light),
+      (label: l10n.themeDark, mode: ThemeMode.dark),
+      (label: l10n.themeSystem, mode: ThemeMode.system),
     ];
     final current = ref.watch(themeModeProvider);
 
@@ -317,7 +314,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         children: [
           GmIcon(GmIcons.sliders, size: 19, color: gm.sub),
           const SizedBox(width: 13),
-          Text('外观', style: GmText.sans(size: 14, color: gm.ink)),
+          Text(l10n.appearance, style: GmText.sans(size: 14, color: gm.ink)),
           const Spacer(),
           Container(
             decoration: BoxDecoration(
@@ -388,27 +385,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   void _comingSoon(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature即将开放')),
+      SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.featureComingSoon(feature))),
     );
   }
 
   void _showPrivacyPolicy() {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: gm.surface,
-        title: Text('隐私政策',
+        title: Text(l10n.privacyPolicy,
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(
-          '照片默认不上传原图，识别数据仅作临时处理；'
-          '你可以随时删除账户与数据。完整条款将在正式发布时提供。',
+          l10n.privacyBody,
           style: GmText.sans(size: 13, height: 1.7),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('知道了', style: GmText.sans(size: 13)),
+            child: Text(l10n.gotIt, style: GmText.sans(size: 13)),
           ),
         ],
       ),
@@ -417,24 +416,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _handleDeleteAccount() async {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: gm.surface,
-        title: Text('永久删除账号？',
+        title: Text(l10n.deleteAccountQ,
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(
-          '将删除你的账号资料与剩余额度，此操作不可恢复。',
+          l10n.deleteAccountBody,
           style: GmText.sans(size: 13, height: 1.7),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('取消', style: GmText.sans(size: 13, color: gm.sub)),
+            child:
+                Text(l10n.cancel, style: GmText.sans(size: 13, color: gm.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('永久删除',
+            child: Text(l10n.permanentDelete,
                 style: GmText.sans(size: 13, color: GmColors.error)),
           ),
         ],
@@ -448,29 +449,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context.go('/login');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('删除失败，请稍后再试')),
+        SnackBar(content: Text(l10n.deleteFailed)),
       );
     }
   }
 
   Future<void> _handleLogout() async {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: gm.surface,
-        title: Text('确认登出',
+        title: Text(l10n.confirmLogout,
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
-        content: Text('确定要登出吗？', style: GmText.sans(size: 13)),
+        content: Text(l10n.confirmLogoutBody, style: GmText.sans(size: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('取消', style: GmText.sans(size: 13, color: gm.sub)),
+            child:
+                Text(l10n.cancel, style: GmText.sans(size: 13, color: gm.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child:
-                Text('确定', style: GmText.sans(size: 13, color: GmColors.error)),
+            child: Text(l10n.confirmYes,
+                style: GmText.sans(size: 13, color: GmColors.error)),
           ),
         ],
       ),

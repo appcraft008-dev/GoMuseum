@@ -13,6 +13,7 @@
 //   - suggestedQuestions chip text renders
 
 import 'package:flutter/material.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
@@ -70,6 +71,9 @@ Widget _wrap() => ProviderScope(
         ),
       ],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         theme: AppTheme.lightTheme(),
         home: const GuidePage(args: GuideArgs(slug: 'orsay', qid: 'Q1')),
       ),
