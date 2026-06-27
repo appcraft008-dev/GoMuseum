@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -46,7 +47,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        setState(() => _cameraError = '未找到可用相机');
+        setState(
+            () => _cameraError = AppLocalizations.of(context)!.camNoCamera);
         return;
       }
       final back = cameras.firstWhere(
@@ -65,7 +67,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
       }
       setState(() => _controller = controller);
     } on CameraException catch (e) {
-      setState(() => _cameraError = e.description ?? '相机初始化失败');
+      setState(() => _cameraError =
+          e.description ?? AppLocalizations.of(context)!.camInitFailed);
     }
   }
 
@@ -129,6 +132,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   void _showTagSearchSheet() {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: gm.bg,
@@ -143,11 +147,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('展签检索',
+            Text(l10n.camTagSearch,
                 style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text(
-              '禁拍照展区可输入展签编号、作品名或作者名',
+              l10n.camTagHint,
               style: GmText.sans(size: 12, color: gm.sub),
             ),
             const SizedBox(height: 14),
@@ -155,7 +159,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
               autofocus: true,
               style: GmText.sans(size: 13.5),
               decoration: InputDecoration(
-                hintText: '如：INV 3692 / 在阿尔的卧室',
+                hintText: l10n.camTagExample,
                 hintStyle: GmText.sans(size: 13.5, color: gm.faint),
                 filled: true,
                 fillColor: gm.surface,
@@ -171,7 +175,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
               onSubmitted: (_) {
                 Navigator.of(sheetContext).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('馆藏检索将在离线馆包接入后开放')),
+                  SnackBar(content: Text(l10n.camPackComingSoon)),
                 );
               },
             ),
@@ -184,6 +188,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   void _showQuotaExhaustedSheet() {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: gm.bg,
@@ -195,16 +200,16 @@ class _CameraPageState extends ConsumerState<CameraPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('免费识别次数已用尽',
+            Text(l10n.camQuotaUsedUp,
                 style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              '升级后可继续畅听全馆讲解',
+              l10n.camUpgradeHint,
               style: GmText.sans(size: 12.5, color: gm.sub),
             ),
             const SizedBox(height: 16),
             GmTicketButton(
-              label: '查看升级方案',
+              label: l10n.camViewUpgrade,
               icon: GmIcons.ticket,
               onTap: () {
                 Navigator.of(sheetContext).pop();
@@ -318,7 +323,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
                               size: 15, color: GmColors.scanInk),
                           const SizedBox(width: 7),
                           Text(
-                            '不能拍照？输入展签编号',
+                            AppLocalizations.of(context)!.camCantPhoto,
                             style: GmText.sans(
                                 size: 12.5, color: GmColors.scanInk),
                           ),
@@ -432,6 +437,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   List<Widget> _loadingContent(GmPalette gm) {
+    final l10n = AppLocalizations.of(context)!;
     return [
       Row(
         children: [
@@ -441,21 +447,22 @@ class _CameraPageState extends ConsumerState<CameraPage>
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 12),
-          Text('正在识别…',
+          Text(l10n.camRecognizing,
               style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
         ],
       ),
       const SizedBox(height: 8),
-      Text('AI 正在比对馆藏与公开艺术数据库', style: GmText.sans(size: 12, color: gm.sub)),
+      Text(l10n.camComparing, style: GmText.sans(size: 12, color: gm.sub)),
       const SizedBox(height: 10),
     ];
   }
 
   List<Widget> _successContent(GmPalette gm, RecognitionSuccess state) {
+    final l10n = AppLocalizations.of(context)!;
     final result = state.result;
     final confidence = (result.confidence * 100).round();
     return [
-      Text('识别完成，请确认展品',
+      Text(l10n.camConfirmPrompt,
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 13),
       Container(
@@ -511,7 +518,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
                       size: 18, weight: FontWeight.w700, color: gm.accentDeep),
                 ),
                 const SizedBox(height: 2),
-                Text('置信度', style: GmText.sans(size: 10, color: gm.sub)),
+                Text(l10n.camConfidence,
+                    style: GmText.sans(size: 10, color: gm.sub)),
               ],
             ),
           ],
@@ -519,7 +527,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       ),
       const SizedBox(height: 14),
       GmTicketButton(
-        label: '确认，开始讲解',
+        label: l10n.camConfirmStart,
         icon: GmIcons.headphones,
         onTap: () => _confirm(state),
       ),
@@ -531,7 +539,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
             _showTagSearchSheet();
           },
           child: Text(
-            '都不是？搜索作品名或展签编号 →',
+            l10n.camNoneSearch,
             style: GmText.sans(size: 12.5, color: gm.accent),
           ),
         ),
@@ -540,12 +548,15 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   List<Widget> _errorContent(GmPalette gm, String message) {
+    final l10n = AppLocalizations.of(context)!;
     return [
-      Text('识别失败', style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      Text(l10n.camRecognizeFailed,
+          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 6),
       Text(message, style: GmText.sans(size: 12, color: gm.sub)),
       const SizedBox(height: 14),
-      GmTicketButton(label: '重新拍摄', icon: GmIcons.camera, onTap: _retake),
+      GmTicketButton(
+          label: l10n.camRetake, icon: GmIcons.camera, onTap: _retake),
     ];
   }
 }

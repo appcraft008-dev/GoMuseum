@@ -11,6 +11,7 @@ import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/history/domain/entities/history_item.dart';
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -42,7 +43,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           child: Column(
             children: [
               Text(
-                '足 迹',
+                AppLocalizations.of(context)!.footprintTitle,
                 style: GmText.serif(
                     size: 21, weight: FontWeight.w700, letterSpacing: 4),
               ),
@@ -63,16 +64,18 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   String _statsLine(List<HistoryItem> items) {
-    if (items.isEmpty) return '还没有足迹';
+    final l10n = AppLocalizations.of(context)!;
+    if (items.isEmpty) return l10n.noFootprints;
     final days = items
         .map((i) =>
             '${i.timestamp.year}-${i.timestamp.month}-${i.timestamp.day}')
         .toSet()
         .length;
-    return '${items.length} 件作品 · $days 天';
+    return l10n.footprintStat(items.length, days);
   }
 
   List<Widget> _content(GmPalette gm, HistoryState history) {
+    final l10n = AppLocalizations.of(context)!;
     if (history.isLoading && history.items.isEmpty) {
       return const [
         Padding(
@@ -87,7 +90,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              Text('足迹加载失败',
+              Text(l10n.footprintLoadFailed,
                   style: GmText.serif(size: 15, weight: FontWeight.w700)),
               const SizedBox(height: 6),
               Text(history.error!,
@@ -95,7 +98,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                   style: GmText.sans(size: 12, color: gm.sub)),
               const SizedBox(height: 14),
               GmTicketButton(
-                label: '重试',
+                label: l10n.retry,
                 height: 38,
                 onTap: () => ref.read(historyProvider.notifier).refresh(),
               ),
@@ -112,11 +115,11 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             children: [
               GmIcon(GmIcons.pin, size: 40, color: gm.faint),
               const SizedBox(height: 12),
-              Text('识别过的展品会自动记录在这里',
+              Text(l10n.footprintEmptyHint,
                   style: GmText.sans(size: 12.5, color: gm.sub)),
               const SizedBox(height: 16),
               GmTicketButton(
-                label: '去识别第一件作品',
+                label: l10n.footprintGoRecognize,
                 icon: GmIcons.camera,
                 onTap: () => context.push('/camera'),
               ),
@@ -136,7 +139,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         child: GmSectionHead(
           number: index.toString().padLeft(2, '0'),
           label: entry.key,
-          note: '${entry.value.length} 件',
+          note: l10n.itemsCount(entry.value.length),
         ),
       ));
       for (final item in entry.value) {
@@ -157,13 +160,14 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   String _dayLabel(DateTime t) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final day = DateTime(t.year, t.month, t.day);
     final diff = today.difference(day).inDays;
-    if (diff == 0) return '今天';
-    if (diff == 1) return '昨天';
-    return '${t.month}月${t.day}日';
+    if (diff == 0) return l10n.today;
+    if (diff == 1) return l10n.yesterday;
+    return l10n.dateMonthDay(t.month, t.day);
   }
 
   Widget _itemRow(GmPalette gm, HistoryItem item) {
@@ -235,22 +239,24 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   Future<void> _confirmDelete(GmPalette gm, HistoryItem item) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: gm.surface,
-        title: Text('删除这条足迹？',
+        title: Text(l10n.deleteFootprintQ,
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(item.artworkName, style: GmText.sans(size: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('取消', style: GmText.sans(size: 13, color: gm.sub)),
+            child:
+                Text(l10n.cancel, style: GmText.sans(size: 13, color: gm.sub)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child:
-                Text('删除', style: GmText.sans(size: 13, color: GmColors.error)),
+            child: Text(l10n.delete,
+                style: GmText.sans(size: 13, color: GmColors.error)),
           ),
         ],
       ),
