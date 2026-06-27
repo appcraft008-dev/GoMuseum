@@ -25,6 +25,7 @@ import 'package:gomuseum_app/features/content/presentation/providers/catalog_pro
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -339,14 +340,16 @@ class _GuidePageState extends ConsumerState<GuidePage>
       final answer =
           (response.data as Map<String, dynamic>)['answer'] as String?;
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
-        _qa.last = _QaEntry(question: q, answer: answer ?? '（未返回回答）');
+        _qa.last = _QaEntry(question: q, answer: answer ?? l10n.guideNoAnswer);
         _asking = false;
       });
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
-        _qa.last = _QaEntry(question: q, answer: '回答失败，请稍后再试。');
+        _qa.last = _QaEntry(question: q, answer: l10n.guideAnswerFailed);
         _asking = false;
       });
     }
@@ -510,7 +513,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
             child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
           ),
           Expanded(
-            child: Text('语音导览',
+            child: Text(AppLocalizations.of(context)!.guideVoiceGuide,
                 textAlign: TextAlign.center,
                 style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub)),
           ),
@@ -646,15 +649,17 @@ class _GuidePageState extends ConsumerState<GuidePage>
 
   Widget _legacyBody() {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     if (_loadError != null) {
       return Column(children: [
-        Text('讲解生成失败', style: GmText.serif(size: 15, weight: FontWeight.w700)),
+        Text(l10n.guideGenFailed,
+            style: GmText.serif(size: 15, weight: FontWeight.w700)),
         const SizedBox(height: 6),
         Text(_loadError!,
             textAlign: TextAlign.center,
             style: GmText.sans(size: 12, color: gm.sub)),
         const SizedBox(height: 12),
-        GmTicketButton(label: '重试', onTap: _loadExplanation, height: 38),
+        GmTicketButton(label: l10n.retry, onTap: _loadExplanation, height: 38),
       ]);
     }
     final e = _explanation;
@@ -664,7 +669,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
         child: Column(children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 12),
-          Text('正在为你撰写讲解…', style: GmText.sans(size: 12, color: gm.sub)),
+          Text(l10n.guideWriting, style: GmText.sans(size: 12, color: gm.sub)),
         ]),
       );
     }
@@ -682,7 +687,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
         if (highlight.isNotEmpty) ...[
           const SizedBox(height: 11),
           Row(children: [
-            Text('看点',
+            Text(l10n.guideHighlight,
                 style: GmText.serif(
                     size: 14, weight: FontWeight.w700, color: gm.accentDeep)),
             const SizedBox(width: 10),
@@ -697,11 +702,12 @@ class _GuidePageState extends ConsumerState<GuidePage>
 
   Widget _legacyQaList() {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(children: [
-          Text('问答',
+          Text(l10n.guideQa,
               style: GmText.serif(
                   size: 14, weight: FontWeight.w700, color: gm.accentDeep)),
           const SizedBox(width: 10),
@@ -723,7 +729,8 @@ class _GuidePageState extends ConsumerState<GuidePage>
                   height: 12,
                   child: CircularProgressIndicator(strokeWidth: 1.6)),
               const SizedBox(width: 8),
-              Text('思考中…', style: GmText.sans(size: 12, color: gm.sub)),
+              Text(l10n.guideThinking,
+                  style: GmText.sans(size: 12, color: gm.sub)),
             ])
           else
             Text(entry.answer!,
@@ -736,7 +743,8 @@ class _GuidePageState extends ConsumerState<GuidePage>
 
   Widget _legacyQaInput() {
     final gm = context.gm;
-    const suggestions = ['这幅画好在哪里？', '画家当时经历了什么？'];
+    final l10n = AppLocalizations.of(context)!;
+    final suggestions = [l10n.guideQ1, l10n.guideQ2];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
       child: Column(
@@ -778,7 +786,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
                   controller: _questionController,
                   style: GmText.sans(size: 13.5),
                   decoration: InputDecoration(
-                    hintText: '问问这幅画……',
+                    hintText: l10n.guideAskHint,
                     hintStyle: GmText.sans(size: 13.5, color: gm.faint),
                     border: InputBorder.none,
                     isDense: true,
@@ -795,7 +803,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
                   _ask(_questionController.text);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('语音问答即将开放，先打字问问吧')),
+                    SnackBar(content: Text(l10n.guideVoiceComingSoon)),
                   );
                 }
               },
@@ -871,7 +879,8 @@ class _A5GeneratingScaffold extends StatelessWidget {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               CircularProgressIndicator(color: palette.accent, strokeWidth: 2),
               const SizedBox(height: 16),
-              Text('正在生成讲解…', style: GmText.sans(size: 13, color: palette.sub)),
+              Text(AppLocalizations.of(context)!.guideGenerating,
+                  style: GmText.sans(size: 13, color: palette.sub)),
             ]),
           )),
         ]),
@@ -898,7 +907,7 @@ class _A5EmptyScaffold extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                '该作品暂无可接地讲解（待完善）',
+                AppLocalizations.of(context)!.guideEmpty,
                 textAlign: TextAlign.center,
                 style: GmText.sans(size: 14, color: palette.sub),
               ),
@@ -928,10 +937,13 @@ class _A5ErrorScaffold extends StatelessWidget {
           Expanded(
               child: Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('加载失败',
+              Text(AppLocalizations.of(context)!.loadFailed,
                   style: GmText.serif(size: 15, weight: FontWeight.w700)),
               const SizedBox(height: 12),
-              GmTicketButton(label: '重试', onTap: onRetry, height: 38),
+              GmTicketButton(
+                  label: AppLocalizations.of(context)!.retry,
+                  onTap: onRetry,
+                  height: 38),
             ]),
           )),
         ]),
@@ -1268,6 +1280,7 @@ class _FactsAccordion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final info = AppLocalizations.of(context)!.guideInfo;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1278,7 +1291,7 @@ class _FactsAccordion extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(children: [
-              Text(expanded ? '▾ 作品信息' : '▸ 作品信息',
+              Text(expanded ? '▾ $info' : '▸ $info',
                   style: GmText.sans(
                       size: 12.5, color: gm.sub, weight: FontWeight.w600)),
             ]),
@@ -1297,25 +1310,28 @@ class _FactsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
 
     final rows = <_FactRow>[
       if (facts.inventory?.isNotEmpty == true)
-        _FactRow('馆藏编号', facts.inventory!),
-      if (facts.location?.isNotEmpty == true) _FactRow('现藏地', facts.location!),
+        _FactRow(l10n.factInventory, facts.inventory!),
+      if (facts.location?.isNotEmpty == true)
+        _FactRow(l10n.factLocation, facts.location!),
       if (facts.provenance?.isNotEmpty == true)
-        _FactRow('来源流转', facts.provenance!),
+        _FactRow(l10n.factProvenance, facts.provenance!),
       if (facts.exhibitions.isNotEmpty)
-        _FactRow('展览史', facts.exhibitions.join('；')),
+        _FactRow(l10n.factExhibitions, facts.exhibitions.join('；')),
       if (facts.bibliography.isNotEmpty)
-        _FactRow('参考文献', facts.bibliography.join('；')),
+        _FactRow(l10n.factBibliography, facts.bibliography.join('；')),
       if (facts.artistLife?.isNotEmpty == true)
-        _FactRow('作者', facts.artistLife!),
+        _FactRow(l10n.factArtist, facts.artistLife!),
     ];
 
     if (rows.isEmpty) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text('暂无详细信息', style: GmText.sans(size: 12, color: gm.faint)),
+        child:
+            Text(l10n.factNone, style: GmText.sans(size: 12, color: gm.faint)),
       );
     }
 
@@ -1462,7 +1478,7 @@ class _TabContent extends StatelessWidget {
           else
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text('待完善',
+              child: Text(AppLocalizations.of(context)!.toBeRefined,
                   style: GmText.sans(size: 13, color: gm.faint),
                   textAlign: TextAlign.center),
             ),
@@ -1655,7 +1671,7 @@ class _AiChatShell extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: gm.surface, border: Border.all(color: gm.line)),
                 alignment: Alignment.centerLeft,
-                child: Text('问问这幅画',
+                child: Text(AppLocalizations.of(context)!.guideAskShort,
                     style: GmText.sans(size: 13.5, color: gm.faint)),
               ),
             ),

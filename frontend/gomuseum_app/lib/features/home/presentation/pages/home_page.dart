@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -66,6 +67,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final benefits = ref.watch(benefitsStateProvider);
     final quota = benefits.value?.totalQuota;
 
@@ -80,13 +82,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                 padding: const EdgeInsets.only(top: 16),
                 child: Column(
                   children: [
-                    _masthead(gm),
+                    _masthead(gm, l10n),
                     const SizedBox(height: 22),
-                    _slogan(),
+                    _slogan(l10n),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(26, 20, 26, 0),
                       child: GmTicketButton(
-                        label: '拍照识别讲解',
+                        label: l10n.homeCtaRecognize,
                         icon: GmIcons.camera,
                         trailingIcon: GmIcons.arrowR,
                         fontSize: 18,
@@ -94,13 +96,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _quotaLine(gm, quota),
+                    _quotaLine(gm, l10n, quota),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(26, 24, 26, 0),
                       child: GmSectionHead(
                         number: '01',
-                        label: '附近博物馆',
-                        note: '查看全部 →',
+                        label: l10n.homeNearby,
+                        note: l10n.viewAll,
                         onNoteTap: () => context.go('/explore'),
                       ),
                     ),
@@ -117,7 +119,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _masthead(GmPalette gm) {
+  Widget _masthead(GmPalette gm, AppLocalizations l10n) {
     return Column(
       children: [
         Text(
@@ -129,38 +131,25 @@ class _HomePageState extends ConsumerState<HomePage> {
         const GmDiamond(width: 150),
         const SizedBox(height: 9),
         Text(
-          '随身博物馆导览手册 · 巴黎',
+          '${l10n.homePocketGuide} · 巴黎',
           style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
         ),
       ],
     );
   }
 
-  Widget _slogan() {
+  Widget _slogan(AppLocalizations l10n) {
     return Text(
-      '走近一件作品，\n听懂它的故事。',
+      l10n.homeSlogan,
       textAlign: TextAlign.center,
       style: GmText.serif(size: 27, weight: FontWeight.w700, height: 1.55),
     );
   }
 
-  Widget _quotaLine(GmPalette gm, int? quota) {
-    return Text.rich(
-      TextSpan(
-        style: GmText.sans(size: 12, color: gm.sub),
-        children: [
-          const TextSpan(text: '免费识别还剩 '),
-          TextSpan(
-            text: quota?.toString() ?? '—',
-            style: GmText.sans(
-              size: 12,
-              color: gm.accent,
-              weight: FontWeight.w600,
-            ),
-          ),
-          const TextSpan(text: ' 次 · 升级畅听全馆'),
-        ],
-      ),
+  Widget _quotaLine(GmPalette gm, AppLocalizations l10n, int? quota) {
+    return Text(
+      l10n.homeFreeLeft(quota?.toString() ?? '—'),
+      style: GmText.sans(size: 12, color: gm.sub),
     );
   }
 

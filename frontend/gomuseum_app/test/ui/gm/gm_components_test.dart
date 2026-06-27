@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
-Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
+Widget _wrap(Widget child) => MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('zh'),
+    home: Scaffold(body: child));
 
 void main() {
   group('GmNavScan', () {

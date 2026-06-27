@@ -4,6 +4,7 @@
 /// instead of the old hardcoded _museumsByCity seed.
 /// Tests override museumsListProvider with fake MuseumSummary data.
 import 'package:flutter/material.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
@@ -41,7 +42,11 @@ Widget _wrap() => ProviderScope(
       overrides: [
         museumsListProvider.overrideWith((_) async => _fakeMuseums),
       ],
-      child: const MaterialApp(home: Scaffold(body: ExplorePage())),
+      child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(body: ExplorePage())),
     );
 
 void main() {

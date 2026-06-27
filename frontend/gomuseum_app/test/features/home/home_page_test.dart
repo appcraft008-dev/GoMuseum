@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,7 +28,11 @@ void main() {
         overrides: [
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
         ],
-        child: const MaterialApp(home: Scaffold(body: HomePage())),
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(body: HomePage())),
       ),
     );
     await tester.pump();

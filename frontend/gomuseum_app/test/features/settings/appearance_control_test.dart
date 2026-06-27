@@ -1,5 +1,6 @@
 // test/features/settings/appearance_control_test.dart
 import 'dart:async';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,11 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         // Scaffold provides Material ancestor required by InkWell rows.
-        child: const MaterialApp(home: Scaffold(body: SettingsPage())),
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(body: SettingsPage())),
       ),
     );
     // Let _load() in ThemeModeNotifier settle before interacting.
