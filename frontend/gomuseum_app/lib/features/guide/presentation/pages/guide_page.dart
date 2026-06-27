@@ -1048,9 +1048,9 @@ class _HeroImage extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Image.network(
-          imageUrl,
+          // 关键：取 Wikimedia 缩略图而非数十 MB 原图；带合规 UA。
+          sizedImageUrl(imageUrl, 1080),
           fit: BoxFit.cover,
-          // Wikimedia 按 UA 限流：带合规 UA 避免 403（见 image_request.dart）
           headers: kImageRequestHeaders,
           loadingBuilder: (_, child, progress) =>
               progress == null ? child : ColoredBox(color: context.gm.chipBg),
