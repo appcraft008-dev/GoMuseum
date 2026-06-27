@@ -132,7 +132,10 @@ class _HomePageState extends ConsumerState<HomePage> {
         const SizedBox(height: 9),
         Text(
           '${l10n.homePocketGuide} · 巴黎',
-          style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
+          style: GmText.sans(
+              size: 11,
+              letterSpacing: context.gmLetterSpacing(3),
+              color: gm.sub),
         ),
       ],
     );

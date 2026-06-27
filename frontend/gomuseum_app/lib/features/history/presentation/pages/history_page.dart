@@ -45,7 +45,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               Text(
                 AppLocalizations.of(context)!.footprintTitle,
                 style: GmText.serif(
-                    size: 21, weight: FontWeight.w700, letterSpacing: 4),
+                    size: 21,
+                    weight: FontWeight.w700,
+                    letterSpacing: context.gmLetterSpacing(4)),
               ),
               const SizedBox(height: 8),
               const GmDiamond(width: 110),
