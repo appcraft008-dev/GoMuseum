@@ -82,6 +82,7 @@ def test_pack_shape(session):
         "generated_at",
         "source",
         "artwork_count",
+        "categories",
         "artworks",
     }
     art = pack["artworks"][0]
