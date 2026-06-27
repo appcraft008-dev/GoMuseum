@@ -40,13 +40,22 @@ class GmNavScan extends StatelessWidget {
           children: [
             GmIcon(icon, size: 21, color: color, strokeWidth: on ? 1.9 : 1.6),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: GmText.sans(
-                size: 10.5,
-                letterSpacing: 1,
-                color: color,
-                weight: on ? FontWeight.w600 : FontWeight.w400,
+            // scaleDown + 单行：拉丁文长标签(Footprints/Paramètres)缩放适配，不换行。
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: GmText.sans(
+                    size: 10.5,
+                    letterSpacing: context.gmLetterSpacing(1),
+                    color: color,
+                    weight: on ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
               ),
             ),
           ],
