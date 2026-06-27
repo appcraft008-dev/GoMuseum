@@ -466,11 +466,13 @@ class _Thumbnail extends StatelessWidget {
         height: size,
         width: size,
         child: Image.network(
-          url!,
+          // 列表缩略图仅 52dp：取 ?width=200 缩略图(~14KB,生成更快、更易命中
+          // Wikimedia CDN 缓存)而非数十 MB 原图；带合规 UA。
+          sizedImageUrl(url!, 200),
           height: size,
           width: size,
           fit: BoxFit.cover,
-          // Wikimedia 按 UA 限流：带合规 UA 避免 403（见 image_request.dart）
+          cacheWidth: 200,
           headers: kImageRequestHeaders,
           loadingBuilder: (_, child, progress) =>
               progress == null ? child : _Placeholder(size: size),
