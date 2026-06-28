@@ -73,3 +73,29 @@ def test_build_material_includes_new_joconde_fields():
     mat = build_material(obj)
     assert "torse,nu,figure" in mat
     assert "4e quart 19e siècle" in mat
+
+
+def test_generate_canonical_uses_role_prompt_and_parses():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    captured = {}
+
+    def fake_complete(system, user):
+        captured["user"] = user
+        import json as _json
+
+        return _json.dumps({"overview": "A grounded hook.", "background": "The story."})
+
+    enr = ContentEnricher(complete=fake_complete)
+    out = enr.generate_canonical(
+        {
+            "qid": "Q1",
+            "title_en": "X",
+            "category": "painting",
+            "attributes": {"extract_en": "Foo."},
+        },
+        sections=["overview", "background"],
+    )
+    assert out["overview"] == "A grounded hook." and out["background"] == "The story."
+    # 角色注入到了 prompt
+    assert "hook" in captured["user"].lower() and "story" in captured["user"].lower()
