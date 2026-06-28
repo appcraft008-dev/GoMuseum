@@ -40,12 +40,22 @@ def build_generation_prompt(material: str, sections: list[str], category: str):
 
 
 _ENTAILMENT_SYSTEM = (
-    "You are a fact-checking judge. You are given source MATERIAL and a numbered list of "
-    "SENTENCES taken from an artwork explanation. For EACH sentence decide whether it is "
-    "entailed (fully supported) by the material. Judge USING ONLY the material; a sentence "
-    "that adds any fact not present in the material is NOT supported, even if it is true in "
-    'the real world. Return STRICT JSON: {"verdicts": [true, false, ...]} with one boolean '
-    "per sentence in the SAME order. No commentary."
+    "You are a grounding judge for audio-guide narration. Given source MATERIAL and a "
+    "numbered list of SENTENCES, decide for EACH sentence whether to KEEP it (true) or "
+    "REMOVE it (false), by its type:\n"
+    "- FACTUAL CLAIM (a checkable fact about the work/artist/history: a name, date, medium, "
+    "event, attribution, or what is depicted) → KEEP only if fully supported by the "
+    "material; otherwise REMOVE. A claim true in the real world but absent from the material "
+    "is still REMOVE.\n"
+    "- FRAMING / GUIDANCE (second-person direction like 'notice the corner', rhetorical "
+    "questions, transitions, sensory pointers) → KEEP. These make no factual claim.\n"
+    "- IMPRESSION (a gentle subjective reading like 'the brushwork feels restless') → KEEP, "
+    "UNLESS it asserts or implies a specific fact not in the material, or contradicts the "
+    "material → then REMOVE.\n"
+    "When in doubt whether something is a factual claim, treat it AS a factual claim and "
+    "require support (bias toward grounding).\n"
+    'Return STRICT JSON: {"verdicts": [true, false, ...]} with one boolean per sentence in '
+    "the SAME order (true = keep). No commentary."
 )
 
 
