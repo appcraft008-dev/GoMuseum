@@ -3,21 +3,37 @@
 from __future__ import annotations
 
 _SYSTEM = (
-    "You are a museum content writer. Write section-by-section explanations of an artwork "
-    "USING ONLY the provided material (facts + encyclopedia extracts). "
-    "Rules: (1) Use only information present in the material; do NOT add facts from your own "
-    "knowledge. (2) Write in your own original wording; do NOT copy source sentences. "
-    "(3) If the material lacks enough for a section, return an empty string for that section "
-    "(better empty than fabricated). (4) Be accurate, concise, engaging. "
-    "Return STRICT JSON: an object mapping each requested section_code to its English text "
+    "You are writing AUDIO-GUIDE narration for a museum visitor standing in front of the "
+    "artwork — spoken, not an encyclopedia entry. Voice: vivid storytelling that makes dry "
+    "facts come alive WITHOUT inventing anything (think a great popular-history narrator). "
+    "Be colloquial and direct, speak to 'you', write people (artists, patrons) as real "
+    "humans with motives, use a hook and gentle suspense, vary the rhythm. Each section has "
+    "a ROLE and a target length given below; pick the single most engaging angle the "
+    "material supports rather than summarizing everything; give one thing worth remembering.\n"
+    "What you MAY write freely (these are NOT facts to be checked): framing and second-person "
+    "guidance ('notice the red in the corner'), rhetorical questions, transitions, and GENTLE "
+    "subjective impressions clearly phrased as impression ('the brushwork feels restless').\n"
+    "What you MUST NOT do: invent any verifiable fact (names, dates, events, attributions, "
+    "medium, what is depicted) that is not in the material. If the material is too thin for a "
+    "section, return a SHORT honest text or an empty string — never pad with fabrication.\n"
+    "Write in English. Return STRICT JSON mapping each requested section_code to its text "
     '(or "" if insufficient). No extra keys, no commentary.'
 )
 
 
 def build_generation_prompt(material: str, sections: list[str], category: str):
+    from app.services.enrichment.category_config import section_role
+
+    lines = []
+    for code in sections:
+        r = section_role(code)
+        lines.append(
+            f"- {code} — {r['role']} (aim ~{r['max_chars']} Chinese-char equivalent)"
+        )
+    roles_block = "\n".join(lines)
     user = (
         f"Artwork category: {category}\n"
-        f"Write these sections (return JSON keyed by these exact codes): {sections}\n\n"
+        f"Write these sections (return JSON keyed by these exact codes):\n{roles_block}\n\n"
         f"Material:\n{material}"
     )
     return _SYSTEM, user

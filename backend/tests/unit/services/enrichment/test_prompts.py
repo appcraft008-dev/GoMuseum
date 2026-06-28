@@ -7,10 +7,25 @@ def test_prompt_lists_requested_sections_and_grounding_rules():
         sections=["overview", "artist"],
         category="painting",
     )
-    assert "only" in system.lower()
+    assert "not" in system.lower()  # grounding rule present (do NOT invent / MUST NOT)
     assert "overview" in user and "artist" in user
     assert "painting" in user
     assert "[FACTS]" in user
+
+
+def test_generation_prompt_is_audio_guide_voice_with_roles():
+    system, user = build_generation_prompt(
+        "MAT", ["overview", "background"], "painting"
+    )
+    blob = (system + user).lower()
+    assert "audio" in blob or "spoken" in blob
+    assert "you" in blob
+    assert "framing" in blob or "guide" in blob or "second person" in blob
+    assert "do not invent" in blob or "not in the material" in blob
+    assert "hook" in blob  # overview 角色词
+    assert "story" in blob  # background 角色词
+    assert "json" in blob
+    assert "overview" in user and "background" in user
 
 
 def test_entailment_prompt_demands_per_sentence_json_verdicts():
