@@ -7,10 +7,25 @@ def test_prompt_lists_requested_sections_and_grounding_rules():
         sections=["overview", "artist"],
         category="painting",
     )
-    assert "only" in system.lower()
+    assert "not" in system.lower()  # grounding rule present (do NOT invent / MUST NOT)
     assert "overview" in user and "artist" in user
     assert "painting" in user
     assert "[FACTS]" in user
+
+
+def test_generation_prompt_is_audio_guide_voice_with_roles():
+    system, user = build_generation_prompt(
+        "MAT", ["overview", "background"], "painting"
+    )
+    blob = (system + user).lower()
+    assert "audio" in blob or "spoken" in blob
+    assert "you" in blob
+    assert "framing" in blob or "guide" in blob or "second person" in blob
+    assert "do not invent" in blob or "not in the material" in blob
+    assert "hook" in blob  # overview 角色词
+    assert "story" in blob  # background 角色词
+    assert "json" in blob
+    assert "overview" in user and "background" in user
 
 
 def test_entailment_prompt_demands_per_sentence_json_verdicts():
@@ -94,3 +109,26 @@ def test_qa_prompt_encodes_chip_quality_standard():
     assert "curious" in s or "why/how" in s
     # 宁缺毋滥（少出胜过 trivia 凑数）
     assert "fewer" in s or "empty list" in s
+
+
+from app.services.enrichment.prompts import build_entailment_prompt
+
+
+def test_translation_prompt_preserves_tone():
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    system, _ = build_translation_prompt("Hello.", "zh")
+    blob = system.lower()
+    assert "tone" in blob or "voice" in blob or "engaging" in blob  # 保腔调
+    assert "faithful" in blob  # 仍忠实
+
+
+def test_grounding_prompt_is_three_class():
+    system, user = build_entailment_prompt("MAT", ["s1", "s2"])
+    blob = (system + user).lower()
+    assert "factual claim" in blob or "factual" in blob
+    assert "framing" in blob or "guidance" in blob or "second person" in blob
+    assert "impression" in blob
+    assert "when in doubt" in blob or "if unsure" in blob
+    assert "verdicts" in blob and "true" in blob
+    assert "1. s1" in user and "2. s2" in user

@@ -158,3 +158,61 @@ def sections_for(category: str) -> list[str]:
 def section_label(code: str, lang: str) -> str:
     labels = SECTION_LABELS.get(code, {})
     return labels.get(lang) or labels.get("en") or code
+
+
+# 各段在语音导览里的角色 + 目标长度（中文字数；长度是目标非硬限，料薄可短）。spec §4。
+SECTION_ROLES: dict[str, dict] = {
+    "overview": {
+        "role": "The HOOK: one vivid opening line that makes the visitor look up. Not a dry 'X is a painting by Y'.",
+        "max_chars": 100,
+    },
+    "artist": {
+        "role": "A person with a story: one memorable thing about the maker tied to THIS work, not a CV.",
+        "max_chars": 180,
+    },
+    "background": {
+        "role": "The story: commission, scandal, the moment it was made — narrative with momentum.",
+        "max_chars": 280,
+    },
+    "analysis": {
+        "role": "Guided looking: 'notice the...', composition, technique, what to SEE. Sensory direction and gentle impressions belong here.",
+        "max_chars": 280,
+    },
+    "significance": {
+        "role": "The one takeaway: why it matters / what to remember. The memory point.",
+        "max_chars": 140,
+    },
+    "facts": {
+        "role": "One memorable anecdote or curiosity (hard facts live elsewhere).",
+        "max_chars": 160,
+    },
+    "photographer": {
+        "role": "A person with a story: one memorable thing about the maker tied to THIS work.",
+        "max_chars": 180,
+    },
+    "maker": {
+        "role": "A person with a story: one memorable thing about the maker tied to THIS work.",
+        "max_chars": 180,
+    },
+    "material-technique": {
+        "role": "Guided looking at how it was made: material and craft a visitor can notice.",
+        "max_chars": 200,
+    },
+    "context": {
+        "role": "The story and moment behind the work — narrative with momentum.",
+        "max_chars": 280,
+    },
+    "use": {
+        "role": "What it was for and how it lived — concrete and human.",
+        "max_chars": 200,
+    },
+}
+
+_DEFAULT_ROLE = {
+    "role": "Engaging, grounded spoken narration for a museum visitor.",
+    "max_chars": 180,
+}
+
+
+def section_role(code: str) -> dict:
+    return SECTION_ROLES.get(code, _DEFAULT_ROLE)
