@@ -114,6 +114,15 @@ def test_qa_prompt_encodes_chip_quality_standard():
 from app.services.enrichment.prompts import build_entailment_prompt
 
 
+def test_translation_prompt_preserves_tone():
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    system, _ = build_translation_prompt("Hello.", "zh")
+    blob = system.lower()
+    assert "tone" in blob or "voice" in blob or "engaging" in blob  # 保腔调
+    assert "faithful" in blob  # 仍忠实
+
+
 def test_grounding_prompt_is_three_class():
     system, user = build_entailment_prompt("MAT", ["s1", "s2"])
     blob = (system + user).lower()

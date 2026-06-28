@@ -89,7 +89,10 @@ _TRANSLATION_SYSTEM = (
     "into {lang}. Rules: (1) Be FAITHFUL — do NOT add, remove, or alter any fact. "
     "(2) Keep proper names, artist names, and work TITLES in their original form or the "
     "established exonym in the target language; do NOT literally translate titles. "
-    "(3) Natural, fluent {lang}. Return ONLY the translated text, no commentary, no quotes."
+    "(3) Natural, fluent {lang}. (4) PRESERVE THE TONE — keep the engaging, spoken, "
+    "second-person audio-guide voice, hooks and gentle wit; convey them idiomatically in "
+    "{lang} rather than translating jokes literally. "
+    "Return ONLY the translated text, no commentary, no quotes."
 )
 
 
