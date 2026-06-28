@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
@@ -39,13 +40,22 @@ class GmNavScan extends StatelessWidget {
           children: [
             GmIcon(icon, size: 21, color: color, strokeWidth: on ? 1.9 : 1.6),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: GmText.sans(
-                size: 10.5,
-                letterSpacing: 1,
-                color: color,
-                weight: on ? FontWeight.w600 : FontWeight.w400,
+            // scaleDown + 单行：拉丁文长标签(Footprints/Paramètres)缩放适配，不换行。
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: GmText.sans(
+                    size: 10.5,
+                    letterSpacing: context.gmLetterSpacing(1),
+                    color: color,
+                    weight: on ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
               ),
             ),
           ],
@@ -57,6 +67,7 @@ class GmNavScan extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     return SizedBox(
       height: _barHeight + _overhang + bottomInset,
@@ -76,11 +87,11 @@ class GmNavScan extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  _tab(context, 0, '首页', GmIcons.home),
-                  _tab(context, 1, '探索', GmIcons.compass),
+                  _tab(context, 0, l10n.home, GmIcons.home),
+                  _tab(context, 1, l10n.explore, GmIcons.compass),
                   const SizedBox(width: 92),
-                  _tab(context, 3, '足迹', GmIcons.pin),
-                  _tab(context, 4, '设置', GmIcons.sliders),
+                  _tab(context, 3, l10n.footprints, GmIcons.pin),
+                  _tab(context, 4, l10n.settings, GmIcons.sliders),
                 ],
               ),
             ),
@@ -123,7 +134,7 @@ class GmNavScan extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '识别',
+                        l10n.navScan,
                         style: GmText.sans(
                           size: 10.5,
                           letterSpacing: 1.5,

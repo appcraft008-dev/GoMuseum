@@ -49,13 +49,20 @@ class GmTicketButton extends StatelessWidget {
                   GmIcon(icon!, size: fontSize + 8, color: gm.ctaInk),
                   const SizedBox(width: 11),
                 ],
-                Text(
-                  label,
-                  style: GmText.serif(
-                    size: fontSize,
-                    weight: FontWeight.w600,
-                    color: gm.ctaInk,
-                    letterSpacing: 1.8,
+                // Flexible + scaleDown：拉丁文较长时整体缩放，不溢出/不截断。
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: GmText.serif(
+                        size: fontSize,
+                        weight: FontWeight.w600,
+                        color: gm.ctaInk,
+                        letterSpacing: context.gmLetterSpacing(1.8),
+                      ),
+                    ),
                   ),
                 ),
                 if (trailingIcon != null) ...[

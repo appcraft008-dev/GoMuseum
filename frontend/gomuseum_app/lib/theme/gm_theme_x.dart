@@ -7,6 +7,14 @@ extension GmThemeX on BuildContext {
   GmPalette get gm => Theme.of(this).brightness == Brightness.dark
       ? GmPalette.dark
       : GmPalette.light;
+
+  /// 当前 UI 是否中日韩语（决定排版字距）。
+  bool get isCjk => Localizations.localeOf(this).languageCode == 'zh';
+
+  /// 标题字距：中文用设计的大字距（如 4/7）；拉丁文（en/fr）大字距很难看，
+  /// 按比例收窄到接近 0（全大写 GOMUSEUM 保留一点点）。
+  double gmLetterSpacing(double cjk) =>
+      isCjk ? cjk : (cjk * 0.18).clamp(0.0, 1.2);
 }
 
 /// 不随主题切换的硬编码值（handoff「特殊规则」章节）。

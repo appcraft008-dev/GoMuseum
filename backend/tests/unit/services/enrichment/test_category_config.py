@@ -39,3 +39,19 @@ def test_section_label_localized_with_en_fallback():
     assert section_label("overview", "en") == "Overview"
     assert section_label("overview", "fr") == "Aperçu"
     assert section_label("overview", "xx") == "Overview"
+
+
+def test_section_role_has_role_and_length():
+    from app.services.enrichment.category_config import section_role
+
+    r = section_role("overview")
+    assert "role" in r and "max_chars" in r
+    assert r["max_chars"] <= 120  # overview 是短钩子段
+    assert section_role("background")["max_chars"] >= 200  # 长故事段
+
+
+def test_section_role_unknown_falls_back():
+    from app.services.enrichment.category_config import section_role
+
+    r = section_role("nonexistent")
+    assert "role" in r and "max_chars" in r  # 有兜底，不抛

@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -25,12 +27,21 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   String? _city;
   String _query = '';
 
+  /// 城市去重键用中文城市名（语言无关、稳定），显示时再本地化。
   List<String> _cities(List<MuseumSummary> all) {
     final seen = <String>{};
     return [
       for (final m in all)
         if (m.city.isNotEmpty && seen.add(m.city)) m.city,
     ];
+  }
+
+  /// cityZh → 当前语言城市名（取该城市首个馆的本地化城市名）。
+  String _cityLabel(String cityZh, List<MuseumSummary> all, String lang) {
+    for (final m in all) {
+      if (m.city == cityZh) return m.localizedCity(lang);
+    }
+    return cityZh;
   }
 
   List<MuseumSummary> _filtered(List<MuseumSummary> all) {
@@ -41,7 +52,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       list = list
           .where((m) =>
               m.name.toLowerCase().contains(q) ||
-              m.city.toLowerCase().contains(q))
+              m.nameEn.toLowerCase().contains(q) ||
+              m.city.toLowerCase().contains(q) ||
+              m.cityEn.toLowerCase().contains(q))
           .toList();
     }
     return list;
@@ -50,6 +63,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    final lang = ref.watch(languageProvider).languageCode;
     final async = ref.watch(museumsListProvider);
 
     return SafeArea(
@@ -67,7 +82,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('加载失败', style: GmText.sans(size: 14, color: gm.sub)),
+                Text(l10n.loadFailed,
+                    style: GmText.sans(size: 14, color: gm.sub)),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: () => ref.invalidate(museumsListProvider),
@@ -77,7 +93,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     decoration: BoxDecoration(
                       color: gm.ctaBg,
                     ),
-                    child: Text('重试',
+                    child: Text(l10n.retry,
                         style: GmText.sans(size: 13, color: gm.ctaInk)),
                   ),
                 ),
@@ -109,11 +125,11 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     child: Column(
                       children: [
                         Text(
-                          '探 索',
+                          l10n.exploreTitle,
                           style: GmText.serif(
                               size: 21,
                               weight: FontWeight.w700,
-                              letterSpacing: 4),
+                              letterSpacing: context.gmLetterSpacing(4)),
                         ),
                         const SizedBox(height: 8),
                         const GmDiamond(width: 110),
@@ -121,21 +137,23 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _searchBox(gm),
+                  _searchBox(gm, l10n),
                   const SizedBox(height: 12),
-                  _cityChips(gm, cities),
+                  _cityChips(gm, cities, all, lang),
                   const SizedBox(height: 22),
                   GmSectionHead(
                     number: '01',
-                    label: _city ?? '全部',
-                    note: '${museums.length} 家博物馆',
+                    label: _city != null
+                        ? _cityLabel(_city!, all, lang)
+                        : l10n.all,
+                    note: l10n.museumCount(museums.length),
                   ),
                   if (museums.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 28),
                       child: Center(
                         child: Text(
-                          all.isEmpty ? '暂无博物馆' : '没有匹配的博物馆',
+                          all.isEmpty ? l10n.noMuseums : l10n.noMatchedMuseums,
                           style: GmText.sans(size: 12.5, color: gm.sub),
                         ),
                       ),
@@ -143,10 +161,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   else ...[
                     // 首馆用大卡，其余用列表行
                     const SizedBox(height: 13),
-                    _featureCard(gm, museums.first),
+                    _featureCard(gm, l10n, lang, museums.first),
                     for (var i = 1; i < museums.length; i++)
-                      _listRow(
-                          gm, (i + 1).toString().padLeft(2, '0'), museums[i]),
+                      _listRow(gm, (i + 1).toString().padLeft(2, '0'), lang,
+                          museums[i]),
                   ],
                 ],
               ),
@@ -161,7 +179,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     return ColoredBox(color: gm.bg, child: body);
   }
 
-  Widget _searchBox(GmPalette gm) {
+  Widget _searchBox(GmPalette gm, AppLocalizations l10n) {
     return Container(
       height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -177,7 +195,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
             child: TextField(
               style: GmText.sans(size: 13.5),
               decoration: InputDecoration(
-                hintText: '搜索城市、博物馆或艺术品',
+                hintText: l10n.searchCityMuseumArtwork,
                 hintStyle: GmText.sans(size: 13.5, color: gm.faint),
                 border: InputBorder.none,
                 isDense: true,
@@ -190,7 +208,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _cityChips(GmPalette gm, List<String> cities) {
+  Widget _cityChips(
+      GmPalette gm, List<String> cities, List<MuseumSummary> all, String lang) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -208,7 +227,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   ),
                 ),
                 child: Text(
-                  city,
+                  _cityLabel(city, all, lang),
                   style: GmText.sans(
                     size: 12.5,
                     color: city == _city ? gm.ctaInk : gm.sub,
@@ -223,7 +242,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _featureCard(GmPalette gm, MuseumSummary museum) {
+  Widget _featureCard(
+      GmPalette gm, AppLocalizations l10n, String lang, MuseumSummary museum) {
     return GestureDetector(
       onTap: () => context.push('/museum/${museum.slug}'),
       child: Container(
@@ -254,14 +274,14 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     children: [
                       Expanded(
                         child: Text(
-                          museum.name,
+                          museum.localizedName(lang),
                           style:
                               GmText.serif(size: 17, weight: FontWeight.w600),
                         ),
                       ),
                       if (museum.city.isNotEmpty)
                         Text(
-                          museum.city,
+                          museum.localizedCity(lang),
                           style: GmText.sans(
                               size: 11.5,
                               color: gm.accent,
@@ -276,7 +296,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                         GmIcon(GmIcons.ticket, size: 14, color: gm.faint),
                         const SizedBox(width: 5),
                         Text(
-                          '含 ${museum.artworkCount} 件藏品',
+                          l10n.artworkCountLabel(museum.artworkCount),
                           style: GmText.sans(size: 12, color: gm.sub),
                         ),
                       ],
@@ -291,7 +311,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                       Text(
                         museum.country.isNotEmpty
                             ? museum.country
-                            : museum.city,
+                            : museum.localizedCity(lang),
                         style: GmText.sans(size: 11, color: gm.sub),
                       ),
                       const Spacer(),
@@ -307,7 +327,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _listRow(GmPalette gm, String number, MuseumSummary museum) {
+  Widget _listRow(
+      GmPalette gm, String number, String lang, MuseumSummary museum) {
     return GestureDetector(
       onTap: () => context.push('/museum/${museum.slug}'),
       child: Container(
@@ -331,11 +352,13 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(museum.name,
+                  Text(museum.localizedName(lang),
                       style: GmText.serif(size: 15, weight: FontWeight.w600)),
                   const SizedBox(height: 3),
                   Text(
-                    museum.city.isNotEmpty ? museum.city : museum.country,
+                    museum.city.isNotEmpty
+                        ? museum.localizedCity(lang)
+                        : museum.country,
                     style: GmText.sans(size: 11.5, color: gm.sub),
                   ),
                 ],

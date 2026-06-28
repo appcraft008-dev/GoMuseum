@@ -7,48 +7,63 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 
-/// 附近博物馆种子数据（馆方接口接入前的演示内容）
+/// 附近博物馆种子数据（馆方接口接入前的演示内容）。
+/// 中英两套，按 UI 语言显示；状态走 l10n.statusOpen。
 class _NearbyMuseum {
   const _NearbyMuseum({
     required this.name,
-    required this.status,
+    required this.nameEn,
     required this.meta,
+    required this.metaEn,
     required this.cover,
     this.topWorks = const [],
     this.topWorksLabel,
+    this.topWorksLabelEn,
   });
 
   final String name;
-  final String status;
+  final String nameEn;
   final String meta;
+  final String metaEn;
   final GmArtwork cover;
   final List<GmArtwork> topWorks;
   final String? topWorksLabel;
+  final String? topWorksLabelEn;
+
+  String localizedName(String lang) => lang == 'zh' ? name : nameEn;
+  String localizedMeta(String lang) => lang == 'zh' ? meta : metaEn;
+  String? localizedTopWorks(String lang) =>
+      lang == 'zh' ? topWorksLabel : topWorksLabelEn;
 }
 
 const _nearbyMuseums = [
   _NearbyMuseum(
     name: '奥赛博物馆',
-    status: '开放中',
+    nameEn: "Musée d'Orsay",
     meta: '至 21:45 · 0.8 km · €16',
+    metaEn: 'Until 21:45 · 0.8 km · €16',
     cover: GmArt.orsayHall,
     topWorks: [GmArt.rhone, GmArt.self1889, GmArt.bedroom],
     topWorksLabel: '馆藏 Top 3\n星夜 · 自画像 · 卧室',
+    topWorksLabelEn: 'Top 3\nStarry Night · Self-Portrait · Bedroom',
   ),
   _NearbyMuseum(
     name: '橘园美术馆',
-    status: '开放中',
+    nameEn: "Musée de l'Orangerie",
     meta: '至 18:00 · 1.6 km · €12',
+    metaEn: 'Until 18:00 · 1.6 km · €12',
     cover: GmArt.plain,
   ),
   _NearbyMuseum(
     name: '卢浮宫',
-    status: '开放中',
+    nameEn: 'Louvre',
     meta: '至 18:00 · 1.9 km · €22',
+    metaEn: 'Until 18:00 · 1.9 km · €22',
     cover: GmArt.crows,
   ),
 ];
@@ -66,6 +81,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final benefits = ref.watch(benefitsStateProvider);
     final quota = benefits.value?.totalQuota;
 
@@ -80,13 +96,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                 padding: const EdgeInsets.only(top: 16),
                 child: Column(
                   children: [
-                    _masthead(gm),
+                    _masthead(gm, l10n),
                     const SizedBox(height: 22),
-                    _slogan(),
+                    _slogan(l10n),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(26, 20, 26, 0),
                       child: GmTicketButton(
-                        label: '拍照识别讲解',
+                        label: l10n.homeCtaRecognize,
                         icon: GmIcons.camera,
                         trailingIcon: GmIcons.arrowR,
                         fontSize: 18,
@@ -94,13 +110,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _quotaLine(gm, quota),
+                    _quotaLine(gm, l10n, quota),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(26, 24, 26, 0),
                       child: GmSectionHead(
                         number: '01',
-                        label: '附近博物馆',
-                        note: '查看全部 →',
+                        label: l10n.homeNearby,
+                        note: l10n.viewAll,
                         onNoteTap: () => context.go('/explore'),
                       ),
                     ),
@@ -117,7 +133,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _masthead(GmPalette gm) {
+  Widget _masthead(GmPalette gm, AppLocalizations l10n) {
     return Column(
       children: [
         Text(
@@ -129,38 +145,28 @@ class _HomePageState extends ConsumerState<HomePage> {
         const GmDiamond(width: 150),
         const SizedBox(height: 9),
         Text(
-          '随身博物馆导览手册 · 巴黎',
-          style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
+          l10n.homePocketGuide,
+          style: GmText.sans(
+              size: 11,
+              letterSpacing: context.gmLetterSpacing(3),
+              color: gm.sub),
         ),
       ],
     );
   }
 
-  Widget _slogan() {
+  Widget _slogan(AppLocalizations l10n) {
     return Text(
-      '走近一件作品，\n听懂它的故事。',
+      l10n.homeSlogan,
       textAlign: TextAlign.center,
       style: GmText.serif(size: 27, weight: FontWeight.w700, height: 1.55),
     );
   }
 
-  Widget _quotaLine(GmPalette gm, int? quota) {
-    return Text.rich(
-      TextSpan(
-        style: GmText.sans(size: 12, color: gm.sub),
-        children: [
-          const TextSpan(text: '免费识别还剩 '),
-          TextSpan(
-            text: quota?.toString() ?? '—',
-            style: GmText.sans(
-              size: 12,
-              color: gm.accent,
-              weight: FontWeight.w600,
-            ),
-          ),
-          const TextSpan(text: ' 次 · 升级畅听全馆'),
-        ],
-      ),
+  Widget _quotaLine(GmPalette gm, AppLocalizations l10n, int? quota) {
+    return Text(
+      l10n.homeFreeLeft(quota?.toString() ?? '—'),
+      style: GmText.sans(size: 12, color: gm.sub),
     );
   }
 
@@ -263,6 +269,8 @@ class _MuseumCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final lang = Localizations.localeOf(context).languageCode;
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -289,13 +297,18 @@ class _MuseumCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
-                        museum.name,
-                        style: GmText.serif(size: 17, weight: FontWeight.w600),
+                      Expanded(
+                        child: Text(
+                          museum.localizedName(lang),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              GmText.serif(size: 17, weight: FontWeight.w600),
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       Text(
-                        museum.status,
+                        l10n.statusOpen,
                         style: GmText.sans(
                           size: 11.5,
                           color: gm.accent,
@@ -305,7 +318,7 @@ class _MuseumCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 5),
-                  Text(museum.meta,
+                  Text(museum.localizedMeta(lang),
                       style: GmText.sans(size: 12, color: gm.sub)),
                   if (museum.topWorks.isNotEmpty) ...[
                     const Padding(
@@ -321,7 +334,7 @@ class _MuseumCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         Expanded(
                           child: Text(
-                            museum.topWorksLabel ?? '',
+                            museum.localizedTopWorks(lang) ?? '',
                             style: GmText.sans(
                                 size: 11, color: gm.sub, height: 1.5),
                           ),

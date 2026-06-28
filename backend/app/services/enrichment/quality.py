@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 
 from app.services.enrichment.prompts import build_entailment_prompt
 
+# 存活率阈值：三类闸下 keep 含引导句/解读句（仅无据事实主张被删），
+# 低存活率意味着大量事实性主张无材料支持（料薄/脑补），需人工复审。
 GROUNDING_THRESHOLD = 0.6
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -42,7 +44,17 @@ class QualityGate:
         self._complete = complete  # complete(system, user) -> str
 
     def check_section(self, material: str, facts: str, body: str) -> SectionQuality:
-        """接地(逐句蕴含)是发布的唯一硬闸：grounding≥阈值即 published。
+        """接地闸（三类判定）：逐句送蕴含模型，按 verdicts 保留/删除各句，
+        计算存活率(survival rate) = kept/total，≥ GROUNDING_THRESHOLD → published。
+
+        三类判定语义（接地闸返回 true=keep）：
+          - 事实硬接地：材料直接支持的事实句 → keep=True
+          - 引导句/观察句：引导观众感知、无具体可证伪事实 → keep=True（不占"无据名额"）
+          - 解读句：主观/情感诠释 → keep=True（同上）
+          - 无据事实主张：涉具体事实但材料不支持 → keep=False（被删）
+
+        因此低存活率 = 大量事实性主张无材料支持（料薄/脑补） → needs_review；
+        新语义下引导/解读句天然留存，存活率比纯事实模式更高，阈值语义不变。
 
         不再做阻塞性 fact-consistency 对账——它对 Joconde 富材料里的事件年(展出/收购)
         高频误报、误杀已接地内容(2026-06-21 prod 金丝雀诊断：grounding=1.0 的段被年份

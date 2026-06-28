@@ -3,6 +3,7 @@
 /// Smoke test: override museumsListProvider with fake data from 2 cities,
 /// verify museum names render and city chips appear.
 import 'package:flutter/material.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
@@ -14,7 +15,9 @@ void main() {
     MuseumSummary(
       slug: 'orsay',
       name: '奥赛博物馆',
+      nameEn: '奥赛博物馆',
       city: '巴黎',
+      cityEn: '巴黎',
       country: 'FR',
       coordinates: [48.8599, 2.3266],
       artworkCount: 86,
@@ -22,7 +25,9 @@ void main() {
     MuseumSummary(
       slug: 'pompidou',
       name: '蓬皮杜中心',
+      nameEn: '蓬皮杜中心',
       city: '巴黎',
+      cityEn: '巴黎',
       country: 'FR',
       coordinates: [48.8607, 2.3522],
       artworkCount: 120,
@@ -30,7 +35,9 @@ void main() {
     MuseumSummary(
       slug: 'vangogh',
       name: '梵高博物馆',
+      nameEn: '梵高博物馆',
       city: '阿姆斯特丹',
+      cityEn: '阿姆斯特丹',
       country: 'NL',
       coordinates: [52.3584, 4.8811],
       artworkCount: 42,
@@ -41,7 +48,11 @@ void main() {
         overrides: [
           museumsListProvider.overrideWith((_) async => fakeData),
         ],
-        child: const MaterialApp(home: Scaffold(body: ExplorePage())),
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(body: ExplorePage())),
       );
 
   testWidgets('A1 smoke: 刊头渲染', (tester) async {

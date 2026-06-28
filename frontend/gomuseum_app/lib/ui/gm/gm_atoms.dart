@@ -79,8 +79,10 @@ class GmSectionHead extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           label,
-          style:
-              GmText.sans(size: 12, letterSpacing: 3, weight: FontWeight.w600),
+          style: GmText.sans(
+              size: 12,
+              letterSpacing: context.gmLetterSpacing(3),
+              weight: FontWeight.w600),
         ),
         const SizedBox(width: 12),
         const Expanded(child: GmHairline()),
