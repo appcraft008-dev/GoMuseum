@@ -29,7 +29,8 @@ class _FakeComplete:
     def __call__(self, system, user):
         import json as _json
 
-        if "entail" in system.lower():
+        # system prompt 现用 "grounding judge"（三类判定语义），不再含 "entail"
+        if "grounding judge" in system.lower():
             return _json.dumps({"verdicts": self._verdicts})
         return _json.dumps({"conflicts": self._conflicts})
 
@@ -82,7 +83,7 @@ def test_gate_runs_each_section_and_skips_absent():
         def __call__(self, system, user):
             import json as _json
 
-            if "entail" in system.lower():
+            if "grounding judge" in system.lower():
                 return (
                     _json.dumps({"verdicts": [True]})
                     if "Overview sentence." in user
@@ -109,3 +110,33 @@ def test_quality_gate_constructible_with_default_complete():
 
     gate = QualityGate(default_complete)  # 不调用，只验证可构造、签名兼容
     assert callable(gate._complete)
+
+
+def test_gate_keeps_guidance_and_drops_unsupported_claim():
+    import json as _json
+
+    def fake(system, user):
+        return _json.dumps({"verdicts": [True, False, True]})
+
+    from app.services.enrichment.quality import QualityGate
+
+    g = QualityGate(fake)
+    body = (
+        "Notice the red in the corner. It was painted in 1505. The mood feels uneasy."
+    )
+    r = g.check_section("MAT", "FACTS", body)
+    assert "Notice the red" in r.body and "mood feels uneasy" in r.body
+    assert "1505" not in r.body  # 无据事实被删
+    assert r.status == "published"  # 存活 2/3 ≥ 阈值
+
+
+def test_gate_needs_review_when_mostly_unsupported():
+    import json as _json
+
+    def fake(system, user):
+        return _json.dumps({"verdicts": [False, False, True]})
+
+    from app.services.enrichment.quality import QualityGate
+
+    r = QualityGate(fake).check_section("MAT", "F", "A. B. C.")
+    assert r.status == "needs_review"  # 存活 1/3 < 阈值
