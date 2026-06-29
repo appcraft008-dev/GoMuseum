@@ -47,6 +47,14 @@ _FALLBACK_SECTIONS = ["overview", "background", "significance", "facts"]
 
 # 段落 code → 各语言标签（i18n 配置；缺语言回退 en）。
 SECTION_LABELS: dict[str, dict[str, str]] = {
+    "guide": {
+        "zh": "标准导览",
+        "en": "Standard Guide",
+        "fr": "Visite guidée",
+        "de": "Standardführung",
+        "es": "Guía estándar",
+        "it": "Guida standard",
+    },
     "overview": {
         "zh": "通用描述",
         "en": "Overview",

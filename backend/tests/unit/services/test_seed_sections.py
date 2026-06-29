@@ -35,6 +35,16 @@ def test_seed_creates_multi_category_skeleton(session):
     assert {"overview", "material-technique", "photographer"} <= codes
 
 
+def test_seed_registers_guide_section_type_but_not_as_tab(session):
+    from scripts.seed_sections import seed_into
+
+    seed_into(session)
+    codes = {s.code for s in session.query(SectionType).all()}
+    assert "guide" in codes  # 满足 object_content_sections 外键
+    guide_tabs = session.query(CategorySection).filter_by(section_code="guide").all()
+    assert guide_tabs == []  # guide 不是 6 模块之一，不进任何类目 tab
+
+
 def test_seed_idempotent(session):
     from scripts.seed_sections import seed_into
 
