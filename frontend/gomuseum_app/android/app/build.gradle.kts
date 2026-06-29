@@ -41,6 +41,21 @@ android {
         versionName = flutter.versionName
     }
 
+    // 环境维度：prod 与 staging 各自独立包名，可同机并存、各连各的后端。
+    flavorDimensions += "env"
+    productFlavors {
+        create("prod") {
+            dimension = "env"
+            // 生产包名保持 com.gomuseum.app（不加后缀）
+        }
+        create("staging") {
+            dimension = "env"
+            // → com.gomuseum.app.staging，与 prod 互不覆盖
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+        }
+    }
+
     signingConfigs {
         create("release") {
             if (keystoreProperties.isNotEmpty()) {

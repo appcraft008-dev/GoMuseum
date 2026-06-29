@@ -172,7 +172,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _museumCards() {
     return SizedBox(
-      height: 312,
+      // 留足余量：拉丁衬线行高略高 + 多语言文案，避免卡片底部溢出。
+      height: 344,
       child: ListView.separated(
         controller: _cardScrollController,
         scrollDirection: Axis.horizontal,
@@ -335,6 +336,8 @@ class _MuseumCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             museum.localizedTopWorks(lang) ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: GmText.sans(
                                 size: 11, color: gm.sub, height: 1.5),
                           ),
