@@ -84,7 +84,11 @@ def generate_object(
         from app.services.enrichment.material import fetch_artist_material
 
         # ponytail: country_lang 暂硬编 fr，多馆从馆配置取
-        artist_mat = fetch_artist_material(o.qid, registry, country_lang="fr")
+        # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
+        try:
+            artist_mat = fetch_artist_material(o.qid, registry, country_lang="fr")
+        except Exception:
+            artist_mat = {}
         if artist_mat:
             o.attributes = {**(o.attributes or {}), **artist_mat}
             db.flush()
