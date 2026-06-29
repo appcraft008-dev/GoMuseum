@@ -22,3 +22,46 @@ def test_fetch_rich_facts_empty_on_no_rows():
     from app.services.enrichment.evidence import fetch_rich_facts
 
     assert fetch_rich_facts("Q1", run_query=lambda s: []) == []
+
+
+def test_build_evidence_pack_assembles_facts_and_narrative():
+    from app.services.enrichment.evidence import build_evidence_pack
+
+    obj = {
+        "qid": "Q1",
+        "title_en": "Origin",
+        "artist_en": "Courbet",
+        "year": "1866",
+        "attributes": {
+            "medium_fr": "huile sur toile",
+            "subjects_fr": "nu",
+            "extract_en": "<work article>",
+            "artist_extract_en": "<artist bio>",
+        },
+    }
+    pack = build_evidence_pack(obj, run_query=lambda s: [], complete=None)
+    fact_sources = {f["source"] for f in pack["facts"]}
+    assert any("medium" in s for s in fact_sources)  # medium_fr → 事实
+    assert any(s.startswith("object:") for s in fact_sources)  # 艺术家/年代/标题
+    nsrc = {n["source"] for n in pack["narrative"]}
+    assert "wikipedia:work" in nsrc and "wikipedia:artist" in nsrc
+    assert all(n["type"] == "mainstream" for n in pack["narrative"])
+    assert pack["flagged"] == []  # complete=None → 不抽争议
+
+    # 含 tier 分级:medium 是 wall_label,subjects 是 material
+    by_claim = {f["claim"]: f for f in pack["facts"]}
+    assert by_claim["材质"]["tier"] == "wall_label"
+    assert by_claim["主题"]["tier"] == "material"
+
+
+def test_build_evidence_pack_rich_facts_network_failure_degrades():
+    from app.services.enrichment.evidence import build_evidence_pack
+
+    def boom(sparql):
+        raise RuntimeError("wdqs down")
+
+    obj = {"qid": "Q1", "title_en": "X", "attributes": {"extract_en": "t"}}
+    pack = build_evidence_pack(obj, run_query=boom, complete=None)
+    # 富属性失败不拖垮:基础事实 + narrative 仍在
+    assert any(s.startswith("object:") for s in {f["source"] for f in pack["facts"]})
+    assert any(n["source"] == "wikipedia:work" for n in pack["narrative"])
