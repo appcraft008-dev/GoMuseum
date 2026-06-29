@@ -124,6 +124,23 @@ class SuggestedQuestion extends Equatable {
   List<Object?> get props => [question, answer];
 }
 
+class DefaultGuide extends Equatable {
+  const DefaultGuide({required this.body, required this.audioUrl});
+  final String body;
+  final String? audioUrl;
+
+  bool get hasBody => body.trim().isNotEmpty;
+
+  factory DefaultGuide.fromJson(Map<String, dynamic> j) => DefaultGuide(
+        // 禁裸 as String：富化字段天然可缺，统一可空 + 回退
+        body: j['body'] is String ? j['body'] as String : '',
+        audioUrl: j['audio_url'] is String ? j['audio_url'] as String : null,
+      );
+
+  @override
+  List<Object?> get props => [body, audioUrl];
+}
+
 class ObjectContent extends Equatable {
   const ObjectContent({
     required this.qid,
@@ -135,6 +152,7 @@ class ObjectContent extends Equatable {
     required this.facts,
     required this.tabs,
     required this.suggestedQuestions,
+    this.defaultGuide,
   });
   final String qid;
   final String category;
@@ -145,6 +163,7 @@ class ObjectContent extends Equatable {
   final ObjectFacts facts;
   final List<ObjectTab> tabs;
   final List<SuggestedQuestion> suggestedQuestions;
+  final DefaultGuide? defaultGuide;
 
   factory ObjectContent.fromJson(Map<String, dynamic> j) => ObjectContent(
         qid: j['qid'] as String? ?? '',
@@ -170,6 +189,9 @@ class ObjectContent extends Equatable {
                 .where((q) => q.question.isNotEmpty)
                 .toList() ??
             const [],
+        defaultGuide: j['default_guide'] is Map<String, dynamic>
+            ? DefaultGuide.fromJson(j['default_guide'] as Map<String, dynamic>)
+            : null,
       );
 
   @override
@@ -182,6 +204,7 @@ class ObjectContent extends Equatable {
         images,
         facts,
         tabs,
-        suggestedQuestions
+        suggestedQuestions,
+        defaultGuide
       ];
 }
