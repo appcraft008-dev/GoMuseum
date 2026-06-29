@@ -377,13 +377,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/app_theme.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('zh'),
-      theme: GmTheme.light,
+      theme: AppTheme.lightTheme(),
       home: Scaffold(body: child),
     );
 
@@ -397,7 +397,7 @@ void main() {
 }
 ```
 
-> 注：`GmTheme.light` 在 `lib/theme/gm_tokens.dart`；若实际命名不同，实现时核对 `gm_tokens.dart` 顶部 `ThemeData` 工厂并改用之。
+> 注：`AppTheme.lightTheme()` 在 `lib/theme/app_theme.dart`（已核对）。`GmText` 来自 `gm_tokens.dart`（如该测试需要）。
 
 - [ ] **Step 2: 跑测试确认失败**
 
@@ -412,7 +412,7 @@ Create `lib/features/guide/presentation/widgets/guide_audio_bar.dart`:
 import 'package:flutter/material.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/app_theme.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
 /// 预留态音频条（TTS 未上线前不显示时长、弱化不可点）。
@@ -491,10 +491,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/app_theme.dart';
 
 Widget _wrap(Widget c) =>
-    MaterialApp(theme: GmTheme.light, home: Scaffold(body: c));
+    MaterialApp(theme: AppTheme.lightTheme(), home: Scaffold(body: c));
 
 void main() {
   testWidgets('点击问题就地展开答案', (t) async {
@@ -523,7 +523,7 @@ Create `lib/features/guide/presentation/widgets/guide_question_list.dart`:
 import 'package:flutter/material.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/app_theme.dart';
 
 /// 预设问题竖排，点击就地展开答案（答案随契约返回，无需联网）。
 class GuideQuestionList extends StatefulWidget {
@@ -636,7 +636,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_sheet.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/app_theme.dart';
 
 void main() {
   testWidgets('抽屉渲染 tab 标签与首个 tab 正文，切换 tab 换正文', (t) async {
@@ -648,7 +648,7 @@ void main() {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('zh'),
-      theme: GmTheme.light,
+      theme: AppTheme.lightTheme(),
       home: Scaffold(body: GuideDeepSheetContent(tabs: tabs)),
     ));
     await t.pumpAndSettle();
@@ -677,7 +677,7 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/app_theme.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
 /// 拉起「深度内容」底部抽屉。
@@ -859,9 +859,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
-import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
-import 'package:gomuseum_app/theme/gm_tokens.dart';
+import 'package:gomuseum_app/theme/app_theme.dart';
 
 ObjectContent _sample() => const ObjectContent(
       qid: 'Q1', category: 'painting', language: 'zh',
@@ -881,13 +881,13 @@ void main() {
     await t.pumpWidget(ProviderScope(
       overrides: [
         objectContentProvider((slug: 'orsay', qid: 'Q1'))
-            .overrideWith((ref) => Stream.value(_sample())),
+            .overrideWith((ref) => _sample()),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('zh'),
-        theme: GmTheme.light,
+        theme: AppTheme.lightTheme(),
         home: const GuidePage(args: GuideArgs(slug: 'orsay', qid: 'Q1')),
       ),
     ));
@@ -906,7 +906,7 @@ void main() {
 }
 ```
 
-> `objectContentProvider` 的入参/返回类型核对 `content_providers.dart`（family key `({slug, qid})`，返回 `Stream`/`Future`/`AsyncValue` 视实现而定；override 写法据实调整）。若 provider 非 StreamProvider，改用 `overrideWith` 对应签名。
+> `objectContentProvider` 已核对：定义于 `lib/features/content/presentation/providers/catalog_providers.dart`，是 `FutureProvider.family<ObjectContent, ({String slug, String qid})>`。测试 override 用 `.overrideWith((ref) => _sample())`（返回值即可，FutureOr）。导入 `catalog_providers.dart`（不是 content_providers.dart）。
 
 - [ ] **Step 2: 跑测试确认失败**
 
@@ -1022,7 +1022,7 @@ class _A5Body extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 18),
                       child: GmTicketButton(
                         label: '${l10n.guideDeepContent}（${layer.deepCount}）',
-                        icon: GmIcons.book,
+                        icon: GmIcons.doc,
                         trailingIcon: GmIcons.arrowR,
                         onTap: () => showGuideDeepSheet(context, layer.deepTabs),
                       ),
@@ -1083,7 +1083,7 @@ class _AskBar extends StatelessWidget {
 
 5. 删除现已无引用的 `_TabBar` / `_TabContent` / `_TtsPlayer`(A5) / `_AiChatShell` 类与 `_A5Body` 旧参数（仅当确认 legacy 路径不引用它们；`_TtsPlayer`/`_AiChatShell` 仅 A5 用，可删）。`_buildA5Page` 里 `body:` 改为 `_A5Body(content: content, factsExpanded: _factsExpanded, onToggleFacts: () => setState(() => _factsExpanded = !_factsExpanded))`，并删去 `NestedScrollView` 之外不再需要的 TTS 字段引用。**保留** Hero SliverAppBar（设计稿 Hero 行为兼容；标题/收藏沿用）。
 
-> `GmIcons.book`/`GmIcons.arrowR`/`GmIcons.mic`：实现前 grep `enum GmIcons` 核对名字，缺则用最接近图标（如 book→`GmIcons.photo` 兜底或新增）。
+> `GmIcons.doc`/`GmIcons.arrowR`/`GmIcons.mic`：实现前 grep `enum GmIcons` 核对名字，缺则用最接近图标（如 book→`GmIcons.photo` 兜底或新增）。
 
 - [ ] **Step 4: 跑测试确认通过**
 
@@ -1138,4 +1138,4 @@ git add -A && git commit -m "fix(guide): 暗色 token 微调与真机核对"
 
 - **Spec 覆盖：** default_guide 解析(T1)、分层派生(T2)、文案(T3)、音频预留(T4)、问题展开(T5)、深度抽屉(T6)、主页重写+去 TabBar+去"第N件"(T7)、暗色三处+真机(T8)。回退/边界由 T2 纯逻辑全覆盖并单测。
 - **类型一致：** `GuideLayering.from`→`heroBody/heroAudioUrl/deepTabs/deepCount/hasDeep/hasHero`；`DefaultGuide.body/audioUrl/hasBody`；`GuideAudioBar(audioUrl,label?)`；`GuideQuestionList(questions)`；`GuideDeepSheetContent(tabs)`+`showGuideDeepSheet(context,tabs)`——跨任务一致。
-- **未决依赖（实现时 grep 核对，已在步骤内标注）：** `GmTheme.light` 工厂名、`GmIcons` 是否含 `book/close/arrowR`、`objectContentProvider` 的 family 签名与返回类型。这些是已存在代码的事实核对，非设计缺口。
+- **未决依赖（实现时 grep 核对，已在步骤内标注）：** `AppTheme.lightTheme()` 工厂名、`GmIcons` 是否含 `book/close/arrowR`、`objectContentProvider` 的 family 签名与返回类型。这些是已存在代码的事实核对，非设计缺口。
