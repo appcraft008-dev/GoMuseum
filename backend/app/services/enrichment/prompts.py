@@ -142,3 +142,31 @@ _QA_SYSTEM = (
 def build_qa_prompt(material: str, category: str):
     user = f"Artwork category: {category}\n\nMATERIAL:\n{material}"
     return _QA_SYSTEM, user
+
+
+_DEFAULT_GUIDE_SYSTEM = (
+    "You are a museum audio-guide writer. Write ONE short spoken on-site guide for a visitor "
+    "standing in front of the artwork, built around a SINGLE core point (one throughline) — "
+    "not a summary of everything. Structure (5 beats, flowing, not labeled): "
+    "(1) a hook that gets them looking; (2) guide them to NOTICE 1-2 concrete details; "
+    "(3) explain why those details matter; (4) add only the necessary background; "
+    "(5) end on a memory point or an open question. "
+    "Voice: colloquial, second-person, vivid storytelling that makes facts come alive "
+    "(a great popular-history narrator). You MAY freely use framing/second-person guidance "
+    "and gentle impressions clearly phrased as impression. You MUST NOT invent verifiable "
+    "facts (names, dates, events, attributions, medium, what is depicted) not in the material. "
+    "This is the HEADLINE; deep modules cover the rest, so DON'T try to cover everything. "
+    "Write in English, ONE continuous narration. Return ONLY the text, no commentary, no quotes."
+)
+
+
+def build_default_guide_prompt(
+    material: str, facts: str, target_chars: tuple[int, int]
+):
+    lo, hi = target_chars
+    user = (
+        f"Target length: ~{lo}-{hi} Chinese-character equivalent (a target, not a hard limit; "
+        f"shorter is fine if material is thin).\n\n"
+        f"Key facts:\n{facts}\n\nMaterial:\n{material}"
+    )
+    return _DEFAULT_GUIDE_SYSTEM, user
