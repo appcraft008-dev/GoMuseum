@@ -24,6 +24,10 @@ def test_enrich_maps_french_fields():
                             "numero_inventaire": "RF 2740",
                             "sujet_represente": "torse,nu,figure",
                             "periode_de_creation": "4e quart 19e siècle",
+                            "domaine": "peinture",
+                            "denomination": "tableau",
+                            "ecole_pays": "France",
+                            "localisation": "Paris ; musée d'Orsay",
                         }
                     }
                 ]
@@ -40,6 +44,10 @@ def test_enrich_maps_french_fields():
     assert "000PE004070" in str(captured["params"])
     assert c.fields["subjects_fr"] == "torse,nu,figure"
     assert c.fields["period_fr"] == "4e quart 19e siècle"
+    assert c.fields["domaine_fr"] == "peinture"
+    assert c.fields["denomination_fr"] == "tableau"
+    assert c.fields["school_fr"] == "France"
+    assert c.fields["location_fr"] == "Paris ; musée d'Orsay"
 
 
 def test_enrich_returns_none_without_p347():
