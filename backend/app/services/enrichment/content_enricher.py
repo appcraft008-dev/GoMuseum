@@ -48,6 +48,13 @@ def build_material(obj: dict) -> str:
         lines.append("\n[WIKIPEDIA EXTRACTS]")
         for k, v in extracts.items():
             lines.append(f"({k}) {v}")
+    artist_extracts = {
+        k: v for k, v in attrs.items() if k.startswith("artist_extract_") and v
+    }
+    if artist_extracts:
+        lines.append("\n[ABOUT THE ARTIST]")
+        for k, v in artist_extracts.items():
+            lines.append(f"({k}) {v}")
     return "\n".join(lines)
 
 

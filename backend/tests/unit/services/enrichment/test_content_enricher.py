@@ -135,3 +135,20 @@ def test_generate_default_guide_empty_returns_none():
         )
         is None
     )
+
+
+def test_build_material_includes_artist_extract():
+    from app.services.enrichment.content_enricher import build_material
+
+    mat = build_material(
+        {
+            "qid": "Q1",
+            "title_en": "X",
+            "category": "painting",
+            "attributes": {
+                "artist_extract_en": "Courbet was a French realist painter."
+            },
+        }
+    )
+    assert "Courbet was a French realist painter." in mat
+    assert "ARTIST" in mat or "artist" in mat.lower()

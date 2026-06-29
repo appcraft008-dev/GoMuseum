@@ -80,6 +80,15 @@ def generate_object(
             o.attributes = {**attrs, **fetched}
             db.flush()
 
+    if registry is not None:
+        from app.services.enrichment.material import fetch_artist_material
+
+        # ponytail: country_lang 暂硬编 fr，多馆从馆配置取
+        artist_mat = fetch_artist_material(o.qid, registry, country_lang="fr")
+        if artist_mat:
+            o.attributes = {**(o.attributes or {}), **artist_mat}
+            db.flush()
+
     obj = _row_to_obj(o)
     material = build_material(obj)
     facts = _facts_text(obj)
