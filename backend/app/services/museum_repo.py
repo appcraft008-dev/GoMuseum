@@ -210,6 +210,21 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         "exhibitions": _split_hash(attrs.get("exhibitions_fr")),
         "bibliography": _split_hash(attrs.get("bibliography_fr")),
     }
+    guide_row = (
+        db.query(ObjectContentSection)
+        .filter_by(object_id=obj.id, language=language, section_code="guide")
+        .one_or_none()
+    )
+    default_guide = (
+        {
+            "body": guide_row.body,
+            "audio_url": (
+                storage.public_url(guide_row.audio_key) if guide_row.audio_key else None
+            ),
+        }
+        if guide_row and guide_row.body
+        else None
+    )
     return {
         "qid": qid,
         "category": obj.category,
@@ -221,6 +236,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         "images": images,
         "facts": facts,
         "tabs": tabs,
+        "default_guide": default_guide,
         "suggested_questions": suggested,
     }
 
