@@ -6,7 +6,10 @@ from __future__ import annotations
 import json
 import re
 
-from app.services.enrichment.prompts import build_generation_prompt
+from app.services.enrichment.prompts import (
+    build_default_guide_prompt,
+    build_generation_prompt,
+)
 
 _FACT_FIELDS = [
     ("Title", "title_en"),
@@ -76,6 +79,14 @@ class ContentEnricher:
             v = parsed.get(code)
             out[code] = v.strip() if isinstance(v, str) and v.strip() else None
         return out
+
+    def generate_default_guide(self, obj: dict, facts: str, target_chars) -> str | None:
+        """单主线默认讲解(纯文本)。空串→None。"""
+        material = build_material(obj)
+        system, user = build_default_guide_prompt(material, facts, target_chars)
+        raw = self._complete(system, user)
+        text = raw.strip() if isinstance(raw, str) else ""
+        return text or None
 
 
 def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:
