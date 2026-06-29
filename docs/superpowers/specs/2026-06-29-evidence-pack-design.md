@@ -56,6 +56,20 @@
 
 新查询(`build_evidence_pack` 内,run_query 注入):给定 work qid,取 P180/P135/P136/P88/P186/P1343 的值与 en 标签(`wikibase:label` 服务)。镜像 `material.fetch_artist_material` 的注入式模式(默认真实 SPARQL,测试注入 fake)。
 
+## 5b. facts 面板策展 + 人性化(本期一起做)
+
+现状(草地上的午餐截图):"作品信息"面板**直接倒 Joconde 学术原始数据**——法语收藏链、法语展览清单、`Tabarant 66` 这类参考文献代号、未译材质 `peinture à l'huile`、原始尺寸 `H. 208, l. 264.5`。对普通游客无意义甚至劝退。
+
+**改造(区分"展示级"与"材料级"事实)**:
+- **`get_object_content.facts` 只返展示级、且人性化**:`artist / date / medium / dimensions / inventory / location`。
+  - **medium**:优先取 **Wikidata P186 材质标签**(按 language 干净:油画/Oil on canvas)→ 回退 Joconde 归一化。
+  - **dimensions**:优先取 **Wikidata P2048 高 + P2049 宽**(干净数字)→ 拼 `宽 × 高 cm`;回退解析 Joconde mesures。
+- **参考文献(bibliography)→ 彻底不进展示**(只在 evidence_pack 留作溯源)。
+- **provenance / exhibitions → 本期从 facts 面板移除**(返 null/空,前端已容错不显示);它们进 evidence_pack 的材料级,**阶段2 由 background lane 讲成流转/首展故事**。
+- 契约形状不变(`facts` 字段还在),只是 provenance/exhibitions/bibliography 返空 + medium/dimensions 人性化 → 前端面板自动变干净,**无需前端改**。
+
+**证据包据此分级**:`facts` 原子加 `display: bool`(或 `tier: "wall_label" | "material"`)——wall_label 级供面板,material 级只喂生成。
+
 ## 6. 非目标(本期)
 
 - **生成切到证据包**(去重 lane/动态模块/hedge)= **阶段2**。本期证据包**只建+存**,旧生成路径不变。
@@ -81,5 +95,6 @@
 - `backend/app/services/enrichment/evidence.py`(**新**:`build_evidence_pack` + 富属性 SPARQL + 争议抽出 prompt + topic 映射)
 - `backend/app/services/enrichment/sources/joconde.py`(补字段)
 - `backend/app/services/enrichment/pipeline.py`(generate_object 产出+落 evidence_pack,try/except)
-- 测试:`tests/unit/services/enrichment/test_evidence.py`(新)、`test_joconde_source.py`、`tests/integration/test_generate_pipeline.py`
+- `backend/app/services/museum_repo.py`(get_object_content.facts 策展+人性化:medium←P186、dimensions←P2048/P2049、bibliography/provenance/exhibitions 移出面板)
+- 测试:`tests/unit/services/enrichment/test_evidence.py`(新)、`test_joconde_source.py`、`tests/integration/test_generate_pipeline.py`、`tests/integration/test_pack_and_content_facts.py`(facts 策展)
 - 完成后**回写主文档**(evidence_pack 列 + 证据包结构确认)
