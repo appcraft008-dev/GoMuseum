@@ -74,7 +74,7 @@ def test_content_includes_facts_title_images_status(session):
     assert d["images"][0]["url"] == "https://img/x.jpg"  # upsert_object 把 http→https
     f = d["facts"]
     assert f["artist"] == "库尔贝" and f["date"] == "1866"
-    assert f["medium"] == "huile sur toile" and f["dimensions"] == "46 x 55 cm"
+    assert f["medium"] == "油画" and f["dimensions"] == "46 × 55 cm"  # 已人性化
     assert f["inventory"] == "RF 1995 10" and f["location"] == "奥赛博物馆"
     # exhibitions 已移出面板(进证据包材料级)
     assert f["exhibitions"] == []
@@ -145,13 +145,12 @@ def test_content_facts_curated_and_humanized(session):
     assert not f.get("bibliography")
     assert not f.get("provenance")
     assert not f.get("exhibitions")
-    # medium 取证据包干净值;基础项保留
-    assert f["medium"] == "Oil on canvas"
+    # medium 人性化(zh huile→油画);基础项保留
+    assert f["medium"] == "油画"
     assert "artist" in f and "date" in f
 
 
-def test_content_facts_medium_fallback_to_attributes(session):
-    # 无证据包 wall_label medium 时回退 attributes medium_fr
+def test_content_facts_medium_humanized_from_attributes(session):
     from app.models.museum_object import MuseumObject
     from app.services.museum_repo import get_object_content
 
@@ -160,4 +159,19 @@ def test_content_facts_medium_fallback_to_attributes(session):
     o.evidence_pack = None
     session.commit()
     f = get_object_content(session, "orsay", "Q1", "zh")["facts"]
-    assert f["medium"] == "huile sur toile"
+    assert f["medium"] == "油画"  # 人性化,非原始法语
+
+
+def test_humanize_medium_and_dimensions():
+    from app.services.museum_repo import _humanize_dimensions, _humanize_medium
+
+    assert _humanize_medium("peinture à l'huile (toile)", "zh") == "油画"
+    assert _humanize_medium("huile sur toile", "en") == "Oil on canvas"
+    assert _humanize_medium("bronze", "zh") == "青铜"
+    assert (
+        _humanize_medium("technique inconnue", "zh") == "technique inconnue"
+    )  # 未知原样
+    assert _humanize_medium(None, "zh") is None
+    assert _humanize_dimensions("en mètres : L. 0,55 ; H. 0,46") == "55 × 46 cm"
+    assert _humanize_dimensions("H. 208, l. 264.5") == "208 × 264.5 cm"
+    assert _humanize_dimensions(None) is None
