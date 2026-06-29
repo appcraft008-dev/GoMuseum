@@ -10,7 +10,7 @@ from app.services.content_repo import (
     persist_gated_sections,
     persist_suggested_questions,
 )
-from app.services.enrichment.category_config import sections_for
+from app.services.enrichment.category_config import guide_target_chars, sections_for
 from app.services.enrichment.content_enricher import build_material
 from app.services.enrichment.material import fetch_object_material
 
@@ -80,6 +80,19 @@ def generate_object(
             o.attributes = {**attrs, **fetched}
             db.flush()
 
+    if registry is not None:
+        from app.services.enrichment.material import fetch_artist_material
+
+        # ponytail: country_lang 暂硬编 fr，多馆从馆配置取
+        # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
+        try:
+            artist_mat = fetch_artist_material(o.qid, registry, country_lang="fr")
+        except Exception:
+            artist_mat = {}
+        if artist_mat:
+            o.attributes = {**(o.attributes or {}), **artist_mat}
+            db.flush()
+
     obj = _row_to_obj(o)
     material = build_material(obj)
     facts = _facts_text(obj)
@@ -96,6 +109,18 @@ def generate_object(
         for code, r in gated_en.items()
         if r.status == "published" and r.body
     }
+    # 默认讲解(单主线):生成→三类闸→并入英语已发布集,随后随其它段统一翻译落库
+    guide_text = (
+        enricher.generate_default_guide(obj, facts, guide_target_chars(o.popularity))
+        if hasattr(enricher, "generate_default_guide")
+        else None
+    )
+    if guide_text:
+        gq = gate.check_section(material, facts, guide_text)
+        persist_gated_sections(db, qid, "en", {"guide": gq}, model)
+        if gq.status == "published" and gq.body:
+            en_published["guide"] = gq.body
+
     by_lang = translator.translate_object(en_published, target_langs)
 
     counts = {"en": (pub_en, nr_en)}

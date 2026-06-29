@@ -55,3 +55,12 @@ def test_section_role_unknown_falls_back():
 
     r = section_role("nonexistent")
     assert "role" in r and "max_chars" in r  # 有兜底，不抛
+
+
+def test_guide_target_chars_tiers():
+    from app.services.enrichment.category_config import guide_target_chars
+
+    lo, hi = guide_target_chars(5)  # 普通件
+    assert (lo, hi) == (270, 420)
+    lo2, hi2 = guide_target_chars(50)  # 重点件(>=阈值)
+    assert (lo2, hi2) == (420, 675)

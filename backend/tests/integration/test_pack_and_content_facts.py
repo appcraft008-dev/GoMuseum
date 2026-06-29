@@ -82,3 +82,32 @@ def test_content_includes_facts_title_images_status(session):
 def test_content_en_localizes(session):
     d = get_object_content(session, "orsay", "Q1", "en")
     assert d["title"] == "Origin" and d["facts"]["artist"] == "Courbet"
+
+
+def test_content_returns_default_guide(session):
+    from app.models.content import ObjectContentSection
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="guide",
+            body="单主线默认讲解。",
+            status="published",
+        )
+    )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["default_guide"]["body"] == "单主线默认讲解。"
+    assert "audio_url" in d["default_guide"]
+    assert all(t["section_code"] != "guide" for t in d["tabs"])
+
+
+def test_content_default_guide_null_when_absent(session):
+    from app.services.museum_repo import get_object_content
+
+    d = get_object_content(session, "orsay", "Q1", "en")
+    assert d["default_guide"] is None

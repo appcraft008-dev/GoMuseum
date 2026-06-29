@@ -111,7 +111,25 @@ def test_qa_prompt_encodes_chip_quality_standard():
     assert "fewer" in s or "empty list" in s
 
 
-from app.services.enrichment.prompts import build_entailment_prompt
+from app.services.enrichment.prompts import (
+    build_default_guide_prompt,
+    build_entailment_prompt,
+)
+
+
+def test_default_guide_prompt_five_beats_single_throughline():
+    system, user = build_default_guide_prompt("MAT", "FACTS", (270, 420))
+    blob = (system + user).lower()
+    assert "one" in blob and (
+        "throughline" in blob or "core point" in blob or "single" in blob
+    )
+    assert "notice" in blob or "look" in blob
+    assert "remember" in blob or "memory" in blob or "question" in blob
+    assert "270" in user and "420" in user
+    assert "do not invent" in blob or "not in the material" in blob
+    assert (
+        "headline" in blob or "more content" in blob or "don't cover everything" in blob
+    )
 
 
 def test_translation_prompt_preserves_tone():

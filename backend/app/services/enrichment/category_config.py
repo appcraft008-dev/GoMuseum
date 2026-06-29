@@ -216,3 +216,13 @@ _DEFAULT_ROLE = {
 
 def section_role(code: str) -> dict:
     return SECTION_ROLES.get(code, _DEFAULT_ROLE)
+
+
+# 默认讲解长度档（中文字，已×1.5）。重点件 = popularity>=阈值。spec §3.1。
+GUIDE_KEY_THRESHOLD = 30
+
+
+def guide_target_chars(popularity: int | None) -> tuple[int, int]:
+    if (popularity or 0) >= GUIDE_KEY_THRESHOLD:
+        return (420, 675)
+    return (270, 420)

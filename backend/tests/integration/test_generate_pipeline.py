@@ -191,6 +191,57 @@ def test_generate_object_without_qa_suggester_unchanged(session):
     assert session.query(ObjectSuggestedQuestion).count() == 0
 
 
+def test_generate_object_produces_guide_section(session):
+    from app.models.content import ObjectContentSection
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    class _GuideEnricher(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "Guide hook. Notice the eyes."
+
+    class _GuideGate(_FakeGate):
+        def check_section(self, material, facts, body):
+            return SectionQuality(
+                body=body,
+                status="published",
+                grounding_ratio=1.0,
+                conflicts=[],
+                score=1.0,
+            )
+
+    class _GuideTranslator(_FakeTranslator):
+        def translate_object(self, en_sections, target_langs):
+            return {
+                "fr": {
+                    c: SectionQuality(
+                        body="FR " + b,
+                        status="published",
+                        grounding_ratio=1.0,
+                        conflicts=[],
+                        score=1.0,
+                    )
+                    for c, b in en_sections.items()
+                }
+            }
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_GuideEnricher(),
+        gate=_GuideGate(),
+        translator=_GuideTranslator(),
+        target_langs=["en", "fr"],
+        model="m",
+    )
+    rows = {
+        (r.language, r.section_code): r
+        for r in session.query(ObjectContentSection).all()
+    }
+    assert rows[("en", "guide")].body == "Guide hook. Notice the eyes."
+    assert rows[("fr", "guide")].body.startswith("FR ")
+
+
 class _FakeRegistry:
     def __init__(self):
         self.calls = []
