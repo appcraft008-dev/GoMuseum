@@ -127,5 +127,32 @@ def build_evidence_pack(obj: dict, *, run_query=None, complete=None) -> dict:
     return {"facts": facts, "narrative": narrative, "flagged": flagged}
 
 
+_FLAGGED_SYSTEM = (
+    "You are a sourcing analyst. From the MATERIAL, extract ONLY sentences that are NOT "
+    "settled fact — i.e. scholarly opinion / interpretation, hedged claims (may, possibly, "
+    "believed), disputes, or unverified attributions (e.g. the model's identity). For each, "
+    "classify type as one of: contested | inference | unverified. Ignore plain facts. "
+    'Return STRICT JSON: {"flagged": [{"text": "...", "type": "..."}]} (empty if none). No commentary.'
+)
+
+
 def _extract_flagged(narrative, complete) -> list:
-    return []  # 下一任务实现
+    text = "\n\n".join(n["text"] for n in narrative if n.get("text"))
+    if not text.strip():
+        return []
+    try:
+        from app.services.enrichment.content_enricher import _parse_json
+
+        raw = complete(_FLAGGED_SYSTEM, f"MATERIAL:\n{text}")
+        items = _parse_json(raw).get("flagged") or []
+        return [
+            {
+                "text": it["text"],
+                "type": it.get("type", "contested"),
+                "source": "wikipedia",
+            }
+            for it in items
+            if isinstance(it, dict) and it.get("text")
+        ]
+    except Exception:
+        return []

@@ -65,3 +65,43 @@ def test_build_evidence_pack_rich_facts_network_failure_degrades():
     # 富属性失败不拖垮:基础事实 + narrative 仍在
     assert any(s.startswith("object:") for s in {f["source"] for f in pack["facts"]})
     assert any(n["source"] == "wikipedia:work" for n in pack["narrative"])
+
+
+def test_extract_flagged_classifies_contested():
+    import json as _json
+
+    from app.services.enrichment.evidence import build_evidence_pack
+
+    def fake(system, user):
+        return _json.dumps(
+            {
+                "flagged": [
+                    {"text": "研究者认为模特是 X", "type": "contested"},
+                    {"text": "可能创作于战前", "type": "inference"},
+                ]
+            }
+        )
+
+    obj = {
+        "qid": "Q1",
+        "attributes": {
+            "extract_en": "Scholars believe the model was X. Possibly made before the war."
+        },
+    }
+    pack = build_evidence_pack(obj, run_query=lambda s: [], complete=fake)
+    types = {f["type"] for f in pack["flagged"]}
+    assert "contested" in types and "inference" in types
+
+
+def test_extract_flagged_robust_on_llm_error():
+    from app.services.enrichment.evidence import build_evidence_pack
+
+    def boom(system, user):
+        raise RuntimeError("llm down")
+
+    pack = build_evidence_pack(
+        {"qid": "Q1", "attributes": {"extract_en": "x"}},
+        run_query=lambda s: [],
+        complete=boom,
+    )
+    assert pack["flagged"] == []  # LLM 失败优雅降级
