@@ -96,13 +96,15 @@ void main() {
     expect(find.textContaining('布面油画'), findsWidgets);
   });
 
-  testWidgets('guide_page A5: empty-body tab shows 待完善', (tester) async {
+  testWidgets('guide_page A5: 深度抽屉中空 body tab 显示 待完善', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
 
-    // Default first tab (overview) has body — 待完善 not yet visible
-    // Tap second tab: 作者 (empty body → should show 待完善)
-    await tester.tap(find.text('作者'));
+    // 新 IA：overview 提升为主角，author(空 body) 进深度抽屉。
+    // 打开「深度内容」抽屉，唯一深度 tab=作者(空 body) → 显示 待完善。
+    await tester.ensureVisible(find.textContaining('深度内容'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('深度内容'));
     await tester.pumpAndSettle();
 
     expect(find.text('待完善'), findsOneWidget);
