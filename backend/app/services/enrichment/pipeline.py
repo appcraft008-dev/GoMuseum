@@ -96,6 +96,17 @@ def generate_object(
     obj = _row_to_obj(o)
     material = build_material(obj)
     facts = _facts_text(obj)
+
+    # 证据包:缺则建并落库(内容生成材料底座;阶段2 才切到它生成)。网络/LLM 抖动不拖垮。
+    if o.evidence_pack is None or force:
+        from app.services.enrichment.evidence import build_evidence_pack
+
+        try:
+            o.evidence_pack = build_evidence_pack({**obj, "qid": o.qid}, complete=None)
+            db.flush()
+        except Exception:
+            pass
+
     sections = sections_for(o.category)
 
     draft = enricher.generate_canonical(obj, sections)
