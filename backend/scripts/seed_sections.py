@@ -13,9 +13,14 @@ from app.services.enrichment.category_config import (  # noqa: E402
     section_label,
 )
 
+# 默认讲解 guide：进 section_types 满足 object_content_sections 外键，但不进任何类目 tab。
+_STANDALONE_CODES = {"guide"}
+
 
 def seed_into(db) -> None:
-    all_codes = {c for codes in SECTIONS_BY_CATEGORY.values() for c in codes}
+    all_codes = {
+        c for codes in SECTIONS_BY_CATEGORY.values() for c in codes
+    } | _STANDALONE_CODES
     for code in all_codes:
         st = db.get(SectionType, code) or SectionType(code=code)
         st.label_zh = section_label(code, "zh")
