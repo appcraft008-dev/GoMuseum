@@ -56,6 +56,10 @@ class MuseumObject(Base):
         default=dict,
         server_default="{}",
     )
+    evidence_pack = Column(
+        MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")),
+        nullable=True,
+    )  # 分类证据包(facts/narrative/flagged);内容生成的材料底座
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
