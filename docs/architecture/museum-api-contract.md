@@ -87,6 +87,7 @@
   "qid": "Q334138", "category": "painting", "language": "zh",
   "status": "ready",
   "title": "世界的起源",
+  "default_guide": {"body": "想象一下,站在一幅大胆的画作前…(单主线~300-600字现场导览)", "audio_url": null},
   "images": [{"url": "<url>", "credit": "..."}],
   "facts": {
     "artist": "居斯塔夫·库尔贝", "date": "1866",
@@ -102,7 +103,8 @@
 }
 ```
 
-- `tabs`:按类目的段落清单(`SECTIONS_BY_CATEGORY`)逐段;`body` 为该语种已发布正文(无则 `null`);`audio_url` 为 R2 音频直链(未生成则 `null`,TTS 阶段)。
+- `default_guide`:**默认标准讲解**(单主线·5拍·~300-600字现场导览,识别后首先呈现的"主角")。`{body, audio_url}`,无则 `null`(前端回退 tabs)。**不混入 tabs**。前端分层页:default_guide 置顶 → 推荐 2-3 个 suggested_questions → tabs/其余收进"更多内容"。
+- `tabs`:按类目的段落清单(`SECTIONS_BY_CATEGORY`)逐段(降级为"更多内容"深度模块);`body` 为该语种已发布正文(无则 `null`);`audio_url` 为 R2 音频直链(未生成则 `null`,TTS 阶段)。
 - `facts`:硬事实面板(墙签信息);`exhibitions`/`bibliography` 为 list(Joconde `#` 分隔拆分);`artist_life` 暂为 null(待接 Wikidata 作者源)。
 - `suggested_questions`:好奇心问答(0-4 条)。
 - 对象不属于该 slug / 不存在 → 404。
