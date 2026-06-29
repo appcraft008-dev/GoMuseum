@@ -1,5 +1,6 @@
 """从 DB 读馆藏并拼回与旧 museum_packs JSON 完全一致的形状（保接口兼容）。"""
 
+import re
 from datetime import datetime, timezone
 
 from sqlalchemy import func
@@ -56,6 +57,48 @@ def _wall_value(pack, source_prefix):
         ):
             return fct.get("value")
     return None
+
+
+# 常见材质 → 本地化干净名(按关键词命中;未知原样)。ponytail: 覆盖主流画/雕塑材质,缺再加。
+_MEDIUM_NORM = {
+    "huile": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
+    "bronze": {"zh": "青铜", "en": "Bronze", "fr": "Bronze"},
+    "marbre": {"zh": "大理石", "en": "Marble", "fr": "Marbre"},
+    "aquarelle": {"zh": "水彩", "en": "Watercolour", "fr": "Aquarelle"},
+    "pastel": {"zh": "色粉画", "en": "Pastel", "fr": "Pastel"},
+    "gouache": {"zh": "水粉", "en": "Gouache", "fr": "Gouache"},
+    "fusain": {"zh": "炭笔", "en": "Charcoal", "fr": "Fusain"},
+    "plâtre": {"zh": "石膏", "en": "Plaster", "fr": "Plâtre"},
+}
+
+
+def _humanize_medium(raw, lang):
+    """原始材质串(多为法语 Joconde)→ 本地化干净名;未命中原样。"""
+    if not raw:
+        return None
+    low = raw.lower()
+    for kw, m in _MEDIUM_NORM.items():
+        if kw in low:
+            return m.get(lang) or m.get("en")
+    return raw
+
+
+def _humanize_dimensions(raw):
+    """Joconde 尺寸串(如 'en mètres : L. 0,55 ; H. 0,46' / 'H. 208, l. 264.5')→ '宽 × 高 cm'。
+    ponytail: 取前两个数 + 米→厘米;格式怪异则原样返回。"""
+    if not raw:
+        return None
+    nums = re.findall(r"\d+(?:[.,]\d+)?", raw)
+    if len(nums) < 2:
+        return raw
+    vals = [float(n.replace(",", ".")) for n in nums[:2]]
+    if "mètre" in raw.lower() or "metre" in raw.lower():  # 米 → 厘米
+        vals = [v * 100 for v in vals]
+
+    def _fmt(x):
+        return f"{x:.1f}".rstrip("0").rstrip(".")
+
+    return f"{_fmt(vals[0])} × {_fmt(vals[1])} cm"
 
 
 def list_museums(db: Session) -> list[dict]:
@@ -206,10 +249,8 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     facts = {
         "artist": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
         "date": obj.year,
-        "medium": _wall_value(obj.evidence_pack, "wikidata:P186")
-        or attrs.get("medium_fr"),
-        "dimensions": _wall_value(obj.evidence_pack, "wikidata:P2048")
-        or attrs.get("dimensions"),
+        "medium": _humanize_medium(attrs.get("medium_fr"), language),
+        "dimensions": _humanize_dimensions(attrs.get("dimensions")),
         "inventory": obj.inventory_number,
         "location": _pick(language, museum.name_zh, museum.name_en, museum.name_en),
         # provenance/exhibitions/bibliography 移出面板(进证据包材料级,阶段2 用),保形不删键
