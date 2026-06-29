@@ -48,9 +48,14 @@ def _pick(lang: str, zh, en, fr, fallback=""):
     return en or zh or fallback
 
 
-def _split_hash(s):
-    """Joconde 多值字段用 '#' 分隔 → list；空→[]。"""
-    return [p.strip() for p in s.split("#") if p.strip()] if s else []
+def _wall_value(pack, source_prefix):
+    """从证据包取 tier=wall_label 且 source 以 source_prefix 起头的展示级值。"""
+    for fct in (pack or {}).get("facts", []):
+        if fct.get("tier") == "wall_label" and fct.get("source", "").startswith(
+            source_prefix
+        ):
+            return fct.get("value")
+    return None
 
 
 def list_museums(db: Session) -> list[dict]:
@@ -201,14 +206,17 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     facts = {
         "artist": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
         "date": obj.year,
-        "medium": attrs.get("medium_fr"),
-        "dimensions": attrs.get("dimensions"),
+        "medium": _wall_value(obj.evidence_pack, "wikidata:P186")
+        or attrs.get("medium_fr"),
+        "dimensions": _wall_value(obj.evidence_pack, "wikidata:P2048")
+        or attrs.get("dimensions"),
         "inventory": obj.inventory_number,
         "location": _pick(language, museum.name_zh, museum.name_en, museum.name_en),
-        "provenance": attrs.get("provenance_fr"),
+        # provenance/exhibitions/bibliography 移出面板(进证据包材料级,阶段2 用),保形不删键
+        "provenance": None,
         "artist_life": None,  # ponytail: 未存作者生平，接 Wikidata 作者源后再补
-        "exhibitions": _split_hash(attrs.get("exhibitions_fr")),
-        "bibliography": _split_hash(attrs.get("bibliography_fr")),
+        "exhibitions": [],
+        "bibliography": [],
     }
     guide_row = (
         db.query(ObjectContentSection)
