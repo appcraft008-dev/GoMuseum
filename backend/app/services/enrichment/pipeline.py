@@ -96,6 +96,21 @@ def generate_object(
     obj = _row_to_obj(o)
     material = build_material(obj)
     facts = _facts_text(obj)
+
+    # 证据包:缺则建并落库(内容生成材料底座;阶段2 才切到它生成)。网络/LLM 抖动不拖垮。
+    # Wikidata 富属性按 registry 门控:registry 在=真实生成(走网络);无=测试/离线(no-op,不触网)。
+    if o.evidence_pack is None or force:
+        from app.services.enrichment.evidence import build_evidence_pack
+
+        ev_run_query = None if registry is not None else (lambda _sparql: [])
+        try:
+            o.evidence_pack = build_evidence_pack(
+                {**obj, "qid": o.qid}, run_query=ev_run_query, complete=None
+            )
+            db.flush()
+        except Exception:
+            pass
+
     sections = sections_for(o.category)
 
     draft = enricher.generate_canonical(obj, sections)

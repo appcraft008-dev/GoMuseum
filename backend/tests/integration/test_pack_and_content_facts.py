@@ -76,7 +76,8 @@ def test_content_includes_facts_title_images_status(session):
     assert f["artist"] == "库尔贝" and f["date"] == "1866"
     assert f["medium"] == "huile sur toile" and f["dimensions"] == "46 x 55 cm"
     assert f["inventory"] == "RF 1995 10" and f["location"] == "奥赛博物馆"
-    assert f["exhibitions"] == ["1988, New York", "1996, Paris"]
+    # exhibitions 已移出面板(进证据包材料级)
+    assert f["exhibitions"] == []
 
 
 def test_content_en_localizes(session):
@@ -111,3 +112,52 @@ def test_content_default_guide_null_when_absent(session):
 
     d = get_object_content(session, "orsay", "Q1", "en")
     assert d["default_guide"] is None
+
+
+def test_content_facts_curated_and_humanized(session):
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {
+        "medium_fr": "huile sur toile",
+        "dimensions": "en mètres : L. 0,55 ; H. 0,46",
+        "provenance_fr": "coll X",
+        "exhibitions_fr": "1988#1996",
+        "bibliography_fr": "Tabarant 66",
+    }
+    o.evidence_pack = {
+        "facts": [
+            {
+                "claim": "材质",
+                "value": "Oil on canvas",
+                "source": "wikidata:P186",
+                "topic": "analysis",
+                "tier": "wall_label",
+            },
+        ],
+        "narrative": [],
+        "flagged": [],
+    }
+    session.commit()
+    f = get_object_content(session, "orsay", "Q1", "zh")["facts"]
+    # academic 项移出面板(返空/None)
+    assert not f.get("bibliography")
+    assert not f.get("provenance")
+    assert not f.get("exhibitions")
+    # medium 取证据包干净值;基础项保留
+    assert f["medium"] == "Oil on canvas"
+    assert "artist" in f and "date" in f
+
+
+def test_content_facts_medium_fallback_to_attributes(session):
+    # 无证据包 wall_label medium 时回退 attributes medium_fr
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"medium_fr": "huile sur toile"}
+    o.evidence_pack = None
+    session.commit()
+    f = get_object_content(session, "orsay", "Q1", "zh")["facts"]
+    assert f["medium"] == "huile sur toile"

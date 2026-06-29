@@ -322,6 +322,27 @@ def test_generate_object_marks_empty_when_nothing_published(session):
     assert o.content_status == "empty"
 
 
+def test_generate_object_builds_evidence_pack(session):
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"extract_en": "work text"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    o2 = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o2.evidence_pack is not None
+    assert any(n["source"] == "wikipedia:work" for n in o2.evidence_pack["narrative"])
+
+
 def test_generate_object_no_registry_skips_material_fetch(session):
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
