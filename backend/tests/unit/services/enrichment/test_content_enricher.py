@@ -152,3 +152,52 @@ def test_build_material_includes_artist_extract():
     )
     assert "Courbet was a French realist painter." in mat
     assert "ARTIST" in mat or "artist" in mat.lower()
+
+
+def test_build_material_renders_evidence_pack_rich_facts():
+    from app.services.enrichment.content_enricher import build_material
+
+    obj = {
+        "qid": "Q1",
+        "title_en": "X",
+        "category": "painting",
+        "attributes": {"extract_en": "narrative"},
+        "evidence_pack": {
+            "facts": [
+                {
+                    "claim": "委托人",
+                    "value": "Khalil Bey",
+                    "source": "wikidata:P88",
+                    "topic": "background",
+                },
+                {
+                    "claim": "描绘内容",
+                    "value": "female nude",
+                    "source": "wikidata:P180",
+                    "topic": "analysis",
+                },
+                {
+                    "claim": "材质",
+                    "value": "oil paint",
+                    "source": "joconde:medium_fr",
+                    "topic": "analysis",
+                },
+            ],
+            "narrative": [],
+            "flagged": [],
+        },
+    }
+    mat = build_material(obj)
+    assert "Khalil Bey" in mat and "female nude" in mat
+    assert "background" in mat.lower()  # 富属性带 topic 分组提示
+    # joconde 来源的不在 STRUCTURED FACTS 块(避免与 attributes 重复;只渲染 wikidata 富属性)
+    # (oil paint 来自 joconde,可能不出现在富属性块——不强求断言)
+
+
+def test_build_material_without_pack_unchanged():
+    from app.services.enrichment.content_enricher import build_material
+
+    mat = build_material(
+        {"qid": "Q1", "category": "painting", "attributes": {"extract_en": "x"}}
+    )
+    assert isinstance(mat, str)

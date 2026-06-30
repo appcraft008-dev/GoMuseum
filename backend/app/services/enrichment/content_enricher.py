@@ -55,6 +55,14 @@ def build_material(obj: dict) -> str:
         lines.append("\n[ABOUT THE ARTIST]")
         for k, v in artist_extracts.items():
             lines.append(f"({k}) {v}")
+    pack = obj.get("evidence_pack") or {}
+    rich = [
+        f for f in pack.get("facts", []) if f.get("source", "").startswith("wikidata:")
+    ]
+    if rich:
+        lines.append("\n[STRUCTURED FACTS]")
+        for f in rich:
+            lines.append(f"- ({f.get('topic', '')}) {f.get('claim')}: {f.get('value')}")
     return "\n".join(lines)
 
 
