@@ -39,18 +39,21 @@ class GuideLayering {
         );
 
     final guide = c.defaultGuide;
-    final heroBody =
-        (guide != null && guide.hasBody) ? guide.body : (promoted?.body ?? '');
+    final usingGuide = guide != null && guide.hasBody;
+    final heroBody = usingGuide ? guide.body : (promoted?.body ?? '');
     final heroAudio = (guide?.audioUrl != null && guide!.audioUrl!.isNotEmpty)
         ? guide.audioUrl
         : promoted?.audioUrl;
 
-    // 抽屉：去掉被提升的 tab；default_guide 在场时额外去掉 overview。
+    // 抽屉构成：
+    // - default_guide 当主角时：保留全部 tab，仅隐藏 overview（通用已被 default_guide 取代）。
+    // - 回退用 promoted tab 当主角时：把该 tab 从抽屉移除（内容已上抬为主角）。
     final deep = <ObjectTab>[];
     for (final t in tabs) {
-      if (identical(t, promoted)) continue;
-      if (guide != null && guide.hasBody && t.sectionCode == overviewCode) {
-        continue;
+      if (usingGuide) {
+        if (t.sectionCode == overviewCode) continue;
+      } else {
+        if (identical(t, promoted)) continue;
       }
       deep.add(t);
     }
