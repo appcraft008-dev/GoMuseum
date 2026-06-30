@@ -53,9 +53,8 @@ void main() {
 
     expect(find.textContaining('标准导览'), findsOneWidget);
     expect(find.text('主线讲解正文。'), findsOneWidget);
-    // 作者卡常驻
-    expect(find.text('文森特·梵高'), findsOneWidget);
-    expect(find.text('1853 – 1890'), findsOneWidget);
+    // 作者卡不在主页面（已移入深度抽屉首位）
+    expect(find.text('文森特·梵高'), findsNothing);
     // 深度按钮（去掉 overview 后 = 1）
     expect(find.textContaining('深度内容'), findsOneWidget);
     // 主页不再并列展示深度 tab 的正文
@@ -66,5 +65,50 @@ void main() {
     await t.tap(find.text('为什么星星这么大？'));
     await t.pumpAndSettle();
     expect(find.text('因为是煤气灯。'), findsOneWidget);
+
+    // 打开深度抽屉 → 作者卡在内（首位）
+    await t.ensureVisible(find.textContaining('深度内容'));
+    await t.pumpAndSettle();
+    await t.tap(find.textContaining('深度内容'));
+    await t.pumpAndSettle();
+    expect(find.text('文森特·梵高'), findsOneWidget);
+    expect(find.text('1853 – 1890'), findsOneWidget);
+  });
+
+  testWidgets('无深度 tab 但有作者 → 深度入口仍在，抽屉含作者卡（必选常驻）', (t) async {
+    const c = ObjectContent(
+      qid: 'Q2',
+      category: 'painting',
+      language: 'zh',
+      status: ContentStatus.ready,
+      title: '世界的起源',
+      images: [],
+      facts: ObjectFacts(),
+      defaultGuide: DefaultGuide(body: '主线讲解。', audioUrl: null),
+      tabs: [],
+      suggestedQuestions: [],
+      artist: Artist(name: '库尔贝', bio: '一段经历'),
+    );
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        objectContentProvider((slug: 'orsay', qid: 'Q2'))
+            .overrideWith((ref) => c),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        theme: AppTheme.lightTheme(),
+        home: const GuidePage(args: GuideArgs(slug: 'orsay', qid: 'Q2')),
+      ),
+    ));
+    await t.pumpAndSettle();
+    // 无深度 tab，入口仍露出（label 无括号数字）
+    expect(find.text('深度内容'), findsOneWidget);
+    await t.ensureVisible(find.text('深度内容'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('深度内容'));
+    await t.pumpAndSettle();
+    expect(find.text('库尔贝'), findsOneWidget);
   });
 }
