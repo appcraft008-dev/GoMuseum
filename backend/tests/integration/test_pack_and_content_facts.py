@@ -175,3 +175,10 @@ def test_humanize_medium_and_dimensions():
     assert _humanize_dimensions("en mètres : L. 0,55 ; H. 0,46") == "55 × 46 cm"
     assert _humanize_dimensions("H. 208, l. 264.5") == "208 × 264.5 cm"
     assert _humanize_dimensions(None) is None
+
+
+def test_tabs_exclude_overview(session):
+    from app.services.museum_repo import get_object_content
+
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert all(t["section_code"] != "overview" for t in d["tabs"])
