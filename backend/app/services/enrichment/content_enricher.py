@@ -81,11 +81,13 @@ class ContentEnricher:
     def __init__(self, complete):
         self._complete = complete  # complete(system, user) -> str
 
-    def generate_canonical(self, obj: dict, sections: list[str]) -> dict:
+    def generate_canonical(
+        self, obj: dict, sections: list[str], guide: str | None = None
+    ) -> dict:
         """英语轴心：一次 LLM 调用产出请求段落。空串/未返回 → None（不发布）。"""
         material = build_material(obj)
         system, user = build_generation_prompt(
-            material, sections, obj.get("category", "unknown")
+            material, sections, obj.get("category", "unknown"), guide=guide
         )
         raw = self._complete(system, user)
         parsed = _parse_json(raw)

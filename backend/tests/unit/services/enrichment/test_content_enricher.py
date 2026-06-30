@@ -201,3 +201,23 @@ def test_build_material_without_pack_unchanged():
         {"qid": "Q1", "category": "painting", "attributes": {"extract_en": "x"}}
     )
     assert isinstance(mat, str)
+
+
+def test_generate_canonical_passes_guide_to_prompt():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    captured = {}
+
+    def fake(system, user):
+        captured["user"] = user
+        import json as _json
+
+        return _json.dumps({"artist": "A."})
+
+    enr = ContentEnricher(complete=fake)
+    enr.generate_canonical(
+        {"qid": "Q1", "category": "painting", "attributes": {}},
+        sections=["artist"],
+        guide="头条 XYZ。",
+    )
+    assert "头条 XYZ" in captured["user"]
