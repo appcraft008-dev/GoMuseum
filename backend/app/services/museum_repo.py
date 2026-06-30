@@ -215,6 +215,8 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     storage = get_object_storage()
     tabs = []
     for cs, st in mapping:
+        if cs.section_code == "artist":  # artist 段是常驻卡片,不进 tabs
+            continue
         row = bodies.get(cs.section_code)
         tabs.append(
             {
@@ -274,6 +276,24 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         if guide_row and guide_row.body
         else None
     )
+    artist_row = (
+        db.query(ObjectContentSection)
+        .filter_by(
+            object_id=obj.id,
+            language=language,
+            section_code="artist",
+            status="published",
+        )
+        .first()
+    )
+    artist_card = {
+        "name": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
+        "birth": attrs.get("artist_birth"),
+        "death": attrs.get("artist_death"),
+        "nationality": attrs.get("artist_nationality"),
+        "notable_works": attrs.get("artist_notable_works") or [],
+        "bio": artist_row.body if artist_row else None,
+    }
     return {
         "qid": qid,
         "category": obj.category,
@@ -284,6 +304,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         ),
         "images": images,
         "facts": facts,
+        "artist": artist_card,
         "tabs": tabs,
         "default_guide": default_guide,
         "suggested_questions": suggested,

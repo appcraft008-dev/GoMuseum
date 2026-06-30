@@ -182,3 +182,45 @@ def test_tabs_exclude_overview(session):
 
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert all(t["section_code"] != "overview" for t in d["tabs"])
+
+
+def test_content_artist_card(session):
+    from app.models.content import ObjectContentSection
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_zh = "马奈"
+    o.attributes = {
+        "artist_birth": "1832",
+        "artist_death": "1883",
+        "artist_nationality": "France",
+        "artist_notable_works": ["Olympia"],
+    }
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="artist",
+            body="马奈生平叙事。",
+            status="published",
+        )
+    )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    a = d["artist"]
+    assert a["name"] == "马奈" and a["birth"] == "1832" and a["death"] == "1883"
+    assert a["nationality"] == "France" and a["notable_works"] == ["Olympia"]
+    assert a["bio"] == "马奈生平叙事。"
+    assert all(t["section_code"] != "artist" for t in d["tabs"])  # artist 段不在 tabs
+
+
+def test_content_artist_card_present_when_thin(session):
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {}
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert "artist" in d and "name" in d["artist"]  # 缺结构化+缺bio,卡仍返(name兜底)
