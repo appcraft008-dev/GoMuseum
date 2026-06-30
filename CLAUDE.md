@@ -129,7 +129,7 @@ rules:
 **CD（push 触发，自动 + path-aware）**
 
 - **push `staging`（合并后）→ 自动部署 staging**（端口 8101）；**push `main`（合并后）→ 自动部署 prod**（端口 8100）。
-- **path-aware**：仅当 `backend/**` 改动时才部署（只改前端/文档/workflow 不触发，避免 no-op）；`workflow_dispatch` 手动部署对任一环境**强制执行**（兜底）。
+- **path-aware（触发器层 `paths: ['backend/**']`）**：纯前端/文档/workflow 改动**连 Deploy 工作流都不启动**（真正"不触发"，Actions 里不冒记录、不占 runner）——只有 `backend/**` 改动才跑 CD。`deploy`job 内的`changes`（dorny/paths-filter）过滤**保留作双保险**（万一误删触发器 `paths` 也不会错部署）。`workflow_dispatch` **不受 `paths` 限制\*\*，可手动强制部署任一环境（兜底）。
 - Deploy 用 `concurrency: cancel-in-progress: false`（同目标串行，防并发 compose recreate 撞名残留）。
 
 **自动同步**
