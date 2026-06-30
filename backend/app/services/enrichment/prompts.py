@@ -21,7 +21,9 @@ _SYSTEM = (
 )
 
 
-def build_generation_prompt(material: str, sections: list[str], category: str):
+def build_generation_prompt(
+    material: str, sections: list[str], category: str, guide: str | None = None
+):
     from app.services.enrichment.category_config import section_role
 
     lines = []
@@ -31,10 +33,19 @@ def build_generation_prompt(material: str, sections: list[str], category: str):
             f"- {code} — {r['role']} (aim ~{r['max_chars']} Chinese-char equivalent)"
         )
     roles_block = "\n".join(lines)
+    guide_block = (
+        f'\nThe visitor ALREADY heard this HEADLINE guide:\n"""\n{guide}\n"""\n'
+        "Each section must go DEEPER on ITS OWN lane and add NEW material the headline did "
+        "NOT cover. Do NOT repeat the headline or other sections. If a section would only "
+        "repeat what's already said, return an empty string for it.\n"
+        if guide
+        else ""
+    )
     user = (
         f"Artwork category: {category}\n"
-        f"Write these sections (return JSON keyed by these exact codes):\n{roles_block}\n\n"
-        f"Material:\n{material}"
+        f"Write these sections (return JSON keyed by these exact codes), each staying strictly "
+        f"in its lane:\n{roles_block}\n{guide_block}\n"
+        f"Material (facts tagged with their lane topic):\n{material}"
     )
     return _SYSTEM, user
 

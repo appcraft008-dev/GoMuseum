@@ -16,16 +16,14 @@ def test_sections_by_category_and_fallback():
     from app.services.enrichment.category_config import sections_for
 
     assert sections_for("painting") == [
-        "overview",
         "artist",
         "background",
         "analysis",
         "significance",
         "facts",
     ]
-    assert sections_for("sculpture")[:3] == ["overview", "artist", "material-technique"]
+    assert sections_for("sculpture")[:2] == ["artist", "material-technique"]
     assert sections_for("unknown") == [
-        "overview",
         "background",
         "significance",
         "facts",
@@ -55,6 +53,30 @@ def test_section_role_unknown_falls_back():
 
     r = section_role("nonexistent")
     assert "role" in r and "max_chars" in r  # 有兜底，不抛
+
+
+def test_overview_retired_from_categories():
+    from app.services.enrichment.category_config import SECTIONS_BY_CATEGORY
+
+    for codes in SECTIONS_BY_CATEGORY.values():
+        assert "overview" not in codes
+
+
+def test_section_roles_are_distinct_lanes():
+    from app.services.enrichment.category_config import section_role
+
+    assert (
+        "person" in section_role("artist")["role"].lower()
+        or "maker" in section_role("artist")["role"].lower()
+    )
+    assert (
+        "influence" in section_role("significance")["role"].lower()
+        or "legacy" in section_role("significance")["role"].lower()
+    )
+    assert (
+        "event" in section_role("background")["role"].lower()
+        or "history" in section_role("background")["role"].lower()
+    )
 
 
 def test_guide_target_chars_tiers():

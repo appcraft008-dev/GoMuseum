@@ -18,7 +18,6 @@ def category_for(p31_qid: str | None) -> str:
 # 类别 → 有序段落集（单一真相源；seed/生成/详情共用）。未知类别用 _FALLBACK。
 SECTIONS_BY_CATEGORY: dict[str, list[str]] = {
     "painting": [
-        "overview",
         "artist",
         "background",
         "analysis",
@@ -26,16 +25,14 @@ SECTIONS_BY_CATEGORY: dict[str, list[str]] = {
         "facts",
     ],
     "sculpture": [
-        "overview",
         "artist",
         "material-technique",
         "background",
         "significance",
         "facts",
     ],
-    "photograph": ["overview", "photographer", "context", "significance", "facts"],
+    "photograph": ["photographer", "context", "significance", "facts"],
     "decorative": [
-        "overview",
         "maker",
         "material-technique",
         "use",
@@ -43,7 +40,7 @@ SECTIONS_BY_CATEGORY: dict[str, list[str]] = {
         "facts",
     ],
 }
-_FALLBACK_SECTIONS = ["overview", "background", "significance", "facts"]
+_FALLBACK_SECTIONS = ["background", "significance", "facts"]
 
 # 段落 code → 各语言标签（i18n 配置；缺语言回退 en）。
 SECTION_LABELS: dict[str, dict[str, str]] = {
@@ -175,23 +172,23 @@ SECTION_ROLES: dict[str, dict] = {
         "max_chars": 100,
     },
     "artist": {
-        "role": "A person with a story: one memorable thing about the maker tied to THIS work, not a CV.",
+        "role": "The MAKER as a person: life, character, what drove them, their place in art history. NOT this work's scandal/technique (other lanes cover those).",
         "max_chars": 180,
     },
     "background": {
-        "role": "The story: commission, scandal, the moment it was made — narrative with momentum.",
+        "role": "The work's HISTORY as concrete events: when, who commissioned it, where shown, the reception as events, provenance. NOT why-it-matters (that's significance), NOT how-to-look (that's analysis).",
         "max_chars": 280,
     },
     "analysis": {
-        "role": "Guided looking: 'notice the...', composition, technique, what to SEE. Sensory direction and gentle impressions belong here.",
+        "role": "Guided LOOKING: composition, technique, brushwork, what to notice with your eyes. NOT history or influence.",
         "max_chars": 280,
     },
     "significance": {
-        "role": "The one takeaway: why it matters / what to remember. The memory point.",
-        "max_chars": 140,
+        "role": "LEGACY & influence: what it changed, who it influenced, why it matters to art history. Do NOT re-tell the scandal events (that's background).",
+        "max_chars": 160,
     },
     "facts": {
-        "role": "One memorable anecdote or curiosity (hard facts live elsewhere).",
+        "role": "ONE surprising anecdote/curiosity not covered by other lanes.",
         "max_chars": 160,
     },
     "photographer": {

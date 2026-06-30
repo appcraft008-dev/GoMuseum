@@ -38,7 +38,7 @@ def session():
 
 
 class _FakeEnricher:
-    def generate_canonical(self, obj, sections):
+    def generate_canonical(self, obj, sections, guide=None):
         return {"overview": "EN overview."}
 
 
@@ -240,6 +240,38 @@ def test_generate_object_produces_guide_section(session):
     }
     assert rows[("en", "guide")].body == "Guide hook. Notice the eyes."
     assert rows[("fr", "guide")].body.startswith("FR ")
+
+
+def test_generate_object_passes_guide_into_canonical(session):
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    seen = {}
+
+    class _Enr(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "HEADLINE."
+
+        def generate_canonical(self, obj, sections, guide=None):
+            seen["guide"] = guide
+            return {"artist": "A."}
+
+    class _G(_FakeGate):
+        def check_section(self, m, f, b):
+            return SectionQuality(
+                body=b, status="published", grounding_ratio=1.0, conflicts=[], score=1.0
+            )
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_G(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert seen["guide"] == "HEADLINE."  # 模块拿到了先生成的头条
 
 
 class _FakeRegistry:

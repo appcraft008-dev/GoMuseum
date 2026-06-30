@@ -30,9 +30,9 @@ def test_seed_creates_multi_category_skeleton(session):
         c.section_code
         for c in session.query(CategorySection).filter_by(category="painting").all()
     ]
-    assert len(painting) == 6 and "artist" in painting
+    assert len(painting) == 5 and "artist" in painting
     codes = {s.code for s in session.query(SectionType).all()}
-    assert {"overview", "material-technique", "photographer"} <= codes
+    assert {"material-technique", "photographer"} <= codes
 
 
 def test_seed_registers_guide_section_type_but_not_as_tab(session):
@@ -51,4 +51,4 @@ def test_seed_idempotent(session):
     seed_into(session)
     seed_into(session)  # 二次不报错、不重复
     painting = session.query(CategorySection).filter_by(category="painting").all()
-    assert len(painting) == 6
+    assert len(painting) == 5

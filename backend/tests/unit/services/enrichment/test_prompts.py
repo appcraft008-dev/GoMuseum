@@ -150,3 +150,22 @@ def test_grounding_prompt_is_three_class():
     assert "when in doubt" in blob or "if unsure" in blob
     assert "verdicts" in blob and "true" in blob
     assert "1. s1" in user and "2. s2" in user
+
+
+def test_generation_prompt_dedup_with_guide():
+    from app.services.enrichment.prompts import build_generation_prompt
+
+    system, user = build_generation_prompt(
+        "MAT", ["artist", "background"], "painting", guide="这是已播的头条讲解。"
+    )
+    blob = (system + user).lower()
+    assert "这是已播的头条讲解" in user
+    assert "do not repeat" in blob or "don't repeat" in blob or "already" in blob
+    assert "empty" in blob
+
+
+def test_generation_prompt_no_guide_still_works():
+    from app.services.enrichment.prompts import build_generation_prompt
+
+    system, user = build_generation_prompt("MAT", ["artist"], "painting")
+    assert "artist" in user  # guide 缺省不报错
