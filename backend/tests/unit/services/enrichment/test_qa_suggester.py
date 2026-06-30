@@ -74,3 +74,30 @@ def test_suggest_skips_empty_pairs():
     s = QASuggester(_C(), _Gate(), _Translator())
     out = s.suggest("m", "f", "painting", ["en"])
     assert out["en"] == []
+
+
+def test_suggest_passes_covered_to_prompt():
+    captured = {}
+
+    def fake_complete(system, user):
+        captured["user"] = user
+        import json as _json
+
+        return _json.dumps({"qa": []})
+
+    class _G:
+        def check_section(self, m, f, b):
+            return SectionQuality(
+                body=b,
+                status="published",
+                grounding_ratio=1.0,
+                conflicts=[],
+                score=1.0,
+            )
+
+    class _T:
+        pass
+
+    s = QASuggester(complete=fake_complete, gate=_G(), translator=_T())
+    s.suggest("MAT", "facts", "painting", ["en"], covered="解说讲过猫和花。")
+    assert "解说讲过猫和花" in captured["user"]

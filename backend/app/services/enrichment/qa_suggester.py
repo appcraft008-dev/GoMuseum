@@ -18,8 +18,10 @@ class QASuggester:
         self._gate = gate
         self._translator = translator
 
-    def _generate_en(self, material: str, facts: str, category: str) -> list:
-        raw = self._complete(*build_qa_prompt(material, category))
+    def _generate_en(
+        self, material: str, facts: str, category: str, covered: str | None = None
+    ) -> list:
+        raw = self._complete(*build_qa_prompt(material, category, covered))
         pairs = _parse()(raw).get("qa") or []
         items = []
         for p in pairs:
@@ -35,9 +37,14 @@ class QASuggester:
         return items
 
     def suggest(
-        self, material: str, facts: str, category: str, target_langs: list
+        self,
+        material: str,
+        facts: str,
+        category: str,
+        target_langs: list,
+        covered: str | None = None,
     ) -> dict:
-        en_items = self._generate_en(material, facts, category)
+        en_items = self._generate_en(material, facts, category, covered)
         out = {"en": en_items}
         published = [it for it in en_items if it["status"] == "published"]
         for lang in target_langs:
