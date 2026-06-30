@@ -114,7 +114,14 @@ def generate_object(
 
     sections = sections_for(o.category)
 
-    draft = enricher.generate_canonical(obj, sections)
+    # 头条(默认讲解)先生成,作为模块去重锚:模块带着头条去重,避免与头条重复。
+    guide_text = (
+        enricher.generate_default_guide(obj, facts, guide_target_chars(o.popularity))
+        if hasattr(enricher, "generate_default_guide")
+        else None
+    )
+
+    draft = enricher.generate_canonical(obj, sections, guide=guide_text)
     gated_en = gate.gate(material, facts, draft)
     pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
     o.content_status = "ready" if pub_en > 0 else "empty"
@@ -125,12 +132,7 @@ def generate_object(
         for code, r in gated_en.items()
         if r.status == "published" and r.body
     }
-    # 默认讲解(单主线):生成→三类闸→并入英语已发布集,随后随其它段统一翻译落库
-    guide_text = (
-        enricher.generate_default_guide(obj, facts, guide_target_chars(o.popularity))
-        if hasattr(enricher, "generate_default_guide")
-        else None
-    )
+    # 默认讲解(单主线):上面已生成→三类闸→并入英语已发布集,随后随其它段统一翻译落库
     if guide_text:
         gq = gate.check_section(material, facts, guide_text)
         persist_gated_sections(db, qid, "en", {"guide": gq}, model)
