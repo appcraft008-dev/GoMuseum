@@ -74,3 +74,30 @@ def test_fetch_artist_material_empty_when_no_artist():
         "Q1", SourceRegistry([]), run_query=lambda s: [], country_lang="fr"
     )
     assert out == {}
+
+
+def test_fetch_artist_facts_parses_structured():
+    from app.services.enrichment.material import fetch_artist_facts
+
+    def fake(sparql):
+        return [
+            {
+                "birth": {"value": "1832-01-23T00:00:00Z"},
+                "death": {"value": "1883-04-30T00:00:00Z"},
+                "natLabel": {"value": "France"},
+                "workLabel": {"value": "Olympia"},
+            },
+            {"natLabel": {"value": "France"}, "workLabel": {"value": "The Fifer"}},
+            {"natLabel": {"value": "France"}, "workLabel": {"value": "Olympia"}},
+        ]
+
+    f = fetch_artist_facts("Q1", run_query=fake)
+    assert f["artist_birth"] == "1832" and f["artist_death"] == "1883"
+    assert f["artist_nationality"] == "France"
+    assert f["artist_notable_works"] == ["Olympia", "The Fifer"]  # 去重保序
+
+
+def test_fetch_artist_facts_empty_on_no_rows():
+    from app.services.enrichment.material import fetch_artist_facts
+
+    assert fetch_artist_facts("Q1", run_query=lambda s: []) == {}
