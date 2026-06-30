@@ -28,4 +28,29 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('分析正文'), findsOneWidget);
   });
+
+  testWidgets('提供 artist → 抽屉首位渲染作者卡，且 tab 仍在', (t) async {
+    await t.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('zh'),
+      theme: AppTheme.lightTheme(),
+      home: const Scaffold(
+        body: GuideDeepSheetContent(
+          tabs: [
+            ObjectTab(
+                sectionCode: 'analysis',
+                label: '分析',
+                body: '分析正文',
+                audioUrl: null),
+          ],
+          artist: Artist(name: '马奈', bio: '一段经历'),
+        ),
+      ),
+    ));
+    await t.pumpAndSettle();
+    expect(find.text('马奈'), findsOneWidget);
+    expect(find.text('一段经历'), findsOneWidget);
+    expect(find.text('分析'), findsOneWidget);
+  });
 }

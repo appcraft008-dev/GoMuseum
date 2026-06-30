@@ -24,7 +24,6 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
-import 'package:gomuseum_app/features/guide/presentation/widgets/guide_artist_card.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_sheet.dart';
@@ -1126,10 +1125,6 @@ class _A5Body extends StatelessWidget {
                   style: GmText.sans(size: 13, color: gm.faint)),
             ),
 
-          // 作者卡（必选常驻；name 一定有时才渲染）
-          if (content.artist != null && content.artist!.name.isNotEmpty)
-            GuideArtistCard(artist: content.artist!),
-
           // ── 想深入？点一下 ──
           if (content.suggestedQuestions.isNotEmpty) ...[
             Padding(
@@ -1149,15 +1144,19 @@ class _A5Body extends StatelessWidget {
             GuideQuestionList(questions: content.suggestedQuestions),
           ],
 
-          // 📖 深度内容（N）→ 底部抽屉
-          if (layer.hasDeep)
+          // 📖 深度内容 → 底部抽屉（作者卡在抽屉首位）。
+          // 入口条件放宽：有深度 tab 或有作者卡都露出，保「作者卡必选常驻」。
+          if (layer.hasDeep || content.artist != null)
             Padding(
               padding: const EdgeInsets.only(top: 18),
               child: GmTicketButton(
-                label: '${l10n.guideDeepContent}（${layer.deepCount}）',
+                label: layer.deepCount > 0
+                    ? '${l10n.guideDeepContent}（${layer.deepCount}）'
+                    : l10n.guideDeepContent,
                 icon: GmIcons.doc,
                 trailingIcon: GmIcons.arrowR,
-                onTap: () => showGuideDeepSheet(context, layer.deepTabs),
+                onTap: () => showGuideDeepSheet(context, layer.deepTabs,
+                    artist: content.artist),
               ),
             ),
         ],
