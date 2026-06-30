@@ -436,6 +436,48 @@ abstract class AppLocalizations {
   /// **'Artwork Info'**
   String get guideInfo;
 
+  /// No description provided for @guideStandardTour.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard tour'**
+  String get guideStandardTour;
+
+  /// No description provided for @guideListen.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen'**
+  String get guideListen;
+
+  /// No description provided for @guideDiveIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Want more? Tap below'**
+  String get guideDiveIn;
+
+  /// No description provided for @guideDeepContent.
+  ///
+  /// In en, this message translates to:
+  /// **'In depth'**
+  String get guideDeepContent;
+
+  /// No description provided for @guideAskPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask anything…'**
+  String get guideAskPlaceholder;
+
+  /// No description provided for @guideArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get guideArtist;
+
+  /// No description provided for @guideNotableWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'Notable works'**
+  String get guideNotableWorks;
+
   /// No description provided for @guideNoAnswer.
   ///
   /// In en, this message translates to:

@@ -69,6 +69,24 @@ void main() {
     expect(l.deepTabs.map((t) => t.sectionCode), ['overview']);
   });
 
+  test('default_guide 在场 + 无 overview tab → 全部 tab 进抽屉(不误删)', () {
+    // 对齐 staging 现状：default_guide 上线后 tabs=[background,analysis,...]，
+    // 不应把首个有正文 tab 当 promoted 误删。
+    final c = content(
+      guide: const DefaultGuide(body: '主线讲解', audioUrl: null),
+      tabs: [
+        tab('background', body: '背景'),
+        tab('analysis', body: '分析'),
+        tab('significance', body: '意义'),
+      ],
+    );
+    final l = GuideLayering.from(c);
+    expect(l.heroBody, '主线讲解');
+    expect(l.deepTabs.map((t) => t.sectionCode),
+        ['background', 'analysis', 'significance']);
+    expect(l.deepCount, 3);
+  });
+
   test('完全无内容 → heroBody 空、deepTabs 空、hasDeep=false', () {
     final l = GuideLayering.from(content(tabs: const []));
     expect(l.heroBody, '');
