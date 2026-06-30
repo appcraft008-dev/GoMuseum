@@ -5,12 +5,15 @@ run-name: "Deploy → ${{ github.event_name == 'workflow_dispatch' && inputs.tar
 #   - push staging（合并后）→ 自动部署 staging（VPS /opt/gomuseum/staging，端口 8101）
 #   - push main（合并后）   → 自动部署 prod   （VPS /opt/gomuseum/deploy，端口 8100）
 #   - workflow_dispatch     → 手动部署（target=production/staging，按需）
-# path-aware：仅当 backend/ 改动时才部署（只改前端/文档/workflow 不触发，避免 no-op 部署）；
-#             手动 dispatch 强制部署。
+# path-aware：仅当 backend/ 改动时才部署（纯前端/文档/workflow 改动连工作流都不启动，真正"不触发"）；
+#             手动 dispatch 强制部署（不受 paths 限制）。
 # 依赖仓库 Secrets：VPS_SSH_KEY / VPS_HOST。
 on:
   push:
     branches: [main, staging]
+    # 触发器层路径过滤：纯前端/文档/workflow 改动不启动 CD（job 层 changes 过滤保留作双保险）。
+    paths:
+      - 'backend/**'
   workflow_dispatch:
     inputs:
       target:
