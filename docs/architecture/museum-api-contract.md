@@ -175,7 +175,7 @@
 | significance | 影响与遗产(改变了什么/影响了谁) | 不复述丑闻事件(那是 background) |
 | facts | 一个别处没有的趣闻 | 不与上面重复 |
 
-**关键机制(✅阶段2a 已落地)**:① 先生成默认讲解(头条)→ 模块单调用带头条+证据包富属性+锐化 lane"各守职责、深化非复述、只会重复就返空"(生成已从证据包取料)→ 问答最后只补缝。② **动态显示**:空模块不展示(料薄优雅降级,默认讲解是地板)。③ overview 退役(与默认讲解头条重复)。
+**关键机制(✅阶段2a 已落地)**:① 先生成默认讲解(头条)→ 模块单调用带头条+证据包富属性+锐化 lane"各守职责、深化非复述、只会重复就返空"(生成已从证据包取料)→ 问答最后只补缝。② **动态显示**:空模块不展示(料薄优雅降级,默认讲解是地板)。**深度模块字数按热度分档**(重点件 ×1.5),名作能深则深、薄件天然短;深=用材料具体细节铺开非注水(接地闸+去重兜底)。③ overview 退役(与默认讲解头条重复)。
 
 **证据包(`MuseumObject.evidence_pack`,内容唯一来源)**:每件生成时组装、落库(JSONB,后台中间产物,不进端点契约)。结构 `{facts:[{claim,value,source,topic,tier}], narrative:[{text,source,type}], flagged:[{text,type,source}]}`:
 - `facts` = 结构原子(对象字段 + Joconde + Wikidata 富属性 P88/P180/P186/P135…),`tier`=`wall_label`(进 facts 面板)/`material`(只喂生成),`topic`=lane 提示。
@@ -199,6 +199,7 @@
 ## 变更记录
 
 - 2026-06-28:新建本活文档。纳入近期加法:端点3 `/objects` 分页;端点2 `categories` facet + language;端点4 `status/title/images/facts`;`content_status` 生命周期;上新馆路径。
+- 2026-06-30:模块深度——深度模块字数抬高+按热度分档(重点件×1.5,section_target_chars),名作能深则深、薄件天然短、不注水。
 - 2026-06-30:作者卡——content 增必选常驻 `artist` 卡(生卒P569/P570·国籍P27·代表作P800 from 作者实体 + artist段叙事为bio);artist 段移出 tabs。
 - 2026-06-30:阶段2a 落地——生成从证据包取料(用上 P88/P180 富属性)+ guide 互知去重(模块各守 lane、不复述头条、返空不发布)+ overview 退役(迁移删 category_sections 映射)。
 - 2026-06-29(晚):阶段1 证据包落地——`MuseumObject.evidence_pack`(facts/narrative/flagged);端点4 `facts` 策展+人性化(去学术噪音,provenance/exhibitions/bibliography 移出面板)。
