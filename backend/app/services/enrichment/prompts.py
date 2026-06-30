@@ -157,8 +157,15 @@ _QA_SYSTEM = (
 )
 
 
-def build_qa_prompt(material: str, category: str):
-    user = f"Artwork category: {category}\n\nMATERIAL:\n{material}"
+def build_qa_prompt(material: str, category: str, covered: str | None = None):
+    covered_block = (
+        "\n\nALREADY TOLD to the visitor (in the guide and modules) — do NOT ask questions "
+        "whose answer is already covered here; ask only what extends BEYOND it:\n"
+        f'"""\n{covered}\n"""'
+        if covered
+        else ""
+    )
+    user = f"Artwork category: {category}{covered_block}\n\nMATERIAL:\n{material}"
     return _QA_SYSTEM, user
 
 
