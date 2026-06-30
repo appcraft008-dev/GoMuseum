@@ -139,19 +139,22 @@ def build_faithfulness_prompt(en_body: str, translated: str, target_lang: str):
 
 _QA_SYSTEM = (
     "You write 'curious visitor' question chips for ONE artwork, using ONLY the provided "
-    "MATERIAL. The goal is to spark curiosity — NOT to quiz basic facts.\n"
+    "MATERIAL. The guide and modules ALREADY explain the work's MAIN themes (its meaning, "
+    "the controversy, the technique, the key symbols). Your job is the OPPOSITE: surface the "
+    "peripheral 'huh, I didn't know that' angles those did NOT cover.\n"
     "Rules:\n"
-    "1. NEVER ask about facts already shown on the wall label: title, artist, date/year, "
-    "museum or location, medium, dimensions, inventory number. They are visible elsewhere, "
-    "so asking them is useless noise.\n"
-    "2. Ask what a curious visitor standing in front of the work would actually ask "
-    "(why/how/who/what's the story): meaning, controversy, the people or scene depicted, "
-    "technique, anecdotes, historical context.\n"
-    "3. Grounded only: every answer must be fully supported by the material, no outside "
-    "knowledge. Better to return FEWER questions (even an empty list) than to pad with "
-    "trivia or unsupported claims.\n"
-    "4. Each answer is 1-3 sentences: a satisfying hook in your own words, not copied from "
-    "the material, and it should leave the visitor wanting to ask more.\n"
+    "1. NEVER ask about wall-label facts (title, artist, date/year, museum/location, medium, "
+    "dimensions, inventory) — useless noise.\n"
+    "2. Ask about angles NOT already told: a person's surprising backstory, a hidden or "
+    "easily-missed detail, the work's afterlife (theft, hiding, restoration, later influence, "
+    "where it travelled), an unexpected anecdote. Do NOT re-ask the main meaning / controversy "
+    "/ technique / the same symbols — those are covered elsewhere and re-asking them is noise.\n"
+    "3. When an ALREADY-COVERED block is provided, its topics are FORBIDDEN: any question whose "
+    "answer is already in it is rejected. Find genuinely NEW angles, or return FEWER (even an "
+    "empty list) — NEVER pad by re-asking a covered theme.\n"
+    "4. Grounded only: every answer fully supported by the material, no outside knowledge.\n"
+    "5. Each answer is 1-3 sentences: a satisfying hook in your own words, not copied, leaving "
+    "the visitor wanting to ask more.\n"
     "Write 0 to 4 such questions. "
     'Return STRICT JSON: {"qa": [{"question": "...", "answer": "..."}, ...]}. No commentary.'
 )
@@ -159,8 +162,9 @@ _QA_SYSTEM = (
 
 def build_qa_prompt(material: str, category: str, covered: str | None = None):
     covered_block = (
-        "\n\nALREADY TOLD to the visitor (in the guide and modules) — do NOT ask questions "
-        "whose answer is already covered here; ask only what extends BEYOND it:\n"
+        "\n\nALREADY COVERED (guide + modules) — these topics are FORBIDDEN; any question whose "
+        "answer is already in here will be rejected. Ask ONLY genuinely new / peripheral angles, "
+        "or return fewer:\n"
         f'"""\n{covered}\n"""'
         if covered
         else ""
