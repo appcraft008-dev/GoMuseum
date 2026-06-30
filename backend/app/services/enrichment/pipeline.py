@@ -18,6 +18,13 @@ from app.services.enrichment.material import fetch_object_material
 _FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
 
 
+def _artist_facts(qid):
+    """薄包装：调结构化作者属性获取（测试 monkeypatch 此处避免触网）。"""
+    from app.services.enrichment.material import fetch_artist_facts
+
+    return fetch_artist_facts(qid)
+
+
 def _row_to_obj(o) -> dict:
     """MuseumObject 行 → build_material/生成器吃的 obj dict。"""
     return {
@@ -92,6 +99,14 @@ def generate_object(
             artist_mat = {}
         if artist_mat:
             o.attributes = {**(o.attributes or {}), **artist_mat}
+            db.flush()
+
+        try:
+            af = _artist_facts(o.qid)
+        except Exception:
+            af = {}
+        if af:
+            o.attributes = {**(o.attributes or {}), **af}
             db.flush()
 
     obj = _row_to_obj(o)

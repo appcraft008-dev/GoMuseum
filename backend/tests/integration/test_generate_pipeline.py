@@ -375,6 +375,31 @@ def test_generate_object_builds_evidence_pack(session):
     assert any(n["source"] == "wikipedia:work" for n in o2.evidence_pack["narrative"])
 
 
+def test_generate_object_stores_artist_facts(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_facts",
+        lambda qid: {"artist_birth": "1832", "artist_nationality": "France"},
+    )
+    generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes.get("artist_birth") == "1832"
+    assert o.attributes.get("artist_nationality") == "France"
+
+
 def test_generate_object_no_registry_skips_material_fetch(session):
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
