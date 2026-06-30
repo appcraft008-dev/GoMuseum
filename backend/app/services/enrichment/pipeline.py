@@ -26,7 +26,7 @@ def _row_to_obj(o) -> dict:
         "year": o.year,
         "category": o.category,
         "attributes": o.attributes or {},
-        "evidence_pack": o.evidence_pack,
+        "evidence_pack": getattr(o, "evidence_pack", None),
     }
 
 
