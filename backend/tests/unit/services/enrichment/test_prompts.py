@@ -194,3 +194,18 @@ def test_generation_prompt_popularity_optional():
 
     _, user = build_generation_prompt("M", ["artist"], "painting")
     assert "artist" in user  # 无 popularity 不报错
+
+
+def test_qa_prompt_includes_covered_dedup():
+    from app.services.enrichment.prompts import build_qa_prompt
+
+    _, user = build_qa_prompt("MAT", "painting", covered="解说已讲了猫和花的象征。")
+    assert "解说已讲了猫和花" in user
+    assert "already" in user.lower() or "已" in user or "not" in user.lower()
+
+
+def test_qa_prompt_covered_optional():
+    from app.services.enrichment.prompts import build_qa_prompt
+
+    _, user = build_qa_prompt("MAT", "painting")
+    assert "MAT" in user  # 无 covered 不报错

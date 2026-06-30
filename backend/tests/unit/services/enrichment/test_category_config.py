@@ -105,3 +105,11 @@ def test_section_roles_base_raised():
     assert SECTION_ROLES["artist"]["max_chars"] == 260
     assert SECTION_ROLES["significance"]["max_chars"] == 240
     assert SECTION_ROLES["facts"]["max_chars"] == 200
+
+
+def test_analysis_lane_focuses_craft_not_symbols():
+    from app.services.enrichment.category_config import section_role
+
+    role = section_role("analysis")["role"].lower()
+    assert "craft" in role or "brushwork" in role
+    assert "do not re-list" in role or "go beyond" in role or "headline" in role

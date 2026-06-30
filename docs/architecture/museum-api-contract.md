@@ -171,7 +171,7 @@
 |---|---|---|
 | artist | 作者其人(生平/性格/艺术史地位) | 不讲这幅画的丑闻/技法 |
 | background | 作品史实链**事件**(何时/谁委托/在哪展/风波/流转) | 不讲"为什么重要"(→significance)、怎么看(→analysis) |
-| analysis | 看什么(构图/笔触/视觉细节) | 不讲历史/影响 |
+| analysis | **怎么画的(技法:笔触/光色/构图结构)** | 不复述解说已点的符号/题材(那是看什么) |
 | significance | 影响与遗产(改变了什么/影响了谁) | 不复述丑闻事件(那是 background) |
 | facts | 一个别处没有的趣闻 | 不与上面重复 |
 
@@ -199,6 +199,7 @@
 ## 变更记录
 
 - 2026-06-28:新建本活文档。纳入近期加法:端点3 `/objects` 分页;端点2 `categories` facet + language;端点4 `status/title/images/facts`;`content_status` 生命周期;上新馆路径。
+- 2026-07-01:问答去重(QA 收 covered=解说+模块,只问没讲过)+ analysis lane 收到技法(怎么画的,不复述解说符号)。
 - 2026-06-30:模块深度——深度模块字数抬高+按热度分档(重点件×1.5,section_target_chars),名作能深则深、薄件天然短、不注水。
 - 2026-06-30:作者卡——content 增必选常驻 `artist` 卡(生卒P569/P570·国籍P27·代表作P800 from 作者实体 + artist段叙事为bio);artist 段移出 tabs。
 - 2026-06-30:阶段2a 落地——生成从证据包取料(用上 P88/P180 富属性)+ guide 互知去重(模块各守 lane、不复述头条、返空不发布)+ overview 退役(迁移删 category_sections 映射)。

@@ -180,7 +180,7 @@ SECTION_ROLES: dict[str, dict] = {
         "max_chars": 380,
     },
     "analysis": {
-        "role": "Guided LOOKING: composition, technique, brushwork, what to notice with your eyes. NOT history or influence.",
+        "role": "HOW it's painted — the craft: brushwork, paint handling, light & colour, composition structure, scale. Explain technique and the choices behind the effect. Do NOT re-list the symbols/subjects the headline guide already pointed out; go beyond naming them to how the painting achieves its impact.",
         "max_chars": 380,
     },
     "significance": {

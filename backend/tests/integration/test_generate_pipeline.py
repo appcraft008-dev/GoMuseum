@@ -146,7 +146,7 @@ def test_generate_museum_unknown_slug(session):
 
 
 class _FakeQA:
-    def suggest(self, material, facts, category, target_langs):
+    def suggest(self, material, facts, category, target_langs, covered=None):
         return {
             "en": [{"question": "Q?", "answer": "A.", "status": "published"}],
             "fr": [{"question": "Q-fr?", "answer": "A-fr.", "status": "published"}],
@@ -420,3 +420,44 @@ def test_generate_object_no_registry_skips_material_fetch(session):
     assert (
         session.query(MuseumObject).filter_by(qid="Q1").one().content_status == "ready"
     )
+
+
+def test_generate_object_passes_covered_to_qa(session):
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    seen = {}
+
+    class _QA:
+        def suggest(self, material, facts, category, target_langs, covered=None):
+            seen["covered"] = covered
+            return {"en": []}
+
+    class _Enr(_FakeEnricher):
+        def generate_canonical(self, obj, sections, guide=None):
+            return {"background": "深度背景正文。"}
+
+    class _G(_FakeGate):
+        def gate(self, material, facts, draft):
+            return {
+                code: SectionQuality(
+                    body=b,
+                    status="published",
+                    grounding_ratio=1.0,
+                    conflicts=[],
+                    score=1.0,
+                )
+                for code, b in draft.items()
+            }
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_G(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        qa_suggester=_QA(),
+    )
+    assert seen["covered"] and "深度背景正文" in seen["covered"]
