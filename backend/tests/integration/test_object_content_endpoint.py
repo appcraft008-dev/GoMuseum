@@ -61,6 +61,12 @@ def client():
             object_id=obj.id, language="zh", section_code="overview", body="讲解正文"
         )
     )
+    # fr 也给已发布正文,否则无正文的 tab 现在会被动态隐藏(空 tab 不返)
+    s.add(
+        ObjectContentSection(
+            object_id=obj.id, language="fr", section_code="overview", body="texte fr"
+        )
+    )
     s.commit()
     app.dependency_overrides[get_db] = lambda: (yield s)
     yield TestClient(app)
