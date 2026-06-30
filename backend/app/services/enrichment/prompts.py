@@ -22,16 +22,22 @@ _SYSTEM = (
 
 
 def build_generation_prompt(
-    material: str, sections: list[str], category: str, guide: str | None = None
+    material: str,
+    sections: list[str],
+    category: str,
+    guide: str | None = None,
+    popularity: int | None = None,
 ):
-    from app.services.enrichment.category_config import section_role
+    from app.services.enrichment.category_config import (
+        section_role,
+        section_target_chars,
+    )
 
     lines = []
     for code in sections:
         r = section_role(code)
-        lines.append(
-            f"- {code} — {r['role']} (aim ~{r['max_chars']} Chinese-char equivalent)"
-        )
+        aim = section_target_chars(code, popularity)
+        lines.append(f"- {code} — {r['role']} (aim ~{aim} Chinese-char equivalent)")
     roles_block = "\n".join(lines)
     guide_block = (
         f'\nThe visitor ALREADY heard this HEADLINE guide:\n"""\n{guide}\n"""\n'
@@ -44,7 +50,8 @@ def build_generation_prompt(
     user = (
         f"Artwork category: {category}\n"
         f"Write these sections (return JSON keyed by these exact codes), each staying strictly "
-        f"in its lane:\n{roles_block}\n{guide_block}\n"
+        f"in its lane. Go DEEPER by unpacking concrete facts and details FROM THE MATERIAL — "
+        f"never pad or 注水 with generic filler:\n{roles_block}\n{guide_block}\n"
         f"Material (facts tagged with their lane topic):\n{material}"
     )
     return _SYSTEM, user

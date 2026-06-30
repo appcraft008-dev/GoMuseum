@@ -87,7 +87,11 @@ class ContentEnricher:
         """英语轴心：一次 LLM 调用产出请求段落。空串/未返回 → None（不发布）。"""
         material = build_material(obj)
         system, user = build_generation_prompt(
-            material, sections, obj.get("category", "unknown"), guide=guide
+            material,
+            sections,
+            obj.get("category", "unknown"),
+            guide=guide,
+            popularity=obj.get("popularity"),
         )
         raw = self._complete(system, user)
         parsed = _parse_json(raw)

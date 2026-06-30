@@ -173,23 +173,23 @@ SECTION_ROLES: dict[str, dict] = {
     },
     "artist": {
         "role": "The MAKER as a person: life, character, what drove them, their place in art history. NOT this work's scandal/technique (other lanes cover those).",
-        "max_chars": 180,
+        "max_chars": 260,
     },
     "background": {
         "role": "The work's HISTORY as concrete events: when, who commissioned it, where shown, the reception as events, provenance. NOT why-it-matters (that's significance), NOT how-to-look (that's analysis).",
-        "max_chars": 280,
+        "max_chars": 380,
     },
     "analysis": {
         "role": "Guided LOOKING: composition, technique, brushwork, what to notice with your eyes. NOT history or influence.",
-        "max_chars": 280,
+        "max_chars": 380,
     },
     "significance": {
         "role": "LEGACY & influence: what it changed, who it influenced, why it matters to art history. Do NOT re-tell the scandal events (that's background).",
-        "max_chars": 160,
+        "max_chars": 240,
     },
     "facts": {
         "role": "ONE surprising anecdote/curiosity not covered by other lanes.",
-        "max_chars": 160,
+        "max_chars": 200,
     },
     "photographer": {
         "role": "A person with a story: one memorable thing about the maker tied to THIS work.",
@@ -231,3 +231,11 @@ def guide_target_chars(popularity: int | None) -> tuple[int, int]:
     if (popularity or 0) >= GUIDE_KEY_THRESHOLD:
         return (420, 675)
     return (270, 420)
+
+
+def section_target_chars(code: str, popularity: int | None) -> int:
+    """模块字数上限,按热度分档:重点件(>=阈值)base×1.5,普通件 base。"""
+    base = SECTION_ROLES.get(code, _DEFAULT_ROLE)["max_chars"]
+    if (popularity or 0) >= GUIDE_KEY_THRESHOLD:
+        return int(base * 1.5)
+    return base

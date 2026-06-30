@@ -169,3 +169,28 @@ def test_generation_prompt_no_guide_still_works():
 
     system, user = build_generation_prompt("MAT", ["artist"], "painting")
     assert "artist" in user  # guide 缺省不报错
+
+
+def test_generation_prompt_tiers_length_by_popularity():
+    from app.services.enrichment.prompts import build_generation_prompt
+
+    _, user_key = build_generation_prompt(
+        "M", ["background"], "painting", popularity=40
+    )
+    _, user_norm = build_generation_prompt(
+        "M", ["background"], "painting", popularity=5
+    )
+    assert "570" in user_key  # 重点件 background 380×1.5
+    assert "380" in user_norm  # 普通件
+    assert (
+        "注水" in user_key
+        or "specific" in user_key.lower()
+        or "fluff" in user_key.lower()
+    )
+
+
+def test_generation_prompt_popularity_optional():
+    from app.services.enrichment.prompts import build_generation_prompt
+
+    _, user = build_generation_prompt("M", ["artist"], "painting")
+    assert "artist" in user  # 无 popularity 不报错

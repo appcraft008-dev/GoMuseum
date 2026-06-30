@@ -221,3 +221,22 @@ def test_generate_canonical_passes_guide_to_prompt():
         guide="头条 XYZ。",
     )
     assert "头条 XYZ" in captured["user"]
+
+
+def test_generate_canonical_passes_popularity():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    captured = {}
+
+    def fake(system, user):
+        captured["user"] = user
+        import json as _json
+
+        return _json.dumps({"background": "B."})
+
+    enr = ContentEnricher(complete=fake)
+    enr.generate_canonical(
+        {"qid": "Q1", "category": "painting", "attributes": {}, "popularity": 40},
+        sections=["background"],
+    )
+    assert "570" in captured["user"]  # 重点件 background 380×1.5
