@@ -52,6 +52,44 @@ def _default_artist_query(sparql):
     return r.json()["results"]["bindings"]
 
 
+_ARTIST_FACTS_QUERY = """
+SELECT ?birth ?death ?natLabel ?workLabel WHERE {{
+  wd:{qid} wdt:P170 ?artist .
+  OPTIONAL {{ ?artist wdt:P569 ?birth. }}
+  OPTIONAL {{ ?artist wdt:P570 ?death. }}
+  OPTIONAL {{ ?artist wdt:P27 ?nat. }}
+  OPTIONAL {{ ?artist wdt:P800 ?work. }}
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+}}
+"""
+
+
+def fetch_artist_facts(qid, *, run_query=None) -> dict:
+    """作者 Wikidata 实体结构化属性 → {artist_birth/death/nationality/notable_works}。无→{}。"""
+    run_query = run_query or _default_artist_query
+    rows = run_query(_ARTIST_FACTS_QUERY.format(qid=qid))
+    if not rows:
+        return {}
+    out = {}
+    works = []
+    for row in rows:
+        b = (row.get("birth") or {}).get("value")
+        d = (row.get("death") or {}).get("value")
+        nat = (row.get("natLabel") or {}).get("value")
+        w = (row.get("workLabel") or {}).get("value")
+        if b and "artist_birth" not in out:
+            out["artist_birth"] = b[:4]
+        if d and "artist_death" not in out:
+            out["artist_death"] = d[:4]
+        if nat and "artist_nationality" not in out:
+            out["artist_nationality"] = nat
+        if w and w not in works:
+            works.append(w)
+    if works:
+        out["artist_notable_works"] = works[:5]
+    return out
+
+
 def fetch_artist_material(qid, registry, *, run_query=None, country_lang="fr") -> dict:
     """抓作者实体 Wikipedia(作品→P170→作者维基标题→extract)。无作者/无维基→{}。"""
     run_query = run_query or _default_artist_query
