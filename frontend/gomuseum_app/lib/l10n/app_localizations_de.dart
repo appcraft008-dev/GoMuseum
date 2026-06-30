@@ -187,6 +187,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get guideInfo => 'Artwork Info';
 
   @override
+  String get guideStandardTour => 'Standard tour';
+
+  @override
+  String get guideListen => 'Listen';
+
+  @override
+  String get guideDiveIn => 'Want more? Tap below';
+
+  @override
+  String get guideDeepContent => 'In depth';
+
+  @override
+  String get guideAskPlaceholder => 'Ask anything…';
+
+  @override
+  String get guideArtist => 'Artist';
+
+  @override
+  String get guideNotableWorks => 'Notable works';
+
+  @override
   String get guideNoAnswer => '(no answer returned)';
 
   @override

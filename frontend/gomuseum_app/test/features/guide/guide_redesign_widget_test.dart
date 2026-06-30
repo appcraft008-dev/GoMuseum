@@ -16,6 +16,7 @@ ObjectContent _sample() => const ObjectContent(
       title: '罗纳河上的星夜',
       images: [],
       facts: ObjectFacts(artist: '梵高', date: '1888'),
+      artist: Artist(name: '文森特·梵高', birth: '1853', death: '1890'),
       tabs: [
         ObjectTab(
             sectionCode: 'overview',
@@ -52,6 +53,9 @@ void main() {
 
     expect(find.textContaining('标准导览'), findsOneWidget);
     expect(find.text('主线讲解正文。'), findsOneWidget);
+    // 作者卡常驻
+    expect(find.text('文森特·梵高'), findsOneWidget);
+    expect(find.text('1853 – 1890'), findsOneWidget);
     // 深度按钮（去掉 overview 后 = 1）
     expect(find.textContaining('深度内容'), findsOneWidget);
     // 主页不再并列展示深度 tab 的正文

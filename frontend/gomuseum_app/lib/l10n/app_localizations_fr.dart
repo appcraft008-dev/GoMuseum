@@ -189,6 +189,27 @@ class AppLocalizationsFr extends AppLocalizations {
   String get guideInfo => 'Informations sur l\'œuvre';
 
   @override
+  String get guideStandardTour => 'Visite standard';
+
+  @override
+  String get guideListen => 'Écouter';
+
+  @override
+  String get guideDiveIn => 'Envie d\'en savoir plus ? Touchez';
+
+  @override
+  String get guideDeepContent => 'En détail';
+
+  @override
+  String get guideAskPlaceholder => 'Posez une question…';
+
+  @override
+  String get guideArtist => 'Artiste';
+
+  @override
+  String get guideNotableWorks => 'Œuvres majeures';
+
+  @override
   String get guideNoAnswer => '(aucune réponse renvoyée)';
 
   @override

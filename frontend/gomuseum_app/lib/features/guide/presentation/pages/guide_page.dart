@@ -24,6 +24,7 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_artist_card.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_sheet.dart';
@@ -1124,6 +1125,10 @@ class _A5Body extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: GmText.sans(size: 13, color: gm.faint)),
             ),
+
+          // 作者卡（必选常驻；name 一定有时才渲染）
+          if (content.artist != null && content.artist!.name.isNotEmpty)
+            GuideArtistCard(artist: content.artist!),
 
           // ── 想深入？点一下 ──
           if (content.suggestedQuestions.isNotEmpty) ...[
