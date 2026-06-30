@@ -162,7 +162,10 @@ def generate_object(
         counts[lang] = persist_gated_sections(db, qid, lang, results, model)
     result = {"qid": qid, "counts": counts}
     if qa_suggester is not None:
-        qa_by_lang = qa_suggester.suggest(material, facts, o.category, target_langs)
+        covered = "\n\n".join(v for v in en_published.values() if v)
+        qa_by_lang = qa_suggester.suggest(
+            material, facts, o.category, target_langs, covered=covered
+        )
         result["qa"] = {
             lang: persist_suggested_questions(db, qid, lang, items, model)
             for lang, items in qa_by_lang.items()
