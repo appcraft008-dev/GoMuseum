@@ -218,12 +218,15 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         if cs.section_code == "artist":  # artist 段是常驻卡片,不进 tabs
             continue
         row = bodies.get(cs.section_code)
+        body = row.body if (row and row.status == "published") else None
+        if not (body and body.strip()):
+            continue  # 动态:空/未发布模块不进 tabs(料薄优雅降级)
         tabs.append(
             {
                 "section_code": cs.section_code,
                 "label": section_label(cs.section_code, language),
                 "icon": st.icon,
-                "body": row.body if row else None,
+                "body": body,
                 "audio_url": (
                     storage.public_url(row.audio_key) if row and row.audio_key else None
                 ),

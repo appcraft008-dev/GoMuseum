@@ -224,3 +224,45 @@ def test_content_artist_card_present_when_thin(session):
     session.commit()
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert "artist" in d and "name" in d["artist"]  # 缺结构化+缺bio,卡仍返(name兜底)
+
+
+def test_tabs_hide_empty_and_unpublished(session):
+    from app.models.content import CategorySection, ObjectContentSection, SectionType
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(SectionType(code="significance", icon="i"))
+    session.add(SectionType(code="background", icon="i"))
+    session.add(
+        CategorySection(category="painting", section_code="significance", sort_order=1)
+    )
+    session.add(
+        CategorySection(category="painting", section_code="background", sort_order=2)
+    )
+    # significance: needs_review(应隐);background: published 有正文(应显)
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="significance",
+            body="",
+            status="needs_review",
+        )
+    )
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="background",
+            body="背景正文。",
+            status="published",
+        )
+    )
+    session.commit()
+    codes = [
+        t["section_code"]
+        for t in get_object_content(session, "orsay", "Q1", "zh")["tabs"]
+    ]
+    assert "significance" not in codes  # 空/未发布 → 隐
+    assert "background" in codes  # 有发布正文 → 显
