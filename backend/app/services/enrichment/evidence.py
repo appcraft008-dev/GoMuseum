@@ -12,11 +12,19 @@ _RICH_PROPS = {
     "P135": ("艺术流派", "significance"),
     "P136": ("题材", "significance"),
     "P1343": ("著录文献", "material"),
+    # 关系属性(配源 round2a):给 significance/background 接地影响钩子
+    "P4969": ("影响了", "significance"),  # has derivative work
+    "P144": ("基于", "background"),  # based on
+    "P941": ("受启发于", "background"),  # inspired by
+    "P361": ("所属系列", "background"),  # part of
 }
+
+_RICH_MAX_PER_PROP = 5  # 多值属性(如衍生作品)每 pid 最多取几条,防名作爆表
 
 _RICH_QUERY = """
 SELECT ?pid ?vLabel WHERE {{
-  VALUES ?prop {{ wdt:P88 wdt:P180 wdt:P186 wdt:P135 wdt:P136 wdt:P1343 }}
+  VALUES ?prop {{ wdt:P88 wdt:P180 wdt:P186 wdt:P135 wdt:P136 wdt:P1343
+                  wdt:P4969 wdt:P144 wdt:P941 wdt:P361 }}
   wd:{qid} ?prop ?v .
   ?p wikibase:directClaim ?prop . BIND(STRAFTER(STR(?p), "entity/") AS ?pid)
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
@@ -45,10 +53,14 @@ def fetch_rich_facts(qid: str, *, run_query=None) -> list[dict]:
     run_query = run_query or _default_run_query
     rows = run_query(_RICH_QUERY.format(qid=qid))
     out = []
+    per_prop: dict[str, int] = {}
     for row in rows:
         pid = (row.get("pid") or {}).get("value", "")
         val = (row.get("vLabel") or {}).get("value")
         if pid in _RICH_PROPS and val:
+            if per_prop.get(pid, 0) >= _RICH_MAX_PER_PROP:
+                continue  # 每属性限 _RICH_MAX_PER_PROP 条
+            per_prop[pid] = per_prop.get(pid, 0) + 1
             claim, topic = _RICH_PROPS[pid]
             out.append(
                 {
