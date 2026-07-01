@@ -105,3 +105,34 @@ def test_extract_flagged_robust_on_llm_error():
         complete=boom,
     )
     assert pack["flagged"] == []  # LLM 失败优雅降级
+
+
+def test_fetch_rich_facts_relational_props():
+    from app.services.enrichment.evidence import fetch_rich_facts
+
+    rows = [
+        {"pid": {"value": "P4969"}, "vLabel": {"value": "Later Homage"}},
+        {"pid": {"value": "P144"}, "vLabel": {"value": "Titian Venus"}},
+        {"pid": {"value": "P361"}, "vLabel": {"value": "Salon Series"}},
+    ]
+    facts = fetch_rich_facts("Q1", run_query=lambda s: rows)
+    by = {f["source"]: f for f in facts}
+    assert (
+        by["wikidata:P4969"]["topic"] == "significance"
+        and by["wikidata:P4969"]["claim"] == "影响了"
+    )
+    assert (
+        by["wikidata:P144"]["topic"] == "background"
+        and by["wikidata:P144"]["claim"] == "基于"
+    )
+    assert by["wikidata:P361"]["claim"] == "所属系列"
+
+
+def test_fetch_rich_facts_caps_per_prop_at_5():
+    from app.services.enrichment.evidence import fetch_rich_facts
+
+    rows = [
+        {"pid": {"value": "P4969"}, "vLabel": {"value": "d%d" % i}} for i in range(8)
+    ]
+    facts = fetch_rich_facts("Q1", run_query=lambda s: rows)
+    assert len([f for f in facts if f["source"] == "wikidata:P4969"]) == 5  # 限5
