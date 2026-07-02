@@ -81,6 +81,8 @@ def backfill_display_names(
             o.attributes = attrs
             if ti.get("zh") and not o.title_zh:
                 o.title_zh = ti["zh"]
+            if ti.get("en") and not o.title_en:
+                o.title_en = ti["en"]  # en 轴心列回填(无 en 标签的冷门件经翻译补齐)
             counts["titles"] += 1
         aqid = attrs.get("artist_qid") or creators.get(o.qid)
         if aqid:
