@@ -116,3 +116,18 @@ def test_fetch_artist_facts_skips_raw_qid_works():
     f = fetch_artist_facts("Q1", run_query=fake)
     assert f["artist_notable_works"] == ["Homage to Cézanne"]  # QID 被过滤
     assert f["artist_nationality"] == "France"
+
+
+def test_fetch_artist_facts_returns_artist_qid():
+    from app.services.enrichment.material import fetch_artist_facts
+
+    def fake(sparql):
+        return [
+            {
+                "artist": {"value": "http://www.wikidata.org/entity/Q296"},
+                "natLabel": {"value": "Netherlands"},
+            }
+        ]
+
+    f = fetch_artist_facts("Q1", run_query=fake)
+    assert f["artist_qid"] == "Q296"

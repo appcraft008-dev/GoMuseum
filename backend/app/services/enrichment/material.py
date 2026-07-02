@@ -58,7 +58,7 @@ def _is_raw_qid(v: str) -> bool:
 
 
 _ARTIST_FACTS_QUERY = """
-SELECT ?birth ?death ?natLabel ?workLabel WHERE {{
+SELECT ?artist ?birth ?death ?natLabel ?workLabel WHERE {{
   wd:{qid} wdt:P170 ?artist .
   OPTIONAL {{ ?artist wdt:P569 ?birth. }}
   OPTIONAL {{ ?artist wdt:P570 ?death. }}
@@ -87,6 +87,10 @@ def fetch_artist_facts(qid, *, run_query=None) -> dict:
             nat = None
         if w and _is_raw_qid(w):
             w = None
+        if "artist_qid" not in out:
+            au = (row.get("artist") or {}).get("value", "")
+            if au:
+                out["artist_qid"] = au.rsplit("/", 1)[-1]
         if b and "artist_birth" not in out:
             out["artist_birth"] = b[:4]
         if d and "artist_death" not in out:
