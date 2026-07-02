@@ -93,6 +93,7 @@ def generate_object(
     force=False,
     qa_suggester=None,
     registry=None,
+    country_lang=None,
 ) -> dict:
     """单件：生成→质量闸→落英语→翻译→按语言落库。幂等跳过已发布英语（除非 force）。"""
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
@@ -132,10 +133,11 @@ def generate_object(
 
         from app.services.enrichment.material import fetch_artist_material
 
-        # ponytail: country_lang 暂硬编 fr，多馆从馆配置取
         # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
         try:
-            artist_mat = fetch_artist_material(o.qid, registry, country_lang="fr")
+            artist_mat = fetch_artist_material(
+                o.qid, registry, country_lang=country_lang or "fr"
+            )
         except Exception:
             artist_mat = {}
         if artist_mat:
@@ -286,6 +288,7 @@ def generate_museum(
     limit=None,
     qa_suggester=None,
     registry=None,
+    country_lang=None,
 ) -> dict:
     """按馆批量：popularity 降序逐件 generate_object，聚合。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
@@ -310,6 +313,7 @@ def generate_museum(
             force=force,
             qa_suggester=qa_suggester,
             registry=registry,
+            country_lang=country_lang,
         )
         for o in q.all()
     ]

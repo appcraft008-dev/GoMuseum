@@ -55,19 +55,19 @@ def _pick(lang: str, zh, en, fr, fallback=""):
     return en or zh or fallback
 
 
-def _wall_value(pack, source_prefix):
-    """从证据包取 tier=wall_label 且 source 以 source_prefix 起头的展示级值。"""
-    for fct in (pack or {}).get("facts", []):
-        if fct.get("tier") == "wall_label" and fct.get("source", "").startswith(
-            source_prefix
-        ):
-            return fct.get("value")
-    return None
+def _pack_values(pack, source):
+    """从证据包取 source 匹配的全部值(不限 tier:存量 pack 富属性为 material)。"""
+    return [
+        fct.get("value")
+        for fct in (pack or {}).get("facts", [])
+        if fct.get("source") == source and fct.get("value")
+    ]
 
 
-# 常见材质 → 本地化干净名(按关键词命中;未知原样)。ponytail: 覆盖主流画/雕塑材质,缺再加。
+# 常见材质 → 本地化干净名(按词首关键词命中;未知原样)。ponytail: 覆盖主流画/雕塑材质,缺再加。
 _MEDIUM_NORM = {
     "huile": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
+    "oil": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
     "bronze": {"zh": "青铜", "en": "Bronze", "fr": "Bronze"},
     "marbre": {"zh": "大理石", "en": "Marble", "fr": "Marbre"},
     "aquarelle": {"zh": "水彩", "en": "Watercolour", "fr": "Aquarelle"},
@@ -79,12 +79,13 @@ _MEDIUM_NORM = {
 
 
 def _humanize_medium(raw, lang):
-    """原始材质串(多为法语 Joconde)→ 本地化干净名;未命中原样。"""
+    """原始材质串(法语 Joconde / 英语 Wikidata P186)→ 本地化干净名;未命中原样。
+    词首边界匹配,防 'toile' 误中 'oil'。"""
     if not raw:
         return None
     low = raw.lower()
     for kw, m in _MEDIUM_NORM.items():
-        if kw in low:
+        if re.search(rf"\b{kw}", low):
             return m.get(lang) or m.get("en")
     return raw
 
@@ -263,7 +264,12 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     facts = {
         "artist": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
         "date": obj.year,
-        "medium": _humanize_medium(attrs.get("medium_fr"), language),
+        # medium 优先证据包干净源(Wikidata P186,多值合并),回退 Joconde medium_fr
+        "medium": _humanize_medium(
+            ", ".join(_pack_values(obj.evidence_pack, "wikidata:P186"))
+            or attrs.get("medium_fr"),
+            language,
+        ),
         "dimensions": _humanize_dimensions(attrs.get("dimensions")),
         "inventory": obj.inventory_number,
         "location": _pick(language, museum.name_zh, museum.name_en, museum.name_en),
@@ -364,6 +370,19 @@ def list_objects(
             images_by_obj[img.object_id] = img
     storage = get_object_storage()
 
+    from app.models.artist import Artist
+
+    artist_qids = {
+        (o.attributes or {}).get("artist_qid")
+        for o in objs
+        if (o.attributes or {}).get("artist_qid")
+    }
+    artists_by_qid = (
+        {a.qid: a for a in db.query(Artist).filter(Artist.qid.in_(artist_qids)).all()}
+        if artist_qids
+        else {}
+    )
+
     def _thumb(obj_id):
         img = images_by_obj.get(obj_id)
         if img and img.image_key:
@@ -380,11 +399,16 @@ def list_objects(
         )
 
     def _artist(o):
-        if language == "zh":
-            return o.artist_zh or o.artist_en or ""
-        if language == "fr":
-            return (o.attributes or {}).get("artist_fr") or o.artist_en or ""
-        return o.artist_en or o.artist_zh or ""
+        art = artists_by_qid.get((o.attributes or {}).get("artist_qid"))
+        return (
+            _resolve_name(
+                art.name_i18n if art else None,
+                language,
+                {"zh": o.artist_zh, "en": o.artist_en},
+                o.artist_en or o.artist_zh,
+            )
+            or ""
+        )
 
     items = [
         {
