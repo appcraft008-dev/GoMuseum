@@ -12,6 +12,17 @@ def _parse():
     return _parse_json
 
 
+def _clean_question(q: str):
+    """硬 guard:question 到第一个问号截断(救"Q？+描述");没问号=陈述句→丢(返 None)。
+    英语轴心问号是 '?';翻译后可能是 '？'——两者都认。"""
+    if not q:
+        return None
+    idx = [q.find(m) for m in ("?", "？") if q.find(m) != -1]
+    if not idx:
+        return None  # 无问号 = 陈述句,不发
+    return q[: min(idx) + 1].strip()
+
+
 class QASuggester:
     def __init__(self, complete, gate, translator):
         self._complete = complete
@@ -25,7 +36,7 @@ class QASuggester:
         pairs = _parse()(raw).get("qa") or []
         items = []
         for p in pairs:
-            q = (p.get("question") or "").strip()
+            q = _clean_question((p.get("question") or "").strip())
             a = (p.get("answer") or "").strip()
             if not q or not a:
                 continue
@@ -52,8 +63,12 @@ class QASuggester:
                 continue
             litems = []
             for it in published:
-                tq = self._translator.translate_section(it["question"], lang)
+                tq = _clean_question(
+                    self._translator.translate_section(it["question"], lang)
+                )
                 ta = self._translator.translate_section(it["answer"], lang)
+                if not tq:  # 翻译把问句变陈述了 → 回退英文问句(已是短问句)
+                    tq = it["question"]
                 ok, _ = self._translator.check_faithfulness(it["answer"], ta, lang)
                 litems.append(
                     {
