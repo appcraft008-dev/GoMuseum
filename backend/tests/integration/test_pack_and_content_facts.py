@@ -165,6 +165,41 @@ def test_content_facts_curated_and_humanized(session):
     assert "artist" in f and "date" in f
 
 
+def test_content_facts_medium_prefers_evidence_pack_p186(session):
+    # 契约§4:medium 优先证据包干净源(Wikidata P186);存量 pack 为 tier=material、多值
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"medium_fr": "technique mixte"}
+    o.evidence_pack = {
+        "facts": [
+            {
+                "claim": "材质",
+                "value": "oil paint",
+                "source": "wikidata:P186",
+                "topic": "analysis",
+                "tier": "material",
+            },
+            {
+                "claim": "材质",
+                "value": "canvas",
+                "source": "wikidata:P186",
+                "topic": "analysis",
+                "tier": "material",
+            },
+        ],
+        "narrative": [],
+        "flagged": [],
+    }
+    session.commit()
+    assert get_object_content(session, "orsay", "Q1", "zh")["facts"]["medium"] == "油画"
+    assert (
+        get_object_content(session, "orsay", "Q1", "en")["facts"]["medium"]
+        == "Oil on canvas"
+    )
+
+
 def test_content_facts_medium_humanized_from_attributes(session):
     from app.models.museum_object import MuseumObject
     from app.services.museum_repo import get_object_content

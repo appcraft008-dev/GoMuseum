@@ -22,6 +22,8 @@ class MuseumConfig:
     categories: list[str] = field(default_factory=list)
     country_lang: str | None = None
     languages: list[str] = field(default_factory=list)
+    # 每馆补充源(Wikidata 是脊柱不在此列);缺省只有全球通用的 wikipedia
+    sources: list[str] = field(default_factory=lambda: ["wikipedia"])
 
 
 class MuseumCatalog:
@@ -48,6 +50,7 @@ class MuseumCatalog:
                 categories=list(m.get("categories") or [m["category_filter"]]),
                 country_lang=m.get("country_lang"),
                 languages=list(m.get("languages") or []),
+                sources=list(m.get("sources") or ["wikipedia"]),
             )
         return cls(configs)
 

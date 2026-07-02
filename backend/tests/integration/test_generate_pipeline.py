@@ -587,6 +587,39 @@ def test_generate_fills_title_and_artist_name_i18n(session, monkeypatch):
     assert "Van Gogh" in ni["fr"]  # 作者无权威→翻译兜底
 
 
+def test_generate_object_passes_country_lang_to_artist_material(session, monkeypatch):
+    # 契约"零核心改动上新馆":country_lang 来自 museums.yaml,不得硬编 fr
+    import app.services.enrichment.material as mat
+    import app.services.enrichment.pipeline as pl
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {})
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    seen = {}
+
+    def fake_artist_material(qid, registry, *, run_query=None, country_lang="fr"):
+        seen["country_lang"] = country_lang
+        return {}
+
+    monkeypatch.setattr(mat, "fetch_artist_material", fake_artist_material)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.evidence_pack = {"facts": [], "narrative": [], "flagged": []}  # 免触网重建
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+        country_lang="nl",
+    )
+    assert seen["country_lang"] == "nl"
+
+
 def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
     import app.services.enrichment.pipeline as pl
     from app.models.artist import Artist

@@ -57,20 +57,22 @@ def _catalog() -> MuseumCatalog:
     return MuseumCatalog.from_file(CATALOG_PATH)
 
 
-def cmd_fetch(slug: str) -> None:
+def _registry(slug: str):
+    """按馆配置 sources 组 registry（礼貌限速 session 共享）。"""
     from app.services.enrichment.http_client import PoliteSession
-    from app.services.enrichment.registry import SourceRegistry
-    from app.services.enrichment.sources.joconde import JocondeSource
-    from app.services.enrichment.sources.wikipedia import WikipediaSource
+    from app.services.enrichment.registry import build_registry
 
     ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
     session = PoliteSession(user_agent=ua, min_interval=1.0)
+    return build_registry(_catalog().get(slug).sources, session=session)
+
+
+def cmd_fetch(slug: str) -> None:
     ps = PackStore(get_object_storage())
     spine = WikidataSource()
-    registry = SourceRegistry(
-        [JocondeSource(session=session), WikipediaSource(session=session)]
+    fetcher = Fetcher(
+        catalog=_catalog(), spine=spine, registry=_registry(slug), pack_store=ps
     )
-    fetcher = Fetcher(catalog=_catalog(), spine=spine, registry=registry, pack_store=ps)
     key = fetcher.fetch(slug)
     print(f"✓ pack 已写入: {key}")
 
@@ -154,27 +156,15 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     from app.services.enrichment.quality import QualityGate
     from app.services.enrichment.translator import ContentTranslator
 
-    override = (
-        [s.strip() for s in langs.split(",")]
-        if langs
-        else _catalog().get(slug).languages
-    )
+    cfg = _catalog().get(slug)
+    override = [s.strip() for s in langs.split(",")] if langs else cfg.languages
     target_langs = resolve_languages(override)
     enricher = ContentEnricher(default_complete)
     gate = QualityGate(default_complete)
     translator = ContentTranslator(default_complete)
     qa_suggester = QASuggester(default_complete, gate, translator)
 
-    from app.services.enrichment.http_client import PoliteSession
-    from app.services.enrichment.registry import SourceRegistry
-    from app.services.enrichment.sources.joconde import JocondeSource
-    from app.services.enrichment.sources.wikipedia import WikipediaSource
-
-    ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
-    session = PoliteSession(user_agent=ua, min_interval=1.0)
-    registry = SourceRegistry(
-        [JocondeSource(session=session), WikipediaSource(session=session)]
-    )
+    registry = _registry(slug)
 
     db = SessionLocal()
     try:
@@ -190,6 +180,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
                 force=force,
                 qa_suggester=qa_suggester,
                 registry=registry,
+                country_lang=cfg.country_lang,
             )
         else:
             out = generate_museum(
@@ -204,6 +195,7 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
                 limit=limit,
                 qa_suggester=qa_suggester,
                 registry=registry,
+                country_lang=cfg.country_lang,
             )
     finally:
         db.close()

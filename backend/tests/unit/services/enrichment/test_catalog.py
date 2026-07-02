@@ -37,6 +37,23 @@ def test_categories_and_country_lang_parsed(tmp_path):
     assert cfg.country_lang == "fr"
 
 
+def test_sources_parsed_from_yaml():
+    # 上新馆=纯配置:每馆声明自己的补充源(法国馆才有 joconde)
+    cfg = MuseumCatalog.from_file("museums.yaml").get("orsay")
+    assert cfg.sources == ["joconde", "wikipedia"]
+
+
+def test_sources_default_to_wikipedia(tmp_path):
+    p = tmp_path / "m.yaml"
+    p.write_text(
+        "museums:\n  x:\n    name_zh: 馆\n    name_en: X\n    city_zh: 城\n"
+        "    city_en: C\n    country: NL\n    wikidata_qid: Q1\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n",
+        encoding="utf-8",
+    )
+    assert MuseumCatalog.from_file(p).get("x").sources == ["wikipedia"]
+
+
 def test_categories_defaults_to_category_filter(tmp_path):
     from app.services.enrichment.catalog import MuseumCatalog
 
