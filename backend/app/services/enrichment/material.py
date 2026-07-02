@@ -52,6 +52,11 @@ def _default_artist_query(sparql):
     return r.json()["results"]["bindings"]
 
 
+def _is_raw_qid(v: str) -> bool:
+    """wikibase:label 对无本地化标签的实体退回原始 QID/PID(如 'Q17490760')。"""
+    return bool(v) and v[0] in "QP" and v[1:].isdigit()
+
+
 _ARTIST_FACTS_QUERY = """
 SELECT ?birth ?death ?natLabel ?workLabel WHERE {{
   wd:{qid} wdt:P170 ?artist .
@@ -77,6 +82,11 @@ def fetch_artist_facts(qid, *, run_query=None) -> dict:
         d = (row.get("death") or {}).get("value")
         nat = (row.get("natLabel") or {}).get("value")
         w = (row.get("workLabel") or {}).get("value")
+        # 标签服务对无本地化标签的实体退回原始 QID → 无意义,跳过
+        if nat and _is_raw_qid(nat):
+            nat = None
+        if w and _is_raw_qid(w):
+            w = None
         if b and "artist_birth" not in out:
             out["artist_birth"] = b[:4]
         if d and "artist_death" not in out:

@@ -101,3 +101,18 @@ def test_fetch_artist_facts_empty_on_no_rows():
     from app.services.enrichment.material import fetch_artist_facts
 
     assert fetch_artist_facts("Q1", run_query=lambda s: []) == {}
+
+
+def test_fetch_artist_facts_skips_raw_qid_works():
+    from app.services.enrichment.material import fetch_artist_facts
+
+    def fake(sparql):
+        return [
+            {"workLabel": {"value": "Homage to Cézanne"}},
+            {"workLabel": {"value": "Q17490760"}},  # 无标签→跳
+            {"natLabel": {"value": "France"}},
+        ]
+
+    f = fetch_artist_facts("Q1", run_query=fake)
+    assert f["artist_notable_works"] == ["Homage to Cézanne"]  # QID 被过滤
+    assert f["artist_nationality"] == "France"
