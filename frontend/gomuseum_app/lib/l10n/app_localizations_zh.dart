@@ -186,6 +186,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideInfo => '作品信息';
 
   @override
+  String get guideStandardTour => '标准导览';
+
+  @override
+  String get guideListen => '听讲解';
+
+  @override
+  String get guideDiveIn => '想深入？点一下';
+
+  @override
+  String get guideDeepContent => '深度内容';
+
+  @override
+  String get guideAskPlaceholder => '问点什么…';
+
+  @override
+  String get guideArtist => '作者';
+
+  @override
+  String get guideArtistTab => '作者介绍';
+
+  @override
+  String get guideNotableWorks => '代表作';
+
+  @override
   String get guideNoAnswer => '（未返回回答）';
 
   @override
@@ -309,6 +333,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userDefault => '用户';
+
+  @override
+  String get guestPrefix => '游客_';
 
   @override
   String get noEmailBound => '未绑定邮箱';

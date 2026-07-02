@@ -1,5 +1,6 @@
 """从 DB 读馆藏并拼回与旧 museum_packs JSON 完全一致的形状（保接口兼容）。"""
 
+import re
 from datetime import datetime, timezone
 
 from sqlalchemy import func
@@ -39,6 +40,12 @@ def _category_label(code: str, lang: str) -> str:
     return m.get(lang) or m.get("en") or code
 
 
+def _resolve_name(i18n, language, legacy=None, final=None):
+    """多语显示名规则:i18n[lang] → 该语言的 legacy 列(兼容未 i18n 的 stub)→ final(en 兜底,永不空)。
+    避开 Joconde 脏格式(legacy 不含 artist_fr)。"""
+    return (i18n or {}).get(language) or (legacy or {}).get(language) or final
+
+
 def _pick(lang: str, zh, en, fr, fallback=""):
     """按语言选值，带回退链。zh→zh/en；fr→fr/en；其它→en/zh。"""
     if lang == "zh":
@@ -48,9 +55,56 @@ def _pick(lang: str, zh, en, fr, fallback=""):
     return en or zh or fallback
 
 
-def _split_hash(s):
-    """Joconde 多值字段用 '#' 分隔 → list；空→[]。"""
-    return [p.strip() for p in s.split("#") if p.strip()] if s else []
+def _wall_value(pack, source_prefix):
+    """从证据包取 tier=wall_label 且 source 以 source_prefix 起头的展示级值。"""
+    for fct in (pack or {}).get("facts", []):
+        if fct.get("tier") == "wall_label" and fct.get("source", "").startswith(
+            source_prefix
+        ):
+            return fct.get("value")
+    return None
+
+
+# 常见材质 → 本地化干净名(按关键词命中;未知原样)。ponytail: 覆盖主流画/雕塑材质,缺再加。
+_MEDIUM_NORM = {
+    "huile": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
+    "bronze": {"zh": "青铜", "en": "Bronze", "fr": "Bronze"},
+    "marbre": {"zh": "大理石", "en": "Marble", "fr": "Marbre"},
+    "aquarelle": {"zh": "水彩", "en": "Watercolour", "fr": "Aquarelle"},
+    "pastel": {"zh": "色粉画", "en": "Pastel", "fr": "Pastel"},
+    "gouache": {"zh": "水粉", "en": "Gouache", "fr": "Gouache"},
+    "fusain": {"zh": "炭笔", "en": "Charcoal", "fr": "Fusain"},
+    "plâtre": {"zh": "石膏", "en": "Plaster", "fr": "Plâtre"},
+}
+
+
+def _humanize_medium(raw, lang):
+    """原始材质串(多为法语 Joconde)→ 本地化干净名;未命中原样。"""
+    if not raw:
+        return None
+    low = raw.lower()
+    for kw, m in _MEDIUM_NORM.items():
+        if kw in low:
+            return m.get(lang) or m.get("en")
+    return raw
+
+
+def _humanize_dimensions(raw):
+    """Joconde 尺寸串(如 'en mètres : L. 0,55 ; H. 0,46' / 'H. 208, l. 264.5')→ '宽 × 高 cm'。
+    ponytail: 取前两个数 + 米→厘米;格式怪异则原样返回。"""
+    if not raw:
+        return None
+    nums = re.findall(r"\d+(?:[.,]\d+)?", raw)
+    if len(nums) < 2:
+        return raw
+    vals = [float(n.replace(",", ".")) for n in nums[:2]]
+    if "mètre" in raw.lower() or "metre" in raw.lower():  # 米 → 厘米
+        vals = [v * 100 for v in vals]
+
+    def _fmt(x):
+        return f"{x:.1f}".rstrip("0").rstrip(".")
+
+    return f"{_fmt(vals[0])} × {_fmt(vals[1])} cm"
 
 
 def list_museums(db: Session) -> list[dict]:
@@ -103,7 +157,10 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
             "qid": o.qid,
             # title_zh 永不为 null：富化数据常缺中文标题，回退 title_en→qid，
             # 否则前端 `title_zh as String` 强转会崩（馆藏列表整页加载失败）。
-            "title_zh": o.title_zh or o.title_en or o.qid,
+            "title_zh": (o.attributes or {}).get("title_i18n", {}).get("zh")
+            or o.title_zh
+            or o.title_en
+            or o.qid,
             "title_en": o.title_en,
             "artist_zh": o.artist_zh,
             "artist_en": o.artist_en,
@@ -167,13 +224,18 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     storage = get_object_storage()
     tabs = []
     for cs, st in mapping:
+        if cs.section_code == "artist":  # artist 段是常驻卡片,不进 tabs
+            continue
         row = bodies.get(cs.section_code)
+        body = row.body if (row and row.status == "published") else None
+        if not (body and body.strip()):
+            continue  # 动态:空/未发布模块不进 tabs(料薄优雅降级)
         tabs.append(
             {
                 "section_code": cs.section_code,
                 "label": section_label(cs.section_code, language),
                 "icon": st.icon,
-                "body": row.body if row else None,
+                "body": body,
                 "audio_url": (
                     storage.public_url(row.audio_key) if row and row.audio_key else None
                 ),
@@ -201,26 +263,71 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     facts = {
         "artist": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
         "date": obj.year,
-        "medium": attrs.get("medium_fr"),
-        "dimensions": attrs.get("dimensions"),
+        "medium": _humanize_medium(attrs.get("medium_fr"), language),
+        "dimensions": _humanize_dimensions(attrs.get("dimensions")),
         "inventory": obj.inventory_number,
         "location": _pick(language, museum.name_zh, museum.name_en, museum.name_en),
-        "provenance": attrs.get("provenance_fr"),
+        # provenance/exhibitions/bibliography 移出面板(进证据包材料级,阶段2 用),保形不删键
+        "provenance": None,
         "artist_life": None,  # ponytail: 未存作者生平，接 Wikidata 作者源后再补
-        "exhibitions": _split_hash(attrs.get("exhibitions_fr")),
-        "bibliography": _split_hash(attrs.get("bibliography_fr")),
+        "exhibitions": [],
+        "bibliography": [],
     }
+    guide_row = (
+        db.query(ObjectContentSection)
+        .filter_by(object_id=obj.id, language=language, section_code="guide")
+        .one_or_none()
+    )
+    default_guide = (
+        {
+            "body": guide_row.body,
+            "audio_url": (
+                storage.public_url(guide_row.audio_key) if guide_row.audio_key else None
+            ),
+        }
+        if guide_row and guide_row.body
+        else None
+    )
+    from app.models.artist import Artist
+
+    aqid = attrs.get("artist_qid")
+    art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
+    artist_card = {
+        "name": _resolve_name(
+            art.name_i18n if art else None,
+            language,
+            {
+                "zh": (art.name_zh if art else None) or obj.artist_zh,
+                "en": (art.name_en if art else None) or obj.artist_en,
+            },
+            (art.name_en if art else None) or obj.artist_en or obj.artist_zh,
+        ),
+        "birth": art.birth if art else None,
+        "death": art.death if art else None,
+        "nationality": art.nationality if art else None,
+        "notable_works": (art.notable_works if art else None) or [],
+        "bio": (art.bio or {}).get(language) if art else None,
+    }
+    guide_body = guide_row.body if guide_row else None
+    eff_status = obj.content_status
+    if not (guide_body and guide_body.strip()) and not tabs:
+        eff_status = "empty"
     return {
         "qid": qid,
         "category": obj.category,
         "language": language,
-        "status": obj.content_status,
-        "title": _pick(
-            language, obj.title_zh, obj.title_en, attrs.get("title_fr"), qid
+        "status": eff_status,
+        "title": _resolve_name(
+            attrs.get("title_i18n"),
+            language,
+            {"zh": obj.title_zh, "en": obj.title_en, "fr": attrs.get("title_fr")},
+            obj.title_en or obj.title_zh or obj.qid,
         ),
         "images": images,
         "facts": facts,
+        "artist": artist_card,
         "tabs": tabs,
+        "default_guide": default_guide,
         "suggested_questions": suggested,
     }
 
@@ -264,11 +371,13 @@ def list_objects(
         return img.source_url if img else None
 
     def _title(o):
-        if language == "zh":
-            return o.title_zh or o.title_en or o.qid
-        if language == "fr":
-            return (o.attributes or {}).get("title_fr") or o.title_en or o.qid
-        return o.title_en or o.title_zh or o.qid
+        a = o.attributes or {}
+        return _resolve_name(
+            a.get("title_i18n"),
+            language,
+            {"zh": o.title_zh, "en": o.title_en, "fr": a.get("title_fr")},
+            o.title_en or o.title_zh or o.qid,
+        )
 
     def _artist(o):
         if language == "zh":

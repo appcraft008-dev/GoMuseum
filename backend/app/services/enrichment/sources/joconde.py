@@ -40,6 +40,10 @@ class JocondeSource(Source):
             "bibliography_fr": f.get("bibliographie"),
             "subjects_fr": f.get("sujet_represente"),
             "period_fr": f.get("periode_de_creation"),
+            "domaine_fr": f.get("domaine"),
+            "denomination_fr": f.get("denomination"),
+            "school_fr": f.get("ecole_pays"),
+            "location_fr": f.get("localisation"),
         }
         return ObjectContribution(
             source="official", qid=qid, fields=fields, raw={"joconde": f}

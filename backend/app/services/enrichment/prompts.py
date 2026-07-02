@@ -21,20 +21,38 @@ _SYSTEM = (
 )
 
 
-def build_generation_prompt(material: str, sections: list[str], category: str):
-    from app.services.enrichment.category_config import section_role
+def build_generation_prompt(
+    material: str,
+    sections: list[str],
+    category: str,
+    guide: str | None = None,
+    popularity: int | None = None,
+):
+    from app.services.enrichment.category_config import (
+        section_role,
+        section_target_chars,
+    )
 
     lines = []
     for code in sections:
         r = section_role(code)
-        lines.append(
-            f"- {code} — {r['role']} (aim ~{r['max_chars']} Chinese-char equivalent)"
-        )
+        aim = section_target_chars(code, popularity)
+        lines.append(f"- {code} — {r['role']} (aim ~{aim} Chinese-char equivalent)")
     roles_block = "\n".join(lines)
+    guide_block = (
+        f'\nThe visitor ALREADY heard this HEADLINE guide:\n"""\n{guide}\n"""\n'
+        "Each section must go DEEPER on ITS OWN lane and add NEW material the headline did "
+        "NOT cover. Do NOT repeat the headline or other sections. If a section would only "
+        "repeat what's already said, return an empty string for it.\n"
+        if guide
+        else ""
+    )
     user = (
         f"Artwork category: {category}\n"
-        f"Write these sections (return JSON keyed by these exact codes):\n{roles_block}\n\n"
-        f"Material:\n{material}"
+        f"Write these sections (return JSON keyed by these exact codes), each staying strictly "
+        f"in its lane. Go DEEPER by unpacking concrete facts and details FROM THE MATERIAL — "
+        f"never pad or dilute with generic filler:\n{roles_block}\n{guide_block}\n"
+        f"Material (facts tagged with their lane topic):\n{material}"
     )
     return _SYSTEM, user
 
@@ -121,24 +139,84 @@ def build_faithfulness_prompt(en_body: str, translated: str, target_lang: str):
 
 _QA_SYSTEM = (
     "You write 'curious visitor' question chips for ONE artwork, using ONLY the provided "
-    "MATERIAL. The goal is to spark curiosity — NOT to quiz basic facts.\n"
+    "MATERIAL. WRITE IN ENGLISH (both question and answer) — this is the English axis; other "
+    "languages are translated later. The guide and modules ALREADY explain the work's MAIN "
+    "themes (its meaning, the controversy, the technique, the key symbols). Your job is the "
+    "OPPOSITE: surface the peripheral 'huh, I didn't know that' angles those did NOT cover.\n"
     "Rules:\n"
-    "1. NEVER ask about facts already shown on the wall label: title, artist, date/year, "
-    "museum or location, medium, dimensions, inventory number. They are visible elsewhere, "
-    "so asking them is useless noise.\n"
-    "2. Ask what a curious visitor standing in front of the work would actually ask "
-    "(why/how/who/what's the story): meaning, controversy, the people or scene depicted, "
-    "technique, anecdotes, historical context.\n"
-    "3. Grounded only: every answer must be fully supported by the material, no outside "
-    "knowledge. Better to return FEWER questions (even an empty list) than to pad with "
-    "trivia or unsupported claims.\n"
-    "4. Each answer is 1-3 sentences: a satisfying hook in your own words, not copied from "
-    "the material, and it should leave the visitor wanting to ask more.\n"
-    "Write 0 to 4 such questions. "
+    "1. NEVER ask about wall-label facts (title, artist, date/year, museum/location, medium, "
+    "dimensions, inventory) — useless noise.\n"
+    "2. Cast a WIDE net for angles NOT already told: a person's surprising backstory, a hidden "
+    "or easily-missed detail, the people/place depicted, the work's afterlife (theft, hiding, "
+    "restoration, later influence, where it travelled), the artist's connection to it, a "
+    "technical or material curiosity, a comparison or reference — any fresh, grounded angle. Do "
+    "NOT re-ask the main meaning / controversy / the same symbols the guide already explained.\n"
+    "3. When an ALREADY-COVERED block is provided, its topics are FORBIDDEN: any question whose "
+    "answer is already in it is rejected. Exhaust the peripheral angles above to reach the count; "
+    "drop below the minimum ONLY if the material truly offers nothing more — never pad by "
+    "re-asking a covered theme.\n"
+    "4. Grounded only: every answer fully supported by the material, no outside knowledge.\n"
+    "5. FORMAT (strict): `question` MUST be ONE short, genuine interrogative sentence ending in "
+    "'?' — nothing after the '?', no statement or description appended. Put ALL the substance / "
+    "explanation in `answer` (1-3 sentences, your own words, a satisfying hook). A declarative "
+    "sentence in the `question` field, or content trailing after the '?', is WRONG. Example — "
+    'GOOD: {"question": "Why did Van Gogh use so much blue and yellow here?", "answer": "In his '
+    'letters he wrote that the night is richer in colour than the day..."}. '
+    'BAD: question = "Interestingly, the couple in the foreground symbolises love..." '
+    "(a statement, no question mark).\n"
+    "Write 2 to 4 such questions (aim for 3); fewer only if the material genuinely can't support more. "
     'Return STRICT JSON: {"qa": [{"question": "...", "answer": "..."}, ...]}. No commentary.'
 )
 
 
-def build_qa_prompt(material: str, category: str):
-    user = f"Artwork category: {category}\n\nMATERIAL:\n{material}"
+def build_qa_prompt(material: str, category: str, covered: str | None = None):
+    covered_block = (
+        "\n\nALREADY COVERED (guide + modules) — these topics are FORBIDDEN; any question whose "
+        "answer is already in here will be rejected. Ask ONLY genuinely new / peripheral angles, "
+        "or return fewer:\n"
+        f'"""\n{covered}\n"""'
+        if covered
+        else ""
+    )
+    user = f"Artwork category: {category}{covered_block}\n\nMATERIAL:\n{material}"
     return _QA_SYSTEM, user
+
+
+_ARTIST_BIO_SYSTEM = (
+    "You write a concise, engaging biography of an ARTIST (the maker), using ONLY the MATERIAL. "
+    "Cover: who they were, their life and character, what drove them, their place in art history. "
+    "Write in ENGLISH (regardless of the material's language), plain prose, no headings. "
+    "~200-300 Chinese-char equivalent in length. Grounded only, no fabrication."
+)
+
+
+def build_artist_bio_prompt(material: str):
+    return _ARTIST_BIO_SYSTEM, f"MATERIAL (about the artist):\n{material}"
+
+
+_DEFAULT_GUIDE_SYSTEM = (
+    "You are a museum audio-guide writer. Write ONE short spoken on-site guide for a visitor "
+    "standing in front of the artwork, built around a SINGLE core point (one throughline) — "
+    "not a summary of everything. Structure (5 beats, flowing, not labeled): "
+    "(1) a hook that gets them looking; (2) guide them to NOTICE 1-2 concrete details; "
+    "(3) explain why those details matter; (4) add only the necessary background; "
+    "(5) end on a memory point or an open question. "
+    "Voice: colloquial, second-person, vivid storytelling that makes facts come alive "
+    "(a great popular-history narrator). You MAY freely use framing/second-person guidance "
+    "and gentle impressions clearly phrased as impression. You MUST NOT invent verifiable "
+    "facts (names, dates, events, attributions, medium, what is depicted) not in the material. "
+    "This is the HEADLINE; deep modules cover the rest, so DON'T try to cover everything. "
+    "Write in English, ONE continuous narration. Return ONLY the text, no commentary, no quotes."
+)
+
+
+def build_default_guide_prompt(
+    material: str, facts: str, target_chars: tuple[int, int]
+):
+    lo, hi = target_chars
+    user = (
+        f"Target length: ~{lo}-{hi} Chinese-character equivalent (a target, not a hard limit; "
+        f"shorter is fine if material is thin).\n\n"
+        f"Key facts:\n{facts}\n\nMaterial:\n{material}"
+    )
+    return _DEFAULT_GUIDE_SYSTEM, user

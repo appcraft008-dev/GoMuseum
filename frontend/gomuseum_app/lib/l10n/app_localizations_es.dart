@@ -188,6 +188,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get guideInfo => 'Artwork Info';
 
   @override
+  String get guideStandardTour => 'Standard tour';
+
+  @override
+  String get guideListen => 'Listen';
+
+  @override
+  String get guideDiveIn => 'Want more? Tap below';
+
+  @override
+  String get guideDeepContent => 'In depth';
+
+  @override
+  String get guideAskPlaceholder => 'Ask anything…';
+
+  @override
+  String get guideArtist => 'Artist';
+
+  @override
+  String get guideArtistTab => 'Artist';
+
+  @override
+  String get guideNotableWorks => 'Notable works';
+
+  @override
   String get guideNoAnswer => '(no answer returned)';
 
   @override
@@ -312,6 +336,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get userDefault => 'User';
+
+  @override
+  String get guestPrefix => 'Guest_';
 
   @override
   String get noEmailBound => 'No email linked';

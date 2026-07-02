@@ -210,7 +210,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _row(
             gm: gm,
             icon: GmIcons.user,
-            label: user.username ?? l10n.userDefault,
+            label: _accountName(user, l10n),
             value: user.email ?? l10n.noEmailBound,
           ),
           _row(
@@ -244,6 +244,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  /// 账户显示名。后端给游客生成的用户名带中文前缀「游客_」，非中文界面下
+  /// 换成本地化前缀（Guest_/Invité_…），保留其后的唯一后缀。纯呈现层本地化。
+  String _accountName(User user, AppLocalizations l10n) {
+    final name = user.username;
+    if (name == null) return l10n.userDefault;
+    const cnPrefix = '游客_';
+    if (name.startsWith(cnPrefix)) {
+      return '${l10n.guestPrefix}${name.substring(cnPrefix.length)}';
+    }
+    return name;
+  }
+
   Widget _row({
     required GmPalette gm,
     required GmIcons icon,
@@ -257,22 +269,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final effectiveLabelColor = labelColor ?? gm.ink;
     return InkWell(
       onTap: onTap,
-      child: SizedBox(
-        height: 48,
-        child: Row(
-          children: [
-            GmIcon(icon, size: 19, color: gm.sub),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Text(label,
-                  style: GmText.sans(size: 14, color: effectiveLabelColor)),
-            ),
-            if (value != null) ...[
-              Text(value, style: GmText.sans(size: 12.5, color: gm.sub)),
-              const SizedBox(width: 8),
+      // minHeight 而非死高：长标签（如法语"Packs de musée hors ligne"）折 2 行
+      // 时行高自增、不被裁切；单行仍保持 48。
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              GmIcon(icon, size: 19, color: gm.sub),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Text(label,
+                    style: GmText.sans(size: 14, color: effectiveLabelColor)),
+              ),
+              if (value != null) ...[
+                Text(value, style: GmText.sans(size: 12.5, color: gm.sub)),
+                const SizedBox(width: 8),
+              ],
+              if (onTap != null)
+                GmIcon(GmIcons.chevR, size: 16, color: gm.faint),
             ],
-            if (onTap != null) GmIcon(GmIcons.chevR, size: 16, color: gm.faint),
-          ],
+          ),
         ),
       ),
     );
@@ -285,15 +303,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return SizedBox(
-      height: 48,
-      child: Row(
-        children: [
-          GmIcon(icon, size: 19, color: gm.sub),
-          const SizedBox(width: 13),
-          Expanded(child: Text(label, style: GmText.sans(size: 14))),
-          GmToggle(value: value, onChanged: onChanged),
-        ],
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            GmIcon(icon, size: 19, color: gm.sub),
+            const SizedBox(width: 13),
+            Expanded(child: Text(label, style: GmText.sans(size: 14))),
+            GmToggle(value: value, onChanged: onChanged),
+          ],
+        ),
       ),
     );
   }

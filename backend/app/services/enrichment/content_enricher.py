@@ -6,7 +6,11 @@ from __future__ import annotations
 import json
 import re
 
-from app.services.enrichment.prompts import build_generation_prompt
+from app.services.enrichment.prompts import (
+    build_artist_bio_prompt,
+    build_default_guide_prompt,
+    build_generation_prompt,
+)
 
 _FACT_FIELDS = [
     ("Title", "title_en"),
@@ -45,6 +49,21 @@ def build_material(obj: dict) -> str:
         lines.append("\n[WIKIPEDIA EXTRACTS]")
         for k, v in extracts.items():
             lines.append(f"({k}) {v}")
+    artist_extracts = {
+        k: v for k, v in attrs.items() if k.startswith("artist_extract_") and v
+    }
+    if artist_extracts:
+        lines.append("\n[ABOUT THE ARTIST]")
+        for k, v in artist_extracts.items():
+            lines.append(f"({k}) {v}")
+    pack = obj.get("evidence_pack") or {}
+    rich = [
+        f for f in pack.get("facts", []) if f.get("source", "").startswith("wikidata:")
+    ]
+    if rich:
+        lines.append("\n[STRUCTURED FACTS]")
+        for f in rich:
+            lines.append(f"- ({f.get('topic', '')}) {f.get('claim')}: {f.get('value')}")
     return "\n".join(lines)
 
 
@@ -63,11 +82,17 @@ class ContentEnricher:
     def __init__(self, complete):
         self._complete = complete  # complete(system, user) -> str
 
-    def generate_canonical(self, obj: dict, sections: list[str]) -> dict:
+    def generate_canonical(
+        self, obj: dict, sections: list[str], guide: str | None = None
+    ) -> dict:
         """英语轴心：一次 LLM 调用产出请求段落。空串/未返回 → None（不发布）。"""
         material = build_material(obj)
         system, user = build_generation_prompt(
-            material, sections, obj.get("category", "unknown")
+            material,
+            sections,
+            obj.get("category", "unknown"),
+            guide=guide,
+            popularity=obj.get("popularity"),
         )
         raw = self._complete(system, user)
         parsed = _parse_json(raw)
@@ -76,6 +101,25 @@ class ContentEnricher:
             v = parsed.get(code)
             out[code] = v.strip() if isinstance(v, str) and v.strip() else None
         return out
+
+    def generate_artist_bio(self, artist_obj: dict) -> str | None:
+        parts = [
+            v for k, v in artist_obj.items() if k.startswith("artist_extract_") and v
+        ]
+        if not parts:
+            return None
+        material = "\n\n".join(parts)
+        system, user = build_artist_bio_prompt(material)
+        raw = self._complete(system, user)
+        return raw.strip() if isinstance(raw, str) and raw.strip() else None
+
+    def generate_default_guide(self, obj: dict, facts: str, target_chars) -> str | None:
+        """单主线默认讲解(纯文本)。空串→None。"""
+        material = build_material(obj)
+        system, user = build_default_guide_prompt(material, facts, target_chars)
+        raw = self._complete(system, user)
+        text = raw.strip() if isinstance(raw, str) else ""
+        return text or None
 
 
 def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:

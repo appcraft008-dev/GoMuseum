@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
@@ -24,6 +25,7 @@ def session():
             ObjectImage.__table__,
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -38,7 +40,7 @@ def session():
 
 
 class _FakeEnricher:
-    def generate_canonical(self, obj, sections):
+    def generate_canonical(self, obj, sections, guide=None):
         return {"overview": "EN overview."}
 
 
@@ -56,6 +58,9 @@ class _FakeGate:
 
 
 class _FakeTranslator:
+    def translate_section(self, t, lang):
+        return t + "_" + lang
+
     def translate_object(self, en_sections, target_langs):
         return {
             "fr": {
@@ -146,7 +151,7 @@ def test_generate_museum_unknown_slug(session):
 
 
 class _FakeQA:
-    def suggest(self, material, facts, category, target_langs):
+    def suggest(self, material, facts, category, target_langs, covered=None):
         return {
             "en": [{"question": "Q?", "answer": "A.", "status": "published"}],
             "fr": [{"question": "Q-fr?", "answer": "A-fr.", "status": "published"}],
@@ -189,6 +194,89 @@ def test_generate_object_without_qa_suggester_unchanged(session):
     )
     assert "qa" not in out
     assert session.query(ObjectSuggestedQuestion).count() == 0
+
+
+def test_generate_object_produces_guide_section(session):
+    from app.models.content import ObjectContentSection
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    class _GuideEnricher(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "Guide hook. Notice the eyes."
+
+    class _GuideGate(_FakeGate):
+        def check_section(self, material, facts, body):
+            return SectionQuality(
+                body=body,
+                status="published",
+                grounding_ratio=1.0,
+                conflicts=[],
+                score=1.0,
+            )
+
+    class _GuideTranslator(_FakeTranslator):
+        def translate_object(self, en_sections, target_langs):
+            return {
+                "fr": {
+                    c: SectionQuality(
+                        body="FR " + b,
+                        status="published",
+                        grounding_ratio=1.0,
+                        conflicts=[],
+                        score=1.0,
+                    )
+                    for c, b in en_sections.items()
+                }
+            }
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_GuideEnricher(),
+        gate=_GuideGate(),
+        translator=_GuideTranslator(),
+        target_langs=["en", "fr"],
+        model="m",
+    )
+    rows = {
+        (r.language, r.section_code): r
+        for r in session.query(ObjectContentSection).all()
+    }
+    assert rows[("en", "guide")].body == "Guide hook. Notice the eyes."
+    assert rows[("fr", "guide")].body.startswith("FR ")
+
+
+def test_generate_object_passes_guide_into_canonical(session):
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    seen = {}
+
+    class _Enr(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "HEADLINE."
+
+        def generate_canonical(self, obj, sections, guide=None):
+            seen["guide"] = guide
+            return {"artist": "A."}
+
+    class _G(_FakeGate):
+        def check_section(self, m, f, b):
+            return SectionQuality(
+                body=b, status="published", grounding_ratio=1.0, conflicts=[], score=1.0
+            )
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_G(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert seen["guide"] == "HEADLINE."  # 模块拿到了先生成的头条
 
 
 class _FakeRegistry:
@@ -271,6 +359,52 @@ def test_generate_object_marks_empty_when_nothing_published(session):
     assert o.content_status == "empty"
 
 
+def test_generate_object_builds_evidence_pack(session):
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"extract_en": "work text"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    o2 = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o2.evidence_pack is not None
+    assert any(n["source"] == "wikipedia:work" for n in o2.evidence_pack["narrative"])
+
+
+def test_generate_object_stores_artist_facts(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_facts",
+        lambda qid: {"artist_birth": "1832", "artist_nationality": "France"},
+    )
+    generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes.get("artist_birth") == "1832"
+    assert o.attributes.get("artist_nationality") == "France"
+
+
 def test_generate_object_no_registry_skips_material_fetch(session):
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
@@ -291,3 +425,200 @@ def test_generate_object_no_registry_skips_material_fetch(session):
     assert (
         session.query(MuseumObject).filter_by(qid="Q1").one().content_status == "ready"
     )
+
+
+def test_generate_object_passes_covered_to_qa(session):
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    seen = {}
+
+    class _QA:
+        def suggest(self, material, facts, category, target_langs, covered=None):
+            seen["covered"] = covered
+            return {"en": []}
+
+    class _Enr(_FakeEnricher):
+        def generate_canonical(self, obj, sections, guide=None):
+            return {"background": "深度背景正文。"}
+
+    class _G(_FakeGate):
+        def gate(self, material, facts, draft):
+            return {
+                code: SectionQuality(
+                    body=b,
+                    status="published",
+                    grounding_ratio=1.0,
+                    conflicts=[],
+                    score=1.0,
+                )
+                for code, b in draft.items()
+            }
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_G(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        qa_suggester=_QA(),
+    )
+    assert seen["covered"] and "深度背景正文" in seen["covered"]
+
+
+def test_generate_object_creates_and_reuses_artist(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_facts",
+        lambda qid: {"artist_qid": "Q296", "artist_birth": "1853"},
+    )
+    calls = {"n": 0}
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            calls["n"] += 1
+            return "梵高生平。"
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_extract_en": "Van Gogh..."}
+    session.commit()
+    common = dict(
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    generate_object(session, "Q1", **common)
+    art = session.query(Artist).filter_by(qid="Q296").one()
+    assert art.bio and art.birth == "1853"
+    assert (
+        session.query(MuseumObject)
+        .filter_by(qid="Q1")
+        .one()
+        .attributes.get("artist_qid")
+        == "Q296"
+    )
+    # 再跑一次(同作者已存在)→ 不再调 generate_artist_bio
+    generate_object(session, "Q1", **common)
+    assert calls["n"] == 1
+
+
+def test_generate_object_translates_missing_artist_name_zh(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q7"})
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            return "bio。"
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_zh = None
+    o.artist_en = "Alfred Sisley"
+    o.attributes = {"artist_extract_en": "x"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q7").one()
+    assert (
+        art.name_zh and "Alfred Sisley" in art.name_zh
+    )  # _FakeTranslator 回显 → 证明翻译被调
+
+
+def test_generate_fills_title_and_artist_name_i18n(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q7"})
+    # work Q1: fr 权威有、de 无(翻译兜底);artist Q7: 无权威(翻译兜底)
+    monkeypatch.setattr(
+        pl,
+        "_wikidata_labels",
+        lambda qid, langs: {"fr": "La Nuit"} if qid != "Q7" else {},
+    )
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, o):
+            return "bio。"
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.title_en = "Starry Night"
+    o.artist_en = "Van Gogh"
+    o.attributes = {"artist_extract_en": "x"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "fr", "de"],
+        model="m",
+        registry=_FakeRegistry(),
+        force=True,
+    )
+    o2 = session.query(MuseumObject).filter_by(qid="Q1").one()
+    ti = o2.attributes.get("title_i18n") or {}
+    assert ti["fr"] == "La Nuit"  # 权威优先
+    assert "Starry Night" in ti["de"]  # de 无权威→翻译兜底(_FakeTranslator 回显含原文)
+    ni = session.query(Artist).filter_by(qid="Q7").one().name_i18n or {}
+    assert "Van Gogh" in ni["fr"]  # 作者无权威→翻译兜底
+
+
+def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q9"})
+    calls = {"n": 0}
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            calls["n"] += 1
+            return "bio v%d。" % calls["n"]
+
+    # 预置一条旧 Artist(bio 含旧 en + fr)
+    session.add(Artist(qid="Q9", name_en="X", bio={"en": "old wrong", "fr": "fr bio"}))
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "X"
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+        force=True,
+    )
+    art = session.query(Artist).filter_by(qid="Q9").one()
+    assert calls["n"] == 1  # force 刷新了 bio
+    assert art.bio["en"] == "bio v1。"  # en 更新
+    assert art.bio["fr"] == "fr bio"  # 其它语种保留(合并)

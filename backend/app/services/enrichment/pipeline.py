@@ -10,12 +10,43 @@ from app.services.content_repo import (
     persist_gated_sections,
     persist_suggested_questions,
 )
-from app.services.enrichment.category_config import sections_for
+from app.services.enrichment.category_config import guide_target_chars, sections_for
 from app.services.enrichment.content_enricher import build_material
 from app.services.enrichment.material import fetch_object_material
 
 # 标"Creation year"消歧：避免 fact-consistency 判官把首展/收购/修复年误判为与创作年冲突。
 _FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
+
+
+def _artist_facts(qid):
+    """薄包装：调结构化作者属性获取（测试 monkeypatch 此处避免触网）。"""
+    from app.services.enrichment.material import fetch_artist_facts
+
+    return fetch_artist_facts(qid)
+
+
+def _wikidata_labels(qid, langs):
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    return fetch_wikidata_labels(qid, langs)
+
+
+def _fill_i18n(existing, en_name, labels, langs, translator):
+    """权威标签优先,缺则从 en 翻译,en 兜底。返回 {lang: name}。"""
+    out = dict(existing or {})
+    if en_name:
+        out.setdefault("en", en_name)
+    for lang in langs:
+        if out.get(lang):
+            continue
+        if labels.get(lang):
+            out[lang] = labels[lang]
+        elif lang != "en" and en_name and hasattr(translator, "translate_section"):
+            try:
+                out[lang] = translator.translate_section(en_name, lang)
+            except Exception:
+                pass
+    return out
 
 
 def _row_to_obj(o) -> dict:
@@ -26,6 +57,8 @@ def _row_to_obj(o) -> dict:
         "year": o.year,
         "category": o.category,
         "attributes": o.attributes or {},
+        "evidence_pack": getattr(o, "evidence_pack", None),
+        "popularity": getattr(o, "popularity", None),
     }
 
 
@@ -80,12 +113,131 @@ def generate_object(
             o.attributes = {**attrs, **fetched}
             db.flush()
 
+    if registry is not None:
+        try:
+            wlabels = _wikidata_labels(o.qid, target_langs)
+            ti = _fill_i18n(
+                (o.attributes or {}).get("title_i18n"),
+                o.title_en,
+                wlabels,
+                target_langs,
+                translator,
+            )
+            o.attributes = {**(o.attributes or {}), "title_i18n": ti}
+            if ti.get("zh") and not o.title_zh:
+                o.title_zh = ti["zh"]
+            db.flush()
+        except Exception:
+            pass
+
+        from app.services.enrichment.material import fetch_artist_material
+
+        # ponytail: country_lang 暂硬编 fr，多馆从馆配置取
+        # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
+        try:
+            artist_mat = fetch_artist_material(o.qid, registry, country_lang="fr")
+        except Exception:
+            artist_mat = {}
+        if artist_mat:
+            o.attributes = {**(o.attributes or {}), **artist_mat}
+            db.flush()
+
+        try:
+            af = _artist_facts(o.qid)
+        except Exception:
+            af = {}
+        if af:
+            o.attributes = {**(o.attributes or {}), **af}
+            db.flush()
+
+        aqid = (af or {}).get("artist_qid")
+        if aqid:
+            o.attributes = {**(o.attributes or {}), "artist_qid": aqid}
+            db.flush()
+            from app.models.artist import Artist
+
+            art = db.query(Artist).filter_by(qid=aqid).first()
+            if art is None or force:  # force 时刷新已存作者(修 bio 语言/补语种)
+                bio_en = (
+                    enricher.generate_artist_bio(o.attributes)
+                    if hasattr(enricher, "generate_artist_bio")
+                    else None
+                )
+                bios = {}
+                if bio_en:
+                    bios["en"] = bio_en
+                    for lang in target_langs:
+                        if lang != "en":
+                            try:
+                                bios[lang] = translator.translate_section(bio_en, lang)
+                            except Exception:
+                                pass
+                if art is None:
+                    art = Artist(qid=aqid)
+                    db.add(art)
+                art.name_en = o.artist_en
+                # 中文名缺(Wikidata 无 zh 标签)→ 翻译补,同标题机制
+                name_zh = o.artist_zh
+                if (
+                    not name_zh
+                    and o.artist_en
+                    and hasattr(translator, "translate_section")
+                ):
+                    try:
+                        name_zh = translator.translate_section(o.artist_en, "zh")
+                    except Exception:
+                        name_zh = None
+                art.name_zh = name_zh
+                try:
+                    alabels = _wikidata_labels(aqid, target_langs)
+                    art.name_i18n = _fill_i18n(
+                        art.name_i18n, o.artist_en, alabels, target_langs, translator
+                    )
+                except Exception:
+                    pass
+                art.birth = af.get("artist_birth")
+                art.death = af.get("artist_death")
+                art.nationality = af.get("artist_nationality")
+                art.notable_works = af.get("artist_notable_works")
+                if bios:
+                    art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
+                db.flush()
+
+    if not o.title_zh and o.title_en and hasattr(translator, "translate_section"):
+        try:
+            o.title_zh = translator.translate_section(o.title_en, "zh")
+            db.flush()
+        except Exception:
+            pass
+
     obj = _row_to_obj(o)
     material = build_material(obj)
     facts = _facts_text(obj)
+
+    # 证据包:缺则建并落库(内容生成材料底座;阶段2 才切到它生成)。网络/LLM 抖动不拖垮。
+    # Wikidata 富属性按 registry 门控:registry 在=真实生成(走网络);无=测试/离线(no-op,不触网)。
+    if o.evidence_pack is None or force:
+        from app.services.enrichment.evidence import build_evidence_pack
+
+        ev_run_query = None if registry is not None else (lambda _sparql: [])
+        try:
+            o.evidence_pack = build_evidence_pack(
+                {**obj, "qid": o.qid}, run_query=ev_run_query, complete=None
+            )
+            db.flush()
+        except Exception:
+            pass
+
     sections = sections_for(o.category)
 
-    draft = enricher.generate_canonical(obj, sections)
+    # 头条(默认讲解)先生成,作为模块去重锚:模块带着头条去重,避免与头条重复。
+    guide_text = (
+        enricher.generate_default_guide(obj, facts, guide_target_chars(o.popularity))
+        if hasattr(enricher, "generate_default_guide")
+        else None
+    )
+
+    draft = enricher.generate_canonical(obj, sections, guide=guide_text)
     gated_en = gate.gate(material, facts, draft)
     pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
     o.content_status = "ready" if pub_en > 0 else "empty"
@@ -96,6 +248,13 @@ def generate_object(
         for code, r in gated_en.items()
         if r.status == "published" and r.body
     }
+    # 默认讲解(单主线):上面已生成→三类闸→并入英语已发布集,随后随其它段统一翻译落库
+    if guide_text:
+        gq = gate.check_section(material, facts, guide_text)
+        persist_gated_sections(db, qid, "en", {"guide": gq}, model)
+        if gq.status == "published" and gq.body:
+            en_published["guide"] = gq.body
+
     by_lang = translator.translate_object(en_published, target_langs)
 
     counts = {"en": (pub_en, nr_en)}
@@ -103,7 +262,10 @@ def generate_object(
         counts[lang] = persist_gated_sections(db, qid, lang, results, model)
     result = {"qid": qid, "counts": counts}
     if qa_suggester is not None:
-        qa_by_lang = qa_suggester.suggest(material, facts, o.category, target_langs)
+        covered = "\n\n".join(v for v in en_published.values() if v)
+        qa_by_lang = qa_suggester.suggest(
+            material, facts, o.category, target_langs, covered=covered
+        )
         result["qa"] = {
             lang: persist_suggested_questions(db, qid, lang, items, model)
             for lang, items in qa_by_lang.items()

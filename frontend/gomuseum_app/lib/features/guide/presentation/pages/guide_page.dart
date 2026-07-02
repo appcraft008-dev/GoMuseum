@@ -23,6 +23,10 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_explanati
 import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
+import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_sheet.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -103,20 +107,11 @@ class _GuidePageState extends ConsumerState<GuidePage>
   // ── shared
   bool _starred = false;
 
-  // ── A5 path: tab controller
-  TabController? _tabController;
-  int _tabIndex = 0;
-
-  // ── A5 path: TTS per tab
-  final TtsService _tts = TtsService();
-  bool _audioLoading = false;
-  bool _audioReady = false;
-  static const _speeds = [1.0, 1.25, 1.5, 0.75];
-  int _speedIndex = 0;
-  String? _currentAudioUrl;
-
   // ── A5 path: facts accordion
   bool _factsExpanded = false;
+
+  // 朗读倍速档位（legacy 识别路径用）
+  static const _speeds = [1.0, 1.25, 1.5, 0.75];
 
   // ── A5 path: generating poll
   Timer? _pollTimer;
@@ -147,8 +142,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
   @override
   void dispose() {
     _pollTimer?.cancel();
-    _tabController?.dispose();
-    _tts.dispose();
     _legacyTts.dispose();
     _questionController.dispose();
     _scrollController.dispose();
@@ -166,59 +159,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
   void _stopPolling() {
     _pollTimer?.cancel();
     _pollTimer = null;
-  }
-
-  // ── A5: build/rebuild TabController when tab count changes
-  void _syncTabController(int count) {
-    if (_tabController?.length != count) {
-      _tabController?.dispose();
-      _tabController = TabController(length: count, vsync: this);
-      _tabIndex = 0;
-      _tabController!.addListener(() {
-        if (!_tabController!.indexIsChanging) {
-          setState(() => _tabIndex = _tabController!.index);
-        }
-      });
-    }
-  }
-
-  // ── A5: TTS for current tab
-  Future<void> _toggleTabPlay(String url) async {
-    if (_tts.isPlaying && _currentAudioUrl == url) {
-      await _tts.pause();
-      setState(() {});
-      return;
-    }
-    if (_currentAudioUrl == url && _audioReady) {
-      await _tts.resume();
-      setState(() {});
-      return;
-    }
-    if (_audioLoading) return;
-
-    // switching tabs → stop previous
-    await _tts.stop();
-    setState(() {
-      _audioLoading = true;
-      _audioReady = false;
-      _currentAudioUrl = url;
-    });
-    try {
-      await _tts.play(url);
-      if (mounted) {
-        setState(() {
-          _audioLoading = false;
-          _audioReady = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _audioLoading = false);
-    }
-  }
-
-  Future<void> _cycleSpeed() async {
-    setState(() => _speedIndex = (_speedIndex + 1) % _speeds.length);
-    await _tts.setSpeed(_speeds[_speedIndex]);
   }
 
   // ── Legacy path methods ──────────────────────────────────────────────────
@@ -411,9 +351,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
           return _A5EmptyScaffold(gm: gm, onBack: () => _goBack(context));
         }
 
-        // Ready: full rendering
-        _syncTabController(content.tabs.length);
-
+        // Ready: full rendering（分层导览）
         return Scaffold(
           backgroundColor: gm.bg,
           body: NestedScrollView(
@@ -427,21 +365,12 @@ class _GuidePageState extends ConsumerState<GuidePage>
             ],
             body: _A5Body(
               content: content,
-              tabController: _tabController,
-              tabIndex: _tabIndex,
-              tts: _tts,
-              audioLoading: _audioLoading,
-              audioReady: _audioReady,
-              currentAudioUrl: _currentAudioUrl,
-              speedIndex: _speedIndex,
-              speeds: _speeds,
               factsExpanded: _factsExpanded,
               onToggleFacts: () =>
                   setState(() => _factsExpanded = !_factsExpanded),
-              onToggleTabPlay: _toggleTabPlay,
-              onCycleSpeed: _cycleSpeed,
             ),
           ),
+          bottomNavigationBar: const _AskBar(),
         );
       },
     );
@@ -679,7 +608,8 @@ class _GuidePageState extends ConsumerState<GuidePage>
     final highlight = [e.artisticAnalysis, e.culturalSignificance]
         .where((s) => s.trim().isNotEmpty)
         .join('\n\n');
-    final paragraphStyle = GmText.sans(size: 13.5, height: 1.9);
+    final paragraphStyle =
+        GmText.sans(size: 13.5, height: context.gmBodyHeight);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1134,93 +1064,151 @@ class _HeroPlaceholder extends StatelessWidget {
 // Main scrollable body (wall label + facts + tabs + AI shell)
 // ---------------------------------------------------------------------------
 
+/// 分层导览主体：标准导览主角 + 就地展开问题 + 深度内容门票。
+/// 作为 NestedScrollView 的 body（滚动内容）；底部追问栏由 Scaffold 固定。
 class _A5Body extends StatelessWidget {
   const _A5Body({
     required this.content,
-    required this.tabController,
-    required this.tabIndex,
-    required this.tts,
-    required this.audioLoading,
-    required this.audioReady,
-    required this.currentAudioUrl,
-    required this.speedIndex,
-    required this.speeds,
     required this.factsExpanded,
     required this.onToggleFacts,
-    required this.onToggleTabPlay,
-    required this.onCycleSpeed,
   });
 
   final ObjectContent content;
-  final TabController? tabController;
-  final int tabIndex;
-  final TtsService tts;
-  final bool audioLoading;
-  final bool audioReady;
-  final String? currentAudioUrl;
-  final int speedIndex;
-  final List<double> speeds;
   final bool factsExpanded;
   final VoidCallback onToggleFacts;
-  final Future<void> Function(String url) onToggleTabPlay;
-  final Future<void> Function() onCycleSpeed;
 
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    final layer = GuideLayering.from(content);
 
     return SingleChildScrollView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Wall label
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-            child: _WallLabel(facts: content.facts),
-          ),
-          const SizedBox(height: 2),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(height: 1, color: gm.line),
-          ),
-          const SizedBox(height: 4),
-
-          // Facts accordion
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _FactsAccordion(
-              facts: content.facts,
-              expanded: factsExpanded,
-              onToggle: onToggleFacts,
-            ),
-          ),
+          _WallLabel(facts: content.facts),
           const SizedBox(height: 8),
           Container(height: 1, color: gm.line),
+          _FactsAccordion(
+            facts: content.facts,
+            expanded: factsExpanded,
+            onToggle: onToggleFacts,
+          ),
+          Container(height: 1, color: gm.line),
 
-          // Tabs
-          if (content.tabs.isNotEmpty && tabController != null) ...[
-            _TabBar(tabController: tabController!, tabs: content.tabs),
-            Container(height: 1, color: gm.line),
-            _TabContent(
-              tabs: content.tabs,
-              tabIndex: tabIndex,
-              tts: tts,
-              audioLoading: audioLoading,
-              audioReady: audioReady,
-              currentAudioUrl: currentAudioUrl,
-              speedIndex: speedIndex,
-              speeds: speeds,
-              onToggleTabPlay: onToggleTabPlay,
-              onCycleSpeed: onCycleSpeed,
+          // ◆ 标准导览（主角）
+          Padding(
+            padding: const EdgeInsets.only(top: 18),
+            child: Row(children: [
+              Text('◆  ${l10n.guideStandardTour}',
+                  style: GmText.serif(
+                      size: 12.5,
+                      weight: FontWeight.w700,
+                      color: gm.accentDeep,
+                      letterSpacing: 2)),
+              const SizedBox(width: 10),
+              Expanded(child: Container(height: 1, color: gm.line)),
+            ]),
+          ),
+          GuideAudioBar(audioUrl: layer.heroAudioUrl),
+          const SizedBox(height: 14),
+          if (layer.hasHero)
+            Text(layer.heroBody,
+                style: GmText.sans(size: 13.5, height: context.gmBodyHeight),
+                textAlign: TextAlign.justify)
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(l10n.toBeRefined,
+                  textAlign: TextAlign.center,
+                  style: GmText.sans(size: 13, color: gm.faint)),
             ),
+
+          // ── 想深入？点一下 ──
+          if (content.suggestedQuestions.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: Row(children: [
+                Expanded(child: Container(height: 1, color: gm.line)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 9),
+                  child: Text(l10n.guideDiveIn,
+                      style: GmText.sans(
+                          size: 10.5, color: gm.faint, letterSpacing: 1.2)),
+                ),
+                Expanded(child: Container(height: 1, color: gm.line)),
+              ]),
+            ),
+            const SizedBox(height: 4),
+            GuideQuestionList(questions: content.suggestedQuestions),
           ],
 
-          // TODO(session-B): AiChatSheet 挂载点 — 多轮对话 A6 + 朗读 A8 + 报错 A7
-          _AiChatShell(suggestedQuestions: content.suggestedQuestions),
-
-          const SizedBox(height: 24),
+          // 📖 深度内容 → 底部抽屉（「作者介绍」为首位 tab，必选常驻）。
+          // 入口条件放宽：有深度 tab 或有作者都露出；数字含作者 tab。
+          if (layer.hasDeep || content.artist != null)
+            Builder(builder: (context) {
+              final hasArtist =
+                  content.artist != null && content.artist!.name.isNotEmpty;
+              final sheetTabCount = layer.deepCount + (hasArtist ? 1 : 0);
+              return Padding(
+                padding: const EdgeInsets.only(top: 18),
+                child: GmTicketButton(
+                  label: '${l10n.guideDeepContent}（$sheetTabCount）',
+                  icon: GmIcons.doc,
+                  trailingIcon: GmIcons.arrowR,
+                  onTap: () => showGuideDeepSheet(context, layer.deepTabs,
+                      artist: content.artist),
+                ),
+              );
+            }),
         ],
+      ),
+    );
+  }
+}
+
+/// 底部常驻追问栏（静态壳；多轮对话留给后续 session B）。
+class _AskBar extends StatelessWidget {
+  const _AskBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      decoration: BoxDecoration(
+        color: gm.bg,
+        border: Border(top: BorderSide(color: gm.line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 9, 20, 14),
+          child: Row(children: [
+            Expanded(
+              child: Container(
+                height: 44,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                decoration: BoxDecoration(
+                    color: gm.surface, border: Border.all(color: gm.line)),
+                child: Text(l10n.guideAskPlaceholder,
+                    style: GmText.sans(size: 13, color: gm.faint)),
+              ),
+            ),
+            const SizedBox(width: 9),
+            Container(
+              width: 44,
+              height: 44,
+              decoration:
+                  BoxDecoration(color: gm.ctaBg, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: GmIcon(GmIcons.mic, size: 18, color: gm.ctaInk),
+            ),
+          ]),
+        ),
       ),
     );
   }
@@ -1379,313 +1367,6 @@ class _FactRowWidget extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Tabs bar
-// ---------------------------------------------------------------------------
-
-class _TabBar extends StatelessWidget {
-  const _TabBar({required this.tabController, required this.tabs});
-  final TabController tabController;
-  final List<ObjectTab> tabs;
-
-  @override
-  Widget build(BuildContext context) {
-    final gm = context.gm;
-    return Material(
-      color: gm.bg,
-      child: TabBar(
-        controller: tabController,
-        isScrollable: tabs.length > 3,
-        labelStyle: GmText.serif(size: 12.5, weight: FontWeight.w700),
-        unselectedLabelStyle: GmText.serif(size: 12.5, weight: FontWeight.w400),
-        labelColor: gm.accentDeep,
-        unselectedLabelColor: gm.sub,
-        indicatorColor: gm.accent,
-        indicatorWeight: 2.5,
-        dividerColor: Colors.transparent,
-        tabs: [for (final t in tabs) Tab(text: t.label)],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Tab content (body text + TTS player per tab)
-// ---------------------------------------------------------------------------
-
-class _TabContent extends StatelessWidget {
-  const _TabContent({
-    required this.tabs,
-    required this.tabIndex,
-    required this.tts,
-    required this.audioLoading,
-    required this.audioReady,
-    required this.currentAudioUrl,
-    required this.speedIndex,
-    required this.speeds,
-    required this.onToggleTabPlay,
-    required this.onCycleSpeed,
-  });
-
-  final List<ObjectTab> tabs;
-  final int tabIndex;
-  final TtsService tts;
-  final bool audioLoading;
-  final bool audioReady;
-  final String? currentAudioUrl;
-  final int speedIndex;
-  final List<double> speeds;
-  final Future<void> Function(String url) onToggleTabPlay;
-  final Future<void> Function() onCycleSpeed;
-
-  @override
-  Widget build(BuildContext context) {
-    final gm = context.gm;
-    if (tabIndex >= tabs.length) return const SizedBox.shrink();
-    final tab = tabs[tabIndex];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // TTS player (only if tab has audio_url)
-          if (tab.audioUrl != null)
-            _TtsPlayer(
-              tts: tts,
-              audioUrl: tab.audioUrl!,
-              audioLoading: audioLoading,
-              audioReady: audioReady,
-              currentAudioUrl: currentAudioUrl,
-              speedIndex: speedIndex,
-              speeds: speeds,
-              onTogglePlay: () => onToggleTabPlay(tab.audioUrl!),
-              onCycleSpeed: onCycleSpeed,
-            ),
-          if (tab.audioUrl != null) const SizedBox(height: 12),
-
-          // Body text
-          if (tab.hasBody)
-            Text(
-              tab.body!,
-              style: GmText.sans(size: 13.5, height: 1.9),
-              textAlign: TextAlign.justify,
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text(AppLocalizations.of(context)!.toBeRefined,
-                  style: GmText.sans(size: 13, color: gm.faint),
-                  textAlign: TextAlign.center),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TtsPlayer extends StatelessWidget {
-  const _TtsPlayer({
-    required this.tts,
-    required this.audioUrl,
-    required this.audioLoading,
-    required this.audioReady,
-    required this.currentAudioUrl,
-    required this.speedIndex,
-    required this.speeds,
-    required this.onTogglePlay,
-    required this.onCycleSpeed,
-  });
-
-  final TtsService tts;
-  final String audioUrl;
-  final bool audioLoading;
-  final bool audioReady;
-  final String? currentAudioUrl;
-  final int speedIndex;
-  final List<double> speeds;
-  final VoidCallback onTogglePlay;
-  final Future<void> Function() onCycleSpeed;
-
-  bool get _isThisTab => currentAudioUrl == audioUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final gm = context.gm;
-    return StreamBuilder<Duration>(
-      stream: tts.positionStream,
-      builder: (context, posSnap) {
-        return StreamBuilder<Duration?>(
-          stream: tts.durationStream,
-          builder: (context, durSnap) {
-            final position =
-                (_isThisTab ? posSnap.data : null) ?? Duration.zero;
-            final duration =
-                (_isThisTab ? durSnap.data : null) ?? Duration.zero;
-            final progress = duration.inMilliseconds == 0
-                ? 0.0
-                : (position.inMilliseconds / duration.inMilliseconds)
-                    .clamp(0.0, 1.0);
-
-            return Row(children: [
-              GestureDetector(
-                onTap: onTogglePlay,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration:
-                      BoxDecoration(color: gm.ctaBg, shape: BoxShape.circle),
-                  alignment: Alignment.center,
-                  child: (_isThisTab && audioLoading)
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: gm.ctaInk))
-                      : StreamBuilder<PlayerState>(
-                          stream: tts.playerStateStream,
-                          builder: (context, snap) {
-                            final playing =
-                                _isThisTab && (snap.data?.playing ?? false);
-                            return GmIcon(
-                                playing ? GmIcons.pause : GmIcons.play,
-                                size: 18,
-                                color: gm.ctaInk,
-                                strokeWidth: 2);
-                          }),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                  child: Column(children: [
-                Stack(clipBehavior: Clip.none, children: [
-                  Container(height: 2, color: gm.line),
-                  FractionallySizedBox(
-                      widthFactor: progress,
-                      child: Container(height: 2, color: gm.accent)),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: -3.5,
-                    child: Align(
-                      alignment: Alignment(progress * 2 - 1, 0),
-                      child: Container(
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                              color: gm.accentDeep, shape: BoxShape.circle)),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 7),
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(_formatDuration(position),
-                          style: GmText.sans(size: 11, color: gm.sub)),
-                      Text(_formatDuration(duration),
-                          style: GmText.sans(size: 11, color: gm.sub)),
-                    ]),
-              ])),
-              const SizedBox(width: 14),
-              GestureDetector(
-                onTap: onCycleSpeed,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: gm.surface,
-                      border: Border.all(color: gm.line),
-                      borderRadius: BorderRadius.circular(999)),
-                  child: Text('${speeds[speedIndex]}×',
-                      style: GmText.sans(size: 11.5, color: gm.sub)),
-                ),
-              ),
-            ]);
-          },
-        );
-      },
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// AI chat static shell (Session B mounts the real sheet here)
-// ---------------------------------------------------------------------------
-
-// TODO(session-B): AiChatSheet 挂载点 — 多轮对话 A6 + 朗读 A8 + 报错 A7
-// Session B: replace _AiChatShell with AiChatSheet widget from
-//   lib/features/guide/presentation/widgets/ai_chat_sheet.dart
-class _AiChatShell extends StatelessWidget {
-  const _AiChatShell({required this.suggestedQuestions});
-  final List<SuggestedQuestion> suggestedQuestions;
-
-  @override
-  Widget build(BuildContext context) {
-    final gm = context.gm;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(height: 1, color: gm.line),
-        const SizedBox(height: 10),
-
-        // Suggested question chips (static, no-op taps for now)
-        if (suggestedQuestions.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final sq in suggestedQuestions)
-                  GestureDetector(
-                    onTap: () {
-                      // TODO(session-B): 触发多轮对话
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
-                      color: gm.chipBg,
-                      child: Text(sq.question,
-                          style: GmText.sans(size: 12, color: gm.ink)),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-        const SizedBox(height: 10),
-
-        // Input affordance (static)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          child: Row(children: [
-            Expanded(
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                decoration: BoxDecoration(
-                    color: gm.surface, border: Border.all(color: gm.line)),
-                alignment: Alignment.centerLeft,
-                child: Text(AppLocalizations.of(context)!.guideAskShort,
-                    style: GmText.sans(size: 13.5, color: gm.faint)),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              width: 46,
-              height: 46,
-              color: gm.ctaBg,
-              alignment: Alignment.center,
-              child: GmIcon(GmIcons.mic, size: 20, color: gm.ctaInk),
-            ),
-          ]),
-        ),
-      ],
     );
   }
 }

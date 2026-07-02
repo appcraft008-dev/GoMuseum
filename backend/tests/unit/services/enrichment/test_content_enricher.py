@@ -99,3 +99,163 @@ def test_generate_canonical_uses_role_prompt_and_parses():
     assert out["overview"] == "A grounded hook." and out["background"] == "The story."
     # 角色注入到了 prompt
     assert "hook" in captured["user"].lower() and "story" in captured["user"].lower()
+
+
+def test_generate_default_guide_returns_text_with_length_target():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    captured = {}
+
+    def fake(system, user):
+        captured["user"] = user
+        return "A single-throughline guide. Notice the eyes. Remember this."
+
+    enr = ContentEnricher(complete=fake)
+    out = enr.generate_default_guide(
+        {
+            "qid": "Q1",
+            "title_en": "X",
+            "category": "painting",
+            "attributes": {"extract_en": "Foo."},
+        },
+        facts="- Title: X",
+        target_chars=(270, 420),
+    )
+    assert "Notice the eyes" in out
+    assert "270" in captured["user"] and "420" in captured["user"]
+
+
+def test_generate_default_guide_empty_returns_none():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    enr = ContentEnricher(complete=lambda s, u: "   ")
+    assert (
+        enr.generate_default_guide(
+            {"qid": "Q1", "category": "painting", "attributes": {}}, "", (270, 420)
+        )
+        is None
+    )
+
+
+def test_build_material_includes_artist_extract():
+    from app.services.enrichment.content_enricher import build_material
+
+    mat = build_material(
+        {
+            "qid": "Q1",
+            "title_en": "X",
+            "category": "painting",
+            "attributes": {
+                "artist_extract_en": "Courbet was a French realist painter."
+            },
+        }
+    )
+    assert "Courbet was a French realist painter." in mat
+    assert "ARTIST" in mat or "artist" in mat.lower()
+
+
+def test_build_material_renders_evidence_pack_rich_facts():
+    from app.services.enrichment.content_enricher import build_material
+
+    obj = {
+        "qid": "Q1",
+        "title_en": "X",
+        "category": "painting",
+        "attributes": {"extract_en": "narrative"},
+        "evidence_pack": {
+            "facts": [
+                {
+                    "claim": "委托人",
+                    "value": "Khalil Bey",
+                    "source": "wikidata:P88",
+                    "topic": "background",
+                },
+                {
+                    "claim": "描绘内容",
+                    "value": "female nude",
+                    "source": "wikidata:P180",
+                    "topic": "analysis",
+                },
+                {
+                    "claim": "材质",
+                    "value": "oil paint",
+                    "source": "joconde:medium_fr",
+                    "topic": "analysis",
+                },
+            ],
+            "narrative": [],
+            "flagged": [],
+        },
+    }
+    mat = build_material(obj)
+    assert "Khalil Bey" in mat and "female nude" in mat
+    assert "background" in mat.lower()  # 富属性带 topic 分组提示
+    # joconde 来源的不在 STRUCTURED FACTS 块(避免与 attributes 重复;只渲染 wikidata 富属性)
+    # (oil paint 来自 joconde,可能不出现在富属性块——不强求断言)
+
+
+def test_build_material_without_pack_unchanged():
+    from app.services.enrichment.content_enricher import build_material
+
+    mat = build_material(
+        {"qid": "Q1", "category": "painting", "attributes": {"extract_en": "x"}}
+    )
+    assert isinstance(mat, str)
+
+
+def test_generate_canonical_passes_guide_to_prompt():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    captured = {}
+
+    def fake(system, user):
+        captured["user"] = user
+        import json as _json
+
+        return _json.dumps({"artist": "A."})
+
+    enr = ContentEnricher(complete=fake)
+    enr.generate_canonical(
+        {"qid": "Q1", "category": "painting", "attributes": {}},
+        sections=["artist"],
+        guide="头条 XYZ。",
+    )
+    assert "头条 XYZ" in captured["user"]
+
+
+def test_generate_canonical_passes_popularity():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    captured = {}
+
+    def fake(system, user):
+        captured["user"] = user
+        import json as _json
+
+        return _json.dumps({"background": "B."})
+
+    enr = ContentEnricher(complete=fake)
+    enr.generate_canonical(
+        {"qid": "Q1", "category": "painting", "attributes": {}, "popularity": 40},
+        sections=["background"],
+    )
+    assert "570" in captured["user"]  # 重点件 background 380×1.5
+
+
+def test_generate_artist_bio():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    enr = ContentEnricher(complete=lambda s, u: "梵高是荷兰后印象派先驱……")
+    bio = enr.generate_artist_bio(
+        {"artist_extract_en": "Van Gogh was a Dutch painter..."}
+    )
+    assert bio and "梵高" in bio
+
+
+def test_generate_artist_bio_no_material():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    enr = ContentEnricher(complete=lambda s, u: "x")
+    assert (
+        enr.generate_artist_bio({"extract_en": "no artist material"}) is None
+    )  # 无 artist_extract_* → None
