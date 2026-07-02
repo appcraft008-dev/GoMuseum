@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import re
+
 from app.models.artist import Artist
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
@@ -51,6 +53,19 @@ def _fetch_creators(qids, *, run_query=None) -> dict:
     return out
 
 
+_CJK = re.compile(r"[一-鿿]")
+
+
+def _clean_i18n(i18n) -> dict:
+    """剥无效值:zh 位无汉字 = 翻译失败残留(如《Vue de toits》)→ 当缺失重解析。
+    ponytail: 只查 zh;加 ja/ko 等非拉丁语言时再扩。"""
+    return {
+        k: v
+        for k, v in (i18n or {}).items()
+        if v and not (k == "zh" and not _CJK.search(v))
+    }
+
+
 def backfill_display_names(
     db, slug, *, translator, langs, fetch_labels=None, fetch_creators=None
 ) -> dict:
@@ -72,7 +87,7 @@ def backfill_display_names(
     artist_name_en: dict[str, str] = {}  # 作者QID → 来自作品行的 en 名(兜底)
     for o in objs:
         attrs = o.attributes or {}
-        ti = attrs.get("title_i18n") or {}
+        ti = _clean_i18n(attrs.get("title_i18n"))
         if any(not ti.get(lang) for lang in langs):
             ti = _fill_i18n(
                 ti, o.title_en, fetch_labels(o.qid, langs), langs, translator
@@ -97,7 +112,7 @@ def backfill_display_names(
             db.add(art)
         if not art.name_en:
             art.name_en = en_name
-        ni = art.name_i18n or {}
+        ni = _clean_i18n(art.name_i18n)
         if any(not ni.get(lang) for lang in langs):
             art.name_i18n = _fill_i18n(
                 ni, art.name_en, fetch_labels(aqid, langs), langs, translator
