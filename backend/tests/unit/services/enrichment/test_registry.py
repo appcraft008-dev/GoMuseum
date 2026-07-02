@@ -29,3 +29,22 @@ def test_registry_get_by_name():
     reg = SourceRegistry([FakeSource("wikidata")])
     assert reg.get("wikidata").name == "wikidata"
     assert reg.get("nope") is None
+
+
+def test_build_registry_from_names():
+    from app.services.enrichment.registry import build_registry
+
+    reg = build_registry(["joconde", "wikipedia"], session=None)
+    assert reg.get("joconde") is not None
+    assert reg.get("wikipedia") is not None
+    reg2 = build_registry(["wikipedia"], session=None)
+    assert reg2.get("joconde") is None
+
+
+def test_build_registry_unknown_name_raises():
+    import pytest
+
+    from app.services.enrichment.registry import build_registry
+
+    with pytest.raises(KeyError):
+        build_registry(["nope"], session=None)

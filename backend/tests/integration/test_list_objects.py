@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import list_objects
@@ -17,7 +18,12 @@ def session():
     )
     Base.metadata.create_all(
         bind=engine,
-        tables=[Museum.__table__, MuseumObject.__table__, ObjectImage.__table__],
+        tables=[
+            Museum.__table__,
+            MuseumObject.__table__,
+            ObjectImage.__table__,
+            Artist.__table__,
+        ],
     )
     s = sessionmaker(bind=engine)()
     m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
@@ -109,3 +115,27 @@ def test_list_objects_item_shape(session):
 
 def test_list_objects_unknown_museum(session):
     assert list_objects(session, "nope", language="zh") is None
+
+
+def test_list_objects_artist_resolves_via_name_i18n(session):
+    # 契约§3:artist 同 title 走多语显示名规则(name_i18n 权威→legacy→en)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {**(o.attributes or {}), "artist_qid": "Q34618"}
+    session.add(
+        Artist(
+            qid="Q34618",
+            name_en="Courbet",
+            name_i18n={"en": "Courbet", "fr": "Gustave Courbet", "zh": "库尔贝"},
+        )
+    )
+    session.commit()
+    items = {
+        i["qid"]: i for i in list_objects(session, "orsay", language="fr")["items"]
+    }
+    assert items["Q1"]["artist"] == "Gustave Courbet"  # fr 权威标签
+    items_de = {
+        i["qid"]: i for i in list_objects(session, "orsay", language="de")["items"]
+    }
+    assert items_de["Q1"]["artist"] == "Courbet"  # de 无标签 → en 兜底
+    # 无 artist_qid 的对象仍走 legacy 列
+    assert items["Q2"]["artist"] == "Manet"

@@ -16,3 +16,15 @@ class SourceRegistry:
             if getattr(s, "name", None) == name:
                 return s
         return None
+
+
+def build_registry(names: list[str], *, session) -> SourceRegistry:
+    """按 museums.yaml 的 sources 名单实例化连接器。未知名 → KeyError(配置错误早炸)。"""
+    from app.services.enrichment.sources.joconde import JocondeSource
+    from app.services.enrichment.sources.wikipedia import WikipediaSource
+
+    builders = {
+        "joconde": lambda: JocondeSource(session=session),
+        "wikipedia": lambda: WikipediaSource(session=session),
+    }
+    return SourceRegistry([builders[n]() for n in names])
