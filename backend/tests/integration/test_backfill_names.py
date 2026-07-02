@@ -181,6 +181,29 @@ def test_backfill_merges_existing_artist_langs(session):
     assert art.name_i18n["fr"] == "Édouard Manet"  # 缺失补权威
 
 
+def test_backfill_pivots_on_any_label_when_no_en(session):
+    # 冷门件无 en/zh 标签只有 fr(Q17492795 Le Chat blanc 场景):
+    # 以 fr 权威标签为轴翻出缺失语言,并回填 title_en 列 → 任何视图都不再显 QID
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.title_en = None
+    o.title_zh = None
+    session.commit()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "fr", "zh"],
+        fetch_labels=_labels({"Q1": {"fr": "Le Chat blanc"}}),
+        fetch_creators=lambda qids: {},
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    ti = o.attributes["title_i18n"]
+    assert ti["fr"] == "Le Chat blanc"  # 权威
+    assert ti["en"] == "Le Chat blanc_en"  # fr 轴翻 en
+    assert ti["zh"] == "Le Chat blanc_zh"  # fr 轴翻 zh
+    assert o.title_en == "Le Chat blanc_en"  # en 列回填(轴心补齐)
+
+
 def test_backfill_unknown_museum(session):
     out = backfill_display_names(
         session,

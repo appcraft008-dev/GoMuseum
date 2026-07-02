@@ -32,20 +32,24 @@ def _wikidata_labels(qid, langs):
 
 
 def _fill_i18n(existing, en_name, labels, langs, translator):
-    """权威标签优先(含 en:纠正目录误存非英文标签),缺则从 en 翻译,en 兜底。返回 {lang: name}。"""
+    """权威标签优先(含 en:纠正目录误存非英文标签);缺的从轴心翻译。
+    轴心 = en(名或标签),en 也没有则任一权威标签(冷门件常无 en 标签,如只有 fr)。返回 {lang: name}。"""
     out = dict(existing or {})
+    for lang in langs:
+        if not out.get(lang) and labels.get(lang):
+            out[lang] = labels[lang]
+    if en_name and not out.get("en"):
+        out["en"] = en_name
+    pivot = out.get("en") or next((out[x] for x in langs if out.get(x)), None)
+    if not pivot or not hasattr(translator, "translate_section"):
+        return out
     for lang in langs:
         if out.get(lang):
             continue
-        if labels.get(lang):
-            out[lang] = labels[lang]
-        elif lang != "en" and en_name and hasattr(translator, "translate_section"):
-            try:
-                out[lang] = translator.translate_section(en_name, lang)
-            except Exception:
-                pass
-    if en_name:
-        out.setdefault("en", en_name)
+        try:
+            out[lang] = translator.translate_section(pivot, lang)
+        except Exception:
+            pass
     return out
 
 
