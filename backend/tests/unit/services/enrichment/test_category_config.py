@@ -16,13 +16,12 @@ def test_sections_by_category_and_fallback():
     from app.services.enrichment.category_config import sections_for
 
     assert sections_for("painting") == [
-        "artist",
         "background",
         "analysis",
         "significance",
         "facts",
     ]
-    assert sections_for("sculpture")[:2] == ["artist", "material-technique"]
+    assert sections_for("sculpture")[0] == "material-technique"
     assert sections_for("unknown") == [
         "background",
         "significance",
@@ -113,3 +112,10 @@ def test_analysis_lane_focuses_craft_not_symbols():
     role = section_role("analysis")["role"].lower()
     assert "craft" in role or "brushwork" in role
     assert "do not re-list" in role or "go beyond" in role or "headline" in role
+
+
+def test_artist_not_in_per_work_sections():
+    from app.services.enrichment.category_config import SECTIONS_BY_CATEGORY
+
+    for codes in SECTIONS_BY_CATEGORY.values():
+        assert "artist" not in codes  # 作者成一等实体,不再是每件的段
