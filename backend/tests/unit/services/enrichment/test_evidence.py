@@ -136,3 +136,15 @@ def test_fetch_rich_facts_caps_per_prop_at_5():
     ]
     facts = fetch_rich_facts("Q1", run_query=lambda s: rows)
     assert len([f for f in facts if f["source"] == "wikidata:P4969"]) == 5  # 限5
+
+
+def test_fetch_rich_facts_skips_raw_qid_labels():
+    from app.services.enrichment.evidence import fetch_rich_facts
+
+    rows = [
+        {"pid": {"value": "P4969"}, "vLabel": {"value": "Q137160517"}},  # 无标签→跳
+        {"pid": {"value": "P4969"}, "vLabel": {"value": "Real Homage"}},  # 有标签→留
+    ]
+    facts = fetch_rich_facts("Q1", run_query=lambda s: rows)
+    vals = [f["value"] for f in facts if f["source"] == "wikidata:P4969"]
+    assert vals == ["Real Homage"]  # QID-only 被过滤

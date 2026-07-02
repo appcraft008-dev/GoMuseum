@@ -57,6 +57,9 @@ def fetch_rich_facts(qid: str, *, run_query=None) -> list[dict]:
     for row in rows:
         pid = (row.get("pid") or {}).get("value", "")
         val = (row.get("vLabel") or {}).get("value")
+        # 标签服务对无本地化标签的实体退回原始 QID(如 "Q137160517")→ 无意义,跳过
+        if val and val[0] in "QP" and val[1:].isdigit():
+            val = None
         if pid in _RICH_PROPS and val:
             if per_prop.get(pid, 0) >= _RICH_MAX_PER_PROP:
                 continue  # 每属性限 _RICH_MAX_PER_PROP 条
