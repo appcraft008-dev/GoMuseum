@@ -101,3 +101,16 @@ def test_suggest_passes_covered_to_prompt():
     s = QASuggester(complete=fake_complete, gate=_G(), translator=_T())
     s.suggest("MAT", "facts", "painting", ["en"], covered="解说讲过猫和花。")
     assert "解说讲过猫和花" in captured["user"]
+
+
+def test_clean_question_guard():
+    from app.services.enrichment.qa_suggester import _clean_question
+
+    assert (
+        _clean_question("这幅画的骑士是谁？他很神秘。") == "这幅画的骑士是谁？"
+    )  # 截断描述
+    assert _clean_question("Who is the knight? He is...") == "Who is the knight?"
+    assert (
+        _clean_question("Rochegrosse受多位艺术家影响，展现独特语言。") is None
+    )  # 陈述句→丢
+    assert _clean_question("") is None
