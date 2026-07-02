@@ -104,6 +104,28 @@ def fetch_artist_facts(qid, *, run_query=None) -> dict:
     return out
 
 
+_LABELS_QUERY = """
+SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
+"""
+
+
+def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
+    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。"""
+    run_query = (
+        run_query or _default_artist_query
+    )  # ponytail: same generic SPARQL caller
+    langlist = ", ".join('"%s"' % x for x in langs)
+    rows = run_query(_LABELS_QUERY.format(qid=qid, langs=langlist))
+    out = {}
+    for row in rows:
+        lv = row.get("l") or {}
+        lang = lv.get("xml:lang") or lv.get("lang")
+        val = lv.get("value")
+        if lang in langs and val and lang not in out:
+            out[lang] = val
+    return out
+
+
 def fetch_artist_material(qid, registry, *, run_query=None, country_lang="fr") -> dict:
     """抓作者实体 Wikipedia(作品→P170→作者维基标题→extract)。无作者/无维基→{}。"""
     run_query = run_query or _default_artist_query

@@ -131,3 +131,16 @@ def test_fetch_artist_facts_returns_artist_qid():
 
     f = fetch_artist_facts("Q1", run_query=fake)
     assert f["artist_qid"] == "Q296"
+
+
+def test_fetch_wikidata_labels():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    def fake(sparql):
+        return [
+            {"l": {"value": "La Nuit étoilée", "xml:lang": "fr"}},
+            {"l": {"value": "Starry Night", "xml:lang": "en"}},
+        ]
+
+    out = fetch_wikidata_labels("Q1", ["en", "fr", "de"], run_query=fake)
+    assert out == {"fr": "La Nuit étoilée", "en": "Starry Night"}  # 只含 Wikidata 有的

@@ -81,7 +81,7 @@
 }
 ```
 
-- `title`/`artist` 按 `language` 选语种(zh→`title_zh`→`title_en`→`qid`;fr→`attributes.title_fr`→`title_en`;en→`title_en`→`title_zh`)。
+- `title` 按多语显示名规则:`title_i18n[lang]`(Wikidata权威)→ 该语言 legacy 列 → en 兜底。`artist` 同理经 name_i18n。
 - `content_status`:见末节生命周期(前端据此显"待完善"角标)。
 - 未知馆 → 404。
 
@@ -112,7 +112,7 @@
 
 - `default_guide`:**默认标准讲解**(单主线·5拍·~300-600字现场导览,识别后首先呈现的"主角")。`{body, audio_url}`,无则 `null`(前端回退 tabs)。**不混入 tabs**。前端分层页:default_guide 置顶 → 推荐 2-3 个 suggested_questions → tabs/其余收进"更多内容"。
 - `tabs`:按类目的段落清单(`SECTIONS_BY_CATEGORY`)逐段(降级为"更多内容"深度模块;**overview 已退役**——默认讲解取代其作开场;**artist 已移出 tabs**——成独立作者卡;各模块各守互斥 lane、**不复述头条**、只会重复则返空不发布);`body` 为该语种已发布正文(无则 `null`);`audio_url` 为 R2 音频直链(未生成则 `null`,TTS 阶段)。
-- `artist`:**必选常驻作者卡**(不随空隐)。**数据来自 `artists` 一等实体**(按 artist QID 生成一次、同作者所有作品复用→一致/完整/省;artist 不再是 per-work 段)。`{name, birth, death, nationality, notable_works:[...], bio}`——生卒年/国籍/代表作取自作者 Wikidata 实体(P569/P570/P27/P800);`bio`=artist 段已发布叙事(无则 null)。⚠️ v1:`nationality`/`notable_works` 为 en 标签(zh 视图暂显 en),`name`/生卒年不受影响。
+- `artist`:**必选常驻作者卡**(不随空隐)。**数据来自 `artists` 一等实体**(按 artist QID 生成一次、同作者所有作品复用→一致/完整/省;artist 不再是 per-work 段)。`{name, birth, death, nationality, notable_works:[...], bio}`(**name/title 按多语显示名规则解析:i18n 权威→翻译→en**;bio 按语言取)——生卒年/国籍/代表作取自作者 Wikidata 实体(P569/P570/P27/P800);`bio`=artist 段已发布叙事(无则 null)。⚠️ v1:`nationality`/`notable_works` 为 en 标签(zh 视图暂显 en),`name`/生卒年不受影响。
 - `facts`:**已策展+人性化的墙签事实**(只 wall_label 级):`artist/date/medium/dimensions/inventory/location`。`medium`/`dimensions` 优先取证据包干净源(Wikidata P186/P2048)。⚠️ **`provenance` 返 null、`exhibitions`/`bibliography` 返 `[]`——已移出面板**(学术噪音;参考文献彻底不展示,收藏/展览史进证据包材料级,阶段2 由 background lane 讲成流转故事)。`artist_life` 暂 null。
 - `suggested_questions`:好奇心问答(0-4 条)。
 - 对象不属于该 slug / 不存在 → 404。
@@ -164,6 +164,12 @@
 > **为什么**:接地/事实校验只在英语做一遍,其它语言靠忠实翻译继承 → 省、且跨语言一致。
 > **教训(2026-07-02)**:新加 `generate_artist_bio` 时漏了 "Write in English",作者 bio 随材料语言乱输出(en 条存成中/法文),切语言不对。**新增任何生成 prompt 都要强制英文。**
 
+> **⚠️ 多语显示名规则(title / artist.name)——语言无关,核心约定。**
+> 任何**显示名**(藏品标题、作者名)按请求语言解析,走固定回退链:
+> **① 该语言的权威标签**(Wikidata 多语 labels / 馆方官方标签,专有名词最优)→ **② 从英语轴心机器翻译**(该语言无权威标签时兜底)→ **③ 英语轴心原名**(永不空)。
+> **语言无关**:新增语言(de/es/it…)**只加进 `DEFAULT_LANGUAGES` 语言集**,生成时一次性抓该实体全部目标语言的 Wikidata labels、缺的从 en 翻译 —— **同一套机制、零 per-language 代码**。这就是"加语言=加配置"。
+> **配套**:**QID 是全系统匹配键**(识别/查询/去重/跳转都用 qid);显示名纯展示,名字回退绝不影响匹配。避开脏格式(如 Joconde 的 "Lastname First (dates)")。
+
 **博物馆负责事实,AI 负责讲法。** 每件内容分三层,各守互斥职责,从同一份证据包生成、不重复:
 
 - **第一层 默认标准讲解**(`default_guide`,已上 stage1):识别后首先呈现的"主角",单主线·5拍(钩子→引导观察→为什么重要→必要背景→记忆点)·按热度分档(普通 270-420 / 重点 420-675 中文字)。~1 分钟看懂。
@@ -204,6 +210,8 @@
 ## 变更记录
 
 - 2026-06-28:新建本活文档。纳入近期加法:端点3 `/objects` 分页;端点2 `categories` facet + language;端点4 `status/title/images/facts`;`content_status` 生命周期;上新馆路径。
+- 2026-07-02:多语显示名规则**落地**(title_i18n/Artist.name_i18n:Wikidata多语标签+翻译兜底;端点 resolve_name 语言感知;避 Joconde 脏格式)。
+- 2026-07-02:定**多语显示名规则**(权威标签→翻译兜底→en;语言无关,加语言=加配置)入契约。
 - 2026-07-02:补记**英语轴心**核心约定(所有生成先英语→接地闸→翻译;新增 prompt 必强制英文)+ 修 generate_artist_bio 漏英文致 bio 语言错。
 - 2026-07-02:作者一等实体(artists 表,按 artist QID 生成一次、同作者复用,修每件重复/漏)+ 缺中文标题生成补 + status 按语言判空(修 ready 却空)。
 - 2026-07-01:配源round2a——证据包补 Wikidata 关系属性(衍生/基于/启发/系列),给 significance/background 接地影响钩子。

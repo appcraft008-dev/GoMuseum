@@ -545,6 +545,48 @@ def test_generate_object_translates_missing_artist_name_zh(session, monkeypatch)
     )  # _FakeTranslator 回显 → 证明翻译被调
 
 
+def test_generate_fills_title_and_artist_name_i18n(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q7"})
+    # work Q1: fr 权威有、de 无(翻译兜底);artist Q7: 无权威(翻译兜底)
+    monkeypatch.setattr(
+        pl,
+        "_wikidata_labels",
+        lambda qid, langs: {"fr": "La Nuit"} if qid != "Q7" else {},
+    )
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, o):
+            return "bio。"
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.title_en = "Starry Night"
+    o.artist_en = "Van Gogh"
+    o.attributes = {"artist_extract_en": "x"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "fr", "de"],
+        model="m",
+        registry=_FakeRegistry(),
+        force=True,
+    )
+    o2 = session.query(MuseumObject).filter_by(qid="Q1").one()
+    ti = o2.attributes.get("title_i18n") or {}
+    assert ti["fr"] == "La Nuit"  # 权威优先
+    assert "Starry Night" in ti["de"]  # de 无权威→翻译兜底(_FakeTranslator 回显含原文)
+    ni = session.query(Artist).filter_by(qid="Q7").one().name_i18n or {}
+    assert "Van Gogh" in ni["fr"]  # 作者无权威→翻译兜底
+
+
 def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
     import app.services.enrichment.pipeline as pl
     from app.models.artist import Artist

@@ -54,6 +54,8 @@ def session():
                 "medium_fr": "huile sur toile",
                 "dimensions": "46 x 55 cm",
                 "exhibitions_fr": "1988, New York#1996, Paris",
+                # 多语显示名走 title_i18n(权威→翻译→en);列 title_zh 仅回退兜底
+                "title_i18n": {"zh": "世界的起源", "en": "Origin"},
             },
         },
     )
@@ -209,6 +211,7 @@ def test_content_artist_card(session):
             qid="Q40599",
             name_zh="马奈",
             name_en="Manet",
+            name_i18n={"zh": "马奈", "en": "Manet"},
             birth="1832",
             death="1883",
             nationality="France",
@@ -290,6 +293,7 @@ def test_artist_card_from_artists_table(session):
             qid="Q296",
             name_zh="梵高",
             name_en="Van Gogh",
+            name_i18n={"zh": "梵高", "en": "Van Gogh"},
             birth="1853",
             nationality="Netherlands",
             notable_works=["Starry Night"],
@@ -302,8 +306,50 @@ def test_artist_card_from_artists_table(session):
     assert a["notable_works"] == ["Starry Night"]
 
 
+def test_content_title_and_artist_resolve_by_language(session):
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.title_en = "Starry Night"
+    o.attributes = {
+        "artist_qid": "Q7",
+        "title_i18n": {"en": "Starry Night", "fr": "La Nuit étoilée"},
+    }
+    session.add(
+        Artist(
+            qid="Q7",
+            name_en="Van Gogh",
+            name_i18n={"en": "Van Gogh", "fr": "Van Gogh"},
+        )
+    )
+    session.commit()
+    assert (
+        get_object_content(session, "orsay", "Q1", "fr")["title"] == "La Nuit étoilée"
+    )
+    assert get_object_content(session, "orsay", "Q1", "en")["title"] == "Starry Night"
+    assert (
+        get_object_content(session, "orsay", "Q1", "fr")["artist"]["name"] == "Van Gogh"
+    )
+
+
 def test_status_empty_when_language_has_no_content(session):
     from app.services.museum_repo import get_object_content
 
     d = get_object_content(session, "orsay", "Q1", "fr")  # fr 无 guide 无 tab
     assert d["status"] == "empty"
+
+
+def test_title_falls_back_to_zh_column_when_no_i18n(session):
+    # 未富化 stub:有 title_zh 无 title_i18n → zh 视图仍显中文名(不退成英文)
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.title_zh = "中文名"
+    o.title_en = "English Name"
+    o.attributes = {}  # 无 title_i18n
+    session.commit()
+    assert get_object_content(session, "orsay", "Q1", "zh")["title"] == "中文名"
+    assert get_object_content(session, "orsay", "Q1", "en")["title"] == "English Name"

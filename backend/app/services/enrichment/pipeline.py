@@ -25,6 +25,30 @@ def _artist_facts(qid):
     return fetch_artist_facts(qid)
 
 
+def _wikidata_labels(qid, langs):
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    return fetch_wikidata_labels(qid, langs)
+
+
+def _fill_i18n(existing, en_name, labels, langs, translator):
+    """权威标签优先,缺则从 en 翻译,en 兜底。返回 {lang: name}。"""
+    out = dict(existing or {})
+    if en_name:
+        out.setdefault("en", en_name)
+    for lang in langs:
+        if out.get(lang):
+            continue
+        if labels.get(lang):
+            out[lang] = labels[lang]
+        elif lang != "en" and en_name and hasattr(translator, "translate_section"):
+            try:
+                out[lang] = translator.translate_section(en_name, lang)
+            except Exception:
+                pass
+    return out
+
+
 def _row_to_obj(o) -> dict:
     """MuseumObject 行 → build_material/生成器吃的 obj dict。"""
     return {
@@ -90,6 +114,22 @@ def generate_object(
             db.flush()
 
     if registry is not None:
+        try:
+            wlabels = _wikidata_labels(o.qid, target_langs)
+            ti = _fill_i18n(
+                (o.attributes or {}).get("title_i18n"),
+                o.title_en,
+                wlabels,
+                target_langs,
+                translator,
+            )
+            o.attributes = {**(o.attributes or {}), "title_i18n": ti}
+            if ti.get("zh") and not o.title_zh:
+                o.title_zh = ti["zh"]
+            db.flush()
+        except Exception:
+            pass
+
         from app.services.enrichment.material import fetch_artist_material
 
         # ponytail: country_lang 暂硬编 fr，多馆从馆配置取
@@ -148,6 +188,13 @@ def generate_object(
                     except Exception:
                         name_zh = None
                 art.name_zh = name_zh
+                try:
+                    alabels = _wikidata_labels(aqid, target_langs)
+                    art.name_i18n = _fill_i18n(
+                        art.name_i18n, o.artist_en, alabels, target_langs, translator
+                    )
+                except Exception:
+                    pass
                 art.birth = af.get("artist_birth")
                 art.death = af.get("artist_death")
                 art.nationality = af.get("artist_nationality")
