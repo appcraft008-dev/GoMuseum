@@ -34,6 +34,8 @@ def session():
             "category": "painting",
             "popularity": 50,
             "image": "http://i/1.jpg",
+            # 多语显示名走 title_i18n(权威→翻译→en);列 title_zh 仅回退兜底
+            "attributes": {"title_i18n": {"zh": "世界的起源", "en": "Origin"}},
         },
     )
     upsert_object(

@@ -40,6 +40,11 @@ def _category_label(code: str, lang: str) -> str:
     return m.get(lang) or m.get("en") or code
 
 
+def _resolve_name(i18n, language, fallback_en):
+    """有 i18n 按语言取,否则回退 en(避开 Joconde 脏格式,绝不显 artist_fr)。"""
+    return (i18n or {}).get(language) or fallback_en
+
+
 def _pick(lang: str, zh, en, fr, fallback=""):
     """按语言选值，带回退链。zh→zh/en；fr→fr/en；其它→en/zh。"""
     if lang == "zh":
@@ -151,7 +156,10 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
             "qid": o.qid,
             # title_zh 永不为 null：富化数据常缺中文标题，回退 title_en→qid，
             # 否则前端 `title_zh as String` 强转会崩（馆藏列表整页加载失败）。
-            "title_zh": o.title_zh or o.title_en or o.qid,
+            "title_zh": (o.attributes or {}).get("title_i18n", {}).get("zh")
+            or o.title_zh
+            or o.title_en
+            or o.qid,
             "title_en": o.title_en,
             "artist_zh": o.artist_zh,
             "artist_en": o.artist_en,
@@ -284,11 +292,10 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     aqid = attrs.get("artist_qid")
     art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
     artist_card = {
-        "name": _pick(
+        "name": _resolve_name(
+            art.name_i18n if art else None,
             language,
-            (art.name_zh if art else None) or obj.artist_zh,
             (art.name_en if art else None) or obj.artist_en,
-            attrs.get("artist_fr"),
         ),
         "birth": art.birth if art else None,
         "death": art.death if art else None,
@@ -305,8 +312,10 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         "category": obj.category,
         "language": language,
         "status": eff_status,
-        "title": _pick(
-            language, obj.title_zh, obj.title_en, attrs.get("title_fr"), qid
+        "title": _resolve_name(
+            attrs.get("title_i18n"),
+            language,
+            obj.title_en or obj.title_zh or obj.qid,
         ),
         "images": images,
         "facts": facts,
@@ -356,11 +365,8 @@ def list_objects(
         return img.source_url if img else None
 
     def _title(o):
-        if language == "zh":
-            return o.title_zh or o.title_en or o.qid
-        if language == "fr":
-            return (o.attributes or {}).get("title_fr") or o.title_en or o.qid
-        return o.title_en or o.title_zh or o.qid
+        i18n = (o.attributes or {}).get("title_i18n")
+        return _resolve_name(i18n, language, o.title_en or o.title_zh or o.qid)
 
     def _artist(o):
         if language == "zh":
