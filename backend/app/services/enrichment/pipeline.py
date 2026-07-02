@@ -134,8 +134,19 @@ def generate_object(
                                 pass
                 art = Artist(qid=aqid)
                 db.add(art)
-                art.name_zh = o.artist_zh
                 art.name_en = o.artist_en
+                # 中文名缺(Wikidata 无 zh 标签)→ 翻译补,同标题机制
+                name_zh = o.artist_zh
+                if (
+                    not name_zh
+                    and o.artist_en
+                    and hasattr(translator, "translate_section")
+                ):
+                    try:
+                        name_zh = translator.translate_section(o.artist_en, "zh")
+                    except Exception:
+                        name_zh = None
+                art.name_zh = name_zh
                 art.birth = af.get("artist_birth")
                 art.death = af.get("artist_death")
                 art.nationality = af.get("artist_nationality")

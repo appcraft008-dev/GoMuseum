@@ -510,3 +510,36 @@ def test_generate_object_creates_and_reuses_artist(session, monkeypatch):
     # 再跑一次(同作者已存在)→ 不再调 generate_artist_bio
     generate_object(session, "Q1", **common)
     assert calls["n"] == 1
+
+
+def test_generate_object_translates_missing_artist_name_zh(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q7"})
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            return "bio。"
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_zh = None
+    o.artist_en = "Alfred Sisley"
+    o.attributes = {"artist_extract_en": "x"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q7").one()
+    assert (
+        art.name_zh and "Alfred Sisley" in art.name_zh
+    )  # _FakeTranslator 回显 → 证明翻译被调
