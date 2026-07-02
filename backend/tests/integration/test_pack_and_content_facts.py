@@ -339,3 +339,17 @@ def test_status_empty_when_language_has_no_content(session):
 
     d = get_object_content(session, "orsay", "Q1", "fr")  # fr 无 guide 无 tab
     assert d["status"] == "empty"
+
+
+def test_title_falls_back_to_zh_column_when_no_i18n(session):
+    # 未富化 stub:有 title_zh 无 title_i18n → zh 视图仍显中文名(不退成英文)
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.title_zh = "中文名"
+    o.title_en = "English Name"
+    o.attributes = {}  # 无 title_i18n
+    session.commit()
+    assert get_object_content(session, "orsay", "Q1", "zh")["title"] == "中文名"
+    assert get_object_content(session, "orsay", "Q1", "en")["title"] == "English Name"
