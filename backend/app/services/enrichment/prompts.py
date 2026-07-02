@@ -51,7 +51,7 @@ def build_generation_prompt(
         f"Artwork category: {category}\n"
         f"Write these sections (return JSON keyed by these exact codes), each staying strictly "
         f"in its lane. Go DEEPER by unpacking concrete facts and details FROM THE MATERIAL — "
-        f"never pad or 注水 with generic filler:\n{roles_block}\n{guide_block}\n"
+        f"never pad or dilute with generic filler:\n{roles_block}\n{guide_block}\n"
         f"Material (facts tagged with their lane topic):\n{material}"
     )
     return _SYSTEM, user
@@ -139,9 +139,10 @@ def build_faithfulness_prompt(en_body: str, translated: str, target_lang: str):
 
 _QA_SYSTEM = (
     "You write 'curious visitor' question chips for ONE artwork, using ONLY the provided "
-    "MATERIAL. The guide and modules ALREADY explain the work's MAIN themes (its meaning, "
-    "the controversy, the technique, the key symbols). Your job is the OPPOSITE: surface the "
-    "peripheral 'huh, I didn't know that' angles those did NOT cover.\n"
+    "MATERIAL. WRITE IN ENGLISH (both question and answer) — this is the English axis; other "
+    "languages are translated later. The guide and modules ALREADY explain the work's MAIN "
+    "themes (its meaning, the controversy, the technique, the key symbols). Your job is the "
+    "OPPOSITE: surface the peripheral 'huh, I didn't know that' angles those did NOT cover.\n"
     "Rules:\n"
     "1. NEVER ask about wall-label facts (title, artist, date/year, museum/location, medium, "
     "dimensions, inventory) — useless noise.\n"
@@ -159,8 +160,10 @@ _QA_SYSTEM = (
     "'?' — nothing after the '?', no statement or description appended. Put ALL the substance / "
     "explanation in `answer` (1-3 sentences, your own words, a satisfying hook). A declarative "
     "sentence in the `question` field, or content trailing after the '?', is WRONG. Example — "
-    'GOOD: {"question": "梵高为什么在这幅画里用这么多蓝色和黄色？", "answer": "他在信中写道，夜晚的色彩比白天更丰富……"}. '
-    'BAD: question = "有趣的是，前景这对情侣象征着爱情……"(陈述句，无问号).\n'
+    'GOOD: {"question": "Why did Van Gogh use so much blue and yellow here?", "answer": "In his '
+    'letters he wrote that the night is richer in colour than the day..."}. '
+    'BAD: question = "Interestingly, the couple in the foreground symbolises love..." '
+    "(a statement, no question mark).\n"
     "Write 2 to 4 such questions (aim for 3); fewer only if the material genuinely can't support more. "
     'Return STRICT JSON: {"qa": [{"question": "...", "answer": "..."}, ...]}. No commentary.'
 )
