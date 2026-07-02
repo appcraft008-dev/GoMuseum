@@ -220,3 +220,11 @@ def test_qa_system_steers_peripheral_and_forbids_covered():
     # covered_block 设禁区
     _, user = build_qa_prompt("M", "painting", covered="解说讲过猫和花。")
     assert "forbidden" in user.lower()
+
+
+def test_qa_system_requires_short_interrogative_question():
+    from app.services.enrichment.prompts import _QA_SYSTEM
+
+    s = _QA_SYSTEM.lower()
+    assert "interrogative" in s and "ending in" in s
+    assert "nothing after the" in s  # 问号后不许有描述

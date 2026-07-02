@@ -155,8 +155,12 @@ _QA_SYSTEM = (
     "drop below the minimum ONLY if the material truly offers nothing more — never pad by "
     "re-asking a covered theme.\n"
     "4. Grounded only: every answer fully supported by the material, no outside knowledge.\n"
-    "5. Each answer is 1-3 sentences: a satisfying hook in your own words, not copied, leaving "
-    "the visitor wanting to ask more.\n"
+    "5. FORMAT (strict): `question` MUST be ONE short, genuine interrogative sentence ending in "
+    "'?' — nothing after the '?', no statement or description appended. Put ALL the substance / "
+    "explanation in `answer` (1-3 sentences, your own words, a satisfying hook). A declarative "
+    "sentence in the `question` field, or content trailing after the '?', is WRONG. Example — "
+    'GOOD: {"question": "梵高为什么在这幅画里用这么多蓝色和黄色？", "answer": "他在信中写道，夜晚的色彩比白天更丰富……"}. '
+    'BAD: question = "有趣的是，前景这对情侣象征着爱情……"(陈述句，无问号).\n'
     "Write 2 to 4 such questions (aim for 3); fewer only if the material genuinely can't support more. "
     'Return STRICT JSON: {"qa": [{"question": "...", "answer": "..."}, ...]}. No commentary.'
 )
