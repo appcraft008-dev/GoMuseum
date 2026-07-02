@@ -7,6 +7,7 @@ import json
 import re
 
 from app.services.enrichment.prompts import (
+    build_artist_bio_prompt,
     build_default_guide_prompt,
     build_generation_prompt,
 )
@@ -100,6 +101,17 @@ class ContentEnricher:
             v = parsed.get(code)
             out[code] = v.strip() if isinstance(v, str) and v.strip() else None
         return out
+
+    def generate_artist_bio(self, artist_obj: dict) -> str | None:
+        parts = [
+            v for k, v in artist_obj.items() if k.startswith("artist_extract_") and v
+        ]
+        if not parts:
+            return None
+        material = "\n\n".join(parts)
+        system, user = build_artist_bio_prompt(material)
+        raw = self._complete(system, user)
+        return raw.strip() if isinstance(raw, str) and raw.strip() else None
 
     def generate_default_guide(self, obj: dict, facts: str, target_chars) -> str | None:
         """单主线默认讲解(纯文本)。空串→None。"""
