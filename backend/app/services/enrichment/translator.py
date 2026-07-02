@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from app.services.enrichment.prompts import (
     build_faithfulness_prompt,
+    build_name_translation_prompt,
     build_translation_prompt,
 )
 from app.services.enrichment.quality import SectionQuality
@@ -23,6 +24,12 @@ class ContentTranslator:
     def translate_section(self, en_body: str, target_lang: str) -> str:
         system, user = build_translation_prompt(en_body, target_lang)
         return (self._complete(system, user) or "").strip()
+
+    def translate_name(self, name: str, target_lang: str) -> str:
+        """显示名(标题/人名)专用翻译:只返名字;剥模型仍套上的书名号/引号。"""
+        system, user = build_name_translation_prompt(name, target_lang)
+        out = (self._complete(system, user) or "").strip()
+        return out.strip("《》\"'“”‘’«»")
 
     def check_faithfulness(self, en_body: str, translated: str, target_lang: str):
         system, user = build_faithfulness_prompt(en_body, translated, target_lang)

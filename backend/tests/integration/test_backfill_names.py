@@ -204,6 +204,52 @@ def test_backfill_pivots_on_any_label_when_no_en(session):
     assert o.title_en == "Le Chat blanc_en"  # en 列回填(轴心补齐)
 
 
+def test_backfill_retranslates_junk_zh_value(session):
+    # 《Vue de toits》类:zh 位存了无汉字的值(翻译失败残留)→ 视为缺失重解析
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"title_i18n": {"en": "View of Roofs", "zh": "《Vue de toits》"}}
+    session.commit()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "zh"],
+        fetch_labels=_labels({}),
+        fetch_creators=lambda qids: {},
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes["title_i18n"]["zh"] == "View of Roofs_zh"  # 重翻覆盖坏值
+
+
+def test_fill_i18n_prefers_translate_name(session):
+    # 显示名翻译走 translate_name(标题专用 prompt),而非正文 translate_section
+    from app.services.enrichment.pipeline import _fill_i18n
+
+    calls = []
+
+    class _T:
+        def translate_name(self, text, lang):
+            calls.append(("name", text, lang))
+            return f"{text}~{lang}"
+
+        def translate_section(self, text, lang):
+            calls.append(("section", text, lang))
+            return f"{text}_{lang}"
+
+    out = _fill_i18n({}, "The Cat", {}, ["en", "zh"], _T())
+    assert out["zh"] == "The Cat~zh"
+    assert all(kind == "name" for kind, *_ in calls)
+
+
+def test_translate_name_strips_brackets_and_quotes():
+    from app.services.enrichment.translator import ContentTranslator
+
+    tr = ContentTranslator(lambda system, user: "《屋顶景色》")
+    assert tr.translate_name("Vue de toits", "zh") == "屋顶景色"
+    tr2 = ContentTranslator(lambda system, user: '"White Cat"')
+    assert tr2.translate_name("Le Chat blanc", "en") == "White Cat"
+
+
 def test_backfill_unknown_museum(session):
     out = backfill_display_names(
         session,

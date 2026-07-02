@@ -41,13 +41,17 @@ def _fill_i18n(existing, en_name, labels, langs, translator):
     if en_name and not out.get("en"):
         out["en"] = en_name
     pivot = out.get("en") or next((out[x] for x in langs if out.get(x)), None)
-    if not pivot or not hasattr(translator, "translate_section"):
+    # 显示名优先走 translate_name(标题专用 prompt);老 translator 兼容 translate_section
+    tr = getattr(translator, "translate_name", None) or getattr(
+        translator, "translate_section", None
+    )
+    if not pivot or tr is None:
         return out
     for lang in langs:
         if out.get(lang):
             continue
         try:
-            out[lang] = translator.translate_section(pivot, lang)
+            out[lang] = tr(pivot, lang)
         except Exception:
             pass
     return out
