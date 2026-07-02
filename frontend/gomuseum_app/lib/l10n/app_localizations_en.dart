@@ -337,6 +337,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userDefault => 'User';
 
   @override
+  String get guestPrefix => 'Guest_';
+
+  @override
   String get noEmailBound => 'No email linked';
 
   @override

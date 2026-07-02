@@ -108,6 +108,7 @@
   "loginBind": "登录 / 绑定账号",
   "notLoggedIn": "未登录",
   "userDefault": "用户",
+  "guestPrefix": "游客_",
   "noEmailBound": "未绑定邮箱",
   "logout": "登出",
   "deleteAccount": "删除账号",
