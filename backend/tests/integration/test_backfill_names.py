@@ -250,6 +250,25 @@ def test_translate_name_strips_brackets_and_quotes():
     assert tr2.translate_name("Le Chat blanc", "en") == "White Cat"
 
 
+def test_backfill_strips_surrounding_brackets_from_existing_values(session):
+    # 旧翻译残留《中文题》→ 剥外层书名号并落库(与权威标签风格一致);内容不重翻
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"title_i18n": {"en": "Poplars", "zh": "《白杨树》"}}
+    session.commit()
+    tr = _Translator()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=tr,
+        langs=["en", "zh"],
+        fetch_labels=_labels({}),
+        fetch_creators=lambda qids: {},
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes["title_i18n"]["zh"] == "白杨树"  # 剥号,不重翻
+    assert all(t != "Poplars" for t, _ in tr.calls)  # 标题未触发重翻(作者名翻译不算)
+
+
 def test_backfill_unknown_museum(session):
     out = backfill_display_names(
         session,

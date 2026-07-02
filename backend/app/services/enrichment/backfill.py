@@ -57,13 +57,15 @@ _CJK = re.compile(r"[一-鿿]")
 
 
 def _clean_i18n(i18n) -> dict:
-    """剥无效值:zh 位无汉字 = 翻译失败残留(如《Vue de toits》)→ 当缺失重解析。
+    """清洗显示名:剥外层书名号/引号(旧翻译残留,与权威标签风格一致);
+    zh 位无汉字 = 翻译失败残留(如《Vue de toits》)→ 当缺失重解析。
     ponytail: 只查 zh;加 ja/ko 等非拉丁语言时再扩。"""
-    return {
-        k: v
-        for k, v in (i18n or {}).items()
-        if v and not (k == "zh" and not _CJK.search(v))
-    }
+    out = {}
+    for k, v in (i18n or {}).items():
+        v = (v or "").strip("《》\"'“”‘’«»")
+        if v and not (k == "zh" and not _CJK.search(v)):
+            out[k] = v
+    return out
 
 
 def backfill_display_names(
@@ -88,6 +90,9 @@ def backfill_display_names(
     for o in objs:
         attrs = o.attributes or {}
         ti = _clean_i18n(attrs.get("title_i18n"))
+        if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
+            attrs = {**attrs, "title_i18n": ti}
+            o.attributes = attrs
         if any(not ti.get(lang) for lang in langs):
             ti = _fill_i18n(
                 ti, o.title_en, fetch_labels(o.qid, langs), langs, translator
@@ -113,6 +118,8 @@ def backfill_display_names(
         if not art.name_en:
             art.name_en = en_name
         ni = _clean_i18n(art.name_i18n)
+        if ni != (art.name_i18n or {}):
+            art.name_i18n = ni
         if any(not ni.get(lang) for lang in langs):
             art.name_i18n = _fill_i18n(
                 ni, art.name_en, fetch_labels(aqid, langs), langs, translator
