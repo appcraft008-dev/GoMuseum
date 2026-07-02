@@ -206,6 +206,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get guideArtist => 'Artist';
 
   @override
+  String get guideArtistTab => 'Artist';
+
+  @override
   String get guideNotableWorks => 'Notable works';
 
   @override

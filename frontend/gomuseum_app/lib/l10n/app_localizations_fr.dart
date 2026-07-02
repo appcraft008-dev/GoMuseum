@@ -207,6 +207,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get guideArtist => 'Artiste';
 
   @override
+  String get guideArtistTab => 'Artiste';
+
+  @override
   String get guideNotableWorks => 'Œuvres majeures';
 
   @override
