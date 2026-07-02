@@ -148,9 +148,11 @@
    ```
 2. **铺目录**:`python scripts/onboard.py <slug> catalog --target <staging|prod>`
    → `WikidataCatalog.list` 列 stub → `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。
-3. **生成内容**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
+3. **回填显示名**:`python scripts/onboard.py <slug> names --target <env>`
+   → 全馆 `title_i18n` + `artist_qid`(P170 批量)+ Artist 名字行(权威标签→翻译→en;幂等)。stub 即有完整多语显示名。
+4. **生成内容**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
    → 逐件:stub 抓材料(Wikipedia/Joconde)→ 生成 → 接地闸 → 翻译 → 落库 → `ready`/`empty`。
-4. 端点自动产出上述四个契约;前端零改接入。
+5. 端点自动产出上述四个契约;前端零改接入。
 
 **非 Wikidata 主源的馆**(如美国 Met):一次性写个 `CatalogSource` 连接器(同插件模式,核心零改),其余同上。
 
@@ -170,6 +172,7 @@
 > **① 该语言的权威标签**(Wikidata 多语 labels / 馆方官方标签,专有名词最优)→ **② 从英语轴心机器翻译**(该语言无权威标签时兜底)→ **③ 英语轴心原名**(永不空)。
 > **语言无关**:新增语言(de/es/it…)**只加进 `DEFAULT_LANGUAGES` 语言集**,生成时一次性抓该实体全部目标语言的 Wikidata labels、缺的从 en 翻译 —— **同一套机制、零 per-language 代码**。这就是"加语言=加配置"。
 > **配套**:**QID 是全系统匹配键**(识别/查询/去重/跳转都用 qid);显示名纯展示,名字回退绝不影响匹配。避开脏格式(如 Joconde 的 "Lastname First (dates)")。
+> **解析时机 = 铺目录时(2026-07-03 定)**:显示名是**目录元数据、不是生成内容**——catalog 后立即跑 `onboard.py <slug> names --target <env>`(幂等可重跑),全馆补齐 `title_i18n`/`artist_qid`/Artist 名字行;stub 一进目录就有完整多语显示名,**不等内容生成**(此前只在 generate 时填,导致列表页大量 stub 在 zh 视图显英/法文名)。generate 时同一机制增量修补。en 也权威优先(纠正目录把非英文标签误存 title_en,如 "Régates à Argenteuil")。
 
 **博物馆负责事实,AI 负责讲法。** 每件内容分三层,各守互斥职责,从同一份证据包生成、不重复:
 
@@ -210,6 +213,7 @@
 
 ## 变更记录
 
+- 2026-07-03:定**显示名解析时机=铺目录时**——新增 `names` 回填命令(title_i18n/artist_qid/Artist名字行,幂等);`_fill_i18n` en 也权威优先;Artist 行存在但 bio 空时 generate 补 bio。修列表页 stub 在 zh 视图显英/法文名问题(截图反馈)。翻译兜底规则经讨论**维持所有语言统一**(权威→机翻→en),不按拉丁/非拉丁分叉。
 - 2026-07-03:契约-代码对齐——端点3 `artist` 真正走 name_i18n(此前只 title);facts.medium 优先证据包 P186(修正 P2048 措辞:尺寸仍 Joconde);`country_lang`/`sources` 从 museums.yaml 读(去 France 硬编码,上新馆=纯配置成立)。
 - 2026-06-28:新建本活文档。纳入近期加法:端点3 `/objects` 分页;端点2 `categories` facet + language;端点4 `status/title/images/facts`;`content_status` 生命周期;上新馆路径。
 - 2026-07-02:多语显示名规则**落地**(title_i18n/Artist.name_i18n:Wikidata多语标签+翻译兜底;端点 resolve_name 语言感知;避 Joconde 脏格式)。

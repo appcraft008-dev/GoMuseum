@@ -587,6 +587,38 @@ def test_generate_fills_title_and_artist_name_i18n(session, monkeypatch):
     assert "Van Gogh" in ni["fr"]  # 作者无权威→翻译兜底
 
 
+def test_generate_fills_bio_when_artist_exists_without_bio(session, monkeypatch):
+    # 显示名回填会先建名字-only 的 Artist 行;generate 遇 bio 空必须补,不能因行存在跳过
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q34618"})
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    session.add(Artist(qid="Q34618", name_en="Courbet", name_i18n={"en": "Courbet"}))
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            return "Courbet bio."
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q34618").one()
+    assert art.bio and art.bio["en"] == "Courbet bio."
+
+
 def test_generate_object_passes_country_lang_to_artist_material(session, monkeypatch):
     # 契约"零核心改动上新馆":country_lang 来自 museums.yaml,不得硬编 fr
     import app.services.enrichment.material as mat

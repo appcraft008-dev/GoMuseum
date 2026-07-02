@@ -32,10 +32,8 @@ def _wikidata_labels(qid, langs):
 
 
 def _fill_i18n(existing, en_name, labels, langs, translator):
-    """权威标签优先,缺则从 en 翻译,en 兜底。返回 {lang: name}。"""
+    """权威标签优先(含 en:纠正目录误存非英文标签),缺则从 en 翻译,en 兜底。返回 {lang: name}。"""
     out = dict(existing or {})
-    if en_name:
-        out.setdefault("en", en_name)
     for lang in langs:
         if out.get(lang):
             continue
@@ -46,6 +44,8 @@ def _fill_i18n(existing, en_name, labels, langs, translator):
                 out[lang] = translator.translate_section(en_name, lang)
             except Exception:
                 pass
+    if en_name:
+        out.setdefault("en", en_name)
     return out
 
 
@@ -159,7 +159,8 @@ def generate_object(
             from app.models.artist import Artist
 
             art = db.query(Artist).filter_by(qid=aqid).first()
-            if art is None or force:  # force 时刷新已存作者(修 bio 语言/补语种)
+            # force 刷新已存作者(修 bio 语言/补语种);bio 空也进(显示名回填只建名字行)
+            if art is None or force or not art.bio:
                 bio_en = (
                     enricher.generate_artist_bio(o.attributes)
                     if hasattr(enricher, "generate_artist_bio")
