@@ -156,10 +156,18 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _slogan(AppLocalizations l10n) {
-    return Text(
-      l10n.homeSlogan,
-      textAlign: TextAlign.center,
-      style: GmText.serif(size: 27, weight: FontWeight.w700, height: 1.55),
+    // 标语本身带 `\n`（本意 2 行）。法语首行较长、27px 会被迫再折成 3 行；
+    // FittedBox.scaleDown 把整块按可用宽度等比缩小到恰好 2 行（英/中已够宽、不缩）。
+    return SizedBox(
+      width: double.infinity,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          l10n.homeSlogan,
+          textAlign: TextAlign.center,
+          style: GmText.serif(size: 27, weight: FontWeight.w700, height: 1.55),
+        ),
+      ),
     );
   }
 

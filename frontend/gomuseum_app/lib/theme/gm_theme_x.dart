@@ -15,6 +15,10 @@ extension GmThemeX on BuildContext {
   /// 按比例收窄到接近 0（全大写 GOMUSEUM 保留一点点）。
   double gmLetterSpacing(double cjk) =>
       isCjk ? cjk : (cjk * 0.18).clamp(0.0, 1.2);
+
+  /// 正文行高：中文字密、需大行高(1.9)才透气；拉丁文 1.9 反而行间松散、
+  /// 段落"散架"，收到 1.6（拉丁常规书籍值）。
+  double get gmBodyHeight => isCjk ? 1.9 : 1.6;
 }
 
 /// 不随主题切换的硬编码值（handoff「特殊规则」章节）。

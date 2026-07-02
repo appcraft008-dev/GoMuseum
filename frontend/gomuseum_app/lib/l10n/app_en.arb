@@ -118,6 +118,7 @@
   "loginBind": "Sign in / Link account",
   "notLoggedIn": "Not signed in",
   "userDefault": "User",
+  "guestPrefix": "Guest_",
   "noEmailBound": "No email linked",
   "logout": "Sign out",
   "deleteAccount": "Delete account",

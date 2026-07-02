@@ -608,7 +608,8 @@ class _GuidePageState extends ConsumerState<GuidePage>
     final highlight = [e.artisticAnalysis, e.culturalSignificance]
         .where((s) => s.trim().isNotEmpty)
         .join('\n\n');
-    final paragraphStyle = GmText.sans(size: 13.5, height: 1.9);
+    final paragraphStyle =
+        GmText.sans(size: 13.5, height: context.gmBodyHeight);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1115,7 +1116,7 @@ class _A5Body extends StatelessWidget {
           const SizedBox(height: 14),
           if (layer.hasHero)
             Text(layer.heroBody,
-                style: GmText.sans(size: 13.5, height: 1.95),
+                style: GmText.sans(size: 13.5, height: context.gmBodyHeight),
                 textAlign: TextAlign.justify)
           else
             Padding(

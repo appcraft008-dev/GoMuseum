@@ -108,6 +108,7 @@
   "loginBind": "Se connecter / Lier un compte",
   "notLoggedIn": "Non connecté",
   "userDefault": "Utilisateur",
+  "guestPrefix": "Invité_",
   "noEmailBound": "Aucun e-mail lié",
   "logout": "Se déconnecter",
   "deleteAccount": "Supprimer le compte",

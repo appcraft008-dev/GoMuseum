@@ -175,7 +175,9 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
         Text(
           hasBody ? tab.body! : l10n.toBeRefined,
           style: GmText.sans(
-              size: 13.5, height: 1.95, color: hasBody ? gm.ink : gm.faint),
+              size: 13.5,
+              height: context.gmBodyHeight,
+              color: hasBody ? gm.ink : gm.faint),
           textAlign: TextAlign.justify,
         ),
       ],

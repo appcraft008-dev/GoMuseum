@@ -718,6 +718,12 @@ abstract class AppLocalizations {
   /// **'User'**
   String get userDefault;
 
+  /// No description provided for @guestPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest_'**
+  String get guestPrefix;
+
   /// No description provided for @noEmailBound.
   ///
   /// In en, this message translates to:

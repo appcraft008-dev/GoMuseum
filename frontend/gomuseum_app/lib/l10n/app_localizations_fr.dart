@@ -340,6 +340,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get userDefault => 'Utilisateur';
 
   @override
+  String get guestPrefix => 'Invité_';
+
+  @override
   String get noEmailBound => 'Aucun e-mail lié';
 
   @override

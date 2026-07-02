@@ -335,6 +335,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userDefault => '用户';
 
   @override
+  String get guestPrefix => '游客_';
+
+  @override
   String get noEmailBound => '未绑定邮箱';
 
   @override
