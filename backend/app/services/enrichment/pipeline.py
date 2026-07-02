@@ -117,7 +117,7 @@ def generate_object(
             from app.models.artist import Artist
 
             art = db.query(Artist).filter_by(qid=aqid).first()
-            if art is None:
+            if art is None or force:  # force 时刷新已存作者(修 bio 语言/补语种)
                 bio_en = (
                     enricher.generate_artist_bio(o.attributes)
                     if hasattr(enricher, "generate_artist_bio")
@@ -132,8 +132,9 @@ def generate_object(
                                 bios[lang] = translator.translate_section(bio_en, lang)
                             except Exception:
                                 pass
-                art = Artist(qid=aqid)
-                db.add(art)
+                if art is None:
+                    art = Artist(qid=aqid)
+                    db.add(art)
                 art.name_en = o.artist_en
                 # 中文名缺(Wikidata 无 zh 标签)→ 翻译补,同标题机制
                 name_zh = o.artist_zh
@@ -152,7 +153,7 @@ def generate_object(
                 art.nationality = af.get("artist_nationality")
                 art.notable_works = af.get("artist_notable_works")
                 if bios:
-                    art.bio = bios
+                    art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
                 db.flush()
 
     if not o.title_zh and o.title_en and hasattr(translator, "translate_section"):
