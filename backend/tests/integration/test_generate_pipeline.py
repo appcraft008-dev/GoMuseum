@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
@@ -24,6 +25,7 @@ def session():
             ObjectImage.__table__,
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -56,6 +58,9 @@ class _FakeGate:
 
 
 class _FakeTranslator:
+    def translate_section(self, t, lang):
+        return t + "_" + lang
+
     def translate_object(self, en_sections, target_langs):
         return {
             "fr": {
@@ -461,3 +466,47 @@ def test_generate_object_passes_covered_to_qa(session):
         qa_suggester=_QA(),
     )
     assert seen["covered"] and "深度背景正文" in seen["covered"]
+
+
+def test_generate_object_creates_and_reuses_artist(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_facts",
+        lambda qid: {"artist_qid": "Q296", "artist_birth": "1853"},
+    )
+    calls = {"n": 0}
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            calls["n"] += 1
+            return "梵高生平。"
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_extract_en": "Van Gogh..."}
+    session.commit()
+    common = dict(
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    generate_object(session, "Q1", **common)
+    art = session.query(Artist).filter_by(qid="Q296").one()
+    assert art.bio and art.birth == "1853"
+    assert (
+        session.query(MuseumObject)
+        .filter_by(qid="Q1")
+        .one()
+        .attributes.get("artist_qid")
+        == "Q296"
+    )
+    # 再跑一次(同作者已存在)→ 不再调 generate_artist_bio
+    generate_object(session, "Q1", **common)
+    assert calls["n"] == 1

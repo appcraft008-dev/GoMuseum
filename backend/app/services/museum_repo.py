@@ -279,29 +279,32 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         if guide_row and guide_row.body
         else None
     )
-    artist_row = (
-        db.query(ObjectContentSection)
-        .filter_by(
-            object_id=obj.id,
-            language=language,
-            section_code="artist",
-            status="published",
-        )
-        .first()
-    )
+    from app.models.artist import Artist
+
+    aqid = attrs.get("artist_qid")
+    art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
     artist_card = {
-        "name": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
-        "birth": attrs.get("artist_birth"),
-        "death": attrs.get("artist_death"),
-        "nationality": attrs.get("artist_nationality"),
-        "notable_works": attrs.get("artist_notable_works") or [],
-        "bio": artist_row.body if artist_row else None,
+        "name": _pick(
+            language,
+            (art.name_zh if art else None) or obj.artist_zh,
+            (art.name_en if art else None) or obj.artist_en,
+            attrs.get("artist_fr"),
+        ),
+        "birth": art.birth if art else None,
+        "death": art.death if art else None,
+        "nationality": art.nationality if art else None,
+        "notable_works": (art.notable_works if art else None) or [],
+        "bio": (art.bio or {}).get(language) if art else None,
     }
+    guide_body = guide_row.body if guide_row else None
+    eff_status = obj.content_status
+    if not (guide_body and guide_body.strip()) and not tabs:
+        eff_status = "empty"
     return {
         "qid": qid,
         "category": obj.category,
         "language": language,
-        "status": obj.content_status,
+        "status": eff_status,
         "title": _pick(
             language, obj.title_zh, obj.title_en, attrs.get("title_fr"), qid
         ),

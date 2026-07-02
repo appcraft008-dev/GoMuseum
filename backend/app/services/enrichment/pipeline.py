@@ -110,6 +110,47 @@ def generate_object(
             o.attributes = {**(o.attributes or {}), **af}
             db.flush()
 
+        aqid = (af or {}).get("artist_qid")
+        if aqid:
+            o.attributes = {**(o.attributes or {}), "artist_qid": aqid}
+            db.flush()
+            from app.models.artist import Artist
+
+            art = db.query(Artist).filter_by(qid=aqid).first()
+            if art is None:
+                bio_en = (
+                    enricher.generate_artist_bio(o.attributes)
+                    if hasattr(enricher, "generate_artist_bio")
+                    else None
+                )
+                bios = {}
+                if bio_en:
+                    bios["en"] = bio_en
+                    for lang in target_langs:
+                        if lang != "en":
+                            try:
+                                bios[lang] = translator.translate_section(bio_en, lang)
+                            except Exception:
+                                pass
+                art = Artist(qid=aqid)
+                db.add(art)
+                art.name_zh = o.artist_zh
+                art.name_en = o.artist_en
+                art.birth = af.get("artist_birth")
+                art.death = af.get("artist_death")
+                art.nationality = af.get("artist_nationality")
+                art.notable_works = af.get("artist_notable_works")
+                if bios:
+                    art.bio = bios
+                db.flush()
+
+    if not o.title_zh and o.title_en and hasattr(translator, "translate_section"):
+        try:
+            o.title_zh = translator.translate_section(o.title_en, "zh")
+            db.flush()
+        except Exception:
+            pass
+
     obj = _row_to_obj(o)
     material = build_material(obj)
     facts = _facts_text(obj)

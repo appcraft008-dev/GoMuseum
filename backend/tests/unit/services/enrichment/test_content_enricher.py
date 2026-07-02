@@ -240,3 +240,22 @@ def test_generate_canonical_passes_popularity():
         sections=["background"],
     )
     assert "570" in captured["user"]  # 重点件 background 380×1.5
+
+
+def test_generate_artist_bio():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    enr = ContentEnricher(complete=lambda s, u: "梵高是荷兰后印象派先驱……")
+    bio = enr.generate_artist_bio(
+        {"artist_extract_en": "Van Gogh was a Dutch painter..."}
+    )
+    assert bio and "梵高" in bio
+
+
+def test_generate_artist_bio_no_material():
+    from app.services.enrichment.content_enricher import ContentEnricher
+
+    enr = ContentEnricher(complete=lambda s, u: "x")
+    assert (
+        enr.generate_artist_bio({"extract_en": "no artist material"}) is None
+    )  # 无 artist_extract_* → None

@@ -175,6 +175,17 @@ def build_qa_prompt(material: str, category: str, covered: str | None = None):
     return _QA_SYSTEM, user
 
 
+_ARTIST_BIO_SYSTEM = (
+    "You write a concise, engaging biography of an ARTIST (the maker), using ONLY the MATERIAL. "
+    "Cover: who they were, their life and character, what drove them, their place in art history. "
+    "~200-300 Chinese-char equivalent. Grounded only, no fabrication. Return plain prose, no headings."
+)
+
+
+def build_artist_bio_prompt(material: str):
+    return _ARTIST_BIO_SYSTEM, f"MATERIAL (about the artist):\n{material}"
+
+
 _DEFAULT_GUIDE_SYSTEM = (
     "You are a museum audio-guide writer. Write ONE short spoken on-site guide for a visitor "
     "standing in front of the artwork, built around a SINGLE core point (one throughline) — "

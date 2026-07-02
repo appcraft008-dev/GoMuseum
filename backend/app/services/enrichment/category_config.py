@@ -18,14 +18,12 @@ def category_for(p31_qid: str | None) -> str:
 # 类别 → 有序段落集（单一真相源；seed/生成/详情共用）。未知类别用 _FALLBACK。
 SECTIONS_BY_CATEGORY: dict[str, list[str]] = {
     "painting": [
-        "artist",
         "background",
         "analysis",
         "significance",
         "facts",
     ],
     "sculpture": [
-        "artist",
         "material-technique",
         "background",
         "significance",
