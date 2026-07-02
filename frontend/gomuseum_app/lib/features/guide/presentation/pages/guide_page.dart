@@ -1144,21 +1144,24 @@ class _A5Body extends StatelessWidget {
             GuideQuestionList(questions: content.suggestedQuestions),
           ],
 
-          // 📖 深度内容 → 底部抽屉（作者卡在抽屉首位）。
-          // 入口条件放宽：有深度 tab 或有作者卡都露出，保「作者卡必选常驻」。
+          // 📖 深度内容 → 底部抽屉（「作者介绍」为首位 tab，必选常驻）。
+          // 入口条件放宽：有深度 tab 或有作者都露出；数字含作者 tab。
           if (layer.hasDeep || content.artist != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 18),
-              child: GmTicketButton(
-                label: layer.deepCount > 0
-                    ? '${l10n.guideDeepContent}（${layer.deepCount}）'
-                    : l10n.guideDeepContent,
-                icon: GmIcons.doc,
-                trailingIcon: GmIcons.arrowR,
-                onTap: () => showGuideDeepSheet(context, layer.deepTabs,
-                    artist: content.artist),
-              ),
-            ),
+            Builder(builder: (context) {
+              final hasArtist =
+                  content.artist != null && content.artist!.name.isNotEmpty;
+              final sheetTabCount = layer.deepCount + (hasArtist ? 1 : 0);
+              return Padding(
+                padding: const EdgeInsets.only(top: 18),
+                child: GmTicketButton(
+                  label: '${l10n.guideDeepContent}（$sheetTabCount）',
+                  icon: GmIcons.doc,
+                  trailingIcon: GmIcons.arrowR,
+                  onTap: () => showGuideDeepSheet(context, layer.deepTabs,
+                      artist: content.artist),
+                ),
+              );
+            }),
         ],
       ),
     );

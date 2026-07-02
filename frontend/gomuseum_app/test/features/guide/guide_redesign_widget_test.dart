@@ -24,9 +24,9 @@ ObjectContent _sample() => const ObjectContent(
             body: '主线讲解正文。',
             audioUrl: null),
         ObjectTab(
-            sectionCode: 'artist',
-            label: '作者介绍',
-            body: '作者正文。',
+            sectionCode: 'background',
+            label: '创作背景',
+            body: '背景正文。',
             audioUrl: null),
       ],
       suggestedQuestions: [
@@ -58,7 +58,7 @@ void main() {
     // 深度按钮（去掉 overview 后 = 1）
     expect(find.textContaining('深度内容'), findsOneWidget);
     // 主页不再并列展示深度 tab 的正文
-    expect(find.text('作者正文。'), findsNothing);
+    expect(find.text('背景正文。'), findsNothing);
     // 问题可就地展开
     await t.ensureVisible(find.text('为什么星星这么大？'));
     await t.pumpAndSettle();
@@ -103,12 +103,14 @@ void main() {
       ),
     ));
     await t.pumpAndSettle();
-    // 无深度 tab，入口仍露出（label 无括号数字）
-    expect(find.text('深度内容'), findsOneWidget);
-    await t.ensureVisible(find.text('深度内容'));
+    // 无深度 tab，入口仍露出（label = 深度内容（1），仅作者 tab）
+    expect(find.textContaining('深度内容'), findsOneWidget);
+    await t.ensureVisible(find.textContaining('深度内容'));
     await t.pumpAndSettle();
-    await t.tap(find.text('深度内容'));
+    await t.tap(find.textContaining('深度内容'));
     await t.pumpAndSettle();
+    // 抽屉只有「作者介绍」一个 tab，默认选中 → 显示作者信息
+    expect(find.text('作者介绍'), findsOneWidget);
     expect(find.text('库尔贝'), findsOneWidget);
   });
 }

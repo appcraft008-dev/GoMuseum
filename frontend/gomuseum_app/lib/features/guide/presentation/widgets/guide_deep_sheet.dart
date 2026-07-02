@@ -3,11 +3,12 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_artist_card.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
+import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
-/// 拉起「深度内容」底部抽屉。作者卡（若有）置于首位、必选常驻。
+/// 拉起「深度内容」底部抽屉。作者（若有）作为首位「作者介绍」tab、必选常驻。
 Future<void> showGuideDeepSheet(BuildContext context, List<ObjectTab> tabs,
     {Artist? artist}) {
   final gm = context.gm;
@@ -41,10 +42,16 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    final hasTabs = widget.tabs.isNotEmpty;
-    final tab = hasTabs ? widget.tabs[_i] : null;
-    final hasBody = tab?.hasBody ?? false;
     final showArtist = widget.artist != null && widget.artist!.name.isNotEmpty;
+
+    // 统一 tab 顺序：作者介绍（若有，恒首位）→ 深度 tabs。
+    final labels = <String>[
+      if (showArtist) l10n.guideArtistTab,
+      for (final t in widget.tabs) t.label,
+    ];
+    // 越界保护（重开抽屉时 _i 归 0，一般不触发）。
+    final selected = labels.isEmpty ? 0 : _i.clamp(0, labels.length - 1);
+    final artistSelected = showArtist && selected == 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -89,84 +96,89 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
             ),
           ),
           Container(height: 1.5, color: gm.line),
-          // 内容：作者卡（首位常驻）→ 深度 tab
+          // Tab 栏（横滚，粘顶）
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(left: 12),
+            child: Row(
+              children: [
+                for (int i = 0; i < labels.length; i++)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _i = i),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(14, 9, 14, 8),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color:
+                                i == selected ? gm.accent : Colors.transparent,
+                            width: 2.5,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        labels[i],
+                        style: i == selected
+                            ? GmText.serif(
+                                size: 13.5,
+                                weight: FontWeight.w700,
+                                color: gm.accentDeep)
+                            : GmText.sans(size: 13.5, color: gm.sub),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: gm.line),
+          // 正文（音频条 + 内容），可滚动
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (showArtist)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: GuideArtistCard(artist: widget.artist!),
-                    ),
-                  if (hasTabs) ...[
-                    if (showArtist) const SizedBox(height: 18),
-                    // Tab 栏（横滚）
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.only(left: 12),
-                      child: Row(
-                        children: [
-                          for (int i = 0; i < widget.tabs.length; i++)
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => setState(() => _i = i),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.fromLTRB(14, 9, 14, 8),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: i == _i
-                                          ? gm.accent
-                                          : Colors.transparent,
-                                      width: 2.5,
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  widget.tabs[i].label,
-                                  style: i == _i
-                                      ? GmText.serif(
-                                          size: 13.5,
-                                          weight: FontWeight.w700,
-                                          color: gm.accentDeep)
-                                      : GmText.sans(size: 13.5, color: gm.sub),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Container(height: 1, color: gm.line),
-                    // 音频条 + 正文
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 11, 20, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          GuideAudioBar(audioUrl: tab!.audioUrl),
-                          const SizedBox(height: 14),
-                          Text(
-                            hasBody ? tab.body! : l10n.toBeRefined,
-                            style: GmText.sans(
-                                size: 13.5,
-                                height: 1.95,
-                                color: hasBody ? gm.ink : gm.faint),
-                            textAlign: TextAlign.justify,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 11, 20, 24),
+              child: artistSelected
+                  ? _artistBody()
+                  : _tabBody(context, gm, l10n, showArtist, selected),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// 作者介绍 tab：音频条（预留）+ 结构化作者信息。
+  Widget _artistBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const GuideAudioBar(audioUrl: null),
+        const SizedBox(height: 14),
+        GuideArtistCard(artist: widget.artist!),
+      ],
+    );
+  }
+
+  /// 深度 tab：音频条 + 正文（空则「待完善」）。
+  Widget _tabBody(BuildContext context, GmPalette gm, AppLocalizations l10n,
+      bool showArtist, int selected) {
+    final deepIndex = showArtist ? selected - 1 : selected;
+    if (deepIndex < 0 || deepIndex >= widget.tabs.length) {
+      return const SizedBox.shrink();
+    }
+    final tab = widget.tabs[deepIndex];
+    final hasBody = tab.hasBody;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GuideAudioBar(audioUrl: tab.audioUrl),
+        const SizedBox(height: 14),
+        Text(
+          hasBody ? tab.body! : l10n.toBeRefined,
+          style: GmText.sans(
+              size: 13.5, height: 1.95, color: hasBody ? gm.ink : gm.faint),
+          textAlign: TextAlign.justify,
+        ),
+      ],
     );
   }
 }

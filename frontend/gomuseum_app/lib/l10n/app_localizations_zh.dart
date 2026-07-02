@@ -204,6 +204,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideArtist => '作者';
 
   @override
+  String get guideArtistTab => '作者介绍';
+
+  @override
   String get guideNotableWorks => '代表作';
 
   @override

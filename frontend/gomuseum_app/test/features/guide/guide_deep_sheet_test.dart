@@ -29,7 +29,7 @@ void main() {
     expect(find.text('分析正文'), findsOneWidget);
   });
 
-  testWidgets('提供 artist → 抽屉首位渲染作者卡，且 tab 仍在', (t) async {
+  testWidgets('提供 artist →「作者介绍」为首位 tab、默认选中、可切走', (t) async {
     await t.pumpWidget(MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -49,8 +49,17 @@ void main() {
       ),
     ));
     await t.pumpAndSettle();
+    // 作者介绍 tab 存在且默认选中 → 显示作者信息（含音频条与 bio）
+    expect(find.text('作者介绍'), findsOneWidget);
+    expect(find.text('分析'), findsOneWidget);
     expect(find.text('马奈'), findsOneWidget);
     expect(find.text('一段经历'), findsOneWidget);
-    expect(find.text('分析'), findsOneWidget);
+    expect(find.text('听讲解'), findsOneWidget); // 作者 tab 也有音频条
+    expect(find.text('分析正文'), findsNothing); // 未选中不显示
+    // 切到「分析」→ 作者内容让位给分析正文
+    await t.tap(find.text('分析'));
+    await t.pumpAndSettle();
+    expect(find.text('分析正文'), findsOneWidget);
+    expect(find.text('马奈'), findsNothing);
   });
 }

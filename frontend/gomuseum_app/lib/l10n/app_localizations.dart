@@ -472,6 +472,12 @@ abstract class AppLocalizations {
   /// **'Artist'**
   String get guideArtist;
 
+  /// No description provided for @guideArtistTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get guideArtistTab;
+
   /// No description provided for @guideNotableWorks.
   ///
   /// In en, this message translates to:
