@@ -50,6 +50,9 @@ def build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--limit", type=int, default=None)
     rp = sub.add_parser("report")
     rp.add_argument("--langs", default=None)
+    na = sub.add_parser("names")  # 显示名回填(铺目录后即跑;幂等可重跑)
+    na.add_argument("--target", choices=["staging", "prod"], required=True)
+    na.add_argument("--langs", default=None)
     return p
 
 
@@ -202,6 +205,31 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     print(f"✓ generate 完成: {out}")
 
 
+def cmd_names(slug: str, langs: str | None, target: str) -> None:
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+    from app.services.enrichment.backfill import backfill_display_names
+    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.lang_config import resolve_languages
+    from app.services.enrichment.translator import ContentTranslator
+
+    cfg = _catalog().get(slug)
+    override = [s.strip() for s in langs.split(",")] if langs else cfg.languages
+    target_langs = resolve_languages(override)
+    db = SessionLocal()
+    try:
+        out = backfill_display_names(
+            db, slug, translator=ContentTranslator(default_complete), langs=target_langs
+        )
+    finally:
+        db.close()
+    print(f"✓ names 回填完成: {out}")
+
+
 def cmd_report(slug: str, langs: str | None) -> None:
     from app.services.enrichment.content_report import build_quality_report
     from app.services.enrichment.lang_config import resolve_languages
@@ -229,6 +257,8 @@ def main(argv=None) -> None:
         cmd_generate(ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target)
     elif ns.command == "report":
         cmd_report(ns.slug, ns.langs)
+    elif ns.command == "names":
+        cmd_names(ns.slug, ns.langs, ns.target)
     else:
         cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 
