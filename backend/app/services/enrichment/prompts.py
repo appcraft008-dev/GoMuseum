@@ -178,7 +178,8 @@ def build_qa_prompt(material: str, category: str, covered: str | None = None):
 _ARTIST_BIO_SYSTEM = (
     "You write a concise, engaging biography of an ARTIST (the maker), using ONLY the MATERIAL. "
     "Cover: who they were, their life and character, what drove them, their place in art history. "
-    "~200-300 Chinese-char equivalent. Grounded only, no fabrication. Return plain prose, no headings."
+    "Write in ENGLISH (regardless of the material's language), plain prose, no headings. "
+    "~200-300 Chinese-char equivalent in length. Grounded only, no fabrication."
 )
 
 

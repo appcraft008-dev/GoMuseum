@@ -543,3 +543,40 @@ def test_generate_object_translates_missing_artist_name_zh(session, monkeypatch)
     assert (
         art.name_zh and "Alfred Sisley" in art.name_zh
     )  # _FakeTranslator 回显 → 证明翻译被调
+
+
+def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q9"})
+    calls = {"n": 0}
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            calls["n"] += 1
+            return "bio v%d。" % calls["n"]
+
+    # 预置一条旧 Artist(bio 含旧 en + fr)
+    session.add(Artist(qid="Q9", name_en="X", bio={"en": "old wrong", "fr": "fr bio"}))
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "X"
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+        force=True,
+    )
+    art = session.query(Artist).filter_by(qid="Q9").one()
+    assert calls["n"] == 1  # force 刷新了 bio
+    assert art.bio["en"] == "bio v1。"  # en 更新
+    assert art.bio["fr"] == "fr bio"  # 其它语种保留(合并)
