@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.content import (  # noqa: F401  (建表用)
     CategorySection,
     ObjectContentSection,
@@ -31,6 +32,7 @@ def session():
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
             SectionType.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -69,6 +71,17 @@ def test_pack_includes_category_facet(session):
 
 
 def test_content_includes_facts_title_images_status(session):
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="guide",
+            body="讲解正文。",
+            status="published",
+        )
+    )
+    session.commit()
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert d["title"] == "世界的起源" and d["status"] == "ready"
     assert d["images"][0]["url"] == "https://img/x.jpg"  # upsert_object 把 http→https
@@ -185,25 +198,22 @@ def test_tabs_exclude_overview(session):
 
 
 def test_content_artist_card(session):
-    from app.models.content import ObjectContentSection
+    from app.models.artist import Artist
     from app.models.museum_object import MuseumObject
     from app.services.museum_repo import get_object_content
 
     o = session.query(MuseumObject).filter_by(qid="Q1").one()
-    o.artist_zh = "马奈"
-    o.attributes = {
-        "artist_birth": "1832",
-        "artist_death": "1883",
-        "artist_nationality": "France",
-        "artist_notable_works": ["Olympia"],
-    }
+    o.attributes = {"artist_qid": "Q40599"}
     session.add(
-        ObjectContentSection(
-            object_id=o.id,
-            language="zh",
-            section_code="artist",
-            body="马奈生平叙事。",
-            status="published",
+        Artist(
+            qid="Q40599",
+            name_zh="马奈",
+            name_en="Manet",
+            birth="1832",
+            death="1883",
+            nationality="France",
+            notable_works=["Olympia"],
+            bio={"zh": "马奈生平叙事。"},
         )
     )
     session.commit()
@@ -266,3 +276,34 @@ def test_tabs_hide_empty_and_unpublished(session):
     ]
     assert "significance" not in codes  # 空/未发布 → 隐
     assert "background" in codes  # 有发布正文 → 显
+
+
+def test_artist_card_from_artists_table(session):
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q296"}
+    session.add(
+        Artist(
+            qid="Q296",
+            name_zh="梵高",
+            name_en="Van Gogh",
+            birth="1853",
+            nationality="Netherlands",
+            notable_works=["Starry Night"],
+            bio={"zh": "梵高生平。"},
+        )
+    )
+    session.commit()
+    a = get_object_content(session, "orsay", "Q1", "zh")["artist"]
+    assert a["name"] == "梵高" and a["birth"] == "1853" and a["bio"] == "梵高生平。"
+    assert a["notable_works"] == ["Starry Night"]
+
+
+def test_status_empty_when_language_has_no_content(session):
+    from app.services.museum_repo import get_object_content
+
+    d = get_object_content(session, "orsay", "Q1", "fr")  # fr 无 guide 无 tab
+    assert d["status"] == "empty"
