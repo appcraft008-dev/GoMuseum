@@ -23,6 +23,9 @@ class Artist(Base):
     bio = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
     )
+    name_i18n = Column(
+        MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
+    )  # {lang: name} 多语显示名
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

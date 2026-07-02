@@ -32,3 +32,22 @@ def test_artist_roundtrip():
         and a.bio["zh"] == "梵高生平"
         and a.notable_works == ["Starry Night"]
     )
+
+
+def test_artist_name_i18n_roundtrip():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from app.core.database import Base
+    from app.models.artist import Artist
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine, tables=[Artist.__table__])
+    s = sessionmaker(bind=engine)()
+    s.add(Artist(qid="Q7", name_i18n={"en": "Sisley", "fr": "Sisley", "zh": "西斯莱"}))
+    s.commit()
+    s.expire_all()
+    assert s.query(Artist).filter_by(qid="Q7").one().name_i18n["zh"] == "西斯莱"
