@@ -183,9 +183,9 @@ def test_generation_prompt_tiers_length_by_popularity():
     assert "570" in user_key  # 重点件 background 380×1.5
     assert "380" in user_norm  # 普通件
     assert (
-        "注水" in user_key
-        or "specific" in user_key.lower()
-        or "fluff" in user_key.lower()
+        "dilute" in user_key.lower()
+        or "filler" in user_key.lower()
+        or "pad" in user_key.lower()
     )
 
 
@@ -228,3 +228,12 @@ def test_qa_system_requires_short_interrogative_question():
     s = _QA_SYSTEM.lower()
     assert "interrogative" in s and "ending in" in s
     assert "nothing after the" in s  # 问号后不许有描述
+
+
+def test_qa_system_is_english_axis_no_chinese():
+    import re
+
+    from app.services.enrichment.prompts import _QA_SYSTEM
+
+    assert "WRITE IN ENGLISH" in _QA_SYSTEM
+    assert not re.search(r"[一-龥]", _QA_SYSTEM)  # prompt 绝不含中文(否则 LLM 输出中文)
