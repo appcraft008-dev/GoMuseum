@@ -389,8 +389,18 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         ),
         "birth": art.birth if art else None,
         "death": art.death if art else None,
-        "nationality": art.nationality if art else None,
-        "notable_works": (art.notable_works if art else None) or [],
+        # 国籍/代表作按 language 本地化(i18n 权威→en 列兜底,不返 null;交接③)
+        "nationality": (
+            ((art.nationality_i18n or {}).get(language) or art.nationality)
+            if art
+            else None
+        ),
+        "notable_works": (
+            ((art.notable_works_i18n or {}).get(language) or art.notable_works)
+            if art
+            else None
+        )
+        or [],
         "bio": (art.bio or {}).get(language) if art else None,
     }
     guide_body = guide_row.body if guide_row else None

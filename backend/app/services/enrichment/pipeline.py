@@ -35,6 +35,13 @@ def _wikidata_labels(qid, langs):
     return fetch_wikidata_labels(qid, langs)
 
 
+def _artist_i18n_facts(qid, langs):
+    """薄包装:作者国籍/代表作多语标签(测试 monkeypatch 此处避免触网)。"""
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    return fetch_artist_i18n_facts(qid, langs)
+
+
 def _fill_i18n(existing, en_name, labels, langs, translator):
     """权威标签优先(含 en:纠正目录误存非英文标签);缺的从轴心翻译。
     轴心 = en(名或标签),en 也没有则任一权威标签(冷门件常无 en 标签,如只有 fr)。返回 {lang: name}。"""
@@ -225,6 +232,28 @@ def generate_object(
                 if bios:
                     art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
                 db.flush()
+            # 国籍/代表作多语(交接③):缺语种才触网,幂等,失败不拖垮生成
+            try:
+                need = [
+                    lang
+                    for lang in target_langs
+                    if not (art.nationality_i18n or {}).get(lang)
+                    or not (art.notable_works_i18n or {}).get(lang)
+                ]
+                if need:
+                    from app.services.enrichment.backfill import (
+                        fill_artist_i18n_facts,
+                    )
+
+                    fill_artist_i18n_facts(
+                        art,
+                        target_langs,
+                        translator,
+                        _artist_i18n_facts(aqid, target_langs),
+                    )
+                    db.flush()
+            except Exception:
+                logger.exception("artist facts i18n failed: %s", aqid)
             # 已存在作者的 bio 语种补齐:en 有效、目标语言缺 → 纯翻译补
             # (作者实体全馆复用,老作者 bio 只有老语种;修 es/it 作者简介不全)
             bio_en = (art.bio or {}).get("en") if bio_en_usable(art.bio) else None
