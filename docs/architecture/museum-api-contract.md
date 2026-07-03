@@ -127,10 +127,14 @@
 
 **懒翻译(✅2026-07-03 落地,懒生成姐妹场景)**:content 端点命中"对象 `ready`、有 en 轴心、但**请求语言**无已发布内容" → 后台**只翻这一门语言**(补语种原语:段落+问答+作者bio,数十秒、费用分钱级)。配合**列表 content_status 按请求语言解读**:该语言缺 → 列表即显"待完善",点开触发懒翻译,刷新即有——任何语言视图所见即所得,新加语言自动享受同样行为。同锁/并发/环境门。
 
-## 图片字段
+## 图片字段（✅2026-07-03 R2 自存落地）
 
-`image`(端点2)/`thumbnail`(端点3)/`images[].url`(端点4)取值:`ObjectImage.image_key` 有则 R2 直链(`storage.public_url`),否则回退 `source_url`(当前多为 Wikimedia `Special:FilePath`)。
-> ⚠️ **已知问题 + 规划**:Wikimedia 链接按 UA 策略拦截(需合规 UA)且原图大/现生成慢。规划:富化阶段把图自存 R2 并预生成尺寸档,`image_key` 填充后这些字段自动返 R2 直链(字段名不变,前端零改)。见图像自存交接。
+`image`(端点2)/`thumbnail`(端点3)→ **thumb 档**(480px);`images[].url`(端点4)→ **large 档**(1600px,兼识别参照)。`ObjectImage.image_key` 存**基础键**(`images/{qid}/{sort}`),端点拼 `_thumb.jpg`/`_large.jpg` 出 R2 直链;无 key 回退 `source_url`(Wikimedia)。字段名不变,前端零改。
+
+- **多角度图**:catalog 收 P18 全部值 → 多行 ObjectImage(首张 `role=primary`,其余 `view`;雕塑识别参照)。Commons 分类(P373)深挖留给识别机制 brainstorm。
+- **物化**:`onboard.py <slug> images --target <env> [--limit N]`——下载(合规UA限速)→Pillow两档(JPEG q82,不放大)→R2→Commons 署名(license/credit,CC-BY 摄影必署)。逐行幂等,失败留空重跑重试;SVG/超60MB 跳过。不存原图(source_url 可重下)。
+- **懒补漏**:content 端点发现该件缺图 → 后台补单件(自愈运维疏漏/新进目录;不占内容锁)。
+- **⚠️ 成本分界(通用原则)**:**图=目录门面必须预物化**(列表一屏几十张缩略图多数永不被点开;识别参照库必须先于识别存在;成本≈0)——与**内容=必须懒生成**($/件)相反。新馆照此:catalog→names→images 全量预跑,generate 分层。
 
 ---
 
@@ -177,9 +181,11 @@
    → `WikidataCatalog.list` 列 stub(只收有图,§收录策略)→ `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。新类目先跑一次 `scripts/seed_sections.py`(幂等)。
 3. **回填显示名**:`python scripts/onboard.py <slug> names --target <env>`
    → 全馆 `title_i18n` + `artist_qid`(P170 批量)+ Artist 名字行(权威标签→翻译→en;幂等)。stub 即有完整多语显示名。
-4. **生成内容**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
+4. **物化图片**:`python scripts/onboard.py <slug> images --target <env>`
+   → 全馆缺图行下载→两档→R2→署名(幂等;见§图片字段)。
+5. **生成内容**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
    → 逐件:stub 抓材料(Wikipedia/Joconde)→ 生成 → 接地闸 → 翻译 → 落库 → `ready`/`empty`。
-5. 端点自动产出上述四个契约;前端零改接入。
+6. 端点自动产出上述四个契约;前端零改接入。
 
 **非 Wikidata 主源的馆**(如美国 Met):一次性写个 `CatalogSource` 连接器(同插件模式,核心零改),其余同上。
 
@@ -253,6 +259,7 @@
 
 ## 变更记录
 
+- 2026-07-03:**图像 R2 自存落地**(阶段4提前):两档(thumb480/large1600)/多角度(P18全收 primary+view)/署名/懒补漏;image_key=基础键;上新馆步骤加 `images`(第4步);定"图=预物化 vs 内容=懒生成"成本分界。Commons P373 深挖留识别轮。
 - 2026-07-03:定**完整性判断按语言维度**原则(一日三错 #142/#146/#147 的统摄:存在性检查按语言问不按对象问;复用≠跳过,共享实体每个复用点做语种补齐)。#147:生成时为已存在作者补齐 bio 缺失语种。
 - 2026-07-03:**列表 content_status 按请求语言解读**(该语言无内容→empty"待完善",防列表骗人)+ **懒翻译落地**(ready 但请求语言缺→后台只翻该语言,复用补语种原语+懒生成锁)。
 - 2026-07-03:懒生成**请求语言优先**(lang_priority,逐语言翻完即落库,单语言失败不拖垮)+ **补语种命令落地**(`onboard translate`:存量对象缺失语言从 en 段纯翻译,checklist⑤ 闭环;老 243 件补 de/es/it 用它)。

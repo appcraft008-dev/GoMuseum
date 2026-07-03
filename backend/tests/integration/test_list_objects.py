@@ -161,3 +161,15 @@ def test_list_objects_artist_resolves_via_name_i18n(session):
     assert items_de["Q1"]["artist"] == "Courbet"  # de 无标签 → en 兜底
     # 无 artist_qid 的对象仍走 legacy 列
     assert items["Q2"]["artist"] == "Manet"
+
+
+def test_list_thumbnail_uses_thumb_tier_when_materialized(session):
+    # image_key=基础键 → 列表出 _thumb.jpg 档;无 key 回退 source_url(既有测试保)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    img = session.query(ObjectImage).filter_by(object_id=o.id).one()
+    img.image_key = "images/Q1/0"
+    session.commit()
+    items = {
+        i["qid"]: i for i in list_objects(session, "orsay", language="zh")["items"]
+    }
+    assert items["Q1"]["thumbnail"].endswith("images/Q1/0_thumb.jpg")

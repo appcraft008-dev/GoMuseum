@@ -127,6 +127,11 @@ def _pick(lang: str, zh, en, fr, fallback=""):
     return en or zh or fallback
 
 
+def _sized(storage, key, size):
+    """image_key 是基础键(images/{qid}/{sort}),按档位拼文件名。size: thumb|large。"""
+    return storage.public_url(f"{key}_{size}.jpg")
+
+
 def _pack_values(pack, source):
     """从证据包取 source 匹配的全部值(不限 tier:存量 pack 富属性为 material)。"""
     return [
@@ -222,7 +227,7 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
     def _resolve_image(obj_id, fallback_src):
         img = images_by_obj.get(obj_id)
         if img and img.image_key:
-            return storage.public_url(img.image_key)
+            return _sized(storage, img.image_key, "thumb")
         return (img.source_url if img else None) or fallback_src
 
     artworks = [
@@ -324,7 +329,9 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     attrs = obj.attributes or {}
     images = [
         {
-            "url": storage.public_url(i.image_key) if i.image_key else i.source_url,
+            "url": (
+                _sized(storage, i.image_key, "large") if i.image_key else i.source_url
+            ),
             "credit": i.credit,
         }
         for i in db.query(ObjectImage)
@@ -458,7 +465,7 @@ def list_objects(
     def _thumb(obj_id):
         img = images_by_obj.get(obj_id)
         if img and img.image_key:
-            return storage.public_url(img.image_key)
+            return _sized(storage, img.image_key, "thumb")
         return img.source_url if img else None
 
     def _title(o):

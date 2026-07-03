@@ -97,3 +97,23 @@ def test_wikidata_catalog_upgrades_category_on_multi_p31():
     out = list(WikidataCatalog(run_query=fake).list(_Cfg()))
     assert len(out) == 1
     assert out[0].category == "painting"
+
+
+def test_wikidata_catalog_collects_all_p18_images():
+    # 收录策略:P18 全收(雕塑多角度参照);首张=image_url,全部进 image_urls
+    rows = [
+        _row("Q1", "A", 5),
+        _row("Q1", "A", 5),
+    ]
+    rows[0]["image"] = {"value": "http://img/a.jpg"}
+    rows[1]["image"] = {"value": "http://img/b.jpg"}
+    calls = {"n": 0}
+
+    def fake(sparql):
+        calls["n"] += 1
+        return rows if calls["n"] == 1 else []
+
+    out = list(WikidataCatalog(run_query=fake).list(_Cfg()))
+    assert len(out) == 1
+    assert out[0].image_url == "http://img/a.jpg"
+    assert out[0].image_urls == ["http://img/a.jpg", "http://img/b.jpg"]

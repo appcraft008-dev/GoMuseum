@@ -60,6 +60,9 @@ def build_parser() -> argparse.ArgumentParser:
     tr.add_argument("--target", choices=["staging", "prod"], required=True)
     tr.add_argument("--langs", required=True)  # 如 de,es,it
     tr.add_argument("--limit", type=int, default=None)
+    im = sub.add_parser("images")  # 图像物化:下载→两档→R2→署名(幂等,names 后跑)
+    im.add_argument("--target", choices=["staging", "prod"], required=True)
+    im.add_argument("--limit", type=int, default=None)
     return p
 
 
@@ -237,6 +240,23 @@ def cmd_translate(slug: str, langs: str, limit: int | None, target: str) -> None
     print(f"✓ translate 补语种完成: {out}")
 
 
+def cmd_images(slug: str, limit: int | None, target: str) -> None:
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+    from app.services.enrichment.materializer import materialize_images
+
+    db = SessionLocal()
+    try:
+        out = materialize_images(db, slug, limit=limit)
+    finally:
+        db.close()
+    print(f"✓ images 物化完成: {out}")
+
+
 def cmd_report(slug: str, langs: str | None) -> None:
     from app.services.enrichment.content_report import build_quality_report
     from app.services.enrichment.lang_config import resolve_languages
@@ -268,6 +288,8 @@ def main(argv=None) -> None:
         cmd_names(ns.slug, ns.langs, ns.target)
     elif ns.command == "translate":
         cmd_translate(ns.slug, ns.langs, ns.limit, ns.target)
+    elif ns.command == "images":
+        cmd_images(ns.slug, ns.limit, ns.target)
     else:
         cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 

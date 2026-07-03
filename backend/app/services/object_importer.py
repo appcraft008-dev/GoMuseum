@@ -77,12 +77,16 @@ def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
     db.add(obj)
     db.flush()
 
-    # 主图：按 (object, role=primary) 幂等
-    src = art.get("image")
-    if src:
+    # 图：多角度列表(首张 primary,其余 view)按 (object, sort) 幂等;
+    # 单图老调用方走 image 键(等价单元素列表;老 primary 行 sort=0 自然对齐)
+    images = art.get("images") or ([art["image"]] if art.get("image") else [])
+    for i, src in enumerate(images):
+        if not src:
+            continue
         img = db.query(ObjectImage).filter_by(
-            object_id=obj.id, role="primary"
-        ).one_or_none() or ObjectImage(object_id=obj.id, role="primary")
+            object_id=obj.id, sort=i
+        ).one_or_none() or ObjectImage(object_id=obj.id, sort=i)
+        img.role = "primary" if i == 0 else "view"
         img.source_url = src.replace("http://", "https://")
         db.add(img)
     db.flush()
