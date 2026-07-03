@@ -1,7 +1,18 @@
 # 交接（前端）：拍照识别流程（三档 UI + 引导拍签）
 
-> 后端已先行：`POST /api/v1/museums/{slug}/recognize` 已上 staging（接地识别,契约§识别）。
+> 后端已先行：`POST /api/v1/museums/{slug}/recognize` 已上 staging（接地识别,契约§识别,staging 真图 e2e 已通）。
 > 老 `/recognition` 端点已 deprecated——新识别流程一律走新端点。
+
+## ⚡ 第 0 步（加急）：切换端点
+
+**现状**：App 相机识别仍调老端点（`lib/features/recognition/data/datasources/recognition_remote_datasource.dart:40` → `/api/v1/recognition/recognize`）——那是裸 GPT 猜测流（违反接地原则，将下线），**返回的名字/描述不可信且不带 qid，无法跳详情**。
+
+**改法**：
+1. datasource 换 URL：`/api/v1/museums/{当前馆slug}/recognize?language={App语言}`（slug 现阶段固定 `orsay`，从当前馆上下文取）；multipart 字段名仍是 `image`。
+2. 响应模型整体换新（见下节 JSON；老响应的 `artwork_name/artist/period/description/confidence` 全部作废）。
+3. 结果处理：不再自由展示文本 → 按 `outcome` 走三档 UI（见下）。**做完这一步即使三档 UI 先用最简版（match 直跳详情、其余弹提示），用户就已经可以真机测新识别了。**
+
+先切端点发一版给用户真机测，三档 UI/引导拍签在其后迭代。
 
 ## 端点
 
