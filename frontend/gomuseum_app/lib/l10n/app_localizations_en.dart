@@ -395,6 +395,109 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmYes => 'Confirm';
 
   @override
+  String get authEmailHint => 'Email';
+
+  @override
+  String get authEmailRequired => 'Please enter your email';
+
+  @override
+  String get authEmailInvalid => 'Please enter a valid email';
+
+  @override
+  String get authPasswordHint => 'Password';
+
+  @override
+  String get authPasswordRequired => 'Please enter your password';
+
+  @override
+  String get authPasswordMin6 => 'Password must be at least 6 characters';
+
+  @override
+  String get authConfirmPasswordHint => 'Confirm password';
+
+  @override
+  String get authPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get authUsernameOptionalHint => 'Username (optional)';
+
+  @override
+  String get authLoginButton => 'Log In';
+
+  @override
+  String get authRegisterButton => 'Sign Up';
+
+  @override
+  String get authNoAccount => 'No account? Sign up';
+
+  @override
+  String get authHaveAccount => 'Have an account? Log in';
+
+  @override
+  String get authCreateAccount => 'Create account';
+
+  @override
+  String get authOrLoginWith => 'Or log in with';
+
+  @override
+  String get authGoogleLogin => 'Sign in with Google';
+
+  @override
+  String get authAppleLogin => 'Sign in with Apple';
+
+  @override
+  String get authOr => 'Or';
+
+  @override
+  String get authGuestLogin => 'Continue as guest';
+
+  @override
+  String get authLoginFailed => 'Login failed, check your email and password';
+
+  @override
+  String get authRegisterFailed =>
+      'Registration failed, email may already be in use';
+
+  @override
+  String get authGoogleCancelled => 'Google sign-in cancelled';
+
+  @override
+  String get authGoogleFailed => 'Google sign-in failed, please try again';
+
+  @override
+  String get authGoogleError => 'Google sign-in error';
+
+  @override
+  String get authGoogleNotConfigured =>
+      'Google sign-in not configured, contact the administrator';
+
+  @override
+  String get authGoogleNetworkError =>
+      'Google sign-in network error, check your connection';
+
+  @override
+  String get authAppleOnlyApple =>
+      'Apple sign-in is only supported on iOS and macOS';
+
+  @override
+  String get authAppleCancelled => 'Apple sign-in cancelled';
+
+  @override
+  String get authAppleFailed => 'Apple sign-in failed, please try again';
+
+  @override
+  String get authAppleError => 'Apple sign-in error';
+
+  @override
+  String get authAppleNotConfigured => 'Apple sign-in not configured';
+
+  @override
+  String get authGuestFailed => 'Guest sign-in failed, please try again';
+
+  @override
+  String get authGuestError => 'Guest sign-in error';
+
+  @override
   String get camNoCamera => 'No available camera found';
 
   @override
