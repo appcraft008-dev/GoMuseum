@@ -75,7 +75,8 @@ def backfill_languages(
     )
     if limit:
         q = q.limit(limit)
-    counts = {"objects": 0, "sections": 0, "qa": 0}
+    counts = {"objects": 0, "sections": 0, "qa": 0, "bios": 0}
+    artist_qids: set[str] = set()
     for o in q.all():
         en_secs = {
             r.section_code: r.body
@@ -122,6 +123,25 @@ def backfill_languages(
                 touched = True
         if touched:
             counts["objects"] += 1
+        aqid = (o.attributes or {}).get("artist_qid")
+        if aqid:
+            artist_qids.add(aqid)
+    # 作者 bio 也是内容:en 有、目标语言缺 → 翻译补(作者实体馆内复用,一次补全馆受益)
+    for aqid in artist_qids:
+        art = db.query(Artist).filter_by(qid=aqid).first()
+        bio_en = (art.bio or {}).get("en") if art else None
+        if not bio_en:
+            continue
+        add = {}
+        for lang in langs:
+            if lang != "en" and not (art.bio or {}).get(lang):
+                try:
+                    add[lang] = translator.translate_section(bio_en, lang)
+                except Exception:
+                    pass
+        if add:
+            art.bio = {**(art.bio or {}), **add}
+            counts["bios"] += len(add)
     db.commit()
     return counts
 

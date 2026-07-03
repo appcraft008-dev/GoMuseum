@@ -155,6 +155,30 @@ def test_backfill_translates_suggested_questions(session):
     assert "Because X." in qa[0].answer
 
 
+def test_backfill_translates_artist_bio(session):
+    # 作者 bio 也是内容:en 有、目标语言缺 → 翻译补(修 de 作者介绍不完整)
+    from app.models.artist import Artist
+
+    Artist.__table__.create(bind=session.get_bind(), checkfirst=True)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q34618"}
+    session.add(
+        Artist(
+            qid="Q34618", name_en="Courbet", bio={"en": "EN bio.", "zh": "中文生平。"}
+        )
+    )
+    session.commit()
+    tr = _Tr()
+    backfill_languages(session, "orsay", langs=["de", "zh"], translator=tr)
+    art = session.query(Artist).filter_by(qid="Q34618").one()
+    assert art.bio["de"] == "EN bio._de"  # de 缺 → 翻译补
+    assert art.bio["zh"] == "中文生平。"  # 已有不动
+    # 幂等:重跑不再翻 bio
+    tr2 = _Tr()
+    backfill_languages(session, "orsay", langs=["de"], translator=tr2)
+    assert all(t != "EN bio." for _, _, t in tr2.calls)
+
+
 def test_backfill_unknown_museum(session):
     out = backfill_languages(session, "nope", langs=["de"], translator=_Tr())
     assert out.get("error") == "unknown museum"
