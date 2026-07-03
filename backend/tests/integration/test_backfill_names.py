@@ -269,6 +269,28 @@ def test_backfill_strips_surrounding_brackets_from_existing_values(session):
     assert all(t != "Poplars" for t, _ in tr.calls)  # 标题未触发重翻(作者名翻译不算)
 
 
+def test_fetch_creators_batches_large_qid_sets():
+    # prod 教训:1300+ QID 单条 VALUES 查询 URL 超长(HTTP 414)→ 必须分批
+    from app.services.enrichment.backfill import _fetch_creators
+
+    calls = []
+
+    def fake_run(sparql):
+        calls.append(sparql)
+        return [
+            {
+                "item": {"value": "http://www.wikidata.org/entity/Q1"},
+                "creator": {"value": "http://www.wikidata.org/entity/Q9"},
+            }
+        ]
+
+    qids = [f"Q{i}" for i in range(450)]
+    out = _fetch_creators(qids, run_query=fake_run)
+    assert len(calls) == 3  # 450 / 200 每批 → 3 次
+    assert all(sparql.count("wd:Q") <= 200 for sparql in calls)
+    assert out["Q1"] == "Q9"
+
+
 def test_backfill_unknown_museum(session):
     out = backfill_display_names(
         session,
