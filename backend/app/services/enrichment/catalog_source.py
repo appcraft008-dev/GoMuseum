@@ -27,6 +27,9 @@ class StubRecord:
     wiki_titles: dict = field(
         default_factory=dict
     )  # 各语言维基条目标题，供 Wikipedia 富化
+    image_urls: list = field(
+        default_factory=list
+    )  # P18 全部值(含首张;雕塑多角度识别参照)。spec 2026-07-03 图像自存
 
 
 class CatalogSource(ABC):
