@@ -12,6 +12,18 @@ from app.services.enrichment.quality import SectionQuality
 from app.services.object_importer import upsert_museum, upsert_object
 
 
+@pytest.fixture(autouse=True)
+def _offline_artist_i18n(monkeypatch):
+    # 新增的国籍/代表作多语抓取默认打桩(防既有测试触网);需要时单测覆盖
+    import app.services.enrichment.pipeline as pl
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_i18n_facts",
+        lambda qid, langs: {"nationality_i18n": {}, "notable_works_i18n": {}},
+    )
+
+
 @pytest.fixture()
 def session():
     engine = create_engine(
@@ -814,3 +826,47 @@ def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
     assert calls["n"] == 1  # force 刷新了 bio
     assert art.bio["en"] == "bio v1。"  # en 更新
     assert art.bio["fr"] == "fr bio"  # 其它语种保留(合并)
+
+
+def test_generate_fills_artist_facts_i18n(session, monkeypatch):
+    # 交接③:生成时为作者补 国籍/代表作 多语(权威→翻译兜底)
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_facts",
+        lambda qid: {"artist_qid": "Q296", "artist_nationality": "France"},
+    )
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    monkeypatch.setattr(
+        pl,
+        "_artist_i18n_facts",
+        lambda qid, langs: {
+            "nationality_i18n": {"zh": "法国"},
+            "notable_works_i18n": {},
+        },
+    )
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, o):
+            return "bio."
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_extract_en": "x"}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "zh", "it"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q296").one()
+    assert art.nationality_i18n["zh"] == "法国"  # 权威
+    assert art.nationality_i18n["it"] == "France_it"  # en 轴翻译兜底

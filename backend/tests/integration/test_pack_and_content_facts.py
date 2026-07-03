@@ -429,3 +429,32 @@ def test_content_images_use_large_tier_and_pack_uses_thumb(session):
     pack = get_museum_pack(session, "orsay", "zh")
     art = next(a for a in pack["artworks"] if a["qid"] == "Q1")
     assert art["image"].endswith("images/Q1/0_thumb.jpg")  # 馆包=thumb
+
+
+def test_artist_card_nationality_and_works_localized(session):
+    # 交接③:国籍/代表作按 language 本地化(i18n 优先,缺退 en 列,不返 null)
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q296"}
+    session.add(
+        Artist(
+            qid="Q296",
+            name_en="Manet",
+            nationality="France",
+            notable_works=["Olympia", "The Balcony"],
+            nationality_i18n={"zh": "法国", "de": "Frankreich"},
+            notable_works_i18n={"zh": ["奥林匹亚", "阳台"]},
+        )
+    )
+    session.commit()
+    zh = get_object_content(session, "orsay", "Q1", "zh")["artist"]
+    assert zh["nationality"] == "法国"
+    assert zh["notable_works"] == ["奥林匹亚", "阳台"]
+    de = get_object_content(session, "orsay", "Q1", "de")["artist"]
+    assert de["nationality"] == "Frankreich"
+    assert de["notable_works"] == ["Olympia", "The Balcony"]  # 缺 de 列表 → en 兜底
+    it = get_object_content(session, "orsay", "Q1", "it")["artist"]
+    assert it["nationality"] == "France"  # 缺 it → en 列兜底

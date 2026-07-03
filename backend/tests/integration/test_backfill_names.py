@@ -351,3 +351,41 @@ def test_fetch_creators_survives_batch_failure():
     out = _fetch_creators(qids, run_query=flaky, retry_wait=0)
     assert out.get("Q300") == "Q9"  # 后续批正常
     assert calls["n"] >= 4  # 第一批试了2次(原+重试),另两批各1次
+
+
+def test_backfill_fills_artist_facts_i18n(session):
+    # 交接③:names 回填顺带补 国籍/代表作 多语(权威→翻译兜底→en;幂等)
+    from app.models.artist import Artist
+
+    Artist.__table__.create(bind=session.get_bind(), checkfirst=True)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q296"}
+    session.add(
+        Artist(
+            qid="Q296",
+            name_en="Manet",
+            name_i18n={"en": "Manet", "zh": "马奈"},
+            nationality="France",
+            notable_works=["Olympia"],
+        )
+    )
+    session.commit()
+    tr = _Translator()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=tr,
+        langs=["en", "zh", "de"],
+        fetch_labels=_labels({}),
+        fetch_creators=lambda qids: {},
+        fetch_artist_facts_i18n=lambda qid, langs: {
+            "nationality_i18n": {"zh": "法国"},  # zh 权威;de 缺 → 翻译兜底
+            "notable_works_i18n": {},  # 全缺 → 从 en 列翻译兜底
+        },
+    )
+    art = session.query(Artist).filter_by(qid="Q296").one()
+    assert art.nationality_i18n["zh"] == "法国"  # 权威
+    assert art.nationality_i18n["de"] == "France_de"  # 翻译兜底(_Tr 回显)
+    assert art.nationality_i18n["en"] == "France"  # en 列作轴
+    assert art.notable_works_i18n["zh"] == ["Olympia_zh"]
+    assert art.notable_works_i18n["en"] == ["Olympia"]

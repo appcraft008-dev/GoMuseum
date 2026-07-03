@@ -153,3 +153,40 @@ def fetch_artist_material(qid, registry, *, run_query=None, country_lang="fr") -
         for k, v in contrib.fields.items()
         if k.startswith("extract_") and v
     }
+
+
+_ARTIST_I18N_FACTS_QUERY = """
+SELECT ?natLabel ?workLabel WHERE {{
+  OPTIONAL {{ wd:{qid} wdt:P27 ?nat . ?nat rdfs:label ?natLabel .
+             FILTER(lang(?natLabel) IN ({langs})) }}
+  OPTIONAL {{ wd:{qid} wdt:P800 ?work . ?work rdfs:label ?workLabel .
+             FILTER(lang(?workLabel) IN ({langs})) }}
+}}
+"""
+
+
+def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
+    """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
+    单查询 rdfs:label 语言过滤(同 _LABELS_QUERY 款,一作者一查)。
+    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]}};
+    无标签的语言缺席(由调用方翻译兜底)。"""
+    run_query = run_query or _default_artist_query
+    langlist = ", ".join('"%s"' % x for x in langs)
+    rows = run_query(_ARTIST_I18N_FACTS_QUERY.format(qid=artist_qid, langs=langlist))
+    nat_i18n: dict = {}
+    works_i18n: dict = {}
+    for row in rows:
+        nl = row.get("natLabel") or {}
+        wl = row.get("workLabel") or {}
+        nlang, nv = nl.get("xml:lang") or nl.get("lang"), nl.get("value")
+        wlang, wv = wl.get("xml:lang") or wl.get("lang"), wl.get("value")
+        if nv and nlang in langs and not _is_raw_qid(nv) and nlang not in nat_i18n:
+            nat_i18n[nlang] = nv
+        if wv and wlang in langs and not _is_raw_qid(wv):
+            works_i18n.setdefault(wlang, [])
+            if wv not in works_i18n[wlang]:
+                works_i18n[wlang].append(wv)
+    return {
+        "nationality_i18n": nat_i18n,
+        "notable_works_i18n": {k: v[:5] for k, v in works_i18n.items()},
+    }

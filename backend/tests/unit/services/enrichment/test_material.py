@@ -144,3 +144,39 @@ def test_fetch_wikidata_labels():
 
     out = fetch_wikidata_labels("Q1", ["en", "fr", "de"], run_query=fake)
     assert out == {"fr": "La Nuit étoilée", "en": "Starry Night"}  # 只含 Wikidata 有的
+
+
+def test_fetch_artist_i18n_facts_multilang_labels():
+    # 作者国籍(P27)/代表作(P800)的多语权威标签(交接③:非英语界面显英文)
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    rows = [
+        {
+            "natLabel": {"value": "法国", "xml:lang": "zh"},
+            "workLabel": {"value": "奥林匹亚", "xml:lang": "zh"},
+        },
+        {
+            "natLabel": {"value": "France", "xml:lang": "en"},
+            "workLabel": {"value": "Olympia", "xml:lang": "en"},
+        },
+        {
+            "natLabel": {"value": "Frankreich", "xml:lang": "de"},
+            "workLabel": {"value": "Olympia", "xml:lang": "de"},
+        },
+    ]
+    out = fetch_artist_i18n_facts("Q296", ["zh", "en", "de"], run_query=lambda s: rows)
+    assert out["nationality_i18n"] == {"zh": "法国", "en": "France", "de": "Frankreich"}
+    assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
+    assert out["notable_works_i18n"]["en"] == ["Olympia"]
+
+
+def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    rows = [
+        {"natLabel": {"value": "Q142", "xml:lang": "zh"}},  # 无标签退回QID→跳过
+        {"workLabel": {"value": "Olympia", "xml:lang": "en"}},
+    ]
+    out = fetch_artist_i18n_facts("Q296", ["zh", "en"], run_query=lambda s: rows)
+    assert "zh" not in out["nationality_i18n"]
+    assert out["notable_works_i18n"]["en"] == ["Olympia"]

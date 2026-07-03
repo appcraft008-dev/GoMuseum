@@ -196,16 +196,60 @@ def _clean_i18n(i18n) -> dict:
     return out
 
 
+def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
+    """作者国籍/代表作多语填充(交接③):权威标签优先→已有保留→en 轴(legacy 列)翻译兜底。
+    data=fetch_artist_i18n_facts 结果。幂等只补缺;返回是否有变更。"""
+    nat = {**(data.get("nationality_i18n") or {}), **(art.nationality_i18n or {})}
+    works = {**(data.get("notable_works_i18n") or {}), **(art.notable_works_i18n or {})}
+    if not nat.get("en") and art.nationality:
+        nat["en"] = art.nationality
+    if not works.get("en") and art.notable_works:
+        works["en"] = list(art.notable_works)
+    tr = getattr(translator, "translate_name", None) or getattr(
+        translator, "translate_section", None
+    )
+    for lang in langs:
+        if not nat.get(lang) and nat.get("en") and tr:
+            try:
+                nat[lang] = tr(nat["en"], lang)
+            except Exception:
+                pass
+        if not works.get(lang) and works.get("en") and tr:
+            try:
+                works[lang] = [tr(w, lang) for w in works["en"]]
+            except Exception:
+                pass
+    changed = nat != (art.nationality_i18n or {}) or works != (
+        art.notable_works_i18n or {}
+    )
+    if nat:
+        art.nationality_i18n = nat
+    if works:
+        art.notable_works_i18n = works
+    return changed
+
+
 def backfill_display_names(
-    db, slug, *, translator, langs, fetch_labels=None, fetch_creators=None
+    db,
+    slug,
+    *,
+    translator,
+    langs,
+    fetch_labels=None,
+    fetch_creators=None,
+    fetch_artist_facts_i18n=None,
 ) -> dict:
     """铺目录后回填显示名:title_i18n + artist_qid + Artist.name_i18n(名字行,bio 留给 generate)。
     幂等:已齐语种的对象/作者跳过。契约:stub 一进目录就该有完整多语显示名。"""
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import (
+        fetch_artist_i18n_facts,
+        fetch_wikidata_labels,
+    )
     from app.services.enrichment.pipeline import _fill_i18n
 
     fetch_labels = fetch_labels or fetch_wikidata_labels
     fetch_creators = fetch_creators or _fetch_creators
+    fetch_artist_facts_i18n = fetch_artist_facts_i18n or fetch_artist_i18n_facts
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return {"error": "unknown museum"}
@@ -265,6 +309,17 @@ def backfill_display_names(
                 counts["artists"] += 1
             if not art.name_zh and (art.name_i18n or {}).get("zh"):
                 art.name_zh = art.name_i18n["zh"]
+            # 国籍/代表作多语(交接③):缺语种才触网,幂等
+            need = [
+                lang
+                for lang in langs
+                if not (art.nationality_i18n or {}).get(lang)
+                or not (art.notable_works_i18n or {}).get(lang)
+            ]
+            if need:
+                fill_artist_i18n_facts(
+                    art, langs, translator, fetch_artist_facts_i18n(aqid, langs)
+                )
         except Exception:
             import logging
 
