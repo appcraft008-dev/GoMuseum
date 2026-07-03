@@ -189,11 +189,13 @@ def materialize_images(
     if limit:
         q = q.limit(limit)
     counts = {"done": 0, "failed": 0, "skipped": 0}
-    for o in q.all():
+    for i, o in enumerate(q.all()):
         c = materialize_object_images(
             db, o, fetch_bytes=fetch_bytes, storage=storage, fetch_meta=fetch_meta
         )
         for k in counts:
             counts[k] += c[k]
+        if (i + 1) % 25 == 0:
+            db.commit()  # 分批落盘:中途崩溃/重部署不丢已完成进度
     db.commit()
     return counts

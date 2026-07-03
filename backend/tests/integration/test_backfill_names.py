@@ -301,3 +301,25 @@ def test_backfill_unknown_museum(session):
         fetch_creators=lambda qids: {},
     )
     assert out.get("error") == "unknown museum"
+
+
+def test_backfill_survives_per_object_fetch_failure(session):
+    # prod 教训:单件 Wikidata 超时炸死整个回填(253/1942 即止,进度全丢)
+    # → 单件失败跳过继续 + 分批 commit
+    def flaky(qid, langs, **kw):
+        if qid == "Q1":
+            raise TimeoutError("wikidata read timeout")
+        return {}
+
+    tr = _Translator()
+    out = backfill_display_names(
+        session,
+        "orsay",
+        translator=tr,
+        langs=["en", "zh"],
+        fetch_labels=flaky,
+        fetch_creators=lambda qids: {},
+    )
+    # Q1 失败被跳过,Q2 及作者流程正常走完,整体不抛
+    assert out.get("errors", 0) >= 1
+    assert "titles" in out
