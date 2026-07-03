@@ -414,3 +414,18 @@ def test_category_label_unknown_language_falls_back_to_english():
 
     assert _category_label("painting", "xx") == "Painting"  # 缺译回退 en,不返 null
     assert _category_label("works_on_paper", "it") == "Opere su carta"
+
+
+def test_content_images_use_large_tier_and_pack_uses_thumb(session):
+    from app.models.museum_object import ObjectImage
+    from app.services.museum_repo import get_museum_pack, get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    img = session.query(ObjectImage).filter_by(object_id=o.id).first()
+    img.image_key = "images/Q1/0"
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["images"][0]["url"].endswith("images/Q1/0_large.jpg")  # 详情=large
+    pack = get_museum_pack(session, "orsay", "zh")
+    art = next(a for a in pack["artworks"] if a["qid"] == "Q1")
+    assert art["image"].endswith("images/Q1/0_thumb.jpg")  # 馆包=thumb

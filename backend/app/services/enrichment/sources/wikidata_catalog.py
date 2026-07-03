@@ -63,6 +63,9 @@ class WikidataCatalog(CatalogSource):
                         cat = category_for(p31)
                         if cat != category_for(None):
                             prev.category = cat
+                    img = _wd._v(row, "image")
+                    if img and img not in prev.image_urls:  # P18 多值:累积多角度图
+                        prev.image_urls.append(img)
                     continue
                 ext = {}
                 jo = _wd._v(row, "joconde")
@@ -75,6 +78,7 @@ class WikidataCatalog(CatalogSource):
                 scl = _wd._v(row, "sitelink_cl")
                 if scl:
                     titles[cfg.country_lang or "fr"] = scl.rsplit("/", 1)[-1]
+                first_img = _wd._v(row, "image")
                 records[qid] = StubRecord(
                     inventory_number=_wd._v(row, "inventory"),
                     qid=qid,
@@ -89,6 +93,7 @@ class WikidataCatalog(CatalogSource):
                     raw=row,
                     external_ids=ext,
                     wiki_titles=titles,
+                    image_urls=[first_img] if first_img else [],
                 )
             fetched += len(rows)
             offset += len(rows)

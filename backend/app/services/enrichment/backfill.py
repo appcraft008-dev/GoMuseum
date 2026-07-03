@@ -197,47 +197,64 @@ def backfill_display_names(
     creators = fetch_creators(
         [o.qid for o in objs if not (o.attributes or {}).get("artist_qid")]
     )
-    counts = {"titles": 0, "artists": 0}
+    counts = {"titles": 0, "artists": 0, "errors": 0}
     artist_name_en: dict[str, str] = {}  # 作者QID → 来自作品行的 en 名(兜底)
-    for o in objs:
-        attrs = o.attributes or {}
-        ti = _clean_i18n(attrs.get("title_i18n"))
-        if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
-            attrs = {**attrs, "title_i18n": ti}
-            o.attributes = attrs
-        if any(not ti.get(lang) for lang in langs):
-            ti = _fill_i18n(
-                ti, o.title_en, fetch_labels(o.qid, langs), langs, translator
-            )
-            attrs = {**attrs, "title_i18n": ti}
-            o.attributes = attrs
-            if ti.get("zh") and not o.title_zh:
-                o.title_zh = ti["zh"]
-            if ti.get("en") and not o.title_en:
-                o.title_en = ti["en"]  # en 轴心列回填(无 en 标签的冷门件经翻译补齐)
-            counts["titles"] += 1
-        aqid = attrs.get("artist_qid") or creators.get(o.qid)
-        if aqid:
-            if attrs.get("artist_qid") != aqid:
-                o.attributes = {**attrs, "artist_qid": aqid}
-            if o.artist_en:
-                artist_name_en.setdefault(aqid, o.artist_en)
-    for aqid, en_name in artist_name_en.items():
-        art = db.query(Artist).filter_by(qid=aqid).first()
-        if art is None:
-            art = Artist(qid=aqid)
-            db.add(art)
-        if not art.name_en:
-            art.name_en = en_name
-        ni = _clean_i18n(art.name_i18n)
-        if ni != (art.name_i18n or {}):
-            art.name_i18n = ni
-        if any(not ni.get(lang) for lang in langs):
-            art.name_i18n = _fill_i18n(
-                ni, art.name_en, fetch_labels(aqid, langs), langs, translator
-            )
-            counts["artists"] += 1
-        if not art.name_zh and (art.name_i18n or {}).get("zh"):
-            art.name_zh = art.name_i18n["zh"]
+    for i, o in enumerate(objs):
+        # 单件容错:一次 Wikidata 超时不炸整馆(prod 253/1942 即死教训);失败跳过重跑再补
+        try:
+            attrs = o.attributes or {}
+            ti = _clean_i18n(attrs.get("title_i18n"))
+            if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
+                attrs = {**attrs, "title_i18n": ti}
+                o.attributes = attrs
+            if any(not ti.get(lang) for lang in langs):
+                ti = _fill_i18n(
+                    ti, o.title_en, fetch_labels(o.qid, langs), langs, translator
+                )
+                attrs = {**attrs, "title_i18n": ti}
+                o.attributes = attrs
+                if ti.get("zh") and not o.title_zh:
+                    o.title_zh = ti["zh"]
+                if ti.get("en") and not o.title_en:
+                    o.title_en = ti["en"]  # en 轴心列回填(无 en 标签的冷门件经翻译补齐)
+                counts["titles"] += 1
+            aqid = attrs.get("artist_qid") or creators.get(o.qid)
+            if aqid:
+                if attrs.get("artist_qid") != aqid:
+                    o.attributes = {**attrs, "artist_qid": aqid}
+                if o.artist_en:
+                    artist_name_en.setdefault(aqid, o.artist_en)
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("names backfill failed: %s", o.qid)
+            counts["errors"] += 1
+        if (i + 1) % 50 == 0:
+            db.commit()  # 分批落盘:中途崩溃不丢已完成进度
+    for j, (aqid, en_name) in enumerate(artist_name_en.items()):
+        try:
+            art = db.query(Artist).filter_by(qid=aqid).first()
+            if art is None:
+                art = Artist(qid=aqid)
+                db.add(art)
+            if not art.name_en:
+                art.name_en = en_name
+            ni = _clean_i18n(art.name_i18n)
+            if ni != (art.name_i18n or {}):
+                art.name_i18n = ni
+            if any(not ni.get(lang) for lang in langs):
+                art.name_i18n = _fill_i18n(
+                    ni, art.name_en, fetch_labels(aqid, langs), langs, translator
+                )
+                counts["artists"] += 1
+            if not art.name_zh and (art.name_i18n or {}).get("zh"):
+                art.name_zh = art.name_i18n["zh"]
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("artist names failed: %s", aqid)
+            counts["errors"] += 1
+        if (j + 1) % 50 == 0:
+            db.commit()
     db.commit()
     return counts

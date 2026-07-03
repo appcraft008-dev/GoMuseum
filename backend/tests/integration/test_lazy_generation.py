@@ -230,3 +230,53 @@ def test_run_lazy_generation_clears_lock_on_failure(session, monkeypatch):
     o = _obj(session)
     assert not (o.attributes or {}).get("lazy_lock_at")  # 失败也清锁,允许重试
     assert o.content_status == "stub"  # 状态不变
+
+
+def test_maybe_trigger_lazy_images_when_missing(session):
+    # 懒补漏:该件有"有 source_url 无 image_key"的图行 → 调度单件物化(与内容动作独立)
+    from app.models.museum_object import ObjectImage
+
+    o = _obj(session)
+    o.content_status = "ready"
+    session.add(
+        ObjectImage(object_id=o.id, role="primary", source_url="https://x/a.jpg")
+    )
+    session.commit()
+    _publish(session, "Q1", "en")
+    _publish(session, "Q1", "zh", body="中文。")
+    scheduled = []
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append((fn.__name__, a)),
+        environment="staging",
+        language="zh",
+    )
+    assert scheduled == [("run_lazy_images", ("Q1",))]  # 内容齐,只补图
+
+
+def test_maybe_trigger_no_lazy_images_when_materialized(session):
+    from app.models.museum_object import ObjectImage
+
+    o = _obj(session)
+    o.content_status = "ready"
+    session.add(
+        ObjectImage(
+            object_id=o.id,
+            role="primary",
+            source_url="https://x/a.jpg",
+            image_key="images/Q1/0",
+        )
+    )
+    session.commit()
+    _publish(session, "Q1", "en")
+    _publish(session, "Q1", "zh", body="中文。")
+    scheduled = []
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(a),
+        environment="staging",
+        language="zh",
+    )
+    assert scheduled == []

@@ -149,6 +149,47 @@ def run_lazy_translation(
     )
 
 
+def run_lazy_images(qid: str, *, session_factory=None, close=True) -> None:
+    """懒补漏(spec 图像自存):单件物化缺图。不占内容锁——图物化与内容生成可并行,
+    撞了最多重复下载一张(幂等)。批量预物化为主,此钩子只兜运维疏漏/新进目录。"""
+    if session_factory is None:
+        from app.core.database import SessionLocal
+
+        session_factory = SessionLocal
+    db = session_factory()
+    try:
+        o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+        if o is not None:
+            from app.services.enrichment.materializer import (
+                materialize_object_images,
+            )
+
+            out = materialize_object_images(db, o)
+            db.commit()
+            logger.info("lazy images done: %s -> %s", qid, out)
+    except Exception:
+        db.rollback()
+        logger.exception("lazy images failed: %s", qid)
+    finally:
+        if close:
+            db.close()
+
+
+def _has_missing_images(db, object_id) -> bool:
+    from app.models.museum_object import ObjectImage
+
+    return (
+        db.query(ObjectImage)
+        .filter(
+            ObjectImage.object_id == object_id,
+            ObjectImage.image_key.is_(None),
+            ObjectImage.source_url.isnot(None),
+        )
+        .first()
+        is not None
+    )
+
+
 def _has_published(db, object_id, lang) -> bool:
     from app.models.content import ObjectContentSection
 
@@ -180,6 +221,8 @@ def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) ->
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if o is None:
         return
+    if _has_missing_images(db, o.id):  # 懒补漏:缺图顺手补(独立于内容动作)
+        schedule(run_lazy_images, qid)
     if o.content_status == "stub":
         if try_acquire_lock(db, o):
             schedule(run_lazy_generation, qid, language)

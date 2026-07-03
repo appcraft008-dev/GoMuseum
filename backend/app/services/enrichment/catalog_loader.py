@@ -31,6 +31,7 @@ def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:
             "category": s.category,
             "popularity": s.popularity or 0,
             "image": s.image_url,
+            "images": s.image_urls or ([s.image_url] if s.image_url else []),
             "attributes": attrs,
         }
         obj = upsert_object(db, m.id, art)
