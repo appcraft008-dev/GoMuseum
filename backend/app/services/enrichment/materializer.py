@@ -106,22 +106,30 @@ def materialize_row(
     db, row: ObjectImage, qid: str, *, fetch_bytes, storage, fetch_meta=None
 ) -> str:
     """单行物化。返回 'done' | 'failed' | 'skipped'。失败/跳过均留 image_key 为空。"""
-    try:
-        data = fetch_bytes(row.source_url)
-        thumb, large = _two_tiers(data)
-    except _Unreadable as e:
-        logger.warning("image unreadable, skip: %s (%s)", row.source_url, e)
-        return "skipped"
-    except Exception:
-        logger.exception("image fetch failed: %s", row.source_url)
-        return "failed"
     base = image_base_key(qid, row.sort or 0)
+    # 共桶复用:两档文件已在 R2(如 staging 先物化过)→ 免下载/缩放/上传,只填 DB
     try:
-        storage.put(f"{base}_thumb.jpg", thumb, "image/jpeg")
-        storage.put(f"{base}_large.jpg", large, "image/jpeg")
+        already = storage.exists(f"{base}_thumb.jpg") and storage.exists(
+            f"{base}_large.jpg"
+        )
     except Exception:
-        logger.exception("image upload failed: %s", base)
-        return "failed"
+        already = False  # 探测失败不阻断,走正常下载
+    if not already:
+        try:
+            data = fetch_bytes(row.source_url)
+            thumb, large = _two_tiers(data)
+        except _Unreadable as e:
+            logger.warning("image unreadable, skip: %s (%s)", row.source_url, e)
+            return "skipped"
+        except Exception:
+            logger.exception("image fetch failed: %s", row.source_url)
+            return "failed"
+        try:
+            storage.put(f"{base}_thumb.jpg", thumb, "image/jpeg")
+            storage.put(f"{base}_large.jpg", large, "image/jpeg")
+        except Exception:
+            logger.exception("image upload failed: %s", base)
+            return "failed"
     if fetch_meta is not None:
         meta = fetch_meta(row.source_url) or {}
         row.license = meta.get("license") or row.license

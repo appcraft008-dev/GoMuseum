@@ -33,6 +33,9 @@ class _Storage:
     def put(self, key, data, content_type):
         self.puts[key] = (data, content_type)
 
+    def exists(self, key):
+        return key in self.puts
+
     def public_url(self, key):
         return f"https://cdn.example/{key}"
 
@@ -174,3 +177,26 @@ def test_default_fetch_uses_wikimedia_width_param(monkeypatch):
     # 非 Special:FilePath 的 URL 原样(不乱加参数)
     mat._default_fetch_bytes("https://example.com/x.jpg")
     assert seen["url"] == "https://example.com/x.jpg"
+
+
+def test_materialize_skips_download_when_r2_already_has_files(session):
+    # 共桶场景(staging 先物化过,prod 只需填 DB):两档文件已在 → 免下载/缩放/上传
+    st = _Storage()
+    st.puts["images/Q2/0_thumb.jpg"] = (b"x", "image/jpeg")
+    st.puts["images/Q2/0_large.jpg"] = (b"x", "image/jpeg")
+
+    def no_download(url):
+        raise AssertionError("不应下载:桶里已有")
+
+    o = session.query(MuseumObject).filter_by(qid="Q2").one()
+    out = materialize_object_images(
+        session,
+        o,
+        fetch_bytes=no_download,
+        storage=st,
+        fetch_meta=lambda u: {"license": "Public domain", "credit": "c"},
+    )
+    assert out["done"] == 1
+    row = session.query(ObjectImage).filter_by(object_id=o.id).one()
+    assert row.image_key == "images/Q2/0"
+    assert row.license == "Public domain"  # meta 仍补(prod DB 自己的署名)
