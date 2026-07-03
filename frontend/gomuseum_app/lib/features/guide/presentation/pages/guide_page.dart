@@ -27,6 +27,8 @@ import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.da
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_sheet.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -113,8 +115,15 @@ class _GuidePageState extends ConsumerState<GuidePage>
   // 朗读倍速档位（legacy 识别路径用）
   static const _speeds = [1.0, 1.25, 1.5, 0.75];
 
-  // ── A5 path: generating poll
+  // ── A5 path: generating poll（懒生成体验：约 1-3 分钟出内容）
   Timer? _pollTimer;
+  int _pollCount = 0;
+
+  /// 本次访问是否轮询过（=内容曾在生成中）。用于返回时刷新列表角标。
+  bool _didPoll = false;
+
+  /// 20s×20 ≈ 6.7 分钟，覆盖 stub 全量生成（实测 6-8 分钟触发语言更快）。
+  static const int _maxPolls = 20;
 
   // ── legacy recognition path
   final TtsService _legacyTts = TtsService();
@@ -148,10 +157,17 @@ class _GuidePageState extends ConsumerState<GuidePage>
     super.dispose();
   }
 
-  // ── A5: poll while status == generating
+  // ── A5: poll while status != ready（幂等：重复调用不重置计时器/计数）
   void _startPolling({required String slug, required String qid}) {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+    if (_pollTimer != null) return;
+    _didPoll = true;
+    _pollCount = 0;
+    _pollTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      _pollCount++;
+      if (_pollCount > _maxPolls) {
+        _stopPolling();
+        return;
+      }
       ref.invalidate(objectContentProvider((slug: slug, qid: qid)));
     });
   }
@@ -338,18 +354,13 @@ class _GuidePageState extends ConsumerState<GuidePage>
             ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
       ),
       data: (content) {
-        // Handle status-based states
-        if (content.status == ContentStatus.generating) {
+        // 未就绪（stub/generating/empty）→ 显「生成中」并轮询。
+        // stub 被访问即触发后端懒生成，故与 generating 同一 UX，不再显静态「待完善」。
+        if (content.status != ContentStatus.ready) {
           _startPolling(slug: slug, qid: qid);
           return _A5GeneratingScaffold(gm: gm, onBack: () => _goBack(context));
-        } else {
-          _stopPolling();
         }
-
-        if (content.status == ContentStatus.empty ||
-            content.status == ContentStatus.stub) {
-          return _A5EmptyScaffold(gm: gm, onBack: () => _goBack(context));
-        }
+        _stopPolling();
 
         // Ready: full rendering（分层导览）
         return Scaffold(
@@ -376,8 +387,12 @@ class _GuidePageState extends ConsumerState<GuidePage>
     );
   }
 
-  void _goBack(BuildContext context) =>
-      context.canPop() ? context.pop() : context.go('/');
+  void _goBack(BuildContext context) {
+    // 内容曾在生成中（本次可能已变 ready）→ 失效列表，刷新角标。
+    // 只在轮询过时失效，避免普通浏览 ready 件返回时列表重载丢滚动位置。
+    if (_didPoll) ref.invalidate(objectListProvider);
+    context.canPop() ? context.pop() : context.go('/');
+  }
 
   // =========================================================================
   // Legacy Recognition Path
@@ -819,36 +834,6 @@ class _A5GeneratingScaffold extends StatelessWidget {
   }
 }
 
-class _A5EmptyScaffold extends StatelessWidget {
-  const _A5EmptyScaffold({required this.gm, required this.onBack});
-  final dynamic gm;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.gm;
-    return Scaffold(
-      backgroundColor: palette.bg,
-      body: SafeArea(
-        child: Column(children: [
-          _SimpleTopBar(onBack: onBack),
-          Expanded(
-              child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                AppLocalizations.of(context)!.guideEmpty,
-                textAlign: TextAlign.center,
-                style: GmText.sans(size: 14, color: palette.sub),
-              ),
-            ),
-          )),
-        ]),
-      ),
-    );
-  }
-}
-
 class _A5ErrorScaffold extends StatelessWidget {
   const _A5ErrorScaffold(
       {required this.gm, required this.onBack, required this.onRetry});
@@ -924,8 +909,6 @@ class _A5HeroSliverAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final hasImage = content.images.isNotEmpty;
-    final imageUrl = hasImage ? content.images.first.url : null;
-    final credit = hasImage ? content.images.first.credit : null;
 
     return SliverAppBar(
       expandedHeight: 286,
@@ -956,81 +939,134 @@ class _A5HeroSliverAppBar extends StatelessWidget {
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: hasImage
-            ? _HeroImage(
-                imageUrl: imageUrl!, credit: credit, title: content.title)
+            ? _HeroImages(images: content.images, title: content.title)
             : _HeroPlaceholder(title: content.title),
       ),
     );
   }
 }
 
-class _HeroImage extends StatelessWidget {
-  const _HeroImage(
-      {required this.imageUrl, required this.credit, required this.title});
+/// 头图区：多图轮播（`images.length > 1`）+ 点击进全屏画廊。单图行为不变。
+class _HeroImages extends StatefulWidget {
+  const _HeroImages({required this.images, required this.title});
 
-  final String imageUrl;
-  final String? credit;
+  final List<ObjectImage> images;
   final String title;
 
   @override
+  State<_HeroImages> createState() => _HeroImagesState();
+}
+
+class _HeroImagesState extends State<_HeroImages> {
+  final PageController _pc = PageController();
+  int _i = 0;
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
+  }
+
+  Widget _networkImage(BuildContext context, String url) => Image.network(
+        // 关键：Wikimedia 兜底取缩略图而非数十 MB 原图；R2 直链原样透传。
+        sizedImageUrl(url, 1080),
+        fit: BoxFit.cover,
+        headers: kImageRequestHeaders,
+        loadingBuilder: (_, child, progress) =>
+            progress == null ? child : ColoredBox(color: context.gm.chipBg),
+        errorBuilder: (_, __, ___) => ColoredBox(
+            color: context.gm.chipBg,
+            child: Center(
+                child:
+                    GmIcon(GmIcons.photo, size: 40, color: context.gm.faint))),
+      );
+
+  @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          // 关键：取 Wikimedia 缩略图而非数十 MB 原图；带合规 UA。
-          sizedImageUrl(imageUrl, 1080),
-          fit: BoxFit.cover,
-          headers: kImageRequestHeaders,
-          loadingBuilder: (_, child, progress) =>
-              progress == null ? child : ColoredBox(color: context.gm.chipBg),
-          errorBuilder: (_, __, ___) => ColoredBox(
-              color: context.gm.chipBg,
-              child: Center(
-                  child: GmIcon(GmIcons.photo,
-                      size: 40, color: context.gm.faint))),
-        ),
-        // Bottom gradient scrim
-        const Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 160,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: GmFixed.heroScrim,
-                stops: GmFixed.heroScrimStops,
+    final images = widget.images;
+    final multi = images.length > 1;
+    final credit = images[_i].credit;
+
+    return GestureDetector(
+      onTap: () => showImageGallery(context, images: images, initialIndex: _i),
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (multi)
+            PageView.builder(
+              controller: _pc,
+              itemCount: images.length,
+              onPageChanged: (i) => setState(() => _i = i),
+              itemBuilder: (_, i) => _networkImage(context, images[i].url),
+            )
+          else
+            _networkImage(context, images.first.url),
+
+          // Bottom gradient scrim
+          const Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 160,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: GmFixed.heroScrim,
+                  stops: GmFixed.heroScrimStops,
+                ),
               ),
             ),
           ),
-        ),
-        // Title overlay
-        Positioned(
-          bottom: 42,
-          left: 20,
-          right: credit != null ? 80 : 20,
-          child: Text(
-            title,
-            style: GmText.serif(
-                size: 22, weight: FontWeight.w700, color: GmFixed.heroTitle),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        // Credit bottom-right
-        if (credit != null)
+
+          // Title overlay
           Positioned(
-            bottom: 10,
-            right: 12,
+            bottom: 42,
+            left: 20,
+            right: credit != null ? 80 : 20,
             child: Text(
-              credit!,
-              style: GmText.sans(size: 9, color: GmFixed.heroCredit),
+              widget.title,
+              style: GmText.serif(
+                  size: 22, weight: FontWeight.w700, color: GmFixed.heroTitle),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-      ],
+
+          // 页码 i/n（多图时）
+          if (multi)
+            Positioned(
+              bottom: 14,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(999)),
+                  child: Text('${_i + 1}/${images.length}',
+                      style: GmText.sans(
+                          size: 10.5, color: Colors.white, letterSpacing: 1)),
+                ),
+              ),
+            ),
+
+          // Credit bottom-right
+          if (credit != null && credit.trim().isNotEmpty)
+            Positioned(
+              bottom: 10,
+              right: 12,
+              child: Text(
+                credit,
+                style: GmText.sans(size: 9, color: GmFixed.heroCredit),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -179,7 +179,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Sprach-Fragen kommen bald, tippen Sie vorerst';
 
   @override
-  String get guideGenerating => 'Erklärung wird erstellt…';
+  String get guideGenerating => 'Inhalt wird erstellt · etwa 1–3 Min.';
 
   @override
   String get guideEmpty => 'Noch keine fundierte Erklärung (in Bearbeitung)';

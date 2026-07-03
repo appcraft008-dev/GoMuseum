@@ -179,7 +179,7 @@ class AppLocalizationsIt extends AppLocalizations {
       'Le domande vocali arrivano presto, per ora scrivi';
 
   @override
-  String get guideGenerating => 'Generazione della spiegazione…';
+  String get guideGenerating => 'Generazione contenuti · circa 1–3 min';
 
   @override
   String get guideEmpty => 'Ancora nessuna spiegazione fondata (in corso)';
