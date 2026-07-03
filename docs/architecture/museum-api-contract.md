@@ -20,7 +20,7 @@
 | `GET /museums/{slug}/objects?...` | 分页藏品列表(列表页) | `list_objects` |
 | `GET /museums/{slug}/objects/{qid}/content?language=` | 单件讲解(导览页) | `get_object_content` |
 
-`language` 取值:`zh`/`en`/`fr`(当前生成的语种;`de`/`es`/`it` 在 `DEFAULT_LANGUAGES` 但暂未生成)。缺省 `zh`。
+`language` 取值:`DEFAULT_LANGUAGES` 全集 `en/fr/de/es/it/zh`(2026-07-03 起新生成内容六语全跑;早期存量 243 件讲解只有 zh/en/fr,de/es/it 视图对老件显"待完善",待"补语种"增量命令回补)。缺省 `zh`。显示名(title/artist)六语已全量回填。
 
 ---
 
