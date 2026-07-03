@@ -31,21 +31,28 @@ _LABEL_SYSTEM = (
 
 
 def _default_complete(system: str, user_content) -> str:
-    """真实 GPT-4o-mini 视觉调用(30s 超时)。"""
+    """真实 GPT-4o-mini 视觉调用(30s 超时)。客户端是 AsyncOpenAI——必须 asyncio.run
+    (staging 教训:漏 await 时 create() 返回协程,identify 静默空结果)。"""
+    import asyncio
+
     from app.services.content_generation_service import _get_openai_client
 
     client = _get_openai_client()
     if client is None:
         raise RuntimeError("OpenAI client unavailable")
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user_content},
-        ],
-        timeout=30,
-    )
-    return resp.choices[0].message.content or ""
+
+    async def _run():
+        resp = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_content},
+            ],
+            timeout=30,
+        )
+        return resp.choices[0].message.content or ""
+
+    return asyncio.run(_run())
 
 
 def identify(image_b64: str, mode: str = "artwork", complete=None) -> dict:

@@ -60,3 +60,34 @@ def test_artwork_mode_prompt_identifies_and_transcribes():
     s = seen["system"].lower()
     assert "identify" in s and "transcribe" in s
     assert "query" in s or "candidate" in s  # 强调候选是查询用途
+
+
+def test_default_complete_awaits_async_client(monkeypatch):
+    # staging 教训:_get_openai_client 返回 AsyncOpenAI,漏 await → 协程当响应用 → 静默空结果
+    import app.services.recognition.vision as vision
+
+    class _Msg:
+        content = '{"candidates": [], "label_text": "ok"}'
+
+    class _Choice:
+        message = _Msg()
+
+    class _Resp:
+        choices = [_Choice()]
+
+    class _Completions:
+        async def create(self, **kw):
+            return _Resp()
+
+    class _Chat:
+        completions = _Completions()
+
+    class _Client:
+        chat = _Chat()
+
+    monkeypatch.setattr(
+        "app.services.content_generation_service._get_openai_client",
+        lambda: _Client(),
+    )
+    out = vision._default_complete("system", [{"type": "text", "text": "x"}])
+    assert "ok" in out  # 真正拿到了 content,而非协程对象

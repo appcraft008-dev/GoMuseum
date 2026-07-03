@@ -71,17 +71,18 @@ def list_objects(
 
 
 @router.post("/{slug}/recognize")
-async def recognize_artwork(
+def recognize_artwork(
     slug: str,
     image: UploadFile = File(...),
     language: str = "zh",
     mode: str = "artwork",
     db: Session = Depends(get_db),
 ) -> dict:
-    """拍照识别(接地:身份只来自目录命中;mode=label 为引导补拍的墙签纯转写)"""
+    """拍照识别(接地:身份只来自目录命中;mode=label 为引导补拍的墙签纯转写)。
+    同步 def:FastAPI 扔线程池执行 → vision 内 asyncio.run 不与主事件循环冲突。"""
     from app.services.recognition.service import recognize
 
-    data = await image.read()
+    data = image.file.read()
     out = recognize(db, slug, data, language=language, mode=mode)
     if out is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
