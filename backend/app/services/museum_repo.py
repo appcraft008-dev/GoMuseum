@@ -21,15 +21,24 @@ _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
 
 _LEGACY_SOURCE = "Wikidata/Wikimedia Commons (public data)"
 
+# 通用分类法 8 大类(契约§收录策略),全馆共用;奥赛启用前 4 类
 _CATEGORY_LABELS = {
     "painting": {"zh": "绘画", "en": "Painting", "fr": "Peinture"},
     "sculpture": {"zh": "雕塑", "en": "Sculpture", "fr": "Sculpture"},
+    "works_on_paper": {
+        "zh": "纸上作品",
+        "en": "Works on Paper",
+        "fr": "Arts graphiques",
+    },
     "photography": {"zh": "摄影", "en": "Photography", "fr": "Photographie"},
     "decorative_arts": {
         "zh": "装饰艺术",
         "en": "Decorative Arts",
         "fr": "Arts décoratifs",
     },
+    "textile": {"zh": "纺织", "en": "Textiles", "fr": "Textiles"},
+    "artifact": {"zh": "文物器物", "en": "Artifacts", "fr": "Objets"},
+    "manuscript": {"zh": "手稿古籍", "en": "Manuscripts", "fr": "Manuscrits"},
     "unknown": {"zh": "其他", "en": "Other", "fr": "Autre"},
 }
 _ALL_LABEL = {"zh": "全部", "en": "All", "fr": "Tout"}

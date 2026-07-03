@@ -7,10 +7,15 @@ museums:
     city_en: Paris
     country: FR
     wikidata_qid: Q23402
-    category_filter: Q3305213   # 绘画；以后加雕塑 Q860861 等
-    categories: [Q3305213]
+    category_filter: Q3305213   # 主类目(兜底)
+    # 四大类(通用分类法映射见 category_config.CATEGORY_BY_QID):
+    # 绘画+壁画 / 雕塑+雕像+半身像+小像 / 纸上(素描水彩色粉版画习作草图) / 摄影
+    categories: [Q3305213, Q219423,
+                 Q860861, Q179700, Q241045, Q1066288,
+                 Q93184, Q18761202, Q12043905, Q15123870, Q2647254, Q5078274,
+                 Q125191]
     country_lang: fr
     sources: [joconde, wikipedia]   # 每馆补充源；Wikidata 是脊柱不在此列
-    fetch_limit: 300
+    fetch_limit: 4000               # 安全阀;有图约2065件,多P31重复行留余量
     sample_size: 30
     sample_qids: []

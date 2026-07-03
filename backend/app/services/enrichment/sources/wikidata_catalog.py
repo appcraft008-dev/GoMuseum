@@ -37,7 +37,8 @@ class WikidataCatalog(CatalogSource):
     def list(self, cfg) -> Iterable[StubRecord]:
         cats = cfg.categories or [cfg.category_filter]
         cat_values = " ".join(f"wd:{q}" for q in cats)
-        seen: set[str] = set()
+        # 多 P31 作品每个类型一行:缓冲按 qid 归并,已知类目优先于 unknown(行序无关)
+        records: dict[str, StubRecord] = {}
         fetched = 0
         offset = 0
         while fetched < cfg.fetch_limit:
@@ -55,10 +56,14 @@ class WikidataCatalog(CatalogSource):
                 break
             for row in rows:
                 qid = row["item"]["value"].rsplit("/", 1)[-1]
-                if qid in seen:
-                    continue
-                seen.add(qid)
                 p31 = (row.get("p31", {}) or {}).get("value", "").rsplit("/", 1)[-1]
+                if qid in records:
+                    prev = records[qid]
+                    if prev.category == category_for(None):  # unknown → 可升级
+                        cat = category_for(p31)
+                        if cat != category_for(None):
+                            prev.category = cat
+                    continue
                 ext = {}
                 jo = _wd._v(row, "joconde")
                 if jo:
@@ -70,7 +75,7 @@ class WikidataCatalog(CatalogSource):
                 scl = _wd._v(row, "sitelink_cl")
                 if scl:
                     titles[cfg.country_lang or "fr"] = scl.rsplit("/", 1)[-1]
-                yield StubRecord(
+                records[qid] = StubRecord(
                     inventory_number=_wd._v(row, "inventory"),
                     qid=qid,
                     title=_wd._v(row, "label_en"),
@@ -89,3 +94,4 @@ class WikidataCatalog(CatalogSource):
             offset += len(rows)
             if self._run_query is _default_run_query:
                 time.sleep(1)
+        yield from records.values()  # dict 保插入序(热度降序)

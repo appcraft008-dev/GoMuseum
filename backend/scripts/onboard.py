@@ -42,6 +42,9 @@ def build_parser() -> argparse.ArgumentParser:
     lo.add_argument("--sample", action="store_true")
     ca = sub.add_parser("catalog")
     ca.add_argument("--target", choices=["staging", "prod"], required=True)
+    ca.add_argument(
+        "--limit", type=int, default=None
+    )  # 覆盖 fetch_limit(staging 小样本)
     ge = sub.add_parser("generate")
     ge.add_argument("--target", choices=["staging", "prod"], required=True)
     ge.add_argument("--qid", default=None)
@@ -110,7 +113,7 @@ def cmd_load(slug: str, pack_key: str, sample: bool, target: str) -> None:
         print(build_report(slug, reported, as_markdown=True))
 
 
-def cmd_catalog(slug: str, target: str) -> None:
+def cmd_catalog(slug: str, target: str, limit: int | None = None) -> None:
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
         raise SystemExit(
@@ -122,6 +125,10 @@ def cmd_catalog(slug: str, target: str) -> None:
     from app.services.enrichment.sources.wikidata_catalog import WikidataCatalog
 
     cfg = _catalog().get(slug)
+    if limit:
+        from dataclasses import replace
+
+        cfg = replace(cfg, fetch_limit=limit)
     stubs = merge_stubs(list(WikidataCatalog().list(cfg)))
     museum = {
         "slug": cfg.slug,
@@ -252,7 +259,7 @@ def main(argv=None) -> None:
     if ns.command == "fetch":
         cmd_fetch(ns.slug)
     elif ns.command == "catalog":
-        cmd_catalog(ns.slug, ns.target)
+        cmd_catalog(ns.slug, ns.target, ns.limit)
     elif ns.command == "generate":
         cmd_generate(ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target)
     elif ns.command == "report":
