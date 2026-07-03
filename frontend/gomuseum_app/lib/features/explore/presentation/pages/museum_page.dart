@@ -203,10 +203,16 @@ class _CategoryTabs extends StatelessWidget {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
 
-    // If backend returns no categories, show a single 「全部」 tab
-    final tabs = categories.isNotEmpty
-        ? categories
-        : [MuseumCategory(code: 'all', label: l10n.all, count: 0)];
+    // If backend returns no categories, show a single 「全部」 tab.
+    // 「all」类目 label 后端未本地化（硬编码中文），前端用 l10n.all 覆盖；
+    // 其它类目 label（Painting/Sculpture…）仍待后端按 language 返本地化值。
+    final tabs = (categories.isNotEmpty
+            ? categories
+            : [MuseumCategory(code: 'all', label: l10n.all, count: 0)])
+        .map((c) => c.code == 'all'
+            ? MuseumCategory(code: c.code, label: l10n.all, count: c.count)
+            : c)
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -406,11 +412,14 @@ class _ObjectRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 序号
+            // 序号（宽度容 3 位数，如 263；maxLines 防折行）
             SizedBox(
-              width: 24,
+              width: 32,
               child: Text(
                 number,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
                 style: GmText.serif(
                   size: 13,
                   color: gm.faint,

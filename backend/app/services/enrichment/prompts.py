@@ -121,6 +121,21 @@ def build_translation_prompt(en_body: str, target_lang: str):
     return system, user
 
 
+_NAME_TRANSLATION_SYSTEM = (
+    "You translate museum artwork titles and artist names into {lang}. "
+    "Return ONLY the name itself — no quotes, no brackets, no 《》, no commentary. "
+    "Use the established {lang} form when one exists (standard exonym for artist names, "
+    "conventional {lang} title for well-known works). For descriptive titles, translate "
+    "the meaning; keep proper nouns (places, people) in their standard {lang} form. "
+    "Never return the name untranslated unless it is a proper noun with no {lang} form."
+)
+
+
+def build_name_translation_prompt(name: str, target_lang: str):
+    lang = LANG_NAMES.get(target_lang, target_lang)
+    return _NAME_TRANSLATION_SYSTEM.format(lang=lang), f"Name:\n{name}"
+
+
 _FAITHFULNESS_SYSTEM = (
     "You are a translation quality judge. You are given an English SOURCE and its {lang} "
     "TRANSLATION. Decide whether the translation is faithful: it must convey exactly the "

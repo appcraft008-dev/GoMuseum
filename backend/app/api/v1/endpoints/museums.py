@@ -5,7 +5,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -29,12 +29,19 @@ def list_museums(db: Session = Depends(get_db)) -> list[dict]:
 
 @router.get("/{slug}/objects/{qid}/content")
 def object_content(
-    slug: str, qid: str, language: str = "zh", db: Session = Depends(get_db)
+    slug: str,
+    qid: str,
+    background_tasks: BackgroundTasks,
+    language: str = "zh",
+    db: Session = Depends(get_db),
 ) -> dict:
-    """展品讲解（按 tab 分节返回）"""
+    """展品讲解（按 tab 分节返回）。stub 首次访问触发懒生成（后台,契约§路线图3c）"""
     data = get_object_content(db, slug, qid, language)
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
+    from app.services.enrichment.lazy import maybe_trigger
+
+    maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
     return data
 
 

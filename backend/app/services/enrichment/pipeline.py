@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
@@ -13,6 +15,8 @@ from app.services.content_repo import (
 from app.services.enrichment.category_config import guide_target_chars, sections_for
 from app.services.enrichment.content_enricher import build_material
 from app.services.enrichment.material import fetch_object_material
+
+logger = logging.getLogger(__name__)
 
 # 标"Creation year"消歧：避免 fact-consistency 判官把首展/收购/修复年误判为与创作年冲突。
 _FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
@@ -32,20 +36,28 @@ def _wikidata_labels(qid, langs):
 
 
 def _fill_i18n(existing, en_name, labels, langs, translator):
-    """权威标签优先(含 en:纠正目录误存非英文标签),缺则从 en 翻译,en 兜底。返回 {lang: name}。"""
+    """权威标签优先(含 en:纠正目录误存非英文标签);缺的从轴心翻译。
+    轴心 = en(名或标签),en 也没有则任一权威标签(冷门件常无 en 标签,如只有 fr)。返回 {lang: name}。"""
     out = dict(existing or {})
+    for lang in langs:
+        if not out.get(lang) and labels.get(lang):
+            out[lang] = labels[lang]
+    if en_name and not out.get("en"):
+        out["en"] = en_name
+    pivot = out.get("en") or next((out[x] for x in langs if out.get(x)), None)
+    # 显示名优先走 translate_name(标题专用 prompt);老 translator 兼容 translate_section
+    tr = getattr(translator, "translate_name", None) or getattr(
+        translator, "translate_section", None
+    )
+    if not pivot or tr is None:
+        return out
     for lang in langs:
         if out.get(lang):
             continue
-        if labels.get(lang):
-            out[lang] = labels[lang]
-        elif lang != "en" and en_name and hasattr(translator, "translate_section"):
-            try:
-                out[lang] = translator.translate_section(en_name, lang)
-            except Exception:
-                pass
-    if en_name:
-        out.setdefault("en", en_name)
+        try:
+            out[lang] = tr(pivot, lang)
+        except Exception:
+            pass
     return out
 
 
@@ -94,8 +106,14 @@ def generate_object(
     qa_suggester=None,
     registry=None,
     country_lang=None,
+    lang_priority=None,
 ) -> dict:
-    """单件：生成→质量闸→落英语→翻译→按语言落库。幂等跳过已发布英语（除非 force）。"""
+    """单件：生成→质量闸→落英语→逐语言翻译落库。幂等跳过已发布英语（除非 force）。
+    lang_priority=请求者语言(懒生成场景):排队首,翻完即落库,用户最快看到自己的语言。"""
+    if lang_priority and lang_priority in target_langs:
+        target_langs = [lang_priority] + [
+            lang for lang in target_langs if lang != lang_priority
+        ]
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if not o:
         return {"qid": qid, "skipped": "absent"}
@@ -157,10 +175,12 @@ def generate_object(
             o.attributes = {**(o.attributes or {}), "artist_qid": aqid}
             db.flush()
             from app.models.artist import Artist
+            from app.services.enrichment.backfill import bio_en_usable
 
             art = db.query(Artist).filter_by(qid=aqid).first()
-            # force 刷新已存作者(修 bio 语言/补语种);bio 空也进(显示名回填只建名字行)
-            if art is None or force or not art.bio:
+            # force 刷新已存作者;bio 空或 en 位坏值(老bug遗留中文)也重生成
+            # (契约"完整性判断按语言维度":坏值=缺失)
+            if art is None or force or not bio_en_usable(art.bio):
                 bio_en = (
                     enricher.generate_artist_bio(o.attributes)
                     if hasattr(enricher, "generate_artist_bio")
@@ -205,6 +225,20 @@ def generate_object(
                 if bios:
                     art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
                 db.flush()
+            # 已存在作者的 bio 语种补齐:en 有效、目标语言缺 → 纯翻译补
+            # (作者实体全馆复用,老作者 bio 只有老语种;修 es/it 作者简介不全)
+            bio_en = (art.bio or {}).get("en") if bio_en_usable(art.bio) else None
+            if bio_en and hasattr(translator, "translate_section"):
+                add = {}
+                for lang in target_langs:
+                    if lang != "en" and not (art.bio or {}).get(lang):
+                        try:
+                            add[lang] = translator.translate_section(bio_en, lang)
+                        except Exception:
+                            pass
+                if add:
+                    art.bio = {**(art.bio or {}), **add}
+                    db.flush()
 
     if not o.title_zh and o.title_en and hasattr(translator, "translate_section"):
         try:
@@ -258,10 +292,16 @@ def generate_object(
         if gq.status == "published" and gq.body:
             en_published["guide"] = gq.body
 
-    by_lang = translator.translate_object(en_published, target_langs)
-
     counts = {"en": (pub_en, nr_en)}
-    for lang, results in by_lang.items():
+    # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
+    for lang in target_langs:
+        if lang == "en":
+            continue
+        try:
+            results = translator.translate_object(en_published, [lang]).get(lang, {})
+        except Exception:
+            logger.exception("translate %s failed for %s", lang, qid)
+            continue
         counts[lang] = persist_gated_sections(db, qid, lang, results, model)
     result = {"qid": qid, "counts": counts}
     if qa_suggester is not None:

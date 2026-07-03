@@ -2,9 +2,26 @@ from app.services.enrichment.category_config import DEFAULT_CATEGORY, category_f
 
 
 def test_known_qids_map():
+    # 收录策略:类型归并对齐官方大类,CATEGORY_BY_QID 是单一真相源(加类型=加映射,0代码)
     assert category_for("Q3305213") == "painting"
+    assert category_for("Q219423") == "painting"  # 壁画归绘画
     assert category_for("Q860861") == "sculpture"
-    assert category_for("Q125191") == "photograph"
+    assert category_for("Q179700") == "sculpture"  # 雕像
+    assert category_for("Q241045") == "sculpture"  # 半身像
+    assert category_for("Q1066288") == "sculpture"  # 小像
+    assert category_for("Q125191") == "photography"  # 与契约 facet 代码统一
+    # 纸上作品(官方 Graphic Arts & Pastels):素描/水彩/色粉/版画/习作/草图
+    for q in ("Q93184", "Q18761202", "Q12043905", "Q15123870", "Q2647254", "Q5078274"):
+        assert category_for(q) == "works_on_paper"
+
+
+def test_category_codes_match_contract_facet():
+    # 类目代码必须与契约 facet/标签一致(曾有 photograph/decorative 不一致)
+    from app.services.enrichment.category_config import SECTIONS_BY_CATEGORY
+    from app.services.museum_repo import _CATEGORY_LABELS
+
+    for cat in SECTIONS_BY_CATEGORY:
+        assert cat in _CATEGORY_LABELS, f"{cat} 缺 facet 标签"
 
 
 def test_unknown_falls_back():

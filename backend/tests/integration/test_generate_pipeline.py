@@ -150,6 +150,50 @@ def test_generate_museum_unknown_slug(session):
     assert out["error"] == "unknown museum"
 
 
+def test_generate_object_translates_per_language_with_priority(session):
+    # 懒生成体验:请求语言排队首、逐语言翻完即落库;单语言失败不拖垮其他
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    order = []
+
+    class _Tr(_FakeTranslator):
+        def translate_object(self, en_sections, target_langs):
+            assert len(target_langs) == 1  # 逐语言调用(翻完即存)
+            lang = target_langs[0]
+            order.append(lang)
+            if lang == "de":
+                raise RuntimeError("de provider down")
+            return {
+                lang: {
+                    c: SectionQuality(
+                        body=f"{lang} {b}",
+                        status="published",
+                        grounding_ratio=1.0,
+                        conflicts=[],
+                        score=1.0,
+                    )
+                    for c, b in en_sections.items()
+                }
+            }
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_Tr(),
+        target_langs=["en", "de", "fr", "it"],
+        model="m",
+        lang_priority="it",
+    )
+    assert order[0] == "it"  # 请求语言优先
+    assert set(order) == {"it", "de", "fr"}
+    assert out["counts"]["it"] == (1, 0)
+    assert out["counts"]["fr"] == (1, 0)  # de 失败不拖垮 fr
+    assert "de" not in out["counts"] or out["counts"]["de"] == (0, 0)
+
+
 class _FakeQA:
     def suggest(self, material, facts, category, target_langs, covered=None):
         return {
@@ -617,6 +661,89 @@ def test_generate_fills_bio_when_artist_exists_without_bio(session, monkeypatch)
     )
     art = session.query(Artist).filter_by(qid="Q34618").one()
     assert art.bio and art.bio["en"] == "Courbet bio."
+
+
+def test_generate_tops_up_missing_bio_languages_for_existing_artist(
+    session, monkeypatch
+):
+    # 作者实体已存在(bio 有 en/zh)时,生成新作品应为 bio 补齐目标语言缺口(es/it),
+    # 且不重新生成 bio(用户反馈:es/it 作者简介不全)
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q40599"})
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    session.add(
+        Artist(qid="Q40599", name_en="Manet", bio={"en": "EN bio.", "zh": "中文生平。"})
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+    called = {"n": 0}
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            called["n"] += 1
+            return "regenerated"
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "es", "it", "zh"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q40599").one()
+    assert called["n"] == 0  # bio 已有 → 不重生成
+    assert art.bio["es"] == "EN bio._es"  # 缺口从 en 翻译补
+    assert art.bio["it"] == "EN bio._it"
+    assert art.bio["zh"] == "中文生平。"  # 已有不动
+
+
+def test_generate_regenerates_bio_when_en_is_junk(session, monkeypatch):
+    # 存量坏数据(老bug#117遗留):bio.en 位是中文 → 视为无效,重生成英文 bio
+    # (契约"完整性判断按语言维度":坏值=缺失;用户反馈 en 视图作者简介显中文)
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q39931"})
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    session.add(
+        Artist(
+            qid="Q39931",
+            name_en="Renoir",
+            bio={"en": "雷诺阿是法国印象派画家。", "zh": "中文生平。"},
+        )
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            return "Proper English bio."
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "it"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q39931").one()
+    assert art.bio["en"] == "Proper English bio."  # 坏 en 被重生成替换
+    assert art.bio["it"] == "Proper English bio._it"  # it 从新 en 翻
+    assert art.bio["zh"] == "中文生平。"  # 已有合法语种保留
 
 
 def test_generate_object_passes_country_lang_to_artist_material(session, monkeypatch):

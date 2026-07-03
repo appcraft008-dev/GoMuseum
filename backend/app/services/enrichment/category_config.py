@@ -3,10 +3,22 @@ seed/抓取/生成器/prompt 共用，加新类别=改这里、零代码。"""
 
 from __future__ import annotations
 
+# 通用分类法(契约§收录策略):全馆通用 8 大类,新类型=加一行映射+馆 yaml 选用,零代码。
+# painting/sculpture/works_on_paper/photography/decorative_arts/textile/artifact/manuscript
 CATEGORY_BY_QID: dict[str, str] = {
     "Q3305213": "painting",
+    "Q219423": "painting",  # 壁画
     "Q860861": "sculpture",
-    "Q125191": "photograph",
+    "Q179700": "sculpture",  # 雕像
+    "Q241045": "sculpture",  # 半身像
+    "Q1066288": "sculpture",  # 小像
+    "Q93184": "works_on_paper",  # 素描
+    "Q18761202": "works_on_paper",  # 水彩
+    "Q12043905": "works_on_paper",  # 色粉
+    "Q15123870": "works_on_paper",  # 版画
+    "Q2647254": "works_on_paper",  # 习作
+    "Q5078274": "works_on_paper",  # 草图
+    "Q125191": "photography",
 }
 DEFAULT_CATEGORY = "unknown"
 
@@ -29,14 +41,21 @@ SECTIONS_BY_CATEGORY: dict[str, list[str]] = {
         "significance",
         "facts",
     ],
-    "photograph": ["photographer", "context", "significance", "facts"],
-    "decorative": [
+    "works_on_paper": [
+        "background",
+        "analysis",
+        "significance",
+        "facts",
+    ],
+    "photography": ["photographer", "context", "significance", "facts"],
+    "decorative_arts": [
         "maker",
         "material-technique",
         "use",
         "significance",
         "facts",
     ],
+    # textile/artifact/manuscript 用 _FALLBACK_SECTIONS 兜底,真上馆再细化(宁缺毋滥)
 }
 _FALLBACK_SECTIONS = ["background", "significance", "facts"]
 

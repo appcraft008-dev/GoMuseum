@@ -20,7 +20,7 @@
 | `GET /museums/{slug}/objects?...` | 分页藏品列表(列表页) | `list_objects` |
 | `GET /museums/{slug}/objects/{qid}/content?language=` | 单件讲解(导览页) | `get_object_content` |
 
-`language` 取值:`zh`/`en`/`fr`(当前生成的语种;`de`/`es`/`it` 在 `DEFAULT_LANGUAGES` 但暂未生成)。缺省 `zh`。
+`language` 取值:`DEFAULT_LANGUAGES` 全集 `en/fr/de/es/it/zh`(2026-07-03 起新生成内容六语全跑;早期存量 243 件讲解只有 zh/en/fr,de/es/it 视图对老件显"待完善",待"补语种"增量命令回补)。缺省 `zh`。显示名(title/artist)六语已全量回填。
 
 ---
 
@@ -82,7 +82,7 @@
 ```
 
 - `title` 按多语显示名规则:`title_i18n[lang]`(Wikidata权威)→ 该语言 legacy 列 → en 兜底。`artist` 同理经 name_i18n。
-- `content_status`:见末节生命周期(前端据此显"待完善"角标)。
+- `content_status`:**按请求语言解读**(2026-07-03 定)——对象有内容但该语言无已发布内容 → 返 `empty`(前端显"待完善",防"列表看着有、点进去空")。见末节生命周期。
 - 未知馆 → 404。
 
 ## 4. `GET /museums/{slug}/objects/{qid}/content?language=zh`
@@ -121,7 +121,11 @@
 
 ## `content_status` 生命周期
 
-`stub`(只元数据,目录铺出) → `generating`(生成中,懒生成锁) → `ready`(≥1 段已发布)/ `empty`(无可接地材料)。前端:`stub`/`empty` 显"待完善",`ready` 正常。未知值按 `ready` 容错。
+`stub`(只元数据,目录铺出) → `ready`(≥1 段已发布)/ `empty`(无可接地材料)。前端:`stub`/`empty` 显"待完善",`ready` 正常。未知值按 `ready` 容错。
+
+**懒生成(✅2026-07-03 落地)**:content 端点命中 `stub` → 后台触发该件完整生成(全语言;**请求者语言排队首、逐语言翻完即落库**——用户最快看到自己的语言,单语言翻译失败不拖垮其他),几分钟后再取即 `ready`。锁=内部 `attributes.lazy_lock_at`(TTL 10min 自愈),**不对外暴露中间状态**——stub 期间前端照旧"待完善",契约形状零变化、老 App 无感。`empty` 不重试(已判无可接地材料,防循环烧钱)。并发上限 2/进程;仅 staging/production 环境生效。
+
+**懒翻译(✅2026-07-03 落地,懒生成姐妹场景)**:content 端点命中"对象 `ready`、有 en 轴心、但**请求语言**无已发布内容" → 后台**只翻这一门语言**(补语种原语:段落+问答+作者bio,数十秒、费用分钱级)。配合**列表 content_status 按请求语言解读**:该语言缺 → 列表即显"待完善",点开触发懒翻译,刷新即有——任何语言视图所见即所得,新加语言自动享受同样行为。同锁/并发/环境门。
 
 ## 图片字段
 
@@ -129,6 +133,29 @@
 > ⚠️ **已知问题 + 规划**:Wikimedia 链接按 UA 策略拦截(需合规 UA)且原图大/现生成慢。规划:富化阶段把图自存 R2 并预生成尺寸档,`image_key` 填充后这些字段自动返 R2 直链(字段名不变,前端零改)。见图像自存交接。
 
 ---
+
+## 收录策略（通用规则,任何馆 0 代码复制;2026-07-03 定）
+
+**① 有图才收录(硬规则)。** 只收 Wikidata 上有自由版权图(P18/Wikimedia)的藏品:图是**识别的参照物**(App 靠拍照识别,无图=不可识别的死重)也是**合规边界**(官方馆藏库的图多为 RMN 类版权摄影,商用展示/自存都踩线)。catalog SPARQL 中 P18 必填。
+
+**② 三层口径(奥赛样板数字,评估任何馆时先查这三层)。** 官方全馆藏(奥赛~15万,绝大多数在库房) ≫ **常设在展(奥赛 3-4千,产品真实分母——游客只可能拍到它)** > Wikidata 有条目(5353) > **有图可收录(2065=我们的集合)**。Wikidata 收录天然偏名作、与"在展"高度相关,故有图集合对现场识别命中率的真实覆盖远好于比例数字。
+
+**③ 定期重跑 catalog 吃增量。** Wikimedia 图持续增长;catalog/merge_stubs 幂等,重跑自动收新有图的藏品——"只收有图"不是一锤子,是动态逼近全部可识别集。
+
+**④ 通用分类法(全馆共用 8 大类 + unknown 兜底)。** `CATEGORY_BY_QID`(category_config.py)是唯一真相源:P31 QID → 类目;**加类型=加一行映射 + 馆 yaml `categories` 选用,零代码**。多 P31 作品已知类目优先于 unknown。每类目一套深度模块段落集(SECTIONS_BY_CATEGORY;未细化的类用通用兜底,真上馆再细化)。
+
+| 类目 code | zh | 归并(示例) | 段落集 |
+|---|---|---|---|
+| painting | 绘画 | 油画/壁画 | 专属 |
+| sculpture | 雕塑 | 雕塑/雕像/半身像/小像 | 专属(材质工艺) |
+| works_on_paper | 纸上作品 | 素描/水彩/色粉/版画/习作/草图 | 同绘画 |
+| photography | 摄影 | 照片 | 专属(摄影师) |
+| decorative_arts | 装饰艺术 | 家具/陶瓷/玻璃/金工 | 专属(maker/用途) |
+| textile | 纺织 | 挂毯/服饰 | 兜底 |
+| artifact | 文物器物 | 考古/礼器/武器 | 兜底 |
+| manuscript | 手稿古籍 | 手抄本/书籍 | 兜底 |
+
+**⑤ 内容生成分层(目录便宜、生成贵)。** 目录+显示名回填全量做(全馆 ~$20 内);讲解生成按热度 **top-N 批量**(`generate --limit N`;奥赛 N=200)+ **长尾懒生成**(规划中,`content_status=generating` 锁已预留;staging 验证后上 prod)。**全量目录/生成只在 prod 跑;staging 只做小样本验证机制**(`catalog --limit`)。
 
 ## 上新馆 = 纯配置(零核心改动)
 
@@ -146,8 +173,8 @@
      fetch_limit / sample_size / sample_qids
      languages: []             # 空=用 DEFAULT_LANGUAGES;或指定子集
    ```
-2. **铺目录**:`python scripts/onboard.py <slug> catalog --target <staging|prod>`
-   → `WikidataCatalog.list` 列 stub → `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。
+2. **铺目录**:`python scripts/onboard.py <slug> catalog --target <staging|prod> [--limit N]`
+   → `WikidataCatalog.list` 列 stub(只收有图,§收录策略)→ `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。新类目先跑一次 `scripts/seed_sections.py`(幂等)。
 3. **回填显示名**:`python scripts/onboard.py <slug> names --target <env>`
    → 全馆 `title_i18n` + `artist_qid`(P170 批量)+ Artist 名字行(权威标签→翻译→en;幂等)。stub 即有完整多语显示名。
 4. **生成内容**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
@@ -173,6 +200,19 @@
 > **语言无关**:新增语言(de/es/it…)**只加进 `DEFAULT_LANGUAGES` 语言集**,生成时一次性抓该实体全部目标语言的 Wikidata labels、缺的从 en 翻译 —— **同一套机制、零 per-language 代码**。这就是"加语言=加配置"。
 > **配套**:**QID 是全系统匹配键**(识别/查询/去重/跳转都用 qid);显示名纯展示,名字回退绝不影响匹配。避开脏格式(如 Joconde 的 "Lastname First (dates)")。
 > **解析时机 = 铺目录时(2026-07-03 定)**:显示名是**目录元数据、不是生成内容**——catalog 后立即跑 `onboard.py <slug> names --target <env>`(幂等可重跑),全馆补齐 `title_i18n`/`artist_qid`/Artist 名字行;stub 一进目录就有完整多语显示名,**不等内容生成**(此前只在 generate 时填,导致列表页大量 stub 在 zh 视图显英/法文名)。generate 时同一机制增量修补。en 也权威优先(纠正目录把非英文标签误存 title_en,如 "Régates à Argenteuil")。
+
+> **⚠️ 本地化完整性原则(2026-07-03 定,分类标签教训)。**
+> - **凡端点返回的用户可见文本必须随 `language` 本地化**:内容类走生成/翻译管线;**固定小集合**(分类标签/段落标签/材质名/`all` tab 等)用**静态翻译表一次配齐全部 `DEFAULT_LANGUAGES`**——不许只配部分语言(三语时代的表在六语开放后成洞)。缺译回退 en、**永不 null**。
+> - **机器码字段永不翻译**:`code`/`qid`/`section_code` 是前端逻辑键(筛选/路由/匹配),显示一律靠 `label`——由此所有文案改进都是 server-driven、免发版。
+> - **"加语言" checklist(加语言=加配置的完整清单)**:① `DEFAULT_LANGUAGES`+`LANG_NAMES`(lang_config)② 静态标签表(`_CATEGORY_LABELS`/`_ALL_LABEL`/`SECTION_LABELS`)③ 非拉丁文字语言扩 `_clean_i18n` 文字检测(现只查 zh 汉字)④ 前端 ARB 文案+语言选择器(kSupportedLocales)⑤ 存量回补:显示名跑 `names`(幂等),讲解/问答跑 **`onboard.py <slug> translate --target <env> --langs <新语>`**(✅已实现:从已存 en 段**纯翻译**落库,忠实度校验继承接地,不重生成;幂等只补缺)。
+> 教训:2026-07-03 六语开放,分类标签表只配了 zh/en/fr → de/es/it 真机标签栏中英混杂(前端交接件修复,#142)。
+
+> **⚠️ 完整性判断按语言维度(2026-07-03 定,一日三错的统摄原则)。**
+> 凡是"内容是否已存在"的判断(跳过生成/跳过翻译/显示状态/静态表取值),一律问"**该语言**是否已存在",**绝不问"对象是否已存在"**。同一根子当天犯三次:
+> ① 列表 `content_status` 按对象判 → de 视图显 ready 点开空(#146 修:按请求语言判);
+> ② 作者 bio "存在即跳过" → 复用老作者时新语言永远补不上(#147 修:生成时语种补齐);
+> ③ 静态标签表只配部分语言(#142 修:一次配齐全语种)。
+> **推论——复用≠跳过**:任何"生成一次、全馆复用"的实体(作者 bio/显示名/将来的流派介绍等),**每个复用点必须做语种补齐**——en 轴心在、目标语言缺 → 纯翻译补(幂等,已有语种不动)。新馆复制时:凡新增"共享实体"或"存在性检查",按此自查。
 
 **博物馆负责事实,AI 负责讲法。** 每件内容分三层,各守互斥职责,从同一份证据包生成、不重复:
 
@@ -204,8 +244,8 @@
 
 - **阶段 1 — 材料地基(证据包)**:1a 源配全(Europeana + 更全 Wikidata P 属性;法国官方=Joconde 已有,非法国馆逐馆官方连接器)· 1b 证据包模型 + 分类落库。→ 每件一份完整分类证据包。
 - **阶段 2 — 内容生成重构**:2a 统一分工去重(lane)+ 全从证据包生成 · 2b 动态模块 + 争议 hedge · 2c 两段式质量评估(事实质量 + 讲解质量)。
-- **阶段 3 — 体验补全**:3a AI 自由问答 `/ask`(多轮)· 3b TTS 音频落库 ·(藏品识别机制 = 独立 brainstorm)。
-- **阶段 4 — 规模化**:图像 R2 自存 + `cover_url` + 首页真实化 · 上新馆(逐馆官方连接器 + 纯配置)+ 懒生成接线。
+- **阶段 3 — 体验补全**:3a AI 自由问答 `/ask`(多轮)· 3b TTS 音频落库 · ~~3c 懒生成接线~~(✅2026-07-03 落地,见 content_status 节)·(藏品识别机制 = 独立 brainstorm)。前端增强(生成中提示/自动刷新)另排。
+- **阶段 4 — 规模化**:图像 R2 自存 + `cover_url` + 首页真实化 · 上新馆(逐馆官方连接器 + 纯配置)· **官方馆藏库连接器**(抓元数据+在展清单/展厅号,不抓图;用"在展×有自由图"校准优先级,修正名作偏置)。
 
 **奥赛 = 样板馆**:作为先行者会多吞一两次重生成;流水线成型后,新馆从第一天即"配全·生成一次·封板"。
 
@@ -213,6 +253,12 @@
 
 ## 变更记录
 
+- 2026-07-03:定**完整性判断按语言维度**原则(一日三错 #142/#146/#147 的统摄:存在性检查按语言问不按对象问;复用≠跳过,共享实体每个复用点做语种补齐)。#147:生成时为已存在作者补齐 bio 缺失语种。
+- 2026-07-03:**列表 content_status 按请求语言解读**(该语言无内容→empty"待完善",防列表骗人)+ **懒翻译落地**(ready 但请求语言缺→后台只翻该语言,复用补语种原语+懒生成锁)。
+- 2026-07-03:懒生成**请求语言优先**(lang_priority,逐语言翻完即落库,单语言失败不拖垮)+ **补语种命令落地**(`onboard translate`:存量对象缺失语言从 en 段纯翻译,checklist⑤ 闭环;老 243 件补 de/es/it 用它)。
+- 2026-07-03:定**本地化完整性原则**——用户可见文本必随 language(固定小集合用静态表配齐全语种,缺译回退 en);机器码永不翻译;"加语言"checklist(五步)。教训:六语开放分类标签只配三语(#142 修)。前端六语选择器 #138-140。
+- 2026-07-03:**懒生成落地**(路线图3c):stub 首次访问 → 后台生成(attributes.lazy_lock_at 锁,TTL 10min;并发2;仅部署环境)。组件装配抽 factory(onboard 与懒生成共用)。契约形状零变化。
+- 2026-07-03:定**§收录策略**(通用):有图才收录(识别参照+合规)/三层口径(全馆藏≫在展>有图)/定期重跑吃增量/通用分类法8大类(CATEGORY_BY_QID 真相源,多P31已知优先)/生成分层(top-N=奥赛200 只在 prod;staging 小样本;懒生成入路线图3c;官方馆藏库连接器入阶段4)。类目代码统一(photograph→photography、decorative→decorative_arts);奥赛 categories 扩至四大类,catalog P18 必填。
 - 2026-07-03:定**显示名解析时机=铺目录时**——新增 `names` 回填命令(title_i18n/artist_qid/Artist名字行,幂等);`_fill_i18n` en 也权威优先;Artist 行存在但 bio 空时 generate 补 bio。修列表页 stub 在 zh 视图显英/法文名问题(截图反馈)。翻译兜底规则经讨论**维持所有语言统一**(权威→机翻→en),不按拉丁/非拉丁分叉。
 - 2026-07-03:契约-代码对齐——端点3 `artist` 真正走 name_i18n(此前只 title);facts.medium 优先证据包 P186(修正 P2048 措辞:尺寸仍 Joconde);`country_lang`/`sources` 从 museums.yaml 读(去 France 硬编码,上新馆=纯配置成立)。
 - 2026-06-28:新建本活文档。纳入近期加法:端点3 `/objects` 分页;端点2 `categories` facet + language;端点4 `status/title/images/facts`;`content_status` 生命周期;上新馆路径。
