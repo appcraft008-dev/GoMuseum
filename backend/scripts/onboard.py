@@ -156,57 +156,28 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
             f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
         )
 
-    from app.services.enrichment.content_enricher import (
-        ContentEnricher,
-        default_complete,
-    )
-    from app.services.enrichment.lang_config import resolve_languages
+    from app.services.enrichment.factory import build_generation_components
     from app.services.enrichment.pipeline import generate_museum, generate_object
-    from app.services.enrichment.qa_suggester import QASuggester
-    from app.services.enrichment.quality import QualityGate
-    from app.services.enrichment.translator import ContentTranslator
 
-    cfg = _catalog().get(slug)
-    override = [s.strip() for s in langs.split(",")] if langs else cfg.languages
-    target_langs = resolve_languages(override)
-    enricher = ContentEnricher(default_complete)
-    gate = QualityGate(default_complete)
-    translator = ContentTranslator(default_complete)
-    qa_suggester = QASuggester(default_complete, gate, translator)
-
-    registry = _registry(slug)
-
+    override = [s.strip() for s in langs.split(",")] if langs else None
+    c = build_generation_components(slug, langs_override=override)
+    common = dict(
+        enricher=c["enricher"],
+        gate=c["gate"],
+        translator=c["translator"],
+        target_langs=c["target_langs"],
+        model="gpt-4o-mini",
+        force=force,
+        qa_suggester=c["qa_suggester"],
+        registry=c["registry"],
+        country_lang=c["country_lang"],
+    )
     db = SessionLocal()
     try:
         if qid:
-            out = generate_object(
-                db,
-                qid,
-                enricher=enricher,
-                gate=gate,
-                translator=translator,
-                target_langs=target_langs,
-                model="gpt-4o-mini",
-                force=force,
-                qa_suggester=qa_suggester,
-                registry=registry,
-                country_lang=cfg.country_lang,
-            )
+            out = generate_object(db, qid, **common)
         else:
-            out = generate_museum(
-                db,
-                slug,
-                enricher=enricher,
-                gate=gate,
-                translator=translator,
-                target_langs=target_langs,
-                model="gpt-4o-mini",
-                force=force,
-                limit=limit,
-                qa_suggester=qa_suggester,
-                registry=registry,
-                country_lang=cfg.country_lang,
-            )
+            out = generate_museum(db, slug, limit=limit, **common)
     finally:
         db.close()
     print(f"✓ generate 完成: {out}")
