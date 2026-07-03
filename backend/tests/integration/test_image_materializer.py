@@ -147,3 +147,30 @@ def test_materialize_images_unknown_museum(session):
     assert materialize_images(
         session, "nope", fetch_bytes=lambda u: b"", storage=_Storage()
     ) == {"error": "unknown museum"}
+
+
+def test_default_fetch_uses_wikimedia_width_param(monkeypatch):
+    # 名作原图可达 70MB+:Special:FilePath 加 ?width=1600 用 Wikimedia 服务端缩放,
+    # 带宽降一个量级且根除超大跳过(库尔贝《画家的工作室》教训)
+    import app.services.enrichment.materializer as mat
+
+    seen = {}
+
+    class _Resp:
+        content = b"ok"
+
+        def raise_for_status(self):
+            pass
+
+    def fake_get(url, **kw):
+        seen["url"] = url
+        return _Resp()
+
+    monkeypatch.setattr("requests.get", fake_get)
+    mat._default_fetch_bytes(
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Foo%20Bar.jpg"
+    )
+    assert seen["url"].endswith("?width=1600")
+    # 非 Special:FilePath 的 URL 原样(不乱加参数)
+    mat._default_fetch_bytes("https://example.com/x.jpg")
+    assert seen["url"] == "https://example.com/x.jpg"

@@ -34,6 +34,10 @@ def image_base_key(qid: str, sort: int) -> str:
 def _default_fetch_bytes(url: str) -> bytes:
     import requests
 
+    # Special:FilePath 加 ?width:用 Wikimedia 服务端缩放,带宽降一个量级,
+    # 根除名作原图 70MB+ 触发超大跳过(库尔贝《画家的工作室》教训)
+    if "Special:FilePath" in url and "?" not in url:
+        url = f"{url}?width={_LARGE_PX}"
     r = requests.get(url, headers={"User-Agent": _UA}, timeout=60)
     r.raise_for_status()
     return r.content
