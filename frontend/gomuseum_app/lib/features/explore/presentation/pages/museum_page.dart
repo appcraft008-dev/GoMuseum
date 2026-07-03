@@ -412,11 +412,14 @@ class _ObjectRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 序号
+            // 序号（宽度容 3 位数，如 263；maxLines 防折行）
             SizedBox(
-              width: 24,
+              width: 32,
               child: Text(
                 number,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
                 style: GmText.serif(
                   size: 13,
                   color: gm.faint,
