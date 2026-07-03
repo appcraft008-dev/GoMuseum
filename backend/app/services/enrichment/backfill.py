@@ -41,10 +41,14 @@ _CREATORS_BATCH = (
 )
 
 
-def _fetch_creators(qids, *, run_query=None) -> dict:
-    """批量 作品QID → 作者QID(P170,首个)。VALUES 分批查询。"""
+def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
+    """批量 作品QID → 作者QID(P170,首个)。VALUES 分批查询。
+    单批失败重试一次,仍失败跳过该批(Wikidata 502 教训:不炸全局,幂等重跑再补)。"""
     if not qids:
         return {}
+    import logging
+    import time
+
     from app.services.enrichment.sources.wikidata_catalog import _default_run_query
 
     run_query = run_query or _default_run_query
@@ -52,9 +56,21 @@ def _fetch_creators(qids, *, run_query=None) -> dict:
     qids = list(qids)
     for i in range(0, len(qids), _CREATORS_BATCH):
         batch = qids[i : i + _CREATORS_BATCH]
-        rows = run_query(
-            _CREATORS_QUERY.format(values=" ".join(f"wd:{q}" for q in batch))
-        )
+        sparql = _CREATORS_QUERY.format(values=" ".join(f"wd:{q}" for q in batch))
+        rows = None
+        for attempt in (1, 2):
+            try:
+                rows = run_query(sparql)
+                break
+            except Exception:
+                if attempt == 1:
+                    time.sleep(retry_wait)
+                else:
+                    logging.getLogger(__name__).exception(
+                        "creators batch failed, skip %d qids", len(batch)
+                    )
+        if rows is None:
+            continue
         for row in rows:
             item = (row.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
             creator = (row.get("creator") or {}).get("value", "").rsplit("/", 1)[-1]

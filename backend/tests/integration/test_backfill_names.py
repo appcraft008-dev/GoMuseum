@@ -323,3 +323,31 @@ def test_backfill_survives_per_object_fetch_failure(session):
     # Q1 失败被跳过,Q2 及作者流程正常走完,整体不抛
     assert out.get("errors", 0) >= 1
     assert "titles" in out
+
+
+def test_fetch_creators_survives_batch_failure():
+    # prod 教训2:Wikidata 502 炸在 creators 批量查询(循环之前),整个回填没起步就死
+    # → 单批失败重试一次,仍失败跳过该批继续(幂等重跑再补)
+    from app.services.enrichment.backfill import _fetch_creators
+
+    calls = {"n": 0}
+
+    def flaky(sparql):
+        calls["n"] += 1
+        if "Q0 " in sparql or sparql.rstrip().endswith(
+            "Q0 } ?item wdt:P170 ?creator }"
+        ):
+            pass
+        if calls["n"] <= 2 and "wd:Q0" in sparql:  # 第一批(含重试)都失败
+            raise RuntimeError("502 Bad Gateway")
+        return [
+            {
+                "item": {"value": "http://www.wikidata.org/entity/Q300"},
+                "creator": {"value": "http://www.wikidata.org/entity/Q9"},
+            }
+        ]
+
+    qids = [f"Q{i}" for i in range(450)]  # 3 批
+    out = _fetch_creators(qids, run_query=flaky, retry_wait=0)
+    assert out.get("Q300") == "Q9"  # 后续批正常
+    assert calls["n"] >= 4  # 第一批试了2次(原+重试),另两批各1次
