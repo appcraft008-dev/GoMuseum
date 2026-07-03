@@ -5,7 +5,7 @@
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -68,6 +68,24 @@ def list_objects(
     if page is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     return page
+
+
+@router.post("/{slug}/recognize")
+async def recognize_artwork(
+    slug: str,
+    image: UploadFile = File(...),
+    language: str = "zh",
+    mode: str = "artwork",
+    db: Session = Depends(get_db),
+) -> dict:
+    """拍照识别(接地:身份只来自目录命中;mode=label 为引导补拍的墙签纯转写)"""
+    from app.services.recognition.service import recognize
+
+    data = await image.read()
+    out = recognize(db, slug, data, language=language, mode=mode)
+    if out is None:
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
+    return out
 
 
 @router.get("/{slug}")
