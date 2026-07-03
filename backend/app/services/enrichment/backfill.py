@@ -105,7 +105,8 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     aqid = (o.attributes or {}).get("artist_qid")
     if aqid:
         art = db.query(Artist).filter_by(qid=aqid).first()
-        bio_en = (art.bio or {}).get("en") if art else None
+        # 坏 en(含汉字)不作轴心,防垃圾扩散;重生交给 generate 路径
+        bio_en = (art.bio or {}).get("en") if art and bio_en_usable(art.bio) else None
         if bio_en and not (art.bio or {}).get(lang):
             try:
                 art.bio = {
@@ -148,6 +149,13 @@ def backfill_languages(
 
 
 _CJK = re.compile(r"[一-鿿]")
+
+
+def bio_en_usable(bio) -> bool:
+    """en bio 有且不是坏值(含汉字=老bug遗留的中文进 en 位)→ 可作翻译轴心/无需重生。
+    契约"完整性判断按语言维度":坏值等同缺失。"""
+    en = (bio or {}).get("en")
+    return bool(en) and not _CJK.search(en)
 
 
 def _clean_i18n(i18n) -> dict:

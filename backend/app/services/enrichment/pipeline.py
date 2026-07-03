@@ -175,10 +175,12 @@ def generate_object(
             o.attributes = {**(o.attributes or {}), "artist_qid": aqid}
             db.flush()
             from app.models.artist import Artist
+            from app.services.enrichment.backfill import bio_en_usable
 
             art = db.query(Artist).filter_by(qid=aqid).first()
-            # force 刷新已存作者(修 bio 语言/补语种);bio 空也进(显示名回填只建名字行)
-            if art is None or force or not art.bio:
+            # force 刷新已存作者;bio 空或 en 位坏值(老bug遗留中文)也重生成
+            # (契约"完整性判断按语言维度":坏值=缺失)
+            if art is None or force or not bio_en_usable(art.bio):
                 bio_en = (
                     enricher.generate_artist_bio(o.attributes)
                     if hasattr(enricher, "generate_artist_bio")
@@ -223,9 +225,9 @@ def generate_object(
                 if bios:
                     art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
                 db.flush()
-            # 已存在作者的 bio 语种补齐:en 有、目标语言缺 → 纯翻译补
+            # 已存在作者的 bio 语种补齐:en 有效、目标语言缺 → 纯翻译补
             # (作者实体全馆复用,老作者 bio 只有老语种;修 es/it 作者简介不全)
-            bio_en = (art.bio or {}).get("en")
+            bio_en = (art.bio or {}).get("en") if bio_en_usable(art.bio) else None
             if bio_en and hasattr(translator, "translate_section"):
                 add = {}
                 for lang in target_langs:
