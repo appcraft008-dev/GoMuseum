@@ -9,12 +9,18 @@ const List<Locale> kSupportedLocales = [
   Locale('zh'),
   Locale('en'),
   Locale('fr'),
+  Locale('de'),
+  Locale('es'),
+  Locale('it'),
 ];
 
 const Map<String, String> _kLanguageNames = {
   'zh': '简体中文',
   'en': 'English',
   'fr': 'Français',
+  'de': 'Deutsch',
+  'es': 'Español',
+  'it': 'Italiano',
 };
 
 /// Locale → 展示名（未知语言回退其 code）。
