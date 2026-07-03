@@ -53,11 +53,10 @@ def _fetch_creators(qids, *, run_query=None) -> dict:
     return out
 
 
-def backfill_languages(
-    db, slug, *, langs, translator, limit=None, model="gpt-4o-mini"
-) -> dict:
-    """补语种(契约"加语言"checklist⑤):对已有 published en 段的对象,把缺失语言从
-    en 段**纯翻译**落库(含 guide 与建议问答;忠实度校验继承接地,不重生成)。幂等。"""
+def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> dict:
+    """单件单语言补语种原语(懒翻译与全馆 translate 命令共用):
+    缺失段/问答/该件作者 bio 从已存 en **纯翻译**落库(忠实度校验继承接地,不重生成)。幂等。
+    返回 {"sections": n, "qa": n, "bios": n};对象无 en 轴心内容 → 全零(交给生成)。"""
     from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
     from app.services.content_repo import (
         persist_gated_sections,
@@ -65,6 +64,64 @@ def backfill_languages(
     )
     from app.services.enrichment.qa_suggester import translate_qa_items
 
+    counts = {"sections": 0, "qa": 0, "bios": 0}
+    if lang == "en":
+        return counts
+    en_secs = {
+        r.section_code: r.body
+        for r in db.query(ObjectContentSection)
+        .filter_by(object_id=o.id, language="en", status="published")
+        .all()
+        if r.body
+    }
+    if not en_secs:
+        return counts  # 无英语轴心内容(stub/empty)→ 交给生成,不归补语种管
+    have = {
+        r.section_code
+        for r in db.query(ObjectContentSection)
+        .filter_by(object_id=o.id, language=lang, status="published")
+        .all()
+        if r.body
+    }
+    missing = {c: b for c, b in en_secs.items() if c not in have}
+    if missing:
+        results = translator.translate_object(missing, [lang]).get(lang, {})
+        pub, _nr = persist_gated_sections(db, o.qid, lang, results, model)
+        counts["sections"] += pub
+    en_qa = [
+        {"question": r.question, "answer": r.answer, "status": "published"}
+        for r in db.query(ObjectSuggestedQuestion)
+        .filter_by(object_id=o.id, language="en", status="published")
+        .order_by(ObjectSuggestedQuestion.sort)
+        .all()
+    ]
+    if en_qa and not (
+        db.query(ObjectSuggestedQuestion)
+        .filter_by(object_id=o.id, language=lang, status="published")
+        .first()
+    ):
+        items = translate_qa_items(translator, en_qa, lang)
+        counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
+    aqid = (o.attributes or {}).get("artist_qid")
+    if aqid:
+        art = db.query(Artist).filter_by(qid=aqid).first()
+        bio_en = (art.bio or {}).get("en") if art else None
+        if bio_en and not (art.bio or {}).get(lang):
+            try:
+                art.bio = {
+                    **(art.bio or {}),
+                    lang: translator.translate_section(bio_en, lang),
+                }
+                counts["bios"] += 1
+            except Exception:
+                pass
+    return counts
+
+
+def backfill_languages(
+    db, slug, *, langs, translator, limit=None, model="gpt-4o-mini"
+) -> dict:
+    """补语种(契约"加语言"checklist⑤):全馆按热度逐件调 translate_object_language。幂等。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return {"error": "unknown museum"}
@@ -76,72 +133,16 @@ def backfill_languages(
     if limit:
         q = q.limit(limit)
     counts = {"objects": 0, "sections": 0, "qa": 0, "bios": 0}
-    artist_qids: set[str] = set()
     for o in q.all():
-        en_secs = {
-            r.section_code: r.body
-            for r in db.query(ObjectContentSection)
-            .filter_by(object_id=o.id, language="en", status="published")
-            .all()
-            if r.body
-        }
-        if not en_secs:
-            continue  # 无英语轴心内容(stub/empty)→ 交给生成,不归补语种管
-        en_qa = [
-            {"question": r.question, "answer": r.answer, "status": "published"}
-            for r in db.query(ObjectSuggestedQuestion)
-            .filter_by(object_id=o.id, language="en", status="published")
-            .order_by(ObjectSuggestedQuestion.sort)
-            .all()
-        ]
         touched = False
         for lang in langs:
-            if lang == "en":
-                continue
-            have = {
-                r.section_code
-                for r in db.query(ObjectContentSection)
-                .filter_by(object_id=o.id, language=lang, status="published")
-                .all()
-                if r.body
-            }
-            missing = {c: b for c, b in en_secs.items() if c not in have}
-            if missing:
-                results = translator.translate_object(missing, [lang]).get(lang, {})
-                pub, _nr = persist_gated_sections(db, o.qid, lang, results, model)
-                counts["sections"] += pub
+            c = translate_object_language(db, o, lang, translator, model)
+            if c["sections"] or c["qa"]:
                 touched = True
-            if en_qa and not (
-                db.query(ObjectSuggestedQuestion)
-                .filter_by(object_id=o.id, language=lang, status="published")
-                .first()
-            ):
-                items = translate_qa_items(translator, en_qa, lang)
-                counts["qa"] += persist_suggested_questions(
-                    db, o.qid, lang, items, model
-                )
-                touched = True
+            for k in ("sections", "qa", "bios"):
+                counts[k] += c[k]
         if touched:
             counts["objects"] += 1
-        aqid = (o.attributes or {}).get("artist_qid")
-        if aqid:
-            artist_qids.add(aqid)
-    # 作者 bio 也是内容:en 有、目标语言缺 → 翻译补(作者实体馆内复用,一次补全馆受益)
-    for aqid in artist_qids:
-        art = db.query(Artist).filter_by(qid=aqid).first()
-        bio_en = (art.bio or {}).get("en") if art else None
-        if not bio_en:
-            continue
-        add = {}
-        for lang in langs:
-            if lang != "en" and not (art.bio or {}).get(lang):
-                try:
-                    add[lang] = translator.translate_section(bio_en, lang)
-                except Exception:
-                    pass
-        if add:
-            art.bio = {**(art.bio or {}), **add}
-            counts["bios"] += len(add)
     db.commit()
     return counts
 

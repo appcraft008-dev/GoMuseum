@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.v1.endpoints import museums
 from app.core.database import Base, get_db
+from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.object_importer import upsert_museum, upsert_object
@@ -19,7 +20,12 @@ def client():
     )
     Base.metadata.create_all(
         bind=engine,
-        tables=[Museum.__table__, MuseumObject.__table__, ObjectImage.__table__],
+        tables=[
+            Museum.__table__,
+            MuseumObject.__table__,
+            ObjectImage.__table__,
+            ObjectContentSection.__table__,
+        ],
     )
     TestingSession = sessionmaker(bind=engine)
     s = TestingSession()

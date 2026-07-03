@@ -18,9 +18,10 @@ _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
 _SEM = threading.Semaphore(2)
 
 
-def try_acquire_lock(db, obj: MuseumObject) -> bool:
-    """stub 且无活锁 → 落锁返回 True。乐观读写:竞态窗口极小,撞了最多浪费一次生成费。"""
-    if obj.content_status != "stub":
+def try_acquire_lock(db, obj: MuseumObject, require_status=("stub",)) -> bool:
+    """状态匹配且无活锁 → 落锁返回 True。乐观读写:竞态窗口极小,撞了最多浪费一次生成费。
+    stub=懒生成入口;ready=懒翻译入口(该语言缺)。"""
+    if obj.content_status not in require_status:
         return False
     at = (obj.attributes or {}).get("lazy_lock_at")
     if at:
@@ -70,10 +71,24 @@ def _generate(db, qid: str, language: str | None = None) -> dict:
     )
 
 
-def run_lazy_generation(
-    qid: str, language: str | None = None, *, session_factory=None, close=True
+def _translate(db, qid: str, language: str) -> dict:
+    """懒翻译本体:单件单语言从 en 段纯翻译(补语种原语)。测试 monkeypatch 此处。"""
+    from app.services.enrichment.backfill import translate_object_language
+    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.translator import ContentTranslator
+
+    o = db.query(MuseumObject).filter_by(qid=qid).one()
+    out = translate_object_language(
+        db, o, language, ContentTranslator(default_complete)
+    )
+    db.commit()
+    return out
+
+
+def _run_locked(
+    qid: str, work, label: str, *, session_factory=None, close=True
 ) -> None:
-    """后台任务体:限并发跑生成,完成/失败均清锁(失败留 stub 允许下次重试)。"""
+    """后台任务骨架:限并发跑 work(db),完成/失败均清锁(失败允许下次重试)。"""
     if session_factory is None:
         from app.core.database import SessionLocal
 
@@ -93,11 +108,11 @@ def run_lazy_generation(
         db = session_factory()
         try:
             try:
-                out = _generate(db, qid, language)
-                logger.info("lazy generation done: %s -> %s", qid, out)
+                out = work(db)
+                logger.info("%s done: %s -> %s", label, qid, out)
             except Exception:
                 db.rollback()
-                logger.exception("lazy generation failed: %s", qid)
+                logger.exception("%s failed: %s", label, qid)
             o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
             if o:
                 _clear_lock(db, o)
@@ -108,8 +123,53 @@ def run_lazy_generation(
         _SEM.release()
 
 
+def run_lazy_generation(
+    qid: str, language: str | None = None, *, session_factory=None, close=True
+) -> None:
+    """stub 首访 → 完整生成(全语言,请求语言优先)。"""
+    _run_locked(
+        qid,
+        lambda db: _generate(db, qid, language),
+        "lazy generation",
+        session_factory=session_factory,
+        close=close,
+    )
+
+
+def run_lazy_translation(
+    qid: str, language: str, *, session_factory=None, close=True
+) -> None:
+    """ready 但请求语言缺 → 只翻这一门语言(数十秒,费用分钱级)。"""
+    _run_locked(
+        qid,
+        lambda db: _translate(db, qid, language),
+        "lazy translation",
+        session_factory=session_factory,
+        close=close,
+    )
+
+
+def _has_published(db, object_id, lang) -> bool:
+    from app.models.content import ObjectContentSection
+
+    return (
+        db.query(ObjectContentSection)
+        .filter(
+            ObjectContentSection.object_id == object_id,
+            ObjectContentSection.language == lang,
+            ObjectContentSection.status == "published",
+            ObjectContentSection.body.isnot(None),
+        )
+        .first()
+        is not None
+    )
+
+
 def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) -> None:
-    """content 端点接线:stub 且拿到锁 → schedule(run_lazy_generation, qid)。其余静默。
+    """content 端点接线(拿到锁才调度,其余静默):
+    - stub → 懒生成(完整生成,请求语言优先);
+    - ready 但请求语言缺已发布内容且有 en 轴心 → 懒翻译(只翻该语言);
+    - empty 不动(无可接地材料,防循环烧钱)。
     只在部署环境生效(development/测试不触发:防误连库、误烧 LLM 费)。"""
     if environment is None:
         from app.core.config import settings
@@ -120,5 +180,16 @@ def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) ->
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if o is None:
         return
-    if try_acquire_lock(db, o):
-        schedule(run_lazy_generation, qid, language)
+    if o.content_status == "stub":
+        if try_acquire_lock(db, o):
+            schedule(run_lazy_generation, qid, language)
+        return
+    if (
+        o.content_status == "ready"
+        and language
+        and language != "en"
+        and not _has_published(db, o.id, language)
+        and _has_published(db, o.id, "en")
+    ):
+        if try_acquire_lock(db, o, require_status=("ready",)):
+            schedule(run_lazy_translation, qid, language)
