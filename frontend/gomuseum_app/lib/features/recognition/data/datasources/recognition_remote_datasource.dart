@@ -2,11 +2,21 @@ import 'package:cross_file/cross_file.dart';
 import 'package:dio/dio.dart';
 import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognition_result_model.dart';
+import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:http_parser/http_parser.dart';
 
 /// 远程数据源接口
 abstract class RecognitionRemoteDataSource {
   Future<RecognitionResultModel> recognizeArtwork(XFile imageFile);
+
+  /// 新接地识别端点 `POST /museums/{slug}/recognize`。
+  /// [mode] = `artwork`（默认）或 `label`（引导补拍墙签）。
+  Future<RecognizeResponse> recognize({
+    required String slug,
+    required XFile image,
+    required String language,
+    String mode,
+  });
 }
 
 /// 远程数据源实现
@@ -66,6 +76,56 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
         throw ServerException('Server error: ${e.message}');
       }
     } catch (e) {
+      throw ServerException('Unexpected error: $e');
+    }
+  }
+
+  @override
+  Future<RecognizeResponse> recognize({
+    required String slug,
+    required XFile image,
+    required String language,
+    String mode = 'artwork',
+  }) async {
+    try {
+      final bytes = await image.readAsBytes();
+      final filename = image.name;
+      final formData = FormData.fromMap({
+        'image': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+          contentType: MediaType.parse(_getMimeType(filename)),
+        ),
+      });
+
+      final response = await dio.post(
+        '/api/v1/museums/$slug/recognize',
+        data: formData,
+        queryParameters: {'language': language, 'mode': mode},
+        options: Options(
+          headers: {'Accept': 'application/json'},
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return RecognizeResponse.fromJson(
+            response.data as Map<String, dynamic>);
+      }
+      throw ServerException(
+          'Server returned status code: ${response.statusCode}');
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw const TimeoutException('Request timeout after 60 seconds');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw const NetworkException('Network connection failed');
+      }
+      throw ServerException('Server error: ${e.message}');
+    } catch (e) {
+      if (e is ServerException || e is TimeoutException) rethrow;
       throw ServerException('Unexpected error: $e');
     }
   }

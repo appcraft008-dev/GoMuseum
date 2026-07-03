@@ -505,6 +505,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authGuestError => 'Error de inicio de sesión como invitado';
 
   @override
+  String get recCandidatesTitle => '¿Es esta obra?';
+
+  @override
+  String get recNoneOfThese => 'Ninguna de estas';
+
+  @override
+  String get recNotRecognized => 'No se reconoció esta obra';
+
+  @override
+  String recLabelSeen(String text) {
+    return 'La etiqueta dice «$text» — aún no tenemos su guía completa, pero hemos anotado tu solicitud ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => 'Fotografía la cartela';
+
+  @override
+  String get recShootLabelHint =>
+      'Las cartelas del museo muestran el título y el artista — fotografíala y podremos identificar la obra';
+
+  @override
+  String get recViewfinderLabelHint =>
+      'Apunta al texto de la cartela, llena el encuadre';
+
+  @override
   String get camNoCamera => 'No se encontró ninguna cámara';
 
   @override

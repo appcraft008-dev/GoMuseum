@@ -10,9 +10,12 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -31,6 +34,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
   String? _cameraError;
   bool _flashOn = false;
   XFile? _captured;
+
+  /// 引导拍墙签模式：下一张照片以 `mode=label` 提交。
+  bool _labelMode = false;
+
+  // ponytail: 现阶段固定 orsay;接入馆上下文后从当前馆 slug 取。
+  static const String _slug = 'orsay';
 
   @override
   void initState() {
@@ -111,23 +120,41 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
     final shot = await controller.takePicture();
     setState(() => _captured = shot);
-    await ref.read(recognitionNotifierProvider.notifier).recognizeArtwork(shot);
-    // 识别成功才扣减免费额度
-    if (ref.read(recognitionNotifierProvider) is RecognitionSuccess) {
+    final lang = ref.read(languageProvider).languageCode;
+    final mode = _labelMode ? 'label' : 'artwork';
+    await ref
+        .read(recognitionNotifierProvider.notifier)
+        .recognize(slug: _slug, image: shot, language: lang, mode: mode);
+    if (!mounted) return;
+    final st = ref.read(recognitionNotifierProvider);
+    // 得到有用结果（命中/候选）才扣额度；未收录/错误不扣，不惩罚"没帮上忙"。
+    if (st is RecognitionMatched || st is RecognitionCandidates) {
       await benefits.consumeQuota();
+    }
+    if (st is RecognitionMatched && mounted) {
+      _goGuide(st.slug, st.match.qid);
     }
   }
 
   void _retake() {
-    setState(() => _captured = null);
+    setState(() {
+      _captured = null;
+      _labelMode = false;
+    });
     ref.read(recognitionNotifierProvider.notifier).resetState();
   }
 
-  void _confirm(RecognitionSuccess success) {
-    context.pushReplacement(
-      '/guide',
-      extra: GuideArgs(result: success.result, imagePath: _captured?.path),
-    );
+  /// 进入引导拍墙签：回取景器，下一张以 `mode=label` 提交。
+  void _startLabelCapture() {
+    setState(() {
+      _captured = null;
+      _labelMode = true;
+    });
+    ref.read(recognitionNotifierProvider.notifier).resetState();
+  }
+
+  void _goGuide(String slug, String qid) {
+    context.pushReplacement('/guide', extra: GuideArgs(slug: slug, qid: qid));
   }
 
   void _showTagSearchSheet() {
@@ -277,6 +304,28 @@ class _CameraPageState extends ConsumerState<CameraPage>
         ),
         // 四角取景框
         ..._cornerBrackets(),
+        // 引导拍墙签模式提示
+        if (state is RecognitionInitial && _labelMode)
+          Positioned(
+            left: 24,
+            right: 24,
+            top: 76,
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0x8C171310),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  AppLocalizations.of(context)!.recViewfinderLabelHint,
+                  textAlign: TextAlign.center,
+                  style: GmText.sans(size: 12.5, color: GmColors.scanInk),
+                ),
+              ),
+            ),
+          ),
         // 底部：快门 + 展签检索入口
         if (state is RecognitionInitial)
           Positioned(
@@ -426,8 +475,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
             const SizedBox(height: 13),
             ...switch (state) {
               RecognitionLoading() => _loadingContent(gm),
-              RecognitionSuccess() => _successContent(gm, state),
-              RecognitionError(:final message) => _errorContent(gm, message),
+              RecognitionCandidates() => _candidatesContent(gm, state),
+              RecognitionUnrecognized() => _unrecognizedContent(gm, state),
+              RecognitionError() => _errorContent(gm),
               _ => const <Widget>[],
             },
           ],
@@ -457,103 +507,133 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ];
   }
 
-  List<Widget> _successContent(GmPalette gm, RecognitionSuccess state) {
+  /// 候选确认卡「是这件吗？」——点选跳该 qid 详情，都不是走未收录。
+  List<Widget> _candidatesContent(GmPalette gm, RecognitionCandidates state) {
     final l10n = AppLocalizations.of(context)!;
-    final result = state.result;
-    final confidence = (result.confidence * 100).round();
     return [
-      Text(l10n.camConfirmPrompt,
+      Text(l10n.recCandidatesTitle,
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
-      const SizedBox(height: 13),
-      Container(
-        padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
-          color: gm.surface,
-          border: Border.all(color: gm.accent, width: 1.5),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: _captured != null
-                  ? Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: gm.line),
-                        image: DecorationImage(
-                          image: FileImage(File(_captured!.path)),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    )
-                  : const GmInnerImage(image: null, height: 60, width: 60),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    result.artworkName,
-                    style: GmText.serif(size: 16.5, weight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${result.artist} · ${result.period}',
-                    style: GmText.sans(size: 12, color: gm.sub),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              children: [
-                Text(
-                  '$confidence%',
-                  style: GmText.serif(
-                      size: 18, weight: FontWeight.w700, color: gm.accentDeep),
-                ),
-                const SizedBox(height: 2),
-                Text(l10n.camConfidence,
-                    style: GmText.sans(size: 10, color: gm.sub)),
-              ],
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 14),
-      GmTicketButton(
-        label: l10n.camConfirmStart,
-        icon: GmIcons.headphones,
-        onTap: () => _confirm(state),
-      ),
-      const SizedBox(height: 11),
+      const SizedBox(height: 12),
+      for (final c in state.candidates) ...[
+        _candidateRow(gm, c, state.slug),
+        const SizedBox(height: 8),
+      ],
+      const SizedBox(height: 4),
       Center(
         child: GestureDetector(
-          onTap: () {
-            _retake();
-            _showTagSearchSheet();
-          },
-          child: Text(
-            l10n.camNoneSearch,
-            style: GmText.sans(size: 12.5, color: gm.accent),
-          ),
+          onTap: () =>
+              ref.read(recognitionNotifierProvider.notifier).rejectCandidates(),
+          child: Text(l10n.recNoneOfThese,
+              style: GmText.sans(size: 12.5, color: gm.accent)),
         ),
       ),
     ];
   }
 
-  List<Widget> _errorContent(GmPalette gm, String message) {
+  Widget _candidateRow(GmPalette gm, RecognizedItem c, String slug) {
+    // ponytail: 点选=一条"照片→确认QID"标注(喂后端二期 CLIP 校准);
+    // 埋点接口 P2 提供,现只保证跳转畅通。
+    return GestureDetector(
+      onTap: () => _goGuide(slug, c.qid),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: gm.surface,
+          border: Border.all(color: gm.line),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 52,
+              height: 52,
+              child: c.thumbnail != null
+                  ? Image.network(sizedImageUrl(c.thumbnail!, 200),
+                      fit: BoxFit.cover,
+                      headers: kImageRequestHeaders,
+                      errorBuilder: (_, __, ___) => ColoredBox(
+                          color: gm.chipBg,
+                          child: Center(
+                              child: GmIcon(GmIcons.photo,
+                                  size: 20, color: gm.faint))))
+                  : ColoredBox(color: gm.chipBg),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.title,
+                      style: GmText.serif(size: 14.5, weight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Text(c.artist,
+                      style: GmText.sans(size: 12, color: gm.sub),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            GmIcon(GmIcons.chevR, size: 16, color: gm.faint),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 未收录卡——绝不显示 AI 猜测的名字（契约 R1）。
+  /// 有 label_text：诚实告知已记需求；无：引导拍墙签。
+  List<Widget> _unrecognizedContent(
+      GmPalette gm, RecognitionUnrecognized state) {
+    final l10n = AppLocalizations.of(context)!;
+    final label = state.labelText;
+    if (label != null) {
+      return [
+        Text(l10n.recLabelSeen(label),
+            style: GmText.sans(size: 13, height: 1.5)),
+        const SizedBox(height: 16),
+        Center(
+          child: GestureDetector(
+            onTap: _retake,
+            child: Text(l10n.camRetake,
+                style: GmText.sans(size: 12.5, color: gm.accent)),
+          ),
+        ),
+      ];
+    }
+    return [
+      Text(l10n.recNotRecognized,
+          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      const SizedBox(height: 14),
+      GmTicketButton(
+        label: l10n.recShootLabelBtn,
+        icon: GmIcons.camera,
+        onTap: _startLabelCapture,
+      ),
+      const SizedBox(height: 8),
+      Text(l10n.recShootLabelHint,
+          textAlign: TextAlign.center,
+          style: GmText.sans(size: 11.5, color: gm.sub)),
+      const SizedBox(height: 12),
+      Center(
+        child: GestureDetector(
+          onTap: _retake,
+          child: Text(l10n.camRetake,
+              style: GmText.sans(size: 12.5, color: gm.accent)),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _errorContent(GmPalette gm) {
     final l10n = AppLocalizations.of(context)!;
     return [
       Text(l10n.camRecognizeFailed,
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 6),
-      Text(message, style: GmText.sans(size: 12, color: gm.sub)),
+      Text(l10n.camComparing, style: GmText.sans(size: 12, color: gm.sub)),
       const SizedBox(height: 14),
       GmTicketButton(
           label: l10n.camRetake, icon: GmIcons.camera, onTap: _retake),

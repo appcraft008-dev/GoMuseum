@@ -498,6 +498,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authGuestError => 'Guest sign-in error';
 
   @override
+  String get recCandidatesTitle => 'Is this the one?';
+
+  @override
+  String get recNoneOfThese => 'None of these';
+
+  @override
+  String get recNotRecognized => 'Couldn\'t recognize this work';
+
+  @override
+  String recLabelSeen(String text) {
+    return 'The label reads \"$text\" — we haven\'t added its full guide yet, but we\'ve noted your request ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => 'Photograph the wall label';
+
+  @override
+  String get recShootLabelHint =>
+      'Museum labels show the title and artist — snap it and we can identify the work';
+
+  @override
+  String get recViewfinderLabelHint => 'Aim at the label text, fill the frame';
+
+  @override
   String get camNoCamera => 'No available camera found';
 
   @override
