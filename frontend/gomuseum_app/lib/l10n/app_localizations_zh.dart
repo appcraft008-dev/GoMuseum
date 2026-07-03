@@ -490,6 +490,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authGuestError => '游客登录错误';
 
   @override
+  String get recCandidatesTitle => '是这件吗？';
+
+  @override
+  String get recNoneOfThese => '都不是';
+
+  @override
+  String get recNotRecognized => '没认出来这件作品';
+
+  @override
+  String recLabelSeen(String text) {
+    return '标签上写着 \"$text\"——我们还没收录它的完整讲解，已记下你的需求 ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => '拍下作品旁的说明牌';
+
+  @override
+  String get recShootLabelHint => '博物馆的小标牌上有作品名和作者，拍它我们就能认出来';
+
+  @override
+  String get recViewfinderLabelHint => '对准标签文字，占满画面';
+
+  @override
   String get camNoCamera => '未找到可用相机';
 
   @override

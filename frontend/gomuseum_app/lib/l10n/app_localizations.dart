@@ -1024,6 +1024,48 @@ abstract class AppLocalizations {
   /// **'Guest sign-in error'**
   String get authGuestError;
 
+  /// No description provided for @recCandidatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Is this the one?'**
+  String get recCandidatesTitle;
+
+  /// No description provided for @recNoneOfThese.
+  ///
+  /// In en, this message translates to:
+  /// **'None of these'**
+  String get recNoneOfThese;
+
+  /// No description provided for @recNotRecognized.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t recognize this work'**
+  String get recNotRecognized;
+
+  /// No description provided for @recLabelSeen.
+  ///
+  /// In en, this message translates to:
+  /// **'The label reads \"{text}\" — we haven\'t added its full guide yet, but we\'ve noted your request ✅'**
+  String recLabelSeen(String text);
+
+  /// No description provided for @recShootLabelBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Photograph the wall label'**
+  String get recShootLabelBtn;
+
+  /// No description provided for @recShootLabelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Museum labels show the title and artist — snap it and we can identify the work'**
+  String get recShootLabelHint;
+
+  /// No description provided for @recViewfinderLabelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Aim at the label text, fill the frame'**
+  String get recViewfinderLabelHint;
+
   /// No description provided for @camNoCamera.
   ///
   /// In en, this message translates to:

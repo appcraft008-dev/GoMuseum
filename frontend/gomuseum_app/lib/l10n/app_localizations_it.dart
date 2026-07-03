@@ -501,6 +501,31 @@ class AppLocalizationsIt extends AppLocalizations {
   String get authGuestError => 'Errore di accesso come ospite';
 
   @override
+  String get recCandidatesTitle => 'È quest\'opera?';
+
+  @override
+  String get recNoneOfThese => 'Nessuna di queste';
+
+  @override
+  String get recNotRecognized => 'Opera non riconosciuta';
+
+  @override
+  String recLabelSeen(String text) {
+    return 'L\'etichetta dice «$text» — non abbiamo ancora la sua guida completa, ma la tua richiesta è stata registrata ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => 'Fotografa il cartellino';
+
+  @override
+  String get recShootLabelHint =>
+      'I cartellini del museo mostrano titolo e artista — fotografalo e potremo identificare l\'opera';
+
+  @override
+  String get recViewfinderLabelHint =>
+      'Inquadra il testo del cartellino, riempi lo schermo';
+
+  @override
   String get camNoCamera => 'Nessuna fotocamera disponibile';
 
   @override

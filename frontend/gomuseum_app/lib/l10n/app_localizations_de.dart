@@ -506,6 +506,31 @@ class AppLocalizationsDe extends AppLocalizations {
   String get authGuestError => 'Gast-Anmeldefehler';
 
   @override
+  String get recCandidatesTitle => 'Ist es dieses Werk?';
+
+  @override
+  String get recNoneOfThese => 'Keines davon';
+
+  @override
+  String get recNotRecognized => 'Werk nicht erkannt';
+
+  @override
+  String recLabelSeen(String text) {
+    return 'Auf dem Schild steht „$text\" — wir haben noch keinen vollständigen Guide dazu, aber Ihre Anfrage ist notiert ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => 'Wandschild fotografieren';
+
+  @override
+  String get recShootLabelHint =>
+      'Museumsschilder zeigen Titel und Künstler — fotografieren Sie es und wir erkennen das Werk';
+
+  @override
+  String get recViewfinderLabelHint =>
+      'Auf den Schildtext zielen, Rahmen ausfüllen';
+
+  @override
   String get camNoCamera => 'Keine Kamera verfügbar';
 
   @override
