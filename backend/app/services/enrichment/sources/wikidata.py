@@ -19,7 +19,7 @@ SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?in
   ?item wikibase:sitelinks ?links .
   OPTIONAL {{ ?al_en schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?sitelink_en . }}
   OPTIONAL {{ ?al_cl schema:about ?item ; schema:isPartOf <https://{country_lang}.wikipedia.org/> ; schema:name ?sitelink_cl . }}
-  OPTIONAL {{ ?item wdt:P18 ?image }}
+  ?item wdt:P18 ?image .
   OPTIONAL {{ ?item rdfs:label ?label_zh . FILTER(LANG(?label_zh)="zh") }}
   OPTIONAL {{ ?item rdfs:label ?label_en . FILTER(LANG(?label_en)="en") }}
   OPTIONAL {{ ?item wdt:P170 ?creator .

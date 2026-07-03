@@ -130,6 +130,29 @@
 
 ---
 
+## 收录策略（通用规则,任何馆 0 代码复制;2026-07-03 定）
+
+**① 有图才收录(硬规则)。** 只收 Wikidata 上有自由版权图(P18/Wikimedia)的藏品:图是**识别的参照物**(App 靠拍照识别,无图=不可识别的死重)也是**合规边界**(官方馆藏库的图多为 RMN 类版权摄影,商用展示/自存都踩线)。catalog SPARQL 中 P18 必填。
+
+**② 三层口径(奥赛样板数字,评估任何馆时先查这三层)。** 官方全馆藏(奥赛~15万,绝大多数在库房) ≫ **常设在展(奥赛 3-4千,产品真实分母——游客只可能拍到它)** > Wikidata 有条目(5353) > **有图可收录(2065=我们的集合)**。Wikidata 收录天然偏名作、与"在展"高度相关,故有图集合对现场识别命中率的真实覆盖远好于比例数字。
+
+**③ 定期重跑 catalog 吃增量。** Wikimedia 图持续增长;catalog/merge_stubs 幂等,重跑自动收新有图的藏品——"只收有图"不是一锤子,是动态逼近全部可识别集。
+
+**④ 通用分类法(全馆共用 8 大类 + unknown 兜底)。** `CATEGORY_BY_QID`(category_config.py)是唯一真相源:P31 QID → 类目;**加类型=加一行映射 + 馆 yaml `categories` 选用,零代码**。多 P31 作品已知类目优先于 unknown。每类目一套深度模块段落集(SECTIONS_BY_CATEGORY;未细化的类用通用兜底,真上馆再细化)。
+
+| 类目 code | zh | 归并(示例) | 段落集 |
+|---|---|---|---|
+| painting | 绘画 | 油画/壁画 | 专属 |
+| sculpture | 雕塑 | 雕塑/雕像/半身像/小像 | 专属(材质工艺) |
+| works_on_paper | 纸上作品 | 素描/水彩/色粉/版画/习作/草图 | 同绘画 |
+| photography | 摄影 | 照片 | 专属(摄影师) |
+| decorative_arts | 装饰艺术 | 家具/陶瓷/玻璃/金工 | 专属(maker/用途) |
+| textile | 纺织 | 挂毯/服饰 | 兜底 |
+| artifact | 文物器物 | 考古/礼器/武器 | 兜底 |
+| manuscript | 手稿古籍 | 手抄本/书籍 | 兜底 |
+
+**⑤ 内容生成分层(目录便宜、生成贵)。** 目录+显示名回填全量做(全馆 ~$20 内);讲解生成按热度 **top-N 批量**(`generate --limit N`;奥赛 N=200)+ **长尾懒生成**(规划中,`content_status=generating` 锁已预留;staging 验证后上 prod)。**全量目录/生成只在 prod 跑;staging 只做小样本验证机制**(`catalog --limit`)。
+
 ## 上新馆 = 纯配置(零核心改动)
 
 连接器已存在时(Wikidata 全球通用),上新馆只需:
@@ -146,8 +169,8 @@
      fetch_limit / sample_size / sample_qids
      languages: []             # 空=用 DEFAULT_LANGUAGES;或指定子集
    ```
-2. **铺目录**:`python scripts/onboard.py <slug> catalog --target <staging|prod>`
-   → `WikidataCatalog.list` 列 stub → `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。
+2. **铺目录**:`python scripts/onboard.py <slug> catalog --target <staging|prod> [--limit N]`
+   → `WikidataCatalog.list` 列 stub(只收有图,§收录策略)→ `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。新类目先跑一次 `scripts/seed_sections.py`(幂等)。
 3. **回填显示名**:`python scripts/onboard.py <slug> names --target <env>`
    → 全馆 `title_i18n` + `artist_qid`(P170 批量)+ Artist 名字行(权威标签→翻译→en;幂等)。stub 即有完整多语显示名。
 4. **生成内容**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
@@ -204,8 +227,8 @@
 
 - **阶段 1 — 材料地基(证据包)**:1a 源配全(Europeana + 更全 Wikidata P 属性;法国官方=Joconde 已有,非法国馆逐馆官方连接器)· 1b 证据包模型 + 分类落库。→ 每件一份完整分类证据包。
 - **阶段 2 — 内容生成重构**:2a 统一分工去重(lane)+ 全从证据包生成 · 2b 动态模块 + 争议 hedge · 2c 两段式质量评估(事实质量 + 讲解质量)。
-- **阶段 3 — 体验补全**:3a AI 自由问答 `/ask`(多轮)· 3b TTS 音频落库 ·(藏品识别机制 = 独立 brainstorm)。
-- **阶段 4 — 规模化**:图像 R2 自存 + `cover_url` + 首页真实化 · 上新馆(逐馆官方连接器 + 纯配置)+ 懒生成接线。
+- **阶段 3 — 体验补全**:3a AI 自由问答 `/ask`(多轮)· 3b TTS 音频落库 · 3c **懒生成接线**(长尾首次点开现场生成;staging 验证后上 prod)·(藏品识别机制 = 独立 brainstorm)。
+- **阶段 4 — 规模化**:图像 R2 自存 + `cover_url` + 首页真实化 · 上新馆(逐馆官方连接器 + 纯配置)· **官方馆藏库连接器**(抓元数据+在展清单/展厅号,不抓图;用"在展×有自由图"校准优先级,修正名作偏置)。
 
 **奥赛 = 样板馆**:作为先行者会多吞一两次重生成;流水线成型后,新馆从第一天即"配全·生成一次·封板"。
 
@@ -213,6 +236,7 @@
 
 ## 变更记录
 
+- 2026-07-03:定**§收录策略**(通用):有图才收录(识别参照+合规)/三层口径(全馆藏≫在展>有图)/定期重跑吃增量/通用分类法8大类(CATEGORY_BY_QID 真相源,多P31已知优先)/生成分层(top-N=奥赛200 只在 prod;staging 小样本;懒生成入路线图3c;官方馆藏库连接器入阶段4)。类目代码统一(photograph→photography、decorative→decorative_arts);奥赛 categories 扩至四大类,catalog P18 必填。
 - 2026-07-03:定**显示名解析时机=铺目录时**——新增 `names` 回填命令(title_i18n/artist_qid/Artist名字行,幂等);`_fill_i18n` en 也权威优先;Artist 行存在但 bio 空时 generate 补 bio。修列表页 stub 在 zh 视图显英/法文名问题(截图反馈)。翻译兜底规则经讨论**维持所有语言统一**(权威→机翻→en),不按拉丁/非拉丁分叉。
 - 2026-07-03:契约-代码对齐——端点3 `artist` 真正走 name_i18n(此前只 title);facts.medium 优先证据包 P186(修正 P2048 措辞:尺寸仍 Joconde);`country_lang`/`sources` 从 museums.yaml 读(去 France 硬编码,上新馆=纯配置成立)。
 - 2026-06-28:新建本活文档。纳入近期加法:端点3 `/objects` 分页;端点2 `categories` facet + language;端点4 `status/title/images/facts`;`content_status` 生命周期;上新馆路径。

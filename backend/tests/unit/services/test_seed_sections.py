@@ -25,7 +25,13 @@ def test_seed_creates_multi_category_skeleton(session):
 
     seed_into(session)
     cats = {c.category for c in session.query(CategorySection).all()}
-    assert {"painting", "sculpture", "photograph", "decorative"} <= cats
+    assert {
+        "painting",
+        "sculpture",
+        "photography",
+        "decorative_arts",
+        "works_on_paper",
+    } <= cats
     painting = [
         c.section_code
         for c in session.query(CategorySection).filter_by(category="painting").all()

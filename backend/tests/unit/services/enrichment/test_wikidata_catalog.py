@@ -67,3 +67,33 @@ def test_wikidata_catalog_routing_empty_when_absent():
     cat = WikidataCatalog(run_query=lambda sparql: [_row("Q1", "A", 5)])
     s = list(cat.list(_Cfg()))[0]
     assert s.external_ids == {} and s.wiki_titles == {}
+
+
+def test_wikidata_catalog_query_requires_image():
+    # 收录策略:有图才收录(识别参照+合规前提)→ SPARQL P18 必填,不再 OPTIONAL
+    seen = {}
+
+    def fake(sparql):
+        seen["sparql"] = sparql
+        return []
+
+    list(WikidataCatalog(run_query=fake).list(_Cfg()))
+    assert "OPTIONAL {{ ?item wdt:P18" not in seen["sparql"].replace("{ ?", "{{ ?")
+    assert "?item wdt:P18 ?image ." in seen["sparql"]
+
+
+def test_wikidata_catalog_upgrades_category_on_multi_p31():
+    # 多 P31 作品(如 油画+习作):已知类目优先于 unknown,不受行序影响
+    rows = [
+        _row("Q1", "A", 5, p31="Q999999"),  # 未知类型行先到 → unknown
+        _row("Q1", "A", 5, p31="Q3305213"),  # 同件的绘画行后到 → 应升级
+    ]
+    calls = {"n": 0}
+
+    def fake(sparql):
+        calls["n"] += 1
+        return rows if calls["n"] == 1 else []
+
+    out = list(WikidataCatalog(run_query=fake).list(_Cfg()))
+    assert len(out) == 1
+    assert out[0].category == "painting"
