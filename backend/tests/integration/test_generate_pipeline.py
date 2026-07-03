@@ -663,6 +663,48 @@ def test_generate_fills_bio_when_artist_exists_without_bio(session, monkeypatch)
     assert art.bio and art.bio["en"] == "Courbet bio."
 
 
+def test_generate_tops_up_missing_bio_languages_for_existing_artist(
+    session, monkeypatch
+):
+    # 作者实体已存在(bio 有 en/zh)时,生成新作品应为 bio 补齐目标语言缺口(es/it),
+    # 且不重新生成 bio(用户反馈:es/it 作者简介不全)
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q40599"})
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    session.add(
+        Artist(qid="Q40599", name_en="Manet", bio={"en": "EN bio.", "zh": "中文生平。"})
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+    called = {"n": 0}
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            called["n"] += 1
+            return "regenerated"
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "es", "it", "zh"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q40599").one()
+    assert called["n"] == 0  # bio 已有 → 不重生成
+    assert art.bio["es"] == "EN bio._es"  # 缺口从 en 翻译补
+    assert art.bio["it"] == "EN bio._it"
+    assert art.bio["zh"] == "中文生平。"  # 已有不动
+
+
 def test_generate_object_passes_country_lang_to_artist_material(session, monkeypatch):
     # 契约"零核心改动上新馆":country_lang 来自 museums.yaml,不得硬编 fr
     import app.services.enrichment.material as mat

@@ -223,6 +223,20 @@ def generate_object(
                 if bios:
                     art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
                 db.flush()
+            # 已存在作者的 bio 语种补齐:en 有、目标语言缺 → 纯翻译补
+            # (作者实体全馆复用,老作者 bio 只有老语种;修 es/it 作者简介不全)
+            bio_en = (art.bio or {}).get("en")
+            if bio_en and hasattr(translator, "translate_section"):
+                add = {}
+                for lang in target_langs:
+                    if lang != "en" and not (art.bio or {}).get(lang):
+                        try:
+                            add[lang] = translator.translate_section(bio_en, lang)
+                        except Exception:
+                            pass
+                if add:
+                    art.bio = {**(art.bio or {}), **add}
+                    db.flush()
 
     if not o.title_zh and o.title_en and hasattr(translator, "translate_section"):
         try:
