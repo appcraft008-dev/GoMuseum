@@ -70,8 +70,9 @@ def test_maybe_trigger_schedules_runner_for_stub(session):
         "Q1",
         schedule=lambda fn, *a: scheduled.append(a),
         environment="staging",
+        language="fr",
     )
-    assert scheduled == [("Q1",)]  # stub → 调度一次(后台跑 qid)
+    assert scheduled == [("Q1", "fr")]  # stub → 调度一次(透传请求语言=优先翻译)
 
 
 def test_maybe_trigger_skips_ready_and_locked(session):
@@ -120,7 +121,7 @@ def test_run_lazy_generation_clears_lock(session, monkeypatch):
     # 完成后清锁;生成本体由 generate_object 负责置 ready/empty(此处 fake)
     import app.services.enrichment.lazy as lazy
 
-    def fake_generate(db, qid):
+    def fake_generate(db, qid, language=None):
         o = db.query(MuseumObject).filter_by(qid=qid).one()
         o.content_status = "ready"
         db.flush()
@@ -137,7 +138,7 @@ def test_run_lazy_generation_clears_lock(session, monkeypatch):
 def test_run_lazy_generation_clears_lock_on_failure(session, monkeypatch):
     import app.services.enrichment.lazy as lazy
 
-    def boom(db, qid):
+    def boom(db, qid, language=None):
         raise RuntimeError("llm down")
 
     monkeypatch.setattr(lazy, "_generate", boom)

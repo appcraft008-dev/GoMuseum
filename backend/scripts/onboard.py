@@ -56,6 +56,10 @@ def build_parser() -> argparse.ArgumentParser:
     na = sub.add_parser("names")  # 显示名回填(铺目录后即跑;幂等可重跑)
     na.add_argument("--target", choices=["staging", "prod"], required=True)
     na.add_argument("--langs", default=None)
+    tr = sub.add_parser("translate")  # 补语种:存量对象缺失语言从 en 段纯翻译(幂等)
+    tr.add_argument("--target", choices=["staging", "prod"], required=True)
+    tr.add_argument("--langs", required=True)  # 如 de,es,it
+    tr.add_argument("--limit", type=int, default=None)
     return p
 
 
@@ -208,6 +212,31 @@ def cmd_names(slug: str, langs: str | None, target: str) -> None:
     print(f"✓ names 回填完成: {out}")
 
 
+def cmd_translate(slug: str, langs: str, limit: int | None, target: str) -> None:
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+    from app.services.enrichment.backfill import backfill_languages
+    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.translator import ContentTranslator
+
+    db = SessionLocal()
+    try:
+        out = backfill_languages(
+            db,
+            slug,
+            langs=[s.strip() for s in langs.split(",")],
+            translator=ContentTranslator(default_complete),
+            limit=limit,
+        )
+    finally:
+        db.close()
+    print(f"✓ translate 补语种完成: {out}")
+
+
 def cmd_report(slug: str, langs: str | None) -> None:
     from app.services.enrichment.content_report import build_quality_report
     from app.services.enrichment.lang_config import resolve_languages
@@ -237,6 +266,8 @@ def main(argv=None) -> None:
         cmd_report(ns.slug, ns.langs)
     elif ns.command == "names":
         cmd_names(ns.slug, ns.langs, ns.target)
+    elif ns.command == "translate":
+        cmd_translate(ns.slug, ns.langs, ns.limit, ns.target)
     else:
         cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 

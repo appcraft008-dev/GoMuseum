@@ -41,7 +41,7 @@ def object_content(
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
     from app.services.enrichment.lazy import maybe_trigger
 
-    maybe_trigger(db, qid, schedule=background_tasks.add_task)
+    maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
     return data
 
 

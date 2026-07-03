@@ -53,6 +53,79 @@ def _fetch_creators(qids, *, run_query=None) -> dict:
     return out
 
 
+def backfill_languages(
+    db, slug, *, langs, translator, limit=None, model="gpt-4o-mini"
+) -> dict:
+    """补语种(契约"加语言"checklist⑤):对已有 published en 段的对象,把缺失语言从
+    en 段**纯翻译**落库(含 guide 与建议问答;忠实度校验继承接地,不重生成)。幂等。"""
+    from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
+    from app.services.content_repo import (
+        persist_gated_sections,
+        persist_suggested_questions,
+    )
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    m = db.query(Museum).filter_by(slug=slug).one_or_none()
+    if not m:
+        return {"error": "unknown museum"}
+    q = (
+        db.query(MuseumObject)
+        .filter_by(museum_id=m.id)
+        .order_by(MuseumObject.popularity.desc())
+    )
+    if limit:
+        q = q.limit(limit)
+    counts = {"objects": 0, "sections": 0, "qa": 0}
+    for o in q.all():
+        en_secs = {
+            r.section_code: r.body
+            for r in db.query(ObjectContentSection)
+            .filter_by(object_id=o.id, language="en", status="published")
+            .all()
+            if r.body
+        }
+        if not en_secs:
+            continue  # 无英语轴心内容(stub/empty)→ 交给生成,不归补语种管
+        en_qa = [
+            {"question": r.question, "answer": r.answer, "status": "published"}
+            for r in db.query(ObjectSuggestedQuestion)
+            .filter_by(object_id=o.id, language="en", status="published")
+            .order_by(ObjectSuggestedQuestion.sort)
+            .all()
+        ]
+        touched = False
+        for lang in langs:
+            if lang == "en":
+                continue
+            have = {
+                r.section_code
+                for r in db.query(ObjectContentSection)
+                .filter_by(object_id=o.id, language=lang, status="published")
+                .all()
+                if r.body
+            }
+            missing = {c: b for c, b in en_secs.items() if c not in have}
+            if missing:
+                results = translator.translate_object(missing, [lang]).get(lang, {})
+                pub, _nr = persist_gated_sections(db, o.qid, lang, results, model)
+                counts["sections"] += pub
+                touched = True
+            if en_qa and not (
+                db.query(ObjectSuggestedQuestion)
+                .filter_by(object_id=o.id, language=lang, status="published")
+                .first()
+            ):
+                items = translate_qa_items(translator, en_qa, lang)
+                counts["qa"] += persist_suggested_questions(
+                    db, o.qid, lang, items, model
+                )
+                touched = True
+        if touched:
+            counts["objects"] += 1
+    db.commit()
+    return counts
+
+
 _CJK = re.compile(r"[一-鿿]")
 
 
