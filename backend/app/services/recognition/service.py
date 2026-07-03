@@ -101,7 +101,8 @@ def recognize(
     identify_fn = identify_fn or identify
     vis = identify_fn(ImageService.to_base64(image_bytes), mode=mode)
     queries = [c["title"] for c in vis["candidates"] if c.get("title")]
-    queries += [c["artist"] for c in vis["candidates"] if c.get("artist")]
+    # 作者名只作加分线索,绝不当标题探针(肖像画劫持教训,见 matcher.match)
+    artist_hints = [c["artist"] for c in vis["candidates"] if c.get("artist")]
     label_lines = (vis.get("label_text") or "").splitlines()
     label_lines = [ln.strip() for ln in label_lines if ln.strip()]
 
@@ -118,7 +119,7 @@ def recognize(
         from app.services.storage import get_object_storage
 
         storage = get_object_storage()
-        results = match(build_index(db, museum.id), queries, label_lines)
+        results = match(build_index(db, museum.id), queries, label_lines, artist_hints)
         top = results[0] if results else None
         if top and top[1] >= HIGH:
             o = db.query(MuseumObject).filter_by(qid=top[0]).one()
