@@ -24,10 +24,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settings => 'Ajustes';
 
   @override
-  String get navScan => 'Scan';
+  String get navScan => 'Escanear';
 
   @override
-  String get artworkRecognition => 'Reconocimiento de obras de arte';
+  String get artworkRecognition => 'Reconocimiento de obras';
 
   @override
   String get takePhoto => 'Tomar foto';
@@ -37,7 +37,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get selectImagePrompt =>
-      'Seleccione una imagen para reconocer la obra de arte';
+      'Selecciona una imagen para reconocer la obra';
 
   @override
   String get error => 'Error';
@@ -46,7 +46,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get comingSoon => 'Próximamente';
 
   @override
-  String get comingSoonShort => 'Coming soon';
+  String get comingSoonShort => 'Próximamente';
 
   @override
   String get language => 'Idioma';
@@ -64,392 +64,394 @@ class AppLocalizationsEs extends AppLocalizations {
   String get delete => 'Eliminar';
 
   @override
-  String get confirm => 'Confirm';
+  String get confirm => 'Confirmar';
 
   @override
-  String get gotIt => 'Got it';
+  String get gotIt => 'Entendido';
 
   @override
-  String get loadFailed => 'Failed to load';
+  String get loadFailed => 'Error al cargar';
 
   @override
-  String get loadFailedRetry => 'Failed to load, please retry';
+  String get loadFailedRetry => 'Error al cargar, inténtalo de nuevo';
 
   @override
-  String get toBeRefined => 'In progress';
+  String get toBeRefined => 'En progreso';
 
   @override
-  String get viewAll => 'View all →';
+  String get viewAll => 'Ver todo →';
 
   @override
-  String get all => 'All';
+  String get all => 'Todo';
 
   @override
-  String get homePocketGuide => 'Pocket Museum Guide';
+  String get homePocketGuide => 'Guía de museo de bolsillo';
 
   @override
-  String get homeSlogan =>
-      'Step closer to one work,\nhear the story behind it.';
+  String get homeSlogan => 'Acércate a una obra,\nescucha su historia.';
 
   @override
-  String get homeCtaRecognize => 'Snap to Recognize & Listen';
+  String get homeCtaRecognize => 'Fotografía para reconocer y escuchar';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count free scans left · Upgrade for full access';
+    return '$count escaneos gratis restantes · Mejora para acceso completo';
   }
 
   @override
-  String get homeNearby => 'Nearby Museums';
+  String get homeNearby => 'Museos cercanos';
 
   @override
-  String get statusOpen => 'Open';
+  String get statusOpen => 'Abierto';
 
   @override
-  String get exploreTitle => 'Explore';
+  String get exploreTitle => 'Explorar';
 
   @override
-  String get searchCityMuseumArtwork => 'Search cities, museums or artworks';
+  String get searchCityMuseumArtwork => 'Buscar ciudades, museos u obras';
 
   @override
   String museumCount(Object count) {
-    return '$count museums';
+    return '$count museos';
   }
 
   @override
-  String get noMuseums => 'No museums yet';
+  String get noMuseums => 'Aún no hay museos';
 
   @override
-  String get noMatchedMuseums => 'No matching museums';
+  String get noMatchedMuseums => 'No hay museos coincidentes';
 
   @override
   String artworkCountLabel(Object count) {
-    return '$count works';
+    return '$count obras';
   }
 
   @override
   String recordedCount(Object count) {
-    return '$count works in collection';
+    return '$count obras en la colección';
   }
 
   @override
-  String get noArtworks => 'No works yet';
+  String get noArtworks => 'Aún no hay obras';
 
   @override
   String loadingShown(Object shown, Object total) {
-    return 'Loading · $shown/$total shown';
+    return 'Cargando · $shown/$total mostradas';
   }
 
   @override
   String allLoaded(Object total) {
-    return 'All loaded · $total in total';
+    return 'Todo cargado · $total en total';
   }
 
   @override
-  String get guideVoiceGuide => 'Audio Guide';
+  String get guideVoiceGuide => 'Audioguía';
 
   @override
-  String get guideGenFailed => 'Failed to generate explanation';
+  String get guideGenFailed => 'Error al generar la explicación';
 
   @override
-  String get guideWriting => 'Writing your explanation…';
+  String get guideWriting => 'Escribiendo tu explicación…';
 
   @override
-  String get guideHighlight => 'Highlight';
+  String get guideHighlight => 'Destacado';
 
   @override
-  String get guideQa => 'Q&A';
+  String get guideQa => 'Preguntas y respuestas';
 
   @override
-  String get guideThinking => 'Thinking…';
+  String get guideThinking => 'Pensando…';
 
   @override
-  String get guideQ1 => 'What makes this painting special?';
+  String get guideQ1 => '¿Qué hace especial a este cuadro?';
 
   @override
-  String get guideQ2 => 'What was the artist going through then?';
+  String get guideQ2 => '¿Qué vivía el artista en esa época?';
 
   @override
-  String get guideAskHint => 'Ask about this painting…';
+  String get guideAskHint => 'Pregunta sobre este cuadro…';
 
   @override
-  String get guideAskShort => 'Ask about this painting';
+  String get guideAskShort => 'Preguntar sobre este cuadro';
 
   @override
-  String get guideVoiceComingSoon => 'Voice Q&A is coming soon, type for now';
+  String get guideVoiceComingSoon =>
+      'Las preguntas por voz llegan pronto, escribe por ahora';
 
   @override
-  String get guideGenerating => 'Generating explanation…';
+  String get guideGenerating => 'Generando la explicación…';
 
   @override
-  String get guideEmpty => 'No grounded explanation yet (in progress)';
+  String get guideEmpty => 'Aún no hay explicación fundamentada (en progreso)';
 
   @override
-  String get guideInfo => 'Artwork Info';
+  String get guideInfo => 'Información de la obra';
 
   @override
-  String get guideStandardTour => 'Standard tour';
+  String get guideStandardTour => 'Visita estándar';
 
   @override
-  String get guideListen => 'Listen';
+  String get guideListen => 'Escuchar';
 
   @override
-  String get guideDiveIn => 'Want more? Tap below';
+  String get guideDiveIn => '¿Quieres más? Toca abajo';
 
   @override
-  String get guideDeepContent => 'In depth';
+  String get guideDeepContent => 'En profundidad';
 
   @override
-  String get guideAskPlaceholder => 'Ask anything…';
+  String get guideAskPlaceholder => 'Pregunta lo que quieras…';
 
   @override
-  String get guideArtist => 'Artist';
+  String get guideArtist => 'Artista';
 
   @override
-  String get guideArtistTab => 'Artist';
+  String get guideArtistTab => 'Artista';
 
   @override
-  String get guideNotableWorks => 'Notable works';
+  String get guideNotableWorks => 'Obras destacadas';
 
   @override
-  String get guideNoAnswer => '(no answer returned)';
+  String get guideNoAnswer => '(sin respuesta)';
 
   @override
-  String get guideAnswerFailed => 'Answer failed, please try again later.';
+  String get guideAnswerFailed => 'La respuesta falló, inténtalo más tarde.';
 
   @override
-  String get factInventory => 'Inventory No.';
+  String get factInventory => 'N.º de inventario';
 
   @override
-  String get factLocation => 'Location';
+  String get factLocation => 'Ubicación';
 
   @override
-  String get factProvenance => 'Provenance';
+  String get factProvenance => 'Procedencia';
 
   @override
-  String get factExhibitions => 'Exhibitions';
+  String get factExhibitions => 'Exposiciones';
 
   @override
-  String get factBibliography => 'Bibliography';
+  String get factBibliography => 'Bibliografía';
 
   @override
-  String get factArtist => 'Artist';
+  String get factArtist => 'Artista';
 
   @override
-  String get factNone => 'No detailed information';
+  String get factNone => 'Sin información detallada';
 
   @override
-  String get footprintTitle => 'Footprints';
+  String get footprintTitle => 'Huellas';
 
   @override
-  String get noFootprints => 'No footprints yet';
+  String get noFootprints => 'Aún no hay huellas';
 
   @override
   String footprintStat(Object count, Object days) {
-    return '$count works · $days days';
+    return '$count obras · $days días';
   }
 
   @override
-  String get footprintLoadFailed => 'Failed to load footprints';
+  String get footprintLoadFailed => 'Error al cargar las huellas';
 
   @override
   String get footprintEmptyHint =>
-      'Works you recognize are recorded here automatically';
+      'Las obras que reconoces se guardan aquí automáticamente';
 
   @override
-  String get footprintGoRecognize => 'Recognize your first work';
+  String get footprintGoRecognize => 'Reconoce tu primera obra';
 
   @override
   String itemsCount(Object count) {
-    return '$count works';
+    return '$count obras';
   }
 
   @override
-  String get today => 'Today';
+  String get today => 'Hoy';
 
   @override
-  String get yesterday => 'Yesterday';
+  String get yesterday => 'Ayer';
 
   @override
   String dateMonthDay(Object month, Object day) {
-    return '$month/$day';
+    return '$day/$month';
   }
 
   @override
-  String get deleteFootprintQ => 'Delete this footprint?';
+  String get deleteFootprintQ => '¿Eliminar esta huella?';
 
   @override
-  String get settingsTitle => 'Settings';
+  String get settingsTitle => 'Ajustes';
 
   @override
   String get secGeneral => 'General';
 
   @override
-  String get guideLanguage => 'Guide language';
+  String get guideLanguage => 'Idioma de la guía';
 
   @override
-  String get offlinePacks => 'Offline museum packs';
+  String get offlinePacks => 'Paquetes de museo sin conexión';
 
   @override
-  String get autoSavePhoto => 'Auto-save photos';
+  String get autoSavePhoto => 'Guardar fotos automáticamente';
 
   @override
-  String get ttsVoice => 'TTS voice';
+  String get ttsVoice => 'Voz TTS';
 
   @override
-  String get ttsVoiceValue => 'Calm · Female';
+  String get ttsVoiceValue => 'Serena · Femenina';
 
   @override
-  String get ttsVoiceSelect => 'Choose voice';
+  String get ttsVoiceSelect => 'Elegir voz';
 
   @override
-  String get secAccount => 'Account';
+  String get secAccount => 'Cuenta';
 
   @override
-  String get secSupport => 'Support & Legal';
+  String get secSupport => 'Soporte y aspectos legales';
 
   @override
-  String get encourageUs => 'Encourage us';
+  String get encourageUs => 'Anímanos';
 
   @override
-  String get appStoreRating => 'App Store rating';
+  String get appStoreRating => 'Valoración en App Store';
 
   @override
-  String get privacyPolicy => 'Privacy policy';
+  String get privacyPolicy => 'Política de privacidad';
 
   @override
-  String get freeQuota => 'Free scan quota';
+  String get freeQuota => 'Cuota de escaneos gratis';
 
   @override
   String quotaValue(Object remain, Object total) {
-    return '$remain / $total left';
+    return '$remain / $total restantes';
   }
 
   @override
-  String get upgrade => 'Upgrade';
+  String get upgrade => 'Mejorar';
 
   @override
-  String get loginBind => 'Sign in / Link account';
+  String get loginBind => 'Iniciar sesión / Vincular cuenta';
 
   @override
-  String get notLoggedIn => 'Not signed in';
+  String get notLoggedIn => 'Sin sesión iniciada';
 
   @override
-  String get userDefault => 'User';
+  String get userDefault => 'Usuario';
 
   @override
-  String get guestPrefix => 'Guest_';
+  String get guestPrefix => 'Invitado_';
 
   @override
-  String get noEmailBound => 'No email linked';
+  String get noEmailBound => 'Ningún correo vinculado';
 
   @override
-  String get logout => 'Sign out';
+  String get logout => 'Cerrar sesión';
 
   @override
-  String get deleteAccount => 'Delete account';
+  String get deleteAccount => 'Eliminar cuenta';
 
   @override
-  String get loadingShort => 'Loading…';
+  String get loadingShort => 'Cargando…';
 
   @override
-  String get appearance => 'Appearance';
+  String get appearance => 'Apariencia';
 
   @override
-  String get themeLight => 'Light';
+  String get themeLight => 'Claro';
 
   @override
-  String get themeDark => 'Dark';
+  String get themeDark => 'Oscuro';
 
   @override
-  String get themeSystem => 'System';
+  String get themeSystem => 'Sistema';
 
   @override
   String featureComingSoon(String feature) {
-    return '$feature is coming soon';
+    return '$feature llega pronto';
   }
 
   @override
   String get privacyBody =>
-      'Original photos are not uploaded by default; recognition data is processed temporarily only. You can delete your account and data anytime. Full terms will be provided at official release.';
+      'Las fotos originales no se suben por defecto; los datos de reconocimiento se procesan solo temporalmente. Puedes eliminar tu cuenta y tus datos en cualquier momento. Los términos completos se ofrecerán en el lanzamiento oficial.';
 
   @override
-  String get deleteAccountQ => 'Permanently delete account?';
+  String get deleteAccountQ => '¿Eliminar la cuenta permanentemente?';
 
   @override
   String get deleteAccountBody =>
-      'This will delete your account profile and remaining quota. This action cannot be undone.';
+      'Esto eliminará tu perfil de cuenta y la cuota restante. Esta acción no se puede deshacer.';
 
   @override
-  String get permanentDelete => 'Delete permanently';
+  String get permanentDelete => 'Eliminar permanentemente';
 
   @override
-  String get deleteFailed => 'Delete failed, please try again later';
+  String get deleteFailed => 'Error al eliminar, inténtalo más tarde';
 
   @override
-  String get confirmLogout => 'Confirm sign out';
+  String get confirmLogout => 'Confirmar cierre de sesión';
 
   @override
-  String get confirmLogoutBody => 'Are you sure you want to sign out?';
+  String get confirmLogoutBody => '¿Seguro que quieres cerrar sesión?';
 
   @override
-  String get confirmYes => 'Confirm';
+  String get confirmYes => 'Confirmar';
 
   @override
-  String get camNoCamera => 'No available camera found';
+  String get camNoCamera => 'No se encontró ninguna cámara';
 
   @override
-  String get camInitFailed => 'Camera initialization failed';
+  String get camInitFailed => 'Error al inicializar la cámara';
 
   @override
-  String get camTagSearch => 'Label lookup';
+  String get camTagSearch => 'Búsqueda por cartela';
 
   @override
   String get camTagHint =>
-      'In no-photo areas, enter the label number, title or artist';
+      'En zonas sin foto, introduce el número de cartela, título o artista';
 
   @override
-  String get camTagExample => 'e.g. INV 3692 / The Bedroom';
+  String get camTagExample => 'p. ej. INV 3692 / El dormitorio';
 
   @override
   String get camPackComingSoon =>
-      'Collection lookup opens after offline packs are available';
+      'La búsqueda en la colección se abrirá cuando estén los paquetes sin conexión';
 
   @override
-  String get camQuotaUsedUp => 'Free scans used up';
+  String get camQuotaUsedUp => 'Escaneos gratis agotados';
 
   @override
-  String get camUpgradeHint => 'Upgrade to keep listening across the museum';
+  String get camUpgradeHint =>
+      'Mejora para seguir escuchando por todo el museo';
 
   @override
-  String get camViewUpgrade => 'View upgrade plans';
+  String get camViewUpgrade => 'Ver planes de mejora';
 
   @override
-  String get camCantPhoto => 'Can\'t take a photo? Enter the label number';
+  String get camCantPhoto =>
+      '¿No puedes hacer foto? Introduce el número de cartela';
 
   @override
-  String get camRecognizing => 'Recognizing…';
+  String get camRecognizing => 'Reconociendo…';
 
   @override
   String get camComparing =>
-      'AI is comparing with collections and public art databases';
+      'La IA compara con colecciones y bases de datos de arte públicas';
 
   @override
-  String get camConfirmPrompt => 'Recognition done, please confirm the work';
+  String get camConfirmPrompt => 'Reconocimiento completado, confirma la obra';
 
   @override
-  String get camConfidence => 'Confidence';
+  String get camConfidence => 'Confianza';
 
   @override
-  String get camConfirmStart => 'Confirm & start guide';
+  String get camConfirmStart => 'Confirmar e iniciar guía';
 
   @override
   String get camNoneSearch =>
-      'None of these? Search by title or label number →';
+      '¿Ninguna coincide? Busca por título o número de cartela →';
 
   @override
-  String get camRecognizeFailed => 'Recognition failed';
+  String get camRecognizeFailed => 'Error de reconocimiento';
 
   @override
-  String get camRetake => 'Retake';
+  String get camRetake => 'Repetir';
 }

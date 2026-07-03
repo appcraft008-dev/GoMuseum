@@ -203,10 +203,16 @@ class _CategoryTabs extends StatelessWidget {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
 
-    // If backend returns no categories, show a single 「全部」 tab
-    final tabs = categories.isNotEmpty
-        ? categories
-        : [MuseumCategory(code: 'all', label: l10n.all, count: 0)];
+    // If backend returns no categories, show a single 「全部」 tab.
+    // 「all」类目 label 后端未本地化（硬编码中文），前端用 l10n.all 覆盖；
+    // 其它类目 label（Painting/Sculpture…）仍待后端按 language 返本地化值。
+    final tabs = (categories.isNotEmpty
+            ? categories
+            : [MuseumCategory(code: 'all', label: l10n.all, count: 0)])
+        .map((c) => c.code == 'all'
+            ? MuseumCategory(code: c.code, label: l10n.all, count: c.count)
+            : c)
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
