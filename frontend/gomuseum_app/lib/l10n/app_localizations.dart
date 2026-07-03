@@ -826,6 +826,204 @@ abstract class AppLocalizations {
   /// **'Confirm'**
   String get confirmYes;
 
+  /// No description provided for @authEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get authEmailHint;
+
+  /// No description provided for @authEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your email'**
+  String get authEmailRequired;
+
+  /// No description provided for @authEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email'**
+  String get authEmailInvalid;
+
+  /// No description provided for @authPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authPasswordHint;
+
+  /// No description provided for @authPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your password'**
+  String get authPasswordRequired;
+
+  /// No description provided for @authPasswordMin6.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters'**
+  String get authPasswordMin6;
+
+  /// No description provided for @authConfirmPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get authConfirmPasswordHint;
+
+  /// No description provided for @authPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get authPasswordMismatch;
+
+  /// No description provided for @authUsernameOptionalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Username (optional)'**
+  String get authUsernameOptionalHint;
+
+  /// No description provided for @authLoginButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Log In'**
+  String get authLoginButton;
+
+  /// No description provided for @authRegisterButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up'**
+  String get authRegisterButton;
+
+  /// No description provided for @authNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'No account? Sign up'**
+  String get authNoAccount;
+
+  /// No description provided for @authHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Have an account? Log in'**
+  String get authHaveAccount;
+
+  /// No description provided for @authCreateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get authCreateAccount;
+
+  /// No description provided for @authOrLoginWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Or log in with'**
+  String get authOrLoginWith;
+
+  /// No description provided for @authGoogleLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google'**
+  String get authGoogleLogin;
+
+  /// No description provided for @authAppleLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Apple'**
+  String get authAppleLogin;
+
+  /// No description provided for @authOr.
+  ///
+  /// In en, this message translates to:
+  /// **'Or'**
+  String get authOr;
+
+  /// No description provided for @authGuestLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue as guest'**
+  String get authGuestLogin;
+
+  /// No description provided for @authLoginFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Login failed, check your email and password'**
+  String get authLoginFailed;
+
+  /// No description provided for @authRegisterFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration failed, email may already be in use'**
+  String get authRegisterFailed;
+
+  /// No description provided for @authGoogleCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in cancelled'**
+  String get authGoogleCancelled;
+
+  /// No description provided for @authGoogleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in failed, please try again'**
+  String get authGoogleFailed;
+
+  /// No description provided for @authGoogleError.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in error'**
+  String get authGoogleError;
+
+  /// No description provided for @authGoogleNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in not configured, contact the administrator'**
+  String get authGoogleNotConfigured;
+
+  /// No description provided for @authGoogleNetworkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in network error, check your connection'**
+  String get authGoogleNetworkError;
+
+  /// No description provided for @authAppleOnlyApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple sign-in is only supported on iOS and macOS'**
+  String get authAppleOnlyApple;
+
+  /// No description provided for @authAppleCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple sign-in cancelled'**
+  String get authAppleCancelled;
+
+  /// No description provided for @authAppleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple sign-in failed, please try again'**
+  String get authAppleFailed;
+
+  /// No description provided for @authAppleError.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple sign-in error'**
+  String get authAppleError;
+
+  /// No description provided for @authAppleNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple sign-in not configured'**
+  String get authAppleNotConfigured;
+
+  /// No description provided for @authGuestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest sign-in failed, please try again'**
+  String get authGuestFailed;
+
+  /// No description provided for @authGuestError.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest sign-in error'**
+  String get authGuestError;
+
   /// No description provided for @camNoCamera.
   ///
   /// In en, this message translates to:

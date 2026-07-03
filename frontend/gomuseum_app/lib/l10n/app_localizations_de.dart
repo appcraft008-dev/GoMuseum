@@ -398,6 +398,114 @@ class AppLocalizationsDe extends AppLocalizations {
   String get confirmYes => 'Bestätigen';
 
   @override
+  String get authEmailHint => 'E-Mail';
+
+  @override
+  String get authEmailRequired => 'Bitte geben Sie Ihre E-Mail ein';
+
+  @override
+  String get authEmailInvalid => 'Bitte geben Sie eine gültige E-Mail ein';
+
+  @override
+  String get authPasswordHint => 'Passwort';
+
+  @override
+  String get authPasswordRequired => 'Bitte geben Sie Ihr Passwort ein';
+
+  @override
+  String get authPasswordMin6 =>
+      'Das Passwort muss mindestens 6 Zeichen lang sein';
+
+  @override
+  String get authConfirmPasswordHint => 'Passwort bestätigen';
+
+  @override
+  String get authPasswordMismatch => 'Die Passwörter stimmen nicht überein';
+
+  @override
+  String get authUsernameOptionalHint => 'Benutzername (optional)';
+
+  @override
+  String get authLoginButton => 'Anmelden';
+
+  @override
+  String get authRegisterButton => 'Registrieren';
+
+  @override
+  String get authNoAccount => 'Kein Konto? Registrieren';
+
+  @override
+  String get authHaveAccount => 'Bereits ein Konto? Anmelden';
+
+  @override
+  String get authCreateAccount => 'Konto erstellen';
+
+  @override
+  String get authOrLoginWith => 'Oder anmelden mit';
+
+  @override
+  String get authGoogleLogin => 'Mit Google anmelden';
+
+  @override
+  String get authAppleLogin => 'Mit Apple anmelden';
+
+  @override
+  String get authOr => 'Oder';
+
+  @override
+  String get authGuestLogin => 'Als Gast fortfahren';
+
+  @override
+  String get authLoginFailed =>
+      'Anmeldung fehlgeschlagen, prüfen Sie E-Mail und Passwort';
+
+  @override
+  String get authRegisterFailed =>
+      'Registrierung fehlgeschlagen, E-Mail wird möglicherweise bereits verwendet';
+
+  @override
+  String get authGoogleCancelled => 'Google-Anmeldung abgebrochen';
+
+  @override
+  String get authGoogleFailed =>
+      'Google-Anmeldung fehlgeschlagen, bitte erneut versuchen';
+
+  @override
+  String get authGoogleError => 'Google-Anmeldefehler';
+
+  @override
+  String get authGoogleNotConfigured =>
+      'Google-Anmeldung nicht konfiguriert, wenden Sie sich an den Administrator';
+
+  @override
+  String get authGoogleNetworkError =>
+      'Google-Anmeldung Netzwerkfehler, prüfen Sie Ihre Verbindung';
+
+  @override
+  String get authAppleOnlyApple =>
+      'Apple-Anmeldung wird nur auf iOS und macOS unterstützt';
+
+  @override
+  String get authAppleCancelled => 'Apple-Anmeldung abgebrochen';
+
+  @override
+  String get authAppleFailed =>
+      'Apple-Anmeldung fehlgeschlagen, bitte erneut versuchen';
+
+  @override
+  String get authAppleError => 'Apple-Anmeldefehler';
+
+  @override
+  String get authAppleNotConfigured => 'Apple-Anmeldung nicht konfiguriert';
+
+  @override
+  String get authGuestFailed =>
+      'Gast-Anmeldung fehlgeschlagen, bitte erneut versuchen';
+
+  @override
+  String get authGuestError => 'Gast-Anmeldefehler';
+
+  @override
   String get camNoCamera => 'Keine Kamera verfügbar';
 
   @override

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/auth/presentation/login_page.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/app_theme.dart';
 
 void main() {
@@ -17,6 +18,9 @@ void main() {
           theme: AppTheme.lightTheme(),
           darkTheme: AppTheme.darkTheme(),
           themeMode: ThemeMode.dark,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
           home: const LoginPage(),
         ),
       ),

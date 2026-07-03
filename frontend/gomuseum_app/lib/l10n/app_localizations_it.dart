@@ -396,6 +396,111 @@ class AppLocalizationsIt extends AppLocalizations {
   String get confirmYes => 'Conferma';
 
   @override
+  String get authEmailHint => 'E-mail';
+
+  @override
+  String get authEmailRequired => 'Inserisci la tua e-mail';
+
+  @override
+  String get authEmailInvalid => 'Inserisci un\'e-mail valida';
+
+  @override
+  String get authPasswordHint => 'Password';
+
+  @override
+  String get authPasswordRequired => 'Inserisci la tua password';
+
+  @override
+  String get authPasswordMin6 =>
+      'La password deve contenere almeno 6 caratteri';
+
+  @override
+  String get authConfirmPasswordHint => 'Conferma password';
+
+  @override
+  String get authPasswordMismatch => 'Le password non corrispondono';
+
+  @override
+  String get authUsernameOptionalHint => 'Nome utente (facoltativo)';
+
+  @override
+  String get authLoginButton => 'Accedi';
+
+  @override
+  String get authRegisterButton => 'Registrati';
+
+  @override
+  String get authNoAccount => 'Non hai un account? Registrati';
+
+  @override
+  String get authHaveAccount => 'Hai già un account? Accedi';
+
+  @override
+  String get authCreateAccount => 'Crea account';
+
+  @override
+  String get authOrLoginWith => 'Oppure accedi con';
+
+  @override
+  String get authGoogleLogin => 'Accedi con Google';
+
+  @override
+  String get authAppleLogin => 'Accedi con Apple';
+
+  @override
+  String get authOr => 'Oppure';
+
+  @override
+  String get authGuestLogin => 'Continua come ospite';
+
+  @override
+  String get authLoginFailed =>
+      'Accesso non riuscito, controlla e-mail e password';
+
+  @override
+  String get authRegisterFailed =>
+      'Registrazione non riuscita, l\'e-mail potrebbe essere già in uso';
+
+  @override
+  String get authGoogleCancelled => 'Accesso con Google annullato';
+
+  @override
+  String get authGoogleFailed => 'Accesso con Google non riuscito, riprova';
+
+  @override
+  String get authGoogleError => 'Errore di accesso con Google';
+
+  @override
+  String get authGoogleNotConfigured =>
+      'Accesso con Google non configurato, contatta l\'amministratore';
+
+  @override
+  String get authGoogleNetworkError =>
+      'Errore di rete nell\'accesso con Google, controlla la connessione';
+
+  @override
+  String get authAppleOnlyApple =>
+      'L\'accesso con Apple è supportato solo su iOS e macOS';
+
+  @override
+  String get authAppleCancelled => 'Accesso con Apple annullato';
+
+  @override
+  String get authAppleFailed => 'Accesso con Apple non riuscito, riprova';
+
+  @override
+  String get authAppleError => 'Errore di accesso con Apple';
+
+  @override
+  String get authAppleNotConfigured => 'Accesso con Apple non configurato';
+
+  @override
+  String get authGuestFailed => 'Accesso come ospite non riuscito, riprova';
+
+  @override
+  String get authGuestError => 'Errore di accesso come ospite';
+
+  @override
   String get camNoCamera => 'Nessuna fotocamera disponibile';
 
   @override

@@ -391,6 +391,105 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirmYes => '确定';
 
   @override
+  String get authEmailHint => '邮箱';
+
+  @override
+  String get authEmailRequired => '请输入邮箱';
+
+  @override
+  String get authEmailInvalid => '请输入有效的邮箱地址';
+
+  @override
+  String get authPasswordHint => '密码';
+
+  @override
+  String get authPasswordRequired => '请输入密码';
+
+  @override
+  String get authPasswordMin6 => '密码至少 6 位';
+
+  @override
+  String get authConfirmPasswordHint => '确认密码';
+
+  @override
+  String get authPasswordMismatch => '两次密码不一致';
+
+  @override
+  String get authUsernameOptionalHint => '用户名（可选）';
+
+  @override
+  String get authLoginButton => '登 录';
+
+  @override
+  String get authRegisterButton => '注 册';
+
+  @override
+  String get authNoAccount => '还没有账号？注册';
+
+  @override
+  String get authHaveAccount => '已有账号？登录';
+
+  @override
+  String get authCreateAccount => '创建账号';
+
+  @override
+  String get authOrLoginWith => '或使用以下方式登录';
+
+  @override
+  String get authGoogleLogin => '使用 Google 登录';
+
+  @override
+  String get authAppleLogin => '使用 Apple 登录';
+
+  @override
+  String get authOr => '或';
+
+  @override
+  String get authGuestLogin => '游客登录';
+
+  @override
+  String get authLoginFailed => '登录失败，请检查邮箱和密码';
+
+  @override
+  String get authRegisterFailed => '注册失败，邮箱可能已被使用';
+
+  @override
+  String get authGoogleCancelled => 'Google 登录已取消';
+
+  @override
+  String get authGoogleFailed => 'Google 登录失败，请重试';
+
+  @override
+  String get authGoogleError => 'Google 登录错误';
+
+  @override
+  String get authGoogleNotConfigured => 'Google 登录未配置，请联系管理员';
+
+  @override
+  String get authGoogleNetworkError => 'Google 登录网络错误，请检查网络连接';
+
+  @override
+  String get authAppleOnlyApple => 'Apple 登录仅支持 iOS 和 macOS 设备';
+
+  @override
+  String get authAppleCancelled => 'Apple 登录已取消';
+
+  @override
+  String get authAppleFailed => 'Apple 登录失败，请重试';
+
+  @override
+  String get authAppleError => 'Apple 登录错误';
+
+  @override
+  String get authAppleNotConfigured => 'Apple 登录未配置';
+
+  @override
+  String get authGuestFailed => '游客登录失败，请重试';
+
+  @override
+  String get authGuestError => '游客登录错误';
+
+  @override
   String get camNoCamera => '未找到可用相机';
 
   @override
