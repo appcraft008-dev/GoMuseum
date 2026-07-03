@@ -64,11 +64,21 @@ def _sim(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
 
-def match(index: list[dict], queries: list[str], label_lines: list[str]) -> list:
-    """查询串(候选名)+墙签行 → [(qid, score)] 降序去重。
-    标题相似度为主;查询/墙签行中出现该件作者名 → +0.1(封顶 1.0)。"""
+def match(
+    index: list[dict],
+    queries: list[str],
+    label_lines: list[str],
+    artist_hints: list[str] | None = None,
+) -> list:
+    """查询串(候选题名)+墙签行 → [(qid, score)] 降序去重。
+    标题相似度为主;作者名(artist_hints+各探针)命中该件作者 → +0.1(封顶 1.0)。
+    ⚠️ artist_hints 只参与加分、绝不当标题探针——否则"以画家为题"的肖像画
+    (如巴齐耶《奥古斯特·雷诺阿像》)会被候选作者名精确劫持(staging 真实误配)。"""
     probes = [normalize(q) for q in (list(queries) + list(label_lines)) if q]
     probes = [p for p in probes if p]
+    hint_probes = probes + [
+        normalize(a) for a in (artist_hints or []) if a and normalize(a)
+    ]
     if not probes:
         return []
     best: dict[str, float] = {}
@@ -79,7 +89,7 @@ def match(index: list[dict], queries: list[str], label_lines: list[str]) -> list
         if title_score <= 0:
             continue
         artist_bonus = 0.0
-        for p in probes:
+        for p in hint_probes:
             for an in entry["artists"]:
                 if an and (_sim(p, an) >= 0.8 or an in p or p in an):
                     artist_bonus = 0.1

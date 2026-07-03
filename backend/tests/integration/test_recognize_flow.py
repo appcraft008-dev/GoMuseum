@@ -158,3 +158,49 @@ def test_label_mode_passed_through_and_label_text_returned(session):
 
 def test_unknown_museum_returns_none(session):
     assert recognize(session, "nope", _jpeg(), identify_fn=_vision([])) is None
+
+
+def test_artist_name_does_not_hijack_portrait_titles(session):
+    # staging 真实误配:候选作者名"Pierre-Auguste Renoir"被当标题探针,
+    # 劫持了巴齐耶《奥古斯特·雷诺阿像》(以画家为题的肖像)。作者名只加分,不当标题匹配。
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q12142552",
+            "title_en": "Auguste Renoir",  # 肖像画:标题=画家名
+            "artist_en": "Frédéric Bazille",
+            "category": "painting",
+            "attributes": {"title_i18n": {"en": "Auguste Renoir"}},
+        },
+    )
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q683274",
+            "title_en": "Bal du moulin de la Galette",
+            "artist_en": "Pierre-Auguste Renoir",
+            "category": "painting",
+            "attributes": {"title_i18n": {"en": "Bal du moulin de la Galette"}},
+        },
+    )
+    session.commit()
+    matcher._index_cache.clear()
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        identify_fn=_vision(
+            [
+                {
+                    "title": "Dance at Le Moulin de la Galette",
+                    "artist": "Auguste Renoir",  # GPT 常给短名:与肖像标题精确相等
+                }
+            ]
+        ),
+    )
+    assert out["outcome"] in ("match", "candidates")
+    top_qid = (out["match"] or out["candidates"][0])["qid"]
+    assert top_qid == "Q683274"  # 舞会,不是雷诺阿肖像
