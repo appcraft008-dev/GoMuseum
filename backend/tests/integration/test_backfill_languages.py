@@ -179,6 +179,22 @@ def test_backfill_translates_artist_bio(session):
     assert all(t != "EN bio." for _, _, t in tr2.calls)
 
 
+def test_backfill_skips_junk_en_bio_pivot(session):
+    # bio.en 是中文(坏值)→ 不作翻译轴心(防垃圾扩散);重生交给 generate 路径
+    from app.models.artist import Artist
+
+    Artist.__table__.create(bind=session.get_bind(), checkfirst=True)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q39931"}
+    session.add(Artist(qid="Q39931", name_en="Renoir", bio={"en": "雷诺阿中文简介。"}))
+    session.commit()
+    tr = _Tr()
+    backfill_languages(session, "orsay", langs=["it"], translator=tr)
+    art = session.query(Artist).filter_by(qid="Q39931").one()
+    assert "it" not in (art.bio or {})  # 坏轴心不翻
+    assert all("雷诺阿中文简介" not in t for _, _, t in tr.calls if isinstance(t, str))
+
+
 def test_backfill_unknown_museum(session):
     out = backfill_languages(session, "nope", langs=["de"], translator=_Tr())
     assert out.get("error") == "unknown museum"
