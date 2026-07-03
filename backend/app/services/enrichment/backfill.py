@@ -36,20 +36,30 @@ SELECT ?item ?creator WHERE {{ VALUES ?item {{ {values} }} ?item wdt:P170 ?creat
 """
 
 
+_CREATORS_BATCH = (
+    200  # VALUES 分批:全馆千级 QID 单条查询会 URL 超长(HTTP 414,prod 教训)
+)
+
+
 def _fetch_creators(qids, *, run_query=None) -> dict:
-    """批量 作品QID → 作者QID(P170,首个)。一条 VALUES 查询搞定全馆。"""
+    """批量 作品QID → 作者QID(P170,首个)。VALUES 分批查询。"""
     if not qids:
         return {}
     from app.services.enrichment.sources.wikidata_catalog import _default_run_query
 
     run_query = run_query or _default_run_query
-    rows = run_query(_CREATORS_QUERY.format(values=" ".join(f"wd:{q}" for q in qids)))
-    out = {}
-    for row in rows:
-        item = (row.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
-        creator = (row.get("creator") or {}).get("value", "").rsplit("/", 1)[-1]
-        if item and creator:
-            out.setdefault(item, creator)
+    out: dict = {}
+    qids = list(qids)
+    for i in range(0, len(qids), _CREATORS_BATCH):
+        batch = qids[i : i + _CREATORS_BATCH]
+        rows = run_query(
+            _CREATORS_QUERY.format(values=" ".join(f"wd:{q}" for q in batch))
+        )
+        for row in rows:
+            item = (row.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
+            creator = (row.get("creator") or {}).get("value", "").rsplit("/", 1)[-1]
+            if item and creator:
+                out.setdefault(item, creator)
     return out
 
 
