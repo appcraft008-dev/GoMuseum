@@ -150,6 +150,50 @@ def test_generate_museum_unknown_slug(session):
     assert out["error"] == "unknown museum"
 
 
+def test_generate_object_translates_per_language_with_priority(session):
+    # 懒生成体验:请求语言排队首、逐语言翻完即落库;单语言失败不拖垮其他
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    order = []
+
+    class _Tr(_FakeTranslator):
+        def translate_object(self, en_sections, target_langs):
+            assert len(target_langs) == 1  # 逐语言调用(翻完即存)
+            lang = target_langs[0]
+            order.append(lang)
+            if lang == "de":
+                raise RuntimeError("de provider down")
+            return {
+                lang: {
+                    c: SectionQuality(
+                        body=f"{lang} {b}",
+                        status="published",
+                        grounding_ratio=1.0,
+                        conflicts=[],
+                        score=1.0,
+                    )
+                    for c, b in en_sections.items()
+                }
+            }
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_Tr(),
+        target_langs=["en", "de", "fr", "it"],
+        model="m",
+        lang_priority="it",
+    )
+    assert order[0] == "it"  # 请求语言优先
+    assert set(order) == {"it", "de", "fr"}
+    assert out["counts"]["it"] == (1, 0)
+    assert out["counts"]["fr"] == (1, 0)  # de 失败不拖垮 fr
+    assert "de" not in out["counts"] or out["counts"]["de"] == (0, 0)
+
+
 class _FakeQA:
     def suggest(self, material, facts, category, target_langs, covered=None):
         return {

@@ -44,8 +44,9 @@ def _clear_lock(db, obj: MuseumObject) -> None:
     db.commit()
 
 
-def _generate(db, qid: str) -> dict:
-    """真实生成:组件工厂装配 + generate_object(置 ready/empty)。测试 monkeypatch 此处。"""
+def _generate(db, qid: str, language: str | None = None) -> dict:
+    """真实生成:组件工厂装配 + generate_object(置 ready/empty)。测试 monkeypatch 此处。
+    language=触发者的请求语言 → lang_priority(排队首,最快看到自己的语言)。"""
     from app.services.enrichment.factory import build_generation_components
     from app.services.enrichment.pipeline import generate_object
 
@@ -65,10 +66,13 @@ def _generate(db, qid: str) -> dict:
         qa_suggester=c["qa_suggester"],
         registry=c["registry"],
         country_lang=c["country_lang"],
+        lang_priority=language,
     )
 
 
-def run_lazy_generation(qid: str, *, session_factory=None, close=True) -> None:
+def run_lazy_generation(
+    qid: str, language: str | None = None, *, session_factory=None, close=True
+) -> None:
     """后台任务体:限并发跑生成,完成/失败均清锁(失败留 stub 允许下次重试)。"""
     if session_factory is None:
         from app.core.database import SessionLocal
@@ -89,7 +93,7 @@ def run_lazy_generation(qid: str, *, session_factory=None, close=True) -> None:
         db = session_factory()
         try:
             try:
-                out = _generate(db, qid)
+                out = _generate(db, qid, language)
                 logger.info("lazy generation done: %s -> %s", qid, out)
             except Exception:
                 db.rollback()
@@ -104,7 +108,7 @@ def run_lazy_generation(qid: str, *, session_factory=None, close=True) -> None:
         _SEM.release()
 
 
-def maybe_trigger(db, qid: str, *, schedule, environment=None) -> None:
+def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) -> None:
     """content 端点接线:stub 且拿到锁 → schedule(run_lazy_generation, qid)。其余静默。
     只在部署环境生效(development/测试不触发:防误连库、误烧 LLM 费)。"""
     if environment is None:
@@ -117,4 +121,4 @@ def maybe_trigger(db, qid: str, *, schedule, environment=None) -> None:
     if o is None:
         return
     if try_acquire_lock(db, o):
-        schedule(run_lazy_generation, qid)
+        schedule(run_lazy_generation, qid, language)

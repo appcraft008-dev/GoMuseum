@@ -23,6 +23,25 @@ def _clean_question(q: str):
     return q[: min(idx) + 1].strip()
 
 
+def translate_qa_items(translator, en_items: list, lang: str) -> list:
+    """把英语问答对翻到 lang(问句截到问号+答案忠实校验)。suggest 与补语种共用。"""
+    out = []
+    for it in en_items:
+        tq = _clean_question(translator.translate_section(it["question"], lang))
+        ta = translator.translate_section(it["answer"], lang)
+        if not tq:  # 翻译把问句变陈述了 → 回退英文问句(已是短问句)
+            tq = it["question"]
+        ok, _ = translator.check_faithfulness(it["answer"], ta, lang)
+        out.append(
+            {
+                "question": tq,
+                "answer": ta,
+                "status": "published" if ok else "needs_review",
+            }
+        )
+    return out
+
+
 class QASuggester:
     def __init__(self, complete, gate, translator):
         self._complete = complete
@@ -61,21 +80,5 @@ class QASuggester:
         for lang in target_langs:
             if lang == "en":
                 continue
-            litems = []
-            for it in published:
-                tq = _clean_question(
-                    self._translator.translate_section(it["question"], lang)
-                )
-                ta = self._translator.translate_section(it["answer"], lang)
-                if not tq:  # 翻译把问句变陈述了 → 回退英文问句(已是短问句)
-                    tq = it["question"]
-                ok, _ = self._translator.check_faithfulness(it["answer"], ta, lang)
-                litems.append(
-                    {
-                        "question": tq,
-                        "answer": ta,
-                        "status": "published" if ok else "needs_review",
-                    }
-                )
-            out[lang] = litems
+            out[lang] = translate_qa_items(self._translator, published, lang)
         return out

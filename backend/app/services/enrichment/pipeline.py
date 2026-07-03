@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
@@ -13,6 +15,8 @@ from app.services.content_repo import (
 from app.services.enrichment.category_config import guide_target_chars, sections_for
 from app.services.enrichment.content_enricher import build_material
 from app.services.enrichment.material import fetch_object_material
+
+logger = logging.getLogger(__name__)
 
 # 标"Creation year"消歧：避免 fact-consistency 判官把首展/收购/修复年误判为与创作年冲突。
 _FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
@@ -102,8 +106,14 @@ def generate_object(
     qa_suggester=None,
     registry=None,
     country_lang=None,
+    lang_priority=None,
 ) -> dict:
-    """单件：生成→质量闸→落英语→翻译→按语言落库。幂等跳过已发布英语（除非 force）。"""
+    """单件：生成→质量闸→落英语→逐语言翻译落库。幂等跳过已发布英语（除非 force）。
+    lang_priority=请求者语言(懒生成场景):排队首,翻完即落库,用户最快看到自己的语言。"""
+    if lang_priority and lang_priority in target_langs:
+        target_langs = [lang_priority] + [
+            lang for lang in target_langs if lang != lang_priority
+        ]
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if not o:
         return {"qid": qid, "skipped": "absent"}
@@ -266,10 +276,16 @@ def generate_object(
         if gq.status == "published" and gq.body:
             en_published["guide"] = gq.body
 
-    by_lang = translator.translate_object(en_published, target_langs)
-
     counts = {"en": (pub_en, nr_en)}
-    for lang, results in by_lang.items():
+    # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
+    for lang in target_langs:
+        if lang == "en":
+            continue
+        try:
+            results = translator.translate_object(en_published, [lang]).get(lang, {})
+        except Exception:
+            logger.exception("translate %s failed for %s", lang, qid)
+            continue
         counts[lang] = persist_gated_sections(db, qid, lang, results, model)
     result = {"qid": qid, "counts": counts}
     if qa_suggester is not None:

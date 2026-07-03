@@ -123,7 +123,7 @@
 
 `stub`(只元数据,目录铺出) → `ready`(≥1 段已发布)/ `empty`(无可接地材料)。前端:`stub`/`empty` 显"待完善",`ready` 正常。未知值按 `ready` 容错。
 
-**懒生成(✅2026-07-03 落地)**:content 端点命中 `stub` → 后台触发该件完整生成(全语言),几分钟后再取即 `ready`。锁=内部 `attributes.lazy_lock_at`(TTL 10min 自愈),**不对外暴露中间状态**——stub 期间前端照旧"待完善",契约形状零变化、老 App 无感。`empty` 不重试(已判无可接地材料,防循环烧钱)。并发上限 2/进程;仅 staging/production 环境生效。
+**懒生成(✅2026-07-03 落地)**:content 端点命中 `stub` → 后台触发该件完整生成(全语言;**请求者语言排队首、逐语言翻完即落库**——用户最快看到自己的语言,单语言翻译失败不拖垮其他),几分钟后再取即 `ready`。锁=内部 `attributes.lazy_lock_at`(TTL 10min 自愈),**不对外暴露中间状态**——stub 期间前端照旧"待完善",契约形状零变化、老 App 无感。`empty` 不重试(已判无可接地材料,防循环烧钱)。并发上限 2/进程;仅 staging/production 环境生效。
 
 ## 图片字段
 
@@ -202,7 +202,7 @@
 > **⚠️ 本地化完整性原则(2026-07-03 定,分类标签教训)。**
 > - **凡端点返回的用户可见文本必须随 `language` 本地化**:内容类走生成/翻译管线;**固定小集合**(分类标签/段落标签/材质名/`all` tab 等)用**静态翻译表一次配齐全部 `DEFAULT_LANGUAGES`**——不许只配部分语言(三语时代的表在六语开放后成洞)。缺译回退 en、**永不 null**。
 > - **机器码字段永不翻译**:`code`/`qid`/`section_code` 是前端逻辑键(筛选/路由/匹配),显示一律靠 `label`——由此所有文案改进都是 server-driven、免发版。
-> - **"加语言" checklist(加语言=加配置的完整清单)**:① `DEFAULT_LANGUAGES`+`LANG_NAMES`(lang_config)② 静态标签表(`_CATEGORY_LABELS`/`_ALL_LABEL`/`SECTION_LABELS`)③ 非拉丁文字语言扩 `_clean_i18n` 文字检测(现只查 zh 汉字)④ 前端 ARB 文案+语言选择器(kSupportedLocales)⑤ 存量回补:显示名跑 `names`(幂等),讲解跑补语种命令(backlog:从已存 en 段纯翻译,不重生成)。
+> - **"加语言" checklist(加语言=加配置的完整清单)**:① `DEFAULT_LANGUAGES`+`LANG_NAMES`(lang_config)② 静态标签表(`_CATEGORY_LABELS`/`_ALL_LABEL`/`SECTION_LABELS`)③ 非拉丁文字语言扩 `_clean_i18n` 文字检测(现只查 zh 汉字)④ 前端 ARB 文案+语言选择器(kSupportedLocales)⑤ 存量回补:显示名跑 `names`(幂等),讲解/问答跑 **`onboard.py <slug> translate --target <env> --langs <新语>`**(✅已实现:从已存 en 段**纯翻译**落库,忠实度校验继承接地,不重生成;幂等只补缺)。
 > 教训:2026-07-03 六语开放,分类标签表只配了 zh/en/fr → de/es/it 真机标签栏中英混杂(前端交接件修复,#142)。
 
 **博物馆负责事实,AI 负责讲法。** 每件内容分三层,各守互斥职责,从同一份证据包生成、不重复:
@@ -244,6 +244,7 @@
 
 ## 变更记录
 
+- 2026-07-03:懒生成**请求语言优先**(lang_priority,逐语言翻完即落库,单语言失败不拖垮)+ **补语种命令落地**(`onboard translate`:存量对象缺失语言从 en 段纯翻译,checklist⑤ 闭环;老 243 件补 de/es/it 用它)。
 - 2026-07-03:定**本地化完整性原则**——用户可见文本必随 language(固定小集合用静态表配齐全语种,缺译回退 en);机器码永不翻译;"加语言"checklist(五步)。教训:六语开放分类标签只配三语(#142 修)。前端六语选择器 #138-140。
 - 2026-07-03:**懒生成落地**(路线图3c):stub 首次访问 → 后台生成(attributes.lazy_lock_at 锁,TTL 10min;并发2;仅部署环境)。组件装配抽 factory(onboard 与懒生成共用)。契约形状零变化。
 - 2026-07-03:定**§收录策略**(通用):有图才收录(识别参照+合规)/三层口径(全馆藏≫在展>有图)/定期重跑吃增量/通用分类法8大类(CATEGORY_BY_QID 真相源,多P31已知优先)/生成分层(top-N=奥赛200 只在 prod;staging 小样本;懒生成入路线图3c;官方馆藏库连接器入阶段4)。类目代码统一(photograph→photography、decorative→decorative_arts);奥赛 categories 扩至四大类,catalog P18 必填。
