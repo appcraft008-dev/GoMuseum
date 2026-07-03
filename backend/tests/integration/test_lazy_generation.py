@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.lazy import maybe_trigger, try_acquire_lock
@@ -22,7 +23,12 @@ def session():
     )
     Base.metadata.create_all(
         bind=engine,
-        tables=[Museum.__table__, MuseumObject.__table__, ObjectImage.__table__],
+        tables=[
+            Museum.__table__,
+            MuseumObject.__table__,
+            ObjectImage.__table__,
+            ObjectContentSection.__table__,
+        ],
     )
     s = sessionmaker(bind=engine)()
     m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
@@ -114,6 +120,83 @@ def test_maybe_trigger_disabled_outside_deploy_env(session):
         environment="development",
     )
     assert scheduled == []
+    assert not (_obj(session).attributes or {}).get("lazy_lock_at")
+
+
+def _publish(s, qid, lang, code="guide", body="Body."):
+    o = s.query(MuseumObject).filter_by(qid=qid).one()
+    s.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language=lang,
+            section_code=code,
+            body=body,
+            status="published",
+        )
+    )
+    s.commit()
+
+
+def test_maybe_trigger_lazy_translate_when_language_missing(session):
+    # ready 但请求语言缺、有 en 轴心 → 调度单语言懒翻译(不重生成)
+    import app.services.enrichment.lazy as lazy
+
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    _publish(session, "Q1", "en")
+    scheduled = []
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append((fn.__name__, a)),
+        environment="staging",
+        language="de",
+    )
+    assert scheduled == [("run_lazy_translation", ("Q1", "de"))]
+
+
+def test_maybe_trigger_no_translate_when_language_present_or_en(session):
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    _publish(session, "Q1", "en")
+    _publish(session, "Q1", "zh", body="中文。")
+    scheduled = []
+    sch = lambda fn, *a: scheduled.append(a)  # noqa: E731
+    maybe_trigger(session, "Q1", schedule=sch, environment="staging", language="zh")
+    maybe_trigger(session, "Q1", schedule=sch, environment="staging", language="en")
+    assert scheduled == []  # zh 已有;en 是轴心不翻
+
+
+def test_maybe_trigger_no_translate_for_empty_object(session):
+    o = _obj(session)
+    o.content_status = "empty"  # 无可接地材料:不生成也不翻
+    session.commit()
+    scheduled = []
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(a),
+        environment="staging",
+        language="de",
+    )
+    assert scheduled == []
+
+
+def test_run_lazy_translation_clears_lock(session, monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    calls = []
+    monkeypatch.setattr(
+        lazy, "_translate", lambda db, qid, lang: calls.append((qid, lang))
+    )
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    try_acquire_lock(session, o, require_status=("ready",))
+    lazy.run_lazy_translation("Q1", "de", session_factory=lambda: session, close=False)
+    assert calls == [("Q1", "de")]
     assert not (_obj(session).attributes or {}).get("lazy_lock_at")
 
 

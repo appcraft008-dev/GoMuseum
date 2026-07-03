@@ -5,6 +5,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.models.artist import Artist
+from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import list_objects
@@ -23,6 +24,7 @@ def session():
             MuseumObject.__table__,
             ObjectImage.__table__,
             Artist.__table__,
+            ObjectContentSection.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -65,7 +67,18 @@ def session():
         m.id,
         {"qid": "Q4", "title_en": "Statue", "category": "sculpture", "popularity": 30},
     )
-    s.query(MuseumObject).filter_by(qid="Q1").one().content_status = "ready"
+    o1 = s.query(MuseumObject).filter_by(qid="Q1").one()
+    o1.content_status = "ready"
+    # ready 应有已发布内容(zh):content_status 按请求语言解读
+    s.add(
+        ObjectContentSection(
+            object_id=o1.id,
+            language="zh",
+            section_code="guide",
+            body="中文讲解。",
+            status="published",
+        )
+    )
     s.commit()
     yield s
 
@@ -115,6 +128,15 @@ def test_list_objects_item_shape(session):
 
 def test_list_objects_unknown_museum(session):
     assert list_objects(session, "nope", language="zh") is None
+
+
+def test_list_objects_content_status_is_language_aware(session):
+    # 对象级 ready 但请求语言无已发布内容 → 列表应显"待完善"(empty),不再骗用户
+    zh = {i["qid"]: i for i in list_objects(session, "orsay", language="zh")["items"]}
+    de = {i["qid"]: i for i in list_objects(session, "orsay", language="de")["items"]}
+    assert zh["Q1"]["content_status"] == "ready"  # zh 有内容
+    assert de["Q1"]["content_status"] == "empty"  # de 无内容 → 待完善
+    assert de["Q3"]["content_status"] == "stub"  # stub 保持(懒生成入口)
 
 
 def test_list_objects_artist_resolves_via_name_i18n(session):

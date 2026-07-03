@@ -482,6 +482,29 @@ def list_objects(
             or ""
         )
 
+    # content_status 按请求语言解读:对象 ready 但该语言无已发布内容 → empty(待完善),
+    # 防"列表看着有、点进去空"(懒翻译入口;契约§content_status)
+    lang_ready_ids = (
+        {
+            oid
+            for (oid,) in db.query(ObjectContentSection.object_id)
+            .filter(
+                ObjectContentSection.object_id.in_(obj_ids),
+                ObjectContentSection.language == language,
+                ObjectContentSection.status == "published",
+                ObjectContentSection.body.isnot(None),
+            )
+            .distinct()
+        }
+        if obj_ids
+        else set()
+    )
+
+    def _status(o):
+        if o.content_status == "ready" and o.id not in lang_ready_ids:
+            return "empty"
+        return o.content_status
+
     items = [
         {
             "qid": o.qid,
@@ -489,7 +512,7 @@ def list_objects(
             "artist": _artist(o),
             "year": o.year,
             "thumbnail": _thumb(o.id),
-            "content_status": o.content_status,
+            "content_status": _status(o),
         }
         for o in objs
     ]
