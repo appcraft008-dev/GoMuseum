@@ -421,7 +421,7 @@ abstract class AppLocalizations {
   /// No description provided for @guideGenerating.
   ///
   /// In en, this message translates to:
-  /// **'Generating explanation…'**
+  /// **'Generating content · about 1–3 min'**
   String get guideGenerating;
 
   /// No description provided for @guideEmpty.

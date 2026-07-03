@@ -179,7 +179,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Las preguntas por voz llegan pronto, escribe por ahora';
 
   @override
-  String get guideGenerating => 'Generando la explicación…';
+  String get guideGenerating => 'Generando contenido · aprox. 1–3 min';
 
   @override
   String get guideEmpty => 'Aún no hay explicación fundamentada (en progreso)';

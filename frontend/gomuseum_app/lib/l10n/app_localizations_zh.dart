@@ -177,7 +177,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideVoiceComingSoon => '语音问答即将开放，先打字问问吧';
 
   @override
-  String get guideGenerating => '正在生成讲解…';
+  String get guideGenerating => '内容生成中，约 1–3 分钟';
 
   @override
   String get guideEmpty => '该作品暂无可接地讲解（待完善）';

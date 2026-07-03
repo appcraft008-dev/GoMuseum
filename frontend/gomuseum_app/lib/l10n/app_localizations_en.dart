@@ -178,7 +178,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guideVoiceComingSoon => 'Voice Q&A is coming soon, type for now';
 
   @override
-  String get guideGenerating => 'Generating explanation…';
+  String get guideGenerating => 'Generating content · about 1–3 min';
 
   @override
   String get guideEmpty => 'No grounded explanation yet (in progress)';

@@ -62,7 +62,7 @@
   "guideAskHint": "Ask about this painting…",
   "guideAskShort": "Ask about this painting",
   "guideVoiceComingSoon": "Voice Q&A is coming soon, type for now",
-  "guideGenerating": "Generating explanation…",
+  "guideGenerating": "Generating content · about 1–3 min",
   "guideEmpty": "No grounded explanation yet (in progress)",
   "guideInfo": "Artwork Info",
   "guideStandardTour": "Standard tour",
