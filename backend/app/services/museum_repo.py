@@ -21,27 +21,90 @@ _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
 
 _LEGACY_SOURCE = "Wikidata/Wikimedia Commons (public data)"
 
-# 通用分类法 8 大类(契约§收录策略),全馆共用;奥赛启用前 4 类
+# 通用分类法 8 大类(契约§收录策略),全馆共用;奥赛启用前 4 类。
+# label 全 6 语(交接 2026-07-03-backend-category-label-i18n):固定小集合,静态表即可;缺译回退 en。
 _CATEGORY_LABELS = {
-    "painting": {"zh": "绘画", "en": "Painting", "fr": "Peinture"},
-    "sculpture": {"zh": "雕塑", "en": "Sculpture", "fr": "Sculpture"},
+    "painting": {
+        "zh": "绘画",
+        "en": "Painting",
+        "fr": "Peinture",
+        "de": "Malerei",
+        "es": "Pintura",
+        "it": "Dipinti",
+    },
+    "sculpture": {
+        "zh": "雕塑",
+        "en": "Sculpture",
+        "fr": "Sculpture",
+        "de": "Skulpturen",
+        "es": "Escultura",
+        "it": "Sculture",
+    },
     "works_on_paper": {
         "zh": "纸上作品",
         "en": "Works on Paper",
         "fr": "Arts graphiques",
+        "de": "Arbeiten auf Papier",
+        "es": "Obra sobre papel",
+        "it": "Opere su carta",
     },
-    "photography": {"zh": "摄影", "en": "Photography", "fr": "Photographie"},
+    "photography": {
+        "zh": "摄影",
+        "en": "Photography",
+        "fr": "Photographie",
+        "de": "Fotografie",
+        "es": "Fotografía",
+        "it": "Fotografia",
+    },
     "decorative_arts": {
         "zh": "装饰艺术",
         "en": "Decorative Arts",
         "fr": "Arts décoratifs",
+        "de": "Kunstgewerbe",
+        "es": "Artes decorativas",
+        "it": "Arti decorative",
     },
-    "textile": {"zh": "纺织", "en": "Textiles", "fr": "Textiles"},
-    "artifact": {"zh": "文物器物", "en": "Artifacts", "fr": "Objets"},
-    "manuscript": {"zh": "手稿古籍", "en": "Manuscripts", "fr": "Manuscrits"},
-    "unknown": {"zh": "其他", "en": "Other", "fr": "Autre"},
+    "textile": {
+        "zh": "纺织",
+        "en": "Textiles",
+        "fr": "Textiles",
+        "de": "Textilien",
+        "es": "Textiles",
+        "it": "Tessuti",
+    },
+    "artifact": {
+        "zh": "文物器物",
+        "en": "Artifacts",
+        "fr": "Objets",
+        "de": "Artefakte",
+        "es": "Artefactos",
+        "it": "Reperti",
+    },
+    "manuscript": {
+        "zh": "手稿古籍",
+        "en": "Manuscripts",
+        "fr": "Manuscrits",
+        "de": "Handschriften",
+        "es": "Manuscritos",
+        "it": "Manoscritti",
+    },
+    "unknown": {
+        "zh": "其他",
+        "en": "Other",
+        "fr": "Autre",
+        "de": "Sonstiges",
+        "es": "Otros",
+        "it": "Altro",
+    },
 }
-_ALL_LABEL = {"zh": "全部", "en": "All", "fr": "Tout"}
+_ALL_LABEL = {
+    "zh": "全部",
+    "en": "All",
+    "fr": "Tout",
+    "de": "Alle",
+    "es": "Todo",
+    "it": "Tutto",
+}
 
 
 def _category_label(code: str, lang: str) -> str:

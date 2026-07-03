@@ -388,3 +388,29 @@ def test_title_falls_back_to_zh_column_when_no_i18n(session):
     session.commit()
     assert get_object_content(session, "orsay", "Q1", "zh")["title"] == "中文名"
     assert get_object_content(session, "orsay", "Q1", "en")["title"] == "English Name"
+
+
+def test_pack_category_labels_localized_all_six_languages(session):
+    # 前端交接 2026-07-03:de/es/it 界面分类标签不本地化(只配了 zh/en/fr,回退英文)
+    from app.services.museum_repo import get_museum_pack
+
+    expect = {
+        "de": {"painting": "Malerei", "sculpture": "Skulpturen"},
+        "es": {"painting": "Pintura", "sculpture": "Escultura"},
+        "it": {"painting": "Dipinti", "sculpture": "Sculture"},
+        "fr": {"painting": "Peinture", "sculpture": "Sculpture"},
+    }
+    for lang, m in expect.items():
+        cats = {
+            c["code"]: c["label"]
+            for c in get_museum_pack(session, "orsay", lang)["categories"]
+        }
+        assert cats["painting"] == m["painting"], (lang, cats)
+        assert cats["sculpture"] == m["sculpture"], (lang, cats)
+
+
+def test_category_label_unknown_language_falls_back_to_english():
+    from app.services.museum_repo import _category_label
+
+    assert _category_label("painting", "xx") == "Painting"  # 缺译回退 en,不返 null
+    assert _category_label("works_on_paper", "it") == "Opere su carta"
