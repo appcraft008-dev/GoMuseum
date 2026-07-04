@@ -370,7 +370,12 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     }
     guide_row = (
         db.query(ObjectContentSection)
-        .filter_by(object_id=obj.id, language=language, section_code="guide")
+        .filter_by(
+            object_id=obj.id,
+            language=language,
+            section_code="guide",
+            status="published",
+        )
         .one_or_none()
     )
     default_guide = (
