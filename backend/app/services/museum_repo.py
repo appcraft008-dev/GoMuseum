@@ -31,6 +31,7 @@ _CATEGORY_LABELS = {
         "de": "Malerei",
         "es": "Pintura",
         "it": "Dipinti",
+        "pl": "Malarstwo",
     },
     "sculpture": {
         "zh": "雕塑",
@@ -39,6 +40,7 @@ _CATEGORY_LABELS = {
         "de": "Skulpturen",
         "es": "Escultura",
         "it": "Sculture",
+        "pl": "Rzeźba",
     },
     "works_on_paper": {
         "zh": "纸上作品",
@@ -47,6 +49,7 @@ _CATEGORY_LABELS = {
         "de": "Arbeiten auf Papier",
         "es": "Obra sobre papel",
         "it": "Opere su carta",
+        "pl": "Prace na papierze",
     },
     "photography": {
         "zh": "摄影",
@@ -55,6 +58,7 @@ _CATEGORY_LABELS = {
         "de": "Fotografie",
         "es": "Fotografía",
         "it": "Fotografia",
+        "pl": "Fotografia",
     },
     "decorative_arts": {
         "zh": "装饰艺术",
@@ -63,6 +67,7 @@ _CATEGORY_LABELS = {
         "de": "Kunstgewerbe",
         "es": "Artes decorativas",
         "it": "Arti decorative",
+        "pl": "Sztuka dekoracyjna",
     },
     "textile": {
         "zh": "纺织",
@@ -71,6 +76,7 @@ _CATEGORY_LABELS = {
         "de": "Textilien",
         "es": "Textiles",
         "it": "Tessuti",
+        "pl": "Tekstylia",
     },
     "artifact": {
         "zh": "文物器物",
@@ -79,6 +85,7 @@ _CATEGORY_LABELS = {
         "de": "Artefakte",
         "es": "Artefactos",
         "it": "Reperti",
+        "pl": "Artefakty",
     },
     "manuscript": {
         "zh": "手稿古籍",
@@ -87,6 +94,7 @@ _CATEGORY_LABELS = {
         "de": "Handschriften",
         "es": "Manuscritos",
         "it": "Manoscritti",
+        "pl": "Rękopisy",
     },
     "unknown": {
         "zh": "其他",
@@ -95,6 +103,7 @@ _CATEGORY_LABELS = {
         "de": "Sonstiges",
         "es": "Otros",
         "it": "Altro",
+        "pl": "Inne",
     },
 }
 _ALL_LABEL = {
@@ -104,6 +113,7 @@ _ALL_LABEL = {
     "de": "Alle",
     "es": "Todo",
     "it": "Tutto",
+    "pl": "Wszystko",
 }
 
 

@@ -68,6 +68,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Standardführung",
         "es": "Guía estándar",
         "it": "Guida standard",
+        "pl": "Przewodnik",
     },
     "overview": {
         "zh": "通用描述",
@@ -76,6 +77,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Überblick",
         "es": "Resumen",
         "it": "Panoramica",
+        "pl": "Przegląd",
     },
     "artist": {
         "zh": "作者介绍",
@@ -84,6 +86,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Der Künstler",
         "es": "El artista",
         "it": "L'artista",
+        "pl": "Artysta",
     },
     "photographer": {
         "zh": "摄影师",
@@ -92,6 +95,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Der Fotograf",
         "es": "El fotógrafo",
         "it": "Il fotografo",
+        "pl": "Fotograf",
     },
     "maker": {
         "zh": "制作者",
@@ -100,6 +104,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Der Hersteller",
         "es": "El creador",
         "it": "Il creatore",
+        "pl": "Twórca",
     },
     "material-technique": {
         "zh": "材质工艺",
@@ -108,6 +113,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Material und Technik",
         "es": "Material y técnica",
         "it": "Materiali e tecnica",
+        "pl": "Materiały i technika",
     },
     "background": {
         "zh": "创作背景",
@@ -116,6 +122,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Hintergrund",
         "es": "Contexto",
         "it": "Contesto",
+        "pl": "Kontekst",
     },
     "context": {
         "zh": "拍摄背景",
@@ -124,6 +131,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Kontext",
         "es": "Contexto",
         "it": "Contesto",
+        "pl": "Kontekst",
     },
     "use": {
         "zh": "用途",
@@ -132,6 +140,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Verwendung",
         "es": "Uso",
         "it": "Uso",
+        "pl": "Zastosowanie",
     },
     "analysis": {
         "zh": "艺术分析",
@@ -140,6 +149,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Analyse",
         "es": "Análisis",
         "it": "Analisi",
+        "pl": "Analiza",
     },
     "significance": {
         "zh": "文化意义",
@@ -148,6 +158,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Bedeutung",
         "es": "Significado",
         "it": "Significato",
+        "pl": "Znaczenie",
     },
     "facts": {
         "zh": "趣闻轶事",
@@ -156,6 +167,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
         "de": "Fakten",
         "es": "Datos",
         "it": "Curiosità",
+        "pl": "Ciekawostki",
     },
 }
 SECTION_SORT = {
