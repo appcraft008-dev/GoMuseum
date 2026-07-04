@@ -1066,6 +1066,42 @@ abstract class AppLocalizations {
   /// **'Aim at the label text, fill the frame'**
   String get recViewfinderLabelHint;
 
+  /// No description provided for @camRecognizeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Identify Artwork'**
+  String get camRecognizeTitle;
+
+  /// No description provided for @camViewfinderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit the whole artwork in the frame'**
+  String get camViewfinderHint;
+
+  /// No description provided for @camRecentGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get camRecentGallery;
+
+  /// No description provided for @camAllAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'All albums'**
+  String get camAllAlbums;
+
+  /// No description provided for @camGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get camGallery;
+
+  /// No description provided for @camSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get camSearch;
+
   /// No description provided for @camNoCamera.
   ///
   /// In en, this message translates to:

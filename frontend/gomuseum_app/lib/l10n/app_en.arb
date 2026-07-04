@@ -181,6 +181,13 @@
   "recShootLabelBtn": "Photograph the wall label",
   "recShootLabelHint": "Museum labels show the title and artist — snap it and we can identify the work",
   "recViewfinderLabelHint": "Aim at the label text, fill the frame",
+
+  "camRecognizeTitle": "Identify Artwork",
+  "camViewfinderHint": "Fit the whole artwork in the frame",
+  "camRecentGallery": "Recent",
+  "camAllAlbums": "All albums",
+  "camGallery": "Gallery",
+  "camSearch": "Search",
   "camNoCamera": "No available camera found",
   "camInitFailed": "Camera initialization failed",
   "camTagSearch": "Label lookup",

@@ -530,6 +530,24 @@ class AppLocalizationsEs extends AppLocalizations {
       'Apunta al texto de la cartela, llena el encuadre';
 
   @override
+  String get camRecognizeTitle => 'Identificar obra';
+
+  @override
+  String get camViewfinderHint => 'Encuadra toda la obra';
+
+  @override
+  String get camRecentGallery => 'Recientes';
+
+  @override
+  String get camAllAlbums => 'Todos los álbumes';
+
+  @override
+  String get camGallery => 'Galería';
+
+  @override
+  String get camSearch => 'Buscar';
+
+  @override
   String get camNoCamera => 'No se encontró ninguna cámara';
 
   @override

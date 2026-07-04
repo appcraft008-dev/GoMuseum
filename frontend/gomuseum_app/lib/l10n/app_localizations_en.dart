@@ -522,6 +522,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recViewfinderLabelHint => 'Aim at the label text, fill the frame';
 
   @override
+  String get camRecognizeTitle => 'Identify Artwork';
+
+  @override
+  String get camViewfinderHint => 'Fit the whole artwork in the frame';
+
+  @override
+  String get camRecentGallery => 'Recent';
+
+  @override
+  String get camAllAlbums => 'All albums';
+
+  @override
+  String get camGallery => 'Gallery';
+
+  @override
+  String get camSearch => 'Search';
+
+  @override
   String get camNoCamera => 'No available camera found';
 
   @override

@@ -169,6 +169,13 @@
   "recShootLabelBtn": "Photographier le cartel",
   "recShootLabelHint": "Le cartel du musée indique le titre et l'artiste — photographiez-le et nous pourrons identifier l'œuvre",
   "recViewfinderLabelHint": "Visez le texte du cartel, remplissez le cadre",
+
+  "camRecognizeTitle": "Identifier l'œuvre",
+  "camViewfinderHint": "Cadrez toute l'œuvre",
+  "camRecentGallery": "Récents",
+  "camAllAlbums": "Tous les albums",
+  "camGallery": "Galerie",
+  "camSearch": "Recherche",
   "camNoCamera": "Aucune caméra disponible",
   "camInitFailed": "Échec de l'initialisation de la caméra",
   "camTagSearch": "Recherche par cartel",

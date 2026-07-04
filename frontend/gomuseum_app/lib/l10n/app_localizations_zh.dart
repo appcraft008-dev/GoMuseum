@@ -513,6 +513,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recViewfinderLabelHint => '对准标签文字，占满画面';
 
   @override
+  String get camRecognizeTitle => '识别画作';
+
+  @override
+  String get camViewfinderHint => '将画作完整置于取景框内';
+
+  @override
+  String get camRecentGallery => '最近图库';
+
+  @override
+  String get camAllAlbums => '全部相册';
+
+  @override
+  String get camGallery => '图库';
+
+  @override
+  String get camSearch => '搜索';
+
+  @override
   String get camNoCamera => '未找到可用相机';
 
   @override
