@@ -204,3 +204,101 @@ def test_artist_name_does_not_hijack_portrait_titles(session):
     assert out["outcome"] in ("match", "candidates")
     top_qid = (out["match"] or out["candidates"][0])["qid"]
     assert top_qid == "Q683274"  # 舞会,不是雷诺阿肖像
+
+
+def _benefits_tables(session):
+    from app.models.user_benefits import UserBenefits
+
+    UserBenefits.__table__.create(bind=session.get_bind(), checkfirst=True)
+    return UserBenefits
+
+
+def test_billing_match_consumes_one(session):
+    # 计费规则(用户批准):match/candidates 扣1;unrecognized 不扣;缓存命中不扣;超额 402
+    from app.services.recognition.service import recognize_billed
+
+    UB = _benefits_tables(session)
+    out = recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id=None,
+        device_id="dev1",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
+        ),
+    )
+    assert out["outcome"] == "match"
+    b = session.query(UB).one()
+    assert b.recognition_quota == 9  # 10 - 1
+
+
+def test_billing_unrecognized_free(session):
+    from app.services.recognition.service import recognize_billed
+
+    UB = _benefits_tables(session)
+    out = recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id=None,
+        device_id="dev1",
+        identify_fn=_vision([]),
+    )
+    assert out["outcome"] == "unrecognized"
+    assert session.query(UB).one().recognition_quota == 10  # 不扣
+
+
+def test_billing_quota_exhausted_raises_before_gpt(session):
+    import pytest as _pytest
+
+    from app.services.benefits_service import BenefitsService
+    from app.services.recognition.service import QuotaExceededError, recognize_billed
+
+    _benefits_tables(session)
+
+    def must_not_call(*a, **kw):
+        raise AssertionError("超额时不应调 GPT")
+
+    b = BenefitsService(session).get_or_create_benefits(None, "dev1")
+    b.recognition_quota = 0
+    session.commit()
+    with _pytest.raises(QuotaExceededError):
+        recognize_billed(
+            session,
+            "orsay",
+            _jpeg(),
+            user_id=None,
+            device_id="dev1",
+            identify_fn=must_not_call,
+        )
+
+
+def test_billing_cache_hit_free(session):
+    from app.services.recognition.service import recognize_billed
+
+    UB = _benefits_tables(session)
+
+    class _FakeRedis:
+        def __init__(self):
+            self.store = {}
+
+        def get(self, k):
+            return self.store.get(k)
+
+        def setex(self, k, ttl, v):
+            self.store[k] = v
+
+    r = _FakeRedis()
+    img = _jpeg()
+    kw = dict(
+        user_id=None,
+        device_id="dev1",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
+        ),
+        redis=r,
+    )
+    recognize_billed(session, "orsay", img, **kw)
+    recognize_billed(session, "orsay", img, **kw)  # 第二次走缓存
+    assert session.query(UB).one().recognition_quota == 9  # 只扣了一次
