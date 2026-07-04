@@ -109,20 +109,37 @@ SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
 """
 
 
+# zh 标签变体优先级:简体权威 > 大陆简体 > 笼统 zh(可能繁体;比没有强)
+_ZH_VARIANTS = ("zh-hans", "zh-cn", "zh")
+
+
 def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
-    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。"""
+    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
+    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。"""
     run_query = (
         run_query or _default_artist_query
     )  # ponytail: same generic SPARQL caller
-    langlist = ", ".join('"%s"' % x for x in langs)
+    query_langs = list(langs)
+    if "zh" in langs:
+        query_langs += [v for v in _ZH_VARIANTS if v not in query_langs]
+    langlist = ", ".join('"%s"' % x for x in query_langs)
     rows = run_query(_LABELS_QUERY.format(qid=qid, langs=langlist))
-    out = {}
+    raw: dict = {}
     for row in rows:
         lv = row.get("l") or {}
         lang = lv.get("xml:lang") or lv.get("lang")
         val = lv.get("value")
-        if lang in langs and val and lang not in out:
-            out[lang] = val
+        if lang and val and lang not in raw:
+            raw[lang] = val
+    out = {}
+    for lang in langs:
+        if lang == "zh":
+            for v in _ZH_VARIANTS:
+                if raw.get(v):
+                    out["zh"] = raw[v]
+                    break
+        elif raw.get(lang):
+            out[lang] = raw[lang]
     return out
 
 

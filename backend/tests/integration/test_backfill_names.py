@@ -389,3 +389,27 @@ def test_backfill_fills_artist_facts_i18n(session):
     assert art.nationality_i18n["en"] == "France"  # en 列作轴
     assert art.notable_works_i18n["zh"] == ["Olympia_zh"]
     assert art.notable_works_i18n["en"] == ["Olympia"]
+
+
+def test_backfill_refresh_langs_replaces_with_authoritative(session):
+    # 繁简修复:refresh 模式下,该语言有权威标签则覆盖存量(繁→简);无标签保留(翻译值不动)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {
+        "title_i18n": {"en": "The Wounded Man", "zh": "受傷的男人"}  # 繁体存量
+    }
+    session.commit()
+    o2 = session.query(MuseumObject).filter_by(qid="Q2").one()
+    # Q2 zh 是翻译兜底产物,Wikidata 无 zh 标签 → refresh 不应动它
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "zh"],
+        fetch_labels=_labels({"Q1": {"zh": "受伤的男人"}}),
+        fetch_creators=lambda qids: {},
+        refresh_langs=["zh"],
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes["title_i18n"]["zh"] == "受伤的男人"  # 权威简体覆盖繁体
+    o2 = session.query(MuseumObject).filter_by(qid="Q2").one()
+    assert o2.attributes["title_i18n"]["zh"] == "奥林匹亚"  # 无标签→保留原值
