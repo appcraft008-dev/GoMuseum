@@ -35,7 +35,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
     with WidgetsBindingObserver {
   CameraController? _controller;
   String? _cameraError;
-  bool _flashOn = false;
   XFile? _captured;
 
   /// 引导拍墙签模式：下一张照片以 `mode=label` 提交。
@@ -135,14 +134,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
-  }
-
-  Future<void> _toggleFlash() async {
-    final controller = _controller;
-    if (controller == null) return;
-    final next = !_flashOn;
-    await controller.setFlashMode(next ? FlashMode.torch : FlashMode.off);
-    setState(() => _flashOn = next);
   }
 
   Future<void> _shoot() async {
@@ -362,13 +353,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
                         weight: FontWeight.w700,
                         color: GmColors.scanInk),
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _roundButton(GmIcons.close, () => context.pop()),
-                      _roundButton(GmIcons.flash, _toggleFlash,
-                          active: _flashOn),
-                    ],
+                  // 闪光已移除：博物馆多禁闪光，且玻璃/画框眩光反伤识别
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _roundButton(GmIcons.close, () => context.pop()),
                   ),
                 ],
               ),
