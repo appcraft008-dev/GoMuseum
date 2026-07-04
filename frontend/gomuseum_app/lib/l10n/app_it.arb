@@ -169,6 +169,13 @@
   "recShootLabelBtn": "Fotografa il cartellino",
   "recShootLabelHint": "I cartellini del museo mostrano titolo e artista — fotografalo e potremo identificare l'opera",
   "recViewfinderLabelHint": "Inquadra il testo del cartellino, riempi lo schermo",
+
+  "camRecognizeTitle": "Identifica opera",
+  "camViewfinderHint": "Inquadra tutta l'opera",
+  "camRecentGallery": "Recenti",
+  "camAllAlbums": "Tutti gli album",
+  "camGallery": "Galleria",
+  "camSearch": "Cerca",
   "camNoCamera": "Nessuna fotocamera disponibile",
   "camInitFailed": "Inizializzazione della fotocamera non riuscita",
   "camTagSearch": "Ricerca per cartellino",

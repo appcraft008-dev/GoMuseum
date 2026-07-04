@@ -531,6 +531,24 @@ class AppLocalizationsDe extends AppLocalizations {
       'Auf den Schildtext zielen, Rahmen ausfüllen';
 
   @override
+  String get camRecognizeTitle => 'Werk erkennen';
+
+  @override
+  String get camViewfinderHint => 'Das ganze Werk in den Rahmen';
+
+  @override
+  String get camRecentGallery => 'Zuletzt';
+
+  @override
+  String get camAllAlbums => 'Alle Alben';
+
+  @override
+  String get camGallery => 'Galerie';
+
+  @override
+  String get camSearch => 'Suche';
+
+  @override
   String get camNoCamera => 'Keine Kamera verfügbar';
 
   @override

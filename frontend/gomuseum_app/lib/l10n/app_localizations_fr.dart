@@ -532,6 +532,24 @@ class AppLocalizationsFr extends AppLocalizations {
       'Visez le texte du cartel, remplissez le cadre';
 
   @override
+  String get camRecognizeTitle => 'Identifier l\'œuvre';
+
+  @override
+  String get camViewfinderHint => 'Cadrez toute l\'œuvre';
+
+  @override
+  String get camRecentGallery => 'Récents';
+
+  @override
+  String get camAllAlbums => 'Tous les albums';
+
+  @override
+  String get camGallery => 'Galerie';
+
+  @override
+  String get camSearch => 'Recherche';
+
+  @override
   String get camNoCamera => 'Aucune caméra disponible';
 
   @override

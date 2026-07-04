@@ -169,6 +169,13 @@
   "recShootLabelBtn": "Wandschild fotografieren",
   "recShootLabelHint": "Museumsschilder zeigen Titel und Künstler — fotografieren Sie es und wir erkennen das Werk",
   "recViewfinderLabelHint": "Auf den Schildtext zielen, Rahmen ausfüllen",
+
+  "camRecognizeTitle": "Werk erkennen",
+  "camViewfinderHint": "Das ganze Werk in den Rahmen",
+  "camRecentGallery": "Zuletzt",
+  "camAllAlbums": "Alle Alben",
+  "camGallery": "Galerie",
+  "camSearch": "Suche",
   "camNoCamera": "Keine Kamera verfügbar",
   "camInitFailed": "Kamera-Initialisierung fehlgeschlagen",
   "camTagSearch": "Schildsuche",

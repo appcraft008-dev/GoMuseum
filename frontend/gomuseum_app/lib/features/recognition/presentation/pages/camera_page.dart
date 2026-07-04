@@ -5,12 +5,14 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
@@ -39,6 +41,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
   /// 引导拍墙签模式：下一张照片以 `mode=label` 提交。
   bool _labelMode = false;
 
+  /// 「最近图库」缩略图条的最近图片资产（相册权限拿到后填充）。
+  List<AssetEntity> _recentAssets = const [];
+
   // ponytail: 现阶段固定 orsay;接入馆上下文后从当前馆 slug 取。
   static const String _slug = 'orsay';
 
@@ -47,10 +52,33 @@ class _CameraPageState extends ConsumerState<CameraPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initCamera();
+    _loadRecentAssets();
     // 进入识别页时重置上一次识别状态
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(recognitionNotifierProvider.notifier).resetState();
     });
+  }
+
+  /// 拉「最近图库」缩略图（相册未授权/无图 → 静默留空，仅不显示缩略图条）。
+  Future<void> _loadRecentAssets() async {
+    final ps = await PhotoManager.requestPermissionExtend();
+    if (!ps.hasAccess) return;
+    final paths = await PhotoManager.getAssetPathList(
+        type: RequestType.image, onlyAll: true);
+    if (paths.isEmpty) return;
+    final assets = await paths.first.getAssetListPaged(page: 0, size: 8);
+    if (mounted) setState(() => _recentAssets = assets);
+  }
+
+  /// 点缩略图 → 用该图识别（走同一路由）。
+  Future<void> _recognizeAsset(AssetEntity asset) async {
+    if (!ref.read(benefitsStateProvider.notifier).hasRecognitionAccess) {
+      _showQuotaExhaustedSheet();
+      return;
+    }
+    final file = await asset.file;
+    if (file == null || !mounted) return;
+    await _recognizeImage(XFile(file.path));
   }
 
   Future<void> _initCamera() async {
@@ -274,7 +302,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
       body: Column(
         children: [
           Expanded(child: _viewfinder(state)),
-          if (state is! RecognitionInitial) _bottomPanel(state),
+          if (state is RecognitionInitial)
+            _captureBar()
+          else
+            _bottomPanel(state),
         ],
       ),
     );
@@ -304,113 +335,178 @@ class _CameraPageState extends ConsumerState<CameraPage>
           ),
         // 轻微暗角
         const ColoredBox(color: Color(0x2E171310)),
-        // 顶部：关闭 / 闪光
+        // 顶部：关闭 / 标题「识别画作」/ 闪光
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                _roundButton(GmIcons.close, () => context.pop()),
-                _roundButton(GmIcons.flash, _toggleFlash, active: _flashOn),
+                Text(
+                  AppLocalizations.of(context)!.camRecognizeTitle,
+                  style: GmText.serif(
+                      size: 15.5,
+                      weight: FontWeight.w700,
+                      color: GmColors.scanInk),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _roundButton(GmIcons.close, () => context.pop()),
+                    _roundButton(GmIcons.flash, _toggleFlash, active: _flashOn),
+                  ],
+                ),
               ],
             ),
           ),
         ),
         // 四角取景框
         ..._cornerBrackets(),
-        // 引导拍墙签模式提示
-        if (state is RecognitionInitial && _labelMode)
-          Positioned(
-            left: 24,
-            right: 24,
-            top: 76,
-            child: Center(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: const Color(0x8C171310),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  AppLocalizations.of(context)!.recViewfinderLabelHint,
-                  textAlign: TextAlign.center,
-                  style: GmText.sans(size: 12.5, color: GmColors.scanInk),
-                ),
+        // 取景框中央提示（拍签模式显拍签提示）
+        if (state is RecognitionInitial && _captured == null)
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0x8C171310),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                _labelMode
+                    ? AppLocalizations.of(context)!.recViewfinderLabelHint
+                    : AppLocalizations.of(context)!.camViewfinderHint,
+                textAlign: TextAlign.center,
+                style: GmText.sans(size: 12.5, color: GmColors.scanInk),
               ),
             ),
           ),
-        // 底部：快门 + 展签检索入口
-        if (state is RecognitionInitial)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 16,
-            child: Column(
-              children: [
+      ],
+    );
+  }
+
+  /// 拍摄栏（浅纸面板）：最近图库缩略图条 + 图库/快门/搜索。
+  Widget _captureBar() {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      color: gm.bg,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_recentAssets.isNotEmpty) ...[
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // 从图库上传
-                    _roundButton(GmIcons.photo, _pickFromGallery),
-                    const SizedBox(width: 36),
+                    Text(l10n.camRecentGallery,
+                        style: GmText.sans(
+                            size: 11, letterSpacing: 1, color: gm.sub)),
+                    const SizedBox(width: 10),
+                    const Expanded(child: GmHairline()),
+                    const SizedBox(width: 10),
                     GestureDetector(
-                      onTap: _shoot,
-                      child: Container(
-                        width: 68,
-                        height: 68,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          // 取景框快门使用固定浅色描边
-                          border: Border.all(color: GmColors.scanInk, width: 3),
-                        ),
-                        padding: const EdgeInsets.all(5),
-                        child: const DecoratedBox(
-                          decoration: BoxDecoration(
-                            // 取景框快门内圆使用固定浅色
-                            color: GmColors.scanInk,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
+                      onTap: _pickFromGallery,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(l10n.camAllAlbums,
+                            style: GmText.sans(size: 11, color: gm.accent)),
+                        const SizedBox(width: 3),
+                        GmIcon(GmIcons.arrowR, size: 12, color: gm.accent),
+                      ]),
                     ),
-                    const SizedBox(width: 36),
-                    // 占位：保持快门视觉居中
-                    const SizedBox(width: 38),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Center(
-                  child: GestureDetector(
-                    onTap: _showTagSearchSheet,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0x8C171310),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const GmIcon(GmIcons.search,
-                              size: 15, color: GmColors.scanInk),
-                          const SizedBox(width: 7),
-                          Text(
-                            AppLocalizations.of(context)!.camCantPhoto,
-                            style: GmText.sans(
-                                size: 12.5, color: GmColors.scanInk),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 9),
+                SizedBox(height: 58, child: _recentStrip(gm)),
+                const SizedBox(height: 12),
               ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _labeledButton(
+                      GmIcons.photo, l10n.camGallery, _pickFromGallery),
+                  _shutterButton(gm),
+                  _labeledButton(
+                      GmIcons.search, l10n.camSearch, _showTagSearchSheet),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _recentStrip(GmPalette gm) {
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: _recentAssets.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 8),
+      itemBuilder: (_, i) {
+        final asset = _recentAssets[i];
+        return GestureDetector(
+          onTap: () => _recognizeAsset(asset),
+          child: SizedBox(
+            width: 58,
+            height: 58,
+            child: FutureBuilder<Uint8List?>(
+              future:
+                  asset.thumbnailDataWithSize(const ThumbnailSize.square(200)),
+              builder: (_, snap) {
+                final bytes = snap.data;
+                if (bytes == null) return ColoredBox(color: gm.chipBg);
+                return Image.memory(bytes, fit: BoxFit.cover);
+              },
             ),
           ),
-      ],
+        );
+      },
+    );
+  }
+
+  /// 图库/搜索：圆角方形图标 + 文字标签。
+  Widget _labeledButton(GmIcons icon, String label, VoidCallback onTap) {
+    final gm = context.gm;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: gm.surface,
+              border: Border.all(color: gm.line),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: GmIcon(icon, size: 20, color: gm.ink),
+          ),
+          const SizedBox(height: 5),
+          Text(label, style: GmText.sans(size: 11, color: gm.sub)),
+        ],
+      ),
+    );
+  }
+
+  /// 快门：赤陶实心圆 + 相机图标。
+  Widget _shutterButton(GmPalette gm) {
+    return GestureDetector(
+      onTap: _shoot,
+      child: Container(
+        width: 66,
+        height: 66,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: gm.ctaBg),
+        alignment: Alignment.center,
+        child: GmIcon(GmIcons.camera, size: 26, color: gm.ctaInk),
+      ),
     );
   }
 

@@ -526,6 +526,24 @@ class AppLocalizationsIt extends AppLocalizations {
       'Inquadra il testo del cartellino, riempi lo schermo';
 
   @override
+  String get camRecognizeTitle => 'Identifica opera';
+
+  @override
+  String get camViewfinderHint => 'Inquadra tutta l\'opera';
+
+  @override
+  String get camRecentGallery => 'Recenti';
+
+  @override
+  String get camAllAlbums => 'Tutti gli album';
+
+  @override
+  String get camGallery => 'Galleria';
+
+  @override
+  String get camSearch => 'Cerca';
+
+  @override
   String get camNoCamera => 'Nessuna fotocamera disponibile';
 
   @override
