@@ -280,3 +280,20 @@ def test_maybe_trigger_no_lazy_images_when_materialized(session):
         language="zh",
     )
     assert scheduled == []
+
+
+def test_lock_active_semantics(session):
+    from app.services.enrichment.lazy import lock_active
+
+    o = _obj(session)
+    assert lock_active(o) is False  # 无锁
+    try_acquire_lock(session, o)
+    assert lock_active(o) is True  # 活锁=生成中
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_lock_at": (
+            datetime.now(timezone.utc) - timedelta(minutes=11)
+        ).isoformat(),
+    }
+    session.commit()
+    assert lock_active(o) is False  # 过期锁=已死,不算生成中
