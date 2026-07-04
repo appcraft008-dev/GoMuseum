@@ -201,4 +201,33 @@ def test_fetch_labels_zh_falls_back_when_no_hans():
 
     rows = [{"l": {"value": "馬奈", "xml:lang": "zh"}}]
     out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
-    assert out["zh"] == "馬奈"  # 没 hans 时保留 zh(繁体也比没有强)
+    assert out["zh"] == "马奈"  # 没 hans 时取 zh 并 t2s 转简
+
+
+def test_zh_label_converted_to_simplified_when_only_traditional():
+    # 根因:马奈/高更等在 Wikidata 只有繁体 zh 标签(无 zh-hans)→ OpenCC t2s 确定性转换
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}}]
+    out = fetch_wikidata_labels("Q40599", ["zh"], run_query=lambda s: rows)
+    assert out["zh"] == "爱德华·马奈"  # 繁→简
+
+
+def test_zh_hans_label_untouched():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "克劳德·莫奈", "xml:lang": "zh-hans"}}]
+    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    assert out["zh"] == "克劳德·莫奈"
+
+
+def test_artist_i18n_facts_zh_converted():
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    rows = [
+        {"natLabel": {"value": "法國", "xml:lang": "zh"}},
+        {"workLabel": {"value": "奧林匹亞", "xml:lang": "zh"}},
+    ]
+    out = fetch_artist_i18n_facts("Q40599", ["zh"], run_query=lambda s: rows)
+    assert out["nationality_i18n"]["zh"] == "法国"
+    assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
