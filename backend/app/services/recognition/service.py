@@ -94,7 +94,9 @@ def recognize(
         try:
             hit = redis.get(ckey)
             if hit:
-                return json.loads(hit)
+                cached_out = json.loads(hit)
+                cached_out["_billed"] = True  # 缓存命中:计费层据此不扣次
+                return cached_out
         except Exception:
             pass  # 缓存不可用不阻断识别
 
@@ -161,4 +163,51 @@ def recognize(
             redis.setex(ckey, ttl, json.dumps(out, ensure_ascii=False))
         except Exception:
             pass
+    return out
+
+
+class QuotaExceededError(Exception):
+    """识别配额用尽(端点映射 402;缓存命中也拦——付费墙语义)。"""
+
+
+def recognize_billed(
+    db,
+    slug: str,
+    image_bytes: bytes,
+    *,
+    user_id,
+    device_id,
+    language: str = "zh",
+    mode: str = "artwork",
+    identify_fn=None,
+    redis=None,
+) -> dict | None:
+    """带配额的识别(计费规则,用户 2026-07-04 批准):
+    match/candidates 扣 1;unrecognized 不扣(不为失败付费);缓存命中不扣(不重复扣);
+    配额用尽 → QuotaExceededError(先于 GPT 调用,不烧钱)。"""
+    from app.services.benefits_service import BenefitsService
+
+    benefits = BenefitsService(db)
+    access = benefits.check_access(user_id, device_id)
+    if not access.get("has_access"):
+        raise QuotaExceededError()
+    out = recognize(
+        db,
+        slug,
+        image_bytes,
+        language=language,
+        mode=mode,
+        identify_fn=identify_fn,
+        redis=redis,
+    )
+    if out is not None and out.get("outcome") in ("match", "candidates"):
+        cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
+        if not cached:
+            try:
+                benefits.consume_recognition(user_id, device_id)
+            except Exception:
+                logger.exception("consume_recognition failed")
+    else:
+        if out is not None:
+            out.pop("_billed", None)
     return out
