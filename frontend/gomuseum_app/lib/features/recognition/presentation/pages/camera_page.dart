@@ -64,7 +64,15 @@ class _CameraPageState extends ConsumerState<CameraPage>
     final ps = await PhotoManager.requestPermissionExtend();
     if (!ps.hasAccess) return;
     final paths = await PhotoManager.getAssetPathList(
-        type: RequestType.image, onlyAll: true);
+      type: RequestType.image,
+      onlyAll: true,
+      // 按拍摄时间降序 → 最近的排最前。
+      filterOption: FilterOptionGroup(
+        orders: [
+          const OrderOption(type: OrderOptionType.createDate, asc: false),
+        ],
+      ),
+    );
     if (paths.isEmpty) return;
     final assets = await paths.first.getAssetListPaged(page: 0, size: 8);
     if (mounted) setState(() => _recentAssets = assets);
@@ -335,28 +343,35 @@ class _CameraPageState extends ConsumerState<CameraPage>
           ),
         // 轻微暗角
         const ColoredBox(color: Color(0x2E171310)),
-        // 顶部：关闭 / 标题「识别画作」/ 闪光
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.camRecognizeTitle,
-                  style: GmText.serif(
-                      size: 15.5,
-                      weight: FontWeight.w700,
-                      color: GmColors.scanInk),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _roundButton(GmIcons.close, () => context.pop()),
-                    _roundButton(GmIcons.flash, _toggleFlash, active: _flashOn),
-                  ],
-                ),
-              ],
+        // 顶部：关闭 / 标题「识别画作」/ 闪光（钉顶部，避免被 StackFit.expand 拉满居中）
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.camRecognizeTitle,
+                    style: GmText.serif(
+                        size: 15.5,
+                        weight: FontWeight.w700,
+                        color: GmColors.scanInk),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _roundButton(GmIcons.close, () => context.pop()),
+                      _roundButton(GmIcons.flash, _toggleFlash,
+                          active: _flashOn),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
