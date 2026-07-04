@@ -297,3 +297,50 @@ def test_lock_active_semantics(session):
     }
     session.commit()
     assert lock_active(o) is False  # 过期锁=已死,不算生成中
+
+
+def test_lazy_translate_not_retriggered_when_gated(session):
+    # 死循环修复:某语言已尝试翻译但全被闸挡(needs_review)→ 不再重触发(防无限"生成中")
+    from app.models.content import ObjectContentSection
+
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    _publish(session, "Q1", "en")  # en 轴心
+    # zh 已试过:有 needs_review 段(有正文但未发布)
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="guide",
+            body="翻译含缺陷 severed head",
+            status="needs_review",
+        )
+    )
+    session.commit()
+    scheduled = []
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(a),
+        environment="staging",
+        language="zh",
+    )
+    assert scheduled == []  # 已尝试过,不重触发
+
+
+def test_lazy_translate_still_fires_when_no_sections(session):
+    # 正常场景不受影响:该语言完全无段落 → 照常触发懒翻译
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    _publish(session, "Q1", "en")
+    scheduled = []
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append((fn.__name__, a)),
+        environment="staging",
+        language="zh",
+    )
+    assert scheduled == [("run_lazy_translation", ("Q1", "zh"))]
