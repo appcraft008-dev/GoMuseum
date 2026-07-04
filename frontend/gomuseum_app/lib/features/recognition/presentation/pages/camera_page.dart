@@ -10,6 +10,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
@@ -111,15 +112,29 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _shoot() async {
     final controller = _controller;
     if (controller == null || controller.value.isTakingPicture) return;
-
-    final benefits = ref.read(benefitsStateProvider.notifier);
-    if (!benefits.hasRecognitionAccess) {
+    if (!ref.read(benefitsStateProvider.notifier).hasRecognitionAccess) {
       _showQuotaExhaustedSheet();
       return;
     }
-
     final shot = await controller.takePicture();
+    await _recognizeImage(shot);
+  }
+
+  /// 从图库选图上传识别（无相机拍摄，走同一识别路由）。
+  Future<void> _pickFromGallery() async {
+    if (!ref.read(benefitsStateProvider.notifier).hasRecognitionAccess) {
+      _showQuotaExhaustedSheet();
+      return;
+    }
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null || !mounted) return;
+    await _recognizeImage(picked);
+  }
+
+  /// 拍摄/选图共用：识别 + 三档路由 + 命中扣额度。
+  Future<void> _recognizeImage(XFile shot) async {
     setState(() => _captured = shot);
+    final benefits = ref.read(benefitsStateProvider.notifier);
     final lang = ref.read(languageProvider).languageCode;
     final mode = _labelMode ? 'label' : 'artwork';
     await ref
@@ -334,25 +349,36 @@ class _CameraPageState extends ConsumerState<CameraPage>
             bottom: 16,
             child: Column(
               children: [
-                GestureDetector(
-                  onTap: _shoot,
-                  child: Container(
-                    width: 68,
-                    height: 68,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      // 取景框快门使用固定浅色描边
-                      border: Border.all(color: GmColors.scanInk, width: 3),
-                    ),
-                    padding: const EdgeInsets.all(5),
-                    child: const DecoratedBox(
-                      decoration: BoxDecoration(
-                        // 取景框快门内圆使用固定浅色
-                        color: GmColors.scanInk,
-                        shape: BoxShape.circle,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 从图库上传
+                    _roundButton(GmIcons.photo, _pickFromGallery),
+                    const SizedBox(width: 36),
+                    GestureDetector(
+                      onTap: _shoot,
+                      child: Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          // 取景框快门使用固定浅色描边
+                          border: Border.all(color: GmColors.scanInk, width: 3),
+                        ),
+                        padding: const EdgeInsets.all(5),
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(
+                            // 取景框快门内圆使用固定浅色
+                            color: GmColors.scanInk,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 36),
+                    // 占位：保持快门视觉居中
+                    const SizedBox(width: 38),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 Center(
