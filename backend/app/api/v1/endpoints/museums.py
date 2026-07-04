@@ -36,13 +36,15 @@ def object_content(
     language: str = "zh",
     db: Session = Depends(get_db),
 ) -> dict:
-    """展品讲解（按 tab 分节返回）。stub 首次访问触发懒生成（后台,契约§路线图3c）"""
-    data = get_object_content(db, slug, qid, language)
-    if data is None:
-        raise HTTPException(status_code=404, detail=f"object not found: {qid}")
+    """展品讲解（按 tab 分节返回）。stub 首次访问触发懒生成（后台,契约§路线图3c）。
+    ⚠️ 顺序:先 maybe_trigger 上锁、再读内容——否则首次触发的那次请求会返回
+    generating=false（锁尚未落库）,前端渲染"待完善"完整页且不轮询,永不刷新。"""
     from app.services.enrichment.lazy import maybe_trigger
 
     maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
+    data = get_object_content(db, slug, qid, language)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"object not found: {qid}")
     return data
 
 
