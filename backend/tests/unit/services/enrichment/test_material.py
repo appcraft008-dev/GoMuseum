@@ -180,3 +180,25 @@ def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
     out = fetch_artist_i18n_facts("Q296", ["zh", "en"], run_query=lambda s: rows)
     assert "zh" not in out["nationality_i18n"]
     assert out["notable_works_i18n"]["en"] == ["Olympia"]
+
+
+def test_fetch_labels_prefers_zh_hans_over_traditional():
+    # 繁简混杂尾巴:Wikidata zh 标签变体不定(愛德華·馬奈)→ zh-hans > zh-cn > zh
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [
+        {"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}},
+        {"l": {"value": "爱德华·马奈", "xml:lang": "zh-hans"}},
+        {"l": {"value": "Édouard Manet", "xml:lang": "fr"}},
+    ]
+    out = fetch_wikidata_labels("Q296", ["zh", "fr"], run_query=lambda s: rows)
+    assert out["zh"] == "爱德华·马奈"  # hans 优先于繁体 zh
+    assert out["fr"] == "Édouard Manet"
+
+
+def test_fetch_labels_zh_falls_back_when_no_hans():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "馬奈", "xml:lang": "zh"}}]
+    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    assert out["zh"] == "馬奈"  # 没 hans 时保留 zh(繁体也比没有强)

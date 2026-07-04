@@ -238,6 +238,7 @@ def backfill_display_names(
     fetch_labels=None,
     fetch_creators=None,
     fetch_artist_facts_i18n=None,
+    refresh_langs=None,
 ) -> dict:
     """铺目录后回填显示名:title_i18n + artist_qid + Artist.name_i18n(名字行,bio 留给 generate)。
     幂等:已齐语种的对象/作者跳过。契约:stub 一进目录就该有完整多语显示名。"""
@@ -267,10 +268,17 @@ def backfill_display_names(
             if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
                 attrs = {**attrs, "title_i18n": ti}
                 o.attributes = attrs
-            if any(not ti.get(lang) for lang in langs):
-                ti = _fill_i18n(
-                    ti, o.title_en, fetch_labels(o.qid, langs), langs, translator
-                )
+            need_fill = any(not ti.get(lang) for lang in langs)
+            if need_fill or refresh_langs:
+                labels = fetch_labels(o.qid, langs)
+                # refresh:该语言有权威标签则覆盖存量(繁→简修复);无标签保留(翻译值不动)
+                for lang in refresh_langs or []:
+                    if labels.get(lang) and labels[lang] != ti.get(lang):
+                        ti = {**ti, lang: labels[lang]}
+                        attrs = {**attrs, "title_i18n": ti}
+                        o.attributes = attrs
+            if need_fill:
+                ti = _fill_i18n(ti, o.title_en, labels, langs, translator)
                 attrs = {**attrs, "title_i18n": ti}
                 o.attributes = attrs
                 if ti.get("zh") and not o.title_zh:
@@ -302,10 +310,17 @@ def backfill_display_names(
             ni = _clean_i18n(art.name_i18n)
             if ni != (art.name_i18n or {}):
                 art.name_i18n = ni
-            if any(not ni.get(lang) for lang in langs):
-                art.name_i18n = _fill_i18n(
-                    ni, art.name_en, fetch_labels(aqid, langs), langs, translator
-                )
+            need_fill_a = any(not ni.get(lang) for lang in langs)
+            if need_fill_a or refresh_langs:
+                alabels = fetch_labels(aqid, langs)
+                for lang in refresh_langs or []:
+                    if alabels.get(lang) and alabels[lang] != ni.get(lang):
+                        ni = {**ni, lang: alabels[lang]}
+                        art.name_i18n = ni
+                        if lang == "zh":
+                            art.name_zh = alabels[lang]
+            if need_fill_a:
+                art.name_i18n = _fill_i18n(ni, art.name_en, alabels, langs, translator)
                 counts["artists"] += 1
             if not art.name_zh and (art.name_i18n or {}).get("zh"):
                 art.name_zh = art.name_i18n["zh"]

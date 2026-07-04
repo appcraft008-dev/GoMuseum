@@ -56,6 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     na = sub.add_parser("names")  # 显示名回填(铺目录后即跑;幂等可重跑)
     na.add_argument("--target", choices=["staging", "prod"], required=True)
     na.add_argument("--langs", default=None)
+    na.add_argument(
+        "--refresh-langs", default=None
+    )  # 强刷:该语言权威标签覆盖存量(繁简修复)
     tr = sub.add_parser("translate")  # 补语种:存量对象缺失语言从 en 段纯翻译(幂等)
     tr.add_argument("--target", choices=["staging", "prod"], required=True)
     tr.add_argument("--langs", required=True)  # 如 de,es,it
@@ -190,7 +193,9 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
     print(f"✓ generate 完成: {out}")
 
 
-def cmd_names(slug: str, langs: str | None, target: str) -> None:
+def cmd_names(
+    slug: str, langs: str | None, target: str, refresh_langs: str | None = None
+) -> None:
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
         raise SystemExit(
@@ -208,7 +213,13 @@ def cmd_names(slug: str, langs: str | None, target: str) -> None:
     db = SessionLocal()
     try:
         out = backfill_display_names(
-            db, slug, translator=ContentTranslator(default_complete), langs=target_langs
+            db,
+            slug,
+            translator=ContentTranslator(default_complete),
+            langs=target_langs,
+            refresh_langs=(
+                [x.strip() for x in refresh_langs.split(",")] if refresh_langs else None
+            ),
         )
     finally:
         db.close()
@@ -285,7 +296,7 @@ def main(argv=None) -> None:
     elif ns.command == "report":
         cmd_report(ns.slug, ns.langs)
     elif ns.command == "names":
-        cmd_names(ns.slug, ns.langs, ns.target)
+        cmd_names(ns.slug, ns.langs, ns.target, ns.refresh_langs)
     elif ns.command == "translate":
         cmd_translate(ns.slug, ns.langs, ns.limit, ns.target)
     elif ns.command == "images":
