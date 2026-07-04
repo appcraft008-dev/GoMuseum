@@ -494,3 +494,24 @@ def test_content_exposes_generating_flag(session):
     session.commit()
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert d["generating"] is True
+
+
+def test_default_guide_only_published_not_needs_review(session):
+    # 契约§4:default_guide 是"已发布正文"。needs_review(如缺陷译文)不得泄漏
+    from app.models.content import ObjectContentSection
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="guide",
+            body="缺陷译文 severed head",
+            status="needs_review",
+        )
+    )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["default_guide"] is None  # needs_review 不泄漏
+    assert d["status"] == "empty"  # 无已发布 guide 且无 tab → empty
