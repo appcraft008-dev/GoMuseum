@@ -212,6 +212,21 @@ def _has_published(db, object_id, lang) -> bool:
     )
 
 
+def _has_any_section(db, object_id, lang) -> bool:
+    """该语言有任何段落(含 needs_review)= 已尝试过翻译。用于防死循环重触发。"""
+    from app.models.content import ObjectContentSection
+
+    return (
+        db.query(ObjectContentSection)
+        .filter(
+            ObjectContentSection.object_id == object_id,
+            ObjectContentSection.language == lang,
+        )
+        .first()
+        is not None
+    )
+
+
 def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) -> None:
     """content 端点接线(拿到锁才调度,其余静默):
     - stub → 懒生成(完整生成,请求语言优先);
@@ -237,7 +252,7 @@ def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) ->
         o.content_status == "ready"
         and language
         and language != "en"
-        and not _has_published(db, o.id, language)
+        and not _has_any_section(db, o.id, language)
         and _has_published(db, o.id, "en")
     ):
         if try_acquire_lock(db, o, require_status=("ready",)):
