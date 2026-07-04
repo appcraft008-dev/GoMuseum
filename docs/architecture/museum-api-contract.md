@@ -20,7 +20,7 @@
 | `GET /museums/{slug}/objects?...` | 分页藏品列表(列表页) | `list_objects` |
 | `GET /museums/{slug}/objects/{qid}/content?language=` | 单件讲解(导览页) | `get_object_content` |
 
-`language` 取值:`DEFAULT_LANGUAGES` 全集 `en/fr/de/es/it/zh`(2026-07-03 起新生成内容六语全跑;早期存量 243 件讲解只有 zh/en/fr,de/es/it 视图对老件显"待完善",待"补语种"增量命令回补)。缺省 `zh`。显示名(title/artist)六语已全量回填。
+`language` 取值 = `DEFAULT_LANGUAGES`(lang_config.py,唯一真相源;当前 7 语 en/fr/de/es/it/zh/pl)。缺省 `zh`。**加语言=加配置**:新语言按§多语显示名的"加语言 checklist"落配置即全端点生效,**本行不再随之改动**(引用真相源,非硬列举)。新内容全语生成;老内容缺语走懒翻译/`translate` 补。
 
 ---
 

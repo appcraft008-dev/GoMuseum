@@ -136,3 +136,18 @@ def test_artist_not_in_per_work_sections():
 
     for codes in SECTIONS_BY_CATEGORY.values():
         assert "artist" not in codes  # 作者成一等实体,不再是每件的段
+
+
+def test_polish_added_to_all_static_label_tables():
+    # 加语言=加配置验证:pl 必须在所有静态标签表齐全(否则波兰视图混英文)
+    from app.services.enrichment.category_config import SECTION_LABELS
+    from app.services.enrichment.lang_config import DEFAULT_LANGUAGES, LANG_NAMES
+    from app.services.museum_repo import _ALL_LABEL, _CATEGORY_LABELS
+
+    assert "pl" in DEFAULT_LANGUAGES
+    assert LANG_NAMES.get("pl") == "Polish"
+    assert _ALL_LABEL.get("pl")
+    for code, m in _CATEGORY_LABELS.items():
+        assert m.get("pl"), f"分类 {code} 缺 pl"
+    for code, m in SECTION_LABELS.items():
+        assert m.get("pl"), f"段落 {code} 缺 pl"
