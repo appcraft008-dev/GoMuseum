@@ -9,7 +9,8 @@
 |---|---|
 | ① 分类 label 本地化 | ✅ **已修**——前端 curl staging 验证通过（it/de/zh 分类名已本地化，含「全部」） |
 | ② 老件补 de/es/it 讲解 | ✅ **取消**——前提消失，后端无需做 |
-| ③ 作者国籍/代表作本地化 | 🔄 **后端补数据中**（预计 1-2 小时，staging 补完后前端 curl 复验） |
+| ③ 作者国籍/代表作本地化 | ✅ **本地化已生效**（2026-07-04 curl 验证：`nationality`/`notable_works` 已中文）；⚠️ 但发现**繁简混杂**，见 ④ |
+| ④ zh 标签繁简规范化（新） | 🔴 **待后端**——③ 的中文标签简繁混排（Wikidata zh 标签混 Hans/Hant），app zh=简体，需统一简体 |
 
 ---
 
@@ -55,7 +56,7 @@
 
 ---
 
-## ③ 作者卡 `nationality` / `notable_works` 按语言本地化 — 🔄 后端补数据中
+## ③ 作者卡 `nationality` / `notable_works` 按语言本地化 — ✅ 本地化已生效（繁简待规范，见 ④）
 
 **现象**：作者卡的**国籍**与**代表作**在非英语界面仍显英文——`artist.nationality`=`"France"`（应「法国」/…）、`artist.notable_works`=`["Olympia", ...]`（应按语言权威标签，如「奥林匹亚」）。`artist.name`（已本地化）与生卒年不受影响。
 
@@ -64,6 +65,22 @@
 **要做**：`GET .../content?language={lang}` 返回的 `artist.nationality` 与 `artist.notable_works` 按 `language` 本地化——与标题 `name_i18n` 同机制（Wikidata 权威标签按语言取，缺则翻译回退）。`notable_works` 上游偶有瑕疵标签（截断等），能顺带清洗更好，非阻塞。
 
 **验收**：`GET .../content/{qid}?language=zh` → `artist.nationality` 中文、`notable_works` 中文标签；fr/de/es/it 各自语言；缺译回退英文、不返 null；前端零改动即生效。
+
+---
+
+## ④ zh 作者标签繁简混杂 → 统一简体（③ 收尾发现的新问题）
+
+**现象**：③ 上线后 `language=zh` 的作者标签**简繁混排**。实测 `Q3358957`（高更）：
+- `nationality`: `法國`（**繁体**，应「法国」）
+- `notable_works`: `绿色的基督`(简) / `你何時結婚？`(繁) / `黄色的基督`(简) / `死亡的幽靈在注視`(繁) / `我们从何处来…`(简)
+
+**根因**：Wikidata 的 `zh` 标签本身混 `zh-Hans`(简) 与 `zh-Hant`(繁)，后端取 `zh` 未区分/规范。
+
+**影响**：App 的 zh = **简体**（`app_zh.arb` 全简体），显繁体标签突兀、不一致。
+
+**要做**：zh 作者标签（`nationality`/`notable_works`，以及若同源的其它 zh 文本）统一到**简体**——优先取 `zh-Hans`/`zh-cn` 标签；无则对 `zh-Hant` 做繁→简转换（如 OpenCC）。缺则回退英文。
+
+**验收**：`GET .../content/{qid}?language=zh` 的作者标签全简体（如「法国」「你何时结婚？」）。
 
 ---
 
