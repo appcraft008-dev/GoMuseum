@@ -112,6 +112,19 @@ SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
 # zh 标签变体优先级:简体权威 > 大陆简体 > 笼统 zh(可能繁体;比没有强)
 _ZH_VARIANTS = ("zh-hans", "zh-cn", "zh")
 
+_t2s = None
+
+
+def to_simplified(s: str) -> str:
+    """繁→简(OpenCC 确定性字符转换;马奈/高更等 Wikidata 只有繁体 zh 标签)。
+    不用 LLM——人名转换必须精确对应,不能自由发挥。"""
+    global _t2s
+    if _t2s is None:
+        from opencc import OpenCC
+
+        _t2s = OpenCC("t2s")
+    return _t2s.convert(s or "")
+
 
 def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
     """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
@@ -136,7 +149,8 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
         if lang == "zh":
             for v in _ZH_VARIANTS:
                 if raw.get(v):
-                    out["zh"] = raw[v]
+                    # 取自笼统 zh 变体的可能是繁体 → t2s;hans/cn 转换是无害幂等
+                    out["zh"] = to_simplified(raw[v])
                     break
         elif raw.get(lang):
             out[lang] = raw[lang]
@@ -198,8 +212,10 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
         nlang, nv = nl.get("xml:lang") or nl.get("lang"), nl.get("value")
         wlang, wv = wl.get("xml:lang") or wl.get("lang"), wl.get("value")
         if nv and nlang in langs and not _is_raw_qid(nv) and nlang not in nat_i18n:
-            nat_i18n[nlang] = nv
+            nat_i18n[nlang] = to_simplified(nv) if nlang == "zh" else nv
         if wv and wlang in langs and not _is_raw_qid(wv):
+            if wlang == "zh":
+                wv = to_simplified(wv)
             works_i18n.setdefault(wlang, [])
             if wv not in works_i18n[wlang]:
                 works_i18n[wlang].append(wv)
