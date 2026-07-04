@@ -18,18 +18,24 @@ _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
 _SEM = threading.Semaphore(2)
 
 
+def lock_active(obj: MuseumObject) -> bool:
+    """活锁 = 正在懒生成/懒翻译(端点 generating 字段的信号源;过期/坏时间戳=死锁不算)。"""
+    at = (obj.attributes or {}).get("lazy_lock_at")
+    if not at:
+        return False
+    try:
+        return datetime.now(timezone.utc) - datetime.fromisoformat(at) < _LOCK_TTL
+    except ValueError:
+        return False  # 坏时间戳当过期
+
+
 def try_acquire_lock(db, obj: MuseumObject, require_status=("stub",)) -> bool:
     """状态匹配且无活锁 → 落锁返回 True。乐观读写:竞态窗口极小,撞了最多浪费一次生成费。
     stub=懒生成入口;ready=懒翻译入口(该语言缺)。"""
     if obj.content_status not in require_status:
         return False
-    at = (obj.attributes or {}).get("lazy_lock_at")
-    if at:
-        try:
-            if datetime.now(timezone.utc) - datetime.fromisoformat(at) < _LOCK_TTL:
-                return False
-        except ValueError:
-            pass  # 坏时间戳当过期
+    if lock_active(obj):
+        return False
     obj.attributes = {
         **(obj.attributes or {}),
         "lazy_lock_at": datetime.now(timezone.utc).isoformat(),

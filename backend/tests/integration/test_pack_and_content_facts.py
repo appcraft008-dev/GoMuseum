@@ -458,3 +458,39 @@ def test_artist_card_nationality_and_works_localized(session):
     assert de["notable_works"] == ["Olympia", "The Balcony"]  # 缺 de 列表 → en 兜底
     it = get_object_content(session, "orsay", "Q1", "it")["artist"]
     assert it["nationality"] == "France"  # 缺 it → en 列兜底
+
+
+def test_content_exposes_generating_flag(session):
+    # 加法字段:前端三态判断(生成中/资料不足/待完善可重试)的精确信号
+    from datetime import datetime, timezone
+
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is False
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_lock_at": datetime.now(timezone.utc).isoformat(),
+    }
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is True
+
+
+def test_content_exposes_generating_flag(session):
+    # 加法字段:前端三态判断(生成中/资料不足/待完善可重试)的精确信号
+    from datetime import datetime, timezone
+
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is False
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_lock_at": datetime.now(timezone.utc).isoformat(),
+    }
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is True

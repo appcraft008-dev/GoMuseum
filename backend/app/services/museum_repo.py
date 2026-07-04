@@ -407,11 +407,15 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     eff_status = obj.content_status
     if not (guide_body and guide_body.strip()) and not tabs:
         eff_status = "empty"
+    from app.services.enrichment.lazy import lock_active
+
     return {
         "qid": qid,
         "category": obj.category,
         "language": language,
         "status": eff_status,
+        # 加法字段(2026-07-04):前端三态精确信号——true=懒生成/懒翻译进行中
+        "generating": lock_active(obj),
         "title": _resolve_name(
             attrs.get("title_i18n"),
             language,
