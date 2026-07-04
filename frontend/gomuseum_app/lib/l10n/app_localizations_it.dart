@@ -544,6 +544,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get camSearch => 'Cerca';
 
   @override
+  String get guideUnavailable =>
+      'Materiale insufficiente per una guida su quest\'opera';
+
+  @override
+  String get guideNotGenerated => 'Guida non ancora generata';
+
+  @override
   String get camNoCamera => 'Nessuna fotocamera disponibile';
 
   @override

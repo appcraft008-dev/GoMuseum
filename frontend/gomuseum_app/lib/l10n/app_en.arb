@@ -188,6 +188,9 @@
   "camAllAlbums": "All albums",
   "camGallery": "Gallery",
   "camSearch": "Search",
+
+  "guideUnavailable": "This artwork has too little material for a guide",
+  "guideNotGenerated": "Guide not generated yet",
   "camNoCamera": "No available camera found",
   "camInitFailed": "Camera initialization failed",
   "camTagSearch": "Label lookup",

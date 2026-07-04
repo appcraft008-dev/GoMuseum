@@ -176,6 +176,9 @@
   "camAllAlbums": "Tous les albums",
   "camGallery": "Galerie",
   "camSearch": "Recherche",
+
+  "guideUnavailable": "Trop peu de matière pour un guide sur cette œuvre",
+  "guideNotGenerated": "Guide pas encore généré",
   "camNoCamera": "Aucune caméra disponible",
   "camInitFailed": "Échec de l'initialisation de la caméra",
   "camTagSearch": "Recherche par cartel",

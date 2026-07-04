@@ -176,6 +176,9 @@
   "camAllAlbums": "Tutti gli album",
   "camGallery": "Galleria",
   "camSearch": "Cerca",
+
+  "guideUnavailable": "Materiale insufficiente per una guida su quest'opera",
+  "guideNotGenerated": "Guida non ancora generata",
   "camNoCamera": "Nessuna fotocamera disponibile",
   "camInitFailed": "Inizializzazione della fotocamera non riuscita",
   "camTagSearch": "Ricerca per cartellino",
