@@ -1102,6 +1102,18 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get camSearch;
 
+  /// No description provided for @guideUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This artwork has too little material for a guide'**
+  String get guideUnavailable;
+
+  /// No description provided for @guideNotGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'Guide not generated yet'**
+  String get guideNotGenerated;
+
   /// No description provided for @camNoCamera.
   ///
   /// In en, this message translates to:

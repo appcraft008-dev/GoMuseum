@@ -540,6 +540,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get camSearch => 'Search';
 
   @override
+  String get guideUnavailable =>
+      'This artwork has too little material for a guide';
+
+  @override
+  String get guideNotGenerated => 'Guide not generated yet';
+
+  @override
   String get camNoCamera => 'No available camera found';
 
   @override

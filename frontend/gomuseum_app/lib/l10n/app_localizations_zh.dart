@@ -531,6 +531,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get camSearch => '搜索';
 
   @override
+  String get guideUnavailable => '该藏品资料不足，暂无讲解';
+
+  @override
+  String get guideNotGenerated => '讲解暂未生成';
+
+  @override
   String get camNoCamera => '未找到可用相机';
 
   @override

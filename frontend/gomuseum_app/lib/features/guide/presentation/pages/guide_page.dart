@@ -122,8 +122,9 @@ class _GuidePageState extends ConsumerState<GuidePage>
   /// 本次访问是否轮询过（=内容曾在生成中）。用于返回时刷新列表角标。
   bool _didPoll = false;
 
-  /// 20s×20 ≈ 6.7 分钟，覆盖 stub 全量生成（实测 6-8 分钟触发语言更快）。
-  static const int _maxPolls = 20;
+  /// 安全兜底硬顶：20s×45 = 15 分钟。正常以后端 `generating` 为准提前停；
+  /// 此上限仅防信号异常时无限轮询。
+  static const int _maxPolls = 45;
 
   // ── legacy recognition path
   final TtsService _legacyTts = TtsService();
@@ -354,15 +355,29 @@ class _GuidePageState extends ConsumerState<GuidePage>
             ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
       ),
       data: (content) {
-        // 未就绪（stub/generating/empty）→ 显「生成中」并轮询。
-        // stub 被访问即触发后端懒生成，故与 generating 同一 UX，不再显静态「待完善」。
-        if (content.status != ContentStatus.ready) {
+        // 三态：先看 generating（后端任务锁精确信号），再看 status。
+        // 1) 正在懒生成/懒翻译 → 「生成中」+ 轮询。
+        if (content.generating) {
           _startPolling(slug: slug, qid: qid);
           return _A5GeneratingScaffold(gm: gm, onBack: () => _goBack(context));
         }
         _stopPolling();
+        // 2) 非生成中且非 ready：区分「资料不足」与「暂未生成(可重试)」，不再骗着转圈。
+        if (content.status != ContentStatus.ready) {
+          if (content.status == ContentStatus.empty) {
+            return _A5UnavailableScaffold(
+                gm: gm, onBack: () => _goBack(context));
+          }
+          // stub 等：暂未生成 → 重试即重新拉 content（后端自动再触发懒生成）。
+          return _A5RetryScaffold(
+            gm: gm,
+            onBack: () => _goBack(context),
+            onRetry: () =>
+                ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
+          );
+        }
 
-        // Ready: full rendering（分层导览）
+        // 3) Ready: full rendering（分层导览）
         return Scaffold(
           backgroundColor: gm.bg,
           body: NestedScrollView(
@@ -853,6 +868,71 @@ class _A5ErrorScaffold extends StatelessWidget {
               child: Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text(AppLocalizations.of(context)!.loadFailed,
+                  style: GmText.serif(size: 15, weight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              GmTicketButton(
+                  label: AppLocalizations.of(context)!.retry,
+                  onTap: onRetry,
+                  height: 38),
+            ]),
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
+/// 资料不足（generating=false 且 status=empty）：诚实告知，不转圈、无重试。
+class _A5UnavailableScaffold extends StatelessWidget {
+  const _A5UnavailableScaffold({required this.gm, required this.onBack});
+  final dynamic gm;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.gm;
+    return Scaffold(
+      backgroundColor: palette.bg,
+      body: SafeArea(
+        child: Column(children: [
+          _SimpleTopBar(onBack: onBack),
+          Expanded(
+              child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                AppLocalizations.of(context)!.guideUnavailable,
+                textAlign: TextAlign.center,
+                style: GmText.sans(size: 14, color: palette.sub),
+              ),
+            ),
+          )),
+        ]),
+      ),
+    );
+  }
+}
+
+/// 暂未生成（generating=false 且 status=stub）：重试 = 重新拉 content 再触发懒生成。
+class _A5RetryScaffold extends StatelessWidget {
+  const _A5RetryScaffold(
+      {required this.gm, required this.onBack, required this.onRetry});
+  final dynamic gm;
+  final VoidCallback onBack;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.gm;
+    return Scaffold(
+      backgroundColor: palette.bg,
+      body: SafeArea(
+        child: Column(children: [
+          _SimpleTopBar(onBack: onBack),
+          Expanded(
+              child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(AppLocalizations.of(context)!.guideNotGenerated,
                   style: GmText.serif(size: 15, weight: FontWeight.w700)),
               const SizedBox(height: 12),
               GmTicketButton(

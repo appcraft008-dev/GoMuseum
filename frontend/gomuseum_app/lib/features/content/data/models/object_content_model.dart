@@ -189,6 +189,7 @@ class ObjectContent extends Equatable {
     required this.facts,
     required this.tabs,
     required this.suggestedQuestions,
+    this.generating = false,
     this.defaultGuide,
     this.artist,
   });
@@ -196,6 +197,9 @@ class ObjectContent extends Equatable {
   final String category;
   final String language;
   final ContentStatus status;
+
+  /// 后端任务锁信号：true = 正在懒生成/懒翻译（加法字段，老后端缺 → false）。
+  final bool generating;
   final String title;
   final List<ObjectImage> images;
   final ObjectFacts facts;
@@ -209,6 +213,7 @@ class ObjectContent extends Equatable {
         category: j['category'] as String? ?? '',
         language: j['language'] as String? ?? 'zh',
         status: _statusFromA5(j['status'] as String?),
+        generating: j['generating'] as bool? ?? false,
         title: j['title'] as String? ?? '未命名',
         images: (j['images'] as List?)
                 ?.whereType<Map<String, dynamic>>()
@@ -242,6 +247,7 @@ class ObjectContent extends Equatable {
         category,
         language,
         status,
+        generating,
         title,
         images,
         facts,

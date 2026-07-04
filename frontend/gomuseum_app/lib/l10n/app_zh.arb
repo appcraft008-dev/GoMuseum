@@ -176,6 +176,9 @@
   "camAllAlbums": "全部相册",
   "camGallery": "图库",
   "camSearch": "搜索",
+
+  "guideUnavailable": "该藏品资料不足，暂无讲解",
+  "guideNotGenerated": "讲解暂未生成",
   "camNoCamera": "未找到可用相机",
   "camInitFailed": "相机初始化失败",
   "camTagSearch": "展签检索",
