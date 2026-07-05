@@ -261,3 +261,17 @@ def test_faithfulness_prompt_flags_untranslated_fragments():
     assert "untranslated" in low or "source-language" in low or "残" in system
     # 专有名词/标题豁免(不误判保留的原文标题)
     assert "proper noun" in low or "title" in low
+
+
+def test_translation_prompt_prefers_established_exonym():
+    # Layer3:知名专有名词/标题优先用目标语言既定译名(Salome→莎乐美),不留英文原名
+    # (语言无关:靠 {lang} 与"established form"表述,不硬编具体译名表)
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    for lang_code in ("zh", "ja", "ko", "pl"):
+        system, _ = build_translation_prompt("x", lang_code)
+        low = system.lower()
+        assert "established" in low
+        # 要求"存在既定译名则用之",而非仅"保留原文或既定译名"的二选一
+        assert "prefer" in low or "use it" in low or "use the" in low
+        assert "consistent" in low  # 全文一致
