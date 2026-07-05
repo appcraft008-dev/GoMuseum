@@ -105,6 +105,10 @@ from app.services.enrichment.lang_config import LANG_NAMES
 _TRANSLATION_SYSTEM = (
     "You are a professional art translator. Translate the given English artwork explanation "
     "into {lang}. Rules: (1) Be FAITHFUL — do NOT add, remove, or alter any fact. "
+    "(1b) Render EVERY word in {lang}. NEVER leave source-language (English) fragments "
+    'untranslated mid-sentence (e.g. common nouns/phrases like "severed head", '
+    '"still life" must become their {lang} equivalents). This is critical for languages '
+    "distant from English (Chinese, Japanese, Korean) where copying is not an option. "
     "(2) Keep proper names, artist names, and work TITLES in their original form or the "
     "established exonym in the target language; do NOT literally translate titles. "
     "(3) Natural, fluent {lang}. (4) PRESERVE THE TONE — keep the engaging, spoken, "

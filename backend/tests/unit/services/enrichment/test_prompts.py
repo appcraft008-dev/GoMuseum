@@ -237,3 +237,16 @@ def test_qa_system_is_english_axis_no_chinese():
 
     assert "WRITE IN ENGLISH" in _QA_SYSTEM
     assert not re.search(r"[一-龥]", _QA_SYSTEM)  # prompt 绝不含中文(否则 LLM 输出中文)
+
+
+def test_translation_prompt_forbids_source_fragments_language_agnostic():
+    # 语言无关:任何目标语都要求'全部译出、不留源语言残片'(修 zh 漏翻 severed head 类;
+    # ja/ko/zh-hant 同类问题自动受益。靠 {lang} 占位符,零语言特例)
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    for lang_code in ("zh", "ja", "ko", "pl", "de"):
+        system, _ = build_translation_prompt("x", lang_code)
+        low = system.lower()
+        assert "every" in low and "fragment" in low, lang_code
+        # 不得含硬编码语言名单(如只提 chinese)
+        assert "chinese-only" not in low
