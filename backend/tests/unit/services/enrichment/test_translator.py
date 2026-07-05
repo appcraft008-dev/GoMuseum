@@ -37,7 +37,7 @@ def test_translate_object_skips_en_and_marks_unfaithful():
     # fr 忠实→published；de 不忠实→needs_review
     def router(system, user):
         s = system.lower()
-        if "translate" in s:  # 翻译调用
+        if "quality judge" not in s:  # 翻译调用(非忠实判官)
             return "translated body"
         # 忠实判定：fr 忠实、de 不忠实（按 system 里的语言名区分）
         if "german" in s:

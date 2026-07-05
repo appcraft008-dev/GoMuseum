@@ -215,7 +215,10 @@ def cmd_names(
         out = backfill_display_names(
             db,
             slug,
-            translator=ContentTranslator(default_complete),
+            translator=ContentTranslator(
+                default_complete,
+                complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+            ),
             langs=target_langs,
             refresh_langs=(
                 [x.strip() for x in refresh_langs.split(",")] if refresh_langs else None
@@ -243,7 +246,10 @@ def cmd_translate(slug: str, langs: str, limit: int | None, target: str) -> None
             db,
             slug,
             langs=[s.strip() for s in langs.split(",")],
-            translator=ContentTranslator(default_complete),
+            translator=ContentTranslator(
+                default_complete,
+                complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+            ),
             limit=limit,
         )
     finally:

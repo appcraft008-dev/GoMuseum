@@ -181,7 +181,7 @@ def test_translate_object_output_persists_per_language(session):
     from app.services.enrichment.translator import ContentTranslator
 
     def router(system, user):
-        if "translate" in system.lower():
+        if "quality judge" not in system.lower():  # 翻译调用
             return "Texte traduit."
         return _json.dumps({"faithful": True, "issues": []})
 

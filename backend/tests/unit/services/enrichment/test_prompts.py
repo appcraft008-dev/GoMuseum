@@ -250,3 +250,14 @@ def test_translation_prompt_forbids_source_fragments_language_agnostic():
         assert "every" in low and "fragment" in low, lang_code
         # 不得含硬编码语言名单(如只提 chinese)
         assert "chinese-only" not in low
+
+
+def test_faithfulness_prompt_flags_untranslated_fragments():
+    # 闸假阴性修复:忠实度闸也要抓'未翻译的源语言残片'(修放行"卧 nude"类)
+    from app.services.enrichment.prompts import build_faithfulness_prompt
+
+    system, _ = build_faithfulness_prompt("A nude figure.", "《卧 nude》", "zh")
+    low = system.lower()
+    assert "untranslated" in low or "source-language" in low or "残" in system
+    # 专有名词/标题豁免(不误判保留的原文标题)
+    assert "proper noun" in low or "title" in low
