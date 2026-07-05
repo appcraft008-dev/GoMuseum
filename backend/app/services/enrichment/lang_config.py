@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 # 默认语言集是运营旋钮、非架构（spec §14）。主市场欧洲 + 中文（开发语言）。
-DEFAULT_LANGUAGES = ["en", "fr", "de", "es", "it", "zh", "pl"]
+DEFAULT_LANGUAGES = ["en", "fr", "de", "es", "it", "zh", "pl", "ja"]
 
 # 语言 code → 英文名（喂翻译/校验 prompt，便于模型识别目标语言）。
 LANG_NAMES = {
@@ -14,6 +14,7 @@ LANG_NAMES = {
     "it": "Italian",
     "zh": "Chinese",
     "pl": "Polish",
+    "ja": "Japanese",
 }
 
 
