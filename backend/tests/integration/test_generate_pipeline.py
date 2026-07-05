@@ -73,7 +73,7 @@ class _FakeTranslator:
     def translate_section(self, t, lang):
         return t + "_" + lang
 
-    def translate_object(self, en_sections, target_langs):
+    def translate_object(self, en_sections, target_langs, titles=None):
         return {
             "fr": {
                 "overview": SectionQuality(
@@ -170,7 +170,7 @@ def test_generate_object_translates_per_language_with_priority(session):
     order = []
 
     class _Tr(_FakeTranslator):
-        def translate_object(self, en_sections, target_langs):
+        def translate_object(self, en_sections, target_langs, titles=None):
             assert len(target_langs) == 1  # 逐语言调用(翻完即存)
             lang = target_langs[0]
             order.append(lang)
@@ -272,7 +272,7 @@ def test_generate_object_produces_guide_section(session):
             )
 
     class _GuideTranslator(_FakeTranslator):
-        def translate_object(self, en_sections, target_langs):
+        def translate_object(self, en_sections, target_langs, titles=None):
             return {
                 "fr": {
                     c: SectionQuality(
@@ -919,3 +919,19 @@ def test_translate_no_strong_retry_when_faithful(session):
     out = tr.translate_object({"guide": "Body."}, ["zh"])
     assert strong_calls["n"] == 0  # 忠实则不动强模型
     assert out["zh"]["guide"].status == "published"
+
+
+def test_translate_object_threads_canonical_title(session):
+    from app.services.enrichment.translator import ContentTranslator
+
+    seen = {}
+
+    def fake(system, user):
+        if "quality judge" in system.lower():
+            return '{"faithful": true, "issues": []}'
+        seen["system"] = system
+        return "译文"
+
+    tr = ContentTranslator(fake)
+    tr.translate_object({"guide": "The Apparition."}, ["zh"], titles={"zh": "幻影"})
+    assert "幻影" in seen["system"]  # 标题被穿进翻译 prompt

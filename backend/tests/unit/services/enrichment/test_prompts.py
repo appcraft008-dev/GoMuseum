@@ -275,3 +275,18 @@ def test_translation_prompt_prefers_established_exonym():
         # 要求"存在既定译名则用之",而非仅"保留原文或既定译名"的二选一
         assert "prefer" in low or "use it" in low or "use the" in low
         assert "consistent" in low  # 全文一致
+
+
+def test_translation_prompt_pins_canonical_title():
+    # 标题真相唯一化:内容翻译收到显示名标题→正文必须用它(消除'显现'vs'幻影'分叉)
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    system, _ = build_translation_prompt(
+        "The Apparition is famous.", "zh", title="幻影"
+    )
+    assert "幻影" in system
+    low = system.lower()
+    assert "title" in low
+    # 无 title 时不注入,行为不变
+    s2, _ = build_translation_prompt("x", "zh")
+    assert "幻影" not in s2

@@ -79,7 +79,7 @@ class _Tr:
     def __init__(self):
         self.calls = []
 
-    def translate_object(self, en_sections, target_langs):
+    def translate_object(self, en_sections, target_langs, titles=None):
         from app.services.enrichment.quality import SectionQuality
 
         lang = target_langs[0]

@@ -111,7 +111,10 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     }
     missing = {c: b for c, b in en_secs.items() if c not in have}
     if missing:
-        results = translator.translate_object(missing, [lang]).get(lang, {})
+        title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
+        results = translator.translate_object(
+            missing, [lang], titles={lang: title} if title else None
+        ).get(lang, {})
         pub, _nr = persist_gated_sections(db, o.qid, lang, results, model)
         counts["sections"] += pub
     en_qa = [
