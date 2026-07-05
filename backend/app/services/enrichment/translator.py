@@ -35,9 +35,11 @@ class ContentTranslator:
         return (fn(system, user) or "").strip()
 
     def translate_name(self, name: str, target_lang: str) -> str:
-        """显示名(标题/人名)专用翻译:只返名字;剥模型仍套上的书名号/引号。"""
+        """显示名(标题/人名)专用翻译:只返名字;剥模型仍套上的书名号/引号。
+        名字短/便宜 → 有强模型(gpt-4o)就用它(音译/无残片质量远好于 mini)。"""
         system, user = build_name_translation_prompt(name, target_lang)
-        out = (self._complete(system, user) or "").strip()
+        fn = self._complete_strong or self._complete
+        out = (fn(system, user) or "").strip()
         return out.strip("《》\"'“”‘’«»")
 
     def check_faithfulness(self, en_body: str, translated: str, target_lang: str):

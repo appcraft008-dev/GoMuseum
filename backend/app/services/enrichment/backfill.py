@@ -242,6 +242,7 @@ def backfill_display_names(
     fetch_creators=None,
     fetch_artist_facts_i18n=None,
     refresh_langs=None,
+    retranslate_langs=None,
 ) -> dict:
     """铺目录后回填显示名:title_i18n + artist_qid + Artist.name_i18n(名字行,bio 留给 generate)。
     幂等:已齐语种的对象/作者跳过。契约:stub 一进目录就该有完整多语显示名。"""
@@ -271,6 +272,12 @@ def backfill_display_names(
             if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
                 attrs = {**attrs, "title_i18n": ti}
                 o.attributes = attrs
+            # retranslate:该语言无权威标签则丢弃机翻值,下面 _fill_i18n 用改进版重译
+            if retranslate_langs:
+                _rt_labels = fetch_labels(o.qid, langs)
+                for lang in retranslate_langs:
+                    if not _rt_labels.get(lang):
+                        ti.pop(lang, None)
             need_fill = any(not ti.get(lang) for lang in langs)
             if need_fill or refresh_langs:
                 labels = fetch_labels(o.qid, langs)

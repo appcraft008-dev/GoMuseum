@@ -194,7 +194,11 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
 
 
 def cmd_names(
-    slug: str, langs: str | None, target: str, refresh_langs: str | None = None
+    slug: str,
+    langs: str | None,
+    target: str,
+    refresh_langs: str | None = None,
+    retranslate_langs: str | None = None,
 ) -> None:
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
@@ -222,6 +226,11 @@ def cmd_names(
             langs=target_langs,
             refresh_langs=(
                 [x.strip() for x in refresh_langs.split(",")] if refresh_langs else None
+            ),
+            retranslate_langs=(
+                [x.strip() for x in retranslate_langs.split(",")]
+                if retranslate_langs
+                else None
             ),
         )
     finally:
@@ -302,7 +311,7 @@ def main(argv=None) -> None:
     elif ns.command == "report":
         cmd_report(ns.slug, ns.langs)
     elif ns.command == "names":
-        cmd_names(ns.slug, ns.langs, ns.target, ns.refresh_langs)
+        cmd_names(ns.slug, ns.langs, ns.target, ns.refresh_langs, ns.retranslate_langs)
     elif ns.command == "translate":
         cmd_translate(ns.slug, ns.langs, ns.limit, ns.target)
     elif ns.command == "images":
