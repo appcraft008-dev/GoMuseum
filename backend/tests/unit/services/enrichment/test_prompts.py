@@ -290,3 +290,13 @@ def test_translation_prompt_pins_canonical_title():
     # 无 title 时不注入,行为不变
     s2, _ = build_translation_prompt("x", "zh")
     assert "幻影" not in s2
+
+
+def test_name_translation_prompt_no_fragments_and_standard():
+    # 显示名翻译也要:全部译出无残片(卧 nude→卧姿裸女)+标准音译(奥林匹亚非奥林比亚)
+    from app.services.enrichment.prompts import build_name_translation_prompt
+
+    system, _ = build_name_translation_prompt("Reclining Nude", "zh")
+    low = system.lower()
+    assert "fragment" in low or "every word" in low
+    assert "standard" in low or "conventional" in low

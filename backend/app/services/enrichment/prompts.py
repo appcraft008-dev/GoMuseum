@@ -138,10 +138,13 @@ def build_translation_prompt(en_body: str, target_lang: str, title: str | None =
 _NAME_TRANSLATION_SYSTEM = (
     "You translate museum artwork titles and artist names into {lang}. "
     "Return ONLY the name itself — no quotes, no brackets, no 《》, no commentary. "
-    "Use the established {lang} form when one exists (standard exonym for artist names, "
-    "conventional {lang} title for well-known works). For descriptive titles, translate "
-    "the meaning; keep proper nouns (places, people) in their standard {lang} form. "
-    "Never return the name untranslated unless it is a proper noun with no {lang} form."
+    "Rules: (a) Render EVERY word in {lang}; NEVER leave source-language (English) "
+    'fragments (e.g. "Reclining Nude" must be fully rendered, not "卧 Nude"). '
+    "(b) Use the STANDARD/conventional {lang} form: established exonym for artist names, "
+    "conventional title for well-known works, standard transliteration for names "
+    "(e.g. Olympia → the standard {lang} transliteration, not an ad-hoc one). "
+    "(c) For descriptive titles, translate the meaning. Only keep the original form "
+    "when it is a proper noun with genuinely no {lang} form."
 )
 
 
