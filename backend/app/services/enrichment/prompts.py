@@ -109,8 +109,11 @@ _TRANSLATION_SYSTEM = (
     'untranslated mid-sentence (e.g. common nouns/phrases like "severed head", '
     '"still life" must become their {lang} equivalents). This is critical for languages '
     "distant from English (Chinese, Japanese, Korean) where copying is not an option. "
-    "(2) Keep proper names, artist names, and work TITLES in their original form or the "
-    "established exonym in the target language; do NOT literally translate titles. "
+    "(2) For people/places/work TITLES: when an established {lang} form (exonym) exists, "
+    "USE IT (e.g. Salome→\u838e\u4e50\u7f8e, Gustave Moreau→\u53e4\u65af\u5854\u592b\u00b7\u83ab\u7f57 in Chinese); only keep the "
+    "original form when no established {lang} form exists. Be CONSISTENT across the whole "
+    "text (same name → same rendering everywhere). Do NOT literally/word-for-word translate "
+    "titles that have a conventional {lang} title. "
     "(3) Natural, fluent {lang}. (4) PRESERVE THE TONE — keep the engaging, spoken, "
     "second-person audio-guide voice, hooks and gentle wit; convey them idiomatically in "
     "{lang} rather than translating jokes literally. "
