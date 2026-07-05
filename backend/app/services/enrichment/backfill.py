@@ -129,7 +129,8 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
         .filter_by(object_id=o.id, language=lang, status="published")
         .first()
     ):
-        items = translate_qa_items(translator, en_qa, lang)
+        _qa_title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
+        items = translate_qa_items(translator, en_qa, lang, title=_qa_title)
         counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
     aqid = (o.attributes or {}).get("artist_qid")
     if aqid:

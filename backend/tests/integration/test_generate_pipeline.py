@@ -70,7 +70,7 @@ class _FakeGate:
 
 
 class _FakeTranslator:
-    def translate_section(self, t, lang):
+    def translate_section(self, t, lang, *, strong=False, title=None):
         return t + "_" + lang
 
     def translate_object(self, en_sections, target_langs, titles=None):
@@ -207,7 +207,9 @@ def test_generate_object_translates_per_language_with_priority(session):
 
 
 class _FakeQA:
-    def suggest(self, material, facts, category, target_langs, covered=None):
+    def suggest(
+        self, material, facts, category, target_langs, covered=None, titles=None
+    ):
         return {
             "en": [{"question": "Q?", "answer": "A.", "status": "published"}],
             "fr": [{"question": "Q-fr?", "answer": "A-fr.", "status": "published"}],
@@ -490,7 +492,9 @@ def test_generate_object_passes_covered_to_qa(session):
     seen = {}
 
     class _QA:
-        def suggest(self, material, facts, category, target_langs, covered=None):
+        def suggest(
+            self, material, facts, category, target_langs, covered=None, titles=None
+        ):
             seen["covered"] = covered
             return {"en": []}
 
@@ -935,3 +939,22 @@ def test_translate_object_threads_canonical_title(session):
     tr = ContentTranslator(fake)
     tr.translate_object({"guide": "The Apparition."}, ["zh"], titles={"zh": "幻影"})
     assert "幻影" in seen["system"]  # 标题被穿进翻译 prompt
+
+
+def test_translate_qa_items_threads_title(session):
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    seen = []
+
+    class _Tr:
+        def translate_section(self, text, lang, *, strong=False, title=None):
+            seen.append(title)
+            return "译:" + text
+
+        def check_faithfulness(self, en, tr, lang):
+            return True, []
+
+    translate_qa_items(
+        _Tr(), [{"question": "What?", "answer": "A."}], "zh", title="显现"
+    )
+    assert "显现" in seen  # 问答翻译也收到规范标题

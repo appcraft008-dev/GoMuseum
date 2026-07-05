@@ -97,7 +97,7 @@ class _Tr:
             }
         }
 
-    def translate_section(self, text, lang):
+    def translate_section(self, text, lang, *, strong=False, title=None):
         self.calls.append(("sec", lang, text))
         return f"{text}?" if "?" in text else f"{text}_{lang}"
 

@@ -338,8 +338,12 @@ def generate_object(
     result = {"qid": qid, "counts": counts}
     if qa_suggester is not None:
         covered = "\n\n".join(v for v in en_published.values() if v)
+        _titles = {
+            lg: ((o.attributes or {}).get("title_i18n") or {}).get(lg)
+            for lg in target_langs
+        }
         qa_by_lang = qa_suggester.suggest(
-            material, facts, o.category, target_langs, covered=covered
+            material, facts, o.category, target_langs, covered=covered, titles=_titles
         )
         result["qa"] = {
             lang: persist_suggested_questions(db, qid, lang, items, model)

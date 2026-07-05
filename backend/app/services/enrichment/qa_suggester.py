@@ -23,12 +23,15 @@ def _clean_question(q: str):
     return q[: min(idx) + 1].strip()
 
 
-def translate_qa_items(translator, en_items: list, lang: str) -> list:
-    """把英语问答对翻到 lang(问句截到问号+答案忠实校验)。suggest 与补语种共用。"""
+def translate_qa_items(translator, en_items: list, lang: str, title=None) -> list:
+    """把英语问答对翻到 lang(问句截到问号+答案忠实校验)。suggest 与补语种共用。
+    title=规范标题:问答引用标题统一用显示名(消除分叉,同 guide/deep)。"""
     out = []
     for it in en_items:
-        tq = _clean_question(translator.translate_section(it["question"], lang))
-        ta = translator.translate_section(it["answer"], lang)
+        tq = _clean_question(
+            translator.translate_section(it["question"], lang, title=title)
+        )
+        ta = translator.translate_section(it["answer"], lang, title=title)
         if not tq:  # 翻译把问句变陈述了 → 回退英文问句(已是短问句)
             tq = it["question"]
         ok, _ = translator.check_faithfulness(it["answer"], ta, lang)
@@ -73,12 +76,16 @@ class QASuggester:
         category: str,
         target_langs: list,
         covered: str | None = None,
+        titles: dict | None = None,
     ) -> dict:
+        titles = titles or {}
         en_items = self._generate_en(material, facts, category, covered)
         out = {"en": en_items}
         published = [it for it in en_items if it["status"] == "published"]
         for lang in target_langs:
             if lang == "en":
                 continue
-            out[lang] = translate_qa_items(self._translator, published, lang)
+            out[lang] = translate_qa_items(
+                self._translator, published, lang, title=titles.get(lang)
+            )
         return out
