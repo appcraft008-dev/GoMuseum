@@ -36,7 +36,7 @@ class _Gate:
 
 
 class _Translator:
-    def translate_section(self, body, lang):
+    def translate_section(self, body, lang, *, strong=False, title=None):
         return f"[{lang}] {body}"
 
     def check_faithfulness(self, en, tr, lang):
