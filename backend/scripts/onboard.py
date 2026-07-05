@@ -59,6 +59,9 @@ def build_parser() -> argparse.ArgumentParser:
     na.add_argument(
         "--refresh-langs", default=None
     )  # 强刷:该语言权威标签覆盖存量(繁简修复)
+    na.add_argument(
+        "--retranslate-langs", default=None
+    )  # 重译:无权威标签的机翻显示名用改进版重译
     tr = sub.add_parser("translate")  # 补语种:存量对象缺失语言从 en 段纯翻译(幂等)
     tr.add_argument("--target", choices=["staging", "prod"], required=True)
     tr.add_argument("--langs", required=True)  # 如 de,es,it
