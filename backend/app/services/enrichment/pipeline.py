@@ -327,7 +327,10 @@ def generate_object(
         if lang == "en":
             continue
         try:
-            results = translator.translate_object(en_published, [lang]).get(lang, {})
+            _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
+            results = translator.translate_object(
+                en_published, [lang], titles={lang: _title} if _title else None
+            ).get(lang, {})
         except Exception:
             logger.exception("translate %s failed for %s", lang, qid)
             continue

@@ -23,8 +23,10 @@ class ContentTranslator:
         # 闸失败时的强模型重译(gpt-4o);语言无关,靠闸信号触发(不硬编语言名单)
         self._complete_strong = complete_strong
 
-    def translate_section(self, en_body: str, target_lang: str, *, strong=False) -> str:
-        system, user = build_translation_prompt(en_body, target_lang)
+    def translate_section(
+        self, en_body: str, target_lang: str, *, strong=False, title=None
+    ) -> str:
+        system, user = build_translation_prompt(en_body, target_lang, title)
         fn = (
             self._complete_strong
             if (strong and self._complete_strong)
@@ -43,23 +45,30 @@ class ContentTranslator:
         data = _parse()(self._complete(system, user))
         return bool(data.get("faithful")), (data.get("issues") or [])
 
-    def translate_object(self, en_sections: dict, target_langs: list[str]) -> dict:
+    def translate_object(
+        self, en_sections: dict, target_langs: list[str], titles: dict | None = None
+    ) -> dict:
         """把英语段落铺到目标语言。跳过 'en'（轴心不翻）与空 body 段。
+        titles={lang: 规范标题}:正文引用标题统一用显示名(消除分叉)。
         返回 {lang: {section_code: SectionQuality}}。"""
+        titles = titles or {}
         out: dict = {}
         for lang in target_langs:
             if lang == "en":
                 continue
+            title = titles.get(lang)
             lang_result: dict = {}
             for code, en_body in en_sections.items():
                 if not en_body:
                     continue
-                translated = self.translate_section(en_body, lang)
+                translated = self.translate_section(en_body, lang, title=title)
                 ok, issues = self.check_faithfulness(en_body, translated, lang)
                 if not ok and self._complete_strong:
                     # 残片/不忠实 → 强模型(gpt-4o)重译一次并无条件采用
                     # (总比 mini 的坏译好;顽固少数才付费,语言无关靠闸信号触发)
-                    translated = self.translate_section(en_body, lang, strong=True)
+                    translated = self.translate_section(
+                        en_body, lang, strong=True, title=title
+                    )
                     ok, issues = self.check_faithfulness(en_body, translated, lang)
                 lang_result[code] = SectionQuality(
                     body=translated,

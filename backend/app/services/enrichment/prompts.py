@@ -121,9 +121,16 @@ _TRANSLATION_SYSTEM = (
 )
 
 
-def build_translation_prompt(en_body: str, target_lang: str):
+def build_translation_prompt(en_body: str, target_lang: str, title: str | None = None):
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _TRANSLATION_SYSTEM.format(lang=lang)
+    if title:
+        # 标题真相唯一化:正文引用标题一律用显示名(消除内容翻译自选译名的分叉)
+        system += (
+            f" IMPORTANT: this artwork's canonical {lang} title is 「{title}」 — "
+            f"whenever the text refers to the work by name, use EXACTLY this title, "
+            f"do not invent an alternative rendering."
+        )
     user = f"English:\n{en_body}"
     return system, user
 
