@@ -31,6 +31,7 @@ _CATEGORY_LABELS = {
         "de": "Malerei",
         "es": "Pintura",
         "it": "Dipinti",
+        "pl": "Malarstwo",
     },
     "sculpture": {
         "zh": "雕塑",
@@ -39,6 +40,7 @@ _CATEGORY_LABELS = {
         "de": "Skulpturen",
         "es": "Escultura",
         "it": "Sculture",
+        "pl": "Rzeźba",
     },
     "works_on_paper": {
         "zh": "纸上作品",
@@ -47,6 +49,7 @@ _CATEGORY_LABELS = {
         "de": "Arbeiten auf Papier",
         "es": "Obra sobre papel",
         "it": "Opere su carta",
+        "pl": "Prace na papierze",
     },
     "photography": {
         "zh": "摄影",
@@ -55,6 +58,7 @@ _CATEGORY_LABELS = {
         "de": "Fotografie",
         "es": "Fotografía",
         "it": "Fotografia",
+        "pl": "Fotografia",
     },
     "decorative_arts": {
         "zh": "装饰艺术",
@@ -63,6 +67,7 @@ _CATEGORY_LABELS = {
         "de": "Kunstgewerbe",
         "es": "Artes decorativas",
         "it": "Arti decorative",
+        "pl": "Sztuka dekoracyjna",
     },
     "textile": {
         "zh": "纺织",
@@ -71,6 +76,7 @@ _CATEGORY_LABELS = {
         "de": "Textilien",
         "es": "Textiles",
         "it": "Tessuti",
+        "pl": "Tekstylia",
     },
     "artifact": {
         "zh": "文物器物",
@@ -79,6 +85,7 @@ _CATEGORY_LABELS = {
         "de": "Artefakte",
         "es": "Artefactos",
         "it": "Reperti",
+        "pl": "Artefakty",
     },
     "manuscript": {
         "zh": "手稿古籍",
@@ -87,6 +94,7 @@ _CATEGORY_LABELS = {
         "de": "Handschriften",
         "es": "Manuscritos",
         "it": "Manoscritti",
+        "pl": "Rękopisy",
     },
     "unknown": {
         "zh": "其他",
@@ -95,6 +103,7 @@ _CATEGORY_LABELS = {
         "de": "Sonstiges",
         "es": "Otros",
         "it": "Altro",
+        "pl": "Inne",
     },
 }
 _ALL_LABEL = {
@@ -104,6 +113,7 @@ _ALL_LABEL = {
     "de": "Alle",
     "es": "Todo",
     "it": "Tutto",
+    "pl": "Wszystko",
 }
 
 
@@ -360,7 +370,12 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     }
     guide_row = (
         db.query(ObjectContentSection)
-        .filter_by(object_id=obj.id, language=language, section_code="guide")
+        .filter_by(
+            object_id=obj.id,
+            language=language,
+            section_code="guide",
+            status="published",
+        )
         .one_or_none()
     )
     default_guide = (
@@ -389,19 +404,33 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         ),
         "birth": art.birth if art else None,
         "death": art.death if art else None,
-        "nationality": art.nationality if art else None,
-        "notable_works": (art.notable_works if art else None) or [],
+        # 国籍/代表作按 language 本地化(i18n 权威→en 列兜底,不返 null;交接③)
+        "nationality": (
+            ((art.nationality_i18n or {}).get(language) or art.nationality)
+            if art
+            else None
+        ),
+        "notable_works": (
+            ((art.notable_works_i18n or {}).get(language) or art.notable_works)
+            if art
+            else None
+        )
+        or [],
         "bio": (art.bio or {}).get(language) if art else None,
     }
     guide_body = guide_row.body if guide_row else None
     eff_status = obj.content_status
     if not (guide_body and guide_body.strip()) and not tabs:
         eff_status = "empty"
+    from app.services.enrichment.lazy import lock_active
+
     return {
         "qid": qid,
         "category": obj.category,
         "language": language,
         "status": eff_status,
+        # 加法字段(2026-07-04):前端三态精确信号——true=懒生成/懒翻译进行中
+        "generating": lock_active(obj),
         "title": _resolve_name(
             attrs.get("title_i18n"),
             language,

@@ -71,6 +71,7 @@ class GoMuseumApp extends ConsumerWidget {
         Locale('de'), // 德语
         Locale('es'), // 西班牙语
         Locale('it'), // 意大利语
+        Locale('pl'), // 波兰语
       ],
 
       // 调试配置

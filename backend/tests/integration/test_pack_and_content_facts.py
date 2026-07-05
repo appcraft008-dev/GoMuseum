@@ -429,3 +429,89 @@ def test_content_images_use_large_tier_and_pack_uses_thumb(session):
     pack = get_museum_pack(session, "orsay", "zh")
     art = next(a for a in pack["artworks"] if a["qid"] == "Q1")
     assert art["image"].endswith("images/Q1/0_thumb.jpg")  # 馆包=thumb
+
+
+def test_artist_card_nationality_and_works_localized(session):
+    # 交接③:国籍/代表作按 language 本地化(i18n 优先,缺退 en 列,不返 null)
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q296"}
+    session.add(
+        Artist(
+            qid="Q296",
+            name_en="Manet",
+            nationality="France",
+            notable_works=["Olympia", "The Balcony"],
+            nationality_i18n={"zh": "法国", "de": "Frankreich"},
+            notable_works_i18n={"zh": ["奥林匹亚", "阳台"]},
+        )
+    )
+    session.commit()
+    zh = get_object_content(session, "orsay", "Q1", "zh")["artist"]
+    assert zh["nationality"] == "法国"
+    assert zh["notable_works"] == ["奥林匹亚", "阳台"]
+    de = get_object_content(session, "orsay", "Q1", "de")["artist"]
+    assert de["nationality"] == "Frankreich"
+    assert de["notable_works"] == ["Olympia", "The Balcony"]  # 缺 de 列表 → en 兜底
+    it = get_object_content(session, "orsay", "Q1", "it")["artist"]
+    assert it["nationality"] == "France"  # 缺 it → en 列兜底
+
+
+def test_content_exposes_generating_flag(session):
+    # 加法字段:前端三态判断(生成中/资料不足/待完善可重试)的精确信号
+    from datetime import datetime, timezone
+
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is False
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_lock_at": datetime.now(timezone.utc).isoformat(),
+    }
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is True
+
+
+def test_content_exposes_generating_flag(session):
+    # 加法字段:前端三态判断(生成中/资料不足/待完善可重试)的精确信号
+    from datetime import datetime, timezone
+
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is False
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_lock_at": datetime.now(timezone.utc).isoformat(),
+    }
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is True
+
+
+def test_default_guide_only_published_not_needs_review(session):
+    # 契约§4:default_guide 是"已发布正文"。needs_review(如缺陷译文)不得泄漏
+    from app.models.content import ObjectContentSection
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="guide",
+            body="缺陷译文 severed head",
+            status="needs_review",
+        )
+    )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["default_guide"] is None  # needs_review 不泄漏
+    assert d["status"] == "empty"  # 无已发布 guide 且无 tab → empty

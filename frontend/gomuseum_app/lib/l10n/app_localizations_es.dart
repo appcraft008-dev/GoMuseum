@@ -179,7 +179,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Las preguntas por voz llegan pronto, escribe por ahora';
 
   @override
-  String get guideGenerating => 'Generando la explicación…';
+  String get guideGenerating => 'Generando contenido · aprox. 1–3 min';
 
   @override
   String get guideEmpty => 'Aún no hay explicación fundamentada (en progreso)';
@@ -394,6 +394,164 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get confirmYes => 'Confirmar';
+
+  @override
+  String get authEmailHint => 'Correo electrónico';
+
+  @override
+  String get authEmailRequired => 'Introduce tu correo electrónico';
+
+  @override
+  String get authEmailInvalid => 'Introduce un correo electrónico válido';
+
+  @override
+  String get authPasswordHint => 'Contraseña';
+
+  @override
+  String get authPasswordRequired => 'Introduce tu contraseña';
+
+  @override
+  String get authPasswordMin6 =>
+      'La contraseña debe tener al menos 6 caracteres';
+
+  @override
+  String get authConfirmPasswordHint => 'Confirmar contraseña';
+
+  @override
+  String get authPasswordMismatch => 'Las contraseñas no coinciden';
+
+  @override
+  String get authUsernameOptionalHint => 'Nombre de usuario (opcional)';
+
+  @override
+  String get authLoginButton => 'Iniciar sesión';
+
+  @override
+  String get authRegisterButton => 'Registrarse';
+
+  @override
+  String get authNoAccount => '¿No tienes cuenta? Regístrate';
+
+  @override
+  String get authHaveAccount => '¿Ya tienes cuenta? Inicia sesión';
+
+  @override
+  String get authCreateAccount => 'Crear cuenta';
+
+  @override
+  String get authOrLoginWith => 'O inicia sesión con';
+
+  @override
+  String get authGoogleLogin => 'Iniciar sesión con Google';
+
+  @override
+  String get authAppleLogin => 'Iniciar sesión con Apple';
+
+  @override
+  String get authOr => 'O';
+
+  @override
+  String get authGuestLogin => 'Continuar como invitado';
+
+  @override
+  String get authLoginFailed =>
+      'Error al iniciar sesión, comprueba tu correo y contraseña';
+
+  @override
+  String get authRegisterFailed =>
+      'Error al registrarse, el correo puede estar ya en uso';
+
+  @override
+  String get authGoogleCancelled => 'Inicio de sesión con Google cancelado';
+
+  @override
+  String get authGoogleFailed =>
+      'Error al iniciar sesión con Google, inténtalo de nuevo';
+
+  @override
+  String get authGoogleError => 'Error de inicio de sesión con Google';
+
+  @override
+  String get authGoogleNotConfigured =>
+      'Inicio de sesión con Google no configurado, contacta al administrador';
+
+  @override
+  String get authGoogleNetworkError =>
+      'Error de red al iniciar sesión con Google, comprueba tu conexión';
+
+  @override
+  String get authAppleOnlyApple =>
+      'El inicio de sesión con Apple solo es compatible con iOS y macOS';
+
+  @override
+  String get authAppleCancelled => 'Inicio de sesión con Apple cancelado';
+
+  @override
+  String get authAppleFailed =>
+      'Error al iniciar sesión con Apple, inténtalo de nuevo';
+
+  @override
+  String get authAppleError => 'Error de inicio de sesión con Apple';
+
+  @override
+  String get authAppleNotConfigured =>
+      'Inicio de sesión con Apple no configurado';
+
+  @override
+  String get authGuestFailed =>
+      'Error al iniciar sesión como invitado, inténtalo de nuevo';
+
+  @override
+  String get authGuestError => 'Error de inicio de sesión como invitado';
+
+  @override
+  String get recCandidatesTitle => '¿Es esta obra?';
+
+  @override
+  String get recNoneOfThese => 'Ninguna de estas';
+
+  @override
+  String get recNotRecognized => 'No se reconoció esta obra';
+
+  @override
+  String recLabelSeen(String text) {
+    return 'La etiqueta dice «$text» — aún no tenemos su guía completa, pero hemos anotado tu solicitud ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => 'Fotografía la cartela';
+
+  @override
+  String get recShootLabelHint =>
+      'Las cartelas del museo muestran el título y el artista — fotografíala y podremos identificar la obra';
+
+  @override
+  String get recViewfinderLabelHint =>
+      'Apunta al texto de la cartela, llena el encuadre';
+
+  @override
+  String get camRecognizeTitle => 'Identificar obra';
+
+  @override
+  String get camViewfinderHint => 'Encuadra toda la obra';
+
+  @override
+  String get camRecentGallery => 'Recientes';
+
+  @override
+  String get camAllAlbums => 'Todos los álbumes';
+
+  @override
+  String get camGallery => 'Galería';
+
+  @override
+  String get camSearch => 'Buscar';
+
+  @override
+  String get guideUnavailable => 'Esta obra tiene poco material para una guía';
+
+  @override
+  String get guideNotGenerated => 'Guía aún no generada';
 
   @override
   String get camNoCamera => 'No se encontró ninguna cámara';

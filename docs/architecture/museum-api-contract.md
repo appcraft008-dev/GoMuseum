@@ -20,7 +20,7 @@
 | `GET /museums/{slug}/objects?...` | 分页藏品列表(列表页) | `list_objects` |
 | `GET /museums/{slug}/objects/{qid}/content?language=` | 单件讲解(导览页) | `get_object_content` |
 
-`language` 取值:`DEFAULT_LANGUAGES` 全集 `en/fr/de/es/it/zh`(2026-07-03 起新生成内容六语全跑;早期存量 243 件讲解只有 zh/en/fr,de/es/it 视图对老件显"待完善",待"补语种"增量命令回补)。缺省 `zh`。显示名(title/artist)六语已全量回填。
+`language` 取值 = `DEFAULT_LANGUAGES`(lang_config.py,唯一真相源;当前 7 语 en/fr/de/es/it/zh/pl)。缺省 `zh`。**加语言=加配置**:新语言按§多语显示名的"加语言 checklist"落配置即全端点生效,**本行不再随之改动**(引用真相源,非硬列举)。新内容全语生成;老内容缺语走懒翻译/`translate` 补。
 
 ---
 
@@ -112,7 +112,7 @@
 
 - `default_guide`:**默认标准讲解**(单主线·5拍·~300-600字现场导览,识别后首先呈现的"主角")。`{body, audio_url}`,无则 `null`(前端回退 tabs)。**不混入 tabs**。前端分层页:default_guide 置顶 → 推荐 2-3 个 suggested_questions → tabs/其余收进"更多内容"。
 - `tabs`:按类目的段落清单(`SECTIONS_BY_CATEGORY`)逐段(降级为"更多内容"深度模块;**overview 已退役**——默认讲解取代其作开场;**artist 已移出 tabs**——成独立作者卡;各模块各守互斥 lane、**不复述头条**、只会重复则返空不发布);`body` 为该语种已发布正文(无则 `null`);`audio_url` 为 R2 音频直链(未生成则 `null`,TTS 阶段)。
-- `artist`:**必选常驻作者卡**(不随空隐)。**数据来自 `artists` 一等实体**(按 artist QID 生成一次、同作者所有作品复用→一致/完整/省;artist 不再是 per-work 段)。`{name, birth, death, nationality, notable_works:[...], bio}`(**name/title 按多语显示名规则解析:i18n 权威→翻译→en**;bio 按语言取)——生卒年/国籍/代表作取自作者 Wikidata 实体(P569/P570/P27/P800);`bio`=artist 段已发布叙事(无则 null)。⚠️ v1:`nationality`/`notable_works` 为 en 标签(zh 视图暂显 en),`name`/生卒年不受影响。
+- `artist`:**必选常驻作者卡**(不随空隐)。**数据来自 `artists` 一等实体**(按 artist QID 生成一次、同作者所有作品复用→一致/完整/省;artist 不再是 per-work 段)。`{name, birth, death, nationality, notable_works:[...], bio}`(**name/title 按多语显示名规则解析:i18n 权威→翻译→en**;bio 按语言取)——生卒年/国籍/代表作取自作者 Wikidata 实体(P569/P570/P27/P800);`bio`=artist 段已发布叙事(无则 null)。~~v1 局限~~ ✅2026-07-04 解除:`nationality`/`notable_works` 按 language 本地化(`nationality_i18n`/`notable_works_i18n`:P27/P800 多语权威标签→translate_name 兜底→en 列;生成与 names 回填两路都填,幂等)。
 - `facts`:**已策展+人性化的墙签事实**(只 wall_label 级):`artist/date/medium/dimensions/inventory/location`。`medium` 优先证据包干净源(Wikidata P186,多值合并人性化),回退 Joconde `medium_fr`;`dimensions` 取 Joconde 串人性化(证据包暂不抓 P2048/P2049,非法国馆无 Joconde 时为 null)。⚠️ **`provenance` 返 null、`exhibitions`/`bibliography` 返 `[]`——已移出面板**(学术噪音;参考文献彻底不展示,收藏/展览史进证据包材料级,阶段2 由 background lane 讲成流转故事)。`artist_life` 暂 null。
 - `suggested_questions`:好奇心问答(0-4 条)。
 - 对象不属于该 slug / 不存在 → 404。
@@ -124,6 +124,8 @@
 `stub`(只元数据,目录铺出) → `ready`(≥1 段已发布)/ `empty`(无可接地材料)。前端:`stub`/`empty` 显"待完善",`ready` 正常。未知值按 `ready` 容错。
 
 **懒生成(✅2026-07-03 落地)**:content 端点命中 `stub` → 后台触发该件完整生成(全语言;**请求者语言排队首、逐语言翻完即落库**——用户最快看到自己的语言,单语言翻译失败不拖垮其他),几分钟后再取即 `ready`。锁=内部 `attributes.lazy_lock_at`(TTL 10min 自愈),**不对外暴露中间状态**——stub 期间前端照旧"待完善",契约形状零变化、老 App 无感。`empty` 不重试(已判无可接地材料,防循环烧钱)。并发上限 2/进程;仅 staging/production 环境生效。
+
+**`generating` 字段(✅2026-07-04 加法)**:content 端点返回 `generating: bool`(信号源=懒任务锁)——true=懒生成/懒翻译进行中。前端三态:generating→"生成中"继续轮询;false+empty→"资料不足"停;false+stub 无内容→"待完善"+重试入口。老 App 不读则无感。
 
 **懒翻译(✅2026-07-03 落地,懒生成姐妹场景)**:content 端点命中"对象 `ready`、有 en 轴心、但**请求语言**无已发布内容" → 后台**只翻这一门语言**(补语种原语:段落+问答+作者bio,数十秒、费用分钱级)。配合**列表 content_status 按请求语言解读**:该语言缺 → 列表即显"待完善",点开触发懒翻译,刷新即有——任何语言视图所见即所得,新加语言自动享受同样行为。同锁/并发/环境门。
 
@@ -159,7 +161,7 @@
 | artifact | 文物器物 | 考古/礼器/武器 | 兜底 |
 | manuscript | 手稿古籍 | 手抄本/书籍 | 兜底 |
 
-**⑤ 内容生成分层(目录便宜、生成贵)。** 目录+显示名回填全量做(全馆 ~$20 内);讲解生成按热度 **top-N 批量**(`generate --limit N`;奥赛 N=200)+ **长尾懒生成**(规划中,`content_status=generating` 锁已预留;staging 验证后上 prod)。**全量目录/生成只在 prod 跑;staging 只做小样本验证机制**(`catalog --limit`)。
+**⑤ 内容生成分层(目录便宜、生成贵;2026-07-05 定 N 默认=0)。** 目录+显示名+图物化全量做(全馆 ~$20 内,零 LLM 成本);**讲解内容默认不批量预生成(N=0),完全靠懒生成/懒翻译按需兜底**——上新馆零内容预付,用户点开哪件才生成那件(请求语言优先,~2-3 分钟)。上线运营后按**实际热度/需求**由运营决定某馆 top-N 值再 `generate --limit N` 批量富化(热门件零等待)。**全量目录/图只在 prod 跑;staging 只做小样本验证机制**(`catalog --limit`)。
 
 ## 上新馆 = 纯配置(零核心改动)
 
@@ -190,6 +192,12 @@
 **非 Wikidata 主源的馆**(如美国 Met):一次性写个 `CatalogSource` 连接器(同插件模式,核心零改),其余同上。
 
 `--target` 必须匹配容器 `ENVIRONMENT`(守卫防误灌)。全量富化在 prod 跑(staging 仅样本验证机制)。
+
+> **⚠️ 批处理纪律(2026-07-03 定,prod 三次崩溃换来;适用于全部上馆命令 catalog/names/images/translate/generate 及未来新批任务):**
+> 1. **单件/单批失败跳过继续**——错误计数(`errors`)不炸全局(教训:一次 Wikidata ReadTimeout 炸死整馆 names);
+> 2. **分批落盘**——每 N 件 commit(names 50/images 25),崩溃/重部署不丢进度(教训:253 件进度全丢);
+> 3. **批量外部查询必须分批 + 瞬时错误重试**——VALUES 有 URL 上限(教训:1300 QID 单条查询 HTTP 414);5xx 重试一次仍败跳批(教训:Wikidata 502);
+> 4. **一切批任务幂等可重跑**——重跑只补缺,断点即续传。新写批任务时按此四条自查。
 
 ---
 
@@ -244,13 +252,30 @@
 - `flagged` = LLM 抽出的争议/推测/未证实句(`contested/inference/unverified`,供阶段2 hedge)。
 - **阶段1 已落地(`build_evidence_pack`)**:富属性按 registry 门控(真实生成走网络);阶段2 才把三层+模块生成切到证据包。Europeana 暂缓(待 key)。
 
+## 识别（拍照→讲解;✅P1 2026-07-03 落地）
+
+**原则（通用,任何馆零代码）:**
+- **R1 识别接地第一原则**:AI 视觉输出是**查询不是答案**——候选名必须匹配到真实目录记录才展示身份;不中就诚实"未收录",绝不把模型猜测当事实。
+- **R2 墙签 OCR=权威接地源,但是增强不是依赖**:照片常无签是常态,主路靠画面内容;"引导补拍说明牌"是未收录 UX 的组成部分(`mode=label` 纯转写)。
+- **R3 三档呈现**:高置信(≥HIGH)直开讲解页 / 中置信确认卡(1-3 候选带缩略图) / 低置信未收录+引导拍签。**确认卡=免费人工标注**(真实照片→确认QID,数据飞轮喂 P2 CLIP)。
+- **R4 引擎可替换,匹配/接地层是不变核心**:P1=GPT-4o-mini 视觉;P2=本地 CLIP(ONNX)插到引擎位,接口不变。演进顺序由数据依赖决定(GPT 闭环先生产标注,才能校准 CLIP 阈值)。
+- **R5 需求自适应**:未收录拍摄记 `recognition_demands`(按 馆+感知哈希 幂等计数;墙签文字=高质量需求) → 目录跟真实需求生长。
+- **R6 足迹 vs 归属两轴分离**:到访足迹用物理位置(GPS/App 选馆),绝不用识别到藏品的拥有馆(借展场景两轴背离)。P2 落地,原则先立。
+
+**端点**:`POST /museums/{slug}/recognize`(multipart `image` + `language` + `mode=artwork|label`;馆域内匹配)。响应:
+`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence}, candidates:[{…,score}], label_text, reason: not_in_catalog|low_confidence|no_candidates}`
+——`outcome/reason` 机器码不译;`title/artist` 按 language 走显示名规则;thumbnail=thumb 档。命中跳详情 → 懒生成/懒翻译/懒补图自动接管。同图重复识别走 Redis 缓存(命中 30 天/未收录 1 天)。阈值 HIGH=0.85/LOW=0.5 为初值,真实数据校准。
+**计费(2026-07-04 定)**:`match/candidates` 扣 1 次配额;`unrecognized` 不扣(不为失败付费);缓存命中不扣;配额用尽 → **402** `{reason: quota_exceeded}`(先于 GPT 调用,不烧钱)。身份=Bearer 令牌(App 自带)或 `device_id` 参数;两者皆无 → 401 `{reason: identity_required}`。服务端扣费,不再依赖前端自觉调 `/payment/consume`。
+
+**老端点 `/api/v1/recognition` 标记 deprecated**(裸 GPT 猜测当事实,违反 R1;留给老 App,新 App 一律走新端点)。
+
 ## 路线图（执行顺序;每阶段 = 独立 spec→plan→实现,完成回写本文）
 
 **✅ 已落地**:目录主干 + 4 端点契约 + 分类 facet + 作品信息 facts;接地·引人入胜生成 + 三类闸 + 多语翻译 + 建议问答;默认讲解 stage1(staging)。
 
 - **阶段 1 — 材料地基(证据包)**:1a 源配全(Europeana + 更全 Wikidata P 属性;法国官方=Joconde 已有,非法国馆逐馆官方连接器)· 1b 证据包模型 + 分类落库。→ 每件一份完整分类证据包。
 - **阶段 2 — 内容生成重构**:2a 统一分工去重(lane)+ 全从证据包生成 · 2b 动态模块 + 争议 hedge · 2c 两段式质量评估(事实质量 + 讲解质量)。
-- **阶段 3 — 体验补全**:3a AI 自由问答 `/ask`(多轮)· 3b TTS 音频落库 · ~~3c 懒生成接线~~(✅2026-07-03 落地,见 content_status 节)·(藏品识别机制 = 独立 brainstorm)。前端增强(生成中提示/自动刷新)另排。
+- **阶段 3 — 体验补全**:3a AI 自由问答 `/ask`(多轮)· 3b TTS 音频落库 · ~~3c 懒生成接线~~(✅落地)· ~~藏品识别 P1~~(✅2026-07-03 落地,见§识别;P2=CLIP 前置+需求聚合+足迹)。前端增强(生成中提示/自动刷新/识别相机流程)见交接文档。
 - **阶段 4 — 规模化**:图像 R2 自存 + `cover_url` + 首页真实化 · 上新馆(逐馆官方连接器 + 纯配置)· **官方馆藏库连接器**(抓元数据+在展清单/展厅号,不抓图;用"在展×有自由图"校准优先级,修正名作偏置)。
 
 **奥赛 = 样板馆**:作为先行者会多吞一两次重生成;流水线成型后,新馆从第一天即"配全·生成一次·封板"。
@@ -259,6 +284,12 @@
 
 ## 变更记录
 
+- 2026-07-05:**内容生成 N 默认=0**(收录策略⑤)——上新馆零内容预付,纯懒生成兜底;N 上线后按实际热度/需求由运营逐馆决定。
+- 2026-07-04:content 端点加法字段 `generating`(懒任务锁即信号)——前端等待提示三态化(生成中/资料不足/待完善可重试),修盲轮询三隐患。
+- 2026-07-04:识别端点**服务端计费**落地(match/candidates 扣1,unrecognized/缓存不扣,超额402;身份=令牌或device_id)——堵住新端点绕过配额的洞,弃用前端自觉调 /payment/consume 的客户端计费。
+- 2026-07-04:作者卡 `nationality`/`notable_works` 多语本地化落地(前端交接③;v1 局限解除)。交接①分类标签已由 #142 先行修复;交接②"老件补语种"因 prod 内容清空+六语生成而失效(translate 命令备用)。
+- 2026-07-03:**识别 P1 落地**+§识别入契约(R1-R6:接地第一/墙签增强非依赖/三档呈现/引擎可替换/需求自适应/足迹vs归属)。新端点 `/museums/{slug}/recognize`;老 `/recognition` deprecated;P2=CLIP/需求聚合/足迹。
+- 2026-07-03:定**批处理纪律**四条(单件容错/分批落盘/外部查询分批+重试/幂等可重跑)——prod names 三次崩溃(ReadTimeout 炸全局、进度全丢、414、502)的血泪成文,全部上馆命令适用(#158/#160 落地)。
 - 2026-07-03:**图像 R2 自存落地**(阶段4提前):两档(thumb480/large1600)/多角度(P18全收 primary+view)/署名/懒补漏;image_key=基础键;上新馆步骤加 `images`(第4步);定"图=预物化 vs 内容=懒生成"成本分界。Commons P373 深挖留识别轮。
 - 2026-07-03:定**完整性判断按语言维度**原则(一日三错 #142/#146/#147 的统摄:存在性检查按语言问不按对象问;复用≠跳过,共享实体每个复用点做语种补齐)。#147:生成时为已存在作者补齐 bio 缺失语种。
 - 2026-07-03:**列表 content_status 按请求语言解读**(该语言无内容→empty"待完善",防列表骗人)+ **懒翻译落地**(ready 但请求语言缺→后台只翻该语言,复用补语种原语+懒生成锁)。

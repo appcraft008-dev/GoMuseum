@@ -102,3 +102,29 @@ def test_object_content_labels_localized_fr(client):
     overview = next((t for t in tabs if t["section_code"] == "overview"), None)
     assert overview is not None
     assert overview["label"] == "Aperçu"
+
+
+def test_first_open_of_stub_returns_generating_true(client, monkeypatch):
+    # 竞态修复:首次点开未富化件,端点应先触发懒生成上锁、再读内容 → generating=true
+    # (原 bug:先读后触发→首请求 generating=false→前端显"待完善"不轮询,永不刷新)
+    import app.core.config as cfg
+    import app.services.enrichment.lazy as lazy
+
+    monkeypatch.setattr(cfg.settings, "ENVIRONMENT", "staging")
+    # 背景任务打空跑:只让锁落库,不真生成
+    monkeypatch.setattr(lazy, "run_lazy_generation", lambda *a, **k: None)
+
+    # Q1 目前有 zh/fr overview 已发布(fixture)——改成纯 stub 模拟未富化件
+    from sqlalchemy.orm import Session
+
+    from app.models.museum_object import MuseumObject
+
+    db: Session = next(iter(app.dependency_overrides[get_db]()))
+    o = db.query(MuseumObject).filter_by(qid="Q1").one()
+    o.content_status = "stub"
+    db.query(ObjectContentSection).delete()
+    db.commit()
+
+    r = client.get("/api/v1/museums/orsay/objects/Q1/content?language=zh")
+    assert r.status_code == 200
+    assert r.json()["generating"] is True  # 触发在读之前 → 锁已可见

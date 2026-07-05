@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'dart:io' show Platform;
@@ -36,6 +37,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: gm.bg,
       body: Center(
@@ -58,7 +60,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const Center(child: GmDiamond(width: 150)),
                 const SizedBox(height: 10),
                 Text(
-                  '随身博物馆导览手册',
+                  l10n.homePocketGuide,
                   textAlign: TextAlign.center,
                   style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
                 ),
@@ -66,17 +68,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 _gmField(
                   gm: gm,
                   controller: _emailController,
-                  hint: '邮箱',
+                  hint: l10n.authEmailHint,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (v) => v?.isEmpty == true ? '请输入邮箱' : null,
+                  validator: (v) =>
+                      v?.isEmpty == true ? l10n.authEmailRequired : null,
                 ),
                 const SizedBox(height: 14),
                 _gmField(
                   gm: gm,
                   controller: _passwordController,
-                  hint: '密码',
+                  hint: l10n.authPasswordHint,
                   obscure: true,
-                  validator: (v) => v?.isEmpty == true ? '请输入密码' : null,
+                  validator: (v) =>
+                      v?.isEmpty == true ? l10n.authPasswordRequired : null,
                 ),
                 const SizedBox(height: 22),
                 _isLoading
@@ -88,7 +92,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                       )
                     : GmTicketButton(
-                        label: '登 录',
+                        label: l10n.authLoginButton,
                         icon: GmIcons.ticket,
                         onTap: _handleLogin,
                       ),
@@ -96,21 +100,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 GestureDetector(
                   onTap: () => context.push('/register'),
                   child: Text(
-                    '还没有账号？注册',
+                    l10n.authNoAccount,
                     textAlign: TextAlign.center,
                     style: GmText.sans(size: 12.5, color: gm.accent),
                   ),
                 ),
                 const SizedBox(height: 24),
-                _divider('或使用以下方式登录'),
+                _divider(l10n.authOrLoginWith),
                 const SizedBox(height: 18),
-                _socialButton(gm, '使用 Google 登录', _handleGoogleLogin),
+                _socialButton(gm, l10n.authGoogleLogin, _handleGoogleLogin),
                 const SizedBox(height: 10),
-                _socialButton(gm, '使用 Apple 登录', _handleAppleLogin),
+                _socialButton(gm, l10n.authAppleLogin, _handleAppleLogin),
                 const SizedBox(height: 18),
-                _divider('或'),
+                _divider(l10n.authOr),
                 const SizedBox(height: 18),
-                _socialButton(gm, '游客登录', _handleGuestLogin, emphasized: true),
+                _socialButton(gm, l10n.authGuestLogin, _handleGuestLogin,
+                    emphasized: true),
               ],
             ),
           ),
@@ -215,7 +220,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       context.go('/');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登录失败，请检查邮箱和密码')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.authLoginFailed)),
       );
     }
   }
@@ -234,7 +239,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         // User cancelled the sign-in
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Google登录已取消')),
+            SnackBar(
+                content:
+                    Text(AppLocalizations.of(context)!.authGoogleCancelled)),
           );
         }
         setState(() => _isLoading = false);
@@ -260,22 +267,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         context.go('/');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google登录失败，请重试')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.authGoogleFailed)),
         );
       }
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Google登录错误';
-        if (e.toString().contains('GOOGLE_CLIENT_ID not configured')) {
-          errorMsg = 'Google登录未配置，请联系管理员配置 GOOGLE_CLIENT_ID';
-        } else if (e.toString().contains('DEVELOPER_ERROR') ||
+        final l10n = AppLocalizations.of(context)!;
+        String errorMsg = l10n.authGoogleError;
+        if (e.toString().contains('GOOGLE_CLIENT_ID not configured') ||
+            e.toString().contains('DEVELOPER_ERROR') ||
             e.toString().contains('sign_in_failed') ||
             e.toString().contains('GoogleService-Info.plist')) {
-          errorMsg = 'Google登录未配置，请联系管理员添加GoogleService-Info.plist';
+          errorMsg = l10n.authGoogleNotConfigured;
         } else if (e.toString().contains('network')) {
-          errorMsg = 'Google登录网络错误，请检查网络连接';
+          errorMsg = l10n.authGoogleNetworkError;
         } else {
-          errorMsg = 'Google登录错误: ${e.toString()}';
+          errorMsg = '${l10n.authGoogleError}: ${e.toString()}';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -296,7 +304,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!Platform.isIOS && !Platform.isMacOS) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apple登录仅支持iOS和macOS设备')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.authAppleOnlyApple)),
         );
       }
       return;
@@ -343,21 +352,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         context.go('/');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apple登录失败，请重试')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.authAppleFailed)),
         );
       }
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Apple登录错误';
+        final l10n = AppLocalizations.of(context)!;
+        String errorMsg = l10n.authAppleError;
         if (e.toString().contains('entitlements') ||
             e.toString().contains('not enabled') ||
             e.toString().contains('not configured')) {
-          errorMsg = 'Apple登录未配置，请检查Xcode的Sign In with Apple capability';
+          errorMsg = l10n.authAppleNotConfigured;
         } else if (e.toString().contains('cancelled') ||
             e.toString().contains('1001')) {
-          errorMsg = 'Apple登录已取消';
+          errorMsg = l10n.authAppleCancelled;
         } else {
-          errorMsg = 'Apple登录错误: ${e.toString()}';
+          errorMsg = '${l10n.authAppleError}: ${e.toString()}';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -390,7 +401,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         context.go('/');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('游客登录失败，请重试')),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)!.authGuestFailed)),
         );
       }
     } catch (e) {
@@ -398,7 +410,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('游客登录错误: ${e.toString()}'),
+            content: Text(
+                '${AppLocalizations.of(context)!.authGuestError}: ${e.toString()}'),
             duration: const Duration(seconds: 5),
           ),
         );

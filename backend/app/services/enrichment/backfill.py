@@ -41,10 +41,14 @@ _CREATORS_BATCH = (
 )
 
 
-def _fetch_creators(qids, *, run_query=None) -> dict:
-    """批量 作品QID → 作者QID(P170,首个)。VALUES 分批查询。"""
+def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
+    """批量 作品QID → 作者QID(P170,首个)。VALUES 分批查询。
+    单批失败重试一次,仍失败跳过该批(Wikidata 502 教训:不炸全局,幂等重跑再补)。"""
     if not qids:
         return {}
+    import logging
+    import time
+
     from app.services.enrichment.sources.wikidata_catalog import _default_run_query
 
     run_query = run_query or _default_run_query
@@ -52,9 +56,21 @@ def _fetch_creators(qids, *, run_query=None) -> dict:
     qids = list(qids)
     for i in range(0, len(qids), _CREATORS_BATCH):
         batch = qids[i : i + _CREATORS_BATCH]
-        rows = run_query(
-            _CREATORS_QUERY.format(values=" ".join(f"wd:{q}" for q in batch))
-        )
+        sparql = _CREATORS_QUERY.format(values=" ".join(f"wd:{q}" for q in batch))
+        rows = None
+        for attempt in (1, 2):
+            try:
+                rows = run_query(sparql)
+                break
+            except Exception:
+                if attempt == 1:
+                    time.sleep(retry_wait)
+                else:
+                    logging.getLogger(__name__).exception(
+                        "creators batch failed, skip %d qids", len(batch)
+                    )
+        if rows is None:
+            continue
         for row in rows:
             item = (row.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
             creator = (row.get("creator") or {}).get("value", "").rsplit("/", 1)[-1]
@@ -180,16 +196,61 @@ def _clean_i18n(i18n) -> dict:
     return out
 
 
+def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
+    """作者国籍/代表作多语填充(交接③):权威标签优先→已有保留→en 轴(legacy 列)翻译兜底。
+    data=fetch_artist_i18n_facts 结果。幂等只补缺;返回是否有变更。"""
+    nat = {**(data.get("nationality_i18n") or {}), **(art.nationality_i18n or {})}
+    works = {**(data.get("notable_works_i18n") or {}), **(art.notable_works_i18n or {})}
+    if not nat.get("en") and art.nationality:
+        nat["en"] = art.nationality
+    if not works.get("en") and art.notable_works:
+        works["en"] = list(art.notable_works)
+    tr = getattr(translator, "translate_name", None) or getattr(
+        translator, "translate_section", None
+    )
+    for lang in langs:
+        if not nat.get(lang) and nat.get("en") and tr:
+            try:
+                nat[lang] = tr(nat["en"], lang)
+            except Exception:
+                pass
+        if not works.get(lang) and works.get("en") and tr:
+            try:
+                works[lang] = [tr(w, lang) for w in works["en"]]
+            except Exception:
+                pass
+    changed = nat != (art.nationality_i18n or {}) or works != (
+        art.notable_works_i18n or {}
+    )
+    if nat:
+        art.nationality_i18n = nat
+    if works:
+        art.notable_works_i18n = works
+    return changed
+
+
 def backfill_display_names(
-    db, slug, *, translator, langs, fetch_labels=None, fetch_creators=None
+    db,
+    slug,
+    *,
+    translator,
+    langs,
+    fetch_labels=None,
+    fetch_creators=None,
+    fetch_artist_facts_i18n=None,
+    refresh_langs=None,
 ) -> dict:
     """铺目录后回填显示名:title_i18n + artist_qid + Artist.name_i18n(名字行,bio 留给 generate)。
     幂等:已齐语种的对象/作者跳过。契约:stub 一进目录就该有完整多语显示名。"""
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import (
+        fetch_artist_i18n_facts,
+        fetch_wikidata_labels,
+    )
     from app.services.enrichment.pipeline import _fill_i18n
 
     fetch_labels = fetch_labels or fetch_wikidata_labels
     fetch_creators = fetch_creators or _fetch_creators
+    fetch_artist_facts_i18n = fetch_artist_facts_i18n or fetch_artist_i18n_facts
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return {"error": "unknown museum"}
@@ -207,10 +268,17 @@ def backfill_display_names(
             if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
                 attrs = {**attrs, "title_i18n": ti}
                 o.attributes = attrs
-            if any(not ti.get(lang) for lang in langs):
-                ti = _fill_i18n(
-                    ti, o.title_en, fetch_labels(o.qid, langs), langs, translator
-                )
+            need_fill = any(not ti.get(lang) for lang in langs)
+            if need_fill or refresh_langs:
+                labels = fetch_labels(o.qid, langs)
+                # refresh:该语言有权威标签则覆盖存量(繁→简修复);无标签保留(翻译值不动)
+                for lang in refresh_langs or []:
+                    if labels.get(lang) and labels[lang] != ti.get(lang):
+                        ti = {**ti, lang: labels[lang]}
+                        attrs = {**attrs, "title_i18n": ti}
+                        o.attributes = attrs
+            if need_fill:
+                ti = _fill_i18n(ti, o.title_en, labels, langs, translator)
                 attrs = {**attrs, "title_i18n": ti}
                 o.attributes = attrs
                 if ti.get("zh") and not o.title_zh:
@@ -242,13 +310,31 @@ def backfill_display_names(
             ni = _clean_i18n(art.name_i18n)
             if ni != (art.name_i18n or {}):
                 art.name_i18n = ni
-            if any(not ni.get(lang) for lang in langs):
-                art.name_i18n = _fill_i18n(
-                    ni, art.name_en, fetch_labels(aqid, langs), langs, translator
-                )
+            need_fill_a = any(not ni.get(lang) for lang in langs)
+            if need_fill_a or refresh_langs:
+                alabels = fetch_labels(aqid, langs)
+                for lang in refresh_langs or []:
+                    if alabels.get(lang) and alabels[lang] != ni.get(lang):
+                        ni = {**ni, lang: alabels[lang]}
+                        art.name_i18n = ni
+                        if lang == "zh":
+                            art.name_zh = alabels[lang]
+            if need_fill_a:
+                art.name_i18n = _fill_i18n(ni, art.name_en, alabels, langs, translator)
                 counts["artists"] += 1
             if not art.name_zh and (art.name_i18n or {}).get("zh"):
                 art.name_zh = art.name_i18n["zh"]
+            # 国籍/代表作多语(交接③):缺语种才触网,幂等
+            need = [
+                lang
+                for lang in langs
+                if not (art.nationality_i18n or {}).get(lang)
+                or not (art.notable_works_i18n or {}).get(lang)
+            ]
+            if need:
+                fill_artist_i18n_facts(
+                    art, langs, translator, fetch_artist_facts_i18n(aqid, langs)
+                )
         except Exception:
             import logging
 

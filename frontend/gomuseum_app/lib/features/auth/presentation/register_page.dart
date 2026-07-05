@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'auth_provider.dart';
@@ -25,6 +26,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: gm.bg,
       body: SafeArea(
@@ -48,7 +50,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '创建账号',
+                    l10n.authCreateAccount,
                     textAlign: TextAlign.center,
                     style: GmText.serif(
                         size: 21, weight: FontWeight.w700, letterSpacing: 4),
@@ -59,13 +61,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   _gmField(
                     gm: gm,
                     controller: _emailController,
-                    hint: '邮箱',
+                    hint: l10n.authEmailHint,
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) {
-                      if (v?.isEmpty == true) return '请输入邮箱';
+                      if (v?.isEmpty == true) return l10n.authEmailRequired;
                       final emailRegex = RegExp(
                           r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                      if (!emailRegex.hasMatch(v!)) return '请输入有效的邮箱地址';
+                      if (!emailRegex.hasMatch(v!))
+                        return l10n.authEmailInvalid;
                       return null;
                     },
                   ),
@@ -73,17 +76,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   _gmField(
                     gm: gm,
                     controller: _usernameController,
-                    hint: '用户名（可选）',
+                    hint: l10n.authUsernameOptionalHint,
                   ),
                   const SizedBox(height: 14),
                   _gmField(
                     gm: gm,
                     controller: _passwordController,
-                    hint: '密码',
+                    hint: l10n.authPasswordHint,
                     obscure: true,
                     validator: (v) {
-                      if (v?.isEmpty == true) return '请输入密码';
-                      if (v!.length < 6) return '密码至少6位';
+                      if (v?.isEmpty == true) return l10n.authPasswordRequired;
+                      if (v!.length < 6) return l10n.authPasswordMin6;
                       return null;
                     },
                   ),
@@ -91,10 +94,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   _gmField(
                     gm: gm,
                     controller: _confirmPasswordController,
-                    hint: '确认密码',
+                    hint: l10n.authConfirmPasswordHint,
                     obscure: true,
                     validator: (v) {
-                      if (v != _passwordController.text) return '两次密码不一致';
+                      if (v != _passwordController.text) {
+                        return l10n.authPasswordMismatch;
+                      }
                       return null;
                     },
                   ),
@@ -108,7 +113,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           ),
                         )
                       : GmTicketButton(
-                          label: '注 册',
+                          label: l10n.authRegisterButton,
                           icon: GmIcons.ticket,
                           onTap: _handleRegister,
                         ),
@@ -116,7 +121,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   GestureDetector(
                     onTap: () => context.pop(),
                     child: Text(
-                      '已有账号？登录',
+                      l10n.authHaveAccount,
                       textAlign: TextAlign.center,
                       style: GmText.sans(size: 12.5, color: gm.accent),
                     ),
@@ -190,7 +195,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       context.go('/');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('注册失败，邮箱可能已被使用')),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.authRegisterFailed)),
       );
     }
   }

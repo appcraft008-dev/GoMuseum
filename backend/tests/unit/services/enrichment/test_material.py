@@ -144,3 +144,90 @@ def test_fetch_wikidata_labels():
 
     out = fetch_wikidata_labels("Q1", ["en", "fr", "de"], run_query=fake)
     assert out == {"fr": "La Nuit étoilée", "en": "Starry Night"}  # 只含 Wikidata 有的
+
+
+def test_fetch_artist_i18n_facts_multilang_labels():
+    # 作者国籍(P27)/代表作(P800)的多语权威标签(交接③:非英语界面显英文)
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    rows = [
+        {
+            "natLabel": {"value": "法国", "xml:lang": "zh"},
+            "workLabel": {"value": "奥林匹亚", "xml:lang": "zh"},
+        },
+        {
+            "natLabel": {"value": "France", "xml:lang": "en"},
+            "workLabel": {"value": "Olympia", "xml:lang": "en"},
+        },
+        {
+            "natLabel": {"value": "Frankreich", "xml:lang": "de"},
+            "workLabel": {"value": "Olympia", "xml:lang": "de"},
+        },
+    ]
+    out = fetch_artist_i18n_facts("Q296", ["zh", "en", "de"], run_query=lambda s: rows)
+    assert out["nationality_i18n"] == {"zh": "法国", "en": "France", "de": "Frankreich"}
+    assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
+    assert out["notable_works_i18n"]["en"] == ["Olympia"]
+
+
+def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    rows = [
+        {"natLabel": {"value": "Q142", "xml:lang": "zh"}},  # 无标签退回QID→跳过
+        {"workLabel": {"value": "Olympia", "xml:lang": "en"}},
+    ]
+    out = fetch_artist_i18n_facts("Q296", ["zh", "en"], run_query=lambda s: rows)
+    assert "zh" not in out["nationality_i18n"]
+    assert out["notable_works_i18n"]["en"] == ["Olympia"]
+
+
+def test_fetch_labels_prefers_zh_hans_over_traditional():
+    # 繁简混杂尾巴:Wikidata zh 标签变体不定(愛德華·馬奈)→ zh-hans > zh-cn > zh
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [
+        {"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}},
+        {"l": {"value": "爱德华·马奈", "xml:lang": "zh-hans"}},
+        {"l": {"value": "Édouard Manet", "xml:lang": "fr"}},
+    ]
+    out = fetch_wikidata_labels("Q296", ["zh", "fr"], run_query=lambda s: rows)
+    assert out["zh"] == "爱德华·马奈"  # hans 优先于繁体 zh
+    assert out["fr"] == "Édouard Manet"
+
+
+def test_fetch_labels_zh_falls_back_when_no_hans():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "馬奈", "xml:lang": "zh"}}]
+    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    assert out["zh"] == "马奈"  # 没 hans 时取 zh 并 t2s 转简
+
+
+def test_zh_label_converted_to_simplified_when_only_traditional():
+    # 根因:马奈/高更等在 Wikidata 只有繁体 zh 标签(无 zh-hans)→ OpenCC t2s 确定性转换
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}}]
+    out = fetch_wikidata_labels("Q40599", ["zh"], run_query=lambda s: rows)
+    assert out["zh"] == "爱德华·马奈"  # 繁→简
+
+
+def test_zh_hans_label_untouched():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "克劳德·莫奈", "xml:lang": "zh-hans"}}]
+    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    assert out["zh"] == "克劳德·莫奈"
+
+
+def test_artist_i18n_facts_zh_converted():
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    rows = [
+        {"natLabel": {"value": "法國", "xml:lang": "zh"}},
+        {"workLabel": {"value": "奧林匹亞", "xml:lang": "zh"}},
+    ]
+    out = fetch_artist_i18n_facts("Q40599", ["zh"], run_query=lambda s: rows)
+    assert out["nationality_i18n"]["zh"] == "法国"
+    assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]

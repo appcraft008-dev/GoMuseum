@@ -12,6 +12,7 @@ const List<Locale> kSupportedLocales = [
   Locale('de'),
   Locale('es'),
   Locale('it'),
+  Locale('pl'),
 ];
 
 const Map<String, String> _kLanguageNames = {
@@ -21,6 +22,7 @@ const Map<String, String> _kLanguageNames = {
   'de': 'Deutsch',
   'es': 'Español',
   'it': 'Italiano',
+  'pl': 'Polski',
 };
 
 /// Locale → 展示名（未知语言回退其 code）。

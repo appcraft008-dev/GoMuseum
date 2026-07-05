@@ -178,7 +178,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guideVoiceComingSoon => 'Voice Q&A is coming soon, type for now';
 
   @override
-  String get guideGenerating => 'Generating explanation…';
+  String get guideGenerating => 'Generating content · about 1–3 min';
 
   @override
   String get guideEmpty => 'No grounded explanation yet (in progress)';
@@ -393,6 +393,158 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get confirmYes => 'Confirm';
+
+  @override
+  String get authEmailHint => 'Email';
+
+  @override
+  String get authEmailRequired => 'Please enter your email';
+
+  @override
+  String get authEmailInvalid => 'Please enter a valid email';
+
+  @override
+  String get authPasswordHint => 'Password';
+
+  @override
+  String get authPasswordRequired => 'Please enter your password';
+
+  @override
+  String get authPasswordMin6 => 'Password must be at least 6 characters';
+
+  @override
+  String get authConfirmPasswordHint => 'Confirm password';
+
+  @override
+  String get authPasswordMismatch => 'Passwords do not match';
+
+  @override
+  String get authUsernameOptionalHint => 'Username (optional)';
+
+  @override
+  String get authLoginButton => 'Log In';
+
+  @override
+  String get authRegisterButton => 'Sign Up';
+
+  @override
+  String get authNoAccount => 'No account? Sign up';
+
+  @override
+  String get authHaveAccount => 'Have an account? Log in';
+
+  @override
+  String get authCreateAccount => 'Create account';
+
+  @override
+  String get authOrLoginWith => 'Or log in with';
+
+  @override
+  String get authGoogleLogin => 'Sign in with Google';
+
+  @override
+  String get authAppleLogin => 'Sign in with Apple';
+
+  @override
+  String get authOr => 'Or';
+
+  @override
+  String get authGuestLogin => 'Continue as guest';
+
+  @override
+  String get authLoginFailed => 'Login failed, check your email and password';
+
+  @override
+  String get authRegisterFailed =>
+      'Registration failed, email may already be in use';
+
+  @override
+  String get authGoogleCancelled => 'Google sign-in cancelled';
+
+  @override
+  String get authGoogleFailed => 'Google sign-in failed, please try again';
+
+  @override
+  String get authGoogleError => 'Google sign-in error';
+
+  @override
+  String get authGoogleNotConfigured =>
+      'Google sign-in not configured, contact the administrator';
+
+  @override
+  String get authGoogleNetworkError =>
+      'Google sign-in network error, check your connection';
+
+  @override
+  String get authAppleOnlyApple =>
+      'Apple sign-in is only supported on iOS and macOS';
+
+  @override
+  String get authAppleCancelled => 'Apple sign-in cancelled';
+
+  @override
+  String get authAppleFailed => 'Apple sign-in failed, please try again';
+
+  @override
+  String get authAppleError => 'Apple sign-in error';
+
+  @override
+  String get authAppleNotConfigured => 'Apple sign-in not configured';
+
+  @override
+  String get authGuestFailed => 'Guest sign-in failed, please try again';
+
+  @override
+  String get authGuestError => 'Guest sign-in error';
+
+  @override
+  String get recCandidatesTitle => 'Is this the one?';
+
+  @override
+  String get recNoneOfThese => 'None of these';
+
+  @override
+  String get recNotRecognized => 'Couldn\'t recognize this work';
+
+  @override
+  String recLabelSeen(String text) {
+    return 'The label reads \"$text\" — we haven\'t added its full guide yet, but we\'ve noted your request ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => 'Photograph the wall label';
+
+  @override
+  String get recShootLabelHint =>
+      'Museum labels show the title and artist — snap it and we can identify the work';
+
+  @override
+  String get recViewfinderLabelHint => 'Aim at the label text, fill the frame';
+
+  @override
+  String get camRecognizeTitle => 'Identify Artwork';
+
+  @override
+  String get camViewfinderHint => 'Fit the whole artwork in the frame';
+
+  @override
+  String get camRecentGallery => 'Recent';
+
+  @override
+  String get camAllAlbums => 'All albums';
+
+  @override
+  String get camGallery => 'Gallery';
+
+  @override
+  String get camSearch => 'Search';
+
+  @override
+  String get guideUnavailable =>
+      'This artwork has too little material for a guide';
+
+  @override
+  String get guideNotGenerated => 'Guide not generated yet';
 
   @override
   String get camNoCamera => 'No available camera found';

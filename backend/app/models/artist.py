@@ -26,6 +26,12 @@ class Artist(Base):
     name_i18n = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
     )  # {lang: name} 多语显示名
+    nationality_i18n = Column(
+        MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
+    )  # {lang: 国籍}(P27 权威标签→翻译兜底;交接③)
+    notable_works_i18n = Column(
+        MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
+    )  # {lang: [代表作名]}(P800 权威标签→翻译兜底)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

@@ -109,20 +109,51 @@ SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
 """
 
 
+# zh 标签变体优先级:简体权威 > 大陆简体 > 笼统 zh(可能繁体;比没有强)
+_ZH_VARIANTS = ("zh-hans", "zh-cn", "zh")
+
+_t2s = None
+
+
+def to_simplified(s: str) -> str:
+    """繁→简(OpenCC 确定性字符转换;马奈/高更等 Wikidata 只有繁体 zh 标签)。
+    不用 LLM——人名转换必须精确对应,不能自由发挥。"""
+    global _t2s
+    if _t2s is None:
+        from opencc import OpenCC
+
+        _t2s = OpenCC("t2s")
+    return _t2s.convert(s or "")
+
+
 def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
-    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。"""
+    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
+    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。"""
     run_query = (
         run_query or _default_artist_query
     )  # ponytail: same generic SPARQL caller
-    langlist = ", ".join('"%s"' % x for x in langs)
+    query_langs = list(langs)
+    if "zh" in langs:
+        query_langs += [v for v in _ZH_VARIANTS if v not in query_langs]
+    langlist = ", ".join('"%s"' % x for x in query_langs)
     rows = run_query(_LABELS_QUERY.format(qid=qid, langs=langlist))
-    out = {}
+    raw: dict = {}
     for row in rows:
         lv = row.get("l") or {}
         lang = lv.get("xml:lang") or lv.get("lang")
         val = lv.get("value")
-        if lang in langs and val and lang not in out:
-            out[lang] = val
+        if lang and val and lang not in raw:
+            raw[lang] = val
+    out = {}
+    for lang in langs:
+        if lang == "zh":
+            for v in _ZH_VARIANTS:
+                if raw.get(v):
+                    # 取自笼统 zh 变体的可能是繁体 → t2s;hans/cn 转换是无害幂等
+                    out["zh"] = to_simplified(raw[v])
+                    break
+        elif raw.get(lang):
+            out[lang] = raw[lang]
     return out
 
 
@@ -152,4 +183,43 @@ def fetch_artist_material(qid, registry, *, run_query=None, country_lang="fr") -
         f"artist_{k}": v
         for k, v in contrib.fields.items()
         if k.startswith("extract_") and v
+    }
+
+
+_ARTIST_I18N_FACTS_QUERY = """
+SELECT ?natLabel ?workLabel WHERE {{
+  OPTIONAL {{ wd:{qid} wdt:P27 ?nat . ?nat rdfs:label ?natLabel .
+             FILTER(lang(?natLabel) IN ({langs})) }}
+  OPTIONAL {{ wd:{qid} wdt:P800 ?work . ?work rdfs:label ?workLabel .
+             FILTER(lang(?workLabel) IN ({langs})) }}
+}}
+"""
+
+
+def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
+    """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
+    单查询 rdfs:label 语言过滤(同 _LABELS_QUERY 款,一作者一查)。
+    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]}};
+    无标签的语言缺席(由调用方翻译兜底)。"""
+    run_query = run_query or _default_artist_query
+    langlist = ", ".join('"%s"' % x for x in langs)
+    rows = run_query(_ARTIST_I18N_FACTS_QUERY.format(qid=artist_qid, langs=langlist))
+    nat_i18n: dict = {}
+    works_i18n: dict = {}
+    for row in rows:
+        nl = row.get("natLabel") or {}
+        wl = row.get("workLabel") or {}
+        nlang, nv = nl.get("xml:lang") or nl.get("lang"), nl.get("value")
+        wlang, wv = wl.get("xml:lang") or wl.get("lang"), wl.get("value")
+        if nv and nlang in langs and not _is_raw_qid(nv) and nlang not in nat_i18n:
+            nat_i18n[nlang] = to_simplified(nv) if nlang == "zh" else nv
+        if wv and wlang in langs and not _is_raw_qid(wv):
+            if wlang == "zh":
+                wv = to_simplified(wv)
+            works_i18n.setdefault(wlang, [])
+            if wv not in works_i18n[wlang]:
+                works_i18n[wlang].append(wv)
+    return {
+        "nationality_i18n": nat_i18n,
+        "notable_works_i18n": {k: v[:5] for k, v in works_i18n.items()},
     }

@@ -323,3 +323,93 @@ def test_backfill_survives_per_object_fetch_failure(session):
     # Q1 失败被跳过,Q2 及作者流程正常走完,整体不抛
     assert out.get("errors", 0) >= 1
     assert "titles" in out
+
+
+def test_fetch_creators_survives_batch_failure():
+    # prod 教训2:Wikidata 502 炸在 creators 批量查询(循环之前),整个回填没起步就死
+    # → 单批失败重试一次,仍失败跳过该批继续(幂等重跑再补)
+    from app.services.enrichment.backfill import _fetch_creators
+
+    calls = {"n": 0}
+
+    def flaky(sparql):
+        calls["n"] += 1
+        if "Q0 " in sparql or sparql.rstrip().endswith(
+            "Q0 } ?item wdt:P170 ?creator }"
+        ):
+            pass
+        if calls["n"] <= 2 and "wd:Q0" in sparql:  # 第一批(含重试)都失败
+            raise RuntimeError("502 Bad Gateway")
+        return [
+            {
+                "item": {"value": "http://www.wikidata.org/entity/Q300"},
+                "creator": {"value": "http://www.wikidata.org/entity/Q9"},
+            }
+        ]
+
+    qids = [f"Q{i}" for i in range(450)]  # 3 批
+    out = _fetch_creators(qids, run_query=flaky, retry_wait=0)
+    assert out.get("Q300") == "Q9"  # 后续批正常
+    assert calls["n"] >= 4  # 第一批试了2次(原+重试),另两批各1次
+
+
+def test_backfill_fills_artist_facts_i18n(session):
+    # 交接③:names 回填顺带补 国籍/代表作 多语(权威→翻译兜底→en;幂等)
+    from app.models.artist import Artist
+
+    Artist.__table__.create(bind=session.get_bind(), checkfirst=True)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q296"}
+    session.add(
+        Artist(
+            qid="Q296",
+            name_en="Manet",
+            name_i18n={"en": "Manet", "zh": "马奈"},
+            nationality="France",
+            notable_works=["Olympia"],
+        )
+    )
+    session.commit()
+    tr = _Translator()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=tr,
+        langs=["en", "zh", "de"],
+        fetch_labels=_labels({}),
+        fetch_creators=lambda qids: {},
+        fetch_artist_facts_i18n=lambda qid, langs: {
+            "nationality_i18n": {"zh": "法国"},  # zh 权威;de 缺 → 翻译兜底
+            "notable_works_i18n": {},  # 全缺 → 从 en 列翻译兜底
+        },
+    )
+    art = session.query(Artist).filter_by(qid="Q296").one()
+    assert art.nationality_i18n["zh"] == "法国"  # 权威
+    assert art.nationality_i18n["de"] == "France_de"  # 翻译兜底(_Tr 回显)
+    assert art.nationality_i18n["en"] == "France"  # en 列作轴
+    assert art.notable_works_i18n["zh"] == ["Olympia_zh"]
+    assert art.notable_works_i18n["en"] == ["Olympia"]
+
+
+def test_backfill_refresh_langs_replaces_with_authoritative(session):
+    # 繁简修复:refresh 模式下,该语言有权威标签则覆盖存量(繁→简);无标签保留(翻译值不动)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {
+        "title_i18n": {"en": "The Wounded Man", "zh": "受傷的男人"}  # 繁体存量
+    }
+    session.commit()
+    o2 = session.query(MuseumObject).filter_by(qid="Q2").one()
+    # Q2 zh 是翻译兜底产物,Wikidata 无 zh 标签 → refresh 不应动它
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "zh"],
+        fetch_labels=_labels({"Q1": {"zh": "受伤的男人"}}),
+        fetch_creators=lambda qids: {},
+        refresh_langs=["zh"],
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes["title_i18n"]["zh"] == "受伤的男人"  # 权威简体覆盖繁体
+    o2 = session.query(MuseumObject).filter_by(qid="Q2").one()
+    assert o2.attributes["title_i18n"]["zh"] == "奥林匹亚"  # 无标签→保留原值
