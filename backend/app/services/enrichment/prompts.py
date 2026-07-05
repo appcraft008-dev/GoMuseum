@@ -144,7 +144,12 @@ _FAITHFULNESS_SYSTEM = (
     "You are a translation quality judge. You are given an English SOURCE and its {lang} "
     "TRANSLATION. Decide whether the translation is faithful: it must convey exactly the "
     "same facts with nothing added and nothing omitted (wording/fluency differences are "
-    'fine). Return STRICT JSON: {{"faithful": true|false, "issues": ["..."]}} '
+    "fine). ALSO mark it UNFAITHFUL if the TRANSLATION still contains any untranslated "
+    "source-language (English) words or phrases that should have been rendered in {lang} "
+    '(e.g. a common noun like "nude" or "severed head" left in English mid-text). '
+    "EXCEPTION: proper nouns (people/places) and work TITLES kept in their conventional "
+    "original/exonym form are fine and must NOT be flagged. "
+    'Return STRICT JSON: {{"faithful": true|false, "issues": ["..."]}} '
     "(issues empty if faithful). No commentary."
 )
 

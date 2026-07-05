@@ -85,7 +85,13 @@ def _translate(db, qid: str, language: str) -> dict:
 
     o = db.query(MuseumObject).filter_by(qid=qid).one()
     out = translate_object_language(
-        db, o, language, ContentTranslator(default_complete)
+        db,
+        o,
+        language,
+        ContentTranslator(
+            default_complete,
+            complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+        ),
     )
     db.commit()
     return out

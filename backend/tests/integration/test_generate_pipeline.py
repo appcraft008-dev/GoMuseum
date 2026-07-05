@@ -870,3 +870,52 @@ def test_generate_fills_artist_facts_i18n(session, monkeypatch):
     art = session.query(Artist).filter_by(qid="Q296").one()
     assert art.nationality_i18n["zh"] == "法国"  # 权威
     assert art.nationality_i18n["it"] == "France_it"  # en 轴翻译兜底
+
+
+def test_translate_retries_with_strong_model_on_faithfulness_fail(session):
+    # Layer2:闸失败→用强模型(gpt-4o)重译(语言无关,靠闸信号触发,不硬编语言)
+    from app.services.enrichment.translator import ContentTranslator
+
+    calls = {"mini": 0, "strong": 0, "faith": 0}
+
+    def mini(system, user):
+        if "quality judge" in system:  # faithfulness
+            calls["faith"] += 1
+            # mini 译文含残片 → 第一次判不忠实,重译后忠实
+            return (
+                '{"faithful": false, "issues": ["fragment"]}'
+                if calls["strong"] == 0
+                else '{"faithful": true, "issues": []}'
+            )
+        calls["mini"] += 1
+        return "含残片 severed head 的译文"
+
+    def strong(system, user):
+        calls["strong"] += 1
+        return "干净的中文译文"
+
+    tr = ContentTranslator(mini, complete_strong=strong)
+    out = tr.translate_object({"guide": "The severed head."}, ["zh"])
+    assert calls["strong"] == 1  # 触发了强模型重译
+    assert out["zh"]["guide"].status == "published"
+    assert out["zh"]["guide"].body == "干净的中文译文"
+
+
+def test_translate_no_strong_retry_when_faithful(session):
+    from app.services.enrichment.translator import ContentTranslator
+
+    strong_calls = {"n": 0}
+
+    def mini(system, user):
+        if "quality judge" in system:
+            return '{"faithful": true, "issues": []}'
+        return "忠实译文"
+
+    def strong(system, user):
+        strong_calls["n"] += 1
+        return "x"
+
+    tr = ContentTranslator(mini, complete_strong=strong)
+    out = tr.translate_object({"guide": "Body."}, ["zh"])
+    assert strong_calls["n"] == 0  # 忠实则不动强模型
+    assert out["zh"]["guide"].status == "published"
