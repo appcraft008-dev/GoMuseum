@@ -168,6 +168,10 @@
   "camSearch": "搜尋",
   "guideUnavailable": "該藏品資料不足，暫無講解",
   "guideNotGenerated": "講解暫未生成",
+
+  "audioNotReady": "講解生成後可聽",
+  "audioFailed": "音訊暫不可用，請重試",
+  "deepGenerating": "深度內容生成中…",
   "camNoCamera": "未找到可用相機",
   "camInitFailed": "相機初始化失敗",
   "camTagSearch": "展籤檢索",

@@ -557,6 +557,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get guideNotGenerated => 'Guide pas encore généré';
 
   @override
+  String get audioNotReady => 'Audio disponible une fois le guide prêt';
+
+  @override
+  String get audioFailed => 'Audio indisponible, réessayez';
+
+  @override
+  String get deepGenerating => 'Génération du contenu détaillé…';
+
+  @override
   String get camNoCamera => 'Aucune caméra disponible';
 
   @override

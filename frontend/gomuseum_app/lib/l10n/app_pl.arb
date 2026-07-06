@@ -178,6 +178,10 @@
 
   "guideUnavailable": "To dzieło ma zbyt mało materiału na przewodnik",
   "guideNotGenerated": "Przewodnik jeszcze nie wygenerowany",
+
+  "audioNotReady": "Audio dostępne po przygotowaniu przewodnika",
+  "audioFailed": "Audio niedostępne, spróbuj ponownie",
+  "deepGenerating": "Generowanie szczegółowej treści…",
   "camNoCamera": "Nie znaleziono dostępnego aparatu",
   "camInitFailed": "Nie udało się uruchomić aparatu",
   "camTagSearch": "Wyszukiwanie po tabliczce",

@@ -538,6 +538,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guideNotGenerated => 'ガイドはまだ生成されていません';
 
   @override
+  String get audioNotReady => '解説の生成後に再生できます';
+
+  @override
+  String get audioFailed => '音声を利用できません。再試行してください';
+
+  @override
+  String get deepGenerating => '詳細コンテンツを生成中…';
+
+  @override
   String get camNoCamera => '利用可能なカメラが見つかりません';
 
   @override

@@ -179,6 +179,10 @@
 
   "guideUnavailable": "该藏品资料不足，暂无讲解",
   "guideNotGenerated": "讲解暂未生成",
+
+  "audioNotReady": "讲解生成后可听",
+  "audioFailed": "音频暂不可用，请重试",
+  "deepGenerating": "深度内容生成中…",
   "camNoCamera": "未找到可用相机",
   "camInitFailed": "相机初始化失败",
   "camTagSearch": "展签检索",

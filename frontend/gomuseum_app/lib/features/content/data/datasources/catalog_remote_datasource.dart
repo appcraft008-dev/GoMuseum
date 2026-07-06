@@ -1,5 +1,6 @@
 // lib/features/content/data/datasources/catalog_remote_datasource.dart
 import 'package:dio/dio.dart';
+import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
@@ -19,6 +20,14 @@ abstract class CatalogRemoteDataSource {
     required String slug,
     required String qid,
     String language,
+  });
+
+  /// 讲解 TTS 懒生成：点播放触发。200→就绪，404→文字未生成，503/其它→失败。
+  Future<GuideAudioResult> getGuideAudio({
+    required String slug,
+    required String qid,
+    required String language,
+    String section,
   });
 }
 
@@ -62,5 +71,27 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
     final r = await dio.get('/api/v1/museums/$slug/objects/$qid/content',
         queryParameters: {'language': language});
     return ObjectContent.fromJson(r.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<GuideAudioResult> getGuideAudio({
+    required String slug,
+    required String qid,
+    required String language,
+    String section = 'guide',
+  }) async {
+    try {
+      final r = await dio.get('/api/v1/museums/$slug/objects/$qid/audio',
+          queryParameters: {'language': language, 'section': section});
+      final url = (r.data as Map)['audio_url'] as String?;
+      if (url != null && url.isNotEmpty) return GuideAudioReady(url);
+      return const GuideAudioFailed();
+    } on DioException catch (e) {
+      // 404 = 该语言文字未生成（非错误）；其余（503 等）= 失败可重试。
+      if (e.response?.statusCode == 404) return const GuideAudioNotReady();
+      return const GuideAudioFailed();
+    } catch (_) {
+      return const GuideAudioFailed();
+    }
   }
 }

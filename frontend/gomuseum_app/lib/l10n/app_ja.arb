@@ -168,6 +168,10 @@
   "camSearch": "検索",
   "guideUnavailable": "この作品はガイド用の資料が不足しています",
   "guideNotGenerated": "ガイドはまだ生成されていません",
+
+  "audioNotReady": "解説の生成後に再生できます",
+  "audioFailed": "音声を利用できません。再試行してください",
+  "deepGenerating": "詳細コンテンツを生成中…",
   "camNoCamera": "利用可能なカメラが見つかりません",
   "camInitFailed": "カメラの初期化に失敗しました",
   "camTagSearch": "プレート検索",

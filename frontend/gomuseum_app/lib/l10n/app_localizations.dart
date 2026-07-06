@@ -1121,6 +1121,24 @@ abstract class AppLocalizations {
   /// **'Guide not generated yet'**
   String get guideNotGenerated;
 
+  /// No description provided for @audioNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio available once the guide is ready'**
+  String get audioNotReady;
+
+  /// No description provided for @audioFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio unavailable, please retry'**
+  String get audioFailed;
+
+  /// No description provided for @deepGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating in-depth content…'**
+  String get deepGenerating;
+
   /// No description provided for @camNoCamera.
   ///
   /// In en, this message translates to:
