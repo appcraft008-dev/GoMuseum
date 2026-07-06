@@ -8,8 +8,10 @@ extension GmThemeX on BuildContext {
       ? GmPalette.dark
       : GmPalette.light;
 
-  /// 当前 UI 是否中日韩语（决定排版字距）。
-  bool get isCjk => Localizations.localeOf(this).languageCode == 'zh';
+  /// 当前 UI 是否中日韩语（决定排版字距/行高）。
+  /// ja/ko/zh（含繁体 zh-Hant，其 languageCode 也是 'zh'）都算 CJK。
+  bool get isCjk => const {'zh', 'ja', 'ko'}
+      .contains(Localizations.localeOf(this).languageCode);
 
   /// 标题字距：中文用设计的大字距（如 4/7）；拉丁文（en/fr）大字距很难看，
   /// 按比例收窄到接近 0（全大写 GOMUSEUM 保留一点点）。

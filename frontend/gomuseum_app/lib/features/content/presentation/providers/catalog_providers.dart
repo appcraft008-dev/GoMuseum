@@ -13,7 +13,7 @@ final catalogDataSourceProvider = Provider<CatalogRemoteDataSource>((ref) {
 
 final museumDetailProvider =
     FutureProvider.family<MuseumDetail, String>((ref, slug) {
-  final lang = ref.watch(languageProvider).languageCode;
+  final lang = apiLanguage(ref.watch(languageProvider));
   return ref
       .watch(catalogDataSourceProvider)
       .getMuseumDetail(slug: slug, language: lang);
@@ -21,7 +21,7 @@ final museumDetailProvider =
 
 final objectContentProvider =
     FutureProvider.family<ObjectContent, ({String slug, String qid})>((ref, a) {
-  final lang = ref.watch(languageProvider).languageCode;
+  final lang = apiLanguage(ref.watch(languageProvider));
   return ref
       .watch(catalogDataSourceProvider)
       .getObjectContent(slug: a.slug, qid: a.qid, language: lang);

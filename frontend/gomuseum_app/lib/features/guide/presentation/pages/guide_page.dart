@@ -139,7 +139,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
   bool _asking = false;
 
   // ── language
-  String get _language => ref.read(languageProvider).languageCode;
+  String get _language => apiLanguage(ref.read(languageProvider));
 
   @override
   void initState() {
