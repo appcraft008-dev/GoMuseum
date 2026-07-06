@@ -125,3 +125,53 @@ def test_audio_endpoint_503_on_tts_failure(client, monkeypatch):
 
     db = next(iter(app.dependency_overrides[_get_db]()))
     assert get_section_audio_key(db, "Q1", "zh", "guide") is None
+
+
+def test_audio_busy_when_section_locked(monkeypatch):
+    # 段级锁:同段同语言已在生成(锁活)→ 返 busy,不重复调 TTS
+    from datetime import datetime, timezone
+
+    import app.services.enrichment.lazy_audio as la
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[
+            Museum.__table__,
+            MuseumObject.__table__,
+            ObjectImage.__table__,
+            SectionType.__table__,
+            CategorySection.__table__,
+            ObjectContentSection.__table__,
+            ObjectSuggestedQuestion.__table__,
+        ],
+    )
+    s = sessionmaker(bind=engine)()
+    m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
+    obj = upsert_object(s, m.id, {"qid": "Q1", "title_en": "A", "category": "painting"})
+    s.add(
+        ObjectContentSection(
+            object_id=obj.id,
+            language="zh",
+            section_code="guide",
+            body="讲解",
+            status="published",
+        )
+    )
+    obj.attributes = {
+        "audio_locks": {"zh:guide": datetime.now(timezone.utc).isoformat()}
+    }
+    s.commit()
+
+    monkeypatch.setattr(la, "get_object_storage", lambda: FakeStorage())
+    calls = {"tts": 0}
+    monkeypatch.setattr(
+        la, "_synth", lambda t, l: calls.__setitem__("tts", calls["tts"] + 1) or b"X"
+    )
+
+    url, status = la.get_or_make_audio_url(s, "orsay", "Q1", "zh", "guide")
+    assert status == "busy"
+    assert calls["tts"] == 0  # 锁活 → 不生成
+    s.close()

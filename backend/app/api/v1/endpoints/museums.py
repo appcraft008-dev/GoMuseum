@@ -63,7 +63,10 @@ def object_audio(
     try:
         url, status = get_or_make_audio_url(db, slug, qid, language, section)
     except Exception:
+        logger.exception("TTS audio failed: %s/%s/%s", qid, language, section)
         raise HTTPException(status_code=503, detail={"reason": "tts_failed"})
+    if status == "busy":
+        raise HTTPException(status_code=409, detail={"reason": "audio_generating"})
     if status == "no_text":
         raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
     return {"audio_url": url}
