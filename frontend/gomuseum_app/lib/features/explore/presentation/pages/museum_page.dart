@@ -50,7 +50,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
   void _onScroll() {
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 200) {
-      final lang = ref.read(languageProvider).languageCode;
+      final lang = apiLanguage(ref.read(languageProvider));
       final notifier = ref.read(objectListProvider(
               (slug: widget.slug, category: _selectedCategory, language: lang))
           .notifier);
@@ -76,7 +76,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
             _TopBar(
               slug: widget.slug,
               detailAsync: detailAsync,
-              lang: ref.watch(languageProvider).languageCode,
+              lang: apiLanguage(ref.watch(languageProvider)),
             ),
             // Category tabs
             detailAsync.when(
@@ -300,7 +300,7 @@ class _ObjectGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    final lang = ref.watch(languageProvider).languageCode;
+    final lang = apiLanguage(ref.watch(languageProvider));
     final state = ref.watch(
         objectListProvider((slug: slug, category: category, language: lang)));
     final items = state.items;

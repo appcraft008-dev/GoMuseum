@@ -59,6 +59,9 @@ def build_parser() -> argparse.ArgumentParser:
     na.add_argument(
         "--refresh-langs", default=None
     )  # 强刷:该语言权威标签覆盖存量(繁简修复)
+    na.add_argument(
+        "--retranslate-langs", default=None
+    )  # 重译:无权威标签的机翻显示名用改进版重译
     tr = sub.add_parser("translate")  # 补语种:存量对象缺失语言从 en 段纯翻译(幂等)
     tr.add_argument("--target", choices=["staging", "prod"], required=True)
     tr.add_argument("--langs", required=True)  # 如 de,es,it
@@ -194,7 +197,11 @@ def cmd_generate(slug, qid, langs, force, limit, target) -> None:
 
 
 def cmd_names(
-    slug: str, langs: str | None, target: str, refresh_langs: str | None = None
+    slug: str,
+    langs: str | None,
+    target: str,
+    refresh_langs: str | None = None,
+    retranslate_langs: str | None = None,
 ) -> None:
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
@@ -215,10 +222,18 @@ def cmd_names(
         out = backfill_display_names(
             db,
             slug,
-            translator=ContentTranslator(default_complete),
+            translator=ContentTranslator(
+                default_complete,
+                complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+            ),
             langs=target_langs,
             refresh_langs=(
                 [x.strip() for x in refresh_langs.split(",")] if refresh_langs else None
+            ),
+            retranslate_langs=(
+                [x.strip() for x in retranslate_langs.split(",")]
+                if retranslate_langs
+                else None
             ),
         )
     finally:
@@ -243,7 +258,10 @@ def cmd_translate(slug: str, langs: str, limit: int | None, target: str) -> None
             db,
             slug,
             langs=[s.strip() for s in langs.split(",")],
-            translator=ContentTranslator(default_complete),
+            translator=ContentTranslator(
+                default_complete,
+                complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+            ),
             limit=limit,
         )
     finally:
@@ -296,7 +314,7 @@ def main(argv=None) -> None:
     elif ns.command == "report":
         cmd_report(ns.slug, ns.langs)
     elif ns.command == "names":
-        cmd_names(ns.slug, ns.langs, ns.target, ns.refresh_langs)
+        cmd_names(ns.slug, ns.langs, ns.target, ns.refresh_langs, ns.retranslate_langs)
     elif ns.command == "translate":
         cmd_translate(ns.slug, ns.langs, ns.limit, ns.target)
     elif ns.command == "images":

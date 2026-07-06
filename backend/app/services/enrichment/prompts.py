@@ -105,8 +105,15 @@ from app.services.enrichment.lang_config import LANG_NAMES
 _TRANSLATION_SYSTEM = (
     "You are a professional art translator. Translate the given English artwork explanation "
     "into {lang}. Rules: (1) Be FAITHFUL — do NOT add, remove, or alter any fact. "
-    "(2) Keep proper names, artist names, and work TITLES in their original form or the "
-    "established exonym in the target language; do NOT literally translate titles. "
+    "(1b) Render EVERY word in {lang}. NEVER leave source-language (English) fragments "
+    'untranslated mid-sentence (e.g. common nouns/phrases like "severed head", '
+    '"still life" must become their {lang} equivalents). This is critical for languages '
+    "distant from English (Chinese, Japanese, Korean) where copying is not an option. "
+    "(2) For people/places/work TITLES: when an established {lang} form (exonym) exists, "
+    "USE IT (e.g. Salome→\u838e\u4e50\u7f8e, Gustave Moreau→\u53e4\u65af\u5854\u592b\u00b7\u83ab\u7f57 in Chinese); only keep the "
+    "original form when no established {lang} form exists. Be CONSISTENT across the whole "
+    "text (same name → same rendering everywhere). Do NOT literally/word-for-word translate "
+    "titles that have a conventional {lang} title. "
     "(3) Natural, fluent {lang}. (4) PRESERVE THE TONE — keep the engaging, spoken, "
     "second-person audio-guide voice, hooks and gentle wit; convey them idiomatically in "
     "{lang} rather than translating jokes literally. "
@@ -114,9 +121,16 @@ _TRANSLATION_SYSTEM = (
 )
 
 
-def build_translation_prompt(en_body: str, target_lang: str):
+def build_translation_prompt(en_body: str, target_lang: str, title: str | None = None):
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _TRANSLATION_SYSTEM.format(lang=lang)
+    if title:
+        # 标题真相唯一化:正文引用标题一律用显示名(消除内容翻译自选译名的分叉)
+        system += (
+            f" IMPORTANT: this artwork's canonical {lang} title is 「{title}」 — "
+            f"whenever the text refers to the work by name, use EXACTLY this title, "
+            f"do not invent an alternative rendering."
+        )
     user = f"English:\n{en_body}"
     return system, user
 
@@ -124,10 +138,13 @@ def build_translation_prompt(en_body: str, target_lang: str):
 _NAME_TRANSLATION_SYSTEM = (
     "You translate museum artwork titles and artist names into {lang}. "
     "Return ONLY the name itself — no quotes, no brackets, no 《》, no commentary. "
-    "Use the established {lang} form when one exists (standard exonym for artist names, "
-    "conventional {lang} title for well-known works). For descriptive titles, translate "
-    "the meaning; keep proper nouns (places, people) in their standard {lang} form. "
-    "Never return the name untranslated unless it is a proper noun with no {lang} form."
+    "Rules: (a) Render EVERY word in {lang}; NEVER leave source-language (English) "
+    'fragments (e.g. "Reclining Nude" must be fully rendered, not "卧 Nude"). '
+    "(b) Use the STANDARD/conventional {lang} form: established exonym for artist names, "
+    "conventional title for well-known works, standard transliteration for names "
+    "(e.g. Olympia → the standard {lang} transliteration, not an ad-hoc one). "
+    "(c) For descriptive titles, translate the meaning. Only keep the original form "
+    "when it is a proper noun with genuinely no {lang} form."
 )
 
 
@@ -140,7 +157,12 @@ _FAITHFULNESS_SYSTEM = (
     "You are a translation quality judge. You are given an English SOURCE and its {lang} "
     "TRANSLATION. Decide whether the translation is faithful: it must convey exactly the "
     "same facts with nothing added and nothing omitted (wording/fluency differences are "
-    'fine). Return STRICT JSON: {{"faithful": true|false, "issues": ["..."]}} '
+    "fine). ALSO mark it UNFAITHFUL if the TRANSLATION still contains any untranslated "
+    "source-language (English) words or phrases that should have been rendered in {lang} "
+    '(e.g. a common noun like "nude" or "severed head" left in English mid-text). '
+    "EXCEPTION: proper nouns (people/places) and work TITLES kept in their conventional "
+    "original/exonym form are fine and must NOT be flagged. "
+    'Return STRICT JSON: {{"faithful": true|false, "issues": ["..."]}} '
     "(issues empty if faithful). No commentary."
 )
 

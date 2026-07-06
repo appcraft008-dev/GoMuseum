@@ -111,7 +111,10 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     }
     missing = {c: b for c, b in en_secs.items() if c not in have}
     if missing:
-        results = translator.translate_object(missing, [lang]).get(lang, {})
+        title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
+        results = translator.translate_object(
+            missing, [lang], titles={lang: title} if title else None
+        ).get(lang, {})
         pub, _nr = persist_gated_sections(db, o.qid, lang, results, model)
         counts["sections"] += pub
     en_qa = [
@@ -126,7 +129,8 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
         .filter_by(object_id=o.id, language=lang, status="published")
         .first()
     ):
-        items = translate_qa_items(translator, en_qa, lang)
+        _qa_title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
+        items = translate_qa_items(translator, en_qa, lang, title=_qa_title)
         counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
     aqid = (o.attributes or {}).get("artist_qid")
     if aqid:
@@ -191,7 +195,7 @@ def _clean_i18n(i18n) -> dict:
     out = {}
     for k, v in (i18n or {}).items():
         v = (v or "").strip("《》\"'“”‘’«»")
-        if v and not (k == "zh" and not _CJK.search(v)):
+        if v and not (k in ("zh", "zh-hant") and not _CJK.search(v)):
             out[k] = v
     return out
 
@@ -239,6 +243,7 @@ def backfill_display_names(
     fetch_creators=None,
     fetch_artist_facts_i18n=None,
     refresh_langs=None,
+    retranslate_langs=None,
 ) -> dict:
     """铺目录后回填显示名:title_i18n + artist_qid + Artist.name_i18n(名字行,bio 留给 generate)。
     幂等:已齐语种的对象/作者跳过。契约:stub 一进目录就该有完整多语显示名。"""
@@ -268,6 +273,12 @@ def backfill_display_names(
             if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
                 attrs = {**attrs, "title_i18n": ti}
                 o.attributes = attrs
+            # retranslate:该语言无权威标签则丢弃机翻值,下面 _fill_i18n 用改进版重译
+            if retranslate_langs:
+                _rt_labels = fetch_labels(o.qid, langs)
+                for lang in retranslate_langs:
+                    if not _rt_labels.get(lang):
+                        ti.pop(lang, None)
             need_fill = any(not ti.get(lang) for lang in langs)
             if need_fill or refresh_langs:
                 labels = fetch_labels(o.qid, langs)

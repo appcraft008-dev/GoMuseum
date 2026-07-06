@@ -231,3 +231,38 @@ def test_artist_i18n_facts_zh_converted():
     out = fetch_artist_i18n_facts("Q40599", ["zh"], run_query=lambda s: rows)
     assert out["nationality_i18n"]["zh"] == "法国"
     assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
+
+
+def test_zh_hant_prefers_traditional_authoritative_label():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [
+        {"l": {"value": "顯現", "xml:lang": "zh-hant"}},
+        {"l": {"value": "显现", "xml:lang": "zh-hans"}},
+    ]
+    out = fetch_wikidata_labels("Q", ["zh-hant"], run_query=lambda s: rows)
+    assert out["zh-hant"] == "顯現"  # 权威繁体优先
+
+
+def test_zh_hant_converts_simplified_to_traditional_when_only_hans():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "爱德华·马奈", "xml:lang": "zh-hans"}}]
+    out = fetch_wikidata_labels("Q296", ["zh-hant"], run_query=lambda s: rows)
+    assert out["zh-hant"] == "愛德華·馬奈"  # 简→繁 s2t
+
+
+def test_zh_still_simplified_regression():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}}]
+    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    assert out["zh"] == "爱德华·马奈"  # 繁→简,回归不破
+
+
+def test_non_variant_language_not_converted():
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "エドゥアール・マネ", "xml:lang": "ja"}}]
+    out = fetch_wikidata_labels("Q296", ["ja"], run_query=lambda s: rows)
+    assert out["ja"] == "エドゥアール・マネ"  # 非变体不动

@@ -237,3 +237,66 @@ def test_qa_system_is_english_axis_no_chinese():
 
     assert "WRITE IN ENGLISH" in _QA_SYSTEM
     assert not re.search(r"[一-龥]", _QA_SYSTEM)  # prompt 绝不含中文(否则 LLM 输出中文)
+
+
+def test_translation_prompt_forbids_source_fragments_language_agnostic():
+    # 语言无关:任何目标语都要求'全部译出、不留源语言残片'(修 zh 漏翻 severed head 类;
+    # ja/ko/zh-hant 同类问题自动受益。靠 {lang} 占位符,零语言特例)
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    for lang_code in ("zh", "ja", "ko", "pl", "de"):
+        system, _ = build_translation_prompt("x", lang_code)
+        low = system.lower()
+        assert "every" in low and "fragment" in low, lang_code
+        # 不得含硬编码语言名单(如只提 chinese)
+        assert "chinese-only" not in low
+
+
+def test_faithfulness_prompt_flags_untranslated_fragments():
+    # 闸假阴性修复:忠实度闸也要抓'未翻译的源语言残片'(修放行"卧 nude"类)
+    from app.services.enrichment.prompts import build_faithfulness_prompt
+
+    system, _ = build_faithfulness_prompt("A nude figure.", "《卧 nude》", "zh")
+    low = system.lower()
+    assert "untranslated" in low or "source-language" in low or "残" in system
+    # 专有名词/标题豁免(不误判保留的原文标题)
+    assert "proper noun" in low or "title" in low
+
+
+def test_translation_prompt_prefers_established_exonym():
+    # Layer3:知名专有名词/标题优先用目标语言既定译名(Salome→莎乐美),不留英文原名
+    # (语言无关:靠 {lang} 与"established form"表述,不硬编具体译名表)
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    for lang_code in ("zh", "ja", "ko", "pl"):
+        system, _ = build_translation_prompt("x", lang_code)
+        low = system.lower()
+        assert "established" in low
+        # 要求"存在既定译名则用之",而非仅"保留原文或既定译名"的二选一
+        assert "prefer" in low or "use it" in low or "use the" in low
+        assert "consistent" in low  # 全文一致
+
+
+def test_translation_prompt_pins_canonical_title():
+    # 标题真相唯一化:内容翻译收到显示名标题→正文必须用它(消除'显现'vs'幻影'分叉)
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    system, _ = build_translation_prompt(
+        "The Apparition is famous.", "zh", title="幻影"
+    )
+    assert "幻影" in system
+    low = system.lower()
+    assert "title" in low
+    # 无 title 时不注入,行为不变
+    s2, _ = build_translation_prompt("x", "zh")
+    assert "幻影" not in s2
+
+
+def test_name_translation_prompt_no_fragments_and_standard():
+    # 显示名翻译也要:全部译出无残片(卧 nude→卧姿裸女)+标准音译(奥林匹亚非奥林比亚)
+    from app.services.enrichment.prompts import build_name_translation_prompt
+
+    system, _ = build_name_translation_prompt("Reclining Nude", "zh")
+    low = system.lower()
+    assert "fragment" in low or "every word" in low
+    assert "standard" in low or "conventional" in low

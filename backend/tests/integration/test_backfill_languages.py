@@ -79,7 +79,7 @@ class _Tr:
     def __init__(self):
         self.calls = []
 
-    def translate_object(self, en_sections, target_langs):
+    def translate_object(self, en_sections, target_langs, titles=None):
         from app.services.enrichment.quality import SectionQuality
 
         lang = target_langs[0]
@@ -97,7 +97,7 @@ class _Tr:
             }
         }
 
-    def translate_section(self, text, lang):
+    def translate_section(self, text, lang, *, strong=False, title=None):
         self.calls.append(("sec", lang, text))
         return f"{text}?" if "?" in text else f"{text}_{lang}"
 

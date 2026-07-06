@@ -590,3 +590,590 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get camRetake => '重新拍摄';
 }
+
+/// The translations for Chinese, using the Han script (`zh_Hant`).
+class AppLocalizationsZhHant extends AppLocalizationsZh {
+  AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get home => '首頁';
+
+  @override
+  String get explore => '探索';
+
+  @override
+  String get capture => '拍照';
+
+  @override
+  String get footprints => '足跡';
+
+  @override
+  String get settings => '設定';
+
+  @override
+  String get navScan => '識別';
+
+  @override
+  String get artworkRecognition => '藝術品識別';
+
+  @override
+  String get takePhoto => '拍照';
+
+  @override
+  String get chooseFromGallery => '從相簿選擇';
+
+  @override
+  String get selectImagePrompt => '選擇圖片以識別藝術品';
+
+  @override
+  String get error => '錯誤';
+
+  @override
+  String get comingSoon => '即將推出';
+
+  @override
+  String get comingSoonShort => '即將上線';
+
+  @override
+  String get language => '語言';
+
+  @override
+  String get selectLanguage => '選擇語言';
+
+  @override
+  String get retry => '重試';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get delete => '刪除';
+
+  @override
+  String get confirm => '確定';
+
+  @override
+  String get gotIt => '知道了';
+
+  @override
+  String get loadFailed => '載入失敗';
+
+  @override
+  String get loadFailedRetry => '載入失敗，請重試';
+
+  @override
+  String get toBeRefined => '待完善';
+
+  @override
+  String get viewAll => '檢視全部 →';
+
+  @override
+  String get all => '全部';
+
+  @override
+  String get homePocketGuide => '隨身博物館導覽手冊';
+
+  @override
+  String get homeSlogan => '走近一件作品，\n聽懂它的故事。';
+
+  @override
+  String get homeCtaRecognize => '拍照識別講解';
+
+  @override
+  String homeFreeLeft(Object count) {
+    return '免費識別還剩 $count 次 · 升級暢聽全館';
+  }
+
+  @override
+  String get homeNearby => '附近博物館';
+
+  @override
+  String get statusOpen => '開放中';
+
+  @override
+  String get exploreTitle => '探 索';
+
+  @override
+  String get searchCityMuseumArtwork => '搜尋城市、博物館或藝術品';
+
+  @override
+  String museumCount(Object count) {
+    return '$count 家博物館';
+  }
+
+  @override
+  String get noMuseums => '暫無博物館';
+
+  @override
+  String get noMatchedMuseums => '沒有匹配的博物館';
+
+  @override
+  String artworkCountLabel(Object count) {
+    return '含 $count 件藏品';
+  }
+
+  @override
+  String recordedCount(Object count) {
+    return '$count 件收錄藏品';
+  }
+
+  @override
+  String get noArtworks => '暫無藏品';
+
+  @override
+  String loadingShown(Object shown, Object total) {
+    return '正在載入·已顯示 $shown/$total';
+  }
+
+  @override
+  String allLoaded(Object total) {
+    return '已全部載入·共 $total 件';
+  }
+
+  @override
+  String get guideVoiceGuide => '語音導覽';
+
+  @override
+  String get guideGenFailed => '講解生成失敗';
+
+  @override
+  String get guideWriting => '正在為你撰寫講解…';
+
+  @override
+  String get guideHighlight => '看點';
+
+  @override
+  String get guideQa => '問答';
+
+  @override
+  String get guideThinking => '思考中…';
+
+  @override
+  String get guideQ1 => '這幅畫好在哪裡？';
+
+  @override
+  String get guideQ2 => '畫家當時經歷了什麼？';
+
+  @override
+  String get guideAskHint => '問問這幅畫……';
+
+  @override
+  String get guideAskShort => '問問這幅畫';
+
+  @override
+  String get guideVoiceComingSoon => '語音問答即將開放，先打字問問吧';
+
+  @override
+  String get guideGenerating => '內容生成中，約 1–3 分鐘';
+
+  @override
+  String get guideEmpty => '該作品暫無可接地講解（待完善）';
+
+  @override
+  String get guideInfo => '作品資訊';
+
+  @override
+  String get guideStandardTour => '標準導覽';
+
+  @override
+  String get guideListen => '聽講解';
+
+  @override
+  String get guideDiveIn => '想深入？點一下';
+
+  @override
+  String get guideDeepContent => '深度內容';
+
+  @override
+  String get guideAskPlaceholder => '問點什麼…';
+
+  @override
+  String get guideArtist => '作者';
+
+  @override
+  String get guideArtistTab => '作者介紹';
+
+  @override
+  String get guideNotableWorks => '代表作';
+
+  @override
+  String get guideNoAnswer => '（未返回回答）';
+
+  @override
+  String get guideAnswerFailed => '回答失敗，請稍後再試。';
+
+  @override
+  String get factInventory => '館藏編號';
+
+  @override
+  String get factLocation => '現藏地';
+
+  @override
+  String get factProvenance => '來源流轉';
+
+  @override
+  String get factExhibitions => '展覽史';
+
+  @override
+  String get factBibliography => '參考文獻';
+
+  @override
+  String get factArtist => '作者';
+
+  @override
+  String get factNone => '暫無詳細資訊';
+
+  @override
+  String get footprintTitle => '足 跡';
+
+  @override
+  String get noFootprints => '還沒有足跡';
+
+  @override
+  String footprintStat(Object count, Object days) {
+    return '$count 件作品 · $days 天';
+  }
+
+  @override
+  String get footprintLoadFailed => '足跡載入失敗';
+
+  @override
+  String get footprintEmptyHint => '識別過的展品會自動記錄在這裡';
+
+  @override
+  String get footprintGoRecognize => '去識別第一件作品';
+
+  @override
+  String itemsCount(Object count) {
+    return '$count 件';
+  }
+
+  @override
+  String get today => '今天';
+
+  @override
+  String get yesterday => '昨天';
+
+  @override
+  String dateMonthDay(Object month, Object day) {
+    return '$month月$day日';
+  }
+
+  @override
+  String get deleteFootprintQ => '刪除這條足跡？';
+
+  @override
+  String get settingsTitle => '設 置';
+
+  @override
+  String get secGeneral => '通用';
+
+  @override
+  String get guideLanguage => '講解語言';
+
+  @override
+  String get offlinePacks => '離線館包';
+
+  @override
+  String get autoSavePhoto => '自動儲存照片';
+
+  @override
+  String get ttsVoice => 'TTS 音色';
+
+  @override
+  String get ttsVoiceValue => '沉穩 · 女聲';
+
+  @override
+  String get ttsVoiceSelect => '音色選擇';
+
+  @override
+  String get secAccount => '賬戶';
+
+  @override
+  String get secSupport => '支援與法律';
+
+  @override
+  String get encourageUs => '鼓勵我們';
+
+  @override
+  String get appStoreRating => '應用商店評分';
+
+  @override
+  String get privacyPolicy => '隱私政策';
+
+  @override
+  String get freeQuota => '免費識別額度';
+
+  @override
+  String quotaValue(Object remain, Object total) {
+    return '剩餘 $remain/$total 次';
+  }
+
+  @override
+  String get upgrade => '升級';
+
+  @override
+  String get loginBind => '登入 / 繫結賬號';
+
+  @override
+  String get notLoggedIn => '未登入';
+
+  @override
+  String get userDefault => '使用者';
+
+  @override
+  String get guestPrefix => '遊客_';
+
+  @override
+  String get noEmailBound => '未繫結郵箱';
+
+  @override
+  String get logout => '登出';
+
+  @override
+  String get deleteAccount => '刪除賬號';
+
+  @override
+  String get loadingShort => '載入中…';
+
+  @override
+  String get appearance => '外觀';
+
+  @override
+  String get themeLight => '淺色';
+
+  @override
+  String get themeDark => '深色';
+
+  @override
+  String get themeSystem => '跟隨系統';
+
+  @override
+  String featureComingSoon(String feature) {
+    return '$feature即將開放';
+  }
+
+  @override
+  String get privacyBody => '照片預設不上傳原圖，識別資料僅作臨時處理；你可以隨時刪除賬戶與資料。完整條款將在正式釋出時提供。';
+
+  @override
+  String get deleteAccountQ => '永久刪除賬號？';
+
+  @override
+  String get deleteAccountBody => '將刪除你的賬號資料與剩餘額度，此操作不可恢復。';
+
+  @override
+  String get permanentDelete => '永久刪除';
+
+  @override
+  String get deleteFailed => '刪除失敗，請稍後再試';
+
+  @override
+  String get confirmLogout => '確認登出';
+
+  @override
+  String get confirmLogoutBody => '確定要登出嗎？';
+
+  @override
+  String get confirmYes => '確定';
+
+  @override
+  String get authEmailHint => '郵箱';
+
+  @override
+  String get authEmailRequired => '請輸入郵箱';
+
+  @override
+  String get authEmailInvalid => '請輸入有效的郵箱地址';
+
+  @override
+  String get authPasswordHint => '密碼';
+
+  @override
+  String get authPasswordRequired => '請輸入密碼';
+
+  @override
+  String get authPasswordMin6 => '密碼至少 6 位';
+
+  @override
+  String get authConfirmPasswordHint => '確認密碼';
+
+  @override
+  String get authPasswordMismatch => '兩次密碼不一致';
+
+  @override
+  String get authUsernameOptionalHint => '使用者名稱（可選）';
+
+  @override
+  String get authLoginButton => '登 錄';
+
+  @override
+  String get authRegisterButton => '注 冊';
+
+  @override
+  String get authNoAccount => '還沒有賬號？註冊';
+
+  @override
+  String get authHaveAccount => '已有賬號？登入';
+
+  @override
+  String get authCreateAccount => '建立賬號';
+
+  @override
+  String get authOrLoginWith => '或使用以下方式登入';
+
+  @override
+  String get authGoogleLogin => '使用 Google 登入';
+
+  @override
+  String get authAppleLogin => '使用 Apple 登入';
+
+  @override
+  String get authOr => '或';
+
+  @override
+  String get authGuestLogin => '遊客登入';
+
+  @override
+  String get authLoginFailed => '登入失敗，請檢查郵箱和密碼';
+
+  @override
+  String get authRegisterFailed => '註冊失敗，郵箱可能已被使用';
+
+  @override
+  String get authGoogleCancelled => 'Google 登入已取消';
+
+  @override
+  String get authGoogleFailed => 'Google 登入失敗，請重試';
+
+  @override
+  String get authGoogleError => 'Google 登入錯誤';
+
+  @override
+  String get authGoogleNotConfigured => 'Google 登入未配置，請聯絡管理員';
+
+  @override
+  String get authGoogleNetworkError => 'Google 登入網路錯誤，請檢查網路連線';
+
+  @override
+  String get authAppleOnlyApple => 'Apple 登入僅支援 iOS 和 macOS 裝置';
+
+  @override
+  String get authAppleCancelled => 'Apple 登入已取消';
+
+  @override
+  String get authAppleFailed => 'Apple 登入失敗，請重試';
+
+  @override
+  String get authAppleError => 'Apple 登入錯誤';
+
+  @override
+  String get authAppleNotConfigured => 'Apple 登入未配置';
+
+  @override
+  String get authGuestFailed => '遊客登入失敗，請重試';
+
+  @override
+  String get authGuestError => '遊客登入錯誤';
+
+  @override
+  String get recCandidatesTitle => '是這件嗎？';
+
+  @override
+  String get recNoneOfThese => '都不是';
+
+  @override
+  String get recNotRecognized => '沒認出來這件作品';
+
+  @override
+  String recLabelSeen(String text) {
+    return '標籤上寫著 \"$text\"——我們還沒收錄它的完整講解，已記下你的需求 ✅';
+  }
+
+  @override
+  String get recShootLabelBtn => '拍下作品旁的說明牌';
+
+  @override
+  String get recShootLabelHint => '博物館的小標牌上有作品名和作者，拍它我們就能認出來';
+
+  @override
+  String get recViewfinderLabelHint => '對準標籤文字，佔滿畫面';
+
+  @override
+  String get camRecognizeTitle => '識別畫作';
+
+  @override
+  String get camViewfinderHint => '將畫作完整置於取景框內';
+
+  @override
+  String get camRecentGallery => '最近相簿';
+
+  @override
+  String get camAllAlbums => '全部相簿';
+
+  @override
+  String get camGallery => '相簿';
+
+  @override
+  String get camSearch => '搜尋';
+
+  @override
+  String get guideUnavailable => '該藏品資料不足，暫無講解';
+
+  @override
+  String get guideNotGenerated => '講解暫未生成';
+
+  @override
+  String get camNoCamera => '未找到可用相機';
+
+  @override
+  String get camInitFailed => '相機初始化失敗';
+
+  @override
+  String get camTagSearch => '展籤檢索';
+
+  @override
+  String get camTagHint => '禁拍照展區可輸入展籤編號、作品名或作者名';
+
+  @override
+  String get camTagExample => '如：INV 3692 / 在阿爾的臥室';
+
+  @override
+  String get camPackComingSoon => '館藏檢索將在離線館包接入後開放';
+
+  @override
+  String get camQuotaUsedUp => '免費識別次數已用盡';
+
+  @override
+  String get camUpgradeHint => '升級後可繼續暢聽全館講解';
+
+  @override
+  String get camViewUpgrade => '檢視升級方案';
+
+  @override
+  String get camCantPhoto => '不能拍照？輸入展籤編號';
+
+  @override
+  String get camRecognizing => '正在識別…';
+
+  @override
+  String get camComparing => 'AI 正在比對館藏與公開藝術資料庫';
+
+  @override
+  String get camConfirmPrompt => '識別完成，請確認展品';
+
+  @override
+  String get camConfidence => '置信度';
+
+  @override
+  String get camConfirmStart => '確認，開始講解';
+
+  @override
+  String get camNoneSearch => '都不是？搜尋作品名或展籤編號 →';
+
+  @override
+  String get camRecognizeFailed => '識別失敗';
+
+  @override
+  String get camRetake => '重新拍攝';
+}

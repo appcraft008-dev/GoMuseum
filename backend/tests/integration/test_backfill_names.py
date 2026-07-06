@@ -64,7 +64,7 @@ class _Translator:
     def __init__(self):
         self.calls = []
 
-    def translate_section(self, text, lang):
+    def translate_section(self, text, lang, *, strong=False, title=None):
         self.calls.append((text, lang))
         return f"{text}_{lang}"
 
@@ -232,7 +232,7 @@ def test_fill_i18n_prefers_translate_name(session):
             calls.append(("name", text, lang))
             return f"{text}~{lang}"
 
-        def translate_section(self, text, lang):
+        def translate_section(self, text, lang, *, strong=False, title=None):
             calls.append(("section", text, lang))
             return f"{text}_{lang}"
 
@@ -413,3 +413,25 @@ def test_backfill_refresh_langs_replaces_with_authoritative(session):
     assert o.attributes["title_i18n"]["zh"] == "受伤的男人"  # 权威简体覆盖繁体
     o2 = session.query(MuseumObject).filter_by(qid="Q2").one()
     assert o2.attributes["title_i18n"]["zh"] == "奥林匹亚"  # 无标签→保留原值
+
+
+def test_retranslate_langs_regenerates_machine_translated(session):
+    # A修复:retranslate-langs 对无权威标签的机翻显示名强制重译(修卧 nude/奥林比亚);
+    # 有权威标签仍用权威
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.title_en = "Reclining Nude"
+    o.attributes = {"title_i18n": {"en": "Reclining Nude", "zh": "卧 nude 女人"}}
+    session.commit()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "zh"],
+        fetch_labels=_labels({}),  # 无权威标签
+        fetch_creators=lambda qids: {},
+        retranslate_langs=["zh"],
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    zh = o.attributes["title_i18n"]["zh"]
+    assert "nude" not in zh  # 坏译名被重译(不再含英文残片)
+    assert zh != "卧 nude 女人"
