@@ -554,6 +554,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get guideNotGenerated => 'Przewodnik jeszcze nie wygenerowany';
 
   @override
+  String get audioNotReady => 'Audio dostępne po przygotowaniu przewodnika';
+
+  @override
+  String get audioFailed => 'Audio niedostępne, spróbuj ponownie';
+
+  @override
+  String get deepGenerating => 'Generowanie szczegółowej treści…';
+
+  @override
   String get camNoCamera => 'Nie znaleziono dostępnego aparatu';
 
   @override

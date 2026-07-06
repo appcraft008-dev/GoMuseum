@@ -179,6 +179,10 @@
 
   "guideUnavailable": "Zu wenig Material für einen Guide zu diesem Werk",
   "guideNotGenerated": "Guide noch nicht erstellt",
+
+  "audioNotReady": "Audio verfügbar, sobald der Guide bereit ist",
+  "audioFailed": "Audio nicht verfügbar, bitte erneut versuchen",
+  "deepGenerating": "Detailinhalte werden erstellt…",
   "camNoCamera": "Keine Kamera verfügbar",
   "camInitFailed": "Kamera-Initialisierung fehlgeschlagen",
   "camTagSearch": "Schildsuche",

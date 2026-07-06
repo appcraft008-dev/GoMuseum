@@ -538,6 +538,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get guideNotGenerated => '아직 가이드가 생성되지 않았습니다';
 
   @override
+  String get audioNotReady => '해설 생성 후 들을 수 있습니다';
+
+  @override
+  String get audioFailed => '오디오를 사용할 수 없습니다. 다시 시도하세요';
+
+  @override
+  String get deepGenerating => '심층 콘텐츠 생성 중…';
+
+  @override
   String get camNoCamera => '사용 가능한 카메라가 없습니다';
 
   @override

@@ -554,6 +554,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get guideNotGenerated => 'Guía aún no generada';
 
   @override
+  String get audioNotReady => 'Audio disponible cuando la guía esté lista';
+
+  @override
+  String get audioFailed => 'Audio no disponible, reinténtalo';
+
+  @override
+  String get deepGenerating => 'Generando contenido detallado…';
+
+  @override
   String get camNoCamera => 'No se encontró ninguna cámara';
 
   @override
