@@ -179,3 +179,17 @@ def test_korean_added_to_all_static_label_tables():
         assert m.get("ko"), f"分类 {code} 缺 ko"
     for code, m in SECTION_LABELS.items():
         assert m.get("ko"), f"段落 {code} 缺 ko"
+
+
+def test_zh_hant_added_to_all_static_label_tables():
+    from app.services.enrichment.category_config import SECTION_LABELS
+    from app.services.enrichment.lang_config import DEFAULT_LANGUAGES, LANG_NAMES
+    from app.services.museum_repo import _ALL_LABEL, _CATEGORY_LABELS
+
+    assert "zh-hant" in DEFAULT_LANGUAGES
+    assert LANG_NAMES.get("zh-hant") == "Traditional Chinese"
+    assert _ALL_LABEL.get("zh-hant")
+    for code, m in _CATEGORY_LABELS.items():
+        assert m.get("zh-hant"), f"分类 {code} 缺 zh-hant"
+    for code, m in SECTION_LABELS.items():
+        assert m.get("zh-hant"), f"段落 {code} 缺 zh-hant"

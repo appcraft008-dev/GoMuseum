@@ -26,6 +26,7 @@ _LEGACY_SOURCE = "Wikidata/Wikimedia Commons (public data)"
 _CATEGORY_LABELS = {
     "painting": {
         "zh": "绘画",
+        "zh-hant": "繪畫",
         "en": "Painting",
         "fr": "Peinture",
         "de": "Malerei",
@@ -37,6 +38,7 @@ _CATEGORY_LABELS = {
     },
     "sculpture": {
         "zh": "雕塑",
+        "zh-hant": "雕塑",
         "en": "Sculpture",
         "fr": "Sculpture",
         "de": "Skulpturen",
@@ -48,6 +50,7 @@ _CATEGORY_LABELS = {
     },
     "works_on_paper": {
         "zh": "纸上作品",
+        "zh-hant": "紙上作品",
         "en": "Works on Paper",
         "fr": "Arts graphiques",
         "de": "Arbeiten auf Papier",
@@ -59,6 +62,7 @@ _CATEGORY_LABELS = {
     },
     "photography": {
         "zh": "摄影",
+        "zh-hant": "攝影",
         "en": "Photography",
         "fr": "Photographie",
         "de": "Fotografie",
@@ -70,6 +74,7 @@ _CATEGORY_LABELS = {
     },
     "decorative_arts": {
         "zh": "装饰艺术",
+        "zh-hant": "裝飾藝術",
         "en": "Decorative Arts",
         "fr": "Arts décoratifs",
         "de": "Kunstgewerbe",
@@ -81,6 +86,7 @@ _CATEGORY_LABELS = {
     },
     "textile": {
         "zh": "纺织",
+        "zh-hant": "紡織",
         "en": "Textiles",
         "fr": "Textiles",
         "de": "Textilien",
@@ -92,6 +98,7 @@ _CATEGORY_LABELS = {
     },
     "artifact": {
         "zh": "文物器物",
+        "zh-hant": "文物器物",
         "en": "Artifacts",
         "fr": "Objets",
         "de": "Artefakte",
@@ -103,6 +110,7 @@ _CATEGORY_LABELS = {
     },
     "manuscript": {
         "zh": "手稿古籍",
+        "zh-hant": "手稿古籍",
         "en": "Manuscripts",
         "fr": "Manuscrits",
         "de": "Handschriften",
@@ -114,6 +122,7 @@ _CATEGORY_LABELS = {
     },
     "unknown": {
         "zh": "其他",
+        "zh-hant": "其他",
         "en": "Other",
         "fr": "Autre",
         "de": "Sonstiges",
@@ -126,6 +135,7 @@ _CATEGORY_LABELS = {
 }
 _ALL_LABEL = {
     "zh": "全部",
+    "zh-hant": "全部",
     "en": "All",
     "fr": "Tout",
     "de": "Alle",

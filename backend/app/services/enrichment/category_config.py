@@ -63,6 +63,7 @@ _FALLBACK_SECTIONS = ["background", "significance", "facts"]
 SECTION_LABELS: dict[str, dict[str, str]] = {
     "guide": {
         "zh": "标准导览",
+        "zh-hant": "標準導覽",
         "en": "Standard Guide",
         "fr": "Visite guidée",
         "de": "Standardführung",
@@ -74,6 +75,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "overview": {
         "zh": "通用描述",
+        "zh-hant": "通用描述",
         "en": "Overview",
         "fr": "Aperçu",
         "de": "Überblick",
@@ -85,6 +87,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "artist": {
         "zh": "作者介绍",
+        "zh-hant": "作者介紹",
         "en": "The Artist",
         "fr": "L'artiste",
         "de": "Der Künstler",
@@ -96,6 +99,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "photographer": {
         "zh": "摄影师",
+        "zh-hant": "攝影師",
         "en": "The Photographer",
         "fr": "Le photographe",
         "de": "Der Fotograf",
@@ -107,6 +111,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "maker": {
         "zh": "制作者",
+        "zh-hant": "製作者",
         "en": "The Maker",
         "fr": "Le créateur",
         "de": "Der Hersteller",
@@ -118,6 +123,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "material-technique": {
         "zh": "材质工艺",
+        "zh-hant": "材質工藝",
         "en": "Material & Technique",
         "fr": "Matériaux et technique",
         "de": "Material und Technik",
@@ -129,6 +135,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "background": {
         "zh": "创作背景",
+        "zh-hant": "創作背景",
         "en": "Background",
         "fr": "Contexte",
         "de": "Hintergrund",
@@ -140,6 +147,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "context": {
         "zh": "拍摄背景",
+        "zh-hant": "拍攝背景",
         "en": "Context",
         "fr": "Contexte",
         "de": "Kontext",
@@ -151,6 +159,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "use": {
         "zh": "用途",
+        "zh-hant": "用途",
         "en": "Use",
         "fr": "Usage",
         "de": "Verwendung",
@@ -162,6 +171,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "analysis": {
         "zh": "艺术分析",
+        "zh-hant": "藝術分析",
         "en": "Analysis",
         "fr": "Analyse",
         "de": "Analyse",
@@ -173,6 +183,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "significance": {
         "zh": "文化意义",
+        "zh-hant": "文化意義",
         "en": "Significance",
         "fr": "Signification",
         "de": "Bedeutung",
@@ -184,6 +195,7 @@ SECTION_LABELS: dict[str, dict[str, str]] = {
     },
     "facts": {
         "zh": "趣闻轶事",
+        "zh-hant": "趣聞軼事",
         "en": "Facts",
         "fr": "Anecdotes",
         "de": "Fakten",
