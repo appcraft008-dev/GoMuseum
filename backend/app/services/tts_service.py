@@ -51,6 +51,10 @@ VOICE_MAPPING = {
     "de": {"default": "echo", "options": ["echo", "alloy", "onyx"]},
     "es": {"default": "nova", "options": ["nova", "shimmer", "alloy"]},
     "it": {"default": "alloy", "options": ["alloy", "shimmer", "nova"]},
+    "pl": {"default": "alloy", "options": ["alloy", "nova", "shimmer"]},
+    "ja": {"default": "nova", "options": ["nova", "shimmer", "alloy"]},
+    "ko": {"default": "nova", "options": ["nova", "shimmer", "alloy"]},
+    "zh-hant": {"default": "nova", "options": ["nova", "shimmer", "alloy"]},
 }
 
 
