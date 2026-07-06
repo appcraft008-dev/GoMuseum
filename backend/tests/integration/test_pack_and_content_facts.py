@@ -515,3 +515,30 @@ def test_default_guide_only_published_not_needs_review(session):
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert d["default_guide"] is None  # needs_review 不泄漏
     assert d["status"] == "empty"  # 无已发布 guide 且无 tab → empty
+
+
+def test_content_returns_guide_while_generating(session):
+    # 流式先出闭环:生成中(锁活)且 zh guide 已落 → 端点仍返回 guide,前端可先显示
+    from datetime import datetime, timezone
+
+    from app.models.content import ObjectContentSection
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="guide",
+            body="先出的中文讲解。",
+            status="published",
+        )
+    )
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_lock_at": datetime.now(timezone.utc).isoformat(),
+    }
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is True  # 深度模块仍生成中
+    assert d["default_guide"]["body"] == "先出的中文讲解。"  # guide 已可显示
