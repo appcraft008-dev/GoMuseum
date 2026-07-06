@@ -109,21 +109,36 @@ SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
 """
 
 
-# zh 标签变体优先级:简体权威 > 大陆简体 > 笼统 zh(可能繁体;比没有强)
-_ZH_VARIANTS = ("zh-hans", "zh-cn", "zh")
+# 字形变体语言:同一语言不同字形,可逐字确定性 OpenCC 转换(区别于独立语言 ca/pt——
+# 那些要真翻译)。lang → (Wikidata 标签变体优先序, OpenCC 方向)。
+# 加变体语言=加一行;非变体语言不在表里、走默认路径不受影响。
+_SCRIPT_VARIANTS = {
+    "zh": (("zh-hans", "zh-cn", "zh"), "t2s"),  # 收敛简体
+    "zh-hant": (
+        ("zh-hant", "zh-tw", "zh-hk", "zh", "zh-hans", "zh-cn"),
+        "s2t",
+    ),  # 繁体优先,简体兜底再转
+}
 
-_t2s = None
+_opencc: dict = {}
+
+
+def _variant_convert(lang: str, s: str) -> str:
+    """字形变体语言按其方向 OpenCC 转换;非变体语言原样返回。确定性,不用 LLM。"""
+    conf = _SCRIPT_VARIANTS.get(lang)
+    if not conf or not s:
+        return s
+    direction = conf[1]
+    if direction not in _opencc:
+        from opencc import OpenCC
+
+        _opencc[direction] = OpenCC(direction)
+    return _opencc[direction].convert(s)
 
 
 def to_simplified(s: str) -> str:
-    """繁→简(OpenCC 确定性字符转换;马奈/高更等 Wikidata 只有繁体 zh 标签)。
-    不用 LLM——人名转换必须精确对应,不能自由发挥。"""
-    global _t2s
-    if _t2s is None:
-        from opencc import OpenCC
-
-        _t2s = OpenCC("t2s")
-    return _t2s.convert(s or "")
+    """繁→简薄包装(向后兼容;一次性脚本仍在用)。"""
+    return _variant_convert("zh", s)
 
 
 def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
@@ -133,8 +148,11 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
         run_query or _default_artist_query
     )  # ponytail: same generic SPARQL caller
     query_langs = list(langs)
-    if "zh" in langs:
-        query_langs += [v for v in _ZH_VARIANTS if v not in query_langs]
+    for lang in langs:
+        if lang in _SCRIPT_VARIANTS:
+            query_langs += [
+                v for v in _SCRIPT_VARIANTS[lang][0] if v not in query_langs
+            ]
     langlist = ", ".join('"%s"' % x for x in query_langs)
     rows = run_query(_LABELS_QUERY.format(qid=qid, langs=langlist))
     raw: dict = {}
@@ -146,11 +164,11 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
             raw[lang] = val
     out = {}
     for lang in langs:
-        if lang == "zh":
-            for v in _ZH_VARIANTS:
+        if lang in _SCRIPT_VARIANTS:
+            for v in _SCRIPT_VARIANTS[lang][0]:
                 if raw.get(v):
-                    # 取自笼统 zh 变体的可能是繁体 → t2s;hans/cn 转换是无害幂等
-                    out["zh"] = to_simplified(raw[v])
+                    # 变体标签逐字转到目标字形(hans→hant 或反;同字形转换是无害幂等)
+                    out[lang] = _variant_convert(lang, raw[v])
                     break
         elif raw.get(lang):
             out[lang] = raw[lang]
@@ -212,10 +230,9 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
         nlang, nv = nl.get("xml:lang") or nl.get("lang"), nl.get("value")
         wlang, wv = wl.get("xml:lang") or wl.get("lang"), wl.get("value")
         if nv and nlang in langs and not _is_raw_qid(nv) and nlang not in nat_i18n:
-            nat_i18n[nlang] = to_simplified(nv) if nlang == "zh" else nv
+            nat_i18n[nlang] = _variant_convert(nlang, nv)
         if wv and wlang in langs and not _is_raw_qid(wv):
-            if wlang == "zh":
-                wv = to_simplified(wv)
+            wv = _variant_convert(wlang, wv)
             works_i18n.setdefault(wlang, [])
             if wv not in works_i18n[wlang]:
                 works_i18n[wlang].append(wv)

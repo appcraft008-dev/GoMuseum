@@ -195,7 +195,7 @@ def _clean_i18n(i18n) -> dict:
     out = {}
     for k, v in (i18n or {}).items():
         v = (v or "").strip("《》\"'“”‘’«»")
-        if v and not (k == "zh" and not _CJK.search(v)):
+        if v and not (k in ("zh", "zh-hant") and not _CJK.search(v)):
             out[k] = v
     return out
 
