@@ -303,23 +303,30 @@ def generate_object(
         else None
     )
 
-    draft = enricher.generate_canonical(obj, sections, guide=guide_text)
-    gated_en = gate.gate(material, facts, draft)
-    pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
-    o.content_status = "ready" if pub_en > 0 else "empty"
-    db.flush()
-
-    en_published = {
-        code: r.body
-        for code, r in gated_en.items()
-        if r.status == "published" and r.body
-    }
-    # 默认讲解(单主线):上面已生成→三类闸→并入英语已发布集,随后随其它段统一翻译落库
+    en_published: dict = {}
+    # 流式先出:guide 先 gate+落库(先于深度模块),前端轮询中途即可显示主讲解。
     if guide_text:
         gq = gate.check_section(material, facts, guide_text)
         persist_gated_sections(db, qid, "en", {"guide": gq}, model)
         if gq.status == "published" and gq.body:
             en_published["guide"] = gq.body
+            o.content_status = "ready"
+            db.flush()
+
+    draft = enricher.generate_canonical(obj, sections, guide=guide_text)
+    gated_en = gate.gate(material, facts, draft)
+    pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
+    if o.content_status != "ready":
+        o.content_status = "ready" if pub_en > 0 else "empty"
+    db.flush()
+
+    en_published.update(
+        {
+            code: r.body
+            for code, r in gated_en.items()
+            if r.status == "published" and r.body
+        }
+    )
 
     counts = {"en": (pub_en, nr_en)}
     # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
