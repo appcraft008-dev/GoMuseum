@@ -218,7 +218,8 @@
 > **⚠️ 本地化完整性原则(2026-07-03 定,分类标签教训)。**
 > - **凡端点返回的用户可见文本必须随 `language` 本地化**:内容类走生成/翻译管线;**固定小集合**(分类标签/段落标签/材质名/`all` tab 等)用**静态翻译表一次配齐全部 `DEFAULT_LANGUAGES`**——不许只配部分语言(三语时代的表在六语开放后成洞)。缺译回退 en、**永不 null**。
 > - **机器码字段永不翻译**:`code`/`qid`/`section_code` 是前端逻辑键(筛选/路由/匹配),显示一律靠 `label`——由此所有文案改进都是 server-driven、免发版。
-> - **"加语言" checklist(加语言=加配置的完整清单)**:① `DEFAULT_LANGUAGES`+`LANG_NAMES`(lang_config)② 静态标签表(`_CATEGORY_LABELS`/`_ALL_LABEL`/`SECTION_LABELS`)③ 非拉丁文字语言扩 `_clean_i18n` 文字检测(现只查 zh 汉字)④ 前端 ARB 文案+语言选择器(kSupportedLocales)⑤ 存量回补:显示名跑 `names`(幂等),讲解/问答跑 **`onboard.py <slug> translate --target <env> --langs <新语>`**(✅已实现:从已存 en 段**纯翻译**落库,忠实度校验继承接地,不重生成;幂等只补缺)。
+> - **"加语言" checklist(加语言=加配置的完整清单)**:① `DEFAULT_LANGUAGES`+`LANG_NAMES`(lang_config)② 静态标签表(`_CATEGORY_LABELS`/`_ALL_LABEL`/`SECTION_LABELS`)③ 非拉丁文字语言扩 `_clean_i18n` 文字检测(现查 zh/zh-hant 汉字)④ 前端 ARB 文案+语言选择器(kSupportedLocales)⑤ 存量回补:显示名跑 `names`(幂等),讲解/问答跑 **`onboard.py <slug> translate --target <env> --langs <新语>`**(✅已实现:从已存 en 段**纯翻译**落库,忠实度校验继承接地,不重生成;幂等只补缺)。
+>   **⑥ 仅字形变体语言**(如 zh-hant——同一语言不同字形、可 OpenCC 逐字确定性转换):额外在 `material._SCRIPT_VARIANTS` 加一行 `(标签变体优先序, OpenCC 方向)`;前端注意繁体 API 参数发 `zh-hant` 非 `zh`(见 handoff 4 陷阱)。**独立语言不适用**——即便相似如加泰罗尼亚/葡萄牙语,词汇不同、不能逐字转,走普通翻译路径(①–⑤)即可。判据:两形式间有无"确定性逐字保词转换"。
 > 教训:2026-07-03 六语开放,分类标签表只配了 zh/en/fr → de/es/it 真机标签栏中英混杂(前端交接件修复,#142)。
 > - **加非拉丁语言(ja/ko/zh-hant)前跑翻译质量验收**:见 `docs/i18n-translation-quality-checklist.md`(六检查点:残片/专名一致/标题多通路一致/显示名质量/忠实度/字形;全语言无关机制)。
 > - **标题真相唯一化(2026-07-05 定)**:显示名 `title_i18n[lang]` 是该藏品标题在该语言的**唯一真相源**。所有内容通路(讲解 guide / 深度模块 / 建议问答)在正文里引用本作品标题时**必须跟随显示名**——翻译时把 `title_i18n[lang]` 作为 glossary 注入(`translate_object(titles=)` / `suggest(titles=)`)。否则各通路独立翻译标题会分叉(如无权威标签的 zh:显示"显现"、正文"幻影")。引用**其他**作品的标题不受此约束(各用各的真相)。
