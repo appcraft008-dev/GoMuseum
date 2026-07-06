@@ -162,7 +162,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _recognizeImage(XFile shot) async {
     setState(() => _captured = shot);
     final benefits = ref.read(benefitsStateProvider.notifier);
-    final lang = ref.read(languageProvider).languageCode;
+    final lang = apiLanguage(ref.read(languageProvider));
     final mode = _labelMode ? 'label' : 'artwork';
     await ref
         .read(recognitionNotifierProvider.notifier)
