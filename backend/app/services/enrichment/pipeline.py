@@ -333,15 +333,25 @@ def generate_object(
     for lang in target_langs:
         if lang == "en":
             continue
-        try:
-            _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
-            results = translator.translate_object(
-                en_published, [lang], titles={lang: _title} if _title else None
-            ).get(lang, {})
-        except Exception:
-            logger.exception("translate %s failed for %s", lang, qid)
-            continue
-        counts[lang] = persist_gated_sections(db, qid, lang, results, model)
+        _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
+        _titles = {lang: _title} if _title else None
+        # 流式先出:guide 段先翻先落,请求语言用户先看到主讲解;其余段随后逐段落库。
+        ordered = (["guide"] if "guide" in en_published else []) + [
+            c for c in en_published if c != "guide"
+        ]
+        pub_total, nr_total = 0, 0
+        for code in ordered:
+            try:
+                res = translator.translate_object(
+                    {code: en_published[code]}, [lang], titles=_titles
+                ).get(lang, {})
+            except Exception:
+                logger.exception("translate %s/%s failed for %s", lang, code, qid)
+                continue
+            p, n = persist_gated_sections(db, qid, lang, res, model)
+            pub_total += p
+            nr_total += n
+        counts[lang] = (pub_total, nr_total)
     result = {"qid": qid, "counts": counts}
     if qa_suggester is not None:
         covered = "\n\n".join(v for v in en_published.values() if v)

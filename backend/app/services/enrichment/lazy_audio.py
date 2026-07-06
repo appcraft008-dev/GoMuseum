@@ -31,6 +31,8 @@ def _audio_lock_active(obj, lang: str, section: str) -> bool:
 
 
 def _set_audio_lock(db, obj, lang: str, section: str, on: bool) -> None:
+    # ponytail: 与 lazy_lock_at 共用 attributes JSON,并发读改写=后写覆盖;
+    # 2min TTL 自愈,可接受。若音频并发成热点,改 Redis/独立列。
     locks = dict((obj.attributes or {}).get("audio_locks") or {})
     k = f"{lang}:{section}"
     if on:

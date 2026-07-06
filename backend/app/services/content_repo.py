@@ -97,6 +97,8 @@ def _upsert_section(db, obj, language, code, body, status, model):
         .filter_by(object_id=obj.id, language=language, section_code=code)
         .one_or_none()
     ) or ObjectContentSection(object_id=obj.id, language=language, section_code=code)
+    if row.body is not None and row.body != body:
+        row.audio_key = None  # body 变更 → 旧音频失效,下次请求重生成
     row.body = body
     row.status = status
     row.source = "ai_generated"
