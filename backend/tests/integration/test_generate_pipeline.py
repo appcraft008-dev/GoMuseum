@@ -337,6 +337,63 @@ def test_generate_object_passes_guide_into_canonical(session):
     assert seen["guide"] == "HEADLINE."  # 模块拿到了先生成的头条
 
 
+def test_en_guide_persisted_before_deep_modules(session, monkeypatch):
+    # 流式先出:guide 落库这一批 persist 调用必须先于深度模块那一批,轮询才能中途看到 guide。
+    import app.services.enrichment.pipeline as pl
+    from app.services.enrichment.quality import SectionQuality
+
+    order = []
+    orig = pl.persist_gated_sections
+
+    def spy(db, qid, lang, results, model):
+        order.extend(results.keys())
+        return orig(db, qid, lang, results, model)
+
+    monkeypatch.setattr(pl, "persist_gated_sections", spy)
+
+    class _GuideEnricher(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "Guide hook."
+
+        def generate_canonical(self, obj, sections, guide=None):
+            return {"background": "Deep background."}
+
+    class _GuideGate(_FakeGate):
+        def check_section(self, material, facts, body):
+            return SectionQuality(
+                body=body,
+                status="published",
+                grounding_ratio=1.0,
+                conflicts=[],
+                score=1.0,
+            )
+
+        def gate(self, material, facts, draft):
+            return {
+                code: SectionQuality(
+                    body=b,
+                    status="published",
+                    grounding_ratio=1.0,
+                    conflicts=[],
+                    score=1.0,
+                )
+                for code, b in draft.items()
+            }
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_GuideEnricher(),
+        gate=_GuideGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert order.index("guide") < order.index("background")
+
+
 class _FakeRegistry:
     def __init__(self):
         self.calls = []

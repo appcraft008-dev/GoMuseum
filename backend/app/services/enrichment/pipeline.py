@@ -303,38 +303,55 @@ def generate_object(
         else None
     )
 
-    draft = enricher.generate_canonical(obj, sections, guide=guide_text)
-    gated_en = gate.gate(material, facts, draft)
-    pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
-    o.content_status = "ready" if pub_en > 0 else "empty"
-    db.flush()
-
-    en_published = {
-        code: r.body
-        for code, r in gated_en.items()
-        if r.status == "published" and r.body
-    }
-    # 默认讲解(单主线):上面已生成→三类闸→并入英语已发布集,随后随其它段统一翻译落库
+    en_published: dict = {}
+    # 流式先出:guide 先 gate+落库(先于深度模块),前端轮询中途即可显示主讲解。
     if guide_text:
         gq = gate.check_section(material, facts, guide_text)
         persist_gated_sections(db, qid, "en", {"guide": gq}, model)
         if gq.status == "published" and gq.body:
             en_published["guide"] = gq.body
+            o.content_status = "ready"
+            db.flush()
+
+    draft = enricher.generate_canonical(obj, sections, guide=guide_text)
+    gated_en = gate.gate(material, facts, draft)
+    pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
+    if o.content_status != "ready":
+        o.content_status = "ready" if pub_en > 0 else "empty"
+    db.flush()
+
+    en_published.update(
+        {
+            code: r.body
+            for code, r in gated_en.items()
+            if r.status == "published" and r.body
+        }
+    )
 
     counts = {"en": (pub_en, nr_en)}
     # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
     for lang in target_langs:
         if lang == "en":
             continue
-        try:
-            _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
-            results = translator.translate_object(
-                en_published, [lang], titles={lang: _title} if _title else None
-            ).get(lang, {})
-        except Exception:
-            logger.exception("translate %s failed for %s", lang, qid)
-            continue
-        counts[lang] = persist_gated_sections(db, qid, lang, results, model)
+        _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
+        _titles = {lang: _title} if _title else None
+        # 流式先出:guide 段先翻先落,请求语言用户先看到主讲解;其余段随后逐段落库。
+        ordered = (["guide"] if "guide" in en_published else []) + [
+            c for c in en_published if c != "guide"
+        ]
+        pub_total, nr_total = 0, 0
+        for code in ordered:
+            try:
+                res = translator.translate_object(
+                    {code: en_published[code]}, [lang], titles=_titles
+                ).get(lang, {})
+            except Exception:
+                logger.exception("translate %s/%s failed for %s", lang, code, qid)
+                continue
+            p, n = persist_gated_sections(db, qid, lang, res, model)
+            pub_total += p
+            nr_total += n
+        counts[lang] = (pub_total, nr_total)
     result = {"qid": qid, "counts": counts}
     if qa_suggester is not None:
         covered = "\n\n".join(v for v in en_published.values() if v)

@@ -112,11 +112,17 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     missing = {c: b for c, b in en_secs.items() if c not in have}
     if missing:
         title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
-        results = translator.translate_object(
-            missing, [lang], titles={lang: title} if title else None
-        ).get(lang, {})
-        pub, _nr = persist_gated_sections(db, o.qid, lang, results, model)
-        counts["sections"] += pub
+        _titles = {lang: title} if title else None
+        # 流式先出:guide 段先翻先落(前端先显主讲解),深度模块/问答随后逐段落库。
+        ordered = (["guide"] if "guide" in missing else []) + [
+            c for c in missing if c != "guide"
+        ]
+        for code in ordered:
+            res = translator.translate_object(
+                {code: missing[code]}, [lang], titles=_titles
+            ).get(lang, {})
+            pub, _nr = persist_gated_sections(db, o.qid, lang, res, model)
+            counts["sections"] += pub
     en_qa = [
         {"question": r.question, "answer": r.answer, "status": "published"}
         for r in db.query(ObjectSuggestedQuestion)

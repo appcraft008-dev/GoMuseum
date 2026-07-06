@@ -48,6 +48,30 @@ def object_content(
     return data
 
 
+@router.get("/{slug}/objects/{qid}/audio")
+def object_audio(
+    slug: str,
+    qid: str,
+    language: str = "zh",
+    section: str = "guide",
+    db: Session = Depends(get_db),
+) -> dict:
+    """guide 音频懒生成(点播放触发)。仅 guide(Phase1)。语速由客户端 setPlaybackRate。
+    同步 def:_synth 内 asyncio.run 不与主事件循环冲突(同 recognize 端点)。"""
+    from app.services.enrichment.lazy_audio import get_or_make_audio_url
+
+    try:
+        url, status = get_or_make_audio_url(db, slug, qid, language, section)
+    except Exception:
+        logger.exception("TTS audio failed: %s/%s/%s", qid, language, section)
+        raise HTTPException(status_code=503, detail={"reason": "tts_failed"})
+    if status == "busy":
+        raise HTTPException(status_code=409, detail={"reason": "audio_generating"})
+    if status == "no_text":
+        raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
+    return {"audio_url": url}
+
+
 @router.get("/{slug}/objects")
 def list_objects(
     slug: str,

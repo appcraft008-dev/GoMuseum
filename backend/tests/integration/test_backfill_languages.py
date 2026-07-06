@@ -198,3 +198,20 @@ def test_backfill_skips_junk_en_bio_pivot(session):
 def test_backfill_unknown_museum(session):
     out = backfill_languages(session, "nope", langs=["de"], translator=_Tr())
     assert out.get("error") == "unknown museum"
+
+
+def test_translate_guide_section_first(session, monkeypatch):
+    # 流式先出:guide 段必须先于深度模块 persist(前端轮询先看到主讲解)
+    import app.services.content_repo as cr
+
+    order = []
+    orig = cr.persist_gated_sections
+
+    def spy(db, qid, lang, results, model):
+        order.extend(results.keys())
+        return orig(db, qid, lang, results, model)
+
+    monkeypatch.setattr(cr, "persist_gated_sections", spy)
+    backfill_languages(session, "orsay", langs=["de"], translator=_Tr())
+    # Q1 en 有 guide+background,de 缺两者 → guide 先落
+    assert order.index("guide") < order.index("background")
