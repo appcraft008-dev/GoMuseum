@@ -382,22 +382,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final picked = await showModalBottomSheet<Locale>(
       context: context,
       backgroundColor: gm.bg,
+      // 语言数已达 10 种，默认半屏会裁掉末尾——可滚动 + 限高。
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            for (final loc in kSupportedLocales)
-              ListTile(
-                title: Text(languageDisplayName(loc),
-                    style: GmText.sans(size: 15, color: gm.ink)),
-                trailing: loc.languageCode == current.languageCode
-                    ? GmIcon(GmIcons.check, size: 18, color: gm.ink)
-                    : null,
-                onTap: () => Navigator.of(ctx).pop(loc),
-              ),
-            const SizedBox(height: 8),
-          ],
+        child: ConstrainedBox(
+          constraints:
+              BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              for (final loc in kSupportedLocales)
+                ListTile(
+                  title: Text(languageDisplayName(loc),
+                      style: GmText.sans(size: 15, color: gm.ink)),
+                  // 按完整 tag 比：简体 zh 与繁体 zh-Hant 的 languageCode 都是 'zh'，会误勾。
+                  trailing: localeTag(loc) == localeTag(current)
+                      ? GmIcon(GmIcons.check, size: 18, color: gm.ink)
+                      : null,
+                  onTap: () => Navigator.of(ctx).pop(loc),
+                ),
+            ],
+          ),
         ),
       ),
     );
