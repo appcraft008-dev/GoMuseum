@@ -62,13 +62,14 @@ def _generate(db, qid: str, language: str | None = None) -> dict:
 
     m = db.query(Museum).filter_by(id=o.museum_id).one()
     c = build_generation_components(m.slug)
+    _req = [language] if language and language != "en" else []
     return generate_object(
         db,
         qid,
         enricher=c["enricher"],
         gate=c["gate"],
         translator=c["translator"],
-        target_langs=c["target_langs"],
+        target_langs=["en"] + _req,  # 英语轴心 + 请求语言(仅);其余走懒翻译
         model="gpt-4o-mini",
         qa_suggester=c["qa_suggester"],
         registry=c["registry"],
