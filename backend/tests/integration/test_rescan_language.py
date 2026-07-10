@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.content import (
     CategorySection,
     ObjectContentSection,
@@ -32,6 +33,7 @@ def session():
             CategorySection.__table__,
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -99,3 +101,25 @@ def test_rescan_finds_and_fixes_contaminated(session):
         .first()
     )
     assert zh and "中文" in zh.body
+
+
+def test_rescan_detects_bad_bio(session):
+    # 重扫也扫作者 bio:非en污染(clean en)→重译;en污染→报告
+    from app.models.artist import Artist
+    from scripts.rescan_language import rescan
+
+    session.add(
+        Artist(
+            qid="Q1",
+            name_en="X",
+            bio={
+                "en": "A clean English biography of the artist here now.",
+                "zh": "This zh bio is entirely English which is contamination bad.",
+            },
+        )
+    )
+    session.commit()
+    r = rescan(session, "orsay", _CleanTr())
+    assert r["bad_bio_nonen_fixed"] >= 1  # zh bio 污染,从en重译
+    a = session.query(Artist).filter_by(qid="Q1").one()
+    assert "中文" in a.bio["zh"]  # 重译为中文
