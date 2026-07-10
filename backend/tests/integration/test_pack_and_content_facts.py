@@ -542,3 +542,35 @@ def test_content_returns_guide_while_generating(session):
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert d["generating"] is True  # 深度模块仍生成中
     assert d["default_guide"]["body"] == "先出的中文讲解。"  # guide 已可显示
+
+
+def test_content_generation_progress_fraction(session):
+    # 加法字段:懒生成进度真实分数(guide+已发布深度段 / guide+类目深度段)
+    from app.models.content import CategorySection, ObjectContentSection, SectionType
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    # 类目 painting = guide + significance + background(expected=3)
+    session.add(SectionType(code="significance", icon="i"))
+    session.add(SectionType(code="background", icon="i"))
+    session.add(
+        CategorySection(category="painting", section_code="significance", sort_order=1)
+    )
+    session.add(
+        CategorySection(category="painting", section_code="background", sort_order=2)
+    )
+    # ko: 发布 guide + background(2 段),significance 缺 → 2/3
+    for code in ("guide", "background"):
+        session.add(
+            ObjectContentSection(
+                object_id=o.id,
+                language="ko",
+                section_code=code,
+                body="x",
+                status="published",
+            )
+        )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "ko")
+    assert d["generation"]["expected"] == 3  # guide + significance + background
+    assert d["generation"]["published"] == 2  # guide + background

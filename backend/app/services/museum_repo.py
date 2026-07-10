@@ -454,6 +454,14 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         eff_status = "empty"
     from app.services.enrichment.lazy import lock_active
 
+    # 加法字段(2026-07-10):真实段落进度(诚实分数,非假百分比)。
+    # expected=guide+该类目深度段(不含 artist 卡);published=已发布的 guide+深度段。
+    _expected_deep = sum(1 for cs, _st in mapping if cs.section_code != "artist")
+    generation = {
+        "published": (1 if default_guide else 0) + len(tabs),
+        "expected": 1 + _expected_deep,
+    }
+
     return {
         "qid": qid,
         "category": obj.category,
@@ -461,6 +469,8 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         "status": eff_status,
         # 加法字段(2026-07-04):前端三态精确信号——true=懒生成/懒翻译进行中
         "generating": lock_active(obj),
+        # 加法字段(2026-07-10):懒生成进度分数(前端显 published/expected 段)
+        "generation": generation,
         "title": _resolve_name(
             attrs.get("title_i18n"),
             language,
