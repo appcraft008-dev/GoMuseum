@@ -1015,3 +1015,30 @@ def test_translate_qa_items_threads_title(session):
         _Tr(), [{"question": "What?", "answer": "A."}], "zh", title="显现"
     )
     assert "显现" in seen  # 问答翻译也收到规范标题
+
+
+def test_translate_object_gates_wrong_language(session):
+    # 语言闸:译文语言不符→gpt-4o重译;重译后语言正确→published
+    from app.services.enrichment.translator import ContentTranslator
+
+    calls = {"strong": 0}
+
+    def mini(system, user):
+        if "quality judge" in system.lower():
+            return '{"faithful": true, "issues": []}'
+        return (
+            "This is an English sentence that leaked into a French translation badly."
+        )
+
+    def strong(system, user):
+        if "quality judge" in system.lower():
+            return '{"faithful": true, "issues": []}'
+        calls["strong"] += 1
+        return "Ceci est une phrase française correcte au sujet du tableau et de son histoire."
+
+    tr = ContentTranslator(mini, complete_strong=strong)
+    out = tr.translate_object(
+        {"guide": "A sentence about the painting here now."}, ["fr"]
+    )
+    assert calls["strong"] == 1  # 语言不符触发强模型重译
+    assert out["fr"]["guide"].status == "published"  # 重译后语言正确

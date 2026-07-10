@@ -17,6 +17,12 @@ def _parse():
     return _parse_json
 
 
+def _lang_ok(text, lang):
+    from app.services.enrichment.lang_detect import text_in_language
+
+    return text_in_language(text, lang)
+
+
 class ContentTranslator:
     def __init__(self, complete, complete_strong=None):
         self._complete = complete  # complete(system, user) -> str (默认 gpt-4o-mini)
@@ -65,19 +71,22 @@ class ContentTranslator:
                     continue
                 translated = self.translate_section(en_body, lang, title=title)
                 ok, issues = self.check_faithfulness(en_body, translated, lang)
-                if not ok and self._complete_strong:
-                    # 残片/不忠实 → 强模型(gpt-4o)重译一次并无条件采用
+                lang_ok = _lang_ok(translated, lang)
+                if (not ok or not lang_ok) and self._complete_strong:
+                    # 不忠实 或 语言不符 → 强模型(gpt-4o)重译一次并采用
                     # (总比 mini 的坏译好;顽固少数才付费,语言无关靠闸信号触发)
                     translated = self.translate_section(
                         en_body, lang, strong=True, title=title
                     )
                     ok, issues = self.check_faithfulness(en_body, translated, lang)
+                    lang_ok = _lang_ok(translated, lang)
+                published = ok and lang_ok  # 忠实且语言正确才发布
                 lang_result[code] = SectionQuality(
                     body=translated,
-                    status="published" if ok else "needs_review",
-                    grounding_ratio=1.0 if ok else 0.0,
-                    conflicts=issues,
-                    score=1.0 if ok else 0.0,
+                    status="published" if published else "needs_review",
+                    grounding_ratio=1.0 if published else 0.0,
+                    conflicts=issues if lang_ok else (issues + ["language_mismatch"]),
+                    score=1.0 if published else 0.0,
                 )
             out[lang] = lang_result
         return out
