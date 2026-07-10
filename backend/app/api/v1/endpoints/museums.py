@@ -54,14 +54,31 @@ def object_audio(
     qid: str,
     language: str = "zh",
     section: str = "guide",
+    qa_sort: int | None = None,
     db: Session = Depends(get_db),
 ) -> dict:
-    """guide 音频懒生成(点播放触发)。仅 guide(Phase1)。语速由客户端 setPlaybackRate。
+    """音频懒生成(点播放触发):guide/深度模块(section=段code)、问答(section=qa&qa_sort=N)、
+    作者介绍(section=artist_bio,按作者共享)。语速由客户端 setPlaybackRate。
     同步 def:_synth 内 asyncio.run 不与主事件循环冲突(同 recognize 端点)。"""
-    from app.services.enrichment.lazy_audio import get_or_make_audio_url
+    from app.services.enrichment.lazy_audio import (
+        get_or_make_artist_bio_audio_url,
+        get_or_make_audio_url,
+        get_or_make_qa_audio_url,
+    )
 
     try:
-        url, status = get_or_make_audio_url(db, slug, qid, language, section)
+        if section == "qa":
+            if qa_sort is None:
+                raise HTTPException(
+                    status_code=422, detail={"reason": "qa_sort_required"}
+                )
+            url, status = get_or_make_qa_audio_url(db, qid, language, qa_sort)
+        elif section == "artist_bio":
+            url, status = get_or_make_artist_bio_audio_url(db, qid, language)
+        else:
+            url, status = get_or_make_audio_url(db, slug, qid, language, section)
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("TTS audio failed: %s/%s/%s", qid, language, section)
         raise HTTPException(status_code=503, detail={"reason": "tts_failed"})

@@ -116,7 +116,9 @@ def test_get_object_content_includes_suggested_questions(session):
     )
     content = get_object_content(session, "orsay", "Q1", "en")
     assert "suggested_questions" in content
-    assert content["suggested_questions"] == [{"question": "Q-pub", "answer": "A-pub"}]
+    assert content["suggested_questions"] == [
+        {"question": "Q-pub", "answer": "A-pub", "sort": 0}
+    ]  # sort=QA音频寻址(加法)
 
 
 def test_get_object_content_suggested_questions_empty_when_none(session):

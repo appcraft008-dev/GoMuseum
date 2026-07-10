@@ -231,6 +231,11 @@ def generate_object(
                 art.notable_works = af.get("artist_notable_works")
                 if bios:
                     art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
+                    # bio 变更 → 对应语言旧音频失效(下次点播放重生成)
+                    ba = dict(art.bio_audio or {})
+                    for _l in bios:
+                        ba.pop(_l, None)
+                    art.bio_audio = ba
                 db.flush()
             # 国籍/代表作多语(交接③):缺语种才触网,幂等,失败不拖垮生成
             try:
