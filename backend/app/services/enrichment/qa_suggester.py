@@ -42,11 +42,15 @@ def translate_qa_items(translator, en_items: list, lang: str, title=None) -> lis
             else:
                 tq = it["question"]
         ok, _ = translator.check_faithfulness(it["answer"], ta, lang)
+        from app.services.enrichment.lang_detect import text_in_language
+
+        # 语言闸:问句或答案不是目标语(混英文等)→ 不发布
+        lang_ok = text_in_language(ta, lang) and text_in_language(tq, lang)
         out.append(
             {
                 "question": tq,
                 "answer": ta,
-                "status": "published" if ok else "needs_review",
+                "status": "published" if (ok and lang_ok) else "needs_review",
             }
         )
     return out

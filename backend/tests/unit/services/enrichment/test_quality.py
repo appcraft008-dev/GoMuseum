@@ -140,3 +140,19 @@ def test_gate_needs_review_when_mostly_unsupported():
 
     r = QualityGate(fake).check_section("MAT", "F", "A. B. C.")
     assert r.status == "needs_review"  # 存活 1/3 < 阈值
+
+
+def test_en_axis_rejects_non_english():
+    # en 轴心须英文:接地过但 body 是法语(镜像法语源)→needs_review
+    from app.services.enrichment.quality import QualityGate
+
+    def fake(system, user):
+        return '{"verdicts": [true, true, true, true, true]}'
+
+    gate = QualityGate(fake)
+    q = gate.check_section(
+        "material",
+        "facts",
+        "Ceci est une phrase française qui a fui dans l'axe anglais du contenu artistique.",
+    )
+    assert q.status == "needs_review"

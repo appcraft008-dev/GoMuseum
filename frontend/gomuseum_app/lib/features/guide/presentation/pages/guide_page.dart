@@ -1508,20 +1508,18 @@ class _FactRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    // 标签在上、值在下：固定宽度的两列布局在各语言下标签长短不一（如法语
+    // "N° d'inventaire"），易折行/被裁；堆叠布局任何语言任何长度都不折。
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 64,
-            child: Text(row.label,
-                style: GmText.sans(size: 11.5, color: gm.faint)),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(row.value, style: GmText.sans(size: 12, color: gm.ink)),
-          ),
+          Text(row.label,
+              style:
+                  GmText.sans(size: 10.5, color: gm.faint, letterSpacing: 0.3)),
+          const SizedBox(height: 3),
+          Text(row.value, style: GmText.sans(size: 12.5, color: gm.ink)),
         ],
       ),
     );
