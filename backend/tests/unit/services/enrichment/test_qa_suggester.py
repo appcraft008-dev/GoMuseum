@@ -43,7 +43,11 @@ class _Translator:
         return True, []
 
 
-def test_suggest_en_gates_answers_and_translates_published():
+def test_suggest_en_gates_answers_and_translates_published(monkeypatch):
+    # 合成 [lang] 假译文非真语言,此测试验翻译流程非语言检测→屏蔽语言闸
+    monkeypatch.setattr(
+        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+    )
     s = QASuggester(_Complete(), _Gate(), _Translator())
     out = s.suggest("material", "facts", "painting", ["en", "fr"])
 
@@ -134,3 +138,23 @@ def test_translate_qa_appends_qmark_not_english_fallback():
     q = out[0]["question"]
     assert "？" in q  # 补了中文问号
     assert "What" not in q  # 没回退英文
+
+
+def test_qa_gates_wrong_language():
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    class _Tr:
+        def translate_section(self, text, lang, *, strong=False, title=None):
+            return (
+                "This whole answer leaked into English instead of the Chinese language."
+            )
+
+        def check_faithfulness(self, en, tr, lang):
+            return True, []
+
+    out = translate_qa_items(
+        _Tr(),
+        [{"question": "Why?", "answer": "Because of the light effects here now."}],
+        "zh",
+    )
+    assert out[0]["status"] == "needs_review"  # 答案英文→语言不符→不发布
