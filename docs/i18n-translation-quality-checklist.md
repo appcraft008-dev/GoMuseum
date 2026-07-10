@@ -61,6 +61,13 @@
 - **注**：zh-hant 作为独立语言时，方向相反（保留繁体，不转简）——加 zh-hant 时需确认 OpenCC 方向按 target 区分。
 - **西里尔类推**：塞尔维亚语 sr 的西里尔/拉丁 digraphia 同理——定统一字形，抓另一套字形的残留。
 
+### ⑦ 整段语言纯度（核心差异点，2026-07-10 加）
+- **症状**：整段/整字段是**别的语言**（作者 bio 出法语、zh 问答混整句英文、en 轴心镜像法语源）。①只抓"残片"，⑦抓"整段跑偏"。
+- **查**：`lang_detect.text_in_language(text, lang)`——非拉丁按目标字形占比、拉丁用 lingua。全库重扫：`python scripts/rescan_language.py orsay --target <env>`（找出并重译污染段，幂等）。
+- **修**（已实现，语言无关）：翻译/生成路径接语言一致性闸——不符→gpt-4o 重译→仍不符 needs_review 不发布。bio 用检测器统一判定（取代查中/法语打地鼠）。
+- **语言无关·未来语言自动覆盖**：检测候选集派生自 `DEFAULT_LANGUAGES`；加语言即纳入。加非拉丁语言时把它加进 `lang_detect._NONLATIN_SCRIPT`（一行）；拉丁语言若 lingua 支持则自动。
+- **加语言验收必查**：新语言下抽查各内容（讲解/深度/问答/bio）无整段外语；跑 `rescan_language` 应零污染。
+
 ## 加一种非拉丁语言的标准动作
 
 1. 配置：契约"加语言 checklist"五步（DEFAULT_LANGUAGES/静态标签表/前端 ARB…）。
