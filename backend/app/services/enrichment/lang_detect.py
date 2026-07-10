@@ -42,18 +42,26 @@ def _get_detector():
 
 def text_in_language(text: str, lang: str) -> bool:
     t = (text or "").strip()
-    if len(t) < 15 or len(t.split()) < 3:
-        return True  # 短文本/名字 → 放行
+    if not t:
+        return True
     try:
+        alpha = re.findall(r"[^\W\d_]", t, re.UNICODE)  # 字母类字符
+        latin = sum(1 for c in alpha if _LATIN.match(c)) if alpha else 0
         if lang in _NONLATIN_SCRIPT:
-            alpha = re.findall(r"[^\W\d_]", t, re.UNICODE)  # 字母类字符
-            if not alpha:
+            # 非拉丁目标:短(名字/短标题)放行;否则拉丁占比 >40% = 英文污染
+            if len(t) < 15:
                 return True
-            latin = sum(1 for c in alpha if _LATIN.match(c))
-            return (latin / len(alpha)) <= 0.4  # 拉丁占比 >40% = 英文污染
+            return not alpha or (latin / len(alpha)) <= 0.4
         if lang in _LINGUA_CODE:
             from lingua import Language
 
+            # 拉丁目标但大量非拉丁字母(CJK 等)= 明确不是该语言(如中文进 en 位),
+            # 不受短文本豁免(拉丁字段里的 CJK 一定错)。
+            if alpha and (latin / len(alpha)) < 0.6:
+                return False
+            # 拉丁 vs 拉丁:短文本 lingua 不稳 → 放行(名字);否则 lingua 判别
+            if len(t) < 15 or len(t.split()) < 3:
+                return True
             det = _get_detector()
             conf = det.compute_language_confidence_values(t)
             if not conf:

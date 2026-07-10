@@ -187,19 +187,13 @@ def backfill_languages(
 _CJK = re.compile(r"[一-鿿]")
 
 
-# en 位混入法语的特征词(法国作者的 bio 常镜像法语源材料)。坏值=不可作轴心,需重生。
-_FRENCH_SIG = re.compile(
-    r"\b(né|née|était|est un|est une|dans une|peintre français|française|"
-    r"sculpteur français)\b",
-    re.IGNORECASE,
-)
-
-
 def bio_en_usable(bio) -> bool:
-    """en bio 有且不是坏值→可作翻译轴心/无需重生。契约"完整性判断按语言维度":坏值等同缺失。
-    坏值 = 含汉字(中文混入)或含法语特征词(法语镜像,问题3)。"""
+    """en bio 有且真的是英文→可作翻译轴心/无需重生。契约"完整性判断按语言维度":坏值=缺失。
+    用语言一致性检测器统一判定(取代此前查中/法语的 _CJK/_FRENCH_SIG 打地鼠)。"""
+    from app.services.enrichment.lang_detect import text_in_language
+
     en = (bio or {}).get("en")
-    return bool(en) and not _CJK.search(en) and not _FRENCH_SIG.search(en)
+    return bool(en) and text_in_language(en, "en")
 
 
 def _clean_i18n(i18n) -> dict:
