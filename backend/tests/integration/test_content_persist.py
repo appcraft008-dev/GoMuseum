@@ -200,3 +200,47 @@ def test_translate_object_output_persists_per_language(session):
     assert rows[("fr", "overview")].body == "Texte traduit."
     assert rows[("fr", "overview")].status == "published"
     assert ("en", "overview") not in rows
+
+
+def test_upsert_section_clears_audio_key_on_body_change(session):
+    # Important 修复:persist_gated_sections 改 body → 旧 audio_key 失效(防播放旧音频)
+    from app.services.content_repo import persist_gated_sections, persist_section_audio
+    from app.services.enrichment.quality import SectionQuality
+
+    class _FakeStore:
+        def put(self, k, d, c):
+            pass
+
+        def public_url(self, k):
+            return f"u/{k}"
+
+    def _sec(body):
+        return {
+            "guide": SectionQuality(
+                body=body,
+                status="published",
+                grounding_ratio=1.0,
+                conflicts=[],
+                score=1.0,
+            )
+        }
+
+    persist_gated_sections(session, "Q1", "zh", _sec("原讲解"), "m")
+    persist_section_audio(session, "Q1", "zh", "guide", b"AUDIO", _FakeStore())
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    row = (
+        session.query(ObjectContentSection)
+        .filter_by(object_id=o.id, language="zh", section_code="guide")
+        .one()
+    )
+    assert row.audio_key is not None  # 有音频
+
+    persist_gated_sections(session, "Q1", "zh", _sec("改后的讲解"), "m")  # body 变
+    session.refresh(row)
+    assert row.audio_key is None  # 旧音频失效
+
+    # 相同 body 重跑 → 不误清(此处已 None,验幂等不报错即可)
+    persist_section_audio(session, "Q1", "zh", "guide", b"AUDIO2", _FakeStore())
+    persist_gated_sections(session, "Q1", "zh", _sec("改后的讲解"), "m")  # body 同
+    session.refresh(row)
+    assert row.audio_key is not None  # body 未变 → 音频保留

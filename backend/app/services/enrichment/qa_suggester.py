@@ -26,20 +26,31 @@ def _clean_question(q: str):
 def translate_qa_items(translator, en_items: list, lang: str, title=None) -> list:
     """把英语问答对翻到 lang(问句截到问号+答案忠实校验)。suggest 与补语种共用。
     title=规范标题:问答引用标题统一用显示名(消除分叉,同 guide/deep)。"""
+    import re as _re
+
     out = []
     for it in en_items:
-        tq = _clean_question(
-            translator.translate_section(it["question"], lang, title=title)
-        )
+        raw_q = translator.translate_section(it["question"], lang, title=title)
+        tq = _clean_question(raw_q)
         ta = translator.translate_section(it["answer"], lang, title=title)
-        if not tq:  # 翻译把问句变陈述了 → 回退英文问句(已是短问句)
-            tq = it["question"]
+        if not tq:
+            # 翻译丢了问号 → 补目标语问号(别回退英文,那样中文里混英文问题);真空才回退英文
+            stripped = (raw_q or "").strip()
+            if stripped:
+                cjk = _re.search(r"[一-鿿぀-ゟ゠-ヿ가-힣]", stripped)
+                tq = stripped.rstrip("。.！!？?") + ("？" if cjk else "?")
+            else:
+                tq = it["question"]
         ok, _ = translator.check_faithfulness(it["answer"], ta, lang)
+        from app.services.enrichment.lang_detect import text_in_language
+
+        # 语言闸:问句或答案不是目标语(混英文等)→ 不发布
+        lang_ok = text_in_language(ta, lang) and text_in_language(tq, lang)
         out.append(
             {
                 "question": tq,
                 "answer": ta,
-                "status": "published" if ok else "needs_review",
+                "status": "published" if (ok and lang_ok) else "needs_review",
             }
         )
     return out

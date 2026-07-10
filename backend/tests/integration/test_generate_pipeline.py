@@ -337,6 +337,63 @@ def test_generate_object_passes_guide_into_canonical(session):
     assert seen["guide"] == "HEADLINE."  # 模块拿到了先生成的头条
 
 
+def test_en_guide_persisted_before_deep_modules(session, monkeypatch):
+    # 流式先出:guide 落库这一批 persist 调用必须先于深度模块那一批,轮询才能中途看到 guide。
+    import app.services.enrichment.pipeline as pl
+    from app.services.enrichment.quality import SectionQuality
+
+    order = []
+    orig = pl.persist_gated_sections
+
+    def spy(db, qid, lang, results, model):
+        order.extend(results.keys())
+        return orig(db, qid, lang, results, model)
+
+    monkeypatch.setattr(pl, "persist_gated_sections", spy)
+
+    class _GuideEnricher(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "Guide hook."
+
+        def generate_canonical(self, obj, sections, guide=None):
+            return {"background": "Deep background."}
+
+    class _GuideGate(_FakeGate):
+        def check_section(self, material, facts, body):
+            return SectionQuality(
+                body=body,
+                status="published",
+                grounding_ratio=1.0,
+                conflicts=[],
+                score=1.0,
+            )
+
+        def gate(self, material, facts, draft):
+            return {
+                code: SectionQuality(
+                    body=b,
+                    status="published",
+                    grounding_ratio=1.0,
+                    conflicts=[],
+                    score=1.0,
+                )
+                for code, b in draft.items()
+            }
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_GuideEnricher(),
+        gate=_GuideGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert order.index("guide") < order.index("background")
+
+
 class _FakeRegistry:
     def __init__(self):
         self.calls = []
@@ -958,3 +1015,30 @@ def test_translate_qa_items_threads_title(session):
         _Tr(), [{"question": "What?", "answer": "A."}], "zh", title="显现"
     )
     assert "显现" in seen  # 问答翻译也收到规范标题
+
+
+def test_translate_object_gates_wrong_language(session):
+    # 语言闸:译文语言不符→gpt-4o重译;重译后语言正确→published
+    from app.services.enrichment.translator import ContentTranslator
+
+    calls = {"strong": 0}
+
+    def mini(system, user):
+        if "quality judge" in system.lower():
+            return '{"faithful": true, "issues": []}'
+        return (
+            "This is an English sentence that leaked into a French translation badly."
+        )
+
+    def strong(system, user):
+        if "quality judge" in system.lower():
+            return '{"faithful": true, "issues": []}'
+        calls["strong"] += 1
+        return "Ceci est une phrase française correcte au sujet du tableau et de son histoire."
+
+    tr = ContentTranslator(mini, complete_strong=strong)
+    out = tr.translate_object(
+        {"guide": "A sentence about the painting here now."}, ["fr"]
+    )
+    assert calls["strong"] == 1  # 语言不符触发强模型重译
+    assert out["fr"]["guide"].status == "published"  # 重译后语言正确

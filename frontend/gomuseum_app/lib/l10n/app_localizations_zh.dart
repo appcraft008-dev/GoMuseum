@@ -537,6 +537,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideNotGenerated => '讲解暂未生成';
 
   @override
+  String get audioNotReady => '讲解生成后可听';
+
+  @override
+  String get audioFailed => '音频暂不可用，请重试';
+
+  @override
+  String get deepGenerating => '深度内容生成中…';
+
+  @override
   String get camNoCamera => '未找到可用相机';
 
   @override
@@ -1122,6 +1131,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get guideNotGenerated => '講解暫未生成';
+
+  @override
+  String get audioNotReady => '講解生成後可聽';
+
+  @override
+  String get audioFailed => '音訊暫不可用，請重試';
+
+  @override
+  String get deepGenerating => '深度內容生成中…';
 
   @override
   String get camNoCamera => '未找到可用相機';

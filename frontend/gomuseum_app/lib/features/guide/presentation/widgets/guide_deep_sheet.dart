@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_artist_card.dart';
-import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -9,8 +9,15 @@ import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
 /// 拉起「深度内容」底部抽屉。作者（若有）作为首位「作者介绍」tab、必选常驻。
-Future<void> showGuideDeepSheet(BuildContext context, List<ObjectTab> tabs,
-    {Artist? artist}) {
+/// slug/qid/language 供各段落懒取音频（深度模块 section_code / 作者介绍 artist_bio）。
+Future<void> showGuideDeepSheet(
+  BuildContext context,
+  List<ObjectTab> tabs, {
+  required String slug,
+  required String qid,
+  required String language,
+  Artist? artist,
+}) {
   final gm = context.gm;
   return showModalBottomSheet<void>(
     context: context,
@@ -20,16 +27,29 @@ Future<void> showGuideDeepSheet(BuildContext context, List<ObjectTab> tabs,
     barrierColor: gm.ink.withValues(alpha: 0.32),
     builder: (_) => FractionallySizedBox(
       heightFactor: 0.85,
-      child: GuideDeepSheetContent(tabs: tabs, artist: artist),
+      child: GuideDeepSheetContent(
+          tabs: tabs, artist: artist, slug: slug, qid: qid, language: language),
     ),
   );
 }
 
 /// 抽屉内容（抽出便于单测，不依赖 showModalBottomSheet）。
 class GuideDeepSheetContent extends StatefulWidget {
-  const GuideDeepSheetContent({super.key, required this.tabs, this.artist});
+  const GuideDeepSheetContent({
+    super.key,
+    required this.tabs,
+    this.artist,
+    this.slug,
+    this.qid,
+    this.language,
+  });
   final List<ObjectTab> tabs;
   final Artist? artist;
+
+  /// 懒取音频所需（单测可省，省则不渲染播放器）。
+  final String? slug;
+  final String? qid;
+  final String? language;
 
   @override
   State<GuideDeepSheetContent> createState() => _GuideDeepSheetContentState();
@@ -146,19 +166,31 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
     );
   }
 
-  /// 作者介绍 tab：音频条（预留）+ 结构化作者信息。
+  /// slug/qid/language 齐备才渲染播放器（单测省这些参数时降级为无播放器）。
+  bool get _canPlay =>
+      widget.slug != null && widget.qid != null && widget.language != null;
+
+  /// 作者介绍 tab：作者卡 bio 有则给播放（section=artist_bio，按作者共享）。
   Widget _artistBody() {
+    final hasBio = (widget.artist!.bio ?? '').trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const GuideAudioBar(audioUrl: null),
-        const SizedBox(height: 14),
+        if (_canPlay && hasBio) ...[
+          GuideAudioPlayer(
+            slug: widget.slug!,
+            qid: widget.qid!,
+            language: widget.language!,
+            section: 'artist_bio',
+          ),
+          const SizedBox(height: 14),
+        ],
         GuideArtistCard(artist: widget.artist!),
       ],
     );
   }
 
-  /// 深度 tab：音频条 + 正文（空则「待完善」）。
+  /// 深度 tab：正文有则给播放（section=section_code）+ 正文（空则「待完善」）。
   Widget _tabBody(BuildContext context, GmPalette gm, AppLocalizations l10n,
       bool showArtist, int selected) {
     final deepIndex = showArtist ? selected - 1 : selected;
@@ -170,8 +202,16 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GuideAudioBar(audioUrl: tab.audioUrl),
-        const SizedBox(height: 14),
+        if (_canPlay && hasBody) ...[
+          GuideAudioPlayer(
+            slug: widget.slug!,
+            qid: widget.qid!,
+            language: widget.language!,
+            section: tab.sectionCode,
+            initialUrl: tab.audioUrl,
+          ),
+          const SizedBox(height: 14),
+        ],
         Text(
           hasBody ? tab.body! : l10n.toBeRefined,
           style: GmText.sans(

@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 
 /// 预设问题竖排，点击就地展开答案（答案随契约返回，无需联网）。
+/// slug/qid/language 齐备且该问答有 sort 时，展开处给「问+答连念」播放（section=qa）。
 class GuideQuestionList extends StatefulWidget {
-  const GuideQuestionList({super.key, required this.questions});
+  const GuideQuestionList({
+    super.key,
+    required this.questions,
+    this.slug,
+    this.qid,
+    this.language,
+  });
   final List<SuggestedQuestion> questions;
+  final String? slug;
+  final String? qid;
+  final String? language;
 
   @override
   State<GuideQuestionList> createState() => _GuideQuestionListState();
@@ -15,6 +26,9 @@ class GuideQuestionList extends StatefulWidget {
 
 class _GuideQuestionListState extends State<GuideQuestionList> {
   final Set<int> _open = {};
+
+  bool get _canPlay =>
+      widget.slug != null && widget.qid != null && widget.language != null;
 
   @override
   Widget build(BuildContext context) {
@@ -69,9 +83,22 @@ class _GuideQuestionListState extends State<GuideQuestionList> {
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: gm.line)),
             ),
-            child: Text(q.answer!,
-                style: GmText.sans(size: 13, height: 1.9, color: gm.sub),
-                textAlign: TextAlign.justify),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(q.answer!,
+                    style: GmText.sans(size: 13, height: 1.9, color: gm.sub),
+                    textAlign: TextAlign.justify),
+                if (_canPlay && q.sort != null)
+                  GuideAudioPlayer(
+                    slug: widget.slug!,
+                    qid: widget.qid!,
+                    language: widget.language!,
+                    section: 'qa',
+                    qaSort: q.sort,
+                  ),
+              ],
+            ),
           ),
       ],
     );

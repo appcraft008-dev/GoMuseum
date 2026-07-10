@@ -112,16 +112,21 @@ class ObjectTab extends Equatable {
 }
 
 class SuggestedQuestion extends Equatable {
-  const SuggestedQuestion({required this.question, required this.answer});
+  const SuggestedQuestion(
+      {required this.question, required this.answer, this.sort});
   final String question;
   final String? answer;
+
+  /// 问答音频定位键（section=qa&qa_sort）。加法字段，老后端缺 → null（不显播放）。
+  final int? sort;
   factory SuggestedQuestion.fromJson(Map<String, dynamic> j) =>
       SuggestedQuestion(
         question: j['question'] as String? ?? '',
         answer: j['answer'] as String?,
+        sort: j['sort'] as int?,
       );
   @override
-  List<Object?> get props => [question, answer];
+  List<Object?> get props => [question, answer, sort];
 }
 
 class DefaultGuide extends Equatable {

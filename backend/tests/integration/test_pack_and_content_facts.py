@@ -515,3 +515,88 @@ def test_default_guide_only_published_not_needs_review(session):
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert d["default_guide"] is None  # needs_review 不泄漏
     assert d["status"] == "empty"  # 无已发布 guide 且无 tab → empty
+
+
+def test_content_returns_guide_while_generating(session):
+    # 流式先出闭环:生成中(锁活)且 zh guide 已落 → 端点仍返回 guide,前端可先显示
+    from datetime import datetime, timezone
+
+    from app.models.content import ObjectContentSection
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="zh",
+            section_code="guide",
+            body="先出的中文讲解。",
+            status="published",
+        )
+    )
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_lock_at": datetime.now(timezone.utc).isoformat(),
+    }
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["generating"] is True  # 深度模块仍生成中
+    assert d["default_guide"]["body"] == "先出的中文讲解。"  # guide 已可显示
+
+
+def test_content_generation_progress_fraction(session):
+    # 加法字段:懒生成进度真实分数(guide+已发布深度段 / guide+类目深度段)
+    from app.models.content import CategorySection, ObjectContentSection, SectionType
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    # 类目 painting = guide + significance + background(expected=3)
+    session.add(SectionType(code="significance", icon="i"))
+    session.add(SectionType(code="background", icon="i"))
+    session.add(
+        CategorySection(category="painting", section_code="significance", sort_order=1)
+    )
+    session.add(
+        CategorySection(category="painting", section_code="background", sort_order=2)
+    )
+    # ko: 发布 guide + background(2 段),significance 缺 → 2/3
+    for code in ("guide", "background"):
+        session.add(
+            ObjectContentSection(
+                object_id=o.id,
+                language="ko",
+                section_code=code,
+                body="x",
+                status="published",
+            )
+        )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "ko")
+    assert d["generation"]["expected"] == 3  # guide + significance + background
+    assert d["generation"]["published"] == 2  # guide + background
+
+
+def test_facts_artist_uses_localized_name(session):
+    # 问题1a:简介行作者名走 name_i18n(与作者卡一致),非原始 artist_zh/en 列
+    from app.models.artist import Artist
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_zh = "雷諾瓦"  # 原始列(繁体/旧)
+    o.artist_en = "Renoir"
+    o.attributes = {"artist_qid": "Q296"}
+    session.add(
+        Artist(qid="Q296", name_en="Renoir", name_i18n={"zh": "雷诺阿", "en": "Renoir"})
+    )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["facts"]["artist"] == "雷诺阿"  # 用 i18n 简体,非原始列 雷諾瓦
+    assert d["artist"]["name"] == "雷诺阿"  # 与作者卡一致
+
+
+def test_humanize_medium_salted_paper(session):
+    # 问题1b:摄影材质 salted paper 也本地化
+    from app.services.museum_repo import _humanize_medium
+
+    assert _humanize_medium("salted paper", "zh") == "盐纸法"
+    assert _humanize_medium("salted paper print", "en") == "Salted paper"

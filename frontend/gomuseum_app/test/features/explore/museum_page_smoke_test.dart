@@ -9,6 +9,7 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/datasources/catalog_remote_datasource.dart';
+import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
@@ -75,6 +76,16 @@ class _FakeCatalogDs implements CatalogRemoteDataSource {
     String language = 'zh',
   }) async =>
       throw UnimplementedError();
+
+  @override
+  Future<GuideAudioResult> getGuideAudio({
+    required String slug,
+    required String qid,
+    required String language,
+    String section = 'guide',
+    int? qaSort,
+  }) async =>
+      const GuideAudioFailed();
 }
 
 // ---------------------------------------------------------------------------

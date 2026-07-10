@@ -29,3 +29,12 @@ def test_generate_audio_reads_sync_iter_bytes(monkeypatch):
     result = asyncio.run(TTSService().generate_audio(text="hello world", language="en"))
     assert result["audio_data"] == b"ABCD"
     assert result["content_type"] == "audio/mpeg"
+
+
+def test_voice_mapping_covers_all_default_languages():
+    from app.services.enrichment.lang_config import DEFAULT_LANGUAGES
+    from app.services.tts_service import VOICE_MAPPING
+
+    for lang in DEFAULT_LANGUAGES:
+        assert lang in VOICE_MAPPING, f"TTS 缺 {lang} 音色"
+        assert VOICE_MAPPING[lang].get("default")

@@ -179,6 +179,10 @@
 
   "guideUnavailable": "Materiale insufficiente per una guida su quest'opera",
   "guideNotGenerated": "Guida non ancora generata",
+
+  "audioNotReady": "Audio disponibile quando la guida è pronta",
+  "audioFailed": "Audio non disponibile, riprova",
+  "deepGenerating": "Generazione dei contenuti di approfondimento…",
   "camNoCamera": "Nessuna fotocamera disponibile",
   "camInitFailed": "Inizializzazione della fotocamera non riuscita",
   "camTagSearch": "Ricerca per cartellino",

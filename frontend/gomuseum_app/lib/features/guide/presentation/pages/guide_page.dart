@@ -24,7 +24,7 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
-import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_bar.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_sheet.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.dart';
@@ -355,48 +355,57 @@ class _GuidePageState extends ConsumerState<GuidePage>
             ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
       ),
       data: (content) {
-        // 三态：先看 generating（后端任务锁精确信号），再看 status。
-        // 1) 正在懒生成/懒翻译 → 「生成中」+ 轮询。
+        // ① 部分就绪流式：先看主讲解是否已落库。
+        // 主讲解有 → 立即渲染（不管 generating）；generating 时深度区显「生成中」并继续轮询，
+        // 深度模块/问答随后填入。用户不用等全部生成完。
+        final hasHero = GuideLayering.from(content).hasHero;
+        if (hasHero) {
+          if (content.generating) {
+            _startPolling(slug: slug, qid: qid);
+          } else {
+            _stopPolling();
+          }
+          return Scaffold(
+            backgroundColor: gm.bg,
+            body: NestedScrollView(
+              headerSliverBuilder: (context, _) => [
+                _A5HeroSliverAppBar(
+                  content: content,
+                  starred: _starred,
+                  onBack: () => _goBack(context),
+                  onToggleStar: () => setState(() => _starred = !_starred),
+                ),
+              ],
+              body: _A5Body(
+                content: content,
+                slug: slug,
+                language: _language,
+                deepGenerating: content.generating,
+                factsExpanded: _factsExpanded,
+                onToggleFacts: () =>
+                    setState(() => _factsExpanded = !_factsExpanded),
+              ),
+            ),
+            bottomNavigationBar: const _AskBar(),
+          );
+        }
+
+        // 主讲解还没有：沿用三态。
+        // 2) 生成中 → 「生成中」+ 轮询。
         if (content.generating) {
           _startPolling(slug: slug, qid: qid);
           return _A5GeneratingScaffold(gm: gm, onBack: () => _goBack(context));
         }
         _stopPolling();
-        // 2) 非生成中且非 ready：区分「资料不足」与「暂未生成(可重试)」，不再骗着转圈。
-        if (content.status != ContentStatus.ready) {
-          if (content.status == ContentStatus.empty) {
-            return _A5UnavailableScaffold(
-                gm: gm, onBack: () => _goBack(context));
-          }
-          // stub 等：暂未生成 → 重试即重新拉 content（后端自动再触发懒生成）。
-          return _A5RetryScaffold(
-            gm: gm,
-            onBack: () => _goBack(context),
-            onRetry: () =>
-                ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
-          );
+        // 3) 非生成中且无内容：资料不足(empty) / 暂未生成可重试(stub)。
+        if (content.status == ContentStatus.empty) {
+          return _A5UnavailableScaffold(gm: gm, onBack: () => _goBack(context));
         }
-
-        // 3) Ready: full rendering（分层导览）
-        return Scaffold(
-          backgroundColor: gm.bg,
-          body: NestedScrollView(
-            headerSliverBuilder: (context, _) => [
-              _A5HeroSliverAppBar(
-                content: content,
-                starred: _starred,
-                onBack: () => _goBack(context),
-                onToggleStar: () => setState(() => _starred = !_starred),
-              ),
-            ],
-            body: _A5Body(
-              content: content,
-              factsExpanded: _factsExpanded,
-              onToggleFacts: () =>
-                  setState(() => _factsExpanded = !_factsExpanded),
-            ),
-          ),
-          bottomNavigationBar: const _AskBar(),
+        return _A5RetryScaffold(
+          gm: gm,
+          onBack: () => _goBack(context),
+          onRetry: () =>
+              ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
         );
       },
     );
@@ -1185,11 +1194,21 @@ class _HeroPlaceholder extends StatelessWidget {
 class _A5Body extends StatelessWidget {
   const _A5Body({
     required this.content,
+    required this.slug,
+    required this.language,
+    required this.deepGenerating,
     required this.factsExpanded,
     required this.onToggleFacts,
   });
 
   final ObjectContent content;
+  final String slug;
+
+  /// API 语言参数（繁体已 zh-hant）。
+  final String language;
+
+  /// 主讲解已出但后端仍在生成深度/问答 → 深度区显「生成中」提示。
+  final bool deepGenerating;
   final bool factsExpanded;
   final VoidCallback onToggleFacts;
 
@@ -1228,7 +1247,12 @@ class _A5Body extends StatelessWidget {
               Expanded(child: Container(height: 1, color: gm.line)),
             ]),
           ),
-          GuideAudioBar(audioUrl: layer.heroAudioUrl),
+          GuideAudioPlayer(
+            slug: slug,
+            qid: content.qid,
+            language: language,
+            initialUrl: layer.heroAudioUrl,
+          ),
           const SizedBox(height: 14),
           if (layer.hasHero)
             Text(layer.heroBody,
@@ -1258,8 +1282,30 @@ class _A5Body extends StatelessWidget {
               ]),
             ),
             const SizedBox(height: 4),
-            GuideQuestionList(questions: content.suggestedQuestions),
+            GuideQuestionList(
+              questions: content.suggestedQuestions,
+              slug: slug,
+              qid: content.qid,
+              language: language,
+            ),
           ],
+
+          // ① 深度/问答仍在生成 → 轻提示（主讲解已可读）。
+          if (deepGenerating)
+            Padding(
+              padding: const EdgeInsets.only(top: 18),
+              child: Row(children: [
+                SizedBox(
+                  width: 13,
+                  height: 13,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 1.6, color: gm.faint),
+                ),
+                const SizedBox(width: 10),
+                Text(l10n.deepGenerating,
+                    style: GmText.sans(size: 12, color: gm.sub)),
+              ]),
+            ),
 
           // 📖 深度内容 → 底部抽屉（「作者介绍」为首位 tab，必选常驻）。
           // 入口条件放宽：有深度 tab 或有作者都露出；数字含作者 tab。
@@ -1274,8 +1320,14 @@ class _A5Body extends StatelessWidget {
                   label: '${l10n.guideDeepContent}（$sheetTabCount）',
                   icon: GmIcons.doc,
                   trailingIcon: GmIcons.arrowR,
-                  onTap: () => showGuideDeepSheet(context, layer.deepTabs,
-                      artist: content.artist),
+                  onTap: () => showGuideDeepSheet(
+                    context,
+                    layer.deepTabs,
+                    slug: slug,
+                    qid: content.qid,
+                    language: language,
+                    artist: content.artist,
+                  ),
                 ),
               );
             }),
@@ -1467,20 +1519,18 @@ class _FactRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    // 标签在上、值在下：固定宽度的两列布局在各语言下标签长短不一（如法语
+    // "N° d'inventaire"），易折行/被裁；堆叠布局任何语言任何长度都不折。
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 64,
-            child: Text(row.label,
-                style: GmText.sans(size: 11.5, color: gm.faint)),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(row.value, style: GmText.sans(size: 12, color: gm.ink)),
-          ),
+          Text(row.label,
+              style:
+                  GmText.sans(size: 10.5, color: gm.faint, letterSpacing: 0.3)),
+          const SizedBox(height: 3),
+          Text(row.value, style: GmText.sans(size: 12.5, color: gm.ink)),
         ],
       ),
     );

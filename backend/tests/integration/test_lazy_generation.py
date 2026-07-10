@@ -344,3 +344,35 @@ def test_lazy_translate_still_fires_when_no_sections(session):
         language="zh",
     )
     assert scheduled == [("run_lazy_translation", ("Q1", "zh"))]
+
+
+def test_lazy_generation_only_request_language(session, monkeypatch):
+    # 省成本核心:懒生成只产 en 轴心 + 请求语言,不产其他 9 门
+    import app.services.enrichment.lazy as lazy
+
+    captured = {}
+
+    def fake_generate_object(db, qid, *, target_langs, lang_priority, **kw):
+        captured["target_langs"] = list(target_langs)
+        for lang in target_langs:
+            db.add(
+                ObjectContentSection(
+                    object_id=db.query(lazy.MuseumObject).filter_by(qid=qid).one().id,
+                    language=lang,
+                    section_code="guide",
+                    body="x",
+                    status="published",
+                )
+            )
+        o = db.query(lazy.MuseumObject).filter_by(qid=qid).one()
+        o.content_status = "ready"
+        db.commit()
+        return {"qid": qid}
+
+    monkeypatch.setattr(
+        "app.services.enrichment.pipeline.generate_object", fake_generate_object
+    )
+    lazy.run_lazy_generation(
+        qid="Q1", language="zh", session_factory=lambda: session, close=False
+    )
+    assert set(captured["target_langs"]) == {"en", "zh"}  # 只 en+zh,非全 10 语

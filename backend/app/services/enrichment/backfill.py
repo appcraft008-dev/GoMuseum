@@ -112,11 +112,17 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     missing = {c: b for c, b in en_secs.items() if c not in have}
     if missing:
         title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
-        results = translator.translate_object(
-            missing, [lang], titles={lang: title} if title else None
-        ).get(lang, {})
-        pub, _nr = persist_gated_sections(db, o.qid, lang, results, model)
-        counts["sections"] += pub
+        _titles = {lang: title} if title else None
+        # 流式先出:guide 段先翻先落(前端先显主讲解),深度模块/问答随后逐段落库。
+        ordered = (["guide"] if "guide" in missing else []) + [
+            c for c in missing if c != "guide"
+        ]
+        for code in ordered:
+            res = translator.translate_object(
+                {code: missing[code]}, [lang], titles=_titles
+            ).get(lang, {})
+            pub, _nr = persist_gated_sections(db, o.qid, lang, res, model)
+            counts["sections"] += pub
     en_qa = [
         {"question": r.question, "answer": r.answer, "status": "published"}
         for r in db.query(ObjectSuggestedQuestion)
@@ -182,10 +188,12 @@ _CJK = re.compile(r"[一-鿿]")
 
 
 def bio_en_usable(bio) -> bool:
-    """en bio 有且不是坏值(含汉字=老bug遗留的中文进 en 位)→ 可作翻译轴心/无需重生。
-    契约"完整性判断按语言维度":坏值等同缺失。"""
+    """en bio 有且真的是英文→可作翻译轴心/无需重生。契约"完整性判断按语言维度":坏值=缺失。
+    用语言一致性检测器统一判定(取代此前查中/法语的 _CJK/_FRENCH_SIG 打地鼠)。"""
+    from app.services.enrichment.lang_detect import text_in_language
+
     en = (bio or {}).get("en")
-    return bool(en) and not _CJK.search(en)
+    return bool(en) and text_in_language(en, "en")
 
 
 def _clean_i18n(i18n) -> dict:

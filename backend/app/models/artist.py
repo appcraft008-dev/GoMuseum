@@ -23,6 +23,9 @@ class Artist(Base):
     bio = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
     )
+    bio_audio = Column(
+        MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
+    )  # {lang: audio_key} 作者介绍音频,按作者共享一份(TTS Phase2)
     name_i18n = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
     )  # {lang: name} 多语显示名

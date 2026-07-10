@@ -43,7 +43,11 @@ class _Translator:
         return True, []
 
 
-def test_suggest_en_gates_answers_and_translates_published():
+def test_suggest_en_gates_answers_and_translates_published(monkeypatch):
+    # 合成 [lang] 假译文非真语言,此测试验翻译流程非语言检测→屏蔽语言闸
+    monkeypatch.setattr(
+        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+    )
     s = QASuggester(_Complete(), _Gate(), _Translator())
     out = s.suggest("material", "facts", "painting", ["en", "fr"])
 
@@ -114,3 +118,43 @@ def test_clean_question_guard():
         _clean_question("Rochegrosse受多位艺术家影响，展现独特语言。") is None
     )  # 陈述句→丢
     assert _clean_question("") is None
+
+
+def test_translate_qa_appends_qmark_not_english_fallback():
+    # 问题2:翻译没带问号时,补目标语问号(别回退英文原问题)
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    class _Tr:
+        def translate_section(self, text, lang, *, strong=False, title=None):
+            # 模拟翻译丢了问号(陈述句式)
+            return "梵高的信件揭示了什么" if "?" in text else f"{text}译"
+
+        def check_faithfulness(self, en, tr, lang):
+            return True, []
+
+    out = translate_qa_items(
+        _Tr(), [{"question": "What did Van Gogh reveal?", "answer": "X."}], "zh"
+    )
+    q = out[0]["question"]
+    assert "？" in q  # 补了中文问号
+    assert "What" not in q  # 没回退英文
+
+
+def test_qa_gates_wrong_language():
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    class _Tr:
+        def translate_section(self, text, lang, *, strong=False, title=None):
+            return (
+                "This whole answer leaked into English instead of the Chinese language."
+            )
+
+        def check_faithfulness(self, en, tr, lang):
+            return True, []
+
+    out = translate_qa_items(
+        _Tr(),
+        [{"question": "Why?", "answer": "Because of the light effects here now."}],
+        "zh",
+    )
+    assert out[0]["status"] == "needs_review"  # 答案英文→语言不符→不发布

@@ -435,3 +435,47 @@ def test_retranslate_langs_regenerates_machine_translated(session):
     zh = o.attributes["title_i18n"]["zh"]
     assert "nude" not in zh  # 坏译名被重译(不再含英文残片)
     assert zh != "卧 nude 女人"
+
+
+def test_bio_en_usable_rejects_french():
+    # 问题3:en bio 含法语(né/est un peintre français)=坏值,不可作轴心,需重生
+    from app.services.enrichment.backfill import bio_en_usable
+
+    assert bio_en_usable({"en": "Monet was a French painter born in 1840."}) is True
+    assert (
+        bio_en_usable(
+            {"en": "Claude Monet, né en 1840 à Paris, est un peintre français."}
+        )
+        is False
+    )  # 法语
+    assert bio_en_usable({"en": "Courbet était un peintre réaliste."}) is False
+
+
+def test_bio_en_usable_uses_detector_any_language():
+    # Task5:bio_en_usable 用检测器,不再打地鼠(德语等也被拦)
+    from app.services.enrichment.backfill import bio_en_usable
+
+    assert (
+        bio_en_usable(
+            {
+                "en": "Monet was a French Impressionist painter and a leader of the movement."
+            }
+        )
+        is True
+    )
+    assert (
+        bio_en_usable(
+            {
+                "en": "Claude Monet, né en 1840 à Paris, est un peintre français reconnu partout."
+            }
+        )
+        is False
+    )
+    assert (
+        bio_en_usable(
+            {
+                "en": "Claude Monet war ein französischer Maler und Mitbegründer des Impressionismus."
+            }
+        )
+        is False
+    )  # 德语:打地鼠时代漏网,检测器拦
