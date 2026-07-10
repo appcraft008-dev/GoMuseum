@@ -73,6 +73,12 @@ class QualityGate:
         kept_body = " ".join(kept) if kept else None
 
         published = kept_body is not None and grounding_ratio >= GROUNDING_THRESHOLD
+        if published:
+            from app.services.enrichment.lang_detect import text_in_language
+
+            # en 轴心须英文:接地过但语言不是英文(镜像法语源)→needs_review
+            if not text_in_language(kept_body, "en"):
+                published = False
         return SectionQuality(
             body=kept_body,
             status="published" if published else "needs_review",
