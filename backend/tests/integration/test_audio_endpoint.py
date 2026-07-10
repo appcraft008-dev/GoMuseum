@@ -8,6 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.artist import Artist
 from app.models.content import (
     CategorySection,
     ObjectContentSection,
@@ -48,6 +49,7 @@ def client(monkeypatch):
             CategorySection.__table__,
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -72,6 +74,27 @@ def client(monkeypatch):
             status="published",
         )
     )
+    s.add(
+        ObjectContentSection(
+            object_id=obj.id,
+            language="zh",
+            section_code="background",
+            body="背景段正文",
+            status="published",
+        )
+    )
+    s.add(
+        ObjectSuggestedQuestion(
+            object_id=obj.id,
+            language="zh",
+            sort=1,
+            question="为什么这幅画有名？",
+            answer="因为它的光线效果开创了先河。",
+            status="published",
+        )
+    )
+    s.add(Artist(qid="Q296", name_en="Manet", bio={"zh": "马奈是法国画家，生于巴黎。"}))
+    obj.attributes = {"artist_qid": "Q296"}
     s.commit()
 
     import app.services.enrichment.lazy_audio as la
@@ -146,6 +169,7 @@ def test_audio_busy_when_section_locked(monkeypatch):
             CategorySection.__table__,
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -175,3 +199,69 @@ def test_audio_busy_when_section_locked(monkeypatch):
     assert status == "busy"
     assert calls["tts"] == 0  # 锁活 → 不生成
     s.close()
+
+
+def test_audio_endpoint_deep_section(client, monkeypatch):
+    # Phase2:深度模块段(background 等)也能点播放懒生成音频
+    import app.services.enrichment.lazy_audio as la
+
+    monkeypatch.setattr(la, "_synth", lambda t, l: b"MP3")
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/audio?language=zh&section=background"
+    )
+    assert r.status_code == 200 and r.json()["audio_url"]
+
+
+def test_audio_endpoint_deep_section_404_when_missing(client):
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/audio?language=zh&section=analysis"
+    )
+    assert r.status_code == 404  # analysis 段无已发布正文
+
+
+def test_audio_endpoint_qa(client, monkeypatch):
+    # QA 音频:问+答连念,懒生成,audio_key 落行
+    import app.services.enrichment.lazy_audio as la
+
+    seen = {}
+
+    def fake(t, l):
+        seen["text"] = t
+        return b"MP3"
+
+    monkeypatch.setattr(la, "_synth", fake)
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/audio?language=zh&section=qa&qa_sort=1"
+    )
+    assert r.status_code == 200 and r.json()["audio_url"]
+    assert "为什么" in seen["text"] and "因为" in seen["text"]  # 问+答连念
+    r2 = client.get(
+        "/api/v1/museums/orsay/objects/Q1/audio?language=zh&section=qa&qa_sort=1"
+    )
+    assert r2.status_code == 200  # 秒回缓存
+
+
+def test_audio_endpoint_artist_bio_shared(client, monkeypatch):
+    # 作者介绍音频:按作者共享(key 按 artist qid,非藏品 qid)
+    import app.services.enrichment.lazy_audio as la
+
+    monkeypatch.setattr(la, "_synth", lambda t, l: b"MP3")
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/audio?language=zh&section=artist_bio"
+    )
+    assert r.status_code == 200
+    assert "/artist/Q296/" in r.json()["audio_url"]  # 作者维度 key,同作者共享
+
+
+def test_bio_audio_regenerated_after_bio_change(client, monkeypatch):
+    # bio 音频失效链:改 bio 后再点播放应重新生成(不是旧音频)
+    import app.services.enrichment.lazy_audio as la
+
+    calls = {"n": 0}
+    monkeypatch.setattr(
+        la, "_synth", lambda t, l: calls.__setitem__("n", calls["n"] + 1) or b"M"
+    )
+    client.get("/api/v1/museums/orsay/objects/Q1/audio?language=zh&section=artist_bio")
+    assert calls["n"] == 1
+    client.get("/api/v1/museums/orsay/objects/Q1/audio?language=zh&section=artist_bio")
+    assert calls["n"] == 1  # 缓存

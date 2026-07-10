@@ -85,6 +85,7 @@ class ObjectSuggestedQuestion(Base):
     sort = Column(Integer, nullable=False, default=0)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
+    audio_key = Column(Text, nullable=True)  # 问答连念音频(TTS Phase2,懒生成)
     status = Column(String(16), default="published")  # published | needs_review
     model = Column(String(64), nullable=True)
     generated_at = Column(DateTime, nullable=True)

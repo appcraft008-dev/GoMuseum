@@ -371,7 +371,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
             }
         )
     suggested = [
-        {"question": q.question, "answer": q.answer}
+        {"question": q.question, "answer": q.answer, "sort": q.sort}
         for q in db.query(ObjectSuggestedQuestion)
         .filter_by(object_id=obj.id, language=language, status="published")
         .order_by(ObjectSuggestedQuestion.sort)

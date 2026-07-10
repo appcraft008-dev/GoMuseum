@@ -75,6 +75,10 @@ def rescan(db, slug, translator):
                 try:
                     bio[lang] = translator.translate_section(bio["en"], lang)
                     bad_bio_nonen += 1
+                    # bio 变更 → 该语言旧音频失效
+                    ba = dict(a.bio_audio or {})
+                    ba.pop(lang, None)
+                    a.bio_audio = ba
                 except Exception:
                     pass
         if bio != (a.bio or {}):
