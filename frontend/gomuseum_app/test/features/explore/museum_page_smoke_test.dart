@@ -83,6 +83,7 @@ class _FakeCatalogDs implements CatalogRemoteDataSource {
     required String qid,
     required String language,
     String section = 'guide',
+    int? qaSort,
   }) async =>
       const GuideAudioFailed();
 }

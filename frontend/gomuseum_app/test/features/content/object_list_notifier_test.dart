@@ -27,7 +27,8 @@ class _FakeDs implements CatalogRemoteDataSource {
           {required String slug,
           required String qid,
           required String language,
-          String section = 'guide'}) async =>
+          String section = 'guide',
+          int? qaSort}) async =>
       const GuideAudioFailed();
 
   @override
@@ -75,7 +76,8 @@ class _ThrowingDs implements CatalogRemoteDataSource {
           {required String slug,
           required String qid,
           required String language,
-          String section = 'guide'}) async =>
+          String section = 'guide',
+          int? qaSort}) async =>
       const GuideAudioFailed();
 
   @override

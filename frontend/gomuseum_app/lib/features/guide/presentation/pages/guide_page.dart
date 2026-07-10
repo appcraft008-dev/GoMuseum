@@ -1282,7 +1282,12 @@ class _A5Body extends StatelessWidget {
               ]),
             ),
             const SizedBox(height: 4),
-            GuideQuestionList(questions: content.suggestedQuestions),
+            GuideQuestionList(
+              questions: content.suggestedQuestions,
+              slug: slug,
+              qid: content.qid,
+              language: language,
+            ),
           ],
 
           // ① 深度/问答仍在生成 → 轻提示（主讲解已可读）。
@@ -1315,8 +1320,14 @@ class _A5Body extends StatelessWidget {
                   label: '${l10n.guideDeepContent}（$sheetTabCount）',
                   icon: GmIcons.doc,
                   trailingIcon: GmIcons.arrowR,
-                  onTap: () => showGuideDeepSheet(context, layer.deepTabs,
-                      artist: content.artist),
+                  onTap: () => showGuideDeepSheet(
+                    context,
+                    layer.deepTabs,
+                    slug: slug,
+                    qid: content.qid,
+                    language: language,
+                    artist: content.artist,
+                  ),
                 ),
               );
             }),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_sheet.dart';
@@ -30,7 +31,8 @@ void main() {
   });
 
   testWidgets('提供 artist →「作者介绍」为首位 tab、默认选中、可切走', (t) async {
-    await t.pumpWidget(MaterialApp(
+    await t.pumpWidget(ProviderScope(
+        child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('zh'),
@@ -45,9 +47,12 @@ void main() {
                 audioUrl: null),
           ],
           artist: Artist(name: '马奈', bio: '一段经历'),
+          slug: 'orsay',
+          qid: 'Q1',
+          language: 'zh',
         ),
       ),
-    ));
+    )));
     await t.pumpAndSettle();
     // 作者介绍 tab 存在且默认选中 → 显示作者信息（含音频条与 bio）
     expect(find.text('作者介绍'), findsOneWidget);
