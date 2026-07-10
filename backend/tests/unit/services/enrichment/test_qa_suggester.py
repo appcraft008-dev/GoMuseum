@@ -114,3 +114,23 @@ def test_clean_question_guard():
         _clean_question("Rochegrosse受多位艺术家影响，展现独特语言。") is None
     )  # 陈述句→丢
     assert _clean_question("") is None
+
+
+def test_translate_qa_appends_qmark_not_english_fallback():
+    # 问题2:翻译没带问号时,补目标语问号(别回退英文原问题)
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    class _Tr:
+        def translate_section(self, text, lang, *, strong=False, title=None):
+            # 模拟翻译丢了问号(陈述句式)
+            return "梵高的信件揭示了什么" if "?" in text else f"{text}译"
+
+        def check_faithfulness(self, en, tr, lang):
+            return True, []
+
+    out = translate_qa_items(
+        _Tr(), [{"question": "What did Van Gogh reveal?", "answer": "X."}], "zh"
+    )
+    q = out[0]["question"]
+    assert "？" in q  # 补了中文问号
+    assert "What" not in q  # 没回退英文
