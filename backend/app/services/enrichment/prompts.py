@@ -223,6 +223,8 @@ _ARTIST_BIO_SYSTEM = (
     "You write a concise, engaging biography of an ARTIST (the maker), using ONLY the MATERIAL. "
     "Cover: who they were, their life and character, what drove them, their place in art history. "
     "Write in ENGLISH (regardless of the material's language), plain prose, no headings. "
+    "⚠️ The MATERIAL is often in French — you MUST still write entirely in ENGLISH; "
+    "never copy French sentences or phrases verbatim. "
     "~200-300 Chinese-char equivalent in length. Grounded only, no fabrication."
 )
 

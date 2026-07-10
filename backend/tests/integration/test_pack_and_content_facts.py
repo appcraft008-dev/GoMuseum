@@ -574,3 +574,29 @@ def test_content_generation_progress_fraction(session):
     d = get_object_content(session, "orsay", "Q1", "ko")
     assert d["generation"]["expected"] == 3  # guide + significance + background
     assert d["generation"]["published"] == 2  # guide + background
+
+
+def test_facts_artist_uses_localized_name(session):
+    # 问题1a:简介行作者名走 name_i18n(与作者卡一致),非原始 artist_zh/en 列
+    from app.models.artist import Artist
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_zh = "雷諾瓦"  # 原始列(繁体/旧)
+    o.artist_en = "Renoir"
+    o.attributes = {"artist_qid": "Q296"}
+    session.add(
+        Artist(qid="Q296", name_en="Renoir", name_i18n={"zh": "雷诺阿", "en": "Renoir"})
+    )
+    session.commit()
+    d = get_object_content(session, "orsay", "Q1", "zh")
+    assert d["facts"]["artist"] == "雷诺阿"  # 用 i18n 简体,非原始列 雷諾瓦
+    assert d["artist"]["name"] == "雷诺阿"  # 与作者卡一致
+
+
+def test_humanize_medium_salted_paper(session):
+    # 问题1b:摄影材质 salted paper 也本地化
+    from app.services.museum_repo import _humanize_medium
+
+    assert _humanize_medium("salted paper", "zh") == "盐纸法"
+    assert _humanize_medium("salted paper print", "en") == "Salted paper"

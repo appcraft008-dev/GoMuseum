@@ -192,6 +192,17 @@ _MEDIUM_NORM = {
     "gouache": {"zh": "水粉", "en": "Gouache", "fr": "Gouache"},
     "fusain": {"zh": "炭笔", "en": "Charcoal", "fr": "Fusain"},
     "plâtre": {"zh": "石膏", "en": "Plaster", "fr": "Plâtre"},
+    "salted": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
+    "papier salé": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
+    "albumen": {"zh": "蛋白印相", "en": "Albumen print", "fr": "Tirage albuminé"},
+    "gelatin": {
+        "zh": "明胶银盐",
+        "en": "Gelatin silver print",
+        "fr": "Tirage argentique",
+    },
+    "encre": {"zh": "墨水", "en": "Ink", "fr": "Encre"},
+    "crayon": {"zh": "铅笔", "en": "Pencil", "fr": "Crayon"},
+    "terre cuite": {"zh": "陶土", "en": "Terracotta", "fr": "Terre cuite"},
 }
 
 
@@ -380,8 +391,22 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         .all()
         if i.image_key or i.source_url
     ]
+    from app.models.artist import Artist
+
+    aqid = attrs.get("artist_qid")
+    art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
+    # 作者名唯一解析(问题1a):简介行与作者卡共用 name_i18n,不再用原始 artist_zh/en 列
+    resolved_artist = _resolve_name(
+        art.name_i18n if art else None,
+        language,
+        {
+            "zh": (art.name_zh if art else None) or obj.artist_zh,
+            "en": (art.name_en if art else None) or obj.artist_en,
+        },
+        (art.name_en if art else None) or obj.artist_en or obj.artist_zh,
+    )
     facts = {
-        "artist": _pick(language, obj.artist_zh, obj.artist_en, attrs.get("artist_fr")),
+        "artist": resolved_artist,
         "date": obj.year,
         # medium 优先证据包干净源(Wikidata P186,多值合并),回退 Joconde medium_fr
         "medium": _humanize_medium(
@@ -418,20 +443,8 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         if guide_row and guide_row.body
         else None
     )
-    from app.models.artist import Artist
-
-    aqid = attrs.get("artist_qid")
-    art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
     artist_card = {
-        "name": _resolve_name(
-            art.name_i18n if art else None,
-            language,
-            {
-                "zh": (art.name_zh if art else None) or obj.artist_zh,
-                "en": (art.name_en if art else None) or obj.artist_en,
-            },
-            (art.name_en if art else None) or obj.artist_en or obj.artist_zh,
-        ),
+        "name": resolved_artist,  # 与简介行同源(问题1a)
         "birth": art.birth if art else None,
         "death": art.death if art else None,
         # 国籍/代表作按 language 本地化(i18n 权威→en 列兜底,不返 null;交接③)
