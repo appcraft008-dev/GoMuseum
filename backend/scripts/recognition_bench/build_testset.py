@@ -132,6 +132,10 @@ def louvre_distractors(exclude: set[str], n: int = 50) -> list[tuple[str, str]]:
     return out
 
 
+def _flush(rows):
+    (DATA / "testset.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1))
+
+
 def main():
     manifest = json.loads((DATA / "manifest.json").read_text())
     objects = manifest["objects"]
@@ -149,30 +153,37 @@ def main():
         except Exception as e:
             print(f"commons fail {o['qid']}: {e}")
         # 合成畸变(官方图第一张)
-        ref = DATA / "testset" / o["qid"] / "_ref.jpg"
-        if _download(o["images"][0], ref):
-            img = Image.open(ref)
-            for name, v in distort_all(img, seed=42).items():
-                dest = qdir / f"syn_{name}.jpg"
-                if not dest.exists():
-                    v.save(dest, "JPEG", quality=90)
-                rows.append({"path": str(dest), "source": "synthetic", **tags})
+        try:
+            ref = DATA / "testset" / o["qid"] / "_ref.jpg"
+            if _download(o["images"][0], ref):
+                img = Image.open(ref)
+                for name, v in distort_all(img, seed=42).items():
+                    dest = qdir / f"syn_{name}.jpg"
+                    if not dest.exists():
+                        v.save(dest, "JPEG", quality=90)
+                    rows.append({"path": str(dest), "source": "synthetic", **tags})
+        except Exception as e:
+            print(f"synthetic fail {o['qid']}: {e}")
+        _flush(rows)  # 每件落盘:中途崩溃不丢已完成件的行
         print(f"{o['qid']} done ({len(rows)} rows)")
     # 库外干扰组
-    exclude = {o["qid"] for o in objects}
-    for qid, url in louvre_distractors(exclude):
-        dest = DATA / "ooc" / f"{qid}.jpg"
-        if _download(url, dest):
-            rows.append(
-                {
-                    "path": str(dest),
-                    "true_qid": None,
-                    "source": "ooc",
-                    "fame": None,
-                    "dim": None,
-                }
-            )
-    (DATA / "testset.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1))
+    try:
+        exclude = {o["qid"] for o in objects}
+        for qid, url in louvre_distractors(exclude):
+            dest = DATA / "ooc" / f"{qid}.jpg"
+            if _download(url, dest):
+                rows.append(
+                    {
+                        "path": str(dest),
+                        "true_qid": None,
+                        "source": "ooc",
+                        "fame": None,
+                        "dim": None,
+                    }
+                )
+    except Exception as e:
+        print(f"ooc fail: {e}")
+    _flush(rows)
     print(f"testset.json: {len(rows)} rows")
 
 
