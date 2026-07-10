@@ -13,6 +13,18 @@
   - `default_guide` 空 + `generating=false` → 现有「资料不足/待完善」三态。
 - 效果：用户 ~10s（有轴心）或 ~1-2min（无轴心）就看到主讲解，不用等全部 4-5 分钟。
 
+## ①b 等待进度（诚实分数 + 阶段 + 计时，⛔不做假进度条）
+
+⚠️ **不要做时间百分比/匀速进度条**——LLM 生成时间不可预测（30s~4min），假进度条会卡在 90% 反伤信任。用**诚实的三样**：
+
+1. **阶段文字**：guide 未出→「正在生成讲解…」；guide 出+`generating=true`→「主讲解已就绪，深度内容生成中…」。（前端零后端）
+2. **真实段落分数**：content 端点新增 `generation: {published, expected}`（加法字段）——显示「深度内容 `published`/`expected` 段」。这是唯一诚实的"进度"，随轮询真实增长。
+3. **计时 + 预期**：「已等 45 秒，通常 1-3 分钟」（前端本地计时）。
+
+## ①c 语音生成等待
+
+TTS 只需 ~数秒 → **spinner 即可**，别加进度条（过度设计）。点「听讲解」后转圈到 `audio_url` 返回。
+
 ## ② 听讲解点播放（TTS 懒生成，仅 guide）
 
 - 端点：`GET /api/v1/museums/{slug}/objects/{qid}/audio?language={lang}&section=guide`
