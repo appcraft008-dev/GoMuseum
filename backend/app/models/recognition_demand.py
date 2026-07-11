@@ -15,7 +15,7 @@ class RecognitionDemand(Base):
     __table_args__ = (UniqueConstraint("museum_slug", "phash", name="uq_demand"),)
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    museum_slug = Column(String(64), nullable=False, index=True)
+    museum_slug = Column(String(64), nullable=True, index=True)
     phash = Column(String(64), nullable=False, index=True)
     label_text = Column(Text, nullable=True)  # 墙签转写(有=高质量需求,补录直接可用)
     gpt_candidates = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
