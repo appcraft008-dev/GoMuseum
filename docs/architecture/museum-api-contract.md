@@ -200,6 +200,10 @@
 > 2. **分批落盘**——每 N 件 commit(names 50/images 25),崩溃/重部署不丢进度(教训:253 件进度全丢);
 > 3. **批量外部查询必须分批 + 瞬时错误重试**——VALUES 有 URL 上限(教训:1300 QID 单条查询 HTTP 414);5xx 重试一次仍败跳批(教训:Wikidata 502);
 > 4. **一切批任务幂等可重跑**——重跑只补缺,断点即续传。新写批任务时按此四条自查。
+> 5. **空响应≠数据到底,必须重试后再判**(2026-07-11 添)——WDQS 深 OFFSET+ORDER BY 超时会返回
+>    HTTP 200 的**空结果**,把空页当"翻完了"会**静默缺件**(教训:orsay catalog 两次截断 1537/1517,
+>    漏收 500+ 长尾件含用户实拍的库尔贝《鹿斗》)。翻页循环连续空 N 次才允许 break;
+>    上新馆跑完 catalog 核对 loaded 数与该馆 Wikidata 有图量级是否相符。
 
 ---
 
@@ -277,6 +281,8 @@
 响应:`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence,museum}, candidates:[{…,score,museum}], label_text, reason}`
 ——**`museum`=归属馆 slug(2026-07-11 加法字段)**,前端跳详情用它(老 App 不读不炸;新前端解析 `as String?` + 回退)。`outcome/reason` 机器码不译;`title/artist` 按 language 走显示名规则;thumbnail=thumb 档。命中跳详情 → 懒生成/懒翻译/懒补图自动接管。同图重复识别走 Redis 缓存(命中 30 天/未收录 1 天;键空间 `recog3`)。**阈值 server-driven**:向量档 `RECOG_HIGH=0.85`/`RECOG_LOW=0.72`(环境变量,由 benchmark 校准,库外零误接受);文字兜底档沿用 HIGH=0.85/LOW=0.5。
 
+**低分自动多裁剪重查(2026-07-11)**:全图向量分 < LOW 时(即原本注定失败的照片)自动裁 中心60%/35%+四象限 批量重查取最大分,再不中才进 GPT 兜底——全景式拍法(画只占画面~25%,真实用户实证 0.51→0.84)的对症药。**正常近拍照片走快路径零延迟影响**;触发裁剪的照片 +~2s,仍快于其下一站 GPT(2-5s)。
+
 **识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。上新馆配方不变:catalog→names→images 全量预跑后,加跑 `onboard views` + `backfill_embeddings`。
 **计费(2026-07-04 定)**:`match/candidates` 扣 1 次配额;`unrecognized` 不扣(不为失败付费);缓存命中不扣;配额用尽 → **402** `{reason: quota_exceeded}`(先于 GPT 调用,不烧钱)。身份=Bearer 令牌(App 自带)或 `device_id` 参数;两者皆无 → 401 `{reason: identity_required}`。服务端扣费,不再依赖前端自觉调 `/payment/consume`。
 
@@ -301,6 +307,7 @@
 - 2026-07-05:定**标题真相唯一化**原则(显示名=标题唯一真相,内容三通路引用跟随;glossary 注入,修显现/幻影分叉)。
 - 2026-07-05:**内容生成 N 默认=0**(收录策略⑤)——上新馆零内容预付,纯懒生成兜底;N 上线后按实际热度/需求由运营逐馆决定。
 - 2026-07-04:content 端点加法字段 `generating`(懒任务锁即信号)——前端等待提示三态化(生成中/资料不足/待完善可重试),修盲轮询三隐患。
+- 2026-07-11:**低分自动多裁剪重查**(全景式拍法对症,真实用户实证 0.51→0.84;近拍快路径零影响)+ 批处理纪律第 5 条**空响应≠到底**(WDQS 深 OFFSET 静默截断实证,catalog 漏收 500+ 长尾件;上新馆必核 loaded 数量级)。
 - 2026-07-11:**GPT 兜底文字链一律不直判**(命中只出确认卡,不产 `outcome=match`;同名撞车 E2E 实证:自画像/The Bathers 精确同名撞他馆无关件)——直开讲解页只来自向量高置信像素证据;label 模式亦然(多一次确认点)。
 - 2026-07-11:**识别主引擎换 DINOv2 向量检索**(R4 兑现:benchmark 裁决 DINOv2 胜 CLIP,非名作 Top-1 95.8%/库外零误接受;GPT+OCR 降为兜底,不可用绝不 500)。**新增全局端点 `POST /api/v1/recognize`**(museum 可选,拍前不选馆)+ 响应加法字段 `museum`(归属馆 slug);裁决**馆域调用不做全局回退**(老 App 前向兼容,跨馆命中=详情 404 死胡同)。参照库=物化即嵌入+backfill;雕塑多视角 view 图(P373 深挖落地);墙签行加馆藏号精确匹配;阈值 server-driven(RECOG_HIGH/LOW 环境变量)。
 - 2026-07-04:识别端点**服务端计费**落地(match/candidates 扣1,unrecognized/缓存不扣,超额402;身份=令牌或device_id)——堵住新端点绕过配额的洞,弃用前端自觉调 /payment/consume 的客户端计费。
