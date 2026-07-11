@@ -14,7 +14,7 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import _resolve_name, _sized
 from app.services.recognition.demands import record_demand
-from app.services.recognition.matcher import HIGH, LOW, build_index, match
+from app.services.recognition.matcher import LOW, build_index, match
 from app.services.recognition.vector_index import query_index
 from app.services.recognition.vision import identify
 
@@ -205,14 +205,9 @@ def recognize(
                 build_index(db, museum_id), queries, label_lines, artist_hints
             )
             top = results[0] if results else None
-            if top and top[1] >= HIGH:
-                o = db.query(MuseumObject).filter_by(qid=top[0]).one()
-                out["outcome"] = "match"
-                out["match"] = {
-                    **_summary(db, storage, o, language),
-                    "confidence": round(top[1], 3),
-                }
-            elif top and top[1] >= LOW:
+            # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);
+            # 直判只属于向量像素证据。将来 matcher 若回传"馆藏号命中"类型,可为 inv 命中恢复直判。
+            if top and top[1] >= LOW:
                 out["outcome"] = "candidates"
                 for qid, score in results[:3]:
                     if score < LOW:

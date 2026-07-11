@@ -91,7 +91,8 @@ def _vision(candidates=None, label=None):
     return fake
 
 
-def test_high_confidence_direct_match(session):
+def test_text_chain_exact_title_returns_candidates_not_match(session):
+    # 文字链即便标题精确相等(score=1.0)也只出确认卡:名字对上≠就是这件(同名撞车实证)。
     out = recognize(
         session,
         "orsay",
@@ -101,11 +102,13 @@ def test_high_confidence_direct_match(session):
             [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
         ),
     )
-    assert out["outcome"] == "match"
-    assert out["match"]["qid"] == "Q334138"
-    assert out["match"]["title"] == "世界的起源"  # 按 language 显示名
-    assert out["match"]["thumbnail"].endswith("_thumb.jpg")
-    assert out["candidates"] == []
+    assert out["outcome"] == "candidates"
+    assert out["match"] is None
+    top = out["candidates"][0]
+    assert top["qid"] == "Q334138"
+    assert top["score"] == 1.0  # 精确相等仍不直判
+    assert top["title"] == "世界的起源"  # 按 language 显示名
+    assert top["thumbnail"].endswith("_thumb.jpg")
 
 
 def test_mid_confidence_returns_candidates(session):
@@ -152,7 +155,7 @@ def test_label_mode_passed_through_and_label_text_returned(session):
 
     out = recognize(session, "orsay", _jpeg(), mode="label", identify_fn=fake)
     assert seen["mode"] == "label"
-    assert out["outcome"] == "match"  # 墙签行直接匹配命中
+    assert out["outcome"] == "candidates"  # 文字链(含 label)不直判,一律确认卡
     assert "Origin" in out["label_text"]
 
 
@@ -228,9 +231,9 @@ def test_billing_match_consumes_one(session):
             [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
         ),
     )
-    assert out["outcome"] == "match"
+    assert out["outcome"] == "candidates"  # 文字链→确认卡,仍计费
     b = session.query(UB).one()
-    assert b.recognition_quota == 9  # 10 - 1
+    assert b.recognition_quota == 9  # 10 - 1(candidates 也扣)
 
 
 def test_billing_unrecognized_free(session):
