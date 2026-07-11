@@ -54,6 +54,8 @@ def test_crop_pyramid_boxes():
     from PIL import Image
 
     crops = emb.crop_pyramid(Image.new("RGB", (1000, 800)))
-    assert len(crops) == 6
+    assert len(crops) == 8
     # center-60% 框 = (0.2,0.2,0.8,0.8) × (1000,800) → 600×480
     assert crops[0].size == (600, 480)
+    # 左半幅框 = (0,0,0.55,1) × (1000,800) → 550×800
+    assert crops[6].size == (550, 800)
