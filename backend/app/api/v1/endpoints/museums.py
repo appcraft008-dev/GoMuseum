@@ -130,36 +130,19 @@ def recognize_artwork(
     """拍照识别(接地:身份只来自目录命中;mode=label 为引导补拍的墙签纯转写)。
     计费:match/candidates 扣1,unrecognized/缓存命中不扣,超额 402(规则用户批准)。
     身份=Bearer 令牌(App 全局拦截器自带)或 device_id(curl/匿名测试)。
-    同步 def:FastAPI 扔线程池执行 → vision 内 asyncio.run 不与主事件循环冲突。"""
-    from app.services.recognition.service import QuotaExceededError, recognize_billed
+    同步 def:FastAPI 扔线程池执行 → vision 内 asyncio.run 不与主事件循环冲突。
+    实现委托给 recognize_global.run_recognition(全局端点共享同一逻辑),行为不变。"""
+    from app.api.v1.endpoints.recognize_global import run_recognition
 
-    user_id = None
-    if credentials:
-        try:
-            from app.services.auth_service import AuthService
-
-            user = AuthService.get_current_user(db, credentials.credentials)
-            user_id = str(user.id)
-        except Exception:
-            user_id = None  # 坏/过期令牌按匿名处理,可退 device_id
-    if not user_id and not device_id:
-        raise HTTPException(status_code=401, detail={"reason": "identity_required"})
-    data = image.file.read()
-    try:
-        out = recognize_billed(
-            db,
-            slug,
-            data,
-            user_id=user_id,
-            device_id=device_id,
-            language=language,
-            mode=mode,
-        )
-    except QuotaExceededError:
-        raise HTTPException(status_code=402, detail={"reason": "quota_exceeded"})
-    if out is None:
-        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
-    return out
+    return run_recognition(
+        db,
+        slug,
+        image,
+        language=language,
+        mode=mode,
+        device_id=device_id,
+        credentials=credentials,
+    )
 
 
 @router.get("/{slug}")

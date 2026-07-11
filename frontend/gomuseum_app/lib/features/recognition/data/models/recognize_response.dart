@@ -27,6 +27,7 @@ class RecognizedItem extends Equatable {
     required this.artist,
     required this.thumbnail,
     required this.score,
+    this.museum,
   });
 
   final String qid;
@@ -37,6 +38,9 @@ class RecognizedItem extends Equatable {
   /// match 用 confidence、candidates 用 score，统一到此。
   final double score;
 
+  /// 归属馆 slug（全局识别端点返回）；老后端无此字段 → null，跳转侧回退。
+  final String? museum;
+
   factory RecognizedItem.fromJson(Map<String, dynamic> j) {
     final rawScore = j['confidence'] ?? j['score'];
     return RecognizedItem(
@@ -45,13 +49,14 @@ class RecognizedItem extends Equatable {
       artist: j['artist'] as String? ?? '',
       thumbnail: j['thumbnail'] as String?,
       score: rawScore is num ? rawScore.toDouble() : 0.0,
+      museum: j['museum'] as String?,
     );
   }
 
   bool get isValid => qid.isNotEmpty;
 
   @override
-  List<Object?> get props => [qid, title, artist, thumbnail, score];
+  List<Object?> get props => [qid, title, artist, thumbnail, score, museum];
 }
 
 class RecognizeResponse extends Equatable {

@@ -134,6 +134,14 @@ def materialize_row(
         meta = fetch_meta(row.source_url) or {}
         row.license = meta.get("license") or row.license
         row.credit = meta.get("credit") or row.credit
+    try:  # 入库即嵌入(R2 已有文件时从 storage 取 large;失败不阻断物化)
+        from app.services.recognition.embeddings import embed_image_row
+
+        large_bytes = large if not already else storage.get(f"{base}_large.jpg")
+        if large_bytes:
+            embed_image_row(db, row, large_bytes)
+    except Exception:
+        logger.exception("embed hook failed: %s", base)
     row.image_key = base
     db.flush()
     return "done"

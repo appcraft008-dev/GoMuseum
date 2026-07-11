@@ -1,111 +1,65 @@
+import 'dart:typed_data';
+
+import 'package:cross_file/cross_file.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gomuseum_app/features/recognition/data/datasources/recognition_remote_datasource.dart';
 import 'package:mocktail/mocktail.dart';
-import 'dart:io';
 
-// Mock classes - will be used once implementation exists
-class MockHttpClient extends Mock implements HttpClient {}
-
-class MockDioClient extends Mock {}
+class MockDio extends Mock implements Dio {}
 
 void main() {
-  group('RecognitionRemoteDataSource', () {
-    late MockDioClient mockDioClient;
+  late MockDio dio;
+  late RecognitionRemoteDataSourceImpl ds;
 
-    setUp(() {
-      mockDioClient = MockDioClient();
-    });
+  setUpAll(() {
+    registerFallbackValue(Options());
+  });
 
-    group('recognizeImage', () {
-      test('should_call_post_api_v1_recognize_endpoint_with_correct_parameters',
-          () async {
-        // Arrange
-        final imageBytes = List<int>.filled(100, 0);
-        // This test will fail because RecognitionRemoteDataSource doesn't exist yet
+  setUp(() {
+    dio = MockDio();
+    ds = RecognitionRemoteDataSourceImpl(dio: dio);
+  });
 
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
+  Response<dynamic> okResponse() => Response(
+        requestOptions: RequestOptions(path: '/api/v1/recognize'),
+        statusCode: 200,
+        data: {'outcome': 'unrecognized'},
+      );
 
-      test('should_return_recognition_result_when_api_call_succeeds', () async {
-        // Arrange
-        final imageBytes = List<int>.filled(100, 0);
+  XFile image() => XFile.fromData(Uint8List.fromList(List<int>.filled(8, 0)),
+      name: 'x.jpg', mimeType: 'image/jpeg');
 
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
+  test('recognize sends device_id in queryParameters when provided', () async {
+    when(() => dio.post(any(),
+        data: any(named: 'data'),
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'))).thenAnswer((_) async => okResponse());
 
-      test('should_throw_server_exception_when_api_returns_error_response',
-          () async {
-        // Arrange
-        final imageBytes = List<int>.filled(100, 0);
+    await ds.recognize(
+        slug: null, image: image(), language: 'en', deviceId: 'dev-123');
 
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
+    final captured = verify(() => dio.post(any(),
+        data: any(named: 'data'),
+        queryParameters: captureAny(named: 'queryParameters'),
+        options: any(named: 'options'))).captured.single as Map;
+    expect(captured['device_id'], 'dev-123');
+    expect(captured['language'], 'en');
+  });
 
-      test('should_handle_timeout_after_5_seconds', () async {
-        // Arrange
-        final imageBytes = List<int>.filled(100, 0);
+  test('recognize omits device_id when null (server falls back to Bearer)',
+      () async {
+    when(() => dio.post(any(),
+        data: any(named: 'data'),
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'))).thenAnswer((_) async => okResponse());
 
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
+    await ds.recognize(slug: null, image: image(), language: 'en');
 
-      test('should_throw_network_exception_when_connection_fails', () async {
-        // Arrange
-        final imageBytes = List<int>.filled(100, 0);
-
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
-
-      test('should_validate_image_size_before_upload', () async {
-        // Arrange - create image larger than 10MB
-        final largeImageBytes = List<int>.filled(11 * 1024 * 1024, 0);
-
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
-
-      test('should_encode_image_as_base64_in_request_body', () async {
-        // Arrange
-        final imageBytes = List<int>.filled(100, 0);
-
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
-
-      test('should_include_proper_headers_in_api_request', () async {
-        // Arrange
-        final imageBytes = List<int>.filled(100, 0);
-
-        // Act & Assert
-        expect(
-            () => throw UnimplementedError(
-                'RecognitionRemoteDataSource not implemented'),
-            throwsA(isA<UnimplementedError>()));
-      });
-    });
+    final captured = verify(() => dio.post(any(),
+        data: any(named: 'data'),
+        queryParameters: captureAny(named: 'queryParameters'),
+        options: any(named: 'options'))).captured.single as Map;
+    expect(captured.containsKey('device_id'), isFalse);
   });
 }

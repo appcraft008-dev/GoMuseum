@@ -2,6 +2,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 
 part 'recognition_provider.g.dart';
 
@@ -22,7 +23,7 @@ class RecognitionLoading extends RecognitionState {
 class RecognitionMatched extends RecognitionState {
   const RecognitionMatched(this.match, this.slug);
   final RecognizedItem match;
-  final String slug;
+  final String? slug;
 }
 
 /// 多候选：确认卡「是这件吗？」。
@@ -30,7 +31,7 @@ class RecognitionCandidates extends RecognitionState {
   const RecognitionCandidates(this.candidates, this.labelText, this.slug);
   final List<RecognizedItem> candidates;
   final String? labelText;
-  final String slug;
+  final String? slug;
 }
 
 /// 未收录：诚实文案 + 引导拍墙签（绝不显示 AI 猜测的名字）。
@@ -38,7 +39,7 @@ class RecognitionUnrecognized extends RecognitionState {
   const RecognitionUnrecognized(this.labelText, this.reason, this.slug);
   final String? labelText;
   final String? reason;
-  final String slug;
+  final String? slug;
 }
 
 class RecognitionError extends RecognitionState {
@@ -55,7 +56,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   /// 接地识别：走新端点，按 outcome 落三档状态。
   /// [mode] = `artwork`（默认）或 `label`（引导补拍墙签）。
   Future<void> recognize({
-    required String slug,
+    String? slug,
     required XFile image,
     required String language,
     String mode = 'artwork',
@@ -63,8 +64,20 @@ class RecognitionNotifier extends _$RecognitionNotifier {
     state = const RecognitionLoading();
     try {
       final ds = ref.read(recognitionRemoteDataSourceProvider);
+      // 恒带 device_id（契约身份回退）：游客设备绑定，令牌抽风时后端仍认得出。
+      // deviceIdProvider 自带兜底（不会抛），拿不到就传 null，服务端退回 Bearer。
+      String? deviceId;
+      try {
+        deviceId = await ref.read(deviceIdProvider.future);
+      } catch (_) {
+        deviceId = null;
+      }
       final resp = await ds.recognize(
-          slug: slug, image: image, language: language, mode: mode);
+          slug: slug,
+          image: image,
+          language: language,
+          mode: mode,
+          deviceId: deviceId);
       state = switch (resp.outcome) {
         RecognizeOutcome.match when resp.match?.isValid == true =>
           RecognitionMatched(resp.match!, slug),
