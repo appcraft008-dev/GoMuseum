@@ -12,11 +12,15 @@ abstract class RecognitionRemoteDataSource {
   /// 接地识别端点。[slug] 为 null → 全局端点 `POST /recognize`（拍前不选馆）；
   /// 非 null → 老馆内端点 `POST /museums/{slug}/recognize`（兼容留路）。
   /// [mode] = `artwork`（默认）或 `label`（引导补拍墙签）。
+  /// [deviceId] 非空时作为 `device_id` 查询参数发送——契约身份回退：
+  /// 游客账号设备绑定，令牌抽风（multipart 刷新重试在 Dio 下不可靠，FormData 单次性）
+  /// 时后端仍可凭 device_id 认出游客，识别不至于 401。
   Future<RecognizeResponse> recognize({
     String? slug,
     required XFile image,
     required String language,
     String mode,
+    String? deviceId,
   });
 }
 
@@ -87,6 +91,7 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
     required XFile image,
     required String language,
     String mode = 'artwork',
+    String? deviceId,
   }) async {
     try {
       final bytes = await image.readAsBytes();
@@ -105,7 +110,11 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
       final response = await dio.post(
         url,
         data: formData,
-        queryParameters: {'language': language, 'mode': mode},
+        queryParameters: {
+          'language': language,
+          'mode': mode,
+          if (deviceId != null) 'device_id': deviceId,
+        },
         options: Options(
           headers: {'Accept': 'application/json'},
           sendTimeout: const Duration(seconds: 60),

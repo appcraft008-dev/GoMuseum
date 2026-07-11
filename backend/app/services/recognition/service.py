@@ -45,6 +45,23 @@ def _default_embed(image_bytes: bytes):
         return None
 
 
+def _default_embed_crops(image_bytes: bytes):
+    """默认 embed_crops_fn:裁剪金字塔批量 embedding。引擎不可用/异常 → None(编排层走 GPT 兜底)。"""
+    from PIL import Image
+
+    from app.services.recognition.embedder import crop_pyramid, get_embedder
+
+    engine = get_embedder()
+    if engine is None:
+        return None
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        return engine.embed_batch(crop_pyramid(img))
+    except Exception:
+        logger.exception("embed_crops failed, falling back to GPT chain")
+        return None
+
+
 def _get_redis():
     try:
         from app.services.cache_service import get_cache_service
@@ -138,6 +155,7 @@ def recognize(
     redis=None,
     embed_fn=None,
     vector_query_fn=None,
+    embed_crops_fn=None,
 ) -> dict | None:
     """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
     slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
@@ -177,7 +195,19 @@ def recognize(
         vec = (embed_fn or _default_embed)(image_bytes)
         if vec is not None:
             vquery = vector_query_fn or query_index
-            out = _vector_out(db, storage, vquery(db, vec, museum_id), language)
+            ranked = vquery(db, vec, museum_id)
+            # 全景式拍法(画占画面小)的对症药——实测 0.509→0.847;怼拍照片不受影响(快路径)。
+            # 全帧已 ≥ LOW → 不跑金字塔;否则裁剪重查,跨全帧+裁剪按 qid 取 MAX,重定档。
+            if not ranked or ranked[0][1] < settings.RECOG_LOW:
+                crops = (embed_crops_fn or _default_embed_crops)(image_bytes)
+                if crops is not None:
+                    agg = dict(ranked)
+                    for cv in crops:
+                        for qid, s in vquery(db, cv, museum_id):
+                            if s > agg.get(qid, -2.0):
+                                agg[qid] = s
+                    ranked = sorted(agg.items(), key=lambda kv: -kv[1])
+            out = _vector_out(db, storage, ranked, language)
             # 馆域调用不回退全局:老端点已部署 App 不读 museum 字段,跨馆命中会拿他馆
             # qid 撞 /{slug}/objects/{qid}/content 404 死胡同(前向兼容硬约束)。
             # 将来带馆提示的新调用方要全局回退时,加显式参数再开;slug=None 首查即全局。
