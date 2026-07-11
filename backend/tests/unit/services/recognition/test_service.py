@@ -155,8 +155,8 @@ def test_museum_low_no_global_fallback(session):
     orsay_id = session.query(Museum).filter_by(slug="orsay").one().id
     assert vq.calls == [orsay_id]  # 只查馆内一次,绝不查 None(全局)
     assert identify.n == 1  # GPT 链兜底
-    assert out["outcome"] == "match"
-    assert out["match"]["qid"] == "Q334138"
+    assert out["outcome"] == "candidates"  # 文字链不直判,一律确认卡
+    assert out["candidates"][0]["qid"] == "Q334138"
 
 
 def test_vector_all_miss_falls_to_gpt(session):
@@ -173,8 +173,8 @@ def test_vector_all_miss_falls_to_gpt(session):
         identify_fn=identify,
     )
     assert identify.n == 1  # 落到 GPT 链
-    assert out["outcome"] == "match"
-    assert out["match"]["qid"] == "Q334138"
+    assert out["outcome"] == "candidates"  # 文字链不直判,一律确认卡
+    assert out["candidates"][0]["qid"] == "Q334138"
 
 
 def test_engine_down_gpt_only(session):
@@ -192,7 +192,7 @@ def test_engine_down_gpt_only(session):
     )
     assert vq.calls == []  # vec 为 None,向量层跳过
     assert identify.n == 1
-    assert out["outcome"] == "match"
+    assert out["outcome"] == "candidates"  # 文字链不直判,一律确认卡
 
 
 def test_global_slug_none_records_demand_null_museum(session):
@@ -244,4 +244,4 @@ def test_label_mode_skips_vector(session):
     )
     assert embed.n == 0  # label 模式不走向量
     assert identify.n == 1
-    assert out["outcome"] == "match"
+    assert out["outcome"] == "candidates"  # 文字链(含 label)不直判,一律确认卡
