@@ -127,3 +127,6 @@ Thumbs.db
 
 # TTS 音频运行时缓存
 **/tts_cache/
+
+# 识别 benchmark 产物（离线原型，整目录不入库）
+backend/scripts/recognition_bench/data/
