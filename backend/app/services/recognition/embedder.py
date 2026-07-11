@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import threading
 import time
 from pathlib import Path
@@ -90,6 +91,8 @@ def get_embedder():
     with _lock:
         if _engine is not None:
             return _engine
+        if time.time() < _retry_after:  # 并发冷启动:首个失败后其余不重试
+            return None
         try:
             cache = Path(settings.RECOG_MODEL_CACHE)
             local = cache / Path(settings.RECOG_MODEL_KEY).name
@@ -103,7 +106,9 @@ def get_embedder():
                 if want and hashlib.sha256(data).hexdigest() != want:
                     raise RuntimeError("model sha256 mismatch")
                 cache.mkdir(parents=True, exist_ok=True)
-                local.write_bytes(data)
+                tmp = local.with_suffix(".tmp")
+                tmp.write_bytes(data)
+                os.replace(tmp, local)  # 原子替换:防半写文件被当有效缓存
             _engine = OnnxEmbedder(str(local), "dinov2")
             logger.info("recognition embedder ready: %s", local)
             return _engine
