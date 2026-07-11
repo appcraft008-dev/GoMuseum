@@ -213,8 +213,10 @@ def recognize(
             # 将来带馆提示的新调用方要全局回退时,加显式参数再开;slug=None 首查即全局。
 
     if out is None:  # --- GPT + OCR 兜底链(原样) ---
+        from app.services.recognition.vision import _shrink
+
         identify_fn = identify_fn or identify
-        vis = identify_fn(ImageService.to_base64(image_bytes), mode=mode)
+        vis = identify_fn(ImageService.to_base64(_shrink(image_bytes)), mode=mode)
         queries = [c["title"] for c in vis["candidates"] if c.get("title")]
         # 作者名只作加分线索,绝不当标题探针(肖像画劫持教训,见 matcher.match)
         artist_hints = [c["artist"] for c in vis["candidates"] if c.get("artist")]

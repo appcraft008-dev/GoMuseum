@@ -1,9 +1,10 @@
 """识别器:一次 GPT 视觉调用给候选名(查询非答案,R1)+顺带转写可见文字;label 模式纯转写。
 complete 注入离线测。spec 2026-07-03-recognition-design。"""
 
+import io
 import json
 
-from app.services.recognition.vision import identify
+from app.services.recognition.vision import _shrink, identify
 
 
 def test_identify_parses_candidates_and_label():
@@ -91,3 +92,19 @@ def test_default_complete_awaits_async_client(monkeypatch):
     )
     out = vision._default_complete("system", [{"type": "text", "text": "x"}])
     assert "ok" in out  # 真正拿到了 content,而非协程对象
+
+
+def test_shrink_reduces_large_image_to_1024():
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (3000, 2000)).save(buf, format="JPEG")
+    big = buf.getvalue()
+    small = _shrink(big)
+    assert len(small) < len(big)
+    out = Image.open(io.BytesIO(small))
+    assert max(out.size) == 1024
+
+
+def test_shrink_garbage_returns_unchanged():
+    assert _shrink(b"not an image") == b"not an image"

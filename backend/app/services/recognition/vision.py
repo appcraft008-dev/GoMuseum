@@ -5,11 +5,29 @@ spec docs/superpowers/specs/2026-07-03-recognition-design.md。"""
 
 from __future__ import annotations
 
+import io
 import logging
 
 logger = logging.getLogger(__name__)
 
 _EMPTY = {"candidates": [], "label_text": None, "self_confidence": "low"}
+
+
+def _shrink(image_bytes: bytes, max_px: int = 1024) -> bytes:
+    """GPT 视觉前缩图:手机原图全尺寸 base64 直发 GPT(可达 10MB+)是墙签~60s 慢的主因;
+    1024px 对识别/转写足够。任何失败 → log + 原样返回(不阻断识别)。"""
+    try:
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        img.thumbnail((max_px, max_px))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        return buf.getvalue()
+    except Exception:
+        logger.exception("_shrink failed, sending original bytes")
+        return image_bytes
+
 
 _ARTWORK_SYSTEM = (
     "You are a museum artwork recognizer. Look at the photo and try to identify the "
