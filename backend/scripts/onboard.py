@@ -33,7 +33,8 @@ _ENV_BY_TARGET = {"prod": "production", "staging": "staging"}
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="上馆富化管线")
-    p.add_argument("slug")
+    # views 用 --museum 选馆,故 slug 可选(其余子命令仍靠位置 slug)
+    p.add_argument("slug", nargs="?")
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("fetch")
     lo = sub.add_parser("load")
@@ -69,6 +70,9 @@ def build_parser() -> argparse.ArgumentParser:
     im = sub.add_parser("images")  # 图像物化:下载→两档→R2→署名(幂等,names 后跑)
     im.add_argument("--target", choices=["staging", "prod"], required=True)
     im.add_argument("--limit", type=int, default=None)
+    vw = sub.add_parser("views")  # 雕塑多视角补图(Commons 参考图,物化时嵌入)
+    vw.add_argument("--museum", required=True)
+    vw.add_argument("--max", type=int, default=4)
     return p
 
 
@@ -286,6 +290,40 @@ def cmd_images(slug: str, limit: int | None, target: str) -> None:
     print(f"✓ images 物化完成: {out}")
 
 
+def cmd_views(museum: str, max_n: int) -> None:
+    from app.models.museum import Museum
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.views import add_view_images, fetch_view_urls
+
+    db = SessionLocal()
+    try:
+        m = db.query(Museum).filter_by(slug=museum).one_or_none()
+        if not m:
+            raise SystemExit(f"❌ 未知博物馆 slug: {museum}")
+        objs = (
+            db.query(MuseumObject)
+            .filter_by(museum_id=m.id, category="sculpture")
+            .order_by(MuseumObject.popularity.desc())
+            .all()
+        )
+        total = 0
+        for o in objs:
+            n = add_view_images(
+                db, o, fetch=lambda qid, _room: fetch_view_urls(qid, max_n=max_n)
+            )
+            db.commit()  # 逐件落盘:中途崩溃不丢已完成件
+            total += n
+            if n:
+                print(f"  {o.qid}: +{n} view(s)")
+        print(f"✓ views 补图完成: {len(objs)} 件雕塑, 共新增 {total} 行")
+        print(
+            "↳ 下一步跑 `images` 物化(下载→R2→自动嵌入): "
+            f"python scripts/onboard.py {museum} images --target <env>"
+        )
+    finally:
+        db.close()
+
+
 def cmd_report(slug: str, langs: str | None) -> None:
     from app.services.enrichment.content_report import build_quality_report
     from app.services.enrichment.lang_config import resolve_languages
@@ -319,6 +357,8 @@ def main(argv=None) -> None:
         cmd_translate(ns.slug, ns.langs, ns.limit, ns.target)
     elif ns.command == "images":
         cmd_images(ns.slug, ns.limit, ns.target)
+    elif ns.command == "views":
+        cmd_views(ns.museum, ns.max)
     else:
         cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 
