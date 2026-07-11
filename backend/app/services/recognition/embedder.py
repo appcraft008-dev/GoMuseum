@@ -34,6 +34,26 @@ PRESETS = {
 }
 
 
+# 全景式拍法(画占画面小)的裁剪金字塔:中心 60%/35% + 四角 55% 象限(分数框 l,t,r,b)。
+CROPS: list[tuple[float, float, float, float]] = [
+    (0.2, 0.2, 0.8, 0.8),
+    (0.325, 0.325, 0.675, 0.675),
+    (0, 0, 0.55, 0.55),
+    (0.45, 0, 1, 0.55),
+    (0, 0.45, 0.55, 1),
+    (0.45, 0.45, 1, 1),
+]
+
+
+def crop_pyramid(img: Image.Image) -> list[Image.Image]:
+    img = img.convert("RGB")
+    w, h = img.size
+    return [
+        img.crop((round(l * w), round(t * h), round(r * w), round(b * h)))
+        for (l, t, r, b) in CROPS
+    ]
+
+
 def preprocess(img: Image.Image, preset: str) -> np.ndarray:
     cfg = PRESETS[preset]
     img = img.convert("RGB")
@@ -62,6 +82,12 @@ class OnnxEmbedder:
         out = self.sess.run(None, {self.input_name: preprocess(img, self.preset)})
         v = out[0][0].astype(np.float32)
         return v / np.linalg.norm(v)
+
+    def embed_batch(self, imgs: list[Image.Image]) -> np.ndarray:
+        """一次 sess.run 批量推理(ONNX 有动态 batch 轴),每行 L2 归一化 → [N,D]。"""
+        batch = np.concatenate([preprocess(im, self.preset) for im in imgs], axis=0)
+        out = self.sess.run(None, {self.input_name: batch})[0].astype(np.float32)
+        return out / np.linalg.norm(out, axis=1, keepdims=True)
 
 
 def _get_storage():

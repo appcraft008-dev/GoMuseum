@@ -3,6 +3,7 @@
 
 import io
 
+import numpy as np
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -229,6 +230,84 @@ def test_cache_key_global_prefix(session):
         redis=r,
     )
     assert any(k.startswith("recog3:global:") for k in r.keys)
+
+
+def _one_crop(b):
+    """1 行的伪 crop 矩阵(内容无关,查询由 vector_query_fn 伪造)。"""
+    return np.zeros((1, 3), dtype=np.float32)
+
+
+def test_lowscore_crop_pyramid_high_hit_skips_gpt(session):
+    # 全景式拍法:全帧低分(0.50)→ 裁剪金字塔重查命中 HIGH → match,GPT 不被调用
+    identify = _Counter(_vision([{"title": "SHOULD NOT BE USED"}]))
+    vq = _FakeVQ([("Q334138", 0.50)], [("Q334138", 0.90)])
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_crops_fn=_one_crop,
+        vector_query_fn=vq,
+        identify_fn=identify,
+    )
+    assert out["outcome"] == "match"
+    assert out["match"]["qid"] == "Q334138"
+    assert out["match"]["confidence"] == 0.9  # 跨全帧+裁剪取 MAX
+    assert identify.n == 0
+
+
+def test_lowscore_crops_also_low_falls_to_gpt(session):
+    identify = _Counter(
+        _vision([{"title": "The Origin of the World", "artist": "Gustave Courbet"}])
+    )
+    vq = _FakeVQ([("Q334138", 0.50)], [("Q334138", 0.60)])  # 裁剪仍 < LOW
+    crops = _Counter(_one_crop)
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_crops_fn=crops,
+        vector_query_fn=vq,
+        identify_fn=identify,
+    )
+    assert crops.n == 1
+    assert identify.n == 1  # 向量全 miss → GPT 兜底
+    assert out["outcome"] == "candidates"
+
+
+def test_fullframe_ok_skips_crop_pyramid(session):
+    # 快路径:全帧已 ≥ LOW → 不跑金字塔(embed_crops_fn 不被调用)
+    crops = _Counter(_one_crop)
+    vq = _FakeVQ([("Q334138", 0.80)])
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_crops_fn=crops,
+        vector_query_fn=vq,
+    )
+    assert crops.n == 0  # 快路径未变
+    assert out["outcome"] == "candidates"
+
+
+def test_crop_pyramid_failure_falls_to_gpt(session):
+    identify = _Counter(
+        _vision([{"title": "The Origin of the World", "artist": "Gustave Courbet"}])
+    )
+    vq = _FakeVQ([("Q334138", 0.50)])  # 全帧低分,裁剪失败后无二次查询
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_crops_fn=lambda b: None,  # 裁剪/推理失败
+        vector_query_fn=vq,
+        identify_fn=identify,
+    )
+    assert identify.n == 1  # 不崩,落 GPT 链
+    assert out["outcome"] == "candidates"
 
 
 def test_label_mode_skips_vector(session):

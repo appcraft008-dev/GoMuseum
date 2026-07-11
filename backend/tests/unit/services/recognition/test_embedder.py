@@ -48,3 +48,12 @@ def test_storage_failure_returns_none(monkeypatch, tmp_path):
     monkeypatch.setattr(emb, "_get_storage", boom)
     monkeypatch.setattr(emb.settings, "RECOG_MODEL_CACHE", str(tmp_path))
     assert emb.get_embedder() is None
+
+
+def test_crop_pyramid_boxes():
+    from PIL import Image
+
+    crops = emb.crop_pyramid(Image.new("RGB", (1000, 800)))
+    assert len(crops) == 6
+    # center-60% 框 = (0.2,0.2,0.8,0.8) × (1000,800) → 600×480
+    assert crops[0].size == (600, 480)
