@@ -115,9 +115,10 @@ def commons_alt_photos(qid: str, max_n: int = 5) -> list[str]:
 
 
 def louvre_distractors(exclude: set[str], n: int = 50) -> list[tuple[str, str]]:
-    """卢浮宫(Q19675)有图画作 → [(qid, image_url)],排除 orsay 目录 qid。"""
+    """卢浮宫绘画部(Q3044768)有图画作 → [(qid, image_url)],排除 orsay 目录 qid。
+    注:P195 挂博物馆本体 Q19675 的画作只有 4 件(Wikidata 惯例挂部门),实测踩坑。"""
     query = (
-        "SELECT ?item ?image WHERE { ?item wdt:P195 wd:Q19675; wdt:P31 wd:Q3305213; "
+        "SELECT ?item ?image WHERE { ?item wdt:P195 wd:Q3044768; wdt:P31 wd:Q3305213; "
         "wdt:P18 ?image } LIMIT 120"
     )
     rows = _get(SPARQL, query=query, format="json").json()["results"]["bindings"]
