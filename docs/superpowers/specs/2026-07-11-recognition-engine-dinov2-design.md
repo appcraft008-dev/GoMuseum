@@ -15,7 +15,7 @@
 ## 识别漏斗（定稿流程）
 
 ```
-拍照 → DINOv2 向量检索（对有向量的件；全局索引，museum 给了则先馆内、低分回退全局）
+拍照 → DINOv2 向量检索（对有向量的件；全局索引，museum 给了则只搜该馆）
  ├─ ≥ HIGH(0.85)      → match（直开讲解页）
  ├─ [LOW(0.72), HIGH) → candidates（Top-3 确认卡 = 标注飞轮）
  └─ < LOW / 无向量     → GPT+OCR 自动兜底（同一张照片，用户无感）
@@ -53,7 +53,10 @@
 - `POST /api/v1/recognize`：multipart `image`；query `museum`(slug,可选)、`language`、`mode`。
 - 响应 = 现有三档形状 + `match/candidates` 条目内**新增 `museum` 字段**（归属馆 slug，
   前端跳详情页用）——加法字段，老解析不破。
-- museum 给了 → 先馆内（向量索引按 museum 过滤 + 文字匹配该馆目录）；馆内 < LOW 再全局。
+- museum 给了 → 只搜该馆（向量索引按 museum 过滤 + 文字匹配该馆目录），**不做全局回退**。
+  ⚠️ 实现时裁决（2026-07-11 review）：老 App 不读新 `museum` 字段，跨馆命中会拿他馆 qid 撞
+  `/{slug}/objects/{qid}/content` 404 死胡同（前向兼容硬约束）。全局语义只属于 `museum` 未传的
+  调用（新前端即此）；将来带馆提示的调用方要"馆内优先+全局回退"时，加显式参数再开。
   没给 → 直接全局（文字兜底也全目录）。
 - 老端点 `/museums/{slug}/recognize` 改为内部委托新实现（museum=slug 强制馆内语义不变）。
 - 缓存键升 `recog3:{museum|global}:{language}:{sha}`；计费规则不变
