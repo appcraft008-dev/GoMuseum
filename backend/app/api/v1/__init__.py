@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     museums,
     payment,
     recognition,
+    recognize_global,
 )
 
 api_router = APIRouter()
@@ -36,5 +37,8 @@ api_router.include_router(payment.router, prefix="/payment", tags=["payment"])
 
 # Include museum pack endpoints (馆藏目录/讲解，第1步数据地基)
 api_router.include_router(museums.router, prefix="/museums", tags=["museums"])
+
+# Include global recognition endpoint (POST /recognize, museum 可选跨馆识别)
+api_router.include_router(recognize_global.router, tags=["recognition"])
 
 __all__ = ["api_router"]

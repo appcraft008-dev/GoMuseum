@@ -260,19 +260,24 @@
 - `flagged` = LLM 抽出的争议/推测/未证实句(`contested/inference/unverified`,供阶段2 hedge)。
 - **阶段1 已落地(`build_evidence_pack`)**:富属性按 registry 门控(真实生成走网络);阶段2 才把三层+模块生成切到证据包。Europeana 暂缓(待 key)。
 
-## 识别（拍照→讲解;✅P1 2026-07-03 落地）
+## 识别（拍照→讲解;✅P1 2026-07-03;✅向量引擎+全局端点 2026-07-11）
 
 **原则（通用,任何馆零代码）:**
-- **R1 识别接地第一原则**:AI 视觉输出是**查询不是答案**——候选名必须匹配到真实目录记录才展示身份;不中就诚实"未收录",绝不把模型猜测当事实。
-- **R2 墙签 OCR=权威接地源,但是增强不是依赖**:照片常无签是常态,主路靠画面内容;"引导补拍说明牌"是未收录 UX 的组成部分(`mode=label` 纯转写)。
-- **R3 三档呈现**:高置信(≥HIGH)直开讲解页 / 中置信确认卡(1-3 候选带缩略图) / 低置信未收录+引导拍签。**确认卡=免费人工标注**(真实照片→确认QID,数据飞轮喂 P2 CLIP)。
-- **R4 引擎可替换,匹配/接地层是不变核心**:P1=GPT-4o-mini 视觉;P2=本地 CLIP(ONNX)插到引擎位,接口不变。演进顺序由数据依赖决定(GPT 闭环先生产标注,才能校准 CLIP 阈值)。
-- **R5 需求自适应**:未收录拍摄记 `recognition_demands`(按 馆+感知哈希 幂等计数;墙签文字=高质量需求) → 目录跟真实需求生长。
-- **R6 足迹 vs 归属两轴分离**:到访足迹用物理位置(GPS/App 选馆),绝不用识别到藏品的拥有馆(借展场景两轴背离)。P2 落地,原则先立。
+- **R1 识别接地第一原则**:AI 视觉输出是**查询不是答案**——候选名必须匹配到真实目录记录才展示身份;不中就诚实"未收录",绝不把模型猜测当事实。(向量检索天然接地:命中的就是目录参考图。)
+- **R2 墙签 OCR=权威接地源,但是增强不是依赖**:照片常无签是常态,主路靠画面内容;"引导补拍说明牌"是未收录 UX 的组成部分(`mode=label` 纯转写)。墙签行同时做**馆藏号精确匹配**(归一化后≥3位,编号=馆方主键,命中即满分)。
+- **R3 三档呈现**:高置信(≥HIGH)直开讲解页 / 中置信确认卡(1-3 候选带缩略图) / 低置信未收录+引导拍签。**确认卡=免费人工标注**(真实照片→确认QID,数据飞轮)。
+- **R4 引擎可替换,匹配/接地层是不变核心——✅已兑现**:主引擎=DINOv2 ViT-S/14 向量检索(参考图库余弦近邻;benchmark 非名作 Top-1 95.8%/库外零误接受,见 2026-07-11 bench spec);GPT-4o-mini+墙签 OCR 降级为**兜底**(无参考图/低分件;调用量从每张必调降为仅 miss)。引擎任何不可用形态(模型缺失/坏图/表空)→ 自动走兜底,绝不 500。
+- **R5 需求自适应**:未收录拍摄记 `recognition_demands`(按 馆+感知哈希 幂等计数,全局识别时馆可空;墙签文字=高质量需求) → 目录跟真实需求生长。
+- **R6 足迹 vs 归属两轴分离**:到访足迹用物理位置(GPS/App 选馆),绝不用识别到藏品的拥有馆(借展场景两轴背离)。后续落地,原则先立。
 
-**端点**:`POST /museums/{slug}/recognize`(multipart `image` + `language` + `mode=artwork|label`;馆域内匹配)。响应:
-`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence}, candidates:[{…,score}], label_text, reason: not_in_catalog|low_confidence|no_candidates}`
-——`outcome/reason` 机器码不译;`title/artist` 按 language 走显示名规则;thumbnail=thumb 档。命中跳详情 → 懒生成/懒翻译/懒补图自动接管。同图重复识别走 Redis 缓存(命中 30 天/未收录 1 天)。阈值 HIGH=0.85/LOW=0.5 为初值,真实数据校准。
+**端点(两个,响应同形):**
+- `POST /api/v1/recognize`(**2026-07-11 新增,App 主入口**):multipart `image` + query `museum`(slug,**可选**) + `language` + `mode`。不传 `museum` = 全局识别(拍前无需选馆——导航栏识别按钮直达相机);传了 = 只搜该馆。
+- `POST /museums/{slug}/recognize`(保留,行为不变):馆域内匹配。**⚠️ 馆域调用不做全局回退**(2026-07-11 裁决:老 App 不读 `museum` 字段,跨馆命中会拿他馆 qid 撞详情 404 死胡同——前向兼容;将来带馆提示要"馆内优先+全局回退"时加显式参数再开)。
+
+响应:`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence,museum}, candidates:[{…,score,museum}], label_text, reason}`
+——**`museum`=归属馆 slug(2026-07-11 加法字段)**,前端跳详情用它(老 App 不读不炸;新前端解析 `as String?` + 回退)。`outcome/reason` 机器码不译;`title/artist` 按 language 走显示名规则;thumbnail=thumb 档。命中跳详情 → 懒生成/懒翻译/懒补图自动接管。同图重复识别走 Redis 缓存(命中 30 天/未收录 1 天;键空间 `recog3`)。**阈值 server-driven**:向量档 `RECOG_HIGH=0.85`/`RECOG_LOW=0.72`(环境变量,由 benchmark 校准,库外零误接受);文字兜底档沿用 HIGH=0.85/LOW=0.5。
+
+**识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。上新馆配方不变:catalog→names→images 全量预跑后,加跑 `onboard views` + `backfill_embeddings`。
 **计费(2026-07-04 定)**:`match/candidates` 扣 1 次配额;`unrecognized` 不扣(不为失败付费);缓存命中不扣;配额用尽 → **402** `{reason: quota_exceeded}`(先于 GPT 调用,不烧钱)。身份=Bearer 令牌(App 自带)或 `device_id` 参数;两者皆无 → 401 `{reason: identity_required}`。服务端扣费,不再依赖前端自觉调 `/payment/consume`。
 
 **老端点 `/api/v1/recognition` 标记 deprecated**(裸 GPT 猜测当事实,违反 R1;留给老 App,新 App 一律走新端点)。
@@ -296,6 +301,7 @@
 - 2026-07-05:定**标题真相唯一化**原则(显示名=标题唯一真相,内容三通路引用跟随;glossary 注入,修显现/幻影分叉)。
 - 2026-07-05:**内容生成 N 默认=0**(收录策略⑤)——上新馆零内容预付,纯懒生成兜底;N 上线后按实际热度/需求由运营逐馆决定。
 - 2026-07-04:content 端点加法字段 `generating`(懒任务锁即信号)——前端等待提示三态化(生成中/资料不足/待完善可重试),修盲轮询三隐患。
+- 2026-07-11:**识别主引擎换 DINOv2 向量检索**(R4 兑现:benchmark 裁决 DINOv2 胜 CLIP,非名作 Top-1 95.8%/库外零误接受;GPT+OCR 降为兜底,不可用绝不 500)。**新增全局端点 `POST /api/v1/recognize`**(museum 可选,拍前不选馆)+ 响应加法字段 `museum`(归属馆 slug);裁决**馆域调用不做全局回退**(老 App 前向兼容,跨馆命中=详情 404 死胡同)。参照库=物化即嵌入+backfill;雕塑多视角 view 图(P373 深挖落地);墙签行加馆藏号精确匹配;阈值 server-driven(RECOG_HIGH/LOW 环境变量)。
 - 2026-07-04:识别端点**服务端计费**落地(match/candidates 扣1,unrecognized/缓存不扣,超额402;身份=令牌或device_id)——堵住新端点绕过配额的洞,弃用前端自觉调 /payment/consume 的客户端计费。
 - 2026-07-04:作者卡 `nationality`/`notable_works` 多语本地化落地(前端交接③;v1 局限解除)。交接①分类标签已由 #142 先行修复;交接②"老件补语种"因 prod 内容清空+六语生成而失效(translate 命令备用)。
 - 2026-07-03:**识别 P1 落地**+§识别入契约(R1-R6:接地第一/墙签增强非依赖/三档呈现/引擎可替换/需求自适应/足迹vs归属)。新端点 `/museums/{slug}/recognize`;老 `/recognition` deprecated;P2=CLIP/需求聚合/足迹。

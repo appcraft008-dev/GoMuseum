@@ -9,10 +9,11 @@ import 'package:http_parser/http_parser.dart';
 abstract class RecognitionRemoteDataSource {
   Future<RecognitionResultModel> recognizeArtwork(XFile imageFile);
 
-  /// 新接地识别端点 `POST /museums/{slug}/recognize`。
+  /// 接地识别端点。[slug] 为 null → 全局端点 `POST /recognize`（拍前不选馆）；
+  /// 非 null → 老馆内端点 `POST /museums/{slug}/recognize`（兼容留路）。
   /// [mode] = `artwork`（默认）或 `label`（引导补拍墙签）。
   Future<RecognizeResponse> recognize({
-    required String slug,
+    String? slug,
     required XFile image,
     required String language,
     String mode,
@@ -82,7 +83,7 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
 
   @override
   Future<RecognizeResponse> recognize({
-    required String slug,
+    String? slug,
     required XFile image,
     required String language,
     String mode = 'artwork',
@@ -98,8 +99,11 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
         ),
       });
 
+      final url = slug == null
+          ? '/api/v1/recognize'
+          : '/api/v1/museums/$slug/recognize';
       final response = await dio.post(
-        '/api/v1/museums/$slug/recognize',
+        url,
         data: formData,
         queryParameters: {'language': language, 'mode': mode},
         options: Options(

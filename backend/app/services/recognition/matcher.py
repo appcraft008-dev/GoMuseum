@@ -21,6 +21,8 @@ _index_cache: dict = {}  # museum_id -> (ts, index)
 
 _PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
 _WS = re.compile(r"[\s_]+")
+_NONALNUM = re.compile(r"[^a-z0-9]+")
+_INV_MIN = 3  # 归一化后长度 <3 不做编号匹配(防误伤)
 
 
 def normalize(s: str) -> str:
@@ -31,8 +33,14 @@ def normalize(s: str) -> str:
     return _WS.sub(" ", s).strip()
 
 
+def normalize_inv(s: str) -> str:
+    """馆藏号归一化:小写 + 去所有非字母数字("RF 1668"→"rf1668")。空/None 安全。"""
+    return _NONALNUM.sub("", (s or "").lower())
+
+
 def build_index(db, museum_id) -> list[dict]:
-    """馆目录 → [{"qid", "names": set, "artists": set}](归一化;进程内缓存)。"""
+    """馆目录 → [{"qid","names","artists","inv"}](归一化;进程内缓存)。
+    museum_id=None → 全部馆(去 filter,None 为全局索引的缓存键)。"""
     hit = _index_cache.get(museum_id)
     if hit and time.time() - hit[0] < _INDEX_TTL:
         return hit[1]
@@ -42,8 +50,11 @@ def build_index(db, museum_id) -> list[dict]:
         if a.name_en:
             names.add(normalize(a.name_en))
         artists_by_qid[a.qid] = names
+    q = db.query(MuseumObject)
+    if museum_id is not None:
+        q = q.filter_by(museum_id=museum_id)
     index = []
-    for o in db.query(MuseumObject).filter_by(museum_id=museum_id).all():
+    for o in q.all():
         attrs = o.attributes or {}
         names = {normalize(v) for v in (attrs.get("title_i18n") or {}).values() if v}
         for col in (o.title_en, o.title_zh):
@@ -54,7 +65,12 @@ def build_index(db, museum_id) -> list[dict]:
             if col:
                 artist_names.add(normalize(col))
         index.append(
-            {"qid": o.qid, "names": names - {""}, "artists": artist_names - {""}}
+            {
+                "qid": o.qid,
+                "names": names - {""},
+                "artists": artist_names - {""},
+                "inv": normalize_inv(o.inventory_number) or None,
+            }
         )
     _index_cache[museum_id] = (time.time(), index)
     return index
@@ -74,11 +90,15 @@ def match(
     标题相似度为主;作者名(artist_hints+各探针)命中该件作者 → +0.1(封顶 1.0)。
     ⚠️ artist_hints 只参与加分、绝不当标题探针——否则"以画家为题"的肖像画
     (如巴齐耶《奥古斯特·雷诺阿像》)会被候选作者名精确劫持(staging 真实误配)。"""
-    probes = [normalize(q) for q in (list(queries) + list(label_lines)) if q]
-    probes = [p for p in probes if p]
+    raw_probes = [q for q in (list(queries) + list(label_lines)) if q]
+    probes = [p for p in (normalize(q) for q in raw_probes) if p]
     hint_probes = probes + [
         normalize(a) for a in (artist_hints or []) if a and normalize(a)
     ]
+    # 馆藏号精确匹配探针(候选名+墙签行,不含 artist_hints;归一化后长度≥3 才算)
+    inv_probes = {
+        i for i in (normalize_inv(q) for q in raw_probes) if len(i) >= _INV_MIN
+    }
     if not probes:
         return []
     best: dict[str, float] = {}
@@ -86,6 +106,8 @@ def match(
         title_score = max(
             (_sim(p, name) for p in probes for name in entry["names"]), default=0.0
         )
+        if entry.get("inv") and entry["inv"] in inv_probes:
+            title_score = 1.0  # 编号精确命中:满分,盖过模糊(下方再与加分取 min 封顶)
         if title_score <= 0:
             continue
         artist_bonus = 0.0

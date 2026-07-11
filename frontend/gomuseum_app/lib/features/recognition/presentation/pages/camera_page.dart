@@ -43,9 +43,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
   /// 「最近图库」缩略图条的最近图片资产（相册权限拿到后填充）。
   List<AssetEntity> _recentAssets = const [];
 
-  // ponytail: 现阶段固定 orsay;接入馆上下文后从当前馆 slug 取。
-  static const String _slug = 'orsay';
-
   @override
   void initState() {
     super.initState();
@@ -166,7 +163,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     final mode = _labelMode ? 'label' : 'artwork';
     await ref
         .read(recognitionNotifierProvider.notifier)
-        .recognize(slug: _slug, image: shot, language: lang, mode: mode);
+        .recognize(slug: null, image: shot, language: lang, mode: mode);
     if (!mounted) return;
     final st = ref.read(recognitionNotifierProvider);
     // 得到有用结果（命中/候选）才扣额度；未收录/错误不扣，不惩罚"没帮上忙"。
@@ -174,7 +171,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       await benefits.consumeQuota();
     }
     if (st is RecognitionMatched && mounted) {
-      _goGuide(st.slug, st.match.qid);
+      _goGuide(st.match.museum ?? 'orsay', st.match.qid);
     }
   }
 
@@ -640,7 +637,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 12),
       for (final c in state.candidates) ...[
-        _candidateRow(gm, c, state.slug),
+        _candidateRow(gm, c),
         const SizedBox(height: 8),
       ],
       const SizedBox(height: 4),
@@ -655,11 +652,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ];
   }
 
-  Widget _candidateRow(GmPalette gm, RecognizedItem c, String slug) {
+  Widget _candidateRow(GmPalette gm, RecognizedItem c) {
     // ponytail: 点选=一条"照片→确认QID"标注(喂后端二期 CLIP 校准);
     // 埋点接口 P2 提供,现只保证跳转畅通。
+    // 跳转用该候选归属馆;老后端无 museum 字段 → 回退 orsay(契约容错)。
     return GestureDetector(
-      onTap: () => _goGuide(slug, c.qid),
+      onTap: () => _goGuide(c.museum ?? 'orsay', c.qid),
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(9),

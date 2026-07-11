@@ -93,6 +93,13 @@ class Settings(BaseSettings):
     IMAGE_COMPRESSION_QUALITY: int = 85
     MAX_IMAGE_WIDTH: int = 1024
 
+    # Recognition (向量引擎)
+    RECOG_HIGH: float = 0.85
+    RECOG_LOW: float = 0.72
+    RECOG_MODEL_KEY: str = "models/dinov2_vits14.onnx"
+    RECOG_MODEL_SHA256: str = ""
+    RECOG_MODEL_CACHE: str = "/tmp/gomuseum_models"
+
     # Cache
     CACHE_TTL_SECONDS: int = 86400  # 24 hours
 

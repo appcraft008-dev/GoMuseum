@@ -12,7 +12,14 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.object_importer import upsert_museum, upsert_object
 from app.services.recognition import matcher
-from app.services.recognition.matcher import HIGH, LOW, build_index, match, normalize
+from app.services.recognition.matcher import (
+    HIGH,
+    LOW,
+    build_index,
+    match,
+    normalize,
+    normalize_inv,
+)
 
 
 @pytest.fixture()
@@ -122,3 +129,89 @@ def test_index_cached_per_museum(session):
     first = calls["n"]
     build_index(session, mid)
     assert calls["n"] == first  # 二次走缓存,不再查库
+
+
+def test_normalize_inv():
+    assert normalize_inv("RF 1668") == "rf1668"
+    assert normalize_inv("RF-1668") == "rf1668"
+    assert normalize_inv("") == ""
+    assert normalize_inv(None) == ""
+
+
+def test_inv_exact_match_scores_full(session):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q_INV1",
+            "inventory_number": "RF 1668",
+            "title_en": "Some Obscure Sketch",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    matcher._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    out = match(idx, [], ["RF 1668"])
+    assert out[0][0] == "Q_INV1" and out[0][1] == 1.0
+
+
+def test_inv_beats_fuzzy_take_max(session):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q_INV2",
+            "inventory_number": "RF 1668",
+            "title_en": "Nothing Alike",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    matcher._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    # 墙签同时含编号(命中 Q_INV2)与近似题名(命中 Q334138 模糊)
+    out = match(idx, ["Origin of the World"], ["RF 1668"])
+    assert out[0][0] == "Q_INV2" and out[0][1] == 1.0
+    assert "Q334138" in dict(out)  # 模糊件仍在,只是排后
+
+
+def test_short_probe_never_triggers_inv(session):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q_INV3",
+            "inventory_number": "12",
+            "title_en": "Two Digit Object",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    matcher._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    out = match(idx, [], ["12"])
+    # 短探针(<3)不触发编号满分;不应把 Q_INV3 以 1.0 顶到第一
+    assert not any(qid == "Q_INV3" and score == 1.0 for qid, score in out)
+
+
+def test_museum_id_none_indexes_all_museums(session):
+    m2 = upsert_museum(session, {"slug": "louvre", "name_en": "Louvre"})
+    upsert_object(
+        session,
+        m2.id,
+        {
+            "qid": "Q_LOUVRE",
+            "title_en": "Mona Lisa",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    matcher._index_cache.clear()
+    idx = build_index(session, None)
+    qids = {e["qid"] for e in idx}
+    assert "Q334138" in qids  # orsay 件
+    assert "Q_LOUVRE" in qids  # louvre 件
