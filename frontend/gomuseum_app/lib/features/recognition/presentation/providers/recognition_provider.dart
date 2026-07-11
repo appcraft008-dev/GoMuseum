@@ -22,7 +22,7 @@ class RecognitionLoading extends RecognitionState {
 class RecognitionMatched extends RecognitionState {
   const RecognitionMatched(this.match, this.slug);
   final RecognizedItem match;
-  final String slug;
+  final String? slug;
 }
 
 /// 多候选：确认卡「是这件吗？」。
@@ -30,7 +30,7 @@ class RecognitionCandidates extends RecognitionState {
   const RecognitionCandidates(this.candidates, this.labelText, this.slug);
   final List<RecognizedItem> candidates;
   final String? labelText;
-  final String slug;
+  final String? slug;
 }
 
 /// 未收录：诚实文案 + 引导拍墙签（绝不显示 AI 猜测的名字）。
@@ -38,7 +38,7 @@ class RecognitionUnrecognized extends RecognitionState {
   const RecognitionUnrecognized(this.labelText, this.reason, this.slug);
   final String? labelText;
   final String? reason;
-  final String slug;
+  final String? slug;
 }
 
 class RecognitionError extends RecognitionState {
@@ -55,7 +55,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   /// 接地识别：走新端点，按 outcome 落三档状态。
   /// [mode] = `artwork`（默认）或 `label`（引导补拍墙签）。
   Future<void> recognize({
-    required String slug,
+    String? slug,
     required XFile image,
     required String language,
     String mode = 'artwork',
