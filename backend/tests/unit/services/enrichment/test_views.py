@@ -108,34 +108,44 @@ def test_fetch_view_urls_parsing():
                     }
                 }
             }
-        if params.get("list") == "categorymembers":
-            return {
-                "query": {
-                    "categorymembers": [
-                        {"title": "File:Statue front.jpg"},  # P18 本尊,排除
-                        {"title": "File:Statue side.jpg"},
-                        {"title": "File:Statue back.png"},
-                        {"title": "File:Statue notes.svg"},  # 非图,排除
-                        {"title": "File:Statue extra.jpeg"},
-                    ]
-                }
-            }
-        # imageinfo
-        title = params["titles"]
+        assert params.get("list") == "categorymembers"  # 不再打 imageinfo
         return {
             "query": {
-                "pages": {
-                    "1": {
-                        "imageinfo": [
-                            {"thumburl": f"https://thumb/{title}".replace(" ", "_")}
-                        ]
-                    }
-                }
+                "categorymembers": [
+                    {"title": "File:Statue front.jpg"},  # P18 本尊,排除
+                    {"title": "File:Statue side.jpg"},
+                    {"title": "File:Statue back.png"},
+                    {"title": "File:Statue notes.svg"},  # 非图,排除
+                    {"title": "File:Statue extra.jpeg"},
+                ]
             }
         }
 
     urls = fetch_view_urls("Q42", max_n=2, http_get=fake_get)
+    # Special:FilePath 规范 URL(与 P18 管线图同格式;空格 quote 成 %20)、
+    # P18 排除、svg 排除、max_n=2 截断
     assert urls == [
-        "https://thumb/File:Statue_side.jpg",
-        "https://thumb/File:Statue_back.png",
-    ]  # P18 排除、svg 排除、max_n=2 截断
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Statue%20side.jpg",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Statue%20back.png",
+    ]
+
+
+def test_claim_without_datavalue_is_none():
+    # P18 为 novalue snak(无 datavalue)→ 不 KeyError,本尊排除逻辑自然跳过
+    def fake_get(url, params):
+        if "wikidata" in url:
+            return {
+                "entities": {
+                    "Q7": {
+                        "claims": {
+                            "P18": [{"mainsnak": {"snaktype": "novalue"}}],
+                            "P373": [{"mainsnak": {"datavalue": {"value": "Cat X"}}}],
+                        },
+                        "sitelinks": {},
+                    }
+                }
+            }
+        return {"query": {"categorymembers": [{"title": "File:A.jpg"}]}}
+
+    urls = fetch_view_urls("Q7", max_n=2, http_get=fake_get)
+    assert urls == ["https://commons.wikimedia.org/wiki/Special:FilePath/A.jpg"]

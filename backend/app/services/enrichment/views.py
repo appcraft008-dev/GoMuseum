@@ -1,4 +1,4 @@
-"""雕塑多视角补图:Wikidata→Commons 分类→他人照片缩略 URL 注入既有图管线。
+"""雕塑多视角补图:Wikidata→Commons 分类→他人照片规范 URL 注入既有图管线。
 
 基准显示雕塑在真实照片上 Top-1 仅 ~33%(索引每件≈1 图)。这里给 sculpture 件补
 多视角 Commons 照片行(role="view"),由 materializer 物化时自动嵌入(Task 3 钩子)。
@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import time
+from urllib.parse import quote
 
 from app.models.museum_object import ObjectImage
 
@@ -27,7 +28,7 @@ def _default_http_get(url: str, params: dict) -> dict:
 
 
 def fetch_view_urls(qid: str, *, max_n: int = 4, http_get=None) -> list[str]:
-    """qid → P373/commonswiki 分类 → 分类内他人照片(排除 P18 本尊)的 1600px 缩略 URL。"""
+    """qid → P373/commonswiki 分类 → 分类内他人照片(排除 P18 本尊)的 Special:FilePath 规范 URL。"""
     http_get = http_get or _default_http_get
     ent = http_get(
         _WD_API,
@@ -42,7 +43,10 @@ def fetch_view_urls(qid: str, *, max_n: int = 4, http_get=None) -> list[str]:
 
     def _claim_str(pid):
         c = claims.get(pid)
-        return c[0]["mainsnak"]["datavalue"]["value"] if c else None
+        if not c:
+            return None
+        # novalue/somevalue snak 无 datavalue
+        return (c[0]["mainsnak"].get("datavalue") or {}).get("value")
 
     p18 = _claim_str("P18")
     cat = _claim_str("P373")
@@ -66,26 +70,16 @@ def fetch_view_urls(qid: str, *, max_n: int = 4, http_get=None) -> list[str]:
 
     urls: list[str] = []
     for member in members:
-        title = member["title"]
-        fname = title.removeprefix("File:")
+        fname = member["title"].removeprefix("File:")
         if p18 and fname.replace(" ", "_") == p18.replace(" ", "_"):
             continue  # 排除官方图本尊
         if not fname.lower().endswith(_IMG_EXT):
             continue
-        info = http_get(
-            _COMMONS_API,
-            {
-                "action": "query",
-                "titles": title,
-                "prop": "imageinfo",
-                "iiprop": "url",
-                "iiurlwidth": 1600,
-                "format": "json",
-            },
-        )["query"]["pages"]
-        ii = (next(iter(info.values())).get("imageinfo") or [{}])[0]
-        if ii.get("thumburl"):
-            urls.append(ii["thumburl"])
+        # Special:FilePath 规范 URL(与 P18 管线图同格式):materializer 下载时自动加
+        # ?width=1600 服务端缩放,fetch_meta 可由 basename 反查署名——免 imageinfo 调用
+        urls.append(
+            f"https://commons.wikimedia.org/wiki/Special:FilePath/{quote(fname)}"
+        )
         if len(urls) >= max_n:
             break
     return urls
