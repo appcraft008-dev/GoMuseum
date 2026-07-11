@@ -28,6 +28,9 @@ def _default_run_query(sparql: str) -> list[dict]:
     return r.json()["results"]["bindings"]
 
 
+_CATALOG_PAGE = 2000  # 目录翻页页宽(与 _wd._PAGE=200 解耦;大页少翻避开深OFFSET超时)
+
+
 class WikidataCatalog(CatalogSource):
     name = "wikidata"
 
@@ -41,8 +44,11 @@ class WikidataCatalog(CatalogSource):
         records: dict[str, StubRecord] = {}
         fetched = 0
         offset = 0
+        empty_retries = 0
         while fetched < cfg.fetch_limit:
-            page = min(_wd._PAGE, cfg.fetch_limit - fetched)
+            # 大页少翻:每页都要全集 ORDER BY,深 OFFSET×小页(200)在 WDQS 反复超时
+            # (实证 2026-07-11:两次静默截断 1537/1517,漏收长尾件)
+            page = min(_CATALOG_PAGE, cfg.fetch_limit - fetched)
             rows = self._run_query(
                 _wd.QUERY.format(
                     museum=cfg.wikidata_qid,
@@ -53,7 +59,14 @@ class WikidataCatalog(CatalogSource):
                 )
             )
             if not rows:
+                # 空页≠到底:WDQS 超时也返回空——重试再判(批处理纪律:外部查询重试)
+                if empty_retries < 2:
+                    empty_retries += 1
+                    if self._run_query is _default_run_query:
+                        time.sleep(5)
+                    continue
                 break
+            empty_retries = 0
             for row in rows:
                 qid = row["item"]["value"].rsplit("/", 1)[-1]
                 p31 = (row.get("p31", {}) or {}).get("value", "").rsplit("/", 1)[-1]

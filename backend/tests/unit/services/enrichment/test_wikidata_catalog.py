@@ -117,3 +117,21 @@ def test_wikidata_catalog_collects_all_p18_images():
     assert len(out) == 1
     assert out[0].image_url == "http://img/a.jpg"
     assert out[0].image_urls == ["http://img/a.jpg", "http://img/b.jpg"]
+
+
+def test_wikidata_catalog_retries_empty_page_before_stop():
+    """空页≠到底:WDQS 深 OFFSET 超时返回空——重试后有数据则继续收。"""
+    calls = {"n": 0}
+
+    def fake(sparql):
+        calls["n"] += 1
+        # 页1有数据 → 页2空(模拟超时) → 页3重试拿到数据 → 之后一直空(真到底)
+        if calls["n"] == 1:
+            return [_row("Q1", "A", 5)]
+        if calls["n"] == 3:
+            return [_row("Q2", "B", 3)]
+        return []
+
+    out = list(WikidataCatalog(run_query=fake).list(_Cfg()))
+    assert {r.qid for r in out} == {"Q1", "Q2"}  # 空页重试后仍收到 Q2
+    assert calls["n"] >= 5  # 页2空+重试, 尾部空页也要连空3次才停
