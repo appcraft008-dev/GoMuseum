@@ -29,7 +29,8 @@ def _cache_key(slug: str | None, sha: str, language: str) -> str:
 
 
 def _default_embed(image_bytes: bytes):
-    """默认 embed_fn:包装 DINOv2 引擎。引擎不可用 → None(编排层走 GPT 兜底)。"""
+    """默认 embed_fn:包装 DINOv2 引擎。引擎不可用/解码或推理异常 → None(编排层走 GPT 兜底)。
+    validate_image 的 PIL verify() 不解码像素——截断 JPEG 会过校验、在此处才爆,不许炸出去。"""
     from PIL import Image
 
     from app.services.recognition.embedder import get_embedder
@@ -37,7 +38,11 @@ def _default_embed(image_bytes: bytes):
     engine = get_embedder()
     if engine is None:
         return None
-    return engine.embed(Image.open(io.BytesIO(image_bytes)))
+    try:
+        return engine.embed(Image.open(io.BytesIO(image_bytes)))
+    except Exception:
+        logger.exception("embed failed, falling back to GPT chain")
+        return None
 
 
 def _get_redis():
@@ -134,7 +139,7 @@ def recognize(
     embed_fn=None,
     vector_query_fn=None,
 ) -> dict | None:
-    """拍照识别:DINOv2 向量前置(三档)→ 馆内 miss 回退全局 → GPT+OCR 兜底。
+    """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
     slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
     响应形状见 spec(outcome/reason 机器码)。"""
     museum = None
@@ -173,8 +178,9 @@ def recognize(
         if vec is not None:
             vquery = vector_query_fn or query_index
             out = _vector_out(db, storage, vquery(db, vec, museum_id), language)
-            if out is None and museum_id is not None:  # 馆内 miss → 全局再查一次
-                out = _vector_out(db, storage, vquery(db, vec, None), language)
+            # 馆域调用不回退全局:老端点已部署 App 不读 museum 字段,跨馆命中会拿他馆
+            # qid 撞 /{slug}/objects/{qid}/content 404 死胡同(前向兼容硬约束)。
+            # 将来带馆提示的新调用方要全局回退时,加显式参数再开;slug=None 首查即全局。
 
     if out is None:  # --- GPT + OCR 兜底链(原样) ---
         identify_fn = identify_fn or identify

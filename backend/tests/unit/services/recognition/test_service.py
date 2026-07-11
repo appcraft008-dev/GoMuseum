@@ -138,23 +138,32 @@ def test_vector_mid_returns_candidates(session):
     assert out["match"] is None
 
 
-def test_museum_low_then_global_high(session):
-    # 馆内 top<LOW → None → 全局再查(museum_id=None)命中 HIGH
-    vq = _FakeVQ([("Q334138", 0.40)], [("Q152509", 0.93)])
+def test_museum_low_no_global_fallback(session):
+    # 馆域调用向量 miss → 不回退全局(老 App 前向兼容:跨馆 qid = 404 死胡同),直落 GPT 链
+    identify = _Counter(
+        _vision([{"title": "The Origin of the World", "artist": "Gustave Courbet"}])
+    )
+    vq = _FakeVQ([("Q334138", 0.40)])  # top < LOW
     out = recognize(
-        session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        vector_query_fn=vq,
+        identify_fn=identify,
     )
     orsay_id = session.query(Museum).filter_by(slug="orsay").one().id
-    assert vq.calls == [orsay_id, None]  # 先馆 id,再全局
+    assert vq.calls == [orsay_id]  # 只查馆内一次,绝不查 None(全局)
+    assert identify.n == 1  # GPT 链兜底
     assert out["outcome"] == "match"
-    assert out["match"]["qid"] == "Q152509"
+    assert out["match"]["qid"] == "Q334138"
 
 
 def test_vector_all_miss_falls_to_gpt(session):
     identify = _Counter(
         _vision([{"title": "The Origin of the World", "artist": "Gustave Courbet"}])
     )
-    vq = _FakeVQ([], [])  # 馆内 + 全局都空
+    vq = _FakeVQ([])  # 馆内空
     out = recognize(
         session,
         "orsay",
