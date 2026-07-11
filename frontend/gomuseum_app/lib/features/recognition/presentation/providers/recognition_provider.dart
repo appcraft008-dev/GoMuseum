@@ -2,6 +2,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 
 part 'recognition_provider.g.dart';
 
@@ -63,8 +64,20 @@ class RecognitionNotifier extends _$RecognitionNotifier {
     state = const RecognitionLoading();
     try {
       final ds = ref.read(recognitionRemoteDataSourceProvider);
+      // 恒带 device_id（契约身份回退）：游客设备绑定，令牌抽风时后端仍认得出。
+      // deviceIdProvider 自带兜底（不会抛），拿不到就传 null，服务端退回 Bearer。
+      String? deviceId;
+      try {
+        deviceId = await ref.read(deviceIdProvider.future);
+      } catch (_) {
+        deviceId = null;
+      }
       final resp = await ds.recognize(
-          slug: slug, image: image, language: language, mode: mode);
+          slug: slug,
+          image: image,
+          language: language,
+          mode: mode,
+          deviceId: deviceId);
       state = switch (resp.outcome) {
         RecognizeOutcome.match when resp.match?.isValid == true =>
           RecognitionMatched(resp.match!, slug),
