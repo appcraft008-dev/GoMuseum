@@ -94,3 +94,98 @@ def test_old_museum_endpoint_still_200_and_passthrough(client, monkeypatch):
     assert r.status_code == 200, r.text
     assert r.json() == payload
     assert seen["slug"] == "orsay"
+
+
+# --- POST /recognize/confirm(回填 confirmed_qid,fire-and-forget 恒 204) ---
+
+
+def _confirm_client():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from app.core.database import Base
+    from app.models.museum import Museum
+    from app.models.museum_object import MuseumObject, ObjectImage
+    from app.models.recognition_event import RecognitionEvent
+    from app.services.object_importer import upsert_museum, upsert_object
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[
+            Museum.__table__,
+            MuseumObject.__table__,
+            ObjectImage.__table__,
+            RecognitionEvent.__table__,
+        ],
+    )
+    s = sessionmaker(bind=engine)()
+    m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
+    upsert_object(s, m.id, {"qid": "Q1", "title_en": "A"})
+    s.commit()
+
+    def _override():
+        yield s
+
+    app.dependency_overrides[get_db] = _override
+    return TestClient(app), s
+
+
+def test_confirm_backfills_recent_event():
+    from app.models.recognition_event import RecognitionEvent
+
+    client, s = _confirm_client()
+    try:
+        s.add(
+            RecognitionEvent(
+                museum_slug="orsay",
+                phash="ph1",
+                outcome="candidates",
+                top_qid="Q1",
+                engine="text",
+            )
+        )
+        s.commit()
+        r = client.post("/api/v1/recognize/confirm", json={"phash": "ph1", "qid": "Q1"})
+        assert r.status_code == 204
+        s.expire_all()
+        row = s.query(RecognitionEvent).filter_by(phash="ph1").one()
+        assert row.confirmed_qid == "Q1"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_garbage_phash_still_204():
+    client, s = _confirm_client()
+    try:
+        r = client.post(
+            "/api/v1/recognize/confirm", json={"phash": "nope", "qid": "Q1"}
+        )
+        assert r.status_code == 204
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_unknown_qid_ignored_but_204():
+    from app.models.recognition_event import RecognitionEvent
+
+    client, s = _confirm_client()
+    try:
+        s.add(
+            RecognitionEvent(
+                museum_slug="orsay", phash="ph2", outcome="candidates", engine="text"
+            )
+        )
+        s.commit()
+        r = client.post(
+            "/api/v1/recognize/confirm", json={"phash": "ph2", "qid": "Q_NOPE"}
+        )
+        assert r.status_code == 204
+        s.expire_all()
+        row = s.query(RecognitionEvent).filter_by(phash="ph2").one()
+        assert row.confirmed_qid is None
+    finally:
+        app.dependency_overrides.pop(get_db, None)

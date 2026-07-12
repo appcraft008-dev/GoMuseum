@@ -132,6 +132,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String museumCatalogNumbers(Object catalog, Object archive) {
+    return 'Catálogo en línea $catalog obras · archivo $archive entradas (reconocible/buscable)';
+  }
+
+  @override
   String get noArtworks => 'Aún no hay obras';
 
   @override

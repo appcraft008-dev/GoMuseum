@@ -41,6 +41,7 @@
   "artworkCountLabel": "{count} œuvres",
 
   "recordedCount": "{count} œuvres dans la collection",
+  "museumCatalogNumbers": "Catalogue en ligne {catalog} œuvres · archives {archive} entrées (reconnaissable/consultable)",
   "noArtworks": "Aucune œuvre",
   "loadingShown": "Chargement · {shown}/{total} affichés",
   "allLoaded": "Tout chargé · {total} au total",

@@ -41,6 +41,7 @@
   "artworkCountLabel": "含 {count} 件藏品",
 
   "recordedCount": "{count} 件收录藏品",
+  "museumCatalogNumbers": "在线图录 {catalog} 件 · 档案条目 {archive} 件（可识别/搜索）",
   "noArtworks": "暂无藏品",
   "loadingShown": "正在加载·已显示 {shown}/{total}",
   "allLoaded": "已全部加载·共 {total} 件",

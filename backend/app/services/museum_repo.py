@@ -3,7 +3,7 @@
 import re
 from datetime import datetime, timezone
 
-from sqlalchemy import func
+from sqlalchemy import and_, exists, func, or_
 from sqlalchemy.orm import Session
 
 from app.models.content import (
@@ -20,6 +20,22 @@ from app.services.storage import get_object_storage
 _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
 
 _LEGACY_SOURCE = "Wikidata/Wikimedia Commons (public data)"
+
+
+def _has_image_clause():
+    """有图过滤:对象至少有一张可展示图(image_key 或 source_url 非空,且非隔离图)。
+    供 list_objects 与分类计数复用,让浏览面不显示无图 stub(qid 直达不受影响)。"""
+    return exists().where(
+        and_(
+            ObjectImage.object_id == MuseumObject.id,
+            or_(
+                ObjectImage.image_key.isnot(None),
+                ObjectImage.source_url.isnot(None),
+            ),
+            ObjectImage.role != "view_quarantine",
+        )
+    )
+
 
 # 通用分类法 8 大类(契约§收录策略),全馆共用;奥赛启用前 4 类。
 # label 全 6 语(交接 2026-07-03-backend-category-label-i18n):固定小集合,静态表即可;缺译回退 en。
@@ -304,6 +320,7 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
     cat_rows = (
         db.query(MuseumObject.category, func.count())
         .filter_by(museum_id=m.id)
+        .filter(_has_image_clause())  # 分类计数只算有图件(浏览面)
         .group_by(MuseumObject.category)
         .all()
     )
@@ -315,6 +332,23 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
         for code, cnt in sorted(cat_rows, key=lambda x: -x[1])
     ]
 
+    # 双数字(加法字段):catalog_count=有图件数, archive_count=总件数。
+    # 优先读 museum.stats(Task 7 回写),缺失键现场 count 兜底(保证语义即时正确)。
+    stats = m.stats or {}
+    archive_count = stats.get("archive_count")
+    if archive_count is None:
+        archive_count = (
+            db.query(func.count(MuseumObject.id)).filter_by(museum_id=m.id).scalar()
+        )
+    catalog_count = stats.get("catalog_count")
+    if catalog_count is None:
+        catalog_count = (
+            db.query(func.count(MuseumObject.id))
+            .filter_by(museum_id=m.id)
+            .filter(_has_image_clause())
+            .scalar()
+        )
+
     pack = {f: getattr(m, f) for f in _PACK_FIELDS}
     pack.update(
         {
@@ -322,6 +356,8 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
             "source": _LEGACY_SOURCE,
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "artwork_count": len(artworks),
+            "catalog_count": catalog_count,
+            "archive_count": archive_count,
             "categories": categories,
             "artworks": artworks,
         }
@@ -386,7 +422,10 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
             "credit": i.credit,
         }
         for i in db.query(ObjectImage)
-        .filter_by(object_id=obj.id)
+        .filter(
+            ObjectImage.object_id == obj.id,
+            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
+        )
         .order_by(ObjectImage.sort)
         .all()
         if i.image_key or i.source_url
@@ -513,7 +552,7 @@ def list_objects(
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return None
-    q = db.query(MuseumObject).filter_by(museum_id=m.id)
+    q = db.query(MuseumObject).filter_by(museum_id=m.id).filter(_has_image_clause())
     if category and category != "all":
         q = q.filter(MuseumObject.category == category)
     total = q.count()

@@ -16,6 +16,6 @@ museums:
                  Q125191]
     country_lang: fr
     sources: [joconde, wikipedia]   # 每馆补充源；Wikidata 是脊柱不在此列
-    fetch_limit: 6000               # 安全阀;有图约2065件,多P31/多图重复行约2.5x(4000时截断只得1585)
+    fetch_limit: 12000              # 全条目5353+多P31重复行(P18已OPTIONAL,无图件也收)
     sample_size: 30
     sample_qids: []

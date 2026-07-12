@@ -22,6 +22,10 @@ abstract class RecognitionRemoteDataSource {
     String mode,
     String? deviceId,
   });
+
+  /// 确认卡点选「这一件」→ 上报「照片(phash)→qid」标注（喂后端 CLIP 校准）。
+  /// fire-and-forget：吞掉所有异常，绝不打扰识别→讲解的跳转体验。
+  Future<void> confirm({required String phash, required String qid});
 }
 
 /// 远程数据源实现
@@ -140,6 +144,19 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
     } catch (e) {
       if (e is ServerException || e is TimeoutException) rethrow;
       throw ServerException('Unexpected error: $e');
+    }
+  }
+
+  @override
+  Future<void> confirm({required String phash, required String qid}) async {
+    try {
+      await dio.post(
+        '/api/v1/recognize/confirm',
+        data: {'phash': phash, 'qid': qid},
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+    } catch (_) {
+      // fire-and-forget：任何失败都吞掉，绝不打扰 UX。
     }
   }
 

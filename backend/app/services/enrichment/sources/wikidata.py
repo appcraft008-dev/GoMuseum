@@ -13,13 +13,13 @@ SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
 USER_AGENT = "GoMuseum/0.1 (enrichment; contact: dev@gomuseum.app)"
 
 QUERY = """
-SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl WHERE {{
+SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl ?p276 WHERE {{
   VALUES ?cat {{ {cat_values} }}
   ?item wdt:P195 wd:{museum} . ?item wdt:P31 ?cat . ?item wdt:P31 ?p31 .
   ?item wikibase:sitelinks ?links .
   OPTIONAL {{ ?al_en schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?sitelink_en . }}
   OPTIONAL {{ ?al_cl schema:about ?item ; schema:isPartOf <https://{country_lang}.wikipedia.org/> ; schema:name ?sitelink_cl . }}
-  ?item wdt:P18 ?image .
+  OPTIONAL {{ ?item wdt:P18 ?image . }}
   OPTIONAL {{ ?item rdfs:label ?label_zh . FILTER(LANG(?label_zh)="zh") }}
   OPTIONAL {{ ?item rdfs:label ?label_en . FILTER(LANG(?label_en)="en") }}
   OPTIONAL {{ ?item wdt:P170 ?creator .
@@ -28,6 +28,7 @@ SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?in
   OPTIONAL {{ ?item wdt:P571 ?date . BIND(YEAR(?date) AS ?year) }}
   OPTIONAL {{ ?item wdt:P217 ?inventory }}
   OPTIONAL {{ ?item wdt:P347 ?joconde }}
+  OPTIONAL {{ ?item wdt:P276 ?p276 . }}
 }} ORDER BY DESC(?links) LIMIT {limit} OFFSET {offset}
 """
 

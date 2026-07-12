@@ -74,7 +74,7 @@ Thumbs.db
 *.log
 
 # 测试和覆盖率
-**/coverage/
+frontend/gomuseum_app/coverage/
 **/test_results/
 **/.nyc_output/
 

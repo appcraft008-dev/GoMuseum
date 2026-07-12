@@ -341,6 +341,12 @@ abstract class AppLocalizations {
   /// **'{count} works in collection'**
   String recordedCount(Object count);
 
+  /// No description provided for @museumCatalogNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Online catalog {catalog} works · archive {archive} entries (recognizable/searchable)'**
+  String museumCatalogNumbers(Object catalog, Object archive);
+
   /// No description provided for @noArtworks.
   ///
   /// In en, this message translates to:

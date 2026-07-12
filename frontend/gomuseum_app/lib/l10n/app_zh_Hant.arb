@@ -38,6 +38,7 @@
   "noMatchedMuseums": "沒有匹配的博物館",
   "artworkCountLabel": "含 {count} 件藏品",
   "recordedCount": "{count} 件收錄藏品",
+  "museumCatalogNumbers": "線上圖錄 {catalog} 件 · 檔案條目 {archive} 件（可識別/搜尋）",
   "noArtworks": "暫無藏品",
   "loadingShown": "正在載入·已顯示 {shown}/{total}",
   "allLoaded": "已全部載入·共 {total} 件",

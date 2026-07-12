@@ -131,6 +131,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String museumCatalogNumbers(Object catalog, Object archive) {
+    return '온라인 도록 $catalog점 · 아카이브 $archive건 (인식/검색 가능)';
+  }
+
+  @override
   String get noArtworks => '작품이 없습니다';
 
   @override

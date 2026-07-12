@@ -59,7 +59,17 @@ def session():
             },
         },
     )
-    upsert_object(s, m.id, {"qid": "Q2", "title_en": "S", "category": "sculpture"})
+    upsert_object(
+        s,
+        m.id,
+        # 有图过滤后:分类计数只算有图件,facet 测试对象需有图
+        {
+            "qid": "Q2",
+            "title_en": "S",
+            "category": "sculpture",
+            "image": "http://i/2.jpg",
+        },
+    )
     s.query(MuseumObject).filter_by(qid="Q1").one().content_status = "ready"
     s.commit()
     yield s

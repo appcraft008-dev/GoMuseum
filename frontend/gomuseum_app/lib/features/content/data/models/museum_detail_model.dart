@@ -29,6 +29,8 @@ class MuseumDetail extends Equatable {
     required this.openingHours,
     required this.officialUrl,
     required this.categories,
+    this.catalogCount,
+    this.archiveCount,
   });
 
   final String slug;
@@ -44,6 +46,12 @@ class MuseumDetail extends Equatable {
   final String? openingHours;
   final String? officialUrl;
   final List<MuseumCategory> categories;
+
+  /// 在线图录条数（可识别/搜索）；老后端无此字段 → null，不显示双数字行。
+  final int? catalogCount;
+
+  /// 档案条目条数；老后端无此字段 → null。
+  final int? archiveCount;
 
   /// 按 UI 语言取馆名：zh→中文名；其余→英文/拉丁名。
   String localizedName(String lang) => lang == 'zh' ? name : nameEn;
@@ -68,6 +76,8 @@ class MuseumDetail extends Equatable {
               .map(MuseumCategory.fromJson)
               .toList() ??
           const [],
+      catalogCount: (j['catalog_count'] as num?)?.toInt(),
+      archiveCount: (j['archive_count'] as num?)?.toInt(),
     );
   }
 
@@ -81,6 +91,8 @@ class MuseumDetail extends Equatable {
         coordinates,
         openingHours,
         officialUrl,
-        categories
+        categories,
+        catalogCount,
+        archiveCount,
       ];
 }

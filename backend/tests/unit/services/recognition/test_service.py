@@ -14,6 +14,7 @@ from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.models.recognition_demand import RecognitionDemand
+from app.models.recognition_event import RecognitionEvent
 from app.services.object_importer import upsert_museum, upsert_object
 from app.services.recognition import matcher
 from app.services.recognition.service import recognize
@@ -40,6 +41,7 @@ def session():
             ObjectImage.__table__,
             Artist.__table__,
             RecognitionDemand.__table__,
+            RecognitionEvent.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -324,3 +326,112 @@ def test_label_mode_skips_vector(session):
     assert embed.n == 0  # label 模式不走向量
     assert identify.n == 1
     assert out["outcome"] == "candidates"  # 文字链(含 label)不直判,一律确认卡
+
+
+# --- 埋点(recognition_events)+ 响应 phash ---
+
+
+def test_records_event_vector(session):
+    vq = _FakeVQ([("Q334138", 0.95)])
+    out = recognize(
+        session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.engine == "vector"
+    assert ev.outcome == "match"
+    assert ev.top_qid == "Q334138"
+    assert ev.top_score == 0.95
+    assert ev.museum_slug == "orsay"
+    assert ev.phash == out["phash"]
+
+
+def test_records_event_vector_crops(session):
+    # 全帧低分触发裁剪金字塔命中 → engine=vector_crops
+    vq = _FakeVQ([("Q334138", 0.50)], [("Q334138", 0.90)])
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_crops_fn=_one_crop,
+        vector_query_fn=vq,
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.engine == "vector_crops"
+    assert ev.outcome == "match"
+
+
+def test_records_event_text(session):
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: None,  # 引擎不可用 → GPT 链
+        identify_fn=_vision([{"title": "Nope", "artist": "X"}]),
+    )
+    ev = session.query(RecognitionEvent).filter_by(engine="text").one()
+    assert ev.outcome == out["outcome"]
+    assert ev.phash == out["phash"]
+
+
+def test_records_event_cache(session):
+    class _FakeRedis:
+        def __init__(self):
+            self.store = {}
+
+        def get(self, k):
+            return self.store.get(k)
+
+        def setex(self, k, ttl, v):
+            self.store[k] = v
+
+    r = _FakeRedis()
+    vq = _FakeVQ([("Q334138", 0.95)], [("Q334138", 0.95)])
+    img = _jpeg()
+    recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    engines = [e.engine for e in session.query(RecognitionEvent).all()]
+    assert engines.count("vector") == 1
+    assert engines.count("cache") == 1
+
+
+def test_response_has_phash(session):
+    vq = _FakeVQ([("Q334138", 0.95)])
+    out = recognize(
+        session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq
+    )
+    assert isinstance(out["phash"], str) and out["phash"]
+
+
+def test_legacy_cache_entry_hit_gets_phash(session):
+    # 升级前写入的旧缓存值不含 phash → 命中返回时也必须带(三档都带 phash 的兼容修复)
+    import json
+
+    from app.services.image_service import ImageService
+
+    class _FakeRedis:
+        def __init__(self, store):
+            self.store = store
+
+        def get(self, k):
+            return self.store.get(k)
+
+        def setex(self, k, ttl, v):
+            self.store[k] = v
+
+    img = _jpeg()
+    sha = ImageService.generate_hash(img)
+    legacy = {
+        "outcome": "match",
+        "match": {"qid": "Q334138", "confidence": 0.95},
+        "candidates": [],
+        "label_text": None,
+        "reason": None,
+    }  # 无 phash 键
+    r = _FakeRedis({f"recog3:orsay:zh:{sha}": json.dumps(legacy)})
+    out = recognize(session, "orsay", img, redis=r)
+    assert isinstance(out["phash"], str) and out["phash"]

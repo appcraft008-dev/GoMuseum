@@ -193,7 +193,13 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   void _goGuide(String slug, String qid) {
-    context.pushReplacement('/guide', extra: GuideArgs(slug: slug, qid: qid));
+    // 确认卡点选/命中 → 回传「照片→qid」标注（fire-and-forget，无 phash 时静默跳过）。
+    ref.read(recognitionNotifierProvider.notifier).confirmRecognition(qid);
+    // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
+    context.pushReplacement(
+      '/guide',
+      extra: GuideArgs(slug: slug, qid: qid, imagePath: _captured?.path),
+    );
   }
 
   void _showTagSearchSheet() {
