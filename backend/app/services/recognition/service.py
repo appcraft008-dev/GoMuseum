@@ -14,6 +14,7 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import _resolve_name, _sized
 from app.services.recognition.demands import record_demand
+from app.services.recognition.events import record_event
 from app.services.recognition.matcher import LOW, build_index, match
 from app.services.recognition.vector_index import query_index
 from app.services.recognition.vision import identify
@@ -144,6 +145,17 @@ def _vector_out(db, storage, ranked: list, language: str) -> dict | None:
     return None
 
 
+def _top_of(out: dict) -> tuple:
+    """从响应 dict 取 (top_qid, top_score) 供埋点;三档统一。"""
+    m = out.get("match")
+    if m:
+        return m.get("qid"), m.get("confidence")
+    cands = out.get("candidates") or []
+    if cands:
+        return cands[0].get("qid"), cands[0].get("score")
+    return None, None
+
+
 def recognize(
     db,
     slug: str | None,
@@ -179,6 +191,17 @@ def recognize(
             if hit:
                 cached_out = json.loads(hit)
                 cached_out["_billed"] = True  # 缓存命中:计费层据此不扣次
+                tq, ts = _top_of(cached_out)
+                record_event(
+                    db,
+                    museum_slug=slug,
+                    phash=phash,
+                    outcome=cached_out.get("outcome"),
+                    top_qid=tq,
+                    top_score=ts,
+                    language=language,
+                    engine="cache",
+                )
                 return cached_out
         except Exception:
             pass  # 缓存不可用不阻断识别
@@ -190,17 +213,20 @@ def recognize(
 
     out = None
     vis = None
+    engine = "none"  # 埋点:决出结果的档位
     # --- 向量前置(仅 artwork;label 纯转写直走 GPT 链) ---
     if mode == "artwork":
         vec = (embed_fn or _default_embed)(image_bytes)
         if vec is not None:
             vquery = vector_query_fn or query_index
             ranked = vquery(db, vec, museum_id)
+            crops_used = False
             # 全景式拍法(画占画面小)的对症药——实测 0.509→0.847;怼拍照片不受影响(快路径)。
             # 全帧已 ≥ LOW → 不跑金字塔;否则裁剪重查,跨全帧+裁剪按 qid 取 MAX,重定档。
             if not ranked or ranked[0][1] < settings.RECOG_LOW:
                 crops = (embed_crops_fn or _default_embed_crops)(image_bytes)
                 if crops is not None:
+                    crops_used = True
                     agg = dict(ranked)
                     for cv in crops:
                         for qid, s in vquery(db, cv, museum_id):
@@ -208,11 +234,14 @@ def recognize(
                                 agg[qid] = s
                     ranked = sorted(agg.items(), key=lambda kv: -kv[1])
             out = _vector_out(db, storage, ranked, language)
+            if out is not None:
+                engine = "vector_crops" if crops_used else "vector"
             # 馆域调用不回退全局:老端点已部署 App 不读 museum 字段,跨馆命中会拿他馆
             # qid 撞 /{slug}/objects/{qid}/content 404 死胡同(前向兼容硬约束)。
             # 将来带馆提示的新调用方要全局回退时,加显式参数再开;slug=None 首查即全局。
 
     if out is None:  # --- GPT + OCR 兜底链(原样) ---
+        engine = "text"
         from app.services.recognition.vision import _shrink
 
         identify_fn = identify_fn or identify
@@ -265,6 +294,19 @@ def recognize(
             )
         except Exception:
             logger.exception("record_demand failed")
+
+    out["phash"] = phash  # 三档都带;缓存写入前放进 out,缓存命中的响应体也有
+    tq, ts = _top_of(out)
+    record_event(
+        db,
+        museum_slug=slug,
+        phash=phash,
+        outcome=out["outcome"],
+        top_qid=tq,
+        top_score=ts,
+        language=language,
+        engine=engine,
+    )
 
     if redis is not None:
         try:
