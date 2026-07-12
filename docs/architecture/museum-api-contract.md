@@ -144,11 +144,12 @@
 
 ## 收录策略（通用规则,任何馆 0 代码复制;2026-07-03 定）
 
-**① 有图才收录(硬规则)。** 只收 Wikidata 上有自由版权图(P18/Wikimedia)的藏品:图是**识别的参照物**(App 靠拍照识别,无图=不可识别的死重)也是**合规边界**(官方馆藏库的图多为 RMN 类版权摄影,商用展示/自存都踩线)。catalog SPARQL 中 P18 必填。
+**① 分层收录(2026-07-13 取代"有图才收录"硬规则;版权边界语义不变)。** 三层：
+**视觉可识别层**(有自由版权图 P18/Wikimedia——图仍是识别参照物+合规边界,官方 RMN 类版权图照旧不碰)→向量识别+列表展示全功能；**文字可识别层**(有 Wikidata 条目无图,catalog P18 已 OPTIONAL 收全条目)→墙签 OCR/馆藏号/搜索命中,讲解懒生成照常,**列表与分类计数不出现**(浏览面密度优先),馆页双数字揭示规模;**需求层**(无条目)→unrecognized+记需求。无图件讲解页 hero=识别路径用用户自己照片(会话内回显)/搜索路径类目占位图。
 
-**② 三层口径(奥赛样板数字,评估任何馆时先查这三层)。** 官方全馆藏(奥赛~15万,绝大多数在库房) ≫ **常设在展(奥赛 3-4千,产品真实分母——游客只可能拍到它)** > Wikidata 有条目(5353) > **有图可收录(2065=我们的集合)**。Wikidata 收录天然偏名作、与"在展"高度相关,故有图集合对现场识别命中率的真实覆盖远好于比例数字。
+**② 三层口径与北极星 KPI(2026-07-13 验收换轴)。** 口径:官方全馆藏(奥赛~15万) ≫ **常设在展(3-4千,真实分母)** > Wikidata 条目(5353=档案层) > 有图(~2065=图录层)。**上新馆验收不看导入件数,看"现场识别成功率"**——用户实拍一件眼前藏品被正确识别的概率(recognition_events 聚合:(match+确认候选)/尝试)。`onboard coverage-report` 是配方最后一步:输出分层数字/展陈分布/KPI 并回写 museums.stats(馆页双数字数据源)。
 
-**③ 定期重跑 catalog 吃增量。** Wikimedia 图持续增长;catalog/merge_stubs 幂等,重跑自动收新有图的藏品——"只收有图"不是一锤子,是动态逼近全部可识别集。
+**③ 定期重跑 catalog 吃增量 + 展陈状态动态化(2026-07-13)。** Wikimedia 持续增长,catalog 幂等重跑收新;**展陈状态绝不做静态布尔**——`attributes.display`={status(CONFIRMED_ON_DISPLAY/LIKELY_ON_DISPLAY/TEMPORARY_EXHIBITION 预留/NOT_ON_DISPLAY/UNKNOWN), evidence[], confidence, verified_at},证据源按普适性三层:**自家识别流量(最强,零适配器,近30天确认识别→CONFIRMED)** > Wikidata P276(稀疏先验→LIKELY) > 区域适配器(可选增强;样板=Joconde 开放API,reference=P347,localisation 为保管馆级,覆盖全法博物馆)。报告 CLI 触发重算,不做实时。
 
 **④ 通用分类法(全馆共用 8 大类 + unknown 兜底)。** `CATEGORY_BY_QID`(category_config.py)是唯一真相源:P31 QID → 类目;**加类型=加一行映射 + 馆 yaml `categories` 选用,零代码**。多 P31 作品已知类目优先于 unknown。每类目一套深度模块段落集(SECTIONS_BY_CATEGORY;未细化的类用通用兜底,真上馆再细化)。
 
@@ -278,14 +279,15 @@
 - `POST /api/v1/recognize`(**2026-07-11 新增,App 主入口**):multipart `image` + query `museum`(slug,**可选**) + `language` + `mode`。不传 `museum` = 全局识别(拍前无需选馆——导航栏识别按钮直达相机);传了 = 只搜该馆。
 - `POST /museums/{slug}/recognize`(保留,行为不变):馆域内匹配。**⚠️ 馆域调用不做全局回退**(2026-07-11 裁决:老 App 不读 `museum` 字段,跨馆命中会拿他馆 qid 撞详情 404 死胡同——前向兼容;将来带馆提示要"馆内优先+全局回退"时加显式参数再开)。
 
-响应:`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence,museum}, candidates:[{…,score,museum}], label_text, reason}`
+响应:`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence,museum}, candidates:[{…,score,museum}], label_text, reason, phash}`
+——**`phash`(2026-07-13 加法字段)**=该次识别的感知哈希,配套 **`POST /api/v1/recognize/confirm`**(`{"phash","qid"}`,永远204,fire-and-forget):确认卡点选时上报,回填 recognition_events.confirmed_qid——**确认卡=标注飞轮**从此有服务端落点(KPI 的 hits=match+确认候选;match 直跳不上报,confirmed 语义=用户确认)。识别每次调用落 `recognition_events`(只存 phash 不存照片;engine 记 vector/vector_crops/text/cache)——**KPI 与展陈证据一表两吃**。museum pack 加法字段 `catalog_count`/`archive_count`(馆页双数字"在线图录N·档案M",数据源=museums.stats,coverage-report 回写)。
 ——**`museum`=归属馆 slug(2026-07-11 加法字段)**,前端跳详情用它(老 App 不读不炸;新前端解析 `as String?` + 回退)。`outcome/reason` 机器码不译;`title/artist` 按 language 走显示名规则;thumbnail=thumb 档。命中跳详情 → 懒生成/懒翻译/懒补图自动接管。同图重复识别走 Redis 缓存(命中 30 天/未收录 1 天;键空间 `recog3`)。**阈值 server-driven**:向量档 `RECOG_HIGH=0.85`/`RECOG_LOW=0.72`(环境变量,由 benchmark 校准,库外零误接受);文字兜底档沿用 HIGH=0.85/LOW=0.5。
 
 **低分自动多裁剪重查(2026-07-11)**:全图向量分 < LOW 时(即原本注定失败的照片)自动裁 中心60%/35%+四象限+左右半幅 批量重查取最大分,再不中才进 GPT 兜底。**正常近拍照片走快路径零延迟影响**;触发裁剪的照片 +~2s,仍快于其下一站 GPT(2-5s)。已知代价(bench 实测):库外照片经多裁剪误出候选卡比例升高(48%→81%)——确认卡"都不是"出口兜底,可接受。
 
 **⚠️ 识别优化的优先级原则(2026-07-12 定,真实用户测试得出)**:**App 用户是"有意图取景"的**——想识别某件作品的人会主动找能看清整幅作品的角度,拍歪了自己重拍;合影/极偏构图不是主流场景。Commons 随手拍照片测出的失败案例会高估怪构图的真实占比。**故:不再对怪构图做裁剪/阈值工程加码**(已合并的多裁剪留作免费保险丝);识别精度投入主线=**二维靠参考图覆盖,三维靠多视角图库**(建设策略并入藏品覆盖率机制,另立 spec)。
 
-**识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。**⚠️ 已知问题:Commons 分类混入非本体图**(习作/版画/无关照片,orsay 实测 14% 与正面照相似度 <0.4,会毒化识别索引+弄脏详情页图集)——`scripts/vet_view_images.py --dry-run` 可按相似度分诊;**自动清洗策略(阈值/人工介入与否)未定,并入覆盖率机制 spec**(人眼审核不可规模化,新馆跑 views 后先 dry-run 知晓污染面)。上新馆配方:catalog→names→images 全量预跑后,加跑 `onboard views` + `backfill_embeddings` + `vet_view_images --dry-run`(知晓污染,清洗策略待定)。
+**识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。**view 自动治理(2026-07-13 落地,纯自动无人审)**:Commons 分类混入非本体图(orsay 实测 14%)的清洗策略——view 与该件正面照相似度 **<0.25 自动删**(实测全为垃圾)/**0.25-0.4 隔离**(`role=view_quarantine`:留档、不进索引、不上图集、不计有图)/**≥0.4 入索引**;物化嵌入钩子同规则前置闸(新图入库即治理);错杀极端角度由照片飞轮(Phase 3)补回。**上新馆配方(2026-07-13 全串)**:`catalog`(含无图条目)→`names`→`images`→`backfill_embeddings`→`onboard views`+`images`→`vet_view_images`(执行)→`display-evidence --museum <slug>`(区域适配器,可选)→**`coverage-report`(收官:分层数字/展陈分布/KPI,回写 stats)**。
 **计费(2026-07-04 定)**:`match/candidates` 扣 1 次配额;`unrecognized` 不扣(不为失败付费);缓存命中不扣;配额用尽 → **402** `{reason: quota_exceeded}`(先于 GPT 调用,不烧钱)。身份=Bearer 令牌(App 自带)或 `device_id` 参数;两者皆无 → 401 `{reason: identity_required}`。服务端扣费,不再依赖前端自觉调 `/payment/consume`。
 
 **老端点 `/api/v1/recognition` 标记 deprecated**(裸 GPT 猜测当事实,违反 R1;留给老 App,新 App 一律走新端点)。
@@ -309,6 +311,7 @@
 - 2026-07-05:定**标题真相唯一化**原则(显示名=标题唯一真相,内容三通路引用跟随;glossary 注入,修显现/幻影分叉)。
 - 2026-07-05:**内容生成 N 默认=0**(收录策略⑤)——上新馆零内容预付,纯懒生成兜底;N 上线后按实际热度/需求由运营逐馆决定。
 - 2026-07-04:content 端点加法字段 `generating`(懒任务锁即信号)——前端等待提示三态化(生成中/资料不足/待完善可重试),修盲轮询三隐患。
+- 2026-07-13:**覆盖率机制 Phase 1 落地**(spec 2026-07-12-collection-coverage-phase1):§收录策略改**分层收录**(视觉/文字/需求三层,P18 OPTIONAL 收全条目,列表隐形+馆页双数字+用户照片hero);**北极星 KPI 换轴**(验收=现场识别成功率,不看件数);**展陈状态动态化**(attributes.display+证据三层:流量>P276>区域适配器,Joconde样板);**view 自动治理落地**(0.25删/0.4隔离/入库闸,取代dry-run待定);recognition_events 一表两吃(KPI+证据,只存phash);API 面加法:响应 phash+`/recognize/confirm`+pack 双数字;上新馆配方全串至 coverage-report 收官。迁移 p1m2。
 - 2026-07-12:定**识别优化优先级原则**(App 用户有意图取景,怪构图非主流,不再加码裁剪/阈值工程;精度主线=二维参考图覆盖+三维多视角库,并入覆盖率机制 spec)+ 记录 **views 污染已知问题**(Commons 分类混入非本体图 14%,vet_view_images 分诊,清洗策略待覆盖率轮;配方加 dry-run 步骤)+ 多裁剪已知代价(库外误出候选卡 48%→81%,确认卡出口兜底)。
 - 2026-07-11:**低分自动多裁剪重查**(全景式拍法对症,真实用户实证 0.51→0.84;近拍快路径零影响)+ 批处理纪律第 5 条**空响应≠到底**(WDQS 深 OFFSET 静默截断实证,catalog 漏收 500+ 长尾件;上新馆必核 loaded 数量级)。
 - 2026-07-11:**GPT 兜底文字链一律不直判**(命中只出确认卡,不产 `outcome=match`;同名撞车 E2E 实证:自画像/The Bathers 精确同名撞他馆无关件)——直开讲解页只来自向量高置信像素证据;label 模式亦然(多一次确认点)。
