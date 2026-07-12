@@ -6,7 +6,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
-from app.models.content import ObjectContentSection
+from app.models.artist import Artist
+from app.models.content import (
+    CategorySection,
+    ObjectContentSection,
+    ObjectSuggestedQuestion,
+    SectionType,
+)
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services import museum_repo
@@ -25,6 +31,10 @@ def session():
             MuseumObject.__table__,
             ObjectImage.__table__,
             ObjectContentSection.__table__,
+            CategorySection.__table__,
+            SectionType.__table__,
+            ObjectSuggestedQuestion.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -84,3 +94,22 @@ def test_quarantined_only_counts_as_imageless(session):
     res = museum_repo.list_objects(s, "orsay")
     assert [i["qid"] for i in res["items"]] == ["Q1"]  # Q3 隔离图不算有图
     assert res["total"] == 1
+
+
+def test_detail_gallery_excludes_quarantined(session):
+    s, m = session
+    q = s.query(MuseumObject).filter_by(qid="Q1").one()
+    s.add(ObjectImage(object_id=q.id, role="view", source_url="http://x/v.jpg", sort=1))
+    s.add(
+        ObjectImage(
+            object_id=q.id,
+            role="view_quarantine",
+            source_url="http://x/bad.jpg",
+            sort=2,
+        )
+    )
+    s.commit()
+    d = museum_repo.get_object_content(s, "orsay", "Q1", "en")
+    urls = [i["url"] for i in d["images"]]
+    assert any(u.endswith("v.jpg") for u in urls)
+    assert not any(u.endswith("bad.jpg") for u in urls)

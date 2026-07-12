@@ -422,7 +422,10 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
             "credit": i.credit,
         }
         for i in db.query(ObjectImage)
-        .filter_by(object_id=obj.id)
+        .filter(
+            ObjectImage.object_id == obj.id,
+            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
+        )
         .order_by(ObjectImage.sort)
         .all()
         if i.image_key or i.source_url
