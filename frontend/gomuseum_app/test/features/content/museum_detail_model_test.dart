@@ -30,4 +30,18 @@ void main() {
     final m2 = MuseumDetail.fromJson({'slug': 'y'});
     expect(m2.name, 'y');
   });
+
+  test('catalog_count/archive_count 解析；老后端缺字段 → null 不崩', () {
+    final m = MuseumDetail.fromJson(const {
+      'slug': 'orsay',
+      'catalog_count': 1400,
+      'archive_count': 52000,
+    });
+    expect(m.catalogCount, 1400);
+    expect(m.archiveCount, 52000);
+
+    final old = MuseumDetail.fromJson(const {'slug': 'orsay'});
+    expect(old.catalogCount, isNull);
+    expect(old.archiveCount, isNull);
+  });
 }

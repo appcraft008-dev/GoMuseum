@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
+import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
 /// 占位底色（图片缺失/加载中）
 const Color _placeholder = Color(0xFFD8D2C2);
@@ -64,6 +65,11 @@ class GmInnerImage extends StatelessWidget {
             ? null
             : DecorationImage(image: image!, fit: BoxFit.cover),
       ),
+      // ponytail: 通用占位（photo 图标居中一枚）；GmIcons 无类目图标，
+      // 分类目占位等图标资产齐了再做。
+      child: image == null
+          ? Center(child: GmIcon(GmIcons.photo, size: 28, color: gm.faint))
+          : null,
     );
   }
 }

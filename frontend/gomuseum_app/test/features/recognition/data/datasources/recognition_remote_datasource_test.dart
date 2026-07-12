@@ -62,4 +62,34 @@ void main() {
         options: any(named: 'options'))).captured.single as Map;
     expect(captured.containsKey('device_id'), isFalse);
   });
+
+  test('confirm posts phash+qid to /api/v1/recognize/confirm', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'), options: any(named: 'options')))
+        .thenAnswer((_) async => Response(
+              requestOptions: RequestOptions(path: '/api/v1/recognize/confirm'),
+              statusCode: 200,
+              data: {'status': 'ok'},
+            ));
+
+    await ds.confirm(phash: 'abc123', qid: 'Q1');
+
+    final captured = verify(() => dio.post(
+          captureAny(),
+          data: captureAny(named: 'data'),
+          options: any(named: 'options'),
+        )).captured;
+    expect(captured[0], '/api/v1/recognize/confirm');
+    expect(captured[1], {'phash': 'abc123', 'qid': 'Q1'});
+  });
+
+  test('confirm swallows all exceptions (fire-and-forget)', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'), options: any(named: 'options')))
+        .thenThrow(DioException(
+            requestOptions: RequestOptions(path: '/api/v1/recognize/confirm'),
+            type: DioExceptionType.connectionError));
+
+    await expectLater(ds.confirm(phash: 'abc123', qid: 'Q1'), completes);
+  });
 }

@@ -131,6 +131,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String museumCatalogNumbers(Object catalog, Object archive) {
+    return '在线图录 $catalog 件 · 档案条目 $archive 件（可识别/搜索）';
+  }
+
+  @override
   String get noArtworks => '暂无藏品';
 
   @override
@@ -724,6 +729,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String recordedCount(Object count) {
     return '$count 件收錄藏品';
+  }
+
+  @override
+  String museumCatalogNumbers(Object catalog, Object archive) {
+    return '線上圖錄 $catalog 件 · 檔案條目 $archive 件（可識別/搜尋）';
   }
 
   @override
