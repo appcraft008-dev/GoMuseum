@@ -82,6 +82,8 @@ def test_pack_shape(session):
         "generated_at",
         "source",
         "artwork_count",
+        "catalog_count",  # 加法字段:有图件数(在线图录)
+        "archive_count",  # 加法字段:总件数(档案)
         "categories",
         "artworks",
     }
