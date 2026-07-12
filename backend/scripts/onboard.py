@@ -78,6 +78,9 @@ def build_parser() -> argparse.ArgumentParser:
     )  # Joconde 展陈证据(法国馆:P347→localisation)
     de.add_argument("--museum", required=True)
     de.add_argument("--limit", type=int, default=None)
+    cr = sub.add_parser("coverage-report")  # 覆盖率报告+museums.stats回写
+    cr.add_argument("--museum", required=True)
+    cr.add_argument("--json", action="store_true")
     return p
 
 
@@ -343,6 +346,27 @@ def cmd_display_evidence(museum: str, limit: int | None) -> None:
         db.close()
 
 
+def cmd_coverage_report(museum: str, as_json: bool) -> None:
+    from scripts.coverage_report import (
+        _print_human,
+        build_report,
+        write_stats,
+    )
+
+    db = SessionLocal()
+    try:
+        report = build_report(db, museum)
+        write_stats(db, museum, report)
+    finally:
+        db.close()
+    if as_json:
+        import json
+
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        _print_human(museum, report)
+
+
 def cmd_report(slug: str, langs: str | None) -> None:
     from app.services.enrichment.content_report import build_quality_report
     from app.services.enrichment.lang_config import resolve_languages
@@ -380,6 +404,8 @@ def main(argv=None) -> None:
         cmd_views(ns.museum, ns.max)
     elif ns.command == "display-evidence":
         cmd_display_evidence(ns.museum, ns.limit)
+    elif ns.command == "coverage-report":
+        cmd_coverage_report(ns.museum, ns.json)
     else:
         cmd_load(ns.slug, ns.pack, ns.sample, ns.target)
 
