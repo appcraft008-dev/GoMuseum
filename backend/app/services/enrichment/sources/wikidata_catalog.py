@@ -92,6 +92,8 @@ class WikidataCatalog(CatalogSource):
                 if scl:
                     titles[cfg.country_lang or "fr"] = scl.rsplit("/", 1)[-1]
                 first_img = _wd._v(row, "image")
+                p276 = (_wd._v(row, "p276") or "").rsplit("/", 1)[-1] or None
+                row["p276_qid"] = p276
                 records[qid] = StubRecord(
                     inventory_number=_wd._v(row, "inventory"),
                     qid=qid,
