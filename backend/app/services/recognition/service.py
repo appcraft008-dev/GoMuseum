@@ -191,6 +191,7 @@ def recognize(
             if hit:
                 cached_out = json.loads(hit)
                 cached_out["_billed"] = True  # 缓存命中:计费层据此不扣次
+                cached_out["phash"] = phash  # 升级前旧缓存条目无 phash,命中时补齐
                 tq, ts = _top_of(cached_out)
                 record_event(
                     db,

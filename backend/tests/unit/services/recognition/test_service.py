@@ -405,3 +405,33 @@ def test_response_has_phash(session):
         session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq
     )
     assert isinstance(out["phash"], str) and out["phash"]
+
+
+def test_legacy_cache_entry_hit_gets_phash(session):
+    # 升级前写入的旧缓存值不含 phash → 命中返回时也必须带(三档都带 phash 的兼容修复)
+    import json
+
+    from app.services.image_service import ImageService
+
+    class _FakeRedis:
+        def __init__(self, store):
+            self.store = store
+
+        def get(self, k):
+            return self.store.get(k)
+
+        def setex(self, k, ttl, v):
+            self.store[k] = v
+
+    img = _jpeg()
+    sha = ImageService.generate_hash(img)
+    legacy = {
+        "outcome": "match",
+        "match": {"qid": "Q334138", "confidence": 0.95},
+        "candidates": [],
+        "label_text": None,
+        "reason": None,
+    }  # 无 phash 键
+    r = _FakeRedis({f"recog3:orsay:zh:{sha}": json.dumps(legacy)})
+    out = recognize(session, "orsay", img, redis=r)
+    assert isinstance(out["phash"], str) and out["phash"]
