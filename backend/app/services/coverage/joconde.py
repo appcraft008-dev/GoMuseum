@@ -1,5 +1,5 @@
 """Joconde 区域适配器样板:按 Joconde 编号(external_ids["P347"])查 data.culture.gouv.fr
-的 base-joconde-extrait 开放数据,取 localisation(展陈地)写成展陈证据。覆盖全法博物馆
+的 base-joconde-extrait 开放数据,取 localisation(保管馆/城市级,非展厅粒度)写成展陈证据。覆盖全法博物馆
 ——同一适配器喂任意法国馆,故为"区域适配器"样板。
 
 调研实测(2026-07):
@@ -69,7 +69,8 @@ def enrich_museum_display(
     fetch = fetch or fetch_joconde_evidence
     museum = db.query(Museum).filter_by(slug=museum_slug).one_or_none()
     if museum is None:
-        return {"checked": 0, "evidenced": 0}
+        # typo 馆名静默 0/0 像跑成功 → 显式报错(与 cmd_views 一致)
+        raise SystemExit(f"museum not found: {museum_slug}")
 
     checked = evidenced = 0
     for obj in db.query(MuseumObject).filter_by(museum_id=museum.id).all():

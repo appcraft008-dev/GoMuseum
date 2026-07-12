@@ -136,3 +136,10 @@ def test_enrich_fetch_none_no_evidence_no_crash(session):
     assert counts == {"checked": 1, "evidenced": 0}
     obj = s.query(MuseumObject).filter_by(qid="Q3").one()
     assert "display" not in (obj.attributes or {})
+
+
+def test_enrich_unknown_slug_raises(session):
+    """typo 馆名 → SystemExit,不静默 0/0。"""
+    s, _ = session
+    with pytest.raises(SystemExit):
+        enrich_museum_display(s, "no-such-museum", fetch=lambda ref: None)
