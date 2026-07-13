@@ -64,14 +64,19 @@ def vet_views(
             print(f"{prefix}DELETE view sim={sim:.3f} {label}", flush=True)
             deleted += 1
             if not dry_run:
+                # 无 relationship() → flush 不排删除顺序;必须先删向量并 flush,
+                # 否则 PG 下删图行时 object_embeddings.image_id 仍引用 → 外键违反
+                # (sqlite 不查 FK,单测靠顺序断言盯住)。
                 db.delete(emb)
+                db.flush()
                 db.delete(img)
         else:
             print(f"{prefix}QUARANTINE view sim={sim:.3f} {label}", flush=True)
             quarantined += 1
             if not dry_run:
-                img.role = "view_quarantine"
                 db.delete(emb)  # 出索引;行保留可回溯
+                db.flush()  # 同理:向量删除先落,再动图行
+                img.role = "view_quarantine"
         if not dry_run and (deleted + quarantined) % 20 == 0:
             db.commit()
     if not dry_run:
