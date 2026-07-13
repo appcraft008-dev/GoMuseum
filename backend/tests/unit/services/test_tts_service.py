@@ -52,5 +52,6 @@ def test_speech_kwargs_omits_speed_for_gpt4o_mini_tts():
     assert kw["speed"] == 1.5
 
 
-def test_default_tts_model_is_gpt4o_mini():
-    assert TTSService().model == "gpt-4o-mini-tts"
+def test_default_tts_model_is_tts1():
+    # 成本核算纠正后回退 tts-1(gpt-4o-mini-tts 对中文反贵;质量升级留给 env 切换)
+    assert TTSService().model == "tts-1"

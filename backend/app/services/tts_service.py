@@ -64,8 +64,9 @@ class TTSService:
     def __init__(self):
         """Initialize TTS service"""
         self.api_key = settings.OPENAI_API_KEY
-        # gpt-4o-mini-tts:比 tts-1 便宜且质量相当(TTS 是单件最贵环节)
-        self.model = getattr(settings, "OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+        # tts-1:成本核算纠正后回退(gpt-4o-mini-tts 按音频时长计费,对中文反贵 3-5×;
+        # 它是质量升级非降本。留 _speech_kwargs 兼容:设 OPENAI_TTS_MODEL 即可切新模型)
+        self.model = getattr(settings, "OPENAI_TTS_MODEL", "tts-1")
         self.timeout = getattr(settings, "TTS_GENERATION_TIMEOUT", 30)
         logger.info(f"TTSService initialized with model: {self.model}")
 
