@@ -259,3 +259,41 @@ def test_generate_artist_bio_no_material():
     assert (
         enr.generate_artist_bio({"extract_en": "no artist material"}) is None
     )  # 无 artist_extract_* → None
+
+
+def test_default_complete_logs_strong_model_use(monkeypatch, caplog):
+    """强模型(非默认mini)触发时打可grep日志(成本可观测)。"""
+    import logging
+
+    from app.services.enrichment import content_enricher as ce
+
+    class _FakeMsg:
+        content = "ok"
+
+    class _FakeChoice:
+        message = _FakeMsg()
+
+    class _FakeResp:
+        choices = [_FakeChoice()]
+
+    class _FakeCompletions:
+        async def create(self, **kw):
+            return _FakeResp()
+
+    class _FakeChat:
+        completions = _FakeCompletions()
+
+    class _FakeClient:
+        chat = _FakeChat()
+
+    monkeypatch.setattr(
+        "app.services.content_generation_service._get_openai_client",
+        lambda: _FakeClient(),
+    )
+    with caplog.at_level(logging.INFO):
+        ce.default_complete("s", "u", model="gpt-4o")
+    assert any("STRONG_MODEL_USE" in r.message for r in caplog.records)
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        ce.default_complete("s", "u")  # 默认mini不打
+    assert not any("STRONG_MODEL_USE" in r.message for r in caplog.records)

@@ -64,9 +64,23 @@ class TTSService:
     def __init__(self):
         """Initialize TTS service"""
         self.api_key = settings.OPENAI_API_KEY
-        self.model = getattr(settings, "OPENAI_TTS_MODEL", "tts-1")
+        # gpt-4o-mini-tts:比 tts-1 便宜且质量相当(TTS 是单件最贵环节)
+        self.model = getattr(settings, "OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
         self.timeout = getattr(settings, "TTS_GENERATION_TIMEOUT", 30)
         logger.info(f"TTSService initialized with model: {self.model}")
+
+    def _speech_kwargs(self, voice: str, text: str, speed: float) -> dict:
+        """speech.create 参数。speed 仅 tts-1 系支持;gpt-4o-mini-tts 不认(会 400),
+        且语速本就客户端控制,故新模型下省略 speed。"""
+        kw = {
+            "model": self.model,
+            "voice": voice,
+            "input": text,
+            "response_format": "mp3",
+        }
+        if self.model.startswith("tts-1"):
+            kw["speed"] = speed
+        return kw
 
     async def generate_audio(
         self,
@@ -132,13 +146,7 @@ class TTSService:
 
             # Generate audio
             response = await asyncio.wait_for(
-                client.audio.speech.create(
-                    model=self.model,
-                    voice=voice,
-                    input=text,
-                    speed=speed,
-                    response_format="mp3",
-                ),
+                client.audio.speech.create(**self._speech_kwargs(voice, text, speed)),
                 timeout=self.timeout,
             )
 
@@ -210,11 +218,7 @@ class TTSService:
 
         try:
             response = await client.audio.speech.create(
-                model=self.model,
-                voice=voice,
-                input=text,
-                speed=speed,
-                response_format="mp3",
+                **self._speech_kwargs(voice, text, speed)
             )
 
             # Stream audio chunks（openai 2.x 的 iter_bytes() 是同步生成器，不能 async for）
