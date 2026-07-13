@@ -185,7 +185,8 @@ class ContentGenerationService:
     def __init__(self):
         """Initialize content generation service"""
         self.api_key = settings.OPENAI_API_KEY
-        self.model = getattr(settings, "OPENAI_CONTENT_MODEL", "gpt-4")
+        # 默认 mini(排雷:此端点前端未调用+无接地,曾默认 gpt-4≈mini 的 50 倍成本)
+        self.model = getattr(settings, "OPENAI_CONTENT_MODEL", "gpt-4o-mini")
         self.timeout = getattr(settings, "CONTENT_GENERATION_TIMEOUT", 10)
         logger.info(f"ContentGenerationService initialized with model: {self.model}")
 
