@@ -119,3 +119,34 @@ def test_unknown_slug_raises_system_exit(session):
     s, m = session
     with pytest.raises(SystemExit):
         build_report(s, "no-such-museum")
+
+
+def test_global_endpoint_events_attributed_by_top_qid(session):
+    """新前端走全局识别端点(museum_slug=NULL):命中该馆对象的事件按 top_qid 归馆计入;
+    NULL 馆且 NULL 对象的未识别事件无法归馆,不计入任何馆。"""
+    s, m = session
+    s.add(
+        RecognitionEvent(
+            museum_slug=None,
+            phash="p3",
+            outcome="match",
+            top_qid="Q2",
+            engine="vector",
+        )
+    )
+    s.add(
+        RecognitionEvent(
+            museum_slug=None, phash="p4", outcome="unrecognized", engine="vector"
+        )
+    )
+    s.commit()
+    report = build_report(s, "orsay")
+    # 基线 2 事件 + 全局 match(Q2 属 orsay) = 3;NULL/NULL 未识别不计入
+    assert report["kpi"]["attempts"] == 3
+    assert report["kpi"]["hits"] == 2
+    # louvre 不沾光:Q2 非其馆藏
+    assert build_report(s, "louvre")["kpi"] == {
+        "attempts": 0,
+        "hits": 0,
+        "rate": None,
+    }
