@@ -93,3 +93,25 @@ def test_dry_run_mutates_nothing(session):
     assert s.query(ObjectImage).count() == 4
     assert s.query(ObjectEmbedding).count() == 4
     assert {i.role for i in s.query(ObjectImage).all()} == {"primary", "view"}
+
+
+def test_delete_order_embedding_flushed_before_image(session):
+    """PG 外键:图行删除前必须已删其向量并 flush(sqlite 不查 FK,只能靠顺序断言)。"""
+    s, o, primary, view_high, view_mid, view_low = session
+    events = []
+    orig_delete, orig_flush = s.delete, s.flush
+
+    def rec_delete(obj):
+        events.append(("delete", type(obj).__name__))
+        orig_delete(obj)
+
+    def rec_flush(*a, **k):
+        events.append(("flush",))
+        orig_flush(*a, **k)
+
+    s.delete, s.flush = rec_delete, rec_flush
+    vet_views(s, delete_below=0.25, quarantine_below=0.4, dry_run=False)
+    i = events.index(("delete", "ObjectImage"))
+    before = events[:i]
+    j = max(k for k, e in enumerate(before) if e == ("delete", "ObjectEmbedding"))
+    assert ("flush",) in before[j:]  # 向量删除已 flush 落库,再删图行
