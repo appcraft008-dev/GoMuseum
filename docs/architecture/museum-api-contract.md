@@ -147,7 +147,7 @@
 **① 分层收录(2026-07-13 取代"有图才收录"硬规则;版权边界语义不变)。** 三层：
 **视觉可识别层**(有自由版权图 P18/Wikimedia——图仍是识别参照物+合规边界,官方 RMN 类版权图照旧不碰)→向量识别+列表展示全功能；**文字可识别层**(有 Wikidata 条目无图,catalog P18 已 OPTIONAL 收全条目)→墙签 OCR/馆藏号/搜索命中,讲解懒生成照常,**列表与分类计数不出现**(浏览面密度优先),馆页双数字揭示规模;**需求层**(无条目)→unrecognized+记需求。无图件讲解页 hero=识别路径用用户自己照片(会话内回显)/搜索路径类目占位图。
 
-**② 三层口径与北极星 KPI(2026-07-13 验收换轴)。** 口径:官方全馆藏(奥赛~15万) ≫ **常设在展(3-4千,真实分母)** > Wikidata 条目(5353=档案层) > 有图(~2065=图录层)。**上新馆验收不看导入件数,看"现场识别成功率"**——用户实拍一件眼前藏品被正确识别的概率(recognition_events 聚合:(match+确认候选)/尝试)。`onboard coverage-report` 是配方最后一步:输出分层数字/展陈分布/KPI 并回写 museums.stats(馆页双数字数据源)。
+**② 三层口径与北极星 KPI(2026-07-13 验收换轴)。** 口径:官方全馆藏(奥赛~15万) ≫ **常设在展(3-4千,真实分母)** > Wikidata 条目(5353=档案层) > 有图(~2065=图录层)。**上新馆验收不看导入件数,看"现场识别成功率"**——用户实拍一件眼前藏品被正确识别的概率(recognition_events 聚合:(match+确认候选)/尝试)。**KPI 归因口径(2026-07-13 实测修正)**:App 主入口是全局识别端点(事件 museum_slug 为空),按**命中对象的归属馆**归因;全局且未命中(top_qid 也空)的事件无法归馆、不计入任何馆的分子分母(诚实局限,不引入方向性偏差)。`onboard coverage-report` 是配方最后一步:输出分层数字/展陈分布/KPI 并回写 museums.stats(馆页双数字数据源)。
 
 **③ 定期重跑 catalog 吃增量 + 展陈状态动态化(2026-07-13)。** Wikimedia 持续增长,catalog 幂等重跑收新;**展陈状态绝不做静态布尔**——`attributes.display`={status(CONFIRMED_ON_DISPLAY/LIKELY_ON_DISPLAY/TEMPORARY_EXHIBITION 预留/NOT_ON_DISPLAY/UNKNOWN), evidence[], confidence, verified_at},证据源按普适性三层:**自家识别流量(最强,零适配器,近30天确认识别→CONFIRMED)** > Wikidata P276(稀疏先验→LIKELY) > 区域适配器(可选增强;样板=Joconde 开放API,reference=P347,localisation 为保管馆级,覆盖全法博物馆)。报告 CLI 触发重算,不做实时。
 
@@ -287,7 +287,7 @@
 
 **⚠️ 识别优化的优先级原则(2026-07-12 定,真实用户测试得出)**:**App 用户是"有意图取景"的**——想识别某件作品的人会主动找能看清整幅作品的角度,拍歪了自己重拍;合影/极偏构图不是主流场景。Commons 随手拍照片测出的失败案例会高估怪构图的真实占比。**故:不再对怪构图做裁剪/阈值工程加码**(已合并的多裁剪留作免费保险丝);识别精度投入主线=**二维靠参考图覆盖,三维靠多视角图库**(建设策略并入藏品覆盖率机制,另立 spec)。
 
-**识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。**view 自动治理(2026-07-13 落地,纯自动无人审)**:Commons 分类混入非本体图(orsay 实测 14%)的清洗策略——view 与该件正面照相似度 **<0.25 自动删**(实测全为垃圾)/**0.25-0.4 隔离**(`role=view_quarantine`:留档、不进索引、不上图集、不计有图)/**≥0.4 入索引**;物化嵌入钩子同规则前置闸(新图入库即治理);错杀极端角度由照片飞轮(Phase 3)补回。**上新馆配方(2026-07-13 全串)**:`catalog`(含无图条目)→`names`→`images`→`backfill_embeddings`→`onboard views`+`images`→`vet_view_images`(执行)→`display-evidence --museum <slug>`(区域适配器,可选)→**`coverage-report`(收官:分层数字/展陈分布/KPI,回写 stats)**。
+**识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。**view 自动治理(2026-07-13 落地,纯自动无人审)**:Commons 分类混入非本体图(orsay 实测 14%)的清洗策略——view 与该件正面照相似度 **<0.25 自动删**(实测全为垃圾)/**0.25-0.4 隔离**(`role=view_quarantine`:留档、不进索引、不上图集、不计有图)/**≥0.4 入索引**;物化嵌入钩子同规则前置闸(新图入库即治理);错杀极端角度由照片飞轮(Phase 3)补回。**上新馆配方(2026-07-13 全串)**:`catalog`(含无图条目)→`names`(⚠️ 首次收全条目时为数千件×10语回填,Wikidata 限速下**约数小时级**——须在服务器侧 nohup 脱管跑,orsay 实测 4800 件≈8h;增量重跑只处理新件,分钟级)→`images`→`backfill_embeddings`→`onboard views`+`images`→`vet_view_images`(执行)→`display-evidence --museum <slug>`(区域适配器,可选)→**`coverage-report`(收官:分层数字/展陈分布/KPI,回写 stats)**。
 **计费(2026-07-04 定)**:`match/candidates` 扣 1 次配额;`unrecognized` 不扣(不为失败付费);缓存命中不扣;配额用尽 → **402** `{reason: quota_exceeded}`(先于 GPT 调用,不烧钱)。身份=Bearer 令牌(App 自带)或 `device_id` 参数;两者皆无 → 401 `{reason: identity_required}`。服务端扣费,不再依赖前端自觉调 `/payment/consume`。
 
 **老端点 `/api/v1/recognition` 标记 deprecated**(裸 GPT 猜测当事实,违反 R1;留给老 App,新 App 一律走新端点)。
