@@ -112,6 +112,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get searchCityMuseumArtwork => 'Rechercher villes, musées ou œuvres';
 
   @override
+  String get searchMuseumsSection => 'Musées';
+
+  @override
+  String get searchArtworksSection => 'Œuvres';
+
+  @override
+  String get searchNoResults => 'Aucun résultat';
+
+  @override
   String museumCount(Object count) {
     return '$count musées';
   }

@@ -4,11 +4,14 @@
 /// 城市 chips 由返回数据 city 去重生成；搜索为客户端 name/city 过滤。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -25,7 +28,29 @@ class ExplorePage extends ConsumerStatefulWidget {
 class _ExplorePageState extends ConsumerState<ExplorePage> {
   /// 当前选中城市；null 表示「全部」（初始未选定，由数据首城市驱动）。
   String? _city;
-  String _query = '';
+
+  /// debounce 后的搜索词（非空 → 进入服务端搜索模式，替换馆浏览区）。
+  String _debounced = '';
+  Timer? _debounceTimer;
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  /// 即时输入 → 300ms debounce 调全局 /search；清空立即回浏览态。
+  void _onQueryChanged(String v) {
+    _debounceTimer?.cancel();
+    final q = v.trim();
+    if (q.isEmpty) {
+      setState(() => _debounced = '');
+      return;
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _debounced = q);
+    });
+  }
 
   /// 城市去重键用中文城市名（语言无关、稳定），显示时再本地化。
   List<String> _cities(List<MuseumSummary> all) {
@@ -44,20 +69,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     return cityZh;
   }
 
+  /// 浏览态按城市过滤（搜索改走服务端 /search，不再客户端过滤馆名）。
   List<MuseumSummary> _filtered(List<MuseumSummary> all) {
     final city = _city;
-    var list = city != null ? all.where((m) => m.city == city).toList() : all;
-    final q = _query.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      list = list
-          .where((m) =>
-              m.name.toLowerCase().contains(q) ||
-              m.nameEn.toLowerCase().contains(q) ||
-              m.city.toLowerCase().contains(q) ||
-              m.cityEn.toLowerCase().contains(q))
-          .toList();
-    }
-    return list;
+    return city != null ? all.where((m) => m.city == city).toList() : all;
   }
 
   @override
@@ -141,30 +156,40 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   const SizedBox(height: 12),
                   _cityChips(gm, cities, all, lang),
                   const SizedBox(height: 22),
-                  GmSectionHead(
-                    number: '01',
-                    label: _city != null
-                        ? _cityLabel(_city!, all, lang)
-                        : l10n.all,
-                    note: l10n.museumCount(museums.length),
-                  ),
-                  if (museums.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 28),
-                      child: Center(
-                        child: Text(
-                          all.isEmpty ? l10n.noMuseums : l10n.noMatchedMuseums,
-                          style: GmText.sans(size: 12.5, color: gm.sub),
-                        ),
-                      ),
+                  // 有输入 → 全局搜索分区结果；空 → 正常馆浏览。
+                  if (_debounced.isNotEmpty)
+                    SearchResultsView(
+                      query: (slug: null, q: _debounced, lang: lang),
+                      showMuseums: true,
                     )
                   else ...[
-                    // 首馆用大卡，其余用列表行
-                    const SizedBox(height: 13),
-                    _featureCard(gm, l10n, lang, museums.first),
-                    for (var i = 1; i < museums.length; i++)
-                      _listRow(gm, (i + 1).toString().padLeft(2, '0'), lang,
-                          museums[i]),
+                    GmSectionHead(
+                      number: '01',
+                      label: _city != null
+                          ? _cityLabel(_city!, all, lang)
+                          : l10n.all,
+                      note: l10n.museumCount(museums.length),
+                    ),
+                    if (museums.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 28),
+                        child: Center(
+                          child: Text(
+                            all.isEmpty
+                                ? l10n.noMuseums
+                                : l10n.noMatchedMuseums,
+                            style: GmText.sans(size: 12.5, color: gm.sub),
+                          ),
+                        ),
+                      )
+                    else ...[
+                      // 首馆用大卡，其余用列表行
+                      const SizedBox(height: 13),
+                      _featureCard(gm, l10n, lang, museums.first),
+                      for (var i = 1; i < museums.length; i++)
+                        _listRow(gm, (i + 1).toString().padLeft(2, '0'), lang,
+                            museums[i]),
+                    ],
                   ],
                 ],
               ),
@@ -200,7 +225,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 border: InputBorder.none,
                 isDense: true,
               ),
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: _onQueryChanged,
             ),
           ),
         ],

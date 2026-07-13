@@ -35,6 +35,9 @@
 
   "exploreTitle": "Explorer",
   "searchCityMuseumArtwork": "Rechercher villes, musées ou œuvres",
+  "searchMuseumsSection": "Musées",
+  "searchArtworksSection": "Œuvres",
+  "searchNoResults": "Aucun résultat",
   "museumCount": "{count} musées",
   "noMuseums": "Aucun musée",
   "noMatchedMuseums": "Aucun musée correspondant",

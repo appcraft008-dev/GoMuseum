@@ -311,6 +311,24 @@ abstract class AppLocalizations {
   /// **'Search cities, museums or artworks'**
   String get searchCityMuseumArtwork;
 
+  /// No description provided for @searchMuseumsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Museums'**
+  String get searchMuseumsSection;
+
+  /// No description provided for @searchArtworksSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks'**
+  String get searchArtworksSection;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results found'**
+  String get searchNoResults;
+
   /// No description provided for @museumCount.
   ///
   /// In en, this message translates to:

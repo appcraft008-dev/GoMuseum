@@ -110,6 +110,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchCityMuseumArtwork => '도시, 미술관 또는 작품 검색';
 
   @override
+  String get searchMuseumsSection => '박물관';
+
+  @override
+  String get searchArtworksSection => '작품';
+
+  @override
+  String get searchNoResults => '결과 없음';
+
+  @override
   String museumCount(Object count) {
     return '미술관 $count곳';
   }

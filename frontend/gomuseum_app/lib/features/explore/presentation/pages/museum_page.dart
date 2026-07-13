@@ -7,6 +7,8 @@
 /// content_status=stub → 「待完善」角标
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,7 @@ import 'package:gomuseum_app/features/content/data/models/object_list_model.dart
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
+import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -34,6 +37,11 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
   String _selectedCategory = 'all';
   final ScrollController _scrollController = ScrollController();
 
+  /// 馆内搜索：图标展开搜索框，即时（debounce 300ms）只搜当前馆。
+  bool _searching = false;
+  String _searchDebounced = '';
+  Timer? _searchTimer;
+
   @override
   void initState() {
     super.initState();
@@ -42,9 +50,30 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
 
   @override
   void dispose() {
+    _searchTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _toggleSearch() {
+    _searchTimer?.cancel();
+    setState(() {
+      _searching = !_searching;
+      _searchDebounced = '';
+    });
+  }
+
+  void _onSearchChanged(String v) {
+    _searchTimer?.cancel();
+    final q = v.trim();
+    if (q.isEmpty) {
+      setState(() => _searchDebounced = '');
+      return;
+    }
+    _searchTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _searchDebounced = q);
+    });
   }
 
   void _onScroll() {
@@ -65,6 +94,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
+    final lang = apiLanguage(ref.watch(languageProvider));
     final detailAsync = ref.watch(museumDetailProvider(widget.slug));
 
     return Scaffold(
@@ -72,33 +102,55 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top bar
+            // Top bar（搜索态：标题换成搜索框，图标换成关闭）
             _TopBar(
               slug: widget.slug,
               detailAsync: detailAsync,
-              lang: apiLanguage(ref.watch(languageProvider)),
+              lang: lang,
+              searching: _searching,
+              onSearchToggle: _toggleSearch,
+              onQueryChanged: _onSearchChanged,
             ),
-            // Category tabs
-            detailAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-              data: (detail) => _CategoryTabs(
-                categories: detail.categories,
-                selected: _selectedCategory,
-                onSelect: (code) {
-                  if (code == _selectedCategory) return;
-                  setState(() => _selectedCategory = code);
-                },
+            if (_searching)
+              Expanded(
+                child: _searchDebounced.isEmpty
+                    ? const SizedBox.shrink()
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
+                        child: SearchResultsView(
+                          query: (
+                            slug: widget.slug,
+                            q: _searchDebounced,
+                            lang: lang
+                          ),
+                          showMuseums: false,
+                          fallbackSlug: widget.slug,
+                        ),
+                      ),
+              )
+            else ...[
+              // Category tabs
+              detailAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (detail) => _CategoryTabs(
+                  categories: detail.categories,
+                  selected: _selectedCategory,
+                  onSelect: (code) {
+                    if (code == _selectedCategory) return;
+                    setState(() => _selectedCategory = code);
+                  },
+                ),
               ),
-            ),
-            // Grid
-            Expanded(
-              child: _ObjectGrid(
-                slug: widget.slug,
-                category: _selectedCategory,
-                scrollController: _scrollController,
+              // Grid
+              Expanded(
+                child: _ObjectGrid(
+                  slug: widget.slug,
+                  category: _selectedCategory,
+                  scrollController: _scrollController,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -110,12 +162,21 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
 // Top bar
 // ---------------------------------------------------------------------------
 class _TopBar extends StatelessWidget {
-  const _TopBar(
-      {required this.slug, required this.detailAsync, required this.lang});
+  const _TopBar({
+    required this.slug,
+    required this.detailAsync,
+    required this.lang,
+    required this.searching,
+    required this.onSearchToggle,
+    required this.onQueryChanged,
+  });
 
   final String slug;
   final AsyncValue<MuseumDetail> detailAsync;
   final String lang;
+  final bool searching;
+  final VoidCallback onSearchToggle;
+  final ValueChanged<String> onQueryChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -165,32 +226,54 @@ class _TopBar extends StatelessWidget {
             child: GmIcon(GmIcons.back, size: 20, color: gm.ink),
           ),
           Expanded(
-            child: Column(
-              children: [
-                if (museumName.isNotEmpty)
-                  Text(
-                    museumName,
-                    textAlign: TextAlign.center,
-                    style: GmText.serif(
-                        size: 16, weight: FontWeight.w700, letterSpacing: 0.5),
+            child: searching
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: TextField(
+                      autofocus: true,
+                      style: GmText.sans(size: 14),
+                      decoration: InputDecoration(
+                        hintText: l10n.searchCityMuseumArtwork,
+                        hintStyle: GmText.sans(size: 14, color: gm.faint),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      onChanged: onQueryChanged,
+                    ),
+                  )
+                : Column(
+                    children: [
+                      if (museumName.isNotEmpty)
+                        Text(
+                          museumName,
+                          textAlign: TextAlign.center,
+                          style: GmText.serif(
+                              size: 16,
+                              weight: FontWeight.w700,
+                              letterSpacing: 0.5),
+                        ),
+                      if (countLabel != null)
+                        Text(
+                          countLabel,
+                          style: GmText.sans(
+                              size: 10, letterSpacing: 1, color: gm.sub),
+                        ),
+                      if (numbersLabel != null)
+                        Text(
+                          numbersLabel,
+                          textAlign: TextAlign.center,
+                          style: GmText.sans(size: 9.5, color: gm.faint),
+                        ),
+                    ],
                   ),
-                if (countLabel != null)
-                  Text(
-                    countLabel,
-                    style:
-                        GmText.sans(size: 10, letterSpacing: 1, color: gm.sub),
-                  ),
-                if (numbersLabel != null)
-                  Text(
-                    numbersLabel,
-                    textAlign: TextAlign.center,
-                    style: GmText.sans(size: 9.5, color: gm.faint),
-                  ),
-              ],
-            ),
           ),
-          // Search — placeholder (search page is out of scope for this task)
-          GmIcon(GmIcons.search, size: 20, color: gm.ink),
+          // 搜索开关：展开馆内搜索 / 关闭回到目录
+          GestureDetector(
+            onTap: onSearchToggle,
+            behavior: HitTestBehavior.opaque,
+            child: GmIcon(searching ? GmIcons.close : GmIcons.search,
+                size: 20, color: gm.ink),
+          ),
         ],
       ),
     );

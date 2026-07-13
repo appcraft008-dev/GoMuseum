@@ -110,6 +110,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get searchCityMuseumArtwork => '都市・美術館・作品を検索';
 
   @override
+  String get searchMuseumsSection => '美術館';
+
+  @override
+  String get searchArtworksSection => '作品';
+
+  @override
+  String get searchNoResults => '結果が見つかりません';
+
+  @override
   String museumCount(Object count) {
     return '$count館';
   }
