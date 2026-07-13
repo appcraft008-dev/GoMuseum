@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from sqlalchemy import distinct, func  # noqa: E402
+from sqlalchemy import and_, distinct, func, or_  # noqa: E402
 
 from app.core.database import SessionLocal  # noqa: E402
 from app.models.museum import Museum  # noqa: E402
@@ -89,8 +89,23 @@ def build_report(db, museum_slug: str, *, traffic_days: int = 30) -> dict:
         display[status] += 1
 
     since = datetime.utcnow() - timedelta(days=traffic_days)
+    # KPI 归因与 display 证据同口径:老前端带 museum_slug;新前端走全局端点
+    # (museum_slug=NULL)按 top_qid 归命中对象所属馆(qid 全局唯一)。
+    # 诚实局限:全局端点的未识别事件(top_qid 也 NULL)无法归馆,不计入任何馆 KPI
+    # ——分子分母同时缺席,不引入偏差。
+    museum_qids = (
+        db.query(MuseumObject.qid)
+        .filter(MuseumObject.museum_id == museum.id, MuseumObject.qid.isnot(None))
+        .scalar_subquery()
+    )
     events_q = db.query(RecognitionEvent).filter(
-        RecognitionEvent.museum_slug == museum_slug,
+        or_(
+            RecognitionEvent.museum_slug == museum_slug,
+            and_(
+                RecognitionEvent.museum_slug.is_(None),
+                RecognitionEvent.top_qid.in_(museum_qids),
+            ),
+        ),
         RecognitionEvent.created_at >= since,
     )
     attempts = events_q.count()
