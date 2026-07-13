@@ -29,18 +29,25 @@ def _cache_key(slug: str | None, sha: str, language: str) -> str:
     return f"recog3:{slug or 'global'}:{language}:{sha}"
 
 
+def _open_upright(image_bytes: bytes):
+    """解码上传图并应用 EXIF 方向。手机竖拍 JPEG 像素横存+Orientation 标记,
+    PIL 默认无视 → 嵌入'躺着'的画,相似度崩塌(实证:卧室 0.85→0.47,prod 三连miss)。"""
+    from PIL import Image, ImageOps
+
+    img = Image.open(io.BytesIO(image_bytes))
+    return ImageOps.exif_transpose(img)
+
+
 def _default_embed(image_bytes: bytes):
     """默认 embed_fn:包装 DINOv2 引擎。引擎不可用/解码或推理异常 → None(编排层走 GPT 兜底)。
     validate_image 的 PIL verify() 不解码像素——截断 JPEG 会过校验、在此处才爆,不许炸出去。"""
-    from PIL import Image
-
     from app.services.recognition.embedder import get_embedder
 
     engine = get_embedder()
     if engine is None:
         return None
     try:
-        return engine.embed(Image.open(io.BytesIO(image_bytes)))
+        return engine.embed(_open_upright(image_bytes))
     except Exception:
         logger.exception("embed failed, falling back to GPT chain")
         return None
@@ -48,15 +55,13 @@ def _default_embed(image_bytes: bytes):
 
 def _default_embed_crops(image_bytes: bytes):
     """默认 embed_crops_fn:裁剪金字塔批量 embedding。引擎不可用/异常 → None(编排层走 GPT 兜底)。"""
-    from PIL import Image
-
     from app.services.recognition.embedder import crop_pyramid, get_embedder
 
     engine = get_embedder()
     if engine is None:
         return None
     try:
-        img = Image.open(io.BytesIO(image_bytes))
+        img = _open_upright(image_bytes)
         return engine.embed_batch(crop_pyramid(img))
     except Exception:
         logger.exception("embed_crops failed, falling back to GPT chain")

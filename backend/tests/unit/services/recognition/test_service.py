@@ -435,3 +435,33 @@ def test_legacy_cache_entry_hit_gets_phash(session):
     r = _FakeRedis({f"recog3:orsay:zh:{sha}": json.dumps(legacy)})
     out = recognize(session, "orsay", img, redis=r)
     assert isinstance(out["phash"], str) and out["phash"]
+
+
+def test_open_upright_applies_exif_orientation():
+    """手机竖拍JPEG像素横存+EXIF Orientation=6:解码必须转正(实证0.85→0.47崩塌)。"""
+    import io as _io
+
+    from PIL import Image
+
+    from app.services.recognition.service import _open_upright
+
+    img = Image.new("RGB", (400, 200), (10, 20, 30))  # 横存像素
+    buf = _io.BytesIO()
+    exif = Image.Exif()
+    exif[274] = 6  # Orientation: Rotate 90 CW
+    img.save(buf, format="JPEG", exif=exif)
+    out = _open_upright(buf.getvalue())
+    assert out.size == (200, 400)  # 转正后为竖图
+
+
+def test_open_upright_no_exif_passthrough():
+    import io as _io
+
+    from PIL import Image
+
+    from app.services.recognition.service import _open_upright
+
+    img = Image.new("RGB", (400, 200))
+    buf = _io.BytesIO()
+    img.save(buf, format="JPEG")
+    assert _open_upright(buf.getvalue()).size == (400, 200)
