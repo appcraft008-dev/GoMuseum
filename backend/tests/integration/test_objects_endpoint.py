@@ -31,7 +31,15 @@ def client():
     s = TestingSession()
     m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
     upsert_object(
-        s, m.id, {"qid": "Q1", "title_en": "A", "category": "painting", "popularity": 9}
+        s,
+        m.id,
+        {
+            "qid": "Q1",
+            "title_en": "A",
+            "category": "painting",
+            "popularity": 9,
+            "image": "http://i/1.jpg",  # 有图过滤后:列表对象需有图
+        },
     )
     s.commit()
     s.close()

@@ -124,6 +124,8 @@ class _TopBar extends StatelessWidget {
 
     final String museumName;
     final String? countLabel;
+    // 双数字行：在线图录 · 档案条目（两者都在时才显示；老后端缺字段 → null 不显示）。
+    String? numbersLabel;
 
     switch (detailAsync) {
       case AsyncData(:final value):
@@ -135,6 +137,11 @@ class _TopBar extends StatelessWidget {
                 .map((c) => c.count)
                 .firstOrNull;
         countLabel = total != null ? l10n.recordedCount(total) : null;
+        final catalog = value.catalogCount;
+        final archive = value.archiveCount;
+        if (catalog != null && archive != null) {
+          numbersLabel = l10n.museumCatalogNumbers(catalog, archive);
+        }
       case AsyncError():
         museumName = slug;
         countLabel = null;
@@ -172,6 +179,12 @@ class _TopBar extends StatelessWidget {
                     countLabel,
                     style:
                         GmText.sans(size: 10, letterSpacing: 1, color: gm.sub),
+                  ),
+                if (numbersLabel != null)
+                  Text(
+                    numbersLabel,
+                    textAlign: TextAlign.center,
+                    style: GmText.sans(size: 9.5, color: gm.faint),
                   ),
               ],
             ),

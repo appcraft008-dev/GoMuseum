@@ -29,6 +29,40 @@ def embed_image_row(db, row, image_bytes: bytes, embedder=_UNSET) -> bool:
         from PIL import Image
 
         vec = embedder.embed(Image.open(io.BytesIO(image_bytes)))
+        # view 入库闸:primary 已有向量时先算相似度再决定 删/隔离/入库。
+        # 纯自动无人审(spec ④);错杀极端角度由照片飞轮补回。
+        # primary 向量尚不存在 → 照常嵌入(后续 vet CLI 兜底)。
+        if row.role == "view":
+            import numpy as np
+
+            from app.models.museum_object import ObjectImage
+
+            primary = (
+                db.query(ObjectImage)
+                .filter_by(object_id=row.object_id, role="primary")
+                .order_by(ObjectImage.sort)
+                .first()
+            )
+            pemb = (
+                db.query(ObjectEmbedding)
+                .filter_by(image_id=primary.id, model=MODEL_NAME)
+                .first()
+                if primary is not None
+                else None
+            )
+            if pemb is not None:
+                sim = float(
+                    np.dot(
+                        vec.astype("float32"),
+                        np.frombuffer(pemb.vec, dtype="float32"),
+                    )
+                )
+                if sim < 0.25:
+                    db.delete(row)
+                    return False
+                if sim < 0.4:
+                    row.role = "view_quarantine"
+                    return False
         db.add(
             ObjectEmbedding(
                 object_id=row.object_id,

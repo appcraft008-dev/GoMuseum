@@ -45,6 +45,8 @@
 
   "recordedCount": "{count} works in collection",
   "@recordedCount": { "placeholders": { "count": { "type": "Object" } } },
+  "museumCatalogNumbers": "Online catalog {catalog} works · archive {archive} entries (recognizable/searchable)",
+  "@museumCatalogNumbers": { "placeholders": { "catalog": { "type": "Object" }, "archive": { "type": "Object" } } },
   "noArtworks": "No works yet",
   "loadingShown": "Loading · {shown}/{total} shown",
   "@loadingShown": { "placeholders": { "shown": { "type": "Object" }, "total": { "type": "Object" } } },

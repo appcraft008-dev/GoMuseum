@@ -36,4 +36,22 @@ void main() {
       expect(make('orsay'), equals(make('orsay')));
     });
   });
+
+  group('RecognizeResponse.fromJson phash field', () {
+    test('parses phash when present', () {
+      final r = RecognizeResponse.fromJson(const {
+        'outcome': 'candidates',
+        'candidates': [
+          {'qid': 'Q1', 'title': 't', 'artist': 'a', 'score': 0.5},
+        ],
+        'phash': 'abc123',
+      });
+      expect(r.phash, 'abc123');
+    });
+
+    test('missing phash (old backend) → null, no crash', () {
+      final r = RecognizeResponse.fromJson(const {'outcome': 'unrecognized'});
+      expect(r.phash, isNull);
+    });
+  });
 }

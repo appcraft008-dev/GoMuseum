@@ -69,8 +69,8 @@ def test_wikidata_catalog_routing_empty_when_absent():
     assert s.external_ids == {} and s.wiki_titles == {}
 
 
-def test_wikidata_catalog_query_requires_image():
-    # 收录策略:有图才收录(识别参照+合规前提)→ SPARQL P18 必填,不再 OPTIONAL
+def test_wikidata_catalog_query_image_optional():
+    # 收录策略:文字可识别层也收(无图 stub)→ SPARQL P18 改 OPTIONAL,不再必填
     seen = {}
 
     def fake(sparql):
@@ -78,8 +78,40 @@ def test_wikidata_catalog_query_requires_image():
         return []
 
     list(WikidataCatalog(run_query=fake).list(_Cfg()))
-    assert "OPTIONAL {{ ?item wdt:P18" not in seen["sparql"].replace("{ ?", "{{ ?")
-    assert "?item wdt:P18 ?image ." in seen["sparql"]
+    assert "OPTIONAL { ?item wdt:P18 ?image . }" in seen["sparql"]
+
+
+def test_wikidata_catalog_imageless_stub():
+    """P18 OPTIONAL:无图行也产 StubRecord(image_url None,image_urls 空)。"""
+    row = _row("Q9", "NoImage", 3)
+    out = list(
+        WikidataCatalog(run_query=lambda s: [row] if "OFFSET 0" in s else []).list(
+            _Cfg()
+        )
+    )
+    assert len(out) == 1 and out[0].image_url is None and out[0].image_urls == []
+
+
+def test_wikidata_catalog_query_p276_selected():
+    captured = {}
+
+    def fake(sparql):
+        captured["q"] = sparql
+        return []
+
+    list(WikidataCatalog(run_query=fake).list(_Cfg()))
+    assert "?p276" in captured["q"] and "wdt:P276" in captured["q"]
+
+
+def test_wikidata_catalog_p276_passthrough():
+    row = _row("Q9", "A", 3)
+    row["p276"] = {"value": "http://www.wikidata.org/entity/Q123456"}
+    out = list(
+        WikidataCatalog(run_query=lambda s: [row] if "OFFSET 0" in s else []).list(
+            _Cfg()
+        )
+    )
+    assert out[0].raw.get("p276_qid") == "Q123456"
 
 
 def test_wikidata_catalog_upgrades_category_on_multi_p31():

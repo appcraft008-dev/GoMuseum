@@ -20,7 +20,7 @@ def _session():
     return sessionmaker(bind=engine)()
 
 
-def _stub(qid, title="T", inv=None):
+def _stub(qid, title="T", inv=None, raw=None):
     return StubRecord(
         inventory_number=inv,
         qid=qid,
@@ -32,6 +32,7 @@ def _stub(qid, title="T", inv=None):
         popularity=5,
         owning_museum="orsay",
         source="wikidata",
+        raw=raw or {},
         external_ids={"P347": "j1"},
         wiki_titles={"en": "The_Balcony"},
     )
@@ -68,3 +69,10 @@ def test_load_stubs_preserves_ready_status_and_material():
     assert o2.content_status == "ready"
     assert o2.attributes["extract_en"] == "已生成材料"
     assert o2.attributes["external_ids"] == {"P347": "j1"}
+
+
+def test_load_stubs_puts_p276_into_attributes():
+    s = _session()
+    load_stubs(s, _museum(), [_stub("Q1", inv="RF 1", raw={"p276_qid": "Q123456"})])
+    o = s.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes["p276"] == "Q123456"

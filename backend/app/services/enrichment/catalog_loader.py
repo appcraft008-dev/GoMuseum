@@ -22,6 +22,8 @@ def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:
         attrs = dict(existing.attributes or {}) if existing else {}
         attrs["external_ids"] = s.external_ids or {}
         attrs["wiki_titles"] = s.wiki_titles or {}
+        if s.raw.get("p276_qid"):
+            attrs["p276"] = s.raw["p276_qid"]
         art = {
             "qid": s.qid,
             "inventory_number": s.inventory_number,

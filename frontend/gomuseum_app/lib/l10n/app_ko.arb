@@ -38,6 +38,7 @@
   "noMatchedMuseums": "일치하는 미술관이 없습니다",
   "artworkCountLabel": "작품 {count}점",
   "recordedCount": "소장 {count}점",
+  "museumCatalogNumbers": "온라인 도록 {catalog}점 · 아카이브 {archive}건 (인식/검색 가능)",
   "noArtworks": "작품이 없습니다",
   "loadingShown": "불러오는 중 · {shown}/{total} 표시",
   "allLoaded": "모두 불러옴 · 총 {total}점",

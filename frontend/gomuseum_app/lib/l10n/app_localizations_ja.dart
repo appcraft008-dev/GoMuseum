@@ -131,6 +131,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String museumCatalogNumbers(Object catalog, Object archive) {
+    return 'オンライン図録 $catalog 点 · アーカイブ $archive 件（認識・検索可）';
+  }
+
+  @override
   String get noArtworks => '作品がありません';
 
   @override

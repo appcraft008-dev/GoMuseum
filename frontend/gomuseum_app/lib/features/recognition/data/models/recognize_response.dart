@@ -66,6 +66,7 @@ class RecognizeResponse extends Equatable {
     required this.candidates,
     required this.labelText,
     required this.reason,
+    this.phash,
   });
 
   final RecognizeOutcome outcome;
@@ -73,6 +74,9 @@ class RecognizeResponse extends Equatable {
   final List<RecognizedItem> candidates;
   final String? labelText;
   final String? reason;
+
+  /// 本次照片的感知哈希；确认卡点选时回传后端做 CLIP 校准。老后端无此字段 → null。
+  final String? phash;
 
   factory RecognizeResponse.fromJson(Map<String, dynamic> j) {
     final matchJson = j['match'];
@@ -91,9 +95,11 @@ class RecognizeResponse extends Equatable {
           ? (j['label_text'] as String).trim()
           : null,
       reason: j['reason'] as String?,
+      phash: j['phash'] as String?,
     );
   }
 
   @override
-  List<Object?> get props => [outcome, match, candidates, labelText, reason];
+  List<Object?> get props =>
+      [outcome, match, candidates, labelText, reason, phash];
 }

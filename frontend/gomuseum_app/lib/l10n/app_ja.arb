@@ -38,6 +38,7 @@
   "noMatchedMuseums": "一致する美術館がありません",
   "artworkCountLabel": "{count}点",
   "recordedCount": "所蔵{count}点",
+  "museumCatalogNumbers": "オンライン図録 {catalog} 点 · アーカイブ {archive} 件（認識・検索可）",
   "noArtworks": "作品がありません",
   "loadingShown": "読み込み中 · {shown}/{total}件表示",
   "allLoaded": "すべて読み込み済み · 合計{total}件",

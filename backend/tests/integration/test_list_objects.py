@@ -55,17 +55,30 @@ def session():
             "artist_en": "Manet",
             "category": "painting",
             "popularity": 40,
+            "image": "http://i/2.jpg",  # 有图过滤后:列表测试对象都需有图
         },
     )
     upsert_object(
         s,
         m.id,
-        {"qid": "Q3", "title_en": "Low", "category": "painting", "popularity": 10},
+        {
+            "qid": "Q3",
+            "title_en": "Low",
+            "category": "painting",
+            "popularity": 10,
+            "image": "http://i/3.jpg",
+        },
     )
     upsert_object(
         s,
         m.id,
-        {"qid": "Q4", "title_en": "Statue", "category": "sculpture", "popularity": 30},
+        {
+            "qid": "Q4",
+            "title_en": "Statue",
+            "category": "sculpture",
+            "popularity": 30,
+            "image": "http://i/4.jpg",
+        },
     )
     o1 = s.query(MuseumObject).filter_by(qid="Q1").one()
     o1.content_status = "ready"
