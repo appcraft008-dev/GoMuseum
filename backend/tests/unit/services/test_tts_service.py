@@ -38,3 +38,19 @@ def test_voice_mapping_covers_all_default_languages():
     for lang in DEFAULT_LANGUAGES:
         assert lang in VOICE_MAPPING, f"TTS 缺 {lang} 音色"
         assert VOICE_MAPPING[lang].get("default")
+
+
+def test_speech_kwargs_omits_speed_for_gpt4o_mini_tts():
+    """gpt-4o-mini-tts 不认 speed 参数(会400):新模型下省略,tts-1 系保留。"""
+    svc = TTSService()
+    svc.model = "gpt-4o-mini-tts"
+    kw = svc._speech_kwargs("alloy", "hi", 1.5)
+    assert "speed" not in kw and kw["model"] == "gpt-4o-mini-tts"
+
+    svc.model = "tts-1"
+    kw = svc._speech_kwargs("alloy", "hi", 1.5)
+    assert kw["speed"] == 1.5
+
+
+def test_default_tts_model_is_gpt4o_mini():
+    assert TTSService().model == "gpt-4o-mini-tts"

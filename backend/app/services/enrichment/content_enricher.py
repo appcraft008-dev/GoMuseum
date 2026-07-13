@@ -4,6 +4,7 @@ LLM 调用经注入的 complete 可调用，单测离线。"""
 from __future__ import annotations
 
 import json
+import logging
 import re
 
 from app.services.enrichment.prompts import (
@@ -11,6 +12,8 @@ from app.services.enrichment.prompts import (
     build_default_guide_prompt,
     build_generation_prompt,
 )
+
+logger = logging.getLogger(__name__)
 
 _FACT_FIELDS = [
     ("Title", "title_en"),
@@ -132,6 +135,11 @@ def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:
     import asyncio
 
     from app.services.content_generation_service import _get_openai_client
+
+    # 成本可观测:强模型(非默认 mini)每次触发都打一条可 grep 日志(闸失败频率信号)
+    # 统计: docker logs <backend> | grep -c 'STRONG_MODEL_USE'
+    if model != "gpt-4o-mini":
+        logger.info("STRONG_MODEL_USE model=%s", model)
 
     client = _get_openai_client()
     if client is None:
