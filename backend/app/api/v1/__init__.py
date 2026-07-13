@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     payment,
     recognition,
     recognize_global,
+    search,
 )
 
 api_router = APIRouter()
@@ -40,5 +41,8 @@ api_router.include_router(museums.router, prefix="/museums", tags=["museums"])
 
 # Include global recognition endpoint (POST /recognize, museum 可选跨馆识别)
 api_router.include_router(recognize_global.router, tags=["recognition"])
+
+# Include search endpoints (全局 /search + 馆域 /museums/{slug}/search;加法契约)
+api_router.include_router(search.router, tags=["search"])
 
 __all__ = ["api_router"]
