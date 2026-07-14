@@ -157,6 +157,53 @@ def test_inv_exact_match_scores_full(session):
     assert out[0][0] == "Q_INV1" and out[0][1] == 1.0
 
 
+def test_inv_extracted_from_messy_single_line(session):
+    # 脏 OCR:标题/号/尺寸全挤一行,整行 normalize_inv 抠不出号 → 正则补抽
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q_MESSY",
+            "inventory_number": "RF 1951 42",
+            "title_en": "Obscure Sketch No Match",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    matcher._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    # 一行里不含标题,只能靠抽出的馆藏号命中
+    out = match(idx, [], ["blah 1890 huile sur toile RF 1951 42 74x94cm"])
+    assert out and out[0][0] == "Q_MESSY" and out[0][1] == 1.0
+
+
+def test_reverse_substring_when_difflib_diluted(session):
+    # 长墙签行含目录标题(整行模糊被稀释),反向子串命中 → 出候选(≥LOW)
+    idx = build_index(session, _mid(session))
+    line = (
+        "Gustave Courbet The Origin of the World 1866 "
+        "oil on canvas 46 x 55 cm reclining nude study"
+    )
+    out = dict(match(idx, [], [line]))
+    assert out.get("Q334138", 0.0) >= LOW  # 反向子串救回(difflib 整行稀释到 <LOW)
+
+
+def test_reverse_substring_ignores_short_names(session):
+    # 短标题不做反向子串(防"the/art"类误报);OCR 含短词也不该命中
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q_SHORT", "title_en": "Rain", "category": "painting"},
+    )
+    session.commit()
+    matcher._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    out = dict(match(idx, [], ["a walk in the rain on a cold day near the river"]))
+    assert out.get("Q_SHORT", 0.0) < LOW  # "rain"(4字)<8 不触发反向子串
+
+
 def test_inv_beats_fuzzy_take_max(session):
     m = session.query(Museum).filter_by(slug="orsay").one()
     upsert_object(

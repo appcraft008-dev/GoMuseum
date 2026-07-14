@@ -23,6 +23,13 @@ _PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
 _WS = re.compile(r"[\s_]+")
 _NONALNUM = re.compile(r"[^a-z0-9]+")
 _INV_MIN = 3  # 归一化后长度 <3 不做编号匹配(防误伤)
+# 从整段 OCR 抽馆藏号样式 token(≥2 字母前缀 + 至多 3 段数字)。脏 OCR 把标题/号/尺寸
+# 挤一行时,整行 normalize_inv 抠不出号,靠此正则补(实测 0.55→1.0)。数字段有界,避免
+# 贪婪吞掉紧随的尺寸位;抽号前先剥"74x94cm"类尺寸,防污染。
+_DIM = re.compile(r"\d+\s*[x×]\s*\d+\s*(?:cm|mm|in)?", re.IGNORECASE)
+_INV_TOKEN = re.compile(r"[A-Za-z]{2,4}\s?\d{1,5}(?:[\s\-]\d{1,4}){0,2}")
+_REVSUB_MIN = 8  # 反向子串:目录名归一化 ≥8 字符才算"出现在 OCR 里"(防短标题误报)
+_REVSUB_SCORE = 0.7  # 反向子串命中分(≥LOW 出候选卡,<HIGH 不直判)
 
 
 def normalize(s: str) -> str:
@@ -99,6 +106,13 @@ def match(
     inv_probes = {
         i for i in (normalize_inv(q) for q in raw_probes) if len(i) >= _INV_MIN
     }
+    # 脏 OCR 补抽:整行归一化抠不出号时,从全文正则抽馆藏号 token(先剥尺寸防污染)
+    joined = " ".join(raw_probes)
+    for tok in _INV_TOKEN.findall(_DIM.sub(" ", joined)):
+        t = normalize_inv(tok)
+        if len(t) >= _INV_MIN:
+            inv_probes.add(t)
+    ocr_norm = normalize(joined)  # 反向子串:目录标题是否"出现在"整段 OCR 里
     if not probes:
         return []
     best: dict[str, float] = {}
@@ -106,6 +120,11 @@ def match(
         title_score = max(
             (_sim(p, name) for p in probes for name in entry["names"]), default=0.0
         )
+        # 反向子串:整行模糊被长墙签稀释时,目录标题(足够长)作为子串出现在 OCR 里即命中
+        if title_score < _REVSUB_SCORE and any(
+            nm and len(nm) >= _REVSUB_MIN and nm in ocr_norm for nm in entry["names"]
+        ):
+            title_score = _REVSUB_SCORE
         if entry.get("inv") and entry["inv"] in inv_probes:
             title_score = 1.0  # 编号精确命中:满分,盖过模糊(下方再与加分取 min 封顶)
         if title_score <= 0:
