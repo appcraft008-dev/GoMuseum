@@ -62,7 +62,16 @@ class BenefitsService:
                     self.db.commit()
                     benefits = orphan
         else:
-            benefits = query.filter(UserBenefits.device_id == device_id).first()
+            # 串号修复:匿名/令牌失败请求只匹配匿名行(user_id IS NULL),绝不命中
+            # 某账号的配额行(prod 实证:device_id 多行 .first() 撞别账号耗尽行→误 402)。
+            benefits = (
+                query.filter(
+                    UserBenefits.device_id == device_id,
+                    UserBenefits.user_id.is_(None),
+                )
+                .order_by(UserBenefits.created_at)
+                .first()
+            )
 
         if benefits:
             logger.info(
