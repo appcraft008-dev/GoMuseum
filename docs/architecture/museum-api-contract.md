@@ -19,6 +19,8 @@
 | `GET /museums/{slug}?language=` | 完整馆包(元数据+分类+全藏品) | `get_museum_pack` |
 | `GET /museums/{slug}/objects?...` | 分页藏品列表(列表页) | `list_objects` |
 | `GET /museums/{slug}/objects/{qid}/content?language=` | 单件讲解(导览页) | `get_object_content` |
+| `GET /search?q=&language=&limit=` | 全局搜索(探索页;跨馆藏品+博物馆) | `search/inprocess.py` |
+| `GET /museums/{slug}/search?q=&language=&limit=` | 馆域搜索(馆列表页;只搜当前馆藏品) | `search/inprocess.py` |
 
 `language` 取值 = `DEFAULT_LANGUAGES`(lang_config.py,唯一真相源;当前 7 语 en/fr/de/es/it/zh/pl)。缺省 `zh`。**加语言=加配置**:新语言按§多语显示名的"加语言 checklist"落配置即全端点生效,**本行不再随之改动**(引用真相源,非硬列举)。新内容全语生成;老内容缺语走懒翻译/`translate` 补。
 
@@ -292,6 +294,20 @@
 
 **老端点 `/api/v1/recognition` 标记 deprecated**(裸 GPT 猜测当事实,违反 R1;留给老 App,新 App 一律走新端点)。
 
+## 搜索（打字查找;✅2026-07-13;稳定契约+可替换引擎）
+
+识别的姊妹功能,也是**文字可识别层无图 stub 的主可达路径**(与浏览列表隐藏无图件相反——搜索是无图件主入口)。**打字搜索 ≠ 识别匹配**:识别是整串模糊相似(GPT/向量给完整候选),搜索是子串/前缀/分词命中(用户打"梵高"/"moulin"/"RF1668");搜索匹配独立设计,仅复用 matcher 归一化工具。
+
+**两端点(加法,响应同族)**:
+- `GET /api/v1/search?q=&language=&limit=20`——全局(探索页),响应含 `museums`+`objects` 两段。
+- `GET /api/v1/museums/{slug}/search?q=&language=&limit=20`——馆域(馆列表页),只有 `objects`;馆不存在 404。
+
+响应:`{query, museums:[{slug,name,city}](仅全局), objects:[{qid,title,artist,year,thumbnail,museum,has_image}]}`。`title/artist` 走既有显示名规则(`_resolve_name`,全语种);**无图 stub 照常在 `objects`(`has_image:false`,`thumbnail:null`),前端类目占位图**;`museum`=归属馆 slug(点击跳讲解页,与识别 match 同款导航);空 `q`/无结果 → 诚实空态 `objects:[]`。全语种搜(藏品 `title_i18n`+作者 `name_i18n` 全语种进索引,中文界面打 Van Gogh 也中)。
+
+**稳定契约 + 可替换引擎**(照搬识别架构):用户可感知行为由契约锁定、跨引擎不变;引擎可插拔。**首发=进程内索引**(`search/inprocess.py`,单一真相源=Postgres、零同步,馆域索引 TTL 600s 缓存;三路匹配:编号精确 1.0>标题前缀 0.8>标题子串 0.6>作者子串 0.4,同分按 popularity)。**规模触发换引擎**(藏品越过 ~5-10 万件/卢浮+蓬皮杜级别,或实测延迟退化)→ 自托管 Meilisearch/Typesense(CJK 分词好、百万级即时);换引擎只换 `search()` 实现,**契约与前端零改**,唯排序权重可微差、"能搜到什么"一致。
+
+**识别未收录→搜索闭环**:相机识别兜底的「展签检索」sheet 即全局即时搜索,命中点选→讲解页(识别与搜索兜底互通)。
+
 ## 路线图（执行顺序;每阶段 = 独立 spec→plan→实现,完成回写本文）
 
 **✅ 已落地**:目录主干 + 4 端点契约 + 分类 facet + 作品信息 facts;接地·引人入胜生成 + 三类闸 + 多语翻译 + 建议问答;默认讲解 stage1(staging)。
@@ -307,6 +323,7 @@
 
 ## 变更记录
 
+- 2026-07-13:**搜索功能落地**(spec 2026-07-13-search-feature-design)。API 面加法:`GET /search`(全局,museums+objects 两段)+`GET /museums/{slug}/search`(馆域,仅 objects);无图 stub 可搜(has_image/thumbnail:null)、全语种、三路匹配。原则:**搜索=稳定契约+可替换引擎,进程内起步(零同步)→规模触发换 Meilisearch,契约与前端零改**。前端:探索页升级全局搜(debounce 300ms 分区结果)+馆列表页激活馆内搜+识别未收录→搜索闭环。
 - 2026-07-06:加语言 checklist 补⑥字形变体(_SCRIPT_VARIANTS)+⑦强制跑质量验收清单(完整六检查点/全段落扫描;i18n-translation-quality-checklist.md)。
 - 2026-07-05:定**标题真相唯一化**原则(显示名=标题唯一真相,内容三通路引用跟随;glossary 注入,修显现/幻影分叉)。
 - 2026-07-05:**内容生成 N 默认=0**(收录策略⑤)——上新馆零内容预付,纯懒生成兜底;N 上线后按实际热度/需求由运营逐馆决定。

@@ -35,6 +35,9 @@
 
   "exploreTitle": "Entdecken",
   "searchCityMuseumArtwork": "Städte, Museen oder Werke suchen",
+  "searchMuseumsSection": "Museen",
+  "searchArtworksSection": "Werke",
+  "searchNoResults": "Keine Ergebnisse",
   "museumCount": "{count} Museen",
   "noMuseums": "Noch keine Museen",
   "noMatchedMuseums": "Keine passenden Museen",

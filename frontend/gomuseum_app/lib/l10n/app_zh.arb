@@ -35,6 +35,9 @@
 
   "exploreTitle": "探 索",
   "searchCityMuseumArtwork": "搜索城市、博物馆或艺术品",
+  "searchMuseumsSection": "博物馆",
+  "searchArtworksSection": "藏品",
+  "searchNoResults": "没有找到相关结果",
   "museumCount": "{count} 家博物馆",
   "noMuseums": "暂无博物馆",
   "noMatchedMuseums": "没有匹配的博物馆",

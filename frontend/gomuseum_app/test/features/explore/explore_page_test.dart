@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/explore/presentation/pages/explore_page.dart';
+import 'package:gomuseum_app/features/search/data/search_api.dart';
 
 const _fakeMuseums = [
   MuseumSummary(
@@ -47,6 +48,12 @@ const _fakeMuseums = [
 Widget _wrap() => ProviderScope(
       overrides: [
         museumsListProvider.overrideWith((_) async => _fakeMuseums),
+        // 搜索改走服务端 /search：输入'卢浮'返回卢浮宫命中（默认 languageProvider=en）。
+        searchProvider((slug: null, q: '卢浮', lang: 'en')).overrideWith(
+          (ref) => const SearchResults(museums: [
+            SearchMuseumHit(slug: 'louvre', name: '卢浮宫', city: '巴黎'),
+          ]),
+        ),
       ],
       child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -75,12 +82,13 @@ void main() {
     expect(find.text('奥赛博物馆'), findsNothing);
   });
 
-  testWidgets('搜索过滤博物馆', (tester) async {
+  testWidgets('输入 → 服务端搜索结果替换馆浏览', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '卢浮');
-    await tester.pump();
-    expect(find.text('卢浮宫'), findsOneWidget);
-    expect(find.text('奥赛博物馆'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 350)); // 过 debounce
+    await tester.pump(); // provider resolve
+    expect(find.text('卢浮宫'), findsOneWidget); // 搜索命中
+    expect(find.text('奥赛博物馆'), findsNothing); // 浏览区被搜索结果替换
   });
 }

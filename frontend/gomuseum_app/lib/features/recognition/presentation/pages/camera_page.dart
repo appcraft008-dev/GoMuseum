@@ -4,6 +4,7 @@
 /// 暖纸候选确认面板（装裱卡 + 置信度 + 门票式确认按钮）。
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -18,6 +19,7 @@ import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
+import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -204,7 +206,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   void _showTagSearchSheet() {
     final gm = context.gm;
-    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: gm.bg,
@@ -212,49 +213,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            22, 18, 22, 18 + MediaQuery.of(sheetContext).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.camTagSearch,
-                style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
-            const SizedBox(height: 6),
-            Text(
-              l10n.camTagHint,
-              style: GmText.sans(size: 12, color: gm.sub),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              autofocus: true,
-              style: GmText.sans(size: 13.5),
-              decoration: InputDecoration(
-                hintText: l10n.camTagExample,
-                hintStyle: GmText.sans(size: 13.5, color: gm.faint),
-                filled: true,
-                fillColor: gm.surface,
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: gm.line),
-                  borderRadius: BorderRadius.zero,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: gm.accent),
-                  borderRadius: BorderRadius.zero,
-                ),
-              ),
-              onSubmitted: (_) {
-                Navigator.of(sheetContext).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.camPackComingSoon)),
-                );
-              },
-            ),
-            const SizedBox(height: 14),
-          ],
-        ),
-      ),
+      builder: (_) =>
+          _TagSearchSheet(lang: apiLanguage(ref.read(languageProvider))),
     );
   }
 
@@ -767,5 +727,91 @@ class _CameraPageState extends ConsumerState<CameraPage>
       GmTicketButton(
           label: l10n.camRetake, icon: GmIcons.camera, onTap: _retake),
     ];
+  }
+}
+
+/// 识别兜底 → 搜索闭环：无图区/未收录时按编号/名称查找（全局即时搜索）。
+/// 命中点击 → 关闭 sheet 后跳讲解页（与识别 match 同款导航）。
+class _TagSearchSheet extends ConsumerStatefulWidget {
+  const _TagSearchSheet({required this.lang});
+
+  final String lang;
+
+  @override
+  ConsumerState<_TagSearchSheet> createState() => _TagSearchSheetState();
+}
+
+class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
+  String _q = '';
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _onChanged(String v) {
+    _timer?.cancel();
+    final q = v.trim();
+    if (q.isEmpty) {
+      setState(() => _q = '');
+      return;
+    }
+    _timer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _q = q);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          22, 18, 22, 18 + MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.camTagSearch,
+              style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(l10n.camTagHint, style: GmText.sans(size: 12, color: gm.sub)),
+          const SizedBox(height: 14),
+          TextField(
+            autofocus: true,
+            style: GmText.sans(size: 13.5),
+            decoration: InputDecoration(
+              hintText: l10n.camTagExample,
+              hintStyle: GmText.sans(size: 13.5, color: gm.faint),
+              filled: true,
+              fillColor: gm.surface,
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: gm.line),
+                borderRadius: BorderRadius.zero,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: gm.accent),
+                borderRadius: BorderRadius.zero,
+              ),
+            ),
+            onChanged: _onChanged,
+          ),
+          if (_q.isNotEmpty)
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 12),
+                child: SearchResultsView(
+                  query: (slug: null, q: _q, lang: widget.lang),
+                  showMuseums: true,
+                  onNavigate: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          const SizedBox(height: 14),
+        ],
+      ),
+    );
   }
 }

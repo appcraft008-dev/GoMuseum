@@ -110,6 +110,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchCityMuseumArtwork => '搜索城市、博物馆或艺术品';
 
   @override
+  String get searchMuseumsSection => '博物馆';
+
+  @override
+  String get searchArtworksSection => '藏品';
+
+  @override
+  String get searchNoResults => '没有找到相关结果';
+
+  @override
   String museumCount(Object count) {
     return '$count 家博物馆';
   }
@@ -709,6 +718,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchCityMuseumArtwork => '搜尋城市、博物館或藝術品';
+
+  @override
+  String get searchMuseumsSection => '博物館';
+
+  @override
+  String get searchArtworksSection => '藏品';
+
+  @override
+  String get searchNoResults => '沒有找到相關結果';
 
   @override
   String museumCount(Object count) {
