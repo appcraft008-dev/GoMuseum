@@ -21,6 +21,10 @@
 | `GET /museums/{slug}/objects/{qid}/content?language=` | 单件讲解(导览页) | `get_object_content` |
 | `GET /search?q=&language=&limit=` | 全局搜索(探索页;跨馆藏品+博物馆) | `search/inprocess.py` |
 | `GET /museums/{slug}/search?q=&language=&limit=` | 馆域搜索(馆列表页;只搜当前馆藏品) | `search/inprocess.py` |
+| `GET /museums/{slug}/objects/{qid}/audio?language=&section=` | 懒 TTS(点播放才生成;返 `{audio_url}` R2 直链;生成中 409) | `endpoints/museums.py` |
+| `GET /museums/{slug}/objects/{qid}/audio/stream?language=&section=` | 流式 TTS(✅2026-07-16 #256):首播边生成边播 | `endpoints/museums.py` |
+
+**音频流式端点(加法,老 `/audio` 不动)**:`/audio/stream` 仅 guide/深度段(qa 连念/artist_bio v1 仍走 `/audio`)。⚠️ **同一个 200 有两种形状**——首播返 `audio/mpeg` chunked 字节流(单次 TTS tee:客户端边收边播 + detached 落库,断连也把整段落 R2,不重复付费);已落库返 JSON `{"audio_url"}` R2 直链。**前端必须按 Content-Type 分支**;409=同段他人正在生成(重试即缓存命中),404=该段文本未发布。流式响应无 Content-Length/不支持 Range。
 
 `language` 取值 = `DEFAULT_LANGUAGES`(lang_config.py,唯一真相源;当前 7 语 en/fr/de/es/it/zh/pl)。缺省 `zh`。**加语言=加配置**:新语言按§多语显示名的"加语言 checklist"落配置即全端点生效,**本行不再随之改动**(引用真相源,非硬列举)。新内容全语生成;老内容缺语走懒翻译/`translate` 补。
 
@@ -125,7 +129,9 @@
 
 `stub`(只元数据,目录铺出) → `ready`(≥1 段已发布)/ `empty`(无可接地材料)。前端:`stub`/`empty` 显"待完善",`ready` 正常。未知值按 `ready` 容错。
 
-**懒生成(✅2026-07-03 落地)**:content 端点命中 `stub` → 后台触发该件完整生成(全语言;**请求者语言排队首、逐语言翻完即落库**——用户最快看到自己的语言,单语言翻译失败不拖垮其他),几分钟后再取即 `ready`。锁=内部 `attributes.lazy_lock_at`(TTL 10min 自愈),**不对外暴露中间状态**——stub 期间前端照旧"待完善",契约形状零变化、老 App 无感。`empty` 不重试(已判无可接地材料,防循环烧钱)。并发上限 2/进程;仅 staging/production 环境生效。
+**懒生成(✅2026-07-03 落地)**:content 端点命中 `stub` → 后台触发该件完整生成(全语言;**请求者语言排队首、逐语言翻完即落库**——用户最快看到自己的语言,单语言翻译失败不拖垮其他),几分钟后再取即 `ready`。
+
+**首屏关键路径原则(✅2026-07-16 #257 定,TTFC 45.9s→~15s)**:懒生成语句顺序=**请求者首屏最短路径**——材料抓取(guide 的接地输入:对象/作者 wiki 提取 + artist_facts + 证据包,**必须在 guide 前**)→ guide(en) 落库 → **请求语言 guide 翻译立即落库(用户 ~15s 见主讲解)** → 其余全部延后(作者实体 bio/i18n、canonical 深度段、其余语言、QA)。**今后往管线加任何生成步骤,先问:在 guide 依赖链内吗?不在 → 一律放首屏之后**。纯重排:调用集/prompt 不变=质量与成本不变;每段 persist 即 commit=前端轮询立即可见。锁=内部 `attributes.lazy_lock_at`(TTL 10min 自愈),**不对外暴露中间状态**——stub 期间前端照旧"待完善",契约形状零变化、老 App 无感。`empty` 不重试(已判无可接地材料,防循环烧钱)。并发上限 2/进程;仅 staging/production 环境生效。
 
 **`generation` 进度字段(✅2026-07-10 加法)**:content 端点返回 `generation: {published, expected}`——真实段落分数(expected=guide+该类目深度段;published=已发布的 guide+深度段)。前端显"N/M 段"诚实进度(**不做假百分比/时间进度条**:LLM 时间不可预测,假条会卡在90%伤信任)。配合 guide 先出流式,等待体验=主讲解先出+真实段落进度+计时预期。
 
@@ -207,6 +213,11 @@
 >    HTTP 200 的**空结果**,把空页当"翻完了"会**静默缺件**(教训:orsay catalog 两次截断 1537/1517,
 >    漏收 500+ 长尾件含用户实拍的库尔贝《鹿斗》)。翻页循环连续空 N 次才允许 break;
 >    上新馆跑完 catalog 核对 loaded 数与该馆 Wikidata 有图量级是否相符。
+> 6. **容器内长任务:避开部署窗口 + 脱会话 + 日志必须实时落地**(2026-07-16 添)——后端容器随每次
+>    staging/prod 部署 **recreate,里面的批任务被无声杀死**;起长任务前确认无部署在途/等部署落定再起。
+>    启动用 `docker exec -d` + `setsid`(SSH 断连不死);日志逐行 flush 到文件(教训:staging Joconde
+>    补名首跑中途死、日志 0 字节,**死因无法回溯**;重建带日志脚本后 1038 件零失败跑完)。
+>    "监控到进程消失"≠"任务成功"——收尾判断只认日志 DONE 行 + 数据核验(纪律 4 幂等保证随时续跑)。
 
 ---
 
@@ -222,6 +233,7 @@
 > **① 该语言的权威标签**(Wikidata 多语 labels / 馆方官方标签,专有名词最优)→ **② 从英语轴心机器翻译**(该语言无权威标签时兜底)→ **③ 英语轴心原名**(永不空)。
 > **语言无关**:新增语言(de/es/it…)**只加进 `DEFAULT_LANGUAGES` 语言集**,生成时一次性抓该实体全部目标语言的 Wikidata labels、缺的从 en 翻译 —— **同一套机制、零 per-language 代码**。这就是"加语言=加配置"。
 > **配套**:**QID 是全系统匹配键**(识别/查询/去重/跳转都用 qid);显示名纯展示,名字回退绝不影响匹配。避开脏格式(如 Joconde 的 "Lastname First (dates)")。
+> **非 Wikidata 条目的身份(✅2026-07-16 #255 定)**:无 Wikidata 条目的件,qid 位=**合成把手 `<source>-<reference>`**(如 `joconde-000SC010033`)——对外稳定、全系统当 qid 同键用(识别/搜索/跳转零分叉);内部检索按 UUID 回查。`is_wikidata_qid()`(Q+数字)做门控:合成把手**跳过一切 Wikidata SPARQL**(省成本+避免 `wd:<合成号>` 垃圾查询)。**names 配方**:这类件无权威标签可抓 → 直接走显示名规则②(title_en 轴心纯翻译,staging 实证 1038 件×10 语零失败);**无 title_en 则无轴心 → 留空不硬造**(宁缺毋滥)。上新馆接任何非 Wikidata 源(区域目录/官方馆藏库)照此,零核心改动。
 > **解析时机 = 铺目录时(2026-07-03 定)**:显示名是**目录元数据、不是生成内容**——catalog 后立即跑 `onboard.py <slug> names --target <env>`(幂等可重跑),全馆补齐 `title_i18n`/`artist_qid`/Artist 名字行;stub 一进目录就有完整多语显示名,**不等内容生成**(此前只在 generate 时填,导致列表页大量 stub 在 zh 视图显英/法文名)。generate 时同一机制增量修补。en 也权威优先(纠正目录把非英文标签误存 title_en,如 "Régates à Argenteuil")。
 
 > **⚠️ 本地化完整性原则(2026-07-03 定,分类标签教训)。**
@@ -323,6 +335,7 @@
 
 ## 变更记录
 
+- 2026-07-16:**#252-257 批次回写**。API 面加法:`/audio`(懒 TTS)与 `/audio/stream`(流式,单次 tee,⚠️200 双形状按 Content-Type 分支)入端点总览。原则×2:**首屏关键路径原则**(懒生成顺序=请求者最短路径,新增生成步骤不在 guide 依赖链内一律延后;TTFC 45.9s→~15s)、**非 Wikidata 条目身份**(合成把手 `<source>-<ref>` 当 qid 同键用+`is_wikidata_qid` 门控跳 SPARQL+names 走 title_en 轴心)。批处理纪律第 6 条:容器内长任务避开部署窗口+脱会话+日志实时落地("进程消失≠成功",只认 DONE 行+数据核验)。
 - 2026-07-13:**搜索功能落地**(spec 2026-07-13-search-feature-design)。API 面加法:`GET /search`(全局,museums+objects 两段)+`GET /museums/{slug}/search`(馆域,仅 objects);无图 stub 可搜(has_image/thumbnail:null)、全语种、三路匹配。原则:**搜索=稳定契约+可替换引擎,进程内起步(零同步)→规模触发换 Meilisearch,契约与前端零改**。前端:探索页升级全局搜(debounce 300ms 分区结果)+馆列表页激活馆内搜+识别未收录→搜索闭环。
 - 2026-07-06:加语言 checklist 补⑥字形变体(_SCRIPT_VARIANTS)+⑦强制跑质量验收清单(完整六检查点/全段落扫描;i18n-translation-quality-checklist.md)。
 - 2026-07-05:定**标题真相唯一化**原则(显示名=标题唯一真相,内容三通路引用跟随;glossary 注入,修显现/幻影分叉)。
