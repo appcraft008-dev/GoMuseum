@@ -1,5 +1,8 @@
 /// 段落音频播放器：点播放→懒取 TTS（首次现场生成 ~数秒）→播放。
 /// 覆盖 guide/深度模块/问答(qa+qaSort)/作者介绍(artist_bio)。
+/// guide+深度段走流式端点 /audio/stream（边生成边播，首个 chunk 到即出声）；
+/// 一个 200 可能是 JSON(缓存→R2直链) 或 audio/mpeg(渐进流)，异常回退老 /audio。
+/// qa 连念/作者介绍仍走老 /audio（后端 v1 不支持流式）。
 /// 语速 0.75/1/1.5/2x（客户端 setSpeed，零后端成本）；加载后显进度条+剩余时间。
 /// 409「生成中」静默转圈自动重试（≤30s）；404「讲解生成后可听」；503「暂不可用可重试」。
 library;
@@ -10,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/tts_chunk_audio_source.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -73,6 +77,13 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   static const List<double> _speeds = [1.0, 1.5, 2.0, 0.75];
   int _speedIdx = 0;
 
+  /// 正在渐进播放的流式源（需在换源/销毁时取消其 HTTP 订阅，防连接泄漏）。
+  TtsChunkAudioSource? _activeSource;
+
+  /// 流式端点仅 guide + canonical 深度段；qa 连念/作者介绍仍走老 /audio。
+  bool get _useStream =>
+      widget.section != 'qa' && widget.section != 'artist_bio';
+
   void _pauseQuiet() {
     if (_player.playing) _player.pause();
   }
@@ -80,6 +91,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   @override
   void dispose() {
     _ActiveAudio.release(this);
+    _activeSource?.dispose();
     _player.dispose();
     super.dispose();
   }
@@ -100,20 +112,92 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
 
     setState(() => _ui = _Ui.loading);
-    String? src = widget.initialUrl;
-    if (src == null || src.isEmpty) {
-      src = await _fetchWithRetry();
-      if (src == null) return; // 状态已在 _fetchWithRetry 内置为 notReady/error
+    // 换源前取消上一个流式订阅。
+    _activeSource?.dispose();
+    _activeSource = null;
+
+    // 后端已预生成的直链 → 直接播（免懒取/免流式）。
+    final initial = widget.initialUrl;
+    if (initial != null && initial.isNotEmpty) {
+      if (!await _startWith(() => _player.setUrl(initial))) {
+        if (mounted) setState(() => _ui = _Ui.error);
+      }
+      return;
     }
 
+    if (_useStream) {
+      await _loadStreaming();
+    } else {
+      await _loadLegacy();
+    }
+  }
+
+  /// 设源→设速→播；成功返回 true。失败不置 UI（由调用方决定报错或回退）。
+  Future<bool> _startWith(Future<void> Function() setSource) async {
     try {
-      await _player.setUrl(src);
+      await setSource();
       await _player.setSpeed(_speeds[_speedIdx]);
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() => _ui = _Ui.loaded);
       _ActiveAudio.takeOver(this);
       await _player.play();
+      return true;
     } catch (_) {
+      return false;
+    }
+  }
+
+  /// 流式端点：一个 200 可能是 JSON(缓存→URL) 或 audio/mpeg(渐进流)。
+  /// 409 复用 2s 重试；任何流式异常/失败 → 回退老 /audio（命中落库缓存，不重复计费）。
+  Future<void> _loadStreaming() async {
+    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    while (true) {
+      final res = await ref.read(catalogDataSourceProvider).getGuideAudioStream(
+            slug: widget.slug,
+            qid: widget.qid,
+            language: widget.language,
+            section: widget.section,
+          );
+      if (!mounted) return;
+      switch (res) {
+        case GuideAudioReady(:final url):
+          if (!await _startWith(() => _player.setUrl(url))) await _loadLegacy();
+          return;
+        case GuideAudioStream(:final bytes):
+          final source = TtsChunkAudioSource(bytes);
+          _activeSource = source;
+          final ok = await _startWith(() => _player
+              .setAudioSource(source)
+              .timeout(const Duration(seconds: 35)));
+          if (!ok) {
+            source.dispose();
+            _activeSource = null;
+            await _loadLegacy();
+          }
+          return;
+        case GuideAudioGenerating():
+          if (DateTime.now().isAfter(deadline)) {
+            setState(() => _ui = _Ui.error);
+            return;
+          }
+          await Future.delayed(const Duration(seconds: 2));
+          if (!mounted) return;
+          continue;
+        case GuideAudioNotReady():
+          setState(() => _ui = _Ui.notReady);
+          return;
+        case GuideAudioFailed():
+          await _loadLegacy();
+          return;
+      }
+    }
+  }
+
+  /// 老 /audio 路径（qa/作者介绍常走此；流式失败也回退到此）。
+  Future<void> _loadLegacy() async {
+    final url = await _fetchWithRetry();
+    if (url == null) return; // 终态已在 _fetchWithRetry 内置
+    if (!await _startWith(() => _player.setUrl(url))) {
       if (mounted) setState(() => _ui = _Ui.error);
     }
   }
@@ -133,6 +217,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
       switch (res) {
         case GuideAudioReady(:final url):
           return url;
+        case GuideAudioStream():
+          // 老 /audio 端点不返流式；防御性置错。
+          setState(() => _ui = _Ui.error);
+          return null;
         case GuideAudioGenerating():
           if (DateTime.now().isAfter(deadline)) {
             setState(() => _ui = _Ui.error);

@@ -11,6 +11,13 @@ class GuideAudioReady extends GuideAudioResult {
   final String url;
 }
 
+/// 200 audio/mpeg：流式字节流（边生成边播）。仅 /audio/stream 端点返回。
+/// [bytes] 是渐进到达的音频 chunk 流，喂给渐进播放源；异常时调用方回退老 /audio。
+class GuideAudioStream extends GuideAudioResult {
+  const GuideAudioStream(this.bytes);
+  final Stream<List<int>> bytes;
+}
+
 /// 409 audio_generating：正在现场生成（撞段级锁）→ 非错误，等一下自动重试。
 class GuideAudioGenerating extends GuideAudioResult {
   const GuideAudioGenerating();
