@@ -218,13 +218,13 @@ class TTSService:
             raise AIServiceException("OpenAI client not available for TTS")
 
         try:
-            response = await client.audio.speech.create(
+            # 真流式:with_streaming_response 边收边吐(实测修复:普通 create() 的 await
+            # 会把整段音频下载完才返回,iter_bytes 只是切内存——客户端干等 ~20s 后一次性收到全部)
+            async with client.audio.speech.with_streaming_response.create(
                 **self._speech_kwargs(voice, text, speed)
-            )
-
-            # Stream audio chunks（openai 2.x 的 iter_bytes() 是同步生成器，不能 async for）
-            for chunk in response.iter_bytes(chunk_size=4096):
-                yield chunk
+            ) as response:
+                async for chunk in response.iter_bytes(chunk_size=4096):
+                    yield chunk
 
             logger.info("TTS audio stream completed")
 
