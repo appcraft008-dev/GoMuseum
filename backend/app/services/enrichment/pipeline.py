@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
@@ -126,6 +127,13 @@ def generate_object(
         return {"qid": qid, "skipped": "absent"}
     if not force and _has_published_en(db, o.id):
         return {"qid": qid, "skipped": "exists"}
+
+    _t = [time.perf_counter()]
+
+    def _lap(label):
+        now = time.perf_counter()
+        logger.info("GENTIMING qid=%s %s=%.2fs", qid, label, now - _t[0])
+        _t[0] = now
 
     if registry is not None and o.content_status == "stub":
         attrs = o.attributes or {}
@@ -299,6 +307,7 @@ def generate_object(
         except Exception:
             pass
 
+    _lap("setup_material_artist")
     sections = sections_for(o.category)
 
     # 头条(默认讲解)先生成,作为模块去重锚:模块带着头条去重,避免与头条重复。
@@ -313,6 +322,7 @@ def generate_object(
     if guide_text:
         gq = gate.check_section(material, facts, guide_text)
         persist_gated_sections(db, qid, "en", {"guide": gq}, model)
+        _lap("guide_en")
         if gq.status == "published" and gq.body:
             en_published["guide"] = gq.body
             o.content_status = "ready"
@@ -321,6 +331,7 @@ def generate_object(
     draft = enricher.generate_canonical(obj, sections, guide=guide_text)
     gated_en = gate.gate(material, facts, draft)
     pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
+    _lap("canonical_en")
     if o.content_status != "ready":
         o.content_status = "ready" if pub_en > 0 else "empty"
     db.flush()
@@ -358,6 +369,7 @@ def generate_object(
             nr_total += n
         counts[lang] = (pub_total, nr_total)
     result = {"qid": qid, "counts": counts}
+    _lap("translate_all_langs")
     if qa_suggester is not None:
         covered = "\n\n".join(v for v in en_published.values() if v)
         _titles = {
