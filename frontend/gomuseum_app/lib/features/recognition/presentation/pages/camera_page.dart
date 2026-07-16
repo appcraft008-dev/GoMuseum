@@ -152,7 +152,15 @@ class _CameraPageState extends ConsumerState<CameraPage>
       _showQuotaExhaustedSheet();
       return;
     }
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    // 压到后端有用上限（GPT 缩 1024px / DINOv2 裁 224px）：原图全尺寸上传的多余像素
+    // 服务器一收到就丢，纯白等上传。≤1024/q85 精度与原图一致，只省上传耗时（大图差 20-40×）。
+    // EXIF 旋转由 image_picker 烘进像素并剥标签，避免 #244 竖拍横存的方向坑。
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
     if (picked == null || !mounted) return;
     await _recognizeImage(picked);
   }
