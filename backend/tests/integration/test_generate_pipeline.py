@@ -394,6 +394,63 @@ def test_en_guide_persisted_before_deep_modules(session, monkeypatch):
     assert order.index("guide") < order.index("background")
 
 
+def test_priority_lang_guide_persisted_before_canonical(session, monkeypatch):
+    # TTFC:请求语言的 guide 必须先于 canonical 深度段落库——用户 ~15s 就看到自己
+    # 语言的主讲解,而非等全件(canonical/artist/qa)生成完。质量/counts 不变。
+    import app.services.enrichment.pipeline as pl
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    order = []
+    orig = pl.persist_gated_sections
+
+    def spy(db, qid, lang, results, model):
+        order.extend((lang, code) for code in results)
+        return orig(db, qid, lang, results, model)
+
+    monkeypatch.setattr(pl, "persist_gated_sections", spy)
+
+    def _ok(body):
+        return SectionQuality(
+            body=body, status="published", grounding_ratio=1.0, conflicts=[], score=1.0
+        )
+
+    class _Enr(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "Guide hook."
+
+        def generate_canonical(self, obj, sections, guide=None):
+            return {"background": "Deep."}
+
+    class _Gate(_FakeGate):
+        def check_section(self, m, f, b):
+            return _ok(b)
+
+        def gate(self, m, f, draft):
+            return {c: _ok(b) for c, b in draft.items()}
+
+    class _Tr(_FakeTranslator):
+        def translate_object(self, en_sections, target_langs, titles=None):
+            lang = target_langs[0]
+            return {lang: {c: _ok(f"{lang} {b}") for c, b in en_sections.items()}}
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_Gate(),
+        translator=_Tr(),
+        target_langs=["en", "ja"],
+        model="m",
+        lang_priority="ja",
+    )
+    # ja guide 抢在 canonical 深度段(en background)之前落库
+    assert order.index(("ja", "guide")) < order.index(("en", "background"))
+    assert order.count(("ja", "guide")) == 1  # 不重复翻译
+    assert out["counts"]["ja"] == (2, 0)  # 内容完整:guide + background 都发布
+    assert out["counts"]["en"] == (1, 0)
+
+
 class _FakeRegistry:
     def __init__(self):
         self.calls = []
