@@ -6,6 +6,7 @@
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -87,6 +88,33 @@ def object_audio(
     if status == "no_text":
         raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
     return {"audio_url": url}
+
+
+@router.get("/{slug}/objects/{qid}/audio/stream")
+async def object_audio_stream(
+    slug: str,
+    qid: str,
+    language: str = "zh",
+    section: str = "guide",
+):
+    """流式音频(边生成边播,一次 TTS 调用 tee 落库)。首播缩短等待;缓存命中返 R2 URL。
+    落库跑 detached task,用户中途退出也把整段落 R2(tts-1 按字符已付费,抽完最省)。
+    guide/深度段;qa/artist_bio 仍走非流式 /audio(v1 范围)。"""
+    from app.services.enrichment.streaming_audio import stream_section_audio
+
+    try:
+        status, payload = await stream_section_audio(qid, language, section)
+    except Exception:
+        logger.exception("TTS stream failed: %s/%s/%s", qid, language, section)
+        raise HTTPException(status_code=503, detail={"reason": "tts_failed"})
+    if status == "busy":
+        raise HTTPException(status_code=409, detail={"reason": "audio_generating"})
+    if status == "no_text":
+        raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
+    if status == "cached":
+        # 已落库:不重复生成,直接给 R2 直链(前端从 R2 播)
+        return {"audio_url": payload}
+    return StreamingResponse(payload, media_type="audio/mpeg")
 
 
 @router.get("/{slug}/objects")

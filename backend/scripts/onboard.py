@@ -46,6 +46,9 @@ def build_parser() -> argparse.ArgumentParser:
     ca.add_argument(
         "--limit", type=int, default=None
     )  # 覆盖 fetch_limit(staging 小样本)
+    ca.add_argument(
+        "--source", choices=["wikidata", "joconde"], default="wikidata"
+    )  # joconde=补纸上作品(去重只补 Wikidata 缺的件)
     ge = sub.add_parser("generate")
     ge.add_argument("--target", choices=["staging", "prod"], required=True)
     ge.add_argument("--qid", default=None)
@@ -138,23 +141,24 @@ def cmd_load(slug: str, pack_key: str, sample: bool, target: str) -> None:
         print(build_report(slug, reported, as_markdown=True))
 
 
-def cmd_catalog(slug: str, target: str, limit: int | None = None) -> None:
+def cmd_catalog(
+    slug: str, target: str, limit: int | None = None, source: str = "wikidata"
+) -> None:
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
         raise SystemExit(
             f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
             f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
         )
-    from app.services.enrichment.catalog_loader import load_stubs
+    from app.models.museum import Museum
+    from app.services.enrichment.catalog_loader import filter_new_stubs, load_stubs
     from app.services.enrichment.identity import merge_stubs
-    from app.services.enrichment.sources.wikidata_catalog import WikidataCatalog
 
     cfg = _catalog().get(slug)
     if limit:
         from dataclasses import replace
 
         cfg = replace(cfg, fetch_limit=limit)
-    stubs = merge_stubs(list(WikidataCatalog().list(cfg)))
     museum = {
         "slug": cfg.slug,
         "qid": cfg.wikidata_qid,
@@ -166,10 +170,23 @@ def cmd_catalog(slug: str, target: str, limit: int | None = None) -> None:
     }
     db = SessionLocal()
     try:
+        if source == "joconde":
+            # 补充源:只补 Wikidata 缺的件(去重跳过既有,绝不覆盖既有好数据)
+            from app.services.enrichment.sources.joconde_catalog import JocondeCatalog
+
+            stubs = merge_stubs(list(JocondeCatalog().list(cfg)))
+            m = db.query(Museum).filter_by(slug=slug).first()
+            before = len(stubs)
+            stubs = filter_new_stubs(db, m.id if m else None, stubs)
+            print(f"  Joconde 列 {before} 件,去重后新增 {len(stubs)} 件")
+        else:
+            from app.services.enrichment.sources.wikidata_catalog import WikidataCatalog
+
+            stubs = merge_stubs(list(WikidataCatalog().list(cfg)))
         out = load_stubs(db, museum, stubs)
     finally:
         db.close()
-    print(f"✓ catalog 落库: {out}")
+    print(f"✓ catalog 落库({source}): {out}")
 
 
 def cmd_generate(slug, qid, langs, force, limit, target) -> None:
@@ -389,7 +406,7 @@ def main(argv=None) -> None:
     if ns.command == "fetch":
         cmd_fetch(ns.slug)
     elif ns.command == "catalog":
-        cmd_catalog(ns.slug, ns.target, ns.limit)
+        cmd_catalog(ns.slug, ns.target, ns.limit, ns.source)
     elif ns.command == "generate":
         cmd_generate(ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target)
     elif ns.command == "report":

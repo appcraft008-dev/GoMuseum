@@ -240,7 +240,7 @@ def test_zh_hant_prefers_traditional_authoritative_label():
         {"l": {"value": "顯現", "xml:lang": "zh-hant"}},
         {"l": {"value": "显现", "xml:lang": "zh-hans"}},
     ]
-    out = fetch_wikidata_labels("Q", ["zh-hant"], run_query=lambda s: rows)
+    out = fetch_wikidata_labels("Q1", ["zh-hant"], run_query=lambda s: rows)
     assert out["zh-hant"] == "顯現"  # 权威繁体优先
 
 

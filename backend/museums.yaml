@@ -16,6 +16,7 @@ museums:
                  Q125191]
     country_lang: fr
     sources: [joconde, wikipedia]   # 每馆补充源；Wikidata 是脊柱不在此列
+    joconde_museum: "musée d'Orsay"   # JocondeCatalog 补纸上作品(Wikidata 覆盖偏科)
     fetch_limit: 12000              # 全条目5353+多P31重复行(P18已OPTIONAL,无图件也收)
     sample_size: 30
     sample_qids: []

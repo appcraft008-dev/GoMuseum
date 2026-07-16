@@ -6,8 +6,35 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from app.models.museum_object import MuseumObject
 from app.services.enrichment.catalog_source import StubRecord
 from app.services.object_importer import find_object, upsert_museum, upsert_object
+from app.services.recognition.matcher import normalize_inv
+
+
+def filter_new_stubs(
+    db: Session, museum_id, stubs: list[StubRecord]
+) -> list[StubRecord]:
+    """只留库里还没有的件(按归一化馆藏号 + Joconde ref/P347 去重)。
+    补充源(如 Joconde)用:绝不覆盖既有 Wikidata 件的好数据,只补真正缺的。"""
+    existing = (
+        db.query(MuseumObject).filter_by(museum_id=museum_id).all() if museum_id else []
+    )
+    inv_set = {
+        normalize_inv(o.inventory_number) for o in existing if o.inventory_number
+    }
+    p347_set = {
+        (o.attributes or {}).get("external_ids", {}).get("P347") for o in existing
+    }
+    p347_set.discard(None)
+    out = []
+    for s in stubs:
+        if s.inventory_number and normalize_inv(s.inventory_number) in inv_set:
+            continue
+        if s.external_ids.get("P347") and s.external_ids["P347"] in p347_set:
+            continue
+        out.append(s)
+    return out
 
 
 def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:

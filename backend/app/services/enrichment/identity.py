@@ -8,6 +8,14 @@ import re
 
 from app.services.enrichment.catalog_source import StubRecord
 
+_WIKIDATA_QID = re.compile(r"^Q\d+$")
+
+
+def is_wikidata_qid(qid: str | None) -> bool:
+    """真 Wikidata QID(Q+数字)?非 Wikidata 源合成的对外把手(如 joconde-<ref>)返回 False。
+    用于跳过只对真 QID 有意义的 Wikidata SPARQL(既省成本又避免 wd:<合成号> 垃圾查询)。"""
+    return bool(qid and _WIKIDATA_QID.match(qid))
+
 
 def _norm_inv(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
