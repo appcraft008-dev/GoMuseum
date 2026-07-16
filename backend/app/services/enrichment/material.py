@@ -143,7 +143,12 @@ def to_simplified(s: str) -> str:
 
 def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
     """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
-    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。"""
+    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。
+    非 Wikidata 对外把手(joconde-<ref> 等)→ 直接 {}(无真 QID,names 回退机翻 title_en)。"""
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return {}
     run_query = (
         run_query or _default_artist_query
     )  # ponytail: same generic SPARQL caller

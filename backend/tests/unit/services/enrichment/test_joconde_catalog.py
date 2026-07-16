@@ -65,7 +65,9 @@ def test_list_maps_record_fields():
     assert s.year == "1897"
     assert s.category == "works_on_paper"
     assert s.external_ids["P347"] == "50350115122"
-    assert s.qid is None and s.image_url is None and s.source == "joconde"
+    # 合成对外把手:命名空间 + 非 Q 格式(防撞车、不误入 Wikidata SPARQL)
+    assert s.qid == "joconde-50350115122"
+    assert s.image_url is None and s.source == "joconde"
 
 
 def test_list_paginates_until_short_page():
@@ -95,14 +97,39 @@ def test_no_joconde_museum_yields_nothing():
     assert list(JocondeCatalog(http_get=_fake_http([])).list(cfg)) == []
 
 
-def test_skip_record_without_inventory():
-    rec = {
+def test_skip_record_without_inventory_or_reference():
+    no_inv = {
         "reference": "r",
         "numero_inventaire": None,
         "titre": "T",
         "domaine": ["dessin"],
     }
-    assert list(JocondeCatalog(http_get=_fake_http([[rec], []])).list(_ORSAY)) == []
+    no_ref = {
+        "reference": None,
+        "numero_inventaire": "RF 1",
+        "titre": "T",
+        "domaine": ["dessin"],
+    }
+    got = list(JocondeCatalog(http_get=_fake_http([[no_inv, no_ref], []])).list(_ORSAY))
+    assert got == []  # 无号或无 ref(合成不出把手)都跳过
+
+
+def test_is_wikidata_qid_and_labels_guard():
+    from app.services.enrichment.identity import is_wikidata_qid
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    assert is_wikidata_qid("Q334138") is True
+    assert is_wikidata_qid("joconde-50350115122") is False
+    assert is_wikidata_qid(None) is False
+    # 合成 qid → 直接 {},绝不调 SPARQL(省成本 + 避免 wd:<合成号> 垃圾查询)
+    called = {"n": 0}
+
+    def _boom(q):
+        called["n"] += 1
+        raise AssertionError("run_query 不该被调用")
+
+    assert fetch_wikidata_labels("joconde-50350115122", ["zh"], run_query=_boom) == {}
+    assert called["n"] == 0
 
 
 def test_cleaners():

@@ -31,7 +31,9 @@ class MuseumObject(Base):
     museum_id = Column(
         UUID(as_uuid=True), ForeignKey("museums.id"), nullable=False, index=True
     )
-    qid = Column(String(32), unique=True, nullable=True, index=True)  # Wikidata QID
+    # 对外把手:Wikidata QID(Q…);非 Wikidata 源(如 Joconde)合成 `joconde-<ref>`。
+    # 真实内部身份是本行 id(UUID);qid 仅作稳定对外引用(URL/导航/内容端点),全球唯一。
+    qid = Column(String(32), unique=True, nullable=True, index=True)
     inventory_number = Column(String(128), nullable=True)  # 馆藏号
     category = Column(String(32), nullable=False, default="painting")
     title_zh = Column(String(512))

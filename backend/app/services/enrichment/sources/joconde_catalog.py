@@ -75,14 +75,16 @@ def _category(domaine) -> str:
 
 
 def _to_stub(rec: dict, slug: str) -> StubRecord | None:
-    """一条 Joconde 记录 → StubRecord。无馆藏号(无法幂等去重/落库)→ None。"""
+    """一条 Joconde 记录 → StubRecord。无馆藏号或无 reference(无法幂等去重/合成把手)→ None。
+    非 Wikidata 作品:对外把手 qid 合成为 `joconde-<ref>`(命名空间防撞车、非 Q 格式,让它
+    可搜/可导航/可懒生成而不误入 Wikidata SPARQL);真实身份仍是对象 UUID。"""
     inv = _clean_inv(rec.get("numero_inventaire"))
-    if not inv:
-        return None
     ref = rec.get("reference")
+    if not inv or not ref:
+        return None
     return StubRecord(
         inventory_number=inv,
-        qid=None,
+        qid=f"joconde-{ref}",
         title=_clean_title(rec.get("titre")),
         artist=_clean_artist(rec.get("auteur")),
         year=rec.get("millesime_de_creation"),

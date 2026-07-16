@@ -55,6 +55,7 @@ def build_search_index(db, museum_id=None) -> list[dict]:
                 artists.add(normalize(col))
         index.append(
             {
+                "id": o.id,  # 内部真实身份=UUID(qid 可能是合成把手/缺失,回查一律用 id)
                 "qid": o.qid,
                 "names": names - {""},
                 "artists": artists - {""},
@@ -120,7 +121,8 @@ def search(
     if qn:
         ranked = rank(build_search_index(db, museum_id), query, limit)
         for entry, _score_val in ranked:
-            o = db.query(MuseumObject).filter_by(qid=entry["qid"]).first()
+            # 按 UUID 回查(qid 可能是合成把手甚至 None;filter_by(qid=None) 会撞任意空 qid 件)
+            o = db.query(MuseumObject).filter_by(id=entry["id"]).first()
             if not o:
                 continue
             row = _summary(db, storage, o, language)
