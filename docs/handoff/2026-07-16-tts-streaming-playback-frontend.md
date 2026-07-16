@@ -60,8 +60,34 @@ if (ct.contains('application/json')) {
 3. 流式播放中杀 App → 稍后再进,该段应已是缓存命中(后端断连仍落库)。
 4. 问答连念/作者介绍 → 行为与现在完全一致(未切流式)。
 
+---
+
+## ⚠️ Addendum（2026-07-17）：#262 真机实测未达标——三处待修
+
+> 实测环境：staging 编译连 prod 的 APK,《草地上的午餐》(Q152509) 10 语 guide 逐一点播放。
+> **后端已排除**：prod 日志确认 `/audio/stream` 返 200、真流式吐 chunk、tee 落库正常("TTS audio stream completed"),无 5xx。
+> **问题全在前端播放侧**：大部分语言等 18-25s(≈整段生成时间)才出声;ja 等 >40s 报失败,再点 ~10s 播出。
+
+### 症状 ↔ 日志证据 ↔ 根因
+
+| # | 症状 | 日志证据(prod, 2026-07-16 21:2x UTC) | 根因/嫌疑 |
+|---|---|---|---|
+| 1 | **等待≈整段生成时间,"首 chunk 出声"没发生** | ko:stream 请求 21:27:28 → 生成完 21:27:48(20s),用户等了 ~20s;且 ko/zh-hant **流式 200 之后又出现老 `/audio` 请求** = `_startWith` 失败走了 `_loadLegacy` 降级 | `guide_audio_player.dart` `_player.setAudioSource(source).timeout(35s)`——真机上 setAudioSource **等到流结束才 ready(或失败)**。需 adb logcat(ExoPlayer tag)查它在等什么;方向:首 chunk 到即 ready 的正确姿势(先 play 再等 ready / ExoPlayer 缓冲参数 / `TtsChunkAudioSource` 的 request 响应形状) |
+| 2 | **ja 等 >40s 失败** | ja 生成异常慢(chunk 吐了 2min17s:21:24:28→21:26:45);客户端 ~35-40s 处断开;后端 detached 照常落完库 → 用户再点命中缓存 ~10s 播出 | `catalog_remote_datasource.dart` `getGuideAudioStream` 沿用了 **`receiveTimeout: 35s`**(那是老端点"同步生成 3-8s"的参数)——流式连接本来就要挂 1-2 分钟,中途撞超时 → DioException → 报失败。**修:流式请求去掉或放宽到 ≥120s**(或仅对"首 chunk 未到"设短超时) |
+| 3 | **降级链 409 风暴** | ja 失败后老 `/audio` 每 2s 一发连打 15+ 次,再叠 `/audio/stream` 重试——两端点抢同一段级锁互撞 | 流式失败 → `_loadLegacy` 的 2s 固定重试,叠加流式自身重试。**修:降级重试指数退避(2s→4s→8s…),且同段同时只允许一条在途请求** |
+
+### 修复验收（对着本文验证清单第 1 条,当前不达标）
+
+- **长文本语言(ja/ko)点播放 ≤5s 出声**(这是流式存在的全部意义;18-25s = 和不做流式一样);
+- ja 类慢生成(>1min)不再报失败,持续渐进播放;
+- 抓包/日志确认:单次播放**只出现 `/audio/stream` 一条在途请求**,无老端点连打。
+
+> 提示:后端锁行为——流式生成期间任何端点再请求同段都是 409,**409 重试属正常**;要修的只是节流与"流式明明成功却降级"。
+
 ## 相关
 
 - 后端实现：`backend/app/services/enrichment/streaming_audio.py`（单次 TTS tee：客户端+落库一次调用）、
   `backend/app/api/v1/endpoints/museums.py` `object_audio_stream`。
+- 前端实现（#262,本 addendum 的修复对象）：`catalog_remote_datasource.dart` `getGuideAudioStream` /
+  `guide_audio_player.dart` `_loadStreaming` / `tts_chunk_audio_source.dart`。
 - 前序交接：`2026-07-06-lazy-tts-streaming-frontend.md`（点播放/409/语速——本交接在其上加流式，不推翻）。
