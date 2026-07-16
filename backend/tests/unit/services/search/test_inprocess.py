@@ -2,7 +2,7 @@
 契约由端点锁定;本层测匹配行为。离线 sqlite,fixture 抄 test_matcher。"""
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -235,3 +235,48 @@ def test_english_language_resolves_names(session):
 
 def test_empty_query_search_returns_empty(session):
     assert search(session, _FakeStorage(), "", museum_id=None) == ([], [])
+
+
+# --- 性能形状(修"转圈圈"):索引自带展示字段,search 零回表;建索引不拖重 JSONB 列 ---
+
+
+def _capture_sql(session):
+    stmts = []
+    event.listen(
+        session.get_bind(),
+        "before_cursor_execute",
+        lambda conn, cur, stmt, params, ctx, many: stmts.append(stmt),
+    )
+    return stmts
+
+
+def test_build_index_skips_heavy_columns(session):
+    # 冷建索引不得加载 sources/evidence_pack(原始包/证据包,冷建慢的主因)
+    stmts = _capture_sql(session)
+    build_search_index(session)
+    joined = " ".join(stmts).lower()
+    assert "evidence_pack" not in joined
+    assert "museum_objects.sources" not in joined
+
+
+def test_warm_search_no_object_table_roundtrips(session):
+    # 热索引下 search() 的 objects 段全部来自索引,不再逐条回查(原 N+1:每条 4 查询)
+    build_search_index(session)
+    stmts = _capture_sql(session)
+    _, objects = search(
+        session, _FakeStorage(), "starry", museum_id=None, language="zh"
+    )
+    assert len(objects) == 2
+    joined = " ".join(stmts).lower()
+    assert "museum_objects" not in joined
+    assert "artists" not in joined and "object_images" not in joined
+
+
+def test_scoped_search_reuses_global_index(session):
+    # 馆域搜索复用全局索引过滤,热态零 SQL(原先每馆独立冷建)
+    mid = _mid(session)
+    build_search_index(session)
+    stmts = _capture_sql(session)
+    _, objects = search(session, _FakeStorage(), "starry", museum_id=mid, language="zh")
+    assert len(objects) == 2
+    assert stmts == []

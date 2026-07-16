@@ -32,6 +32,14 @@ class _FakeDs implements CatalogRemoteDataSource {
       const GuideAudioFailed();
 
   @override
+  Future<GuideAudioResult> getGuideAudioStream(
+          {required String slug,
+          required String qid,
+          required String language,
+          String section = 'guide'}) async =>
+      const GuideAudioFailed();
+
+  @override
   Future<ObjectListPage> getObjects(
       {required String slug,
       String? category,
@@ -78,6 +86,14 @@ class _ThrowingDs implements CatalogRemoteDataSource {
           required String language,
           String section = 'guide',
           int? qaSort}) async =>
+      const GuideAudioFailed();
+
+  @override
+  Future<GuideAudioResult> getGuideAudioStream(
+          {required String slug,
+          required String qid,
+          required String language,
+          String section = 'guide'}) async =>
       const GuideAudioFailed();
 
   @override

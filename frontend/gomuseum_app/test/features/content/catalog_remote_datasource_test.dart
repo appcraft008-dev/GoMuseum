@@ -5,9 +5,10 @@ import 'package:gomuseum_app/features/content/data/datasources/catalog_remote_da
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 
 class _StubAdapter implements HttpClientAdapter {
-  _StubAdapter(this.body, [this.status = 200]);
+  _StubAdapter(this.body, [this.status = 200, this.contentType]);
   final String body;
   final int status;
+  final String? contentType;
 
   /// 最近一次请求的 URI（校验 query 拼装）。
   Uri? lastUri;
@@ -19,7 +20,7 @@ class _StubAdapter implements HttpClientAdapter {
       RequestOptions o, Stream<List<int>>? r, Future? f) async {
     lastUri = o.uri;
     return ResponseBody.fromString(body, status, headers: {
-      Headers.contentTypeHeader: [Headers.jsonContentType]
+      Headers.contentTypeHeader: [contentType ?? Headers.jsonContentType]
     });
   }
 }
@@ -62,5 +63,44 @@ void main() {
         slug: 'orsay', qid: 'Q1', language: 'zh', section: 'qa', qaSort: 3);
     expect(adapter.lastUri!.queryParameters['section'], 'qa');
     expect(adapter.lastUri!.queryParameters['qa_sort'], '3');
+  });
+
+  test('getGuideAudioStream: 打 /audio/stream；JSON→Ready(缓存直链)', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'http://x'));
+    final adapter = _StubAdapter('{"audio_url":"http://r2/a.mp3"}');
+    dio.httpClientAdapter = adapter;
+    final res = await CatalogRemoteDataSourceImpl(dio: dio)
+        .getGuideAudioStream(slug: 'orsay', qid: 'Q1', language: 'zh');
+    expect(
+        adapter.lastUri!.path, '/api/v1/museums/orsay/objects/Q1/audio/stream');
+    expect(res, isA<GuideAudioReady>());
+    expect((res as GuideAudioReady).url, 'http://r2/a.mp3');
+  });
+
+  test('getGuideAudioStream: audio/mpeg→Stream(字节可读)', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'http://x'));
+    dio.httpClientAdapter = _StubAdapter('ID3AUDIODATA', 200, 'audio/mpeg');
+    final res = await CatalogRemoteDataSourceImpl(dio: dio)
+        .getGuideAudioStream(slug: 'orsay', qid: 'Q1', language: 'zh');
+    expect(res, isA<GuideAudioStream>());
+    final bytes = <int>[];
+    await for (final c in (res as GuideAudioStream).bytes) {
+      bytes.addAll(c);
+    }
+    expect(String.fromCharCodes(bytes), 'ID3AUDIODATA');
+  });
+
+  test('getGuideAudioStream: 409→Generating / 404→NotReady / 503→Failed',
+      () async {
+    Future<GuideAudioResult> call(int status) async {
+      final dio = Dio(BaseOptions(baseUrl: 'http://x'));
+      dio.httpClientAdapter = _StubAdapter('{"detail":{}}', status);
+      return CatalogRemoteDataSourceImpl(dio: dio)
+          .getGuideAudioStream(slug: 'orsay', qid: 'Q1', language: 'zh');
+    }
+
+    expect(await call(409), isA<GuideAudioGenerating>());
+    expect(await call(404), isA<GuideAudioNotReady>());
+    expect(await call(503), isA<GuideAudioFailed>());
   });
 }

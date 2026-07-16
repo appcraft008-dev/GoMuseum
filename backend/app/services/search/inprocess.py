@@ -4,7 +4,13 @@
 (用户打"梵高"/"moulin"/"RF1668")。只复用 matcher 的归一化工具,匹配逻辑独立。
 
 契约由端点锁定、跨引擎不变;规模越过 ~5-10 万件(卢浮+蓬皮杜级别)再换 Meilisearch,
-只换本模块,前端零改动。索引进程内缓存 TTL 600s(同 matcher 模式,key=museum_id,None=全局)。
+只换本模块,前端零改动。
+
+性能形状(修"转圈圈",2026-07-16):
+- 单一全局索引(缓存键恒为 None,TTL 600s),馆域=按 museum_id 过滤,不再每馆独立冷建;
+- 冷建只查需要的列,不拖 sources/evidence_pack 大 JSONB(原冷建数秒的主因);
+- 展示字段(标题/作者 i18n、年代、馆 slug、图 key)建索引时装进条目,
+  search() 纯内存出结果,消灭原先每条结果 4 次回表的 N+1。
 """
 
 from __future__ import annotations
@@ -13,12 +19,12 @@ import time
 
 from app.models.artist import Artist
 from app.models.museum import Museum
-from app.models.museum_object import MuseumObject
-from app.services.museum_repo import _pick
+from app.models.museum_object import MuseumObject, ObjectImage
+from app.services.museum_repo import _pick, _resolve_name, _sized
 from app.services.recognition.matcher import normalize, normalize_inv
 
 _INDEX_TTL = 600  # 秒
-_index_cache: dict = {}  # museum_id -> (ts, index); None = 全局
+_index_cache: dict = {}  # 恒单键 None -> (ts, 全局索引)
 _INV_MIN = 3  # 归一化编号 <3 位不做精确匹配(防误伤)
 
 # 匹配分档(排序权重;换引擎后能搜到什么一致,唯排序权重可有细微差别)
@@ -28,43 +34,87 @@ _S_SUBSTR = 0.6  # 标题子串
 _S_ARTIST = 0.4  # 作者子串
 
 
-def build_search_index(db, museum_id=None) -> list[dict]:
-    """馆(或全部)目录 → [{qid, names, artists, inv, popularity}](全语种归一化;进程内缓存)。"""
-    hit = _index_cache.get(museum_id)
-    if hit and time.time() - hit[0] < _INDEX_TTL:
-        return hit[1]
-    artists_by_qid = {}
-    for a in db.query(Artist).all():
-        names = {normalize(v) for v in (a.name_i18n or {}).values() if v}
-        if a.name_en:
-            names.add(normalize(a.name_en))
-        artists_by_qid[a.qid] = names
-    q = db.query(MuseumObject)
-    if museum_id is not None:
-        q = q.filter_by(museum_id=museum_id)
+def _build_global(db) -> list[dict]:
+    """全表(仅所需列)→ 索引条目(归一化匹配集 + 展示字段自带)。固定 4 条 SQL,与件数无关。"""
+    artists_by_qid = {}  # qid -> (归一化名集, name_i18n)
+    for qid, name_en, name_i18n in db.query(
+        Artist.qid, Artist.name_en, Artist.name_i18n
+    ):
+        names = {normalize(v) for v in (name_i18n or {}).values() if v}
+        if name_en:
+            names.add(normalize(name_en))
+        artists_by_qid[qid] = (names, name_i18n)
+    slug_by_museum = dict(db.query(Museum.id, Museum.slug))
+    img_by_object = {}  # object_id -> (image_key, source_url) 取 primary 最小 sort
+    for oid, key, url in (
+        db.query(ObjectImage.object_id, ObjectImage.image_key, ObjectImage.source_url)
+        .filter_by(role="primary")
+        .order_by(ObjectImage.sort)
+    ):
+        img_by_object.setdefault(oid, (key, url))
     index = []
-    for o in q.all():
-        attrs = o.attributes or {}
-        names = {normalize(v) for v in (attrs.get("title_i18n") or {}).values() if v}
-        for col in (o.title_en, o.title_zh):
+    rows = db.query(
+        MuseumObject.id,
+        MuseumObject.qid,
+        MuseumObject.museum_id,
+        MuseumObject.title_zh,
+        MuseumObject.title_en,
+        MuseumObject.artist_zh,
+        MuseumObject.artist_en,
+        MuseumObject.year,
+        MuseumObject.popularity,
+        MuseumObject.inventory_number,
+        MuseumObject.attributes,
+    )
+    for oid, qid, mid, t_zh, t_en, a_zh, a_en, year, pop, inv, attrs in rows:
+        attrs = attrs or {}
+        title_i18n = attrs.get("title_i18n") or {}
+        names = {normalize(v) for v in title_i18n.values() if v}
+        for col in (t_en, t_zh):
             if col:
                 names.add(normalize(col))
-        artists = set(artists_by_qid.get(attrs.get("artist_qid"), set()))
-        for col in (o.artist_en, o.artist_zh):
+        a_names, a_i18n = artists_by_qid.get(attrs.get("artist_qid"), (set(), None))
+        artist_names = set(a_names)
+        for col in (a_en, a_zh):
             if col:
-                artists.add(normalize(col))
+                artist_names.add(normalize(col))
+        image_key, image_url = img_by_object.get(oid, (None, None))
         index.append(
             {
-                "id": o.id,  # 内部真实身份=UUID(qid 可能是合成把手/缺失,回查一律用 id)
-                "qid": o.qid,
+                "id": oid,  # 内部真实身份=UUID(qid 可能是合成把手/缺失)
+                "qid": qid,
+                "museum_id": mid,
+                "museum_slug": slug_by_museum.get(mid),
                 "names": names - {""},
-                "artists": artists - {""},
-                "inv": normalize_inv(o.inventory_number) or None,
-                "popularity": o.popularity or 0,
+                "artists": artist_names - {""},
+                "inv": normalize_inv(inv) or None,
+                "popularity": pop or 0,
+                # 展示字段自带 → search() 零回表
+                "title_i18n": title_i18n,
+                "title_zh": t_zh,
+                "title_en": t_en,
+                "artist_i18n": a_i18n,
+                "artist_zh": a_zh,
+                "artist_en": a_en,
+                "year": year,
+                "image_key": image_key,
+                "image_url": image_url,
             }
         )
-    _index_cache[museum_id] = (time.time(), index)
     return index
+
+
+def build_search_index(db, museum_id=None) -> list[dict]:
+    """全局索引(进程内缓存);museum_id 给定时按其过滤(共享同一份缓存)。"""
+    hit = _index_cache.get(None)
+    if hit and time.time() - hit[0] < _INDEX_TTL:
+        index = hit[1]
+    else:
+        index = _build_global(db)
+        _index_cache[None] = (time.time(), index)
+    if museum_id is None:
+        return index
+    return [e for e in index if e["museum_id"] == museum_id]
 
 
 def _score(entry: dict, qn: str, qinv: str) -> float:
@@ -112,23 +162,38 @@ def search(
     db, storage, query: str, *, museum_id=None, language: str = "zh", limit: int = 20
 ) -> tuple[list[dict], list[dict]]:
     """契约实现:(museums, objects)。museum_id 给定=馆域(无 museums 段);None=全局。
-    无图 stub 照常在 objects 里(has_image=False)。空 query → ([], [])。"""
-    # 延迟导入避免循环(service 也依赖诸多重模块)
-    from app.services.recognition.service import _summary
-
+    无图 stub 照常在 objects 里(has_image=False)。空 query → ([], [])。
+    objects 段全部来自索引条目,不回表(与原 _summary 输出形状一致)。"""
     qn = normalize(query)
     objects = []
     if qn:
-        ranked = rank(build_search_index(db, museum_id), query, limit)
-        for entry, _score_val in ranked:
-            # 按 UUID 回查(qid 可能是合成把手甚至 None;filter_by(qid=None) 会撞任意空 qid 件)
-            o = db.query(MuseumObject).filter_by(id=entry["id"]).first()
-            if not o:
-                continue
-            row = _summary(db, storage, o, language)
-            row["year"] = o.year
-            row["has_image"] = row.get("thumbnail") is not None
-            objects.append(row)
+        for entry, _score_val in rank(build_search_index(db, museum_id), query, limit):
+            thumbnail = None
+            if entry["image_key"]:
+                thumbnail = _sized(storage, entry["image_key"], "thumb")
+            elif entry["image_url"]:
+                thumbnail = entry["image_url"]
+            objects.append(
+                {
+                    "qid": entry["qid"],
+                    "museum": entry["museum_slug"],
+                    "title": _resolve_name(
+                        entry["title_i18n"],
+                        language,
+                        {"zh": entry["title_zh"], "en": entry["title_en"]},
+                        entry["title_en"] or entry["title_zh"] or entry["qid"],
+                    ),
+                    "artist": _resolve_name(
+                        entry["artist_i18n"],
+                        language,
+                        {"zh": entry["artist_zh"], "en": entry["artist_en"]},
+                        entry["artist_en"] or entry["artist_zh"],
+                    ),
+                    "thumbnail": thumbnail,
+                    "year": entry["year"],
+                    "has_image": thumbnail is not None,
+                }
+            )
     museums = []
     if museum_id is None and qn:
         museums = _search_museums(db, query, language)
