@@ -181,6 +181,13 @@ def generate_object(
         if aqid:
             o.attributes = {**(o.attributes or {}), "artist_qid": aqid}
             db.flush()
+
+    def _enrich_artist_and_titles():
+        """作者实体(bio/名字/国籍多语)+ 中文标题回退。guide 正文不消费这些
+        (build_material 不读 Artist.bio)→ 延后到"请求语言 guide 落库"之后跑,
+        把它们从首屏关键路径挪走,缩短用户 TTFC。质量/成本/调用集不变,仅换顺序。"""
+        aqid = (af or {}).get("artist_qid") if registry is not None else None
+        if aqid:
             from app.models.artist import Artist
             from app.services.enrichment.backfill import bio_en_usable
 
@@ -274,12 +281,12 @@ def generate_object(
                     art.bio = {**(art.bio or {}), **add}
                     db.flush()
 
-    if not o.title_zh and o.title_en and hasattr(translator, "translate_section"):
-        try:
-            o.title_zh = translator.translate_section(o.title_en, "zh")
-            db.flush()
-        except Exception:
-            pass
+        if not o.title_zh and o.title_en and hasattr(translator, "translate_section"):
+            try:
+                o.title_zh = translator.translate_section(o.title_en, "zh")
+                db.flush()
+            except Exception:
+                pass
 
     obj = _row_to_obj(o)
     material = build_material(obj)
@@ -318,12 +325,33 @@ def generate_object(
             o.content_status = "ready"
             db.flush()
 
+    counts: dict = {}
+    # ★ TTFC:请求语言的 guide 先翻先落——抢在 canonical/artist/qa 之前落库(每段
+    # persist 即 commit),用户 ~15s 就看到自己语言的主讲解,而非等全件生成完。
+    done_pr = None  # 已提前落库的 (lang, section),后面循环跳过避免重复翻译
+    if lang_priority and lang_priority != "en" and "guide" in en_published:
+        _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang_priority)
+        _titles = {lang_priority: _title} if _title else None
+        try:
+            res = translator.translate_object(
+                {"guide": en_published["guide"]}, [lang_priority], titles=_titles
+            ).get(lang_priority, {})
+            p, n = persist_gated_sections(db, qid, lang_priority, res, model)
+            counts[lang_priority] = (p, n)
+            done_pr = (lang_priority, "guide")
+        except Exception:
+            logger.exception("priority guide translate failed for %s", qid)
+
+    # --- 以下延后:用户已见首屏,后台继续补全(作者实体/深度段/其余语言/问答)---
+    _enrich_artist_and_titles()
+
     draft = enricher.generate_canonical(obj, sections, guide=guide_text)
     gated_en = gate.gate(material, facts, draft)
     pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)
     if o.content_status != "ready":
         o.content_status = "ready" if pub_en > 0 else "empty"
     db.flush()
+    counts["en"] = (pub_en, nr_en)
 
     en_published.update(
         {
@@ -333,7 +361,6 @@ def generate_object(
         }
     )
 
-    counts = {"en": (pub_en, nr_en)}
     # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
     for lang in target_langs:
         if lang == "en":
@@ -344,8 +371,10 @@ def generate_object(
         ordered = (["guide"] if "guide" in en_published else []) + [
             c for c in en_published if c != "guide"
         ]
-        pub_total, nr_total = 0, 0
+        pub_total, nr_total = counts.get(lang, (0, 0))
         for code in ordered:
+            if done_pr == (lang, code):
+                continue  # 该段已在 TTFC 阶段提前落库,勿重复
             try:
                 res = translator.translate_object(
                     {code: en_published[code]}, [lang], titles=_titles
