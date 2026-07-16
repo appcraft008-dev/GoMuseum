@@ -122,9 +122,13 @@ class _GuidePageState extends ConsumerState<GuidePage>
   /// 本次访问是否轮询过（=内容曾在生成中）。用于返回时刷新列表角标。
   bool _didPoll = false;
 
-  /// 安全兜底硬顶：20s×45 = 15 分钟。正常以后端 `generating` 为准提前停；
+  /// 生成中轮询间隔：后端 #257 已把首屏压到 ~15s，20s 粒度会白吃 5-25s。
+  /// 只在 `generating=true` 窗口内加密到 4s（窗口约 1-2min，content 读接口便宜，服务端扛得住）。
+  static const Duration _pollInterval = Duration(seconds: 4);
+
+  /// 安全兜底硬顶：4s×225 = 15 分钟。正常以后端 `generating` 为准提前停；
   /// 此上限仅防信号异常时无限轮询。
-  static const int _maxPolls = 45;
+  static const int _maxPolls = 225;
 
   // ── legacy recognition path
   final TtsService _legacyTts = TtsService();
@@ -163,7 +167,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
     if (_pollTimer != null) return;
     _didPoll = true;
     _pollCount = 0;
-    _pollTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+    _pollTimer = Timer.periodic(_pollInterval, (_) {
       _pollCount++;
       if (_pollCount > _maxPolls) {
         _stopPolling();
