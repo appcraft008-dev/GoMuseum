@@ -132,7 +132,9 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
         queryParameters: {'language': language, 'section': section},
         options: Options(
           responseType: ResponseType.stream,
-          receiveTimeout: const Duration(seconds: 35),
+          // 流式连接持续整段生成(ja 类慢生成实测 >2min);35s 是老同步端点的参数,
+          // 会在首字节前/流中途误杀。放宽到 5min 覆盖慢语种。
+          receiveTimeout: const Duration(minutes: 5),
         ),
       );
       final ct =
