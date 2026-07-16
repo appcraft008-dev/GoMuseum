@@ -4,7 +4,7 @@
 /// 一个 200 可能是 JSON(缓存→R2直链) 或 audio/mpeg(渐进流)，异常回退老 /audio。
 /// qa 连念/作者介绍仍走老 /audio（后端 v1 不支持流式）。
 /// 语速 0.75/1/1.5/2x（客户端 setSpeed，零后端成本）；加载后显进度条+剩余时间。
-/// 409「生成中」静默转圈自动重试（≤30s）；404「讲解生成后可听」；503「暂不可用可重试」。
+/// 409「生成中」静默转圈指数退避重试（2→4→8→16s，≤60s）；404「讲解生成后可听」；503「暂不可用可重试」。
 library;
 
 import 'dart:async';
@@ -147,10 +147,17 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
   }
 
+  /// 409「生成中」重试退避：2→4→8→16s（封顶）。指数退避消除段级锁 409 风暴
+  /// （#262 addendum 根因3：老 2s 固定重试 30s 内连打 15+ 次）。
+  static Duration _backoff(int attempt) =>
+      Duration(seconds: (2 << attempt).clamp(2, 16));
+
   /// 流式端点：一个 200 可能是 JSON(缓存→URL) 或 audio/mpeg(渐进流)。
-  /// 409 复用 2s 重试；任何流式异常/失败 → 回退老 /audio（命中落库缓存，不重复计费）。
+  /// 409 指数退避重试；任何流式异常/失败 → 回退老 /audio（命中落库缓存，不重复计费）。
+  /// 循环内 await 串行 → 同段同一时刻只有一条在途请求。
   Future<void> _loadStreaming() async {
-    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    final deadline = DateTime.now().add(const Duration(seconds: 60));
+    var attempt = 0;
     while (true) {
       final res = await ref.read(catalogDataSourceProvider).getGuideAudioStream(
             slug: widget.slug,
@@ -166,9 +173,11 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         case GuideAudioStream(:final bytes):
           final source = TtsChunkAudioSource(bytes);
           _activeSource = source;
-          final ok = await _startWith(() => _player
-              .setAudioSource(source)
-              .timeout(const Duration(seconds: 35)));
+          // preload:false → setAudioSource 立即返回(不等整流加载完)；由 play() 渐进
+          // 缓冲，首 chunk 到即出声。preload:true(默认)会 await 到流结束才 ready，
+          // 长文本(ja/ko)白等 18-25s，等于没做流式（#262 addendum 根因1）。
+          final ok = await _startWith(
+              () => _player.setAudioSource(source, preload: false));
           if (!ok) {
             source.dispose();
             _activeSource = null;
@@ -180,7 +189,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             setState(() => _ui = _Ui.error);
             return;
           }
-          await Future.delayed(const Duration(seconds: 2));
+          await Future.delayed(_backoff(attempt++));
           if (!mounted) return;
           continue;
         case GuideAudioNotReady():
@@ -202,9 +211,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
   }
 
-  /// 懒取音频；409（生成中）静默等 2s 自动重试，上限 ~30s；返回 null 表示已置终态。
+  /// 懒取音频；409（生成中）指数退避自动重试，上限 ~60s；返回 null 表示已置终态。
   Future<String?> _fetchWithRetry() async {
-    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    final deadline = DateTime.now().add(const Duration(seconds: 60));
+    var attempt = 0;
     while (true) {
       final res = await ref.read(catalogDataSourceProvider).getGuideAudio(
             slug: widget.slug,
@@ -226,7 +236,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             setState(() => _ui = _Ui.error);
             return null;
           }
-          await Future.delayed(const Duration(seconds: 2));
+          await Future.delayed(_backoff(attempt++));
           if (!mounted) return null;
           continue; // 保持 loading 转圈，重试
         case GuideAudioNotReady():
