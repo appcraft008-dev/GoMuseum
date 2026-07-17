@@ -1229,3 +1229,59 @@ def test_generate_passes_artist_glossary_to_translations(session, monkeypatch):
     )
     assert {"zh": "乔治·秀拉"} in seen["translate"]  # 正文翻译带作者 glossary
     assert seen["qa"] and seen["qa"].get("zh") == "乔治·秀拉"  # QA 同
+
+
+def test_qa_runs_parallel_with_translations(session):
+    # qa ‖ 翻译并行:qa 必须在翻译循环开始前已提交启动(串行实现会让本测试超时失败)
+    import threading
+
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    qa_started = threading.Event()
+
+    class _Tr(_FakeTranslator):
+        def translate_object(
+            self, en_sections, target_langs, titles=None, artists=None
+        ):
+            assert qa_started.wait(timeout=5), "qa 未先于翻译启动(退化回串行?)"
+            lang = target_langs[0]
+            return {
+                lang: {
+                    c: SectionQuality(
+                        body=f"{lang} {b}",
+                        status="published",
+                        grounding_ratio=1.0,
+                        conflicts=[],
+                        score=1.0,
+                    )
+                    for c, b in en_sections.items()
+                }
+            }
+
+    class _QA:
+        def suggest(
+            self,
+            material,
+            facts,
+            category,
+            target_langs,
+            covered=None,
+            titles=None,
+            artists=None,
+        ):
+            qa_started.set()
+            return {"en": [{"question": "Q?", "answer": "A.", "status": "published"}]}
+
+    out = generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_Tr(),
+        target_langs=["en", "fr"],
+        model="m",
+        qa_suggester=_QA(),
+    )
+    assert out["counts"]["fr"] == (1, 0)  # 翻译照常落库
+    assert out["qa"] == {"en": 1}  # qa 照常落库

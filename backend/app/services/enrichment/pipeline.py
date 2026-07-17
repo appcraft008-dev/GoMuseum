@@ -376,6 +376,30 @@ def generate_object(
 
     _anames = artist_names_i18n(db, o)
 
+    # qa ‖ 翻译并行:两者都只读 en_published/material,互不依赖(实测 qa 24.9s 是最大后台
+    # 单块,串行白排队)。线程里只跑纯 LLM(suggest 不碰 db),persist 留主线程(session 非
+    # 线程安全)。同输入同调用集 → 不降质不增本;异常在 .result() 处按原语义抛出。
+    qa_future = qa_pool = None
+    if qa_suggester is not None:
+        from concurrent.futures import ThreadPoolExecutor
+
+        covered = "\n\n".join(v for v in en_published.values() if v)
+        _qa_titles = {
+            lg: ((o.attributes or {}).get("title_i18n") or {}).get(lg)
+            for lg in target_langs
+        }
+        qa_pool = ThreadPoolExecutor(max_workers=1)
+        qa_future = qa_pool.submit(
+            qa_suggester.suggest,
+            material,
+            facts,
+            o.category,
+            target_langs,
+            covered=covered,
+            titles=_qa_titles,
+            artists=_anames,
+        )
+
     # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
     for lang in target_langs:
         if lang == "en":
@@ -407,21 +431,11 @@ def generate_object(
             nr_total += n
         counts[lang] = (pub_total, nr_total)
     result = {"qid": qid, "counts": counts}
-    if qa_suggester is not None:
-        covered = "\n\n".join(v for v in en_published.values() if v)
-        _titles = {
-            lg: ((o.attributes or {}).get("title_i18n") or {}).get(lg)
-            for lg in target_langs
-        }
-        qa_by_lang = qa_suggester.suggest(
-            material,
-            facts,
-            o.category,
-            target_langs,
-            covered=covered,
-            titles=_titles,
-            artists=_anames,
-        )
+    if qa_future is not None:
+        try:
+            qa_by_lang = qa_future.result()
+        finally:
+            qa_pool.shutdown(wait=False)
         result["qa"] = {
             lang: persist_suggested_questions(db, qid, lang, items, model)
             for lang, items in qa_by_lang.items()
