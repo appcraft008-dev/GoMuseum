@@ -174,6 +174,8 @@
 
 **⑤ 内容生成分层(目录便宜、生成贵;2026-07-05 定 N 默认=0)。** 目录+显示名+图物化全量做(全馆 ~$20 内,零 LLM 成本);**讲解内容默认不批量预生成(N=0),完全靠懒生成/懒翻译按需兜底**——上新馆零内容预付,用户点开哪件才生成那件(请求语言优先,~2-3 分钟)。上线运营后按**实际热度/需求**由运营决定某馆 top-N 值再 `generate --limit N` 批量富化(热门件零等待)。**全量目录/图只在 prod 跑;staging 只做小样本验证机制**(`catalog --limit`)。
 
+**⑥ staging 轻量化(2026-07-17 定,spec 2026-07-17-staging-lightweight)。** staging=机制验证平台,**永不为数据规模付 LLM 费**:机制验证用小样本(护栏强制——onboard names/generate/translate 在 staging 默认 limit=50,rescan 系需显式 `--allow-full`);规模数据一律从 prod 搬运(`sync_staging_from_prod.py`,slim=金样本 ~300-500 件/full=发版前拉真;内容是 prod 已付费资产,共 R2 桶 key 复制即解析,零 LLM);**用户表(users/benefits/devices)与 recognition_events 永不跨环境**。上新馆同理:staging 只跑 `catalog --limit` 验证配方,全量只在 prod。
+
 ## 上新馆 = 纯配置(零核心改动)
 
 连接器已存在时(Wikidata 全球通用),上新馆只需:
@@ -335,6 +337,7 @@
 
 ## 变更记录
 
+- 2026-07-17:**staging 轻量化落地**(收录⑥)——护栏(staging 默认小样本/--allow-full)+ prod→staging 搬运两档(slim 金样本/full 拉真)+ 用户表红线。背景:staging 已成 prod 近镜像,十万件×10语全量回填≈百万级强模型调用不可持续。
 - 2026-07-17:**显示名真相唯一化扩到作者名**(#277)——`artists.name_i18n[lang]` 成为正文/问答称呼作者的唯一真相源,glossary 与标题双锁(`translate_object(titles=, artists=)`);修机制级音译分叉(修拉/秀拉)。存量工具 `rescan_artist_names.py`(staging 实跑:92 段+51 问答分叉修复)。原则语言无关、作者无关——新馆多音译作者自动受保护。
 - 2026-07-16:**#252-257 批次回写**。API 面加法:`/audio`(懒 TTS)与 `/audio/stream`(流式,单次 tee,⚠️200 双形状按 Content-Type 分支)入端点总览。原则×2:**首屏关键路径原则**(懒生成顺序=请求者最短路径,新增生成步骤不在 guide 依赖链内一律延后;TTFC 45.9s→~15s)、**非 Wikidata 条目身份**(合成把手 `<source>-<ref>` 当 qid 同键用+`is_wikidata_qid` 门控跳 SPARQL+names 走 title_en 轴心)。批处理纪律第 6 条:容器内长任务避开部署窗口+脱会话+日志实时落地("进程消失≠成功",只认 DONE 行+数据核验)。
 - 2026-07-13:**搜索功能落地**(spec 2026-07-13-search-feature-design)。API 面加法:`GET /search`(全局,museums+objects 两段)+`GET /museums/{slug}/search`(馆域,仅 objects);无图 stub 可搜(has_image/thumbnail:null)、全语种、三路匹配。原则:**搜索=稳定契约+可替换引擎,进程内起步(零同步)→规模触发换 Meilisearch,契约与前端零改**。前端:探索页升级全局搜(debounce 300ms 分区结果)+馆列表页激活馆内搜+识别未收录→搜索闭环。
