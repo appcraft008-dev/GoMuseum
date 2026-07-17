@@ -36,6 +36,11 @@ class TtsChunkAudioSource extends StreamAudioSource {
   StreamSubscription<List<int>>? _sub;
   final List<Completer<void>> _waiters = [];
 
+  /// 首读预缓冲阈值：真流式下字节逐步到达，若首个响应只给几百字节，ExoPlayer 的
+  /// MP3 解码器帧同步不到即静音(#262 addendum2)。攒够一批再返回，让首读拿到完整帧。
+  /// 32KB 够帧同步又不拖慢起播(ExoPlayer 自身另有 ~2.5s 缓冲门槛，起播时长不由此主导)。
+  static const int _minInitialBytes = 32 * 1024;
+
   void _wake() {
     final ws = List.of(_waiters);
     _waiters.clear();
@@ -44,9 +49,20 @@ class TtsChunkAudioSource extends StreamAudioSource {
     }
   }
 
+  /// 阻塞到缓冲达 [n] 字节或源结束（供首读预缓冲）。
+  Future<void> _awaitBuffered(int n) async {
+    while (_buffer.length < n && !_done) {
+      final c = Completer<void>();
+      _waiters.add(c);
+      await c.future;
+    }
+  }
+
   @override
   Future<StreamAudioResponse> request([int? start, int? end]) async {
     final from = start ?? 0;
+    // 首读(from==0)先攒够初始字节再返回，避免逐字节到达时解码器数据饥饿→静音。
+    if (from == 0) await _awaitBuffered(_minInitialBytes);
     return StreamAudioResponse(
       rangeRequestsSupported: false,
       sourceLength: null, // 流式总长未知
