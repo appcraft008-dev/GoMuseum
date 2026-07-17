@@ -119,7 +119,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("slug")
     ap.add_argument("--target", choices=["staging", "prod"], required=True)
+    ap.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
     ns = ap.parse_args()
+    from scripts.ops_guard import staging_require_allow_full
+
+    staging_require_allow_full(ns.target, ns.allow_full)
     db = SessionLocal()
     c = build_generation_components(ns.slug)
     print(rescan(db, c["translator"]))

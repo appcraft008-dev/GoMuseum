@@ -266,9 +266,11 @@ def backfill_display_names(
     fetch_artist_facts_i18n=None,
     refresh_langs=None,
     retranslate_langs=None,
+    limit=None,
 ) -> dict:
     """铺目录后回填显示名:title_i18n + artist_qid + Artist.name_i18n(名字行,bio 留给 generate)。
-    幂等:已齐语种的对象/作者跳过。契约:stub 一进目录就该有完整多语显示名。"""
+    幂等:已齐语种的对象/作者跳过。limit=只处理前 N 件(staging 护栏小样本)。
+    契约:stub 一进目录就该有完整多语显示名。"""
     from app.services.enrichment.material import (
         fetch_artist_i18n_facts,
         fetch_wikidata_labels,
@@ -282,6 +284,8 @@ def backfill_display_names(
     if not m:
         return {"error": "unknown museum"}
     objs = db.query(MuseumObject).filter_by(museum_id=m.id).all()
+    if limit:
+        objs = objs[:limit]
     creators = fetch_creators(
         [o.qid for o in objs if not (o.attributes or {}).get("artist_qid")]
     )
