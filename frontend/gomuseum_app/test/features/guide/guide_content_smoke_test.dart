@@ -124,4 +124,42 @@ void main() {
     // Title appears in the SliverAppBar (may appear more than once)
     expect(find.text('在阿尔勒的卧室'), findsWidgets);
   });
+
+  testWidgets('guide_page A5: 生成中无讲解 → 完整页架子(标题+墙签)+「正在撰写」,非光秃转圈',
+      (tester) async {
+    // 生成中 stub：无 tabs/讲解，但 title/facts 已就绪（后端行为如此）。
+    final generating = const ObjectContent(
+      qid: 'Q1',
+      category: 'painting',
+      language: 'zh',
+      status: ContentStatus.generating,
+      generating: true,
+      title: '在阿尔勒的卧室',
+      images: [],
+      facts: ObjectFacts(artist: '文森特·梵高', date: '1889'),
+      tabs: [],
+      suggestedQuestions: [],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        objectContentProvider.overrideWith((ref, param) async => generating),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        theme: AppTheme.lightTheme(),
+        home: const GuidePage(args: GuideArgs(slug: 'orsay', qid: 'Q1')),
+      ),
+    ));
+    // 有轮询 Timer 在跑，用 pump 而非 pumpAndSettle（后者会等到超时）。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('在阿尔勒的卧室'), findsWidgets); // hero 标题
+    expect(find.textContaining('文森特·梵高'), findsWidgets); // 墙签
+    expect(find.text('正在为你撰写讲解…'), findsOneWidget); // 撰写占位
+    expect(find.text('内容生成中，约 1–3 分钟'), findsNothing); // 旧光秃页已废
+    expect(find.text('听讲解'), findsNothing); // 播放条生成后再出现
+  });
 }
