@@ -245,7 +245,7 @@
 > 教训:2026-07-03 六语开放,分类标签表只配了 zh/en/fr → de/es/it 真机标签栏中英混杂(前端交接件修复,#142)。
 > - **加非拉丁语言(ja/ko/zh-hant)前跑翻译质量验收**:见 `docs/i18n-translation-quality-checklist.md`(六检查点:残片/专名一致/标题多通路一致/显示名质量/忠实度/字形;全语言无关机制)。
 > - **语言一致性(2026-07-10 定,核心差异点)**:所有用户可见文本(讲解/深度/问答/作者bio/藏品简介)在语言 X 下必须真的是语言 X,**零混杂**。经语言一致性闸(`lang_detect.text_in_language`:非拉丁按目标字形占比、拉丁用 lingua 识别)校验;不符→gpt-4o 重译→仍不符 `needs_review` 不发布(宁缺毋滥)。**语言无关**:检测候选集派生自 `DEFAULT_LANGUAGES`,加语言自动覆盖。取代此前查中/法语的打地鼠补丁。加语言必过质量清单的语言一致性检查点。
-> - **标题真相唯一化(2026-07-05 定)**:显示名 `title_i18n[lang]` 是该藏品标题在该语言的**唯一真相源**。所有内容通路(讲解 guide / 深度模块 / 建议问答)在正文里引用本作品标题时**必须跟随显示名**——翻译时把 `title_i18n[lang]` 作为 glossary 注入(`translate_object(titles=)` / `suggest(titles=)`)。否则各通路独立翻译标题会分叉(如无权威标签的 zh:显示"显现"、正文"幻影")。引用**其他**作品的标题不受此约束(各用各的真相)。
+> - **显示名真相唯一化——标题+作者名(2026-07-05 定标题;2026-07-17 #277 扩作者名)**:显示名是正文称呼的**唯一真相源**——藏品标题=`title_i18n[lang]`,**作者名=`artists.name_i18n[lang]`**。所有内容通路(讲解 guide / 深度模块 / 建议问答)在正文里引用本作品标题或称呼作者时**必须跟随显示名**——翻译时把两者作为 glossary 注入(`translate_object(titles=, artists=)` / `suggest(titles=, artists=)` / `translate_qa_items(title=, artist=)`)。否则各通路独立翻译会分叉:标题如"显现/幻影";**作者名凡目标语言有多个通行音译即分叉**(真机实证:正文"修拉" vs 作者卡"秀拉",同为 Seurat;高危:Renoir/Toulouse-Lautrec/Courbet 等,音译型语言 zh/zh-hant/ja/ko 均有风险)。en 轴心天然一致(材料带 `Artist: artist_en`)。引用**其他**作品/作者不受此约束(各用各的真相)。**存量修复工具**:`scripts/rescan_artist_names.py`(en 段提作者姓而译文不含规范名姓段→删段带 glossary 重译,音频随段失效;幂等)——上新馆后或发现分叉时可跑。
 > - **翻译质量规则必须语言无关(2026-07-05 定)**:改进翻译质量(如"全部译出、不留源语言残片")一律靠 `{lang}` 占位符 / 忠实度闸的失败信号,**绝不硬编语言名单**(如"难句 zh 用 gpt-4o")。否则每加一种与英语高距离的语言(zh/ja/ko/zh-hant)都要重打补丁。教训:gpt-4o-mini 对 zh 稳定漏翻"severed head"类短语(距离近的欧洲语言靠同源词"照抄"绕过),按语言无关规则修则 ja/ko 上线自动受益(#197)。
 
 > **⚠️ 完整性判断按语言维度(2026-07-03 定,一日三错的统摄原则)。**
@@ -335,6 +335,7 @@
 
 ## 变更记录
 
+- 2026-07-17:**显示名真相唯一化扩到作者名**(#277)——`artists.name_i18n[lang]` 成为正文/问答称呼作者的唯一真相源,glossary 与标题双锁(`translate_object(titles=, artists=)`);修机制级音译分叉(修拉/秀拉)。存量工具 `rescan_artist_names.py`(staging 实跑:92 段+51 问答分叉修复)。原则语言无关、作者无关——新馆多音译作者自动受保护。
 - 2026-07-16:**#252-257 批次回写**。API 面加法:`/audio`(懒 TTS)与 `/audio/stream`(流式,单次 tee,⚠️200 双形状按 Content-Type 分支)入端点总览。原则×2:**首屏关键路径原则**(懒生成顺序=请求者最短路径,新增生成步骤不在 guide 依赖链内一律延后;TTFC 45.9s→~15s)、**非 Wikidata 条目身份**(合成把手 `<source>-<ref>` 当 qid 同键用+`is_wikidata_qid` 门控跳 SPARQL+names 走 title_en 轴心)。批处理纪律第 6 条:容器内长任务避开部署窗口+脱会话+日志实时落地("进程消失≠成功",只认 DONE 行+数据核验)。
 - 2026-07-13:**搜索功能落地**(spec 2026-07-13-search-feature-design)。API 面加法:`GET /search`(全局,museums+objects 两段)+`GET /museums/{slug}/search`(馆域,仅 objects);无图 stub 可搜(has_image/thumbnail:null)、全语种、三路匹配。原则:**搜索=稳定契约+可替换引擎,进程内起步(零同步)→规模触发换 Meilisearch,契约与前端零改**。前端:探索页升级全局搜(debounce 300ms 分区结果)+馆列表页激活馆内搜+识别未收录→搜索闭环。
 - 2026-07-06:加语言 checklist 补⑥字形变体(_SCRIPT_VARIANTS)+⑦强制跑质量验收清单(完整六检查点/全段落扫描;i18n-translation-quality-checklist.md)。
