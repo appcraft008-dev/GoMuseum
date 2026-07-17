@@ -7,6 +7,7 @@ Uses OpenAI GPT-4 for creating rich, contextual content
 import asyncio
 import json
 import logging
+import threading
 from typing import Dict, Optional
 
 from app.core.config import settings
@@ -14,26 +15,27 @@ from app.core.exceptions import AIServiceException
 
 logger = logging.getLogger(__name__)
 
-# Lazy import OpenAI
-_openai_client = None
+# Lazy import OpenAI。client 按线程本地缓存:httpx 连接池不跨线程安全——
+# 并发生成线程(lazy _SEM=2、qa‖翻译)共享单例会撞池报 APIConnectionError(staging 实证);
+# 线程内顺序复用(每调用 asyncio.run 换 loop)已被 prod 大量调用证明可行。
+_openai_tl = threading.local()
 
 
 def _get_openai_client():
-    """Lazy load OpenAI client"""
-    global _openai_client
-    if _openai_client is None:
+    """Lazy load OpenAI client(每线程一个实例)"""
+    if getattr(_openai_tl, "client", None) is None:
         try:
             from openai import AsyncOpenAI
 
-            _openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            _openai_tl.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             logger.info("OpenAI client initialized for content generation")
         except ImportError:
             logger.warning("openai package not installed")
-            _openai_client = None
+            _openai_tl.client = None
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {e}")
-            _openai_client = None
-    return _openai_client
+            _openai_tl.client = None
+    return _openai_tl.client
 
 
 # Multi-language prompt templates
