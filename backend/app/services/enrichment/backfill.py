@@ -12,6 +12,16 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
 
 
+def artist_names_i18n(db, o) -> dict:
+    """对象作者的规范多语显示名(artists.name_i18n;无作者/无行 → {})。
+    作者译名一致性:翻译 glossary 用它锁正文/问答的作者称呼(与作者卡统一)。"""
+    aqid = (o.attributes or {}).get("artist_qid")
+    if not aqid:
+        return {}
+    art = db.query(Artist).filter_by(qid=aqid).first()
+    return dict(art.name_i18n or {}) if art else {}
+
+
 def backfill_content_status(db) -> dict:
     """按是否有已发布 section 设 content_status。返回 {"ready": n, "stub": m}（目标态分布）。"""
     ready_ids = {
@@ -110,6 +120,8 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
         if r.body
     }
     missing = {c: b for c, b in en_secs.items() if c not in have}
+    _aname = artist_names_i18n(db, o).get(lang)
+    _artists = {lang: _aname} if _aname else None
     if missing:
         title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
         _titles = {lang: title} if title else None
@@ -119,7 +131,7 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
         ]
         for code in ordered:
             res = translator.translate_object(
-                {code: missing[code]}, [lang], titles=_titles
+                {code: missing[code]}, [lang], titles=_titles, artists=_artists
             ).get(lang, {})
             pub, _nr = persist_gated_sections(db, o.qid, lang, res, model)
             counts["sections"] += pub
@@ -136,7 +148,9 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
         .first()
     ):
         _qa_title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
-        items = translate_qa_items(translator, en_qa, lang, title=_qa_title)
+        items = translate_qa_items(
+            translator, en_qa, lang, title=_qa_title, artist=_aname
+        )
         counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
     aqid = (o.attributes or {}).get("artist_qid")
     if aqid:

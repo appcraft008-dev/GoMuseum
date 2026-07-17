@@ -88,13 +88,12 @@ class _FakeCatalogDs implements CatalogRemoteDataSource {
       const GuideAudioFailed();
 
   @override
-  Future<GuideAudioResult> getGuideAudioStream({
-    required String slug,
-    required String qid,
-    required String language,
-    String section = 'guide',
-  }) async =>
-      const GuideAudioFailed();
+  String audioStreamUrl(
+          {required String slug,
+          required String qid,
+          required String language,
+          String section = 'guide'}) =>
+      'http://x/stream';
 }
 
 // ---------------------------------------------------------------------------

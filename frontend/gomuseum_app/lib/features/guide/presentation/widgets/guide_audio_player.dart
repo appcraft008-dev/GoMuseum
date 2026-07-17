@@ -1,7 +1,8 @@
 /// 段落音频播放器：点播放→懒取 TTS（首次现场生成 ~数秒）→播放。
 /// 覆盖 guide/深度模块/问答(qa+qaSort)/作者介绍(artist_bio)。
-/// guide+深度段走流式端点 /audio/stream（边生成边播，首个 chunk 到即出声）；
-/// 一个 200 可能是 JSON(缓存→R2直链) 或 audio/mpeg(渐进流)，异常回退老 /audio。
+/// guide+深度段：/audio/stream URL 直接 setUrl 给系统播放器（原生 chunked MP3
+/// 直播流路径，边生成边播）；非音频响应(缓存 JSON/409/404)→播放器报错→回退老 /audio。
+/// 流式起播有看门狗：position 不推进(静音/卡死)即回退老 /audio，保证可靠出声。
 /// qa 连念/作者介绍仍走老 /audio（后端 v1 不支持流式）。
 /// 语速 0.75/1/1.5/2x（客户端 setSpeed，零后端成本）；加载后显进度条+剩余时间。
 /// 409「生成中」静默转圈指数退避重试（2→4→8→16s，≤60s）；404「讲解生成后可听」；503「暂不可用可重试」。
@@ -13,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
-import 'package:gomuseum_app/features/guide/presentation/widgets/tts_chunk_audio_source.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -77,9 +77,6 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   static const List<double> _speeds = [1.0, 1.5, 2.0, 0.75];
   int _speedIdx = 0;
 
-  /// 正在渐进播放的流式源（需在换源/销毁时取消其 HTTP 订阅，防连接泄漏）。
-  TtsChunkAudioSource? _activeSource;
-
   /// 流式端点仅 guide + canonical 深度段；qa 连念/作者介绍仍走老 /audio。
   bool get _useStream =>
       widget.section != 'qa' && widget.section != 'artist_bio';
@@ -91,7 +88,6 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   @override
   void dispose() {
     _ActiveAudio.release(this);
-    _activeSource?.dispose();
     _player.dispose();
     super.dispose();
   }
@@ -112,9 +108,6 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
 
     setState(() => _ui = _Ui.loading);
-    // 换源前取消上一个流式订阅。
-    _activeSource?.dispose();
-    _activeSource = null;
 
     // 后端已预生成的直链 → 直接播（免懒取/免流式）。
     final initial = widget.initialUrl;
@@ -147,59 +140,53 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
   }
 
+  /// 出声=播放位置推进（just_audio 仅在 ExoPlayer 真 READY 时外推 position，
+  /// 不会被 buffering 骗）。窗口内越过阈值→成功；到点仍不动→判失败(回退)。
+  Future<bool> _playbackStarted(Duration window) async {
+    final deadline = DateTime.now().add(window);
+    while (mounted && DateTime.now().isBefore(deadline)) {
+      if (_player.position > const Duration(milliseconds: 300)) return true;
+      if (_player.processingState == ProcessingState.completed) {
+        return _player.position > Duration.zero;
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+    return false;
+  }
+
   /// 409「生成中」重试退避：2→4→8→16s（封顶）。指数退避消除段级锁 409 风暴
   /// （#262 addendum 根因3：老 2s 固定重试 30s 内连打 15+ 次）。
   static Duration _backoff(int attempt) =>
       Duration(seconds: (2 << attempt).clamp(2, 16));
 
-  /// 流式端点：一个 200 可能是 JSON(缓存→URL) 或 audio/mpeg(渐进流)。
-  /// 409 指数退避重试；任何流式异常/失败 → 回退老 /audio（命中落库缓存，不重复计费）。
-  /// 循环内 await 串行 → 同段同一时刻只有一条在途请求。
+  /// 流式播放：把 /audio/stream URL 直接交给系统播放器（ExoPlayer/AVPlayer 原生
+  /// 支持 chunked MP3 直播流——网络电台同款路径），单次请求、无自定义源无本地 proxy。
+  /// 此前经 dio+TtsChunkAudioSource+just_audio proxy 的链路在真机静音——proxy 的
+  /// Range 分支对 contentLength=null 空断言崩溃(见 handoff Addendum2/3)，已整体废弃。
+  /// 非音频响应(缓存 JSON/409/404)会让播放器快速报错 → 回退老 /audio 分流；
+  /// 起播后看门狗兜底(9s position 不动→回退)，永不永久静音。
   Future<void> _loadStreaming() async {
-    final deadline = DateTime.now().add(const Duration(seconds: 60));
-    var attempt = 0;
-    while (true) {
-      final res = await ref.read(catalogDataSourceProvider).getGuideAudioStream(
-            slug: widget.slug,
-            qid: widget.qid,
-            language: widget.language,
-            section: widget.section,
-          );
+    final url = ref.read(catalogDataSourceProvider).audioStreamUrl(
+          slug: widget.slug,
+          qid: widget.qid,
+          language: widget.language,
+          section: widget.section,
+        );
+    try {
+      await _player.setUrl(url); // 预加载：格式就绪即返回（JSON/4xx 在此抛）
+      await _player.setSpeed(_speeds[_speedIdx]);
       if (!mounted) return;
-      switch (res) {
-        case GuideAudioReady(:final url):
-          if (!await _startWith(() => _player.setUrl(url))) await _loadLegacy();
-          return;
-        case GuideAudioStream(:final bytes):
-          final source = TtsChunkAudioSource(bytes);
-          _activeSource = source;
-          // preload:false → setAudioSource 立即返回(不等整流加载完)；由 play() 渐进
-          // 缓冲，首 chunk 到即出声。preload:true(默认)会 await 到流结束才 ready，
-          // 长文本(ja/ko)白等 18-25s，等于没做流式（#262 addendum 根因1）。
-          final ok = await _startWith(
-              () => _player.setAudioSource(source, preload: false));
-          if (!ok) {
-            source.dispose();
-            _activeSource = null;
-            await _loadLegacy();
-          }
-          return;
-        case GuideAudioGenerating():
-          if (DateTime.now().isAfter(deadline)) {
-            setState(() => _ui = _Ui.error);
-            return;
-          }
-          await Future.delayed(_backoff(attempt++));
-          if (!mounted) return;
-          continue;
-        case GuideAudioNotReady():
-          setState(() => _ui = _Ui.notReady);
-          return;
-        case GuideAudioFailed():
-          await _loadLegacy();
-          return;
-      }
+      setState(() => _ui = _Ui.loaded);
+      _ActiveAudio.takeOver(this);
+      unawaited(_player.play().catchError((_) {}));
+      if (await _playbackStarted(const Duration(seconds: 9))) return;
+    } catch (_) {
+      // 落到 legacy
     }
+    if (!mounted) return;
+    await _player.stop();
+    setState(() => _ui = _Ui.loading);
+    await _loadLegacy();
   }
 
   /// 老 /audio 路径（qa/作者介绍常走此；流式失败也回退到此）。
@@ -227,10 +214,6 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
       switch (res) {
         case GuideAudioReady(:final url):
           return url;
-        case GuideAudioStream():
-          // 老 /audio 端点不返流式；防御性置错。
-          setState(() => _ui = _Ui.error);
-          return null;
         case GuideAudioGenerating():
           if (DateTime.now().isAfter(deadline)) {
             setState(() => _ui = _Ui.error);
@@ -328,37 +311,47 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     );
   }
 
-  /// 进度条 + 剩余时间（-1:23）；剩余按当前语速换算真实等待。
+  /// 进度条 + 时间。总时长已知(缓存/R2 或流式下载完)：正常进度条 + 剩余倒计时(-1:23)。
+  /// 总时长未知(流式播放中，无 Content-Length)：不确定进度条(扫动) + 已播时间正着走，
+  /// 避免卡在 0%/-0:00 假死(#站立的模特反馈)；拿到时长后自动切回倒计时。
   Widget _progress(GmPalette gm) {
     return StreamBuilder<Duration>(
       stream: _player.positionStream,
       builder: (_, posSnap) {
         final pos = posSnap.data ?? Duration.zero;
-        final dur = _player.duration ?? Duration.zero;
-        final total = dur.inMilliseconds;
-        final frac =
-            total == 0 ? 0.0 : (pos.inMilliseconds / total).clamp(0.0, 1.0);
+        final dur = _player.duration;
+        final known = dur != null && dur.inMilliseconds > 0;
         final rate = _speeds[_speedIdx];
-        final remainMs =
-            ((dur - pos).inMilliseconds / rate).round().clamp(0, 1 << 31);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
               height: 3,
-              child: Stack(children: [
-                Container(color: gm.line),
-                FractionallySizedBox(
-                  widthFactor: frac,
-                  child: Container(color: gm.accent),
-                ),
-              ]),
+              child: known
+                  ? Stack(children: [
+                      Container(color: gm.line),
+                      FractionallySizedBox(
+                        widthFactor: (pos.inMilliseconds / dur.inMilliseconds)
+                            .clamp(0.0, 1.0),
+                        child: Container(color: gm.accent),
+                      ),
+                    ])
+                  : LinearProgressIndicator(
+                      backgroundColor: gm.line,
+                      color: gm.accent,
+                      minHeight: 3,
+                    ),
             ),
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerRight,
-              child: Text('-${_fmt(remainMs)}',
-                  style: GmText.sans(size: 10.5, color: gm.sub)),
+              child: Text(
+                known
+                    ? '-${_fmt(((dur - pos).inMilliseconds / rate).round().clamp(0, 1 << 31))}'
+                    : _fmt(
+                        (pos.inMilliseconds / rate).round().clamp(0, 1 << 31)),
+                style: GmText.sans(size: 10.5, color: gm.sub),
+              ),
             ),
           ],
         );

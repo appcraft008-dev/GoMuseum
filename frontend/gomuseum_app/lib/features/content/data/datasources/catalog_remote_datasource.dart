@@ -1,6 +1,4 @@
 // lib/features/content/data/datasources/catalog_remote_datasource.dart
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
@@ -34,10 +32,10 @@ abstract class CatalogRemoteDataSource {
     int? qaSort,
   });
 
-  /// 流式端点 /audio/stream（边生成边播，仅 guide + canonical 深度段）。
-  /// 一个 200 可能是 JSON(缓存命中→GuideAudioReady) 或 audio/mpeg 字节流(GuideAudioStream)；
-  /// 409/404/503 语义同 getGuideAudio。任何异常调用方回退 getGuideAudio。
-  Future<GuideAudioResult> getGuideAudioStream({
+  /// 流式端点 /audio/stream 的完整 URL（边生成边播，仅 guide + canonical 深度段）。
+  /// 直接交给系统播放器 setUrl 播放（原生 chunked MP3 直播流路径，单次请求）；
+  /// 非音频响应(缓存 JSON/409/404)由播放器报错，调用方回退 getGuideAudio。
+  String audioStreamUrl({
     required String slug,
     required String qid,
     required String language,
@@ -120,41 +118,17 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
   }
 
   @override
-  Future<GuideAudioResult> getGuideAudioStream({
+  String audioStreamUrl({
     required String slug,
     required String qid,
     required String language,
     String section = 'guide',
-  }) async {
-    try {
-      final r = await dio.get<ResponseBody>(
-        '/api/v1/museums/$slug/objects/$qid/audio/stream',
-        queryParameters: {'language': language, 'section': section},
-        options: Options(
-          responseType: ResponseType.stream,
-          // 流式连接持续整段生成(ja 类慢生成实测 >2min);35s 是老同步端点的参数,
-          // 会在首字节前/流中途误杀。放宽到 5min 覆盖慢语种。
-          receiveTimeout: const Duration(minutes: 5),
-        ),
-      );
-      final ct =
-          (r.headers.value(Headers.contentTypeHeader) ?? '').toLowerCase();
-      final stream = r.data!.stream; // Stream<Uint8List>
-      // 同一个 200：JSON=缓存命中(播 R2 直链)，audio/mpeg=渐进字节流。
-      if (ct.contains('application/json')) {
-        final url = (jsonDecode(await utf8.decoder.bind(stream).join())
-            as Map)['audio_url'] as String?;
-        if (url != null && url.isNotEmpty) return GuideAudioReady(url);
-        return const GuideAudioFailed();
-      }
-      return GuideAudioStream(stream);
-    } on DioException catch (e) {
-      final code = e.response?.statusCode;
-      if (code == 409) return const GuideAudioGenerating();
-      if (code == 404) return const GuideAudioNotReady();
-      return const GuideAudioFailed();
-    } catch (_) {
-      return const GuideAudioFailed();
-    }
+  }) {
+    final base = dio.options.baseUrl.replaceFirst(RegExp(r'/+$'), '');
+    return Uri.parse('$base/api/v1/museums/$slug/objects/$qid/audio/stream')
+        .replace(queryParameters: {
+      'language': language,
+      'section': section
+    }).toString();
   }
 }
