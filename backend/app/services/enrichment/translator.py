@@ -30,9 +30,9 @@ class ContentTranslator:
         self._complete_strong = complete_strong
 
     def translate_section(
-        self, en_body: str, target_lang: str, *, strong=False, title=None
+        self, en_body: str, target_lang: str, *, strong=False, title=None, artist=None
     ) -> str:
-        system, user = build_translation_prompt(en_body, target_lang, title)
+        system, user = build_translation_prompt(en_body, target_lang, title, artist)
         fn = (
             self._complete_strong
             if (strong and self._complete_strong)
@@ -54,29 +54,38 @@ class ContentTranslator:
         return bool(data.get("faithful")), (data.get("issues") or [])
 
     def translate_object(
-        self, en_sections: dict, target_langs: list[str], titles: dict | None = None
+        self,
+        en_sections: dict,
+        target_langs: list[str],
+        titles: dict | None = None,
+        artists: dict | None = None,
     ) -> dict:
         """把英语段落铺到目标语言。跳过 'en'（轴心不翻）与空 body 段。
         titles={lang: 规范标题}:正文引用标题统一用显示名(消除分叉)。
+        artists={lang: 作者规范名}:正文称呼作者统一用作者卡译名(消除音译分叉)。
         返回 {lang: {section_code: SectionQuality}}。"""
         titles = titles or {}
+        artists = artists or {}
         out: dict = {}
         for lang in target_langs:
             if lang == "en":
                 continue
             title = titles.get(lang)
+            artist = artists.get(lang)
             lang_result: dict = {}
             for code, en_body in en_sections.items():
                 if not en_body:
                     continue
-                translated = self.translate_section(en_body, lang, title=title)
+                translated = self.translate_section(
+                    en_body, lang, title=title, artist=artist
+                )
                 ok, issues = self.check_faithfulness(en_body, translated, lang)
                 lang_ok = _lang_ok(translated, lang)
                 if (not ok or not lang_ok) and self._complete_strong:
                     # 不忠实 或 语言不符 → 强模型(gpt-4o)重译一次并采用
                     # (总比 mini 的坏译好;顽固少数才付费,语言无关靠闸信号触发)
                     translated = self.translate_section(
-                        en_body, lang, strong=True, title=title
+                        en_body, lang, strong=True, title=title, artist=artist
                     )
                     ok, issues = self.check_faithfulness(en_body, translated, lang)
                     lang_ok = _lang_ok(translated, lang)

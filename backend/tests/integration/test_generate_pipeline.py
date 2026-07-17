@@ -70,10 +70,10 @@ class _FakeGate:
 
 
 class _FakeTranslator:
-    def translate_section(self, t, lang, *, strong=False, title=None):
+    def translate_section(self, t, lang, *, strong=False, title=None, artist=None):
         return t + "_" + lang
 
-    def translate_object(self, en_sections, target_langs, titles=None):
+    def translate_object(self, en_sections, target_langs, titles=None, artists=None):
         return {
             "fr": {
                 "overview": SectionQuality(
@@ -170,7 +170,9 @@ def test_generate_object_translates_per_language_with_priority(session):
     order = []
 
     class _Tr(_FakeTranslator):
-        def translate_object(self, en_sections, target_langs, titles=None):
+        def translate_object(
+            self, en_sections, target_langs, titles=None, artists=None
+        ):
             assert len(target_langs) == 1  # 逐语言调用(翻完即存)
             lang = target_langs[0]
             order.append(lang)
@@ -208,7 +210,14 @@ def test_generate_object_translates_per_language_with_priority(session):
 
 class _FakeQA:
     def suggest(
-        self, material, facts, category, target_langs, covered=None, titles=None
+        self,
+        material,
+        facts,
+        category,
+        target_langs,
+        covered=None,
+        titles=None,
+        artists=None,
     ):
         return {
             "en": [{"question": "Q?", "answer": "A.", "status": "published"}],
@@ -274,7 +283,9 @@ def test_generate_object_produces_guide_section(session):
             )
 
     class _GuideTranslator(_FakeTranslator):
-        def translate_object(self, en_sections, target_langs, titles=None):
+        def translate_object(
+            self, en_sections, target_langs, titles=None, artists=None
+        ):
             return {
                 "fr": {
                     c: SectionQuality(
@@ -430,7 +441,9 @@ def test_priority_lang_guide_persisted_before_canonical(session, monkeypatch):
             return {c: _ok(b) for c, b in draft.items()}
 
     class _Tr(_FakeTranslator):
-        def translate_object(self, en_sections, target_langs, titles=None):
+        def translate_object(
+            self, en_sections, target_langs, titles=None, artists=None
+        ):
             lang = target_langs[0]
             return {lang: {c: _ok(f"{lang} {b}") for c, b in en_sections.items()}}
 
@@ -607,7 +620,14 @@ def test_generate_object_passes_covered_to_qa(session):
 
     class _QA:
         def suggest(
-            self, material, facts, category, target_langs, covered=None, titles=None
+            self,
+            material,
+            facts,
+            category,
+            target_langs,
+            covered=None,
+            titles=None,
+            artists=None,
         ):
             seen["covered"] = covered
             return {"en": []}
@@ -1061,7 +1081,9 @@ def test_translate_qa_items_threads_title(session):
     seen = []
 
     class _Tr:
-        def translate_section(self, text, lang, *, strong=False, title=None):
+        def translate_section(
+            self, text, lang, *, strong=False, title=None, artist=None
+        ):
             seen.append(title)
             return "译:" + text
 
@@ -1099,3 +1121,111 @@ def test_translate_object_gates_wrong_language(session):
     )
     assert calls["strong"] == 1  # 语言不符触发强模型重译
     assert out["fr"]["guide"].status == "published"  # 重译后语言正确
+
+
+def test_translate_object_threads_artist_name(session):
+    # 作者译名一致性:作者规范名穿进翻译 prompt(与标题同机制)
+    from app.services.enrichment.translator import ContentTranslator
+
+    seen = {}
+
+    def fake(system, user):
+        if "quality judge" in system.lower():
+            return '{"faithful": true, "issues": []}'
+        seen["system"] = system
+        return "译文"
+
+    tr = ContentTranslator(fake)
+    tr.translate_object(
+        {"guide": "Seurat painted this."}, ["zh"], artists={"zh": "秀拉"}
+    )
+    assert "秀拉" in seen["system"]
+
+
+def test_translate_qa_items_threads_artist(session):
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    seen = []
+
+    class _Tr:
+        def translate_section(
+            self, text, lang, *, strong=False, title=None, artist=None
+        ):
+            seen.append(artist)
+            return "译:" + text
+
+        def check_faithfulness(self, en, tr, lang):
+            return True, []
+
+    translate_qa_items(
+        _Tr(), [{"question": "Who?", "answer": "Seurat."}], "zh", artist="秀拉"
+    )
+    assert "秀拉" in seen
+
+
+def test_generate_passes_artist_glossary_to_translations(session, monkeypatch):
+    # 端到端:作者卡规范名(name_i18n)锁进 正文翻译 + QA 的 glossary
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q296"})
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    session.add(
+        Artist(qid="Q296", name_en="Georges Seurat", name_i18n={"zh": "乔治·秀拉"})
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Georges Seurat"
+    o.attributes = {"artist_extract_en": "x"}
+    session.commit()
+
+    seen = {"translate": [], "qa": None}
+
+    class _Tr(_FakeTranslator):
+        def translate_object(
+            self, en_sections, target_langs, titles=None, artists=None
+        ):
+            seen["translate"].append(artists)
+            lang = target_langs[0]
+            return {
+                lang: {
+                    c: SectionQuality(
+                        body=f"{lang} {b}",
+                        status="published",
+                        grounding_ratio=1.0,
+                        conflicts=[],
+                        score=1.0,
+                    )
+                    for c, b in en_sections.items()
+                }
+            }
+
+    class _QA:
+        def suggest(
+            self,
+            material,
+            facts,
+            category,
+            target_langs,
+            covered=None,
+            titles=None,
+            artists=None,
+        ):
+            seen["qa"] = artists
+            return {"en": []}
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_Tr(),
+        target_langs=["en", "zh"],
+        model="m",
+        registry=_FakeRegistry(),
+        qa_suggester=_QA(),
+    )
+    assert {"zh": "乔治·秀拉"} in seen["translate"]  # 正文翻译带作者 glossary
+    assert seen["qa"] and seen["qa"].get("zh") == "乔治·秀拉"  # QA 同

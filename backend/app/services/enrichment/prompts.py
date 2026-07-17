@@ -121,7 +121,12 @@ _TRANSLATION_SYSTEM = (
 )
 
 
-def build_translation_prompt(en_body: str, target_lang: str, title: str | None = None):
+def build_translation_prompt(
+    en_body: str,
+    target_lang: str,
+    title: str | None = None,
+    artist: str | None = None,
+):
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _TRANSLATION_SYSTEM.format(lang=lang)
     if title:
@@ -130,6 +135,14 @@ def build_translation_prompt(en_body: str, target_lang: str, title: str | None =
             f" IMPORTANT: this artwork's canonical {lang} title is 「{title}」 — "
             f"whenever the text refers to the work by name, use EXACTLY this title, "
             f"do not invent an alternative rendering."
+        )
+    if artist:
+        # 作者译名一致性(标题真相唯一化的姊妹):正文称呼作者一律用作者卡规范名
+        # (消除音译分叉,如 Seurat 修拉/秀拉——正文与 artists.name_i18n 统一)
+        system += (
+            f" IMPORTANT: the artist's canonical {lang} name is 「{artist}」 — "
+            f"whenever the text refers to the artist by name, use EXACTLY this "
+            f"rendering, do not use any alternative transliteration."
         )
     user = f"English:\n{en_body}"
     return system, user

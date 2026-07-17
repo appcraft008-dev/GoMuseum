@@ -36,7 +36,7 @@ class _Gate:
 
 
 class _Translator:
-    def translate_section(self, body, lang, *, strong=False, title=None):
+    def translate_section(self, body, lang, *, strong=False, title=None, artist=None):
         return f"[{lang}] {body}"
 
     def check_faithfulness(self, en, tr, lang):
@@ -125,7 +125,9 @@ def test_translate_qa_appends_qmark_not_english_fallback():
     from app.services.enrichment.qa_suggester import translate_qa_items
 
     class _Tr:
-        def translate_section(self, text, lang, *, strong=False, title=None):
+        def translate_section(
+            self, text, lang, *, strong=False, title=None, artist=None
+        ):
             # 模拟翻译丢了问号(陈述句式)
             return "梵高的信件揭示了什么" if "?" in text else f"{text}译"
 
@@ -144,7 +146,9 @@ def test_qa_gates_wrong_language():
     from app.services.enrichment.qa_suggester import translate_qa_items
 
     class _Tr:
-        def translate_section(self, text, lang, *, strong=False, title=None):
+        def translate_section(
+            self, text, lang, *, strong=False, title=None, artist=None
+        ):
             return (
                 "This whole answer leaked into English instead of the Chinese language."
             )

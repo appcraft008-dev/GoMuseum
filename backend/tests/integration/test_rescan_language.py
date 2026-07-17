@@ -63,7 +63,7 @@ def session():
 
 
 class _CleanTr:
-    def translate_object(self, en_sections, target_langs, titles=None):
+    def translate_object(self, en_sections, target_langs, titles=None, artists=None):
         from app.services.enrichment.quality import SectionQuality
 
         lang = target_langs[0]
@@ -80,7 +80,7 @@ class _CleanTr:
             }
         }
 
-    def translate_section(self, text, lang, *, strong=False, title=None):
+    def translate_section(self, text, lang, *, strong=False, title=None, artist=None):
         return "这是干净的中文重译内容，讲述绘画。"
 
     def check_faithfulness(self, en, tr, lang):

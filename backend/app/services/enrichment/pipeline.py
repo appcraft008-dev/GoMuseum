@@ -332,9 +332,19 @@ def generate_object(
     if lang_priority and lang_priority != "en" and "guide" in en_published:
         _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang_priority)
         _titles = {lang_priority: _title} if _title else None
+        # 作者译名一致性:锁作者卡规范名。全新作者此时 Artist 行未建(延后在
+        # _enrich_artist_and_titles)→ glossary 缺,仅首件首语言 guide 有分叉风险(可接受,
+        # 不为它把作者块拉回首屏关键路径)。
+        from app.services.enrichment.backfill import artist_names_i18n
+
+        _aname = artist_names_i18n(db, o).get(lang_priority)
+        _artists_pr = {lang_priority: _aname} if _aname else None
         try:
             res = translator.translate_object(
-                {"guide": en_published["guide"]}, [lang_priority], titles=_titles
+                {"guide": en_published["guide"]},
+                [lang_priority],
+                titles=_titles,
+                artists=_artists_pr,
             ).get(lang_priority, {})
             p, n = persist_gated_sections(db, qid, lang_priority, res, model)
             counts[lang_priority] = (p, n)
@@ -361,12 +371,19 @@ def generate_object(
         }
     )
 
+    # 作者译名一致性:作者块已跑完(_enrich_artist_and_titles),规范名齐 → 锁进翻译 glossary
+    from app.services.enrichment.backfill import artist_names_i18n
+
+    _anames = artist_names_i18n(db, o)
+
     # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
     for lang in target_langs:
         if lang == "en":
             continue
         _title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
         _titles = {lang: _title} if _title else None
+        _aname = _anames.get(lang)
+        _artists = {lang: _aname} if _aname else None
         # 流式先出:guide 段先翻先落,请求语言用户先看到主讲解;其余段随后逐段落库。
         ordered = (["guide"] if "guide" in en_published else []) + [
             c for c in en_published if c != "guide"
@@ -377,7 +394,10 @@ def generate_object(
                 continue  # 该段已在 TTFC 阶段提前落库,勿重复
             try:
                 res = translator.translate_object(
-                    {code: en_published[code]}, [lang], titles=_titles
+                    {code: en_published[code]},
+                    [lang],
+                    titles=_titles,
+                    artists=_artists,
                 ).get(lang, {})
             except Exception:
                 logger.exception("translate %s/%s failed for %s", lang, code, qid)
@@ -394,7 +414,13 @@ def generate_object(
             for lg in target_langs
         }
         qa_by_lang = qa_suggester.suggest(
-            material, facts, o.category, target_langs, covered=covered, titles=_titles
+            material,
+            facts,
+            o.category,
+            target_langs,
+            covered=covered,
+            titles=_titles,
+            artists=_anames,
         )
         result["qa"] = {
             lang: persist_suggested_questions(db, qid, lang, items, model)
