@@ -81,9 +81,14 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 正在渐进播放的流式源（需在换源/销毁时取消其 HTTP 订阅，防连接泄漏）。
   TtsChunkAudioSource? _activeSource;
 
-  /// 流式端点仅 guide + canonical 深度段；qa 连念/作者介绍仍走老 /audio。
-  bool get _useStream =>
-      widget.section != 'qa' && widget.section != 'artist_bio';
+  // ⚠️ 流式暂时全关(#262 addendum2 及后续真机实测)：真流式下 ExoPlayer 对
+  // TtsChunkAudioSource 增量喂的数据 position 照推进却静音(服务端字节经 ffmpeg 验证
+  // 完好、同文件走 R2 setUrl 正常出声，故非格式问题；预缓冲/看门狗均未解决——看门狗
+  // 被"position 推进"骗过)。全走可靠老 /audio(生成→播 R2)，牺牲首播 ≤5s 换必然出声。
+  // 流式代码(_loadStreaming/_startStreaming/TtsChunkAudioSource/getGuideAudioStream)
+  // 保留待真机 adb logcat(ExoPlayer/AudioTrack)定位后再评估重开。
+  // ponytail: 单点开关，改回 `section != 'qa' && != 'artist_bio'` 即恢复流式。
+  bool get _useStream => false;
 
   void _pauseQuiet() {
     if (_player.playing) _player.pause();
