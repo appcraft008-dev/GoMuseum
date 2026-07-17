@@ -23,16 +23,23 @@ def _clean_question(q: str):
     return q[: min(idx) + 1].strip()
 
 
-def translate_qa_items(translator, en_items: list, lang: str, title=None) -> list:
+def translate_qa_items(
+    translator, en_items: list, lang: str, title=None, artist=None
+) -> list:
     """把英语问答对翻到 lang(问句截到问号+答案忠实校验)。suggest 与补语种共用。
-    title=规范标题:问答引用标题统一用显示名(消除分叉,同 guide/deep)。"""
+    title=规范标题:问答引用标题统一用显示名(消除分叉,同 guide/deep)。
+    artist=作者规范名:问答称呼作者统一用作者卡译名(消除音译分叉)。"""
     import re as _re
 
     out = []
     for it in en_items:
-        raw_q = translator.translate_section(it["question"], lang, title=title)
+        raw_q = translator.translate_section(
+            it["question"], lang, title=title, artist=artist
+        )
         tq = _clean_question(raw_q)
-        ta = translator.translate_section(it["answer"], lang, title=title)
+        ta = translator.translate_section(
+            it["answer"], lang, title=title, artist=artist
+        )
         if not tq:
             # 翻译丢了问号 → 补目标语问号(别回退英文,那样中文里混英文问题);真空才回退英文
             stripped = (raw_q or "").strip()
@@ -88,8 +95,10 @@ class QASuggester:
         target_langs: list,
         covered: str | None = None,
         titles: dict | None = None,
+        artists: dict | None = None,
     ) -> dict:
         titles = titles or {}
+        artists = artists or {}
         en_items = self._generate_en(material, facts, category, covered)
         out = {"en": en_items}
         published = [it for it in en_items if it["status"] == "published"]
@@ -97,6 +106,10 @@ class QASuggester:
             if lang == "en":
                 continue
             out[lang] = translate_qa_items(
-                self._translator, published, lang, title=titles.get(lang)
+                self._translator,
+                published,
+                lang,
+                title=titles.get(lang),
+                artist=artists.get(lang),
             )
         return out
