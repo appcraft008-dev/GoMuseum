@@ -1,7 +1,8 @@
 /// 段落音频播放器：点播放→懒取 TTS（首次现场生成 ~数秒）→播放。
 /// 覆盖 guide/深度模块/问答(qa+qaSort)/作者介绍(artist_bio)。
 /// guide+深度段走流式端点 /audio/stream（边生成边播，首个 chunk 到即出声）；
-/// 一个 200 可能是 JSON(缓存→R2直链) 或 audio/mpeg(渐进流)，异常回退老 /audio。
+/// 一个 200 可能是 JSON(缓存→R2直链) 或 audio/mpeg(渐进流)。
+/// 流式起播有看门狗：position 不推进(静音/卡死)即回退老 /audio，保证可靠出声。
 /// qa 连念/作者介绍仍走老 /audio（后端 v1 不支持流式）。
 /// 语速 0.75/1/1.5/2x（客户端 setSpeed，零后端成本）；加载后显进度条+剩余时间。
 /// 409「生成中」静默转圈指数退避重试（2→4→8→16s，≤60s）；404「讲解生成后可听」；503「暂不可用可重试」。
@@ -147,6 +148,37 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
   }
 
+  /// 流式起播 + 看门狗（#262 addendum2：真流式增量喂数据下播放器静音）。
+  /// preload:false 让 setAudioSource 立即返回、由 play() 渐进缓冲；起播后看门狗只信
+  /// 「position 真推进」这一唯一可靠出声信号——不推进(静音/缓冲卡死/被吞的错误)即判失败，
+  /// 由调用方回退老 /audio。play() 的错误不吞成静音，交看门狗判定。
+  Future<bool> _startStreaming(TtsChunkAudioSource source) async {
+    try {
+      await _player.setAudioSource(source, preload: false);
+      await _player.setSpeed(_speeds[_speedIdx]);
+      if (!mounted) return false;
+      setState(() => _ui = _Ui.loaded);
+      _ActiveAudio.takeOver(this);
+      unawaited(_player.play().catchError((_) {}));
+      return await _playbackStarted(const Duration(seconds: 9));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 出声=播放位置推进。窗口内 position 越过阈值→成功；到点仍不动→判失败(回退)。
+  Future<bool> _playbackStarted(Duration window) async {
+    final deadline = DateTime.now().add(window);
+    while (mounted && DateTime.now().isBefore(deadline)) {
+      if (_player.position > const Duration(milliseconds: 300)) return true;
+      if (_player.processingState == ProcessingState.completed) {
+        return _player.position > Duration.zero;
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+    return false;
+  }
+
   /// 409「生成中」重试退避：2→4→8→16s（封顶）。指数退避消除段级锁 409 风暴
   /// （#262 addendum 根因3：老 2s 固定重试 30s 内连打 15+ 次）。
   static Duration _backoff(int attempt) =>
@@ -173,14 +205,13 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         case GuideAudioStream(:final bytes):
           final source = TtsChunkAudioSource(bytes);
           _activeSource = source;
-          // preload:false → setAudioSource 立即返回(不等整流加载完)；由 play() 渐进
-          // 缓冲，首 chunk 到即出声。preload:true(默认)会 await 到流结束才 ready，
-          // 长文本(ja/ko)白等 18-25s，等于没做流式（#262 addendum 根因1）。
-          final ok = await _startWith(
-              () => _player.setAudioSource(source, preload: false));
-          if (!ok) {
+          if (!await _startStreaming(source)) {
+            // 流式无声(静音/缓冲卡死，#262 addendum2)→停掉、回退老 /audio
+            // (可靠出声，命中落库缓存不重复计费)。
+            await _player.stop();
             source.dispose();
-            _activeSource = null;
+            if (identical(_activeSource, source)) _activeSource = null;
+            if (mounted) setState(() => _ui = _Ui.loading);
             await _loadLegacy();
           }
           return;
