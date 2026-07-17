@@ -359,37 +359,47 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     );
   }
 
-  /// 进度条 + 剩余时间（-1:23）；剩余按当前语速换算真实等待。
+  /// 进度条 + 时间。总时长已知(缓存/R2 或流式下载完)：正常进度条 + 剩余倒计时(-1:23)。
+  /// 总时长未知(流式播放中，无 Content-Length)：不确定进度条(扫动) + 已播时间正着走，
+  /// 避免卡在 0%/-0:00 假死(#站立的模特反馈)；拿到时长后自动切回倒计时。
   Widget _progress(GmPalette gm) {
     return StreamBuilder<Duration>(
       stream: _player.positionStream,
       builder: (_, posSnap) {
         final pos = posSnap.data ?? Duration.zero;
-        final dur = _player.duration ?? Duration.zero;
-        final total = dur.inMilliseconds;
-        final frac =
-            total == 0 ? 0.0 : (pos.inMilliseconds / total).clamp(0.0, 1.0);
+        final dur = _player.duration;
+        final known = dur != null && dur.inMilliseconds > 0;
         final rate = _speeds[_speedIdx];
-        final remainMs =
-            ((dur - pos).inMilliseconds / rate).round().clamp(0, 1 << 31);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
               height: 3,
-              child: Stack(children: [
-                Container(color: gm.line),
-                FractionallySizedBox(
-                  widthFactor: frac,
-                  child: Container(color: gm.accent),
-                ),
-              ]),
+              child: known
+                  ? Stack(children: [
+                      Container(color: gm.line),
+                      FractionallySizedBox(
+                        widthFactor: (pos.inMilliseconds / dur.inMilliseconds)
+                            .clamp(0.0, 1.0),
+                        child: Container(color: gm.accent),
+                      ),
+                    ])
+                  : LinearProgressIndicator(
+                      backgroundColor: gm.line,
+                      color: gm.accent,
+                      minHeight: 3,
+                    ),
             ),
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerRight,
-              child: Text('-${_fmt(remainMs)}',
-                  style: GmText.sans(size: 10.5, color: gm.sub)),
+              child: Text(
+                known
+                    ? '-${_fmt(((dur - pos).inMilliseconds / rate).round().clamp(0, 1 << 31))}'
+                    : _fmt(
+                        (pos.inMilliseconds / rate).round().clamp(0, 1 << 31)),
+                style: GmText.sans(size: 10.5, color: gm.sub),
+              ),
             ),
           ],
         );
