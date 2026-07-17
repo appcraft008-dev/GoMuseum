@@ -458,6 +458,8 @@ class _ObjectGrid extends ConsumerWidget {
                 extra: GuideArgs(
                   slug: slug,
                   qid: items[i].qid,
+                  // 缩略图作生成中 hero 兜底（content 无图的冷门件）。
+                  imageUrl: items[i].thumbnail,
                 ),
               ),
             ),

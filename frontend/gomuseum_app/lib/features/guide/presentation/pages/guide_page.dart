@@ -359,11 +359,12 @@ class _GuidePageState extends ConsumerState<GuidePage>
             ref.invalidate(objectContentProvider((slug: slug, qid: qid))),
       ),
       data: (content) {
-        // ① 部分就绪流式：先看主讲解是否已落库。
-        // 主讲解有 → 立即渲染（不管 generating）；generating 时深度区显「生成中」并继续轮询，
-        // 深度模块/问答随后填入。用户不用等全部生成完。
+        // ① 部分就绪流式：主讲解已落库 或 正在生成 → 都渲染完整页架子。
+        // 生成中时 title/images/facts 早已就绪（收录策略"有图才收录"）——先给
+        // hero+标题+墙签，讲解区显「正在撰写」，深度/问答随轮询陆续填入。
+        // 感知性能：十几秒等待有内容可看，远好于光秃秃转圈（用户反馈）。
         final hasHero = GuideLayering.from(content).hasHero;
-        if (hasHero) {
+        if (hasHero || content.generating) {
           if (content.generating) {
             _startPolling(slug: slug, qid: qid);
           } else {
@@ -376,6 +377,9 @@ class _GuidePageState extends ConsumerState<GuidePage>
                 _A5HeroSliverAppBar(
                   content: content,
                   starred: _starred,
+                  // 识别路径用户照片/列表缩略图：content 无图时兜底当 hero。
+                  fallbackImagePath: widget.args.imagePath,
+                  fallbackImageUrl: widget.args.imageUrl,
                   onBack: () => _goBack(context),
                   onToggleStar: () => setState(() => _starred = !_starred),
                 ),
@@ -394,12 +398,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
           );
         }
 
-        // 主讲解还没有：沿用三态。
-        // 2) 生成中 → 「生成中」+ 轮询。
-        if (content.generating) {
-          _startPolling(slug: slug, qid: qid);
-          return _A5GeneratingScaffold(gm: gm, onBack: () => _goBack(context));
-        }
         _stopPolling();
         // 3) 非生成中且无内容：资料不足(empty) / 暂未生成可重试(stub)。
         if (content.status == ContentStatus.empty) {
@@ -834,34 +832,6 @@ class _A5LoadingScaffold extends StatelessWidget {
   }
 }
 
-class _A5GeneratingScaffold extends StatelessWidget {
-  const _A5GeneratingScaffold({required this.gm, required this.onBack});
-  final dynamic gm;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.gm;
-    return Scaffold(
-      backgroundColor: palette.bg,
-      body: SafeArea(
-        child: Column(children: [
-          _SimpleTopBar(onBack: onBack),
-          Expanded(
-              child: Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              CircularProgressIndicator(color: palette.accent, strokeWidth: 2),
-              const SizedBox(height: 16),
-              Text(AppLocalizations.of(context)!.guideGenerating,
-                  style: GmText.sans(size: 13, color: palette.sub)),
-            ]),
-          )),
-        ]),
-      ),
-    );
-  }
-}
-
 class _A5ErrorScaffold extends StatelessWidget {
   const _A5ErrorScaffold(
       {required this.gm, required this.onBack, required this.onRetry});
@@ -991,10 +961,16 @@ class _A5HeroSliverAppBar extends StatelessWidget {
     required this.starred,
     required this.onBack,
     required this.onToggleStar,
+    this.fallbackImagePath,
+    this.fallbackImageUrl,
   });
 
   final ObjectContent content;
   final bool starred;
+
+  /// content 无图时的 hero 兜底：识别路径的用户照片(本地) / 列表缩略图(网络)。
+  final String? fallbackImagePath;
+  final String? fallbackImageUrl;
   final VoidCallback onBack;
   final VoidCallback onToggleStar;
 
@@ -1033,8 +1009,72 @@ class _A5HeroSliverAppBar extends StatelessWidget {
         collapseMode: CollapseMode.parallax,
         background: hasImage
             ? _HeroImages(images: content.images, title: content.title)
-            : _HeroPlaceholder(title: content.title),
+            : (fallbackImagePath != null || fallbackImageUrl != null)
+                ? _HeroFallbackImage(
+                    imagePath: fallbackImagePath,
+                    imageUrl: fallbackImageUrl,
+                    title: content.title,
+                  )
+                : _HeroPlaceholder(title: content.title),
       ),
+    );
+  }
+}
+
+/// content 无图时的 hero 兜底：用户拍摄照片(本地文件)或列表缩略图(网络)。
+/// 同款渐变遮罩+标题浮层；无画廊/署名（非馆方图）。
+class _HeroFallbackImage extends StatelessWidget {
+  const _HeroFallbackImage(
+      {this.imagePath, this.imageUrl, required this.title});
+
+  final String? imagePath;
+  final String? imageUrl;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final path = imagePath;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (path != null)
+          Image.file(File(path), fit: BoxFit.cover)
+        else
+          Image.network(
+            sizedImageUrl(imageUrl!, 1080),
+            fit: BoxFit.cover,
+            headers: kImageRequestHeaders,
+            errorBuilder: (_, __, ___) => ColoredBox(color: context.gm.chipBg),
+          ),
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 160,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: GmFixed.heroScrim,
+                stops: GmFixed.heroScrimStops,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 42,
+          left: 20,
+          right: 20,
+          child: Text(
+            title,
+            style: GmText.serif(
+                size: 22, weight: FontWeight.w700, color: GmFixed.heroTitle),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1251,17 +1291,35 @@ class _A5Body extends StatelessWidget {
               Expanded(child: Container(height: 1, color: gm.line)),
             ]),
           ),
-          GuideAudioPlayer(
-            slug: slug,
-            qid: content.qid,
-            language: language,
-            initialUrl: layer.heroAudioUrl,
-          ),
+          // 讲解文本生成中先藏播放条（点了必 404 白等）；文本落库后随轮询出现。
+          if (layer.hasHero || !deepGenerating)
+            GuideAudioPlayer(
+              slug: slug,
+              qid: content.qid,
+              language: language,
+              initialUrl: layer.heroAudioUrl,
+            ),
           const SizedBox(height: 14),
           if (layer.hasHero)
             Text(layer.heroBody,
                 style: GmText.sans(size: 13.5, height: context.gmBodyHeight),
                 textAlign: TextAlign.justify)
+          else if (deepGenerating)
+            // 生成中：hero/标题/墙签已在上方呈现，讲解区显「正在撰写」占位。
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 28),
+              child: Column(children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 1.8, color: gm.accent),
+                ),
+                const SizedBox(height: 12),
+                Text(l10n.guideWriting,
+                    style: GmText.sans(size: 12.5, color: gm.sub)),
+              ]),
+            )
           else
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -1294,8 +1352,8 @@ class _A5Body extends StatelessWidget {
             ),
           ],
 
-          // ① 深度/问答仍在生成 → 轻提示（主讲解已可读）。
-          if (deepGenerating)
+          // ① 深度/问答仍在生成 → 轻提示（仅主讲解已可读时；否则上方「正在撰写」已覆盖）。
+          if (deepGenerating && layer.hasHero)
             Padding(
               padding: const EdgeInsets.only(top: 18),
               child: Row(children: [
