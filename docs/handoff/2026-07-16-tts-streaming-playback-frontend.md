@@ -125,3 +125,15 @@ if (ct.contains('application/json')) {
 - 前端实现（#262/#265,本 addendum 2 的修复对象）：`catalog_remote_datasource.dart` `getGuideAudioStream` /
   `guide_audio_player.dart` `_loadStreaming` / `tts_chunk_audio_source.dart`。
 - 前序交接：`2026-07-06-lazy-tts-streaming-frontend.md`（点播放/409/语速——本交接在其上加流式，不推翻）。
+
+## ✅ Addendum 3（2026-07-17，前端）：静音根因定位 + 换直连方案（终版）
+
+### 根因（证据齐全）
+
+- **prod 日志实锤**：每次"静音"会话都是同一模式——`/audio/stream 200` → 数秒后 `/audio 409×n → 200`（看门狗判死回退）。即**自定义 StreamAudioSource 链路在真机从未出过声**；用户此前听到的声音全是回退后的 R2 播放。
+- **just_audio 源码实锤**（v0.9.46）：自定义 `StreamAudioSource` 经 just_audio **内置本地 HTTP proxy** 喂给 ExoPlayer；`_proxyHandlerForSource` 的 Range 分支对 `sourceResponse.contentLength!` **空断言**——流式源长度必然 null，ExoPlayer 一发 Range 请求 proxy 即内部崩溃、吞成 500，ExoPlayer 拿不到数据。该 API 本质是给**已知长度、可随机访问**的源设计的。假流式（字节一次性全到）单响应侥幸走通 → "昨天能响今天哑"。
+- "进度条在走"是错觉：`position` 只在 ExoPlayer 真 READY 才外推（源码证实）；用户看到的是不确定进度条的扫动动画。
+
+### 解法（已实现）：抛弃自定义源，流式 URL 直连播放器
+
+`/audio/stream` URL 直接 `setUrl` 给 ExoPlayer/AVPlayer——**chunked MP3 直播流是其原生路径**（网络电台同款），单次请求、零自定义代码、零 proxy。缓存 JSON/409/404 → 播放器快速报错 → 走老 `/audio` 分流（409 指数退避不变）；9s 看门狗兜底，永不永久静音。`TtsChunkAudioSource`/`getGuideAudioStream`(dio 流管道) 已删除。
