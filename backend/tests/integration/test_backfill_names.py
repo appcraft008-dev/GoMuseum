@@ -481,3 +481,33 @@ def test_bio_en_usable_uses_detector_any_language():
         )
         is False
     )  # 德语:打地鼠时代漏网,检测器拦
+
+
+def test_backfill_display_names_respects_limit(session):
+    # staging 护栏依赖:names 底层支持 limit(只处理前 N 件)
+    from app.models.museum import Museum
+    from app.services.object_importer import upsert_object
+
+    m = session.query(Museum).one()
+    upsert_object(  # 第二个待回填对象
+        session,
+        m.id,
+        {
+            "qid": "Q9",
+            "title_en": "Another",
+            "artist_en": "X",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    tr = _Translator()
+    out = backfill_display_names(
+        session,
+        "orsay",
+        translator=tr,
+        langs=["en", "zh"],
+        fetch_labels=_labels({}),
+        fetch_creators=lambda qids: {},
+        limit=1,
+    )
+    assert out["titles"] == 1  # 两件待回填,limit=1 只处理一件
