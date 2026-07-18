@@ -55,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--langs", default=None)
     ge.add_argument("--force", action="store_true")
     ge.add_argument("--limit", type=int, default=None)
+    ge.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
     rp = sub.add_parser("report")
     rp.add_argument("--langs", default=None)
     na = sub.add_parser("names")  # 显示名回填(铺目录后即跑;幂等可重跑)
@@ -66,10 +67,13 @@ def build_parser() -> argparse.ArgumentParser:
     na.add_argument(
         "--retranslate-langs", default=None
     )  # 重译:无权威标签的机翻显示名用改进版重译
+    na.add_argument("--limit", type=int, default=None)  # 只处理前 N 件(小样本验证)
+    na.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
     tr = sub.add_parser("translate")  # 补语种:存量对象缺失语言从 en 段纯翻译(幂等)
     tr.add_argument("--target", choices=["staging", "prod"], required=True)
     tr.add_argument("--langs", required=True)  # 如 de,es,it
     tr.add_argument("--limit", type=int, default=None)
+    tr.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
     im = sub.add_parser("images")  # 图像物化:下载→两档→R2→署名(幂等,names 后跑)
     im.add_argument("--target", choices=["staging", "prod"], required=True)
     im.add_argument("--limit", type=int, default=None)
@@ -189,7 +193,10 @@ def cmd_catalog(
     print(f"✓ catalog 落库({source}): {out}")
 
 
-def cmd_generate(slug, qid, langs, force, limit, target) -> None:
+def cmd_generate(slug, qid, langs, force, limit, target, allow_full=False) -> None:
+    from scripts.ops_guard import staging_limit
+
+    limit = staging_limit(target, limit, allow_full)
     # 守卫：--target 必须匹配当前容器 ENVIRONMENT（与 cmd_load 同，先于构造 LLM 组件）
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
@@ -231,7 +238,12 @@ def cmd_names(
     target: str,
     refresh_langs: str | None = None,
     retranslate_langs: str | None = None,
+    limit: int | None = None,
+    allow_full: bool = False,
 ) -> None:
+    from scripts.ops_guard import staging_limit
+
+    limit = staging_limit(target, limit, allow_full)
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
         raise SystemExit(
@@ -264,13 +276,19 @@ def cmd_names(
                 if retranslate_langs
                 else None
             ),
+            limit=limit,
         )
     finally:
         db.close()
     print(f"✓ names 回填完成: {out}")
 
 
-def cmd_translate(slug: str, langs: str, limit: int | None, target: str) -> None:
+def cmd_translate(
+    slug: str, langs: str, limit: int | None, target: str, allow_full: bool = False
+) -> None:
+    from scripts.ops_guard import staging_limit
+
+    limit = staging_limit(target, limit, allow_full)
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
         raise SystemExit(
@@ -408,13 +426,23 @@ def main(argv=None) -> None:
     elif ns.command == "catalog":
         cmd_catalog(ns.slug, ns.target, ns.limit, ns.source)
     elif ns.command == "generate":
-        cmd_generate(ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target)
+        cmd_generate(
+            ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target, ns.allow_full
+        )
     elif ns.command == "report":
         cmd_report(ns.slug, ns.langs)
     elif ns.command == "names":
-        cmd_names(ns.slug, ns.langs, ns.target, ns.refresh_langs, ns.retranslate_langs)
+        cmd_names(
+            ns.slug,
+            ns.langs,
+            ns.target,
+            ns.refresh_langs,
+            ns.retranslate_langs,
+            ns.limit,
+            ns.allow_full,
+        )
     elif ns.command == "translate":
-        cmd_translate(ns.slug, ns.langs, ns.limit, ns.target)
+        cmd_translate(ns.slug, ns.langs, ns.limit, ns.target, ns.allow_full)
     elif ns.command == "images":
         cmd_images(ns.slug, ns.limit, ns.target)
     elif ns.command == "views":
