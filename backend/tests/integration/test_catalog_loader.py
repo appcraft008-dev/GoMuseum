@@ -76,3 +76,18 @@ def test_load_stubs_puts_p276_into_attributes():
     load_stubs(s, _museum(), [_stub("Q1", inv="RF 1", raw={"p276_qid": "Q123456"})])
     o = s.query(MuseumObject).filter_by(qid="Q1").one()
     assert o.attributes["p276"] == "Q123456"
+
+
+def test_load_stubs_skips_inventory_collision_and_keeps_good(session=None):
+    # prod 实证:Wikidata 重复条目——某 qid 命中行A,却带着属于行B的馆藏号 →
+    # UNIQUE(museum,inventory) 冲突。单件容错:跳过冲突件,好件照落,不炸整批(纪律①)。
+    s = _session()
+    # 先落两件已提交:QA/INV1、QB/INV2
+    load_stubs(s, _museum(), [_stub("QA", inv="INV1"), _stub("QB", inv="INV2")])
+    # 冲突批:好件 QC/INV3 + 冲突件(qid=QB 命中B行,却塞 INV1=A行的号)
+    out = load_stubs(s, _museum(), [_stub("QC", inv="INV3"), _stub("QB", inv="INV1")])
+    assert out["loaded"] == 1 and out.get("errors") == 1  # 好件落库,冲突件跳过,不抛异常
+    assert s.query(MuseumObject).filter_by(qid="QC").count() == 1  # 好件落库
+    # A/B 原样不动(冲突件被回滚,没把 B 的号改成 INV1)
+    assert s.query(MuseumObject).filter_by(qid="QA").one().inventory_number == "INV1"
+    assert s.query(MuseumObject).filter_by(qid="QB").one().inventory_number == "INV2"

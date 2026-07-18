@@ -4,12 +4,16 @@ spec §6：列目录廉价批量，材料留生成时逐件抓。"""
 
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.models.museum_object import MuseumObject
 from app.services.enrichment.catalog_source import StubRecord
 from app.services.object_importer import find_object, upsert_museum, upsert_object
 from app.services.recognition.matcher import normalize_inv
+
+logger = logging.getLogger(__name__)
 
 
 def filter_new_stubs(
@@ -38,35 +42,48 @@ def filter_new_stubs(
 
 
 def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:
-    """StubRecord 列 → stub 对象。返回 {loaded, stub}。"""
+    """StubRecord 列 → stub 对象。返回 {loaded, stub, errors}。
+    批处理纪律:①单件 SAVEPOINT 隔离——一件冲突(如 Wikidata 重复条目撞
+    UNIQUE(museum,inventory))只回滚该件、跳过继续,不炸整批;②每 200 件 commit,
+    崩溃/重跑不丢已落进度。"""
     m = upsert_museum(db, museum)
-    n_stub = 0
-    for s in stubs:
-        # 读既有材料，路由信息 merge 进去（不抹掉 extract_* 等已抓材料）
-        existing = find_object(
-            db, m.id, {"qid": s.qid, "inventory_number": s.inventory_number}
-        )
-        attrs = dict(existing.attributes or {}) if existing else {}
-        attrs["external_ids"] = s.external_ids or {}
-        attrs["wiki_titles"] = s.wiki_titles or {}
-        if s.raw.get("p276_qid"):
-            attrs["p276"] = s.raw["p276_qid"]
-        art = {
-            "qid": s.qid,
-            "inventory_number": s.inventory_number,
-            "title_en": s.title,
-            "artist_en": s.artist,
-            "year": s.year,
-            "category": s.category,
-            "popularity": s.popularity or 0,
-            "image": s.image_url,
-            "images": s.image_urls or ([s.image_url] if s.image_url else []),
-            "attributes": attrs,
-        }
-        obj = upsert_object(db, m.id, art)
-        if obj.content_status != "ready":
-            obj.content_status = "stub"
-            n_stub += 1
-        db.add(obj)
     db.commit()
-    return {"loaded": len(stubs), "stub": n_stub}
+    n_stub = n_loaded = n_err = 0
+    for i, s in enumerate(stubs):
+        try:
+            with db.begin_nested():  # SAVEPOINT:失败只回滚这一件
+                existing = find_object(
+                    db, m.id, {"qid": s.qid, "inventory_number": s.inventory_number}
+                )
+                attrs = dict(existing.attributes or {}) if existing else {}
+                attrs["external_ids"] = s.external_ids or {}
+                attrs["wiki_titles"] = s.wiki_titles or {}
+                if s.raw.get("p276_qid"):
+                    attrs["p276"] = s.raw["p276_qid"]
+                art = {
+                    "qid": s.qid,
+                    "inventory_number": s.inventory_number,
+                    "title_en": s.title,
+                    "artist_en": s.artist,
+                    "year": s.year,
+                    "category": s.category,
+                    "popularity": s.popularity or 0,
+                    "image": s.image_url,
+                    "images": s.image_urls or ([s.image_url] if s.image_url else []),
+                    "attributes": attrs,
+                }
+                obj = upsert_object(db, m.id, art)
+                if obj.content_status != "ready":
+                    obj.content_status = "stub"
+                    n_stub += 1
+                db.add(obj)
+            n_loaded += 1
+        except Exception:  # 冲突/坏数据:跳过该件,整批继续(纪律①)
+            n_err += 1
+            logger.warning(
+                "load_stubs 跳过冲突件 qid=%s inv=%s", s.qid, s.inventory_number
+            )
+        if (i + 1) % 200 == 0:
+            db.commit()  # 分批落盘(纪律②)
+    db.commit()
+    return {"loaded": n_loaded, "stub": n_stub, "errors": n_err}
