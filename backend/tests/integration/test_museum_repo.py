@@ -86,6 +86,8 @@ def test_pack_shape(session):
         "archive_count",  # 加法字段:总件数(档案)
         "categories",
         "artworks",
+        "description",  # 加法字段:馆介绍(spec 2026-07-18)
+        "cover_image",  # 加法字段:封面
     }
     art = pack["artworks"][0]
     assert set(art.keys()) == {

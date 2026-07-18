@@ -360,6 +360,18 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
             "archive_count": archive_count,
             "categories": categories,
             "artworks": artworks,
+            # 博物馆介绍(spec 2026-07-18):按语言解析,缺→en→任一→null;前端 as String? 容错
+            "description": (
+                (m.description_i18n or {}).get(language)
+                or (m.description_i18n or {}).get("en")
+                or next(iter((m.description_i18n or {}).values()), None)
+            ),
+            # 封面(得体性筛选后固化);large 档(hero 大图)
+            "cover_image": (
+                _sized(storage, m.cover_image_key, "large")
+                if m.cover_image_key
+                else None
+            ),
         }
     )
     return pack
