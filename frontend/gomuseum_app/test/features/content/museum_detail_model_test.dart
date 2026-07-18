@@ -44,4 +44,24 @@ void main() {
     expect(old.catalogCount, isNull);
     expect(old.archiveCount, isNull);
   });
+
+  test('description/cover_image 加法字段：解析；空串/缺 → null（隐藏 hero）', () {
+    final m = MuseumDetail.fromJson(const {
+      'slug': 'orsay',
+      'description': '  奥赛坐落在一座1900年的火车站里。  ',
+      'cover_image': 'https://r2/cover_large.jpg',
+    });
+    expect(m.description, '奥赛坐落在一座1900年的火车站里。'); // trim
+    expect(m.coverImage, 'https://r2/cover_large.jpg');
+
+    // 空串与缺失都视同 null（不显空 hero）。
+    final empty = MuseumDetail.fromJson(
+        const {'slug': 'orsay', 'description': '   ', 'cover_image': ''});
+    expect(empty.description, isNull);
+    expect(empty.coverImage, isNull);
+
+    final old = MuseumDetail.fromJson(const {'slug': 'orsay'});
+    expect(old.description, isNull);
+    expect(old.coverImage, isNull);
+  });
 }
