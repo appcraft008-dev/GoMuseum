@@ -289,10 +289,14 @@ def build_museum_intro_prompt(name_en: str, material: str):
 
 
 _COVER_SAFETY_SYSTEM = (
-    "You judge whether an artwork is appropriate as the PUBLIC COVER image of a museum "
-    "app (family-friendly store listing). Classical, religious or mythological nudity "
-    "is acceptable art convention. Explicit realistic sexual depiction (e.g. Courbet's "
-    "L'Origine du monde) is NOT appropriate. Reply STRICT JSON: "
+    "You judge whether an artwork is appropriate as the PUBLIC COVER image / store "
+    "listing thumbnail of a museum app (must clear a family-friendly app-store content "
+    "rating). Be CONSERVATIVE — this is the storefront, not the in-app content. "
+    "Reject ANY work whose subject is a prominent/central nude or sexual content, "
+    "EVEN IF it is a canonical artistic masterpiece (e.g. Manet's Olympia, Le Déjeuner "
+    "sur l'herbe, Courbet's L'Origine du monde, Cabanel's Birth of Venus). Prefer "
+    "unambiguous safe subjects: landscapes, clothed figures, portraits, still life, "
+    "architecture, everyday scenes. Reply STRICT JSON: "
     '{"appropriate": true} or {"appropriate": false}.'
 )
 
