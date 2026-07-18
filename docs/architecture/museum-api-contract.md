@@ -58,6 +58,8 @@
     {"code": "painting", "label": "绘画", "count": 259},
     {"code": "unknown", "label": "其他", "count": 3}
   ],
+  "description": "奥赛坐落在一座1900年的火车站里…(AI接地叙事,按language)",
+  "cover_image": "<url|null>",
   "artworks": [
     {"qid": "Q334138", "title_zh": "世界的起源", "title_en": "L'Origine du monde",
      "artist_zh": "居斯塔夫·库尔贝", "artist_en": "Gustave Courbet",
@@ -66,6 +68,8 @@
   ]
 }
 ```
+
+- `description`(✅2026-07-18 spec museum-intro,加法):馆叙事介绍,AI 接地生成 `description_i18n[language]`,缺→en→任一→**null**。`cover_image`:得体性筛选后的封面 R2 直链(large 档,**可 null**)。前端 `as String?`,null 整块隐藏。老 App 不读不炸。
 
 - `categories`:`all` 合计 + 各 `MuseumObject.category` 分组计数,标签本地化(`_CATEGORY_LABELS`:painting/sculpture/photography/decorative_arts/unknown)。
 - `artworks[].title_zh` 永不为 null(回退 `title_en`→`qid`,防前端裸 `as String` 崩)。
@@ -303,7 +307,8 @@
 
 **⚠️ 识别优化的优先级原则(2026-07-12 定,真实用户测试得出)**:**App 用户是"有意图取景"的**——想识别某件作品的人会主动找能看清整幅作品的角度,拍歪了自己重拍;合影/极偏构图不是主流场景。Commons 随手拍照片测出的失败案例会高估怪构图的真实占比。**故:不再对怪构图做裁剪/阈值工程加码**(已合并的多裁剪留作免费保险丝);识别精度投入主线=**二维靠参考图覆盖,三维靠多视角图库**(建设策略并入藏品覆盖率机制,另立 spec)。
 
-**识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。**view 自动治理(2026-07-13 落地,纯自动无人审)**:Commons 分类混入非本体图(orsay 实测 14%)的清洗策略——view 与该件正面照相似度 **<0.25 自动删**(实测全为垃圾)/**0.25-0.4 隔离**(`role=view_quarantine`:留档、不进索引、不上图集、不计有图)/**≥0.4 入索引**;物化嵌入钩子同规则前置闸(新图入库即治理);错杀极端角度由照片飞轮(Phase 3)补回。**上新馆配方(2026-07-13 全串)**:`catalog`(含无图条目)→`names`(⚠️ 首次收全条目时为数千件×10语回填,Wikidata 限速下**约数小时级**——须在服务器侧 nohup 脱管跑,orsay 实测 4800 件≈8h;增量重跑只处理新件,分钟级)→`images`→`backfill_embeddings`→`onboard views`+`images`→`vet_view_images`(执行)→`display-evidence --museum <slug>`(区域适配器,可选)→**`coverage-report`(收官:分层数字/展陈分布/KPI,回写 stats)**。
+**识别参照库(与目录共生)**:参考图入库(物化)即嵌入(DINOv2 向量落 `object_embeddings`,生成一次永久落库,model 字段版本化);存量用 backfill CLI。**雕塑多视角**:Commons 分类(P373)拉他人照片入 `role=view`(≤4张/件,Special:FilePath 规范 URL 保署名链),物化即嵌入——3D 单视角是 benchmark 实测短板(真实照 Top-1 ~33%)的对症药。**view 自动治理(2026-07-13 落地,纯自动无人审)**:Commons 分类混入非本体图(orsay 实测 14%)的清洗策略——view 与该件正面照相似度 **<0.25 自动删**(实测全为垃圾)/**0.25-0.4 隔离**(`role=view_quarantine`:留档、不进索引、不上图集、不计有图)/**≥0.4 入索引**;物化嵌入钩子同规则前置闸(新图入库即治理);错杀极端角度由照片飞轮(Phase 3)补回。**上新馆配方(2026-07-13 全串)**:`catalog`(含无图条目)→`names`(⚠️ 首次收全条目时为数千件×10语回填,Wikidata 限速下**约数小时级**——须在服务器侧 nohup 脱管跑,orsay 实测 4800 件≈8h;增量重跑只处理新件,分钟级)→`images`→`backfill_embeddings`→`onboard views`+`images`→`vet_view_images`(执行)→`display-evidence --museum <slug>`(区域适配器,可选)→**`intro`(馆介绍+封面)**→**`coverage-report`(收官:分层数字/展陈分布/KPI,回写 stats)**。
+> **馆介绍=门面类预生成内容(2026-07-18 定,spec museum-intro)**:同"图=门面必须预物化"侧(馆页高频入口,总成本封顶=馆数×几分钱),不走懒生成。`onboard <slug> intro` 幂等**按语言维度补缺**(en 轴心在→只翻缺语;加语言重跑自动补),gate 不过=该语言不落(无 needs_review;宁缺毋滥),语言集 `resolve_languages(cfg.languages)` 馆配置驱动。**封面=后端 LLM 得体性筛选**(server-driven:选错改后端即生效免 Play 审核;top-N 有图件逐件纯文本判定,古典/宗教/神话裸体=艺术惯例可,写实露骨性描绘如《世界的起源》否决)。**绝不碰开放时间/票价**(易变运营数据,AI 不脏补;也保零代码上新馆)。
 **计费(2026-07-04 定)**:`match/candidates` 扣 1 次配额;`unrecognized` 不扣(不为失败付费);缓存命中不扣;配额用尽 → **402** `{reason: quota_exceeded}`(先于 GPT 调用,不烧钱)。身份=Bearer 令牌(App 自带)或 `device_id` 参数;两者皆无 → 401 `{reason: identity_required}`。服务端扣费,不再依赖前端自觉调 `/payment/consume`。
 
 **老端点 `/api/v1/recognition` 标记 deprecated**(裸 GPT 猜测当事实,违反 R1;留给老 App,新 App 一律走新端点)。
@@ -336,6 +341,8 @@
 ---
 
 ## 变更记录
+
+- 2026-07-18:**博物馆介绍+封面落地**(spec museum-intro)。馆包加法字段 `description`(AI 接地叙事,按语言回退,null 安全)/`cover_image`(得体性筛选封面,可 null);`onboard intro` 命令(复用富化管线,按语言维度幂等补缺,gate 不过不落);封面=后端 LLM 得体性判定(《世界的起源》类否决,server-driven 免 Play 审核);上新馆配方加 intro 步。迁移 q1n3。门面类预生成(成本分界),不碰运营数据。
 
 - 2026-07-17:**staging 轻量化落地**(收录⑥)——护栏(staging 默认小样本/--allow-full)+ prod→staging 搬运两档(slim 金样本/full 拉真)+ 用户表红线。背景:staging 已成 prod 近镜像,十万件×10语全量回填≈百万级强模型调用不可持续。
 - 2026-07-17:**显示名真相唯一化扩到作者名**(#277)——`artists.name_i18n[lang]` 成为正文/问答称呼作者的唯一真相源,glossary 与标题双锁(`translate_object(titles=, artists=)`);修机制级音译分叉(修拉/秀拉)。存量工具 `rescan_artist_names.py`(staging 实跑:92 段+51 问答分叉修复)。原则语言无关、作者无关——新馆多音译作者自动受保护。
