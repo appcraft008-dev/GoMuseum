@@ -37,6 +37,9 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
   String _selectedCategory = 'all';
   final ScrollController _scrollController = ScrollController();
 
+  /// 馆介绍卡展开态（页级：跨分类切换保持）。
+  bool _introExpanded = false;
+
   /// 馆内搜索：图标展开搜索框，即时（debounce 300ms）只搜当前馆。
   bool _searching = false;
   String _searchDebounced = '';
@@ -142,12 +145,25 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
                   },
                 ),
               ),
-              // Grid
+              // Grid（顶部折叠 hero：封面 + 介绍卡，随列表滚动；两者皆缺则不出现）
               Expanded(
                 child: _ObjectGrid(
                   slug: widget.slug,
                   category: _selectedCategory,
                   scrollController: _scrollController,
+                  leadingSliver: detailAsync.whenOrNull(
+                    data: (d) => (d.coverImage != null || d.description != null)
+                        ? SliverToBoxAdapter(
+                            child: _MuseumHero(
+                              coverImage: d.coverImage,
+                              description: d.description,
+                              expanded: _introExpanded,
+                              onToggle: () => setState(
+                                  () => _introExpanded = !_introExpanded),
+                            ),
+                          )
+                        : null,
+                  ),
                 ),
               ),
             ],
@@ -379,6 +395,82 @@ class _TabItem extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// 馆封面 + 折叠介绍卡（顶部 hero，随列表滚动；两字段各自可缺）
+// ---------------------------------------------------------------------------
+class _MuseumHero extends StatelessWidget {
+  const _MuseumHero({
+    this.coverImage,
+    this.description,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final String? coverImage;
+  final String? description;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (coverImage != null)
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.network(
+              sizedImageUrl(coverImage!, 1080),
+              fit: BoxFit.cover,
+              headers: kImageRequestHeaders,
+              loadingBuilder: (_, child, p) =>
+                  p == null ? child : ColoredBox(color: gm.chipBg),
+              errorBuilder: (_, __, ___) => ColoredBox(
+                color: gm.chipBg,
+                child: Center(
+                    child: GmIcon(GmIcons.photo, size: 36, color: gm.faint)),
+              ),
+            ),
+          ),
+        if (description != null)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onToggle,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(18, 13, 18, 12),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: gm.line, width: 1.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    description!,
+                    maxLines: expanded ? null : 2,
+                    overflow:
+                        expanded ? TextOverflow.clip : TextOverflow.ellipsis,
+                    style: GmText.sans(size: 13, height: 1.7, color: gm.sub),
+                    textAlign: TextAlign.justify,
+                  ),
+                  const SizedBox(height: 3),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      expanded ? '▴' : '▾',
+                      style: GmText.sans(
+                          size: 13, color: gm.accent, weight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 2-col object grid with infinite scroll
 // ---------------------------------------------------------------------------
 class _ObjectGrid extends ConsumerWidget {
@@ -386,11 +478,15 @@ class _ObjectGrid extends ConsumerWidget {
     required this.slug,
     required this.category,
     required this.scrollController,
+    this.leadingSliver,
   });
 
   final String slug;
   final String category;
   final ScrollController scrollController;
+
+  /// 列表前导 sliver（馆封面+介绍 hero，随列表滚动）；null 则无。
+  final Widget? leadingSliver;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -448,6 +544,7 @@ class _ObjectGrid extends ConsumerWidget {
     return CustomScrollView(
       controller: scrollController,
       slivers: [
+        if (leadingSliver != null) leadingSliver!,
         SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, i) => _ObjectRow(

@@ -31,6 +31,8 @@ class MuseumDetail extends Equatable {
     required this.categories,
     this.catalogCount,
     this.archiveCount,
+    this.description,
+    this.coverImage,
   });
 
   final String slug;
@@ -52,6 +54,12 @@ class MuseumDetail extends Equatable {
 
   /// 档案条目条数；老后端无此字段 → null。
   final int? archiveCount;
+
+  /// 馆叙事介绍（按 language，加法字段）；缺/生成失败 → null，介绍卡整体隐藏。
+  final String? description;
+
+  /// 封面直链（large 档，加法字段）；无合规封面 → null，封面 banner 隐藏。
+  final String? coverImage;
 
   /// 按 UI 语言取馆名：zh→中文名；其余→英文/拉丁名。
   String localizedName(String lang) => lang == 'zh' ? name : nameEn;
@@ -78,6 +86,13 @@ class MuseumDetail extends Equatable {
           const [],
       catalogCount: (j['catalog_count'] as num?)?.toInt(),
       archiveCount: (j['archive_count'] as num?)?.toInt(),
+      // 加法字段：空串视同缺失（隐藏，不显空块）。
+      description: (j['description'] as String?)?.trim().isNotEmpty == true
+          ? (j['description'] as String).trim()
+          : null,
+      coverImage: (j['cover_image'] as String?)?.isNotEmpty == true
+          ? j['cover_image'] as String
+          : null,
     );
   }
 
@@ -94,5 +109,7 @@ class MuseumDetail extends Equatable {
         categories,
         catalogCount,
         archiveCount,
+        description,
+        coverImage,
       ];
 }

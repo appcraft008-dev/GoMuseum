@@ -28,6 +28,8 @@ class _FakeCatalogDs implements CatalogRemoteDataSource {
       'name': '奥赛博物馆',
       'city': '巴黎',
       'country': 'FR',
+      'description': '奥赛坐落在一座1900年的火车站里，收藏印象派与后印象派杰作，'
+          '是巴黎最受欢迎的博物馆之一，见证了艺术从学院派走向现代的转折。',
       'categories': [
         {'code': 'all', 'label': '全部', 'count': 2},
         {'code': 'painting', 'label': '绘画', 'count': 1},
@@ -134,5 +136,22 @@ void main() {
 
     // stub badge should appear for the first card
     expect(find.text('待完善'), findsOneWidget);
+  });
+
+  testWidgets('MuseumPage: 馆介绍 hero 出现，点▾展开', (tester) async {
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // 介绍卡文字（默认收起，仍在树中，只是 maxLines 裁剪）+ 折叠指示 ▾
+    expect(find.textContaining('奥赛坐落在一座1900年的火车站里'), findsOneWidget);
+    expect(find.text('▾'), findsOneWidget);
+    expect(find.text('▴'), findsNothing);
+
+    // 点一下 → 展开（指示变 ▴）
+    await tester.tap(find.text('▾'));
+    await tester.pump();
+    expect(find.text('▴'), findsOneWidget);
+    expect(find.text('▾'), findsNothing);
   });
 }
