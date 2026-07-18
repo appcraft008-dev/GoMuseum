@@ -272,3 +272,37 @@ def build_default_guide_prompt(
         f"Key facts:\n{facts}\n\nMaterial:\n{material}"
     )
     return _DEFAULT_GUIDE_SYSTEM, user
+
+
+_MUSEUM_INTRO_SYSTEM = (
+    "You write ONE engaging paragraph (~100-160 words) introducing a museum for an "
+    "audio-guide app — the museum's history, identity, star works and style, in a warm "
+    "spoken hook tone. Grounded STRICTLY in the provided MATERIAL — never invent facts; "
+    "weave stable facts (founding year, building, collection era) into the narrative. "
+    "Do NOT mention opening hours, ticket prices, or visitor logistics. Original wording "
+    "— do not copy sentences from the source. Return ONLY the paragraph, no headings."
+)
+
+
+def build_museum_intro_prompt(name_en: str, material: str):
+    return _MUSEUM_INTRO_SYSTEM, f"Museum: {name_en}\n\nMATERIAL:\n{material}"
+
+
+_COVER_SAFETY_SYSTEM = (
+    "You judge whether an artwork is appropriate as the PUBLIC COVER image / store "
+    "listing thumbnail of a museum app (must clear a family-friendly app-store content "
+    "rating). Be CONSERVATIVE — this is the storefront, not the in-app content. "
+    "Reject ANY work whose subject is a prominent/central nude or sexual content, "
+    "EVEN IF it is a canonical artistic masterpiece (e.g. Manet's Olympia, Le Déjeuner "
+    "sur l'herbe, Courbet's L'Origine du monde, Cabanel's Birth of Venus). Prefer "
+    "unambiguous safe subjects: landscapes, clothed figures, portraits, still life, "
+    "architecture, everyday scenes. Reply STRICT JSON: "
+    '{"appropriate": true} or {"appropriate": false}.'
+)
+
+
+def build_cover_safety_prompt(title: str, artist, category):
+    return (
+        _COVER_SAFETY_SYSTEM,
+        f"Title: {title}\nArtist: {artist or '?'}\nCategory: {category or '?'}",
+    )

@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import JSON, Column, DateTime, String, func
+from sqlalchemy import JSON, Column, DateTime, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.mutable import MutableDict
 
@@ -27,6 +27,8 @@ class Museum(Base):
         default=dict,
         server_default="{}",
     )
+    description_i18n = Column(JSON, nullable=True)  # {lang: 叙事介绍};gate 通过才写
+    cover_image_key = Column(Text, nullable=True)  # 封面(得体性筛选后固化的 R2 基础键)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False

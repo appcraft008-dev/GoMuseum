@@ -245,3 +245,54 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
         "nationality_i18n": nat_i18n,
         "notable_works_i18n": {k: v[:5] for k, v in works_i18n.items()},
     }
+
+
+def fetch_museum_intro_material(qid: str, *, get_json=None) -> dict:
+    """馆级接地材料(spec 2026-07-18):qid → enwiki sitelink → en 全文 extract。
+    馆没有对象级 wiki_titles 管道,故独立小抓取。get_json 注入可测;失败返 extract_en=None
+    (调用方宁缺毋滥 skip)。"""
+    if get_json is None:
+        import requests
+
+        def get_json(url, params):
+            r = requests.get(
+                url,
+                params=params,
+                headers={
+                    "User-Agent": "GoMuseumBot/0.1 (contact appcraft008@gmail.com)"
+                },
+                timeout=30,
+            )
+            r.raise_for_status()
+            return r.json()
+
+    try:
+        ent = get_json(
+            "https://www.wikidata.org/w/api.php",
+            {
+                "action": "wbgetentities",
+                "ids": qid,
+                "props": "sitelinks",
+                "format": "json",
+            },
+        )
+        title = (
+            ent.get("entities", {}).get(qid, {}).get("sitelinks", {}).get("enwiki", {})
+        ).get("title")
+        if not title:
+            return {"extract_en": None}
+        data = get_json(
+            "https://en.wikipedia.org/w/api.php",
+            {
+                "action": "query",
+                "prop": "extracts",
+                "explaintext": 1,
+                "format": "json",
+                "titles": title,
+            },
+        )
+        pages = data.get("query", {}).get("pages", {})
+        extract = next(iter(pages.values()), {}).get("extract") or None
+        return {"extract_en": extract[:8000] if extract else None}
+    except Exception:
+        return {"extract_en": None}

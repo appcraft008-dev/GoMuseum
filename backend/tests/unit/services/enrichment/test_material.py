@@ -266,3 +266,32 @@ def test_non_variant_language_not_converted():
     rows = [{"l": {"value": "エドゥアール・マネ", "xml:lang": "ja"}}]
     out = fetch_wikidata_labels("Q296", ["ja"], run_query=lambda s: rows)
     assert out["ja"] == "エドゥアール・マネ"  # 非变体不动
+
+
+def test_fetch_museum_intro_material_sitelink_then_extract():
+    from app.services.enrichment.material import fetch_museum_intro_material
+
+    calls = []
+
+    def fake_get_json(url, params):
+        calls.append(url)
+        if "wikidata" in url:
+            return {
+                "entities": {
+                    "Q23402": {"sitelinks": {"enwiki": {"title": "Musée d'Orsay"}}}
+                }
+            }
+        return {"query": {"pages": {"1": {"extract": "The Musée d'Orsay is..."}}}}
+
+    out = fetch_museum_intro_material("Q23402", get_json=fake_get_json)
+    assert out["extract_en"].startswith("The Musée d'Orsay")
+    assert any("wikidata" in u for u in calls) and any("wikipedia" in u for u in calls)
+
+
+def test_fetch_museum_intro_material_no_sitelink():
+    from app.services.enrichment.material import fetch_museum_intro_material
+
+    out = fetch_museum_intro_material(
+        "Q1", get_json=lambda u, p: {"entities": {"Q1": {"sitelinks": {}}}}
+    )
+    assert out["extract_en"] is None

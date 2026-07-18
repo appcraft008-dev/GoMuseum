@@ -85,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     )  # Joconde 展陈证据(法国馆:P347→localisation)
     de.add_argument("--museum", required=True)
     de.add_argument("--limit", type=int, default=None)
+    it = sub.add_parser(
+        "intro"
+    )  # 馆介绍+封面(spec 2026-07-18;门面类预生成,幂等按语言补缺)
+    it.add_argument("--target", choices=["staging", "prod"], required=True)
+    it.add_argument("--force", action="store_true")
     cr = sub.add_parser("coverage-report")  # 覆盖率报告+museums.stats回写
     cr.add_argument("--museum", required=True)
     cr.add_argument("--json", action="store_true")
@@ -381,6 +386,39 @@ def cmd_display_evidence(museum: str, limit: int | None) -> None:
         db.close()
 
 
+def cmd_intro(slug: str, target: str, force: bool = False) -> None:
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.factory import build_generation_components
+    from app.services.enrichment.museum_intro import (
+        generate_museum_intro,
+        select_cover,
+    )
+
+    c = build_generation_components(slug)
+    db = SessionLocal()
+    try:
+        out = generate_museum_intro(
+            db,
+            slug,
+            complete=default_complete,
+            gate=c["gate"],
+            translator=c["translator"],
+            langs=c["target_langs"],  # 馆配置驱动(resolve_languages),不硬编
+            force=force,
+        )
+        cover = select_cover(db, slug, complete=default_complete, force=force)
+        db.commit()
+    finally:
+        db.close()
+    print(f"✓ intro: {out} cover={cover}")
+
+
 def cmd_coverage_report(museum: str, as_json: bool) -> None:
     from scripts.coverage_report import (
         _print_human,
@@ -449,6 +487,8 @@ def main(argv=None) -> None:
         cmd_views(ns.museum, ns.max)
     elif ns.command == "display-evidence":
         cmd_display_evidence(ns.museum, ns.limit)
+    elif ns.command == "intro":
+        cmd_intro(ns.slug, ns.target, ns.force)
     elif ns.command == "coverage-report":
         cmd_coverage_report(ns.museum, ns.json)
     else:
