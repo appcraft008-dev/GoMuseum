@@ -24,6 +24,7 @@ class _NearbyMuseum {
     this.topWorks = const [],
     this.topWorksLabel,
     this.topWorksLabelEn,
+    this.slug,
   });
 
   final String name;
@@ -32,6 +33,9 @@ class _NearbyMuseum {
   final String metaEn;
   final GmArtwork cover;
   final List<GmArtwork> topWorks;
+
+  /// 已上线馆的 slug(可点进馆藏目录);null=未上线(卡片不可点)。
+  final String? slug;
   final String? topWorksLabel;
   final String? topWorksLabelEn;
 
@@ -51,6 +55,7 @@ const _nearbyMuseums = [
     topWorks: [GmArt.rhone, GmArt.self1889, GmArt.bedroom],
     topWorksLabel: '馆藏 Top 3\n星夜 · 自画像 · 卧室',
     topWorksLabelEn: 'Top 3\nStarry Night · Self-Portrait · Bedroom',
+    slug: 'orsay',
   ),
   _NearbyMuseum(
     name: '橘园美术馆',
@@ -58,6 +63,7 @@ const _nearbyMuseums = [
     meta: '至 18:00 · 1.6 km · €12',
     metaEn: 'Until 18:00 · 1.6 km · €12',
     cover: GmArt.plain,
+    slug: 'orangerie',
   ),
   _NearbyMuseum(
     name: '卢浮宫',
@@ -193,8 +199,10 @@ class _HomePageState extends ConsumerState<HomePage> {
           alignment: Alignment.topCenter,
           child: _MuseumCard(
             museum: _nearbyMuseums[index],
-            // 奥赛已有馆包，点击进入馆藏目录
-            onTap: index == 0 ? () => context.push('/museum/orsay') : null,
+            // 已上线馆(slug 非空)可点进馆藏目录;未上线(卢浮宫)不可点
+            onTap: _nearbyMuseums[index].slug != null
+                ? () => context.push('/museum/${_nearbyMuseums[index].slug}')
+                : null,
           ),
         ),
       ),
