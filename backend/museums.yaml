@@ -20,3 +20,21 @@ museums:
     fetch_limit: 12000              # 全条目5353+多P31重复行(P18已OPTIONAL,无图件也收)
     sample_size: 30
     sample_qids: []
+  orangerie:
+    name_zh: 橘园美术馆
+    name_en: Musée de l'Orangerie
+    city_zh: 巴黎
+    city_en: Paris
+    country: FR
+    wikidata_qid: Q726781
+    category_filter: Q3305213
+    categories: [Q3305213, Q219423,
+                 Q860861, Q179700, Q241045, Q1066288,
+                 Q93184, Q18761202, Q12043905, Q15123870, Q2647254, Q5078274,
+                 Q125191]
+    country_lang: fr
+    sources: [joconde, wikipedia]
+    joconde_museum: "musée de l'Orangerie des Tuileries"
+    fetch_limit: 500
+    sample_size: 10
+    sample_qids: []

@@ -269,8 +269,12 @@ def cmd_names(
             db,
             slug,
             translator=ContentTranslator(
-                default_complete,
-                complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+                lambda s, u, model="gpt-4o-mini": default_complete(
+                    s, u, model, channel="names"
+                ),
+                complete_strong=lambda s, u: default_complete(
+                    s, u, model="gpt-4o", channel="names"
+                ),
             ),
             langs=target_langs,
             refresh_langs=(
@@ -311,8 +315,12 @@ def cmd_translate(
             slug,
             langs=[s.strip() for s in langs.split(",")],
             translator=ContentTranslator(
-                default_complete,
-                complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+                lambda s, u, model="gpt-4o-mini": default_complete(
+                    s, u, model, channel="translate"
+                ),
+                complete_strong=lambda s, u: default_complete(
+                    s, u, model="gpt-4o", channel="translate"
+                ),
             ),
             limit=limit,
         )
@@ -406,13 +414,20 @@ def cmd_intro(slug: str, target: str, force: bool = False) -> None:
         out = generate_museum_intro(
             db,
             slug,
-            complete=default_complete,
+            complete=lambda s, u, model="gpt-4o-mini": default_complete(
+                s, u, model, channel="intro"
+            ),
             gate=c["gate"],
             translator=c["translator"],
             langs=c["target_langs"],  # 馆配置驱动(resolve_languages),不硬编
             force=force,
         )
-        cover = select_cover(db, slug, complete=default_complete, force=force)
+        cover = select_cover(
+            db,
+            slug,
+            complete=lambda s, u: default_complete(s, u, channel="intro"),
+            force=force,
+        )
         db.commit()
     finally:
         db.close()

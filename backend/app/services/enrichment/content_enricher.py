@@ -125,12 +125,15 @@ class ContentEnricher:
         return text or None
 
 
-def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:
+def default_complete(
+    system: str, user: str, model: str = "gpt-4o-mini", channel: str = "misc"
+) -> str:
     """默认 LLM 调用（OpenAI，便宜模型）。grounded 生成是受约束改写，不需顶配。
 
     不强制 OpenAI 的 json_object 响应格式：JSON 类调用方（生成/质量闸/译文忠实）统一靠
     prompt「Return STRICT JSON」+ 容错解析 `_parse_json` 兜底，纯文本调用方（翻译段）也能用
     同一个 complete。json_object 模式会要求 messages 含 "json"，翻译 prompt 无此词会 400。
+    channel=用量记账通路标签(成本工程①,factory 打标;缺省 misc)。
     """
     import asyncio
 
@@ -154,6 +157,16 @@ def default_complete(system: str, user: str, model: str = "gpt-4o-mini") -> str:
             ],
             temperature=0.3,
         )
-        return resp.choices[0].message.content
+        u = getattr(resp, "usage", None)
+        return resp.choices[0].message.content, u
 
-    return asyncio.run(_run())
+    text, usage = asyncio.run(_run())
+    from app.services.llm_usage import record_llm_usage
+
+    record_llm_usage(
+        channel,
+        model,
+        getattr(usage, "prompt_tokens", 0),
+        getattr(usage, "completion_tokens", 0),
+    )
+    return text

@@ -20,19 +20,27 @@ def build_generation_components(slug: str, langs_override=None) -> dict:
     from app.services.enrichment.registry import build_registry
     from app.services.enrichment.translator import ContentTranslator
 
+    def _tagged(channel):
+        """用量记账通路打标(成本工程①):同一 default_complete,只多 channel 标签。"""
+        return lambda s, u, model="gpt-4o-mini": default_complete(
+            s, u, model, channel=channel
+        )
+
     cfg = MuseumCatalog.from_file(CATALOG_PATH).get(slug)
-    gate = QualityGate(default_complete)
+    gate = QualityGate(_tagged("gate"))
     translator = ContentTranslator(
-        default_complete,
-        complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+        _tagged("translate"),
+        complete_strong=lambda s, u: default_complete(
+            s, u, model="gpt-4o", channel="translate"
+        ),
     )
     ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
     session = PoliteSession(user_agent=ua, min_interval=1.0)
     return {
-        "enricher": ContentEnricher(default_complete),
+        "enricher": ContentEnricher(_tagged("generate")),
         "gate": gate,
         "translator": translator,
-        "qa_suggester": QASuggester(default_complete, gate, translator),
+        "qa_suggester": QASuggester(_tagged("qa"), gate, translator),
         "registry": build_registry(cfg.sources, session=session),
         "target_langs": resolve_languages(langs_override or cfg.languages),
         "country_lang": cfg.country_lang,
