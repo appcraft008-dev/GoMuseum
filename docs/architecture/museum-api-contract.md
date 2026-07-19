@@ -182,6 +182,14 @@
 
 ## 上新馆 = 纯配置(零核心改动)
 
+> **⓪ 预检清单(2026-07-19 橘园实战补;写配置前先做,两条各一分钟)**:
+> 1. **QID 核验+规模预估**——馆名易记错 QID(橘园教训:Q1094962 查出 0 条,真身 Q726781)。先
+>    `wbsearchentities` 搜馆名拿 QID,再 WDQS 数 `P195=<QID>` 条目数与 P18 有图数——既验 QID 又预估
+>    图录/文字层规模与 names 成本(基准:~$0.60/140 件,names 占 98%)。
+> 2. **Joconde 馆名必须用 POP 精确官方名**——先 `search(nom_officiel_musee,"关键词")` 探查
+>    (橘园官方名="musée de l'Orangerie des Tuileries",直觉名查出 0 条),命中的字符串原样填
+>    `joconde_museum`。非法国馆跳过此条。
+
 连接器已存在时(Wikidata 全球通用),上新馆只需:
 
 1. **`backend/museums.yaml` 加一条**:
