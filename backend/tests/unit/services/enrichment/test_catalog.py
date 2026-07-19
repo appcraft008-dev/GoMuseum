@@ -67,3 +67,12 @@ def test_categories_defaults_to_category_filter(tmp_path):
     cfg = MuseumCatalog.from_file(p).get("orsay")
     assert cfg.categories == ["Q3305213"]
     assert cfg.country_lang is None
+
+
+def test_orangerie_config_loads():
+    # 第二家馆(spec 2026-07-19):纯配置上馆的唯一"代码"
+    cat = MuseumCatalog.from_file("museums.yaml")
+    cfg = cat.get("orangerie")
+    assert cfg.wikidata_qid == "Q726781"
+    assert cfg.joconde_museum == "musée de l'Orangerie des Tuileries"
+    assert cfg.country_lang == "fr" and "joconde" in cfg.sources
