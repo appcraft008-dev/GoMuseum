@@ -190,3 +190,35 @@ def load_state(path):
             return json.load(f)
     except Exception:
         return None
+
+
+def run(
+    db,
+    slug,
+    langs,
+    *,
+    client=None,
+    limit=None,
+    job_id=None,
+    state_path=None,
+    poll_interval=60,
+) -> dict:
+    if client is None:
+        from openai import OpenAI
+
+        from app.core.config import settings
+
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    state_path = state_path or f"/tmp/{slug}_names_batch.json"
+    if job_id is None:
+        tasks = collect_missing(db, slug, langs, limit=limit)
+        if not tasks:
+            return {"tasks": 0, "applied": 0, "skipped": 0}
+        job_id = submit(tasks, client)
+        save_state(state_path, job_id, len(tasks))
+        logger.info("batch %s 已提交 %d 任务(状态: %s)", job_id, len(tasks), state_path)
+    lines = poll(job_id, client, interval=poll_interval)
+    out = apply(db, lines)
+    out["tasks"] = len(lines)
+    out["job_id"] = job_id
+    return out
