@@ -90,8 +90,12 @@ def _translate(db, qid: str, language: str) -> dict:
         o,
         language,
         ContentTranslator(
-            default_complete,
-            complete_strong=lambda s, u: default_complete(s, u, model="gpt-4o"),
+            lambda s, u, model="gpt-4o-mini": default_complete(
+                s, u, model, channel="translate"
+            ),
+            complete_strong=lambda s, u: default_complete(
+                s, u, model="gpt-4o", channel="translate"
+            ),
         ),
     )
     db.commit()

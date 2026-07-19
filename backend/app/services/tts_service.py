@@ -73,6 +73,10 @@ class TTSService:
     def _speech_kwargs(self, voice: str, text: str, speed: float) -> dict:
         """speech.create 参数。speed 仅 tts-1 系支持;gpt-4o-mini-tts 不认(会 400),
         且语速本就客户端控制,故新模型下省略 speed。"""
+        # 用量记账(成本工程①):tts-1 按输入字符计费 → tokens_in=字符数
+        from app.services.llm_usage import record_llm_usage
+
+        record_llm_usage("tts", self.model, len(text), 0)
         kw = {
             "model": self.model,
             "voice": voice,
