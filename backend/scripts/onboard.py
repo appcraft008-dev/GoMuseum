@@ -69,6 +69,8 @@ def build_parser() -> argparse.ArgumentParser:
     )  # 重译:无权威标签的机翻显示名用改进版重译
     na.add_argument("--limit", type=int, default=None)  # 只处理前 N 件(小样本验证)
     na.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
+    na.add_argument("--use-batch", action="store_true")  # 走 OpenAI Batch(半价+免盯守)
+    na.add_argument("--batch-job", default=None)  # 断点续传:直接轮询+回填已提交 job
     tr = sub.add_parser("translate")  # 补语种:存量对象缺失语言从 en 段纯翻译(幂等)
     tr.add_argument("--target", choices=["staging", "prod"], required=True)
     tr.add_argument("--langs", required=True)  # 如 de,es,it
@@ -245,6 +247,8 @@ def cmd_names(
     retranslate_langs: str | None = None,
     limit: int | None = None,
     allow_full: bool = False,
+    use_batch: bool = False,
+    batch_job: str | None = None,
 ) -> None:
     from scripts.ops_guard import staging_limit
 
@@ -263,6 +267,19 @@ def cmd_names(
     cfg = _catalog().get(slug)
     override = [s.strip() for s in langs.split(",")] if langs else cfg.languages
     target_langs = resolve_languages(override)
+
+    # Batch 模式(成本工程②):半价+免长时盯守;失败行=仍缺,幂等重跑或 --batch-job 续
+    if use_batch or batch_job:
+        from app.services.enrichment.batch_names import run as batch_run
+
+        db = SessionLocal()
+        try:
+            out = batch_run(db, slug, target_langs, limit=limit, job_id=batch_job)
+        finally:
+            db.close()
+        print(f"✓ names(batch): {out}")
+        return
+
     db = SessionLocal()
     try:
         out = backfill_display_names(
@@ -493,6 +510,8 @@ def main(argv=None) -> None:
             ns.retranslate_langs,
             ns.limit,
             ns.allow_full,
+            ns.use_batch,
+            ns.batch_job,
         )
     elif ns.command == "translate":
         cmd_translate(ns.slug, ns.langs, ns.limit, ns.target, ns.allow_full)

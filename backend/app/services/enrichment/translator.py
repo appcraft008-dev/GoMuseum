@@ -10,6 +10,13 @@ from app.services.enrichment.prompts import (
 )
 from app.services.enrichment.quality import SectionQuality
 
+_NAME_QUOTES = "《》\"'“”‘’«»"
+
+
+def strip_name(text: str) -> str:
+    """剥模型套上的书名号/引号(translate_name 与 batch 回填共用)。"""
+    return (text or "").strip().strip(_NAME_QUOTES)
+
 
 def _parse():
     from app.services.enrichment.content_enricher import _parse_json
@@ -45,8 +52,7 @@ class ContentTranslator:
         名字短/便宜 → 有强模型(gpt-4o)就用它(音译/无残片质量远好于 mini)。"""
         system, user = build_name_translation_prompt(name, target_lang)
         fn = self._complete_strong or self._complete
-        out = (fn(system, user) or "").strip()
-        return out.strip("《》\"'“”‘’«»")
+        return strip_name(fn(system, user))
 
     def check_faithfulness(self, en_body: str, translated: str, target_lang: str):
         system, user = build_faithfulness_prompt(en_body, translated, target_lang)

@@ -1285,3 +1285,10 @@ def test_qa_runs_parallel_with_translations(session):
     )
     assert out["counts"]["fr"] == (1, 0)  # 翻译照常落库
     assert out["qa"] == {"en": 1}  # qa 照常落库
+
+
+def test_strip_name_shared_helper(session):
+    from app.services.enrichment.translator import strip_name
+
+    assert strip_name("《睡莲》") == "睡莲"
+    assert strip_name('"Water Lilies"') == "Water Lilies"

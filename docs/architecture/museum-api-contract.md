@@ -182,6 +182,14 @@
 
 ## 上新馆 = 纯配置(零核心改动)
 
+> **⓪ 预检清单(2026-07-19 橘园实战补;写配置前先做,两条各一分钟)**:
+> 1. **QID 核验+规模预估**——馆名易记错 QID(橘园教训:Q1094962 查出 0 条,真身 Q726781)。先
+>    `wbsearchentities` 搜馆名拿 QID,再 WDQS 数 `P195=<QID>` 条目数与 P18 有图数——既验 QID 又预估
+>    图录/文字层规模与 names 成本(基准:~$0.60/140 件,names 占 98%)。
+> 2. **Joconde 馆名必须用 POP 精确官方名**——先 `search(nom_officiel_musee,"关键词")` 探查
+>    (橘园官方名="musée de l'Orangerie des Tuileries",直觉名查出 0 条),命中的字符串原样填
+>    `joconde_museum`。非法国馆跳过此条。
+
 连接器已存在时(Wikidata 全球通用),上新馆只需:
 
 1. **`backend/museums.yaml` 加一条**:
@@ -341,6 +349,8 @@
 ---
 
 ## 变更记录
+
+- 2026-07-19:**第二家馆橘园落地——"零代码上新馆"实证成立**(spec orangerie-onboarding)。全程唯一改动=museums.yaml 一个条目;配方全链(catalog×2→names→images→物化即嵌入→intro→coverage-report)原样跑通:档案140/图录15/向量16;封面得体性筛选一次到位(卢梭《婚礼派对》);探索页/搜索/懒讲解(zh 18s)全自动可用。**实测上馆成本基准(llm_usage 首份完整账单):全馆 ~$0.60,其中 names(gpt-4o)$0.59=98%**——坐实成本工程②(Batch API 砍 names)是唯一值得的刀。Joconde 馆名须用 POP 精确官方名(橘园="musée de l'Orangerie des Tuileries")。
 
 - 2026-07-18:**博物馆介绍+封面落地**(spec museum-intro)。馆包加法字段 `description`(AI 接地叙事,按语言回退,null 安全)/`cover_image`(得体性筛选封面,可 null);`onboard intro` 命令(复用富化管线,按语言维度幂等补缺,gate 不过不落);封面=后端 LLM 得体性判定(《世界的起源》类否决,server-driven 免 Play 审核);上新馆配方加 intro 步。迁移 q1n3。门面类预生成(成本分界),不碰运营数据。
 
