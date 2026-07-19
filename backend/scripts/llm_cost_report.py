@@ -9,6 +9,7 @@ sys.path.insert(0, ".")
 PRICES = {
     "gpt-4o-mini": (0.15, 0.60),
     "gpt-4o": (2.50, 10.00),
+    "gpt-4o@batch": (1.25, 5.00),  # Batch API 半价(成本工程②)
     "tts-1": (15.0, 0.0),  # $15/1M chars
 }
 
