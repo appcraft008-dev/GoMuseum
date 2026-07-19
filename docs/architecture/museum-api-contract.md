@@ -342,6 +342,8 @@
 
 ## 变更记录
 
+- 2026-07-19:**第二家馆橘园落地——"零代码上新馆"实证成立**(spec orangerie-onboarding)。全程唯一改动=museums.yaml 一个条目;配方全链(catalog×2→names→images→物化即嵌入→intro→coverage-report)原样跑通:档案140/图录15/向量16;封面得体性筛选一次到位(卢梭《婚礼派对》);探索页/搜索/懒讲解(zh 18s)全自动可用。**实测上馆成本基准(llm_usage 首份完整账单):全馆 ~$0.60,其中 names(gpt-4o)$0.59=98%**——坐实成本工程②(Batch API 砍 names)是唯一值得的刀。Joconde 馆名须用 POP 精确官方名(橘园="musée de l'Orangerie des Tuileries")。
+
 - 2026-07-18:**博物馆介绍+封面落地**(spec museum-intro)。馆包加法字段 `description`(AI 接地叙事,按语言回退,null 安全)/`cover_image`(得体性筛选封面,可 null);`onboard intro` 命令(复用富化管线,按语言维度幂等补缺,gate 不过不落);封面=后端 LLM 得体性判定(《世界的起源》类否决,server-driven 免 Play 审核);上新馆配方加 intro 步。迁移 q1n3。门面类预生成(成本分界),不碰运营数据。
 
 - 2026-07-17:**staging 轻量化落地**(收录⑥)——护栏(staging 默认小样本/--allow-full)+ prod→staging 搬运两档(slim 金样本/full 拉真)+ 用户表红线。背景:staging 已成 prod 近镜像,十万件×10语全量回填≈百万级强模型调用不可持续。
