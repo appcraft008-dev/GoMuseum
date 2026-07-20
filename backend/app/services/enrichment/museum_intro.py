@@ -46,7 +46,18 @@ def generate_museum_intro(
             out["skipped"] = "no_material"  # 宁缺毋滥:源薄不硬写
             return out
         system, user = build_museum_intro_prompt(m.name_en or slug, extract)
-        text = (complete(system, user) or "").strip()
+        # 分段走JSON段落数组,后端拼接——自由文本里精确插入\n\n对LLM不可靠(staging实测:
+        # gpt-4o-mini 稳定忽略该指令),结构化输出才是这类要求的正确解法(同代码库其它
+        # 生成点约定:Return STRICT JSON + _parse_json 容错解析)。
+        try:
+            paragraphs = (
+                _parse_json(complete(system, user) or "").get("paragraphs") or []
+            )
+            text = "\n\n".join(p.strip() for p in paragraphs if p and p.strip())
+        except Exception:
+            text = ""
+        if not text:
+            return out  # JSON解析失败/空段落=当生成失败,不落半成品(宁缺毋滥,重跑再试)
         q = gate.check_section(extract, f"- Museum: {m.name_en}", text)
         if q.status != "published" or not q.body:
             return out  # gate 不过=不落库,重跑再试(无 needs_review 状态机)
