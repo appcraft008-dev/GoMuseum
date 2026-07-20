@@ -632,4 +632,19 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get camRetake => 'Riscatta';
+
+  @override
+  String get museumCoverTab => 'Copertina';
+
+  @override
+  String get museumCollectionTab => 'Collezione';
+
+  @override
+  String get museumOpeningHours => 'Orari di apertura';
+
+  @override
+  String get museumOfficialSite => 'Sito ufficiale';
+
+  @override
+  String get museumIntroComingSoon => 'Presentazione del museo in arrivo';
 }

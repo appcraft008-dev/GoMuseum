@@ -1,10 +1,12 @@
-/// 馆藏列表页 — 暖纸手册 §8 CollectionListScreen
+/// 馆详情页 — 暖纸手册 §8 CollectionListScreen（顶层二级 tab：封面 / 藏品）
 ///
-/// 顶栏：← + 馆名 + 藏品数 + 搜索图标
-/// 分类 Tab 横滑：数据来自 A2 GET /museums/{slug} → categories
-/// 目录列表行：A3 GET /museums/{slug}/objects 无限滚动
-///   每行 = 序号 + 缩略图 + 标题/作者·年代 + content_status 角标
-/// content_status=stub → 「待完善」角标
+/// 顶栏：← + 馆名 + 藏品数 + 搜索图标（全局，不随 tab 变化）
+/// Tab①「封面」（默认）：hero 图 + 馆介绍(description) + 实用信息(开放时间/官网)。
+///   两字段皆缺(老馆/未生成) → 显「介绍生成中」占位，不留空白页。
+/// Tab②「藏品」：分类 Tab 横滑(A2 categories) + 目录列表(A3 无限滚动)，与此前行为一致。
+/// 顶层 tab 结构预留扩展位——以后加「地图」「特展」等新 tab 只需在 _MuseumTopTabBar
+/// 的 tabs 列表 + TabBarView children 各加一项。
+/// 目录列表行：序号 + 缩略图 + 标题/作者·年代 + content_status 角标；stub → 「待完善」角标
 library;
 
 import 'dart:async';
@@ -33,12 +35,14 @@ class MuseumPage extends ConsumerStatefulWidget {
   ConsumerState<MuseumPage> createState() => _MuseumPageState();
 }
 
-class _MuseumPageState extends ConsumerState<MuseumPage> {
+class _MuseumPageState extends ConsumerState<MuseumPage>
+    with SingleTickerProviderStateMixin {
   String _selectedCategory = 'all';
   final ScrollController _scrollController = ScrollController();
 
-  /// 馆介绍卡展开态（页级：跨分类切换保持）。
-  bool _introExpanded = false;
+  /// 顶层二级 tab：0=封面(默认，用户先看馆介绍) 1=藏品。
+  late final TabController _topTabController =
+      TabController(length: 2, vsync: this);
 
   /// 馆内搜索：图标展开搜索框，即时（debounce 300ms）只搜当前馆。
   bool _searching = false;
@@ -56,6 +60,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
     _searchTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _topTabController.dispose();
     super.dispose();
   }
 
@@ -132,43 +137,80 @@ class _MuseumPageState extends ConsumerState<MuseumPage> {
                       ),
               )
             else ...[
-              // Category tabs
-              detailAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-                data: (detail) => _CategoryTabs(
-                  categories: detail.categories,
-                  selected: _selectedCategory,
-                  onSelect: (code) {
-                    if (code == _selectedCategory) return;
-                    setState(() => _selectedCategory = code);
-                  },
-                ),
-              ),
-              // Grid（顶部折叠 hero：封面 + 介绍卡，随列表滚动；两者皆缺则不出现）
+              _MuseumTopTabBar(controller: _topTabController),
               Expanded(
-                child: _ObjectGrid(
-                  slug: widget.slug,
-                  category: _selectedCategory,
-                  scrollController: _scrollController,
-                  leadingSliver: detailAsync.whenOrNull(
-                    data: (d) => (d.coverImage != null || d.description != null)
-                        ? SliverToBoxAdapter(
-                            child: _MuseumHero(
-                              coverImage: d.coverImage,
-                              description: d.description,
-                              expanded: _introExpanded,
-                              onToggle: () => setState(
-                                  () => _introExpanded = !_introExpanded),
-                            ),
-                          )
-                        : null,
-                  ),
+                child: TabBarView(
+                  controller: _topTabController,
+                  children: [
+                    // Tab① 封面：介绍 + 实用信息（新增扩展点在此列表追加）。
+                    _CoverTab(detailAsync: detailAsync),
+                    // Tab② 藏品：分类 tab + 无限滚动目录（与此前行为一致）。
+                    Column(
+                      children: [
+                        detailAsync.when(
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                          data: (detail) => _CategoryTabs(
+                            categories: detail.categories,
+                            selected: _selectedCategory,
+                            onSelect: (code) {
+                              if (code == _selectedCategory) return;
+                              setState(() => _selectedCategory = code);
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: _ObjectGrid(
+                            slug: widget.slug,
+                            category: _selectedCategory,
+                            scrollController: _scrollController,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 顶层二级 tab 栏：封面 / 藏品（扩展点——以后加新 tab 只需在此加一项 + 上面
+// TabBarView.children 对应加一个 view，TabController(length: N) 同步改）。
+// ---------------------------------------------------------------------------
+class _MuseumTopTabBar extends StatelessWidget {
+  const _MuseumTopTabBar({required this.controller});
+
+  final TabController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: gm.line),
+          bottom: BorderSide(color: gm.line, width: 1.5),
+        ),
+      ),
+      child: TabBar(
+        controller: controller,
+        labelColor: gm.accentDeep,
+        unselectedLabelColor: gm.sub,
+        labelStyle: GmText.serif(size: 13.5, weight: FontWeight.w700),
+        unselectedLabelStyle: GmText.serif(size: 13.5),
+        indicatorColor: gm.accent,
+        indicatorWeight: 2.5,
+        tabs: [
+          Tab(text: l10n.museumCoverTab),
+          Tab(text: l10n.museumCollectionTab),
+        ],
       ),
     );
   }
@@ -395,76 +437,145 @@ class _TabItem extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// 馆封面 + 折叠介绍卡（顶部 hero，随列表滚动；两字段各自可缺）
+// Tab①「封面」：hero 图 + 馆介绍(全文，本身独占一屏不必折叠) + 实用信息
+// (开放时间/官网——模型早有这两字段但此前全 App 无处显示，死数据用起来)。
+// description/coverImage 各自可缺；四项全无 → 「介绍生成中」占位，不留空白页。
 // ---------------------------------------------------------------------------
-class _MuseumHero extends StatelessWidget {
-  const _MuseumHero({
-    this.coverImage,
-    this.description,
-    required this.expanded,
-    required this.onToggle,
-  });
+class _CoverTab extends StatelessWidget {
+  const _CoverTab({required this.detailAsync});
 
-  final String? coverImage;
-  final String? description;
-  final bool expanded;
-  final VoidCallback onToggle;
+  final AsyncValue<MuseumDetail> detailAsync;
 
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (coverImage != null)
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Image.network(
-              sizedImageUrl(coverImage!, 1080),
-              fit: BoxFit.cover,
-              headers: kImageRequestHeaders,
-              loadingBuilder: (_, child, p) =>
-                  p == null ? child : ColoredBox(color: gm.chipBg),
-              errorBuilder: (_, __, ___) => ColoredBox(
-                color: gm.chipBg,
-                child: Center(
-                    child: GmIcon(GmIcons.photo, size: 36, color: gm.faint)),
+    final l10n = AppLocalizations.of(context)!;
+    return detailAsync.when(
+      loading: () => Center(child: CircularProgressIndicator(color: gm.accent)),
+      error: (_, __) =>
+          Center(child: Text(l10n.loadFailed, style: GmText.sans(size: 13))),
+      data: (d) => _CoverTabBody(detail: d),
+    );
+  }
+}
+
+class _CoverTabBody extends StatelessWidget {
+  const _CoverTabBody({required this.detail});
+
+  final MuseumDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    final cover = detail.coverImage;
+    final desc = detail.description;
+    final hours = detail.openingHours;
+    final url = detail.officialUrl;
+    final hasHours = hours != null && hours.isNotEmpty;
+    final hasUrl = url != null && url.isNotEmpty;
+    final hasInfo = hasHours || hasUrl;
+
+    if (cover == null && desc == null && !hasInfo) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Text(
+            l10n.museumIntroComingSoon,
+            textAlign: TextAlign.center,
+            style: GmText.sans(size: 13, color: gm.faint),
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (cover != null)
+            AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Image.network(
+                sizedImageUrl(cover, 1080),
+                fit: BoxFit.cover,
+                headers: kImageRequestHeaders,
+                loadingBuilder: (_, child, p) =>
+                    p == null ? child : ColoredBox(color: gm.chipBg),
+                errorBuilder: (_, __, ___) => ColoredBox(
+                  color: gm.chipBg,
+                  child: Center(
+                      child: GmIcon(GmIcons.photo, size: 36, color: gm.faint)),
+                ),
               ),
             ),
-          ),
-        if (description != null)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onToggle,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(18, 13, 18, 12),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: gm.line, width: 1.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (desc != null)
                   Text(
-                    description!,
-                    maxLines: expanded ? null : 2,
-                    overflow:
-                        expanded ? TextOverflow.clip : TextOverflow.ellipsis,
-                    style: GmText.sans(size: 13, height: 1.7, color: gm.sub),
+                    desc,
+                    style: GmText.sans(size: 13.5, height: 1.85, color: gm.ink),
                     textAlign: TextAlign.justify,
                   ),
-                  const SizedBox(height: 3),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      expanded ? '▴' : '▾',
-                      style: GmText.sans(
-                          size: 13, color: gm.accent, weight: FontWeight.w700),
-                    ),
-                  ),
+                if (desc != null && hasInfo) ...[
+                  const SizedBox(height: 18),
+                  const GmHairline(),
+                  const SizedBox(height: 14),
                 ],
-              ),
+                if (hasHours)
+                  _InfoRow(
+                    icon: GmIcons.clock,
+                    label: l10n.museumOpeningHours,
+                    value: hours,
+                  ),
+                if (hasHours && hasUrl) const SizedBox(height: 10),
+                if (hasUrl)
+                  _InfoRow(
+                    icon: GmIcons.globe,
+                    label: l10n.museumOfficialSite,
+                    value: url,
+                  ),
+              ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow(
+      {required this.icon, required this.label, required this.value});
+
+  final GmIcons icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GmIcon(icon, size: 16, color: gm.faint),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: GmText.sans(
+                      size: 10.5, color: gm.faint, letterSpacing: 0.3)),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: GmText.sans(size: 12.5, color: gm.sub, height: 1.5)),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -478,15 +589,11 @@ class _ObjectGrid extends ConsumerWidget {
     required this.slug,
     required this.category,
     required this.scrollController,
-    this.leadingSliver,
   });
 
   final String slug;
   final String category;
   final ScrollController scrollController;
-
-  /// 列表前导 sliver（馆封面+介绍 hero，随列表滚动）；null 则无。
-  final Widget? leadingSliver;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -544,7 +651,6 @@ class _ObjectGrid extends ConsumerWidget {
     return CustomScrollView(
       controller: scrollController,
       slivers: [
-        if (leadingSliver != null) leadingSliver!,
         SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, i) => _ObjectRow(

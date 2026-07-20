@@ -193,5 +193,10 @@
   "camConfirmStart": "확인하고 가이드 시작",
   "camNoneSearch": "해당 없음? 제목이나 설명판 번호로 검색 →",
   "camRecognizeFailed": "인식 실패",
-  "camRetake": "다시 촬영"
+  "camRetake": "다시 촬영",
+  "museumCoverTab": "표지",
+  "museumCollectionTab": "컬렉션",
+  "museumOpeningHours": "운영 시간",
+  "museumOfficialSite": "공식 웹사이트",
+  "museumIntroComingSoon": "박물관 소개 준비 중입니다"
 }

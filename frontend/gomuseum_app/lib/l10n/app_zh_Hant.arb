@@ -193,5 +193,10 @@
   "camConfirmStart": "確認，開始講解",
   "camNoneSearch": "都不是？搜尋作品名或展籤編號 →",
   "camRecognizeFailed": "識別失敗",
-  "camRetake": "重新拍攝"
+  "camRetake": "重新拍攝",
+  "museumCoverTab": "封面",
+  "museumCollectionTab": "藏品",
+  "museumOpeningHours": "開放時間",
+  "museumOfficialSite": "官方網站",
+  "museumIntroComingSoon": "館方介紹生成中，敬請期待"
 }

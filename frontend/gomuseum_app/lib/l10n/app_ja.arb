@@ -193,5 +193,10 @@
   "camConfirmStart": "確認してガイド開始",
   "camNoneSearch": "該当なし？題名またはプレート番号で検索 →",
   "camRecognizeFailed": "認識に失敗しました",
-  "camRetake": "撮り直す"
+  "camRetake": "撮り直す",
+  "museumCoverTab": "表紙",
+  "museumCollectionTab": "コレクション",
+  "museumOpeningHours": "開館時間",
+  "museumOfficialSite": "公式サイト",
+  "museumIntroComingSoon": "館内紹介は準備中です"
 }

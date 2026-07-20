@@ -613,4 +613,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get camRetake => '撮り直す';
+
+  @override
+  String get museumCoverTab => '表紙';
+
+  @override
+  String get museumCollectionTab => 'コレクション';
+
+  @override
+  String get museumOpeningHours => '開館時間';
+
+  @override
+  String get museumOfficialSite => '公式サイト';
+
+  @override
+  String get museumIntroComingSoon => '館内紹介は準備中です';
 }

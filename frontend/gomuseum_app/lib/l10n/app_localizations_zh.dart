@@ -612,6 +612,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get camRetake => '重新拍摄';
+
+  @override
+  String get museumCoverTab => '封面';
+
+  @override
+  String get museumCollectionTab => '藏品';
+
+  @override
+  String get museumOpeningHours => '开放时间';
+
+  @override
+  String get museumOfficialSite => '官方网站';
+
+  @override
+  String get museumIntroComingSoon => '馆方介绍生成中，敬请期待';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1222,4 +1237,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get camRetake => '重新拍攝';
+
+  @override
+  String get museumCoverTab => '封面';
+
+  @override
+  String get museumCollectionTab => '藏品';
+
+  @override
+  String get museumOpeningHours => '開放時間';
+
+  @override
+  String get museumOfficialSite => '官方網站';
+
+  @override
+  String get museumIntroComingSoon => '館方介紹生成中，敬請期待';
 }

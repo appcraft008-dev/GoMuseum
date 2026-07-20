@@ -204,5 +204,10 @@
   "camConfirmStart": "Conferma e avvia la guida",
   "camNoneSearch": "Nessuna corrispondenza? Cerca per titolo o cartellino →",
   "camRecognizeFailed": "Riconoscimento non riuscito",
-  "camRetake": "Riscatta"
+  "camRetake": "Riscatta",
+  "museumCoverTab": "Copertina",
+  "museumCollectionTab": "Collezione",
+  "museumOpeningHours": "Orari di apertura",
+  "museumOfficialSite": "Sito ufficiale",
+  "museumIntroComingSoon": "Presentazione del museo in arrivo"
 }
