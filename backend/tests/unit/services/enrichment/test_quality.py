@@ -156,3 +156,21 @@ def test_en_axis_rejects_non_english():
         "Ceci est une phrase française qui a fui dans l'axe anglais du contenu artistique.",
     )
     assert q.status == "needs_review"
+
+
+def test_check_section_preserves_paragraph_breaks():
+    # 段落感知:过闸后段间 \n\n 保住(馆介绍分段根因——旧版 " ".join 拉平成单段)
+    body = "Sentence A. Sentence B.\n\nSentence C. Sentence D."
+    r = QualityGate(
+        _FakeComplete(verdicts=[True, True, True, True], conflicts=[])
+    ).check_section("MAT", "F", body)
+    assert r.body == "Sentence A. Sentence B.\n\nSentence C. Sentence D."
+
+
+def test_check_section_drops_empty_paragraph_after_gate():
+    # 某段所有句子被闸删 → 该段整体消失,不留空段
+    body = "Kept one. Kept two.\n\nDropped this."
+    r = QualityGate(
+        _FakeComplete(verdicts=[True, True, False], conflicts=[])
+    ).check_section("MAT", "F", body)
+    assert r.body == "Kept one. Kept two."  # 第二段全删 → 无尾随 \n\n
