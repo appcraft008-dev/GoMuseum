@@ -46,13 +46,13 @@ def generate_museum_intro(
             out["skipped"] = "no_material"  # 宁缺毋滥:源薄不硬写
             return out
         system, user = build_museum_intro_prompt(m.name_en or slug, extract)
-        # 分段走JSON段落数组,后端拼接——自由文本里精确插入\n\n对LLM不可靠(staging实测:
-        # gpt-4o-mini 稳定忽略该指令),结构化输出才是这类要求的正确解法(同代码库其它
-        # 生成点约定:Return STRICT JSON + _parse_json 容错解析)。
+        # 分段走固定三具名字段的JSON对象,后端拼接——staging实测:变长数组
+        # {"paragraphs":[...]} 对 gpt-4o-mini 约束力不够,3/3次真实调用模型都合并成
+        # 单元素数组(未违反格式,但违反意图);具名必填字段是更强的结构化约束
+        # (模型难以"偷懒"合并——省略必填key比塞满弱格式约束更显眼,遵从率更高)。
         try:
-            paragraphs = (
-                _parse_json(complete(system, user) or "").get("paragraphs") or []
-            )
+            data = _parse_json(complete(system, user) or "")
+            paragraphs = [data.get(k) for k in ("history", "highlights", "invitation")]
             text = "\n\n".join(p.strip() for p in paragraphs if p and p.strip())
         except Exception:
             text = ""
