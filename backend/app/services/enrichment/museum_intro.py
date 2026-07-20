@@ -22,6 +22,20 @@ from app.services.enrichment.prompts import (
 logger = logging.getLogger(__name__)
 
 
+def _split_into_paragraphs(text: str, target: int = 3) -> str:
+    """兜底格式化:模型把内容全塞进一个字段时,按句子边界切成大致等长的目标
+    段数——零LLM调用、一字不改内容,只加换行换阅读体验。句子数不足 target 则
+    原样返回(硬切短文本没意义)。"""
+    import re
+
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    if len(sentences) < target:
+        return text
+    per = -(-len(sentences) // target)  # 向上取整,保证段数不超 target
+    chunks = [" ".join(sentences[i : i + per]) for i in range(0, len(sentences), per)]
+    return "\n\n".join(c.strip() for c in chunks if c.strip())
+
+
 def generate_museum_intro(
     db,
     slug: str,
@@ -46,14 +60,24 @@ def generate_museum_intro(
             out["skipped"] = "no_material"  # 宁缺毋滥:源薄不硬写
             return out
         system, user = build_museum_intro_prompt(m.name_en or slug, extract)
-        # 分段走固定三具名字段的JSON对象,后端拼接——staging实测:变长数组
-        # {"paragraphs":[...]} 对 gpt-4o-mini 约束力不够,3/3次真实调用模型都合并成
-        # 单元素数组(未违反格式,但违反意图);具名必填字段是更强的结构化约束
-        # (模型难以"偷懒"合并——省略必填key比塞满弱格式约束更显眼,遵从率更高)。
+        # 分段走固定三具名字段JSON对象(staging实测:变长数组{"paragraphs":[...]}
+        # 约束力不够,模型合法地只填一个元素)。但具名字段仍非100%可靠——staging
+        # 两轮真实调用观察到模型偶尔把全部内容塞进一个key、其余留空(已知LLM结构化
+        # 生成弱点,继续换prompt措辞是赌不是工程)。兜底:剩1个非空字段时按句子边界
+        # 确定性切分(零LLM调用零改内容,纯格式化,换阅读体验)。
         try:
             data = _parse_json(complete(system, user) or "")
-            paragraphs = [data.get(k) for k in ("history", "highlights", "invitation")]
-            text = "\n\n".join(p.strip() for p in paragraphs if p and p.strip())
+            filled = [
+                data.get(k, "").strip() if data.get(k) else ""
+                for k in ("history", "highlights", "invitation")
+            ]
+            filled = [p for p in filled if p]
+            if len(filled) >= 2:
+                text = "\n\n".join(filled)
+            elif len(filled) == 1:
+                text = _split_into_paragraphs(filled[0])
+            else:
+                text = ""
         except Exception:
             text = ""
         if not text:
