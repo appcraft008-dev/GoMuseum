@@ -37,11 +37,13 @@
 ```json
 [
   {"slug": "orsay", "name_zh": "奥赛博物馆", "name_en": "Musée d'Orsay",
-   "city_zh": "巴黎", "city_en": "Paris", "country": "FR", "artwork_count": 262}
+   "city_zh": "巴黎", "city_en": "Paris", "country": "FR", "artwork_count": 262,
+   "cover_image": "<url|null>"}
 ]
 ```
 
-> **规划未实现**:`cover_url`(馆封面图,前端首页"附近博物馆"需要)。届时加法补入,见交接备忘。
+- `cover_image`(✅2026-07-20 spec museum-cover-intro-quality,加法):探索页列表缩略图(thumb 档),
+  同 `m.cover_image_key` 一行零成本可读;未生成封面则 `null`(前端隐藏)。
 
 ## 2. `GET /museums/{slug}?language=zh`
 
@@ -69,7 +71,7 @@
 }
 ```
 
-- `description`(✅2026-07-18 spec museum-intro,加法):馆叙事介绍,AI 接地生成 `description_i18n[language]`,缺→en→任一→**null**。`cover_image`:得体性筛选后的封面 R2 直链(large 档,**可 null**)。前端 `as String?`,null 整块隐藏。老 App 不读不炸。
+- `description`(✅2026-07-18 spec museum-intro,加法):馆叙事介绍,AI 接地生成 `description_i18n[language]`,缺→en→任一→**null**;2-3 短段落以 `\n\n` 分隔(2026-07-20 优化,不再是单一长段)。`cover_image`:封面 R2 直链(large 档,**可 null**)——**优先馆自身建筑外观照**(Museum.qid 的 Wikidata P18,不过安全闸:架构零裸体风险),无建筑照/下载失败则回落藏品图逐件得体性判定(古典/宗教裸体可,写实露骨否决)。前端 `as String?`,null 整块隐藏。老 App 不读不炸。
 
 - `categories`:`all` 合计 + 各 `MuseumObject.category` 分组计数,标签本地化(`_CATEGORY_LABELS`:painting/sculpture/photography/decorative_arts/unknown)。
 - `artworks[].title_zh` 永不为 null(回退 `title_en`→`qid`,防前端裸 `as String` 崩)。
@@ -350,6 +352,13 @@
 
 ## 变更记录
 
+- 2026-07-20:**馆封面/简介质量收尾**(spec museum-cover-intro-quality,前端真机实测发现三处)。
+  `GET /museums` 加法字段 `cover_image`(探索页列表缩略图,此前完全无图数据可用);
+  `select_cover` 改为**建筑外观优先**(Museum.qid 的 Wikidata P18,不过安全闸——架构零裸体风险且无
+  title/artist 可喂),无建筑照/下载失败才回落藏品图逐件得体性判定(原逻辑不变);
+  简介 prompt 改 2-3 短段落(`\n\n` 分隔),存量馆(orsay/orangerie)需 `force=True` 重跑才吃到新版。
+  ⚠️ 前端交接文档提及 `opening_hours`/`official_url` 两字段——**故意不做**:属易变运营数据,
+  撞"AI 绝不脏补"红线(museum-intro 原则);前端已用 `as String?` 优雅处理永远 null,无需后端补。
 - 2026-07-19:**第二家馆橘园落地——"零代码上新馆"实证成立**(spec orangerie-onboarding)。全程唯一改动=museums.yaml 一个条目;配方全链(catalog×2→names→images→物化即嵌入→intro→coverage-report)原样跑通:档案140/图录15/向量16;封面得体性筛选一次到位(卢梭《婚礼派对》);探索页/搜索/懒讲解(zh 18s)全自动可用。**实测上馆成本基准(llm_usage 首份完整账单):全馆 ~$0.60,其中 names(gpt-4o)$0.59=98%**——坐实成本工程②(Batch API 砍 names)是唯一值得的刀。Joconde 馆名须用 POP 精确官方名(橘园="musée de l'Orangerie des Tuileries")。
 
 - 2026-07-18:**博物馆介绍+封面落地**(spec museum-intro)。馆包加法字段 `description`(AI 接地叙事,按语言回退,null 安全)/`cover_image`(得体性筛选封面,可 null);`onboard intro` 命令(复用富化管线,按语言维度幂等补缺,gate 不过不落);封面=后端 LLM 得体性判定(《世界的起源》类否决,server-driven 免 Play 审核);上新馆配方加 intro 步。迁移 q1n3。门面类预生成(成本分界),不碰运营数据。

@@ -296,3 +296,22 @@ def fetch_museum_intro_material(qid: str, *, get_json=None) -> dict:
         return {"extract_en": extract[:8000] if extract else None}
     except Exception:
         return {"extract_en": None}
+
+
+_BUILDING_PHOTO_QUERY = "SELECT ?img WHERE {{ wd:{qid} wdt:P18 ?img . }} LIMIT 1"
+
+
+def fetch_museum_building_photo(qid: str, *, run_query=None) -> str | None:
+    """馆自身(非藏品)P18 建筑外观照(spec 2026-07-20 museum-cover-intro-quality)。
+    SPARQL wdt:P18 绑定即完整 Commons Special:FilePath URL,可直接下载。无→None。"""
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return None
+    run_query = run_query or _default_artist_query
+    rows = run_query(_BUILDING_PHOTO_QUERY.format(qid=qid))
+    for row in rows:
+        v = (row.get("img") or {}).get("value")
+        if v:
+            return v
+    return None

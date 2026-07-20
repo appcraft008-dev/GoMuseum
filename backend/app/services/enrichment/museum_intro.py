@@ -10,7 +10,10 @@ import logging
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.content_enricher import _parse_json
-from app.services.enrichment.material import fetch_museum_intro_material
+from app.services.enrichment.material import (
+    fetch_museum_building_photo,
+    fetch_museum_intro_material,
+)
 from app.services.enrichment.prompts import (
     build_cover_safety_prompt,
     build_museum_intro_prompt,
@@ -63,13 +66,76 @@ def generate_museum_intro(
     return out
 
 
-def select_cover(db, slug: str, *, complete, force: bool = False, limit: int = 10):
-    """top-N 热度有图件里选第一张过得体性判定的当封面;全不过→None(前端隐藏)。"""
+def _materialize_museum_photo(url, qid, storage, fetch_bytes) -> str | None:
+    """馆建筑照精简物化:下载→两档→R2。不嵌入(建筑照绝不能进识别向量库,
+    会污染藏品识别),不建 ObjectImage 行(Museum 无此关联,直接落 cover_image_key)。
+    失败返回 None(调用方回落藏品逻辑)。"""
+    from app.services.enrichment.materializer import (
+        _two_tiers,
+        _Unreadable,
+        image_base_key,
+    )
+
+    base = image_base_key(qid, 0)
+    try:
+        if storage.exists(f"{base}_thumb.jpg") and storage.exists(f"{base}_large.jpg"):
+            return base  # 共桶复用(同 materialize_row 惯例)
+    except Exception:
+        pass
+    try:
+        thumb, large = _two_tiers(fetch_bytes(url))
+    except _Unreadable:
+        return None
+    except Exception:
+        logger.warning("museum building photo fetch failed: %s", url, exc_info=True)
+        return None
+    try:
+        storage.put(f"{base}_thumb.jpg", thumb, "image/jpeg")
+        storage.put(f"{base}_large.jpg", large, "image/jpeg")
+    except Exception:
+        logger.warning("museum building photo upload failed: %s", base, exc_info=True)
+        return None
+    return base
+
+
+def select_cover(
+    db,
+    slug: str,
+    *,
+    complete,
+    force: bool = False,
+    limit: int = 10,
+    fetch_building_photo=None,
+    storage=None,
+    fetch_bytes=None,
+):
+    """封面优先取馆自身建筑外观照(P18,不过安全闸——架构零裸体风险,且无
+    title/artist/category 可喂闸);无建筑照/下载失败 → 回落藏品图逐件得体性判定
+    (原逻辑不变)。全不过→None(前端隐藏)。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return None
     if m.cover_image_key and not force:
         return m.cover_image_key
+
+    if m.qid:
+        fetch_photo = fetch_building_photo or fetch_museum_building_photo
+        photo_url = fetch_photo(m.qid)
+        if photo_url:
+            from app.services.enrichment.materializer import _default_fetch_bytes
+            from app.services.storage import get_object_storage
+
+            key = _materialize_museum_photo(
+                photo_url,
+                m.qid,
+                storage or get_object_storage(),
+                fetch_bytes or _default_fetch_bytes,
+            )
+            if key:
+                m.cover_image_key = key
+                db.flush()
+                return key
+
     rows = (
         db.query(MuseumObject, ObjectImage)
         .join(ObjectImage, ObjectImage.object_id == MuseumObject.id)
