@@ -1270,6 +1270,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retake'**
   String get camRetake;
+
+  /// No description provided for @museumCoverTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get museumCoverTab;
+
+  /// No description provided for @museumCollectionTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection'**
+  String get museumCollectionTab;
+
+  /// No description provided for @museumOpeningHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening Hours'**
+  String get museumOpeningHours;
+
+  /// No description provided for @museumOfficialSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Official Website'**
+  String get museumOfficialSite;
+
+  /// No description provided for @museumIntroComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Museum introduction coming soon'**
+  String get museumIntroComingSoon;
 }
 
 class _AppLocalizationsDelegate

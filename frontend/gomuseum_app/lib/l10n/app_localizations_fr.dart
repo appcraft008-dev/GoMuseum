@@ -639,4 +639,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get camRetake => 'Reprendre';
+
+  @override
+  String get museumCoverTab => 'Couverture';
+
+  @override
+  String get museumCollectionTab => 'Collection';
+
+  @override
+  String get museumOpeningHours => 'Horaires d\'ouverture';
+
+  @override
+  String get museumOfficialSite => 'Site officiel';
+
+  @override
+  String get museumIntroComingSoon => 'Présentation du musée à venir';
 }

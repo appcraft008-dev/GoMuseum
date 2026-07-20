@@ -626,4 +626,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get camRetake => 'Retake';
+
+  @override
+  String get museumCoverTab => 'Cover';
+
+  @override
+  String get museumCollectionTab => 'Collection';
+
+  @override
+  String get museumOpeningHours => 'Opening Hours';
+
+  @override
+  String get museumOfficialSite => 'Official Website';
+
+  @override
+  String get museumIntroComingSoon => 'Museum introduction coming soon';
 }

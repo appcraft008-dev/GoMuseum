@@ -204,5 +204,10 @@
   "camConfirmStart": "Confirmer & démarrer le guide",
   "camNoneSearch": "Aucune correspondance ? Recherchez par titre ou numéro de cartel →",
   "camRecognizeFailed": "Échec de la reconnaissance",
-  "camRetake": "Reprendre"
+  "camRetake": "Reprendre",
+  "museumCoverTab": "Couverture",
+  "museumCollectionTab": "Collection",
+  "museumOpeningHours": "Horaires d'ouverture",
+  "museumOfficialSite": "Site officiel",
+  "museumIntroComingSoon": "Présentation du musée à venir"
 }

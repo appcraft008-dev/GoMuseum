@@ -613,4 +613,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get camRetake => '다시 촬영';
+
+  @override
+  String get museumCoverTab => '표지';
+
+  @override
+  String get museumCollectionTab => '컬렉션';
+
+  @override
+  String get museumOpeningHours => '운영 시간';
+
+  @override
+  String get museumOfficialSite => '공식 웹사이트';
+
+  @override
+  String get museumIntroComingSoon => '박물관 소개 준비 중입니다';
 }
