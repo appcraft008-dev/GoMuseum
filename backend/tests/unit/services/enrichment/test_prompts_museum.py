@@ -7,6 +7,7 @@ def test_build_museum_intro_prompt_grounded_no_logistics():
     system, user = build_museum_intro_prompt("Musée d'Orsay", "MATERIAL TEXT")
     assert "Musée d'Orsay" in user and "MATERIAL TEXT" in user
     assert "opening hours" in system  # 明令禁止运营数据
+    assert "paragraphs" in system and "\\n\\n" in system  # 要求分段(2026-07-20 交接)
 
 
 def test_build_cover_safety_prompt_json_contract():

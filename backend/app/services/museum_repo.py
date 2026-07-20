@@ -260,10 +260,15 @@ def list_museums(db: Session) -> list[dict]:
         .order_by(Museum.slug)
         .all()
     )
+    storage = get_object_storage()
     out = []
     for m, cnt in rows:
         row = {f: getattr(m, f) for f in _PACK_FIELDS}
         row["artwork_count"] = cnt
+        # 探索页缩略图(spec 2026-07-20 museum-cover-intro-quality,加法):同一行零成本可读
+        row["cover_image"] = (
+            _sized(storage, m.cover_image_key, "thumb") if m.cover_image_key else None
+        )
         out.append(row)
     return out
 

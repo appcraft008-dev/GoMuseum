@@ -138,7 +138,9 @@ def test_cover_rejects_then_picks_next(session):
             '{"appropriate": false}' if "Origine" in user else '{"appropriate": true}'
         )
 
-    key = select_cover(session, "orsay", complete=judge)
+    key = select_cover(
+        session, "orsay", complete=judge, fetch_building_photo=lambda qid: None
+    )
     assert key == "imgB"
     assert session.query(Museum).one().cover_image_key == "imgB"
 
@@ -152,7 +154,12 @@ def test_cover_judge_error_skips_conservatively(session):
             raise RuntimeError("llm down")
         return '{"appropriate": true}'
 
-    assert select_cover(session, "orsay", complete=judge) == "imgB"
+    assert (
+        select_cover(
+            session, "orsay", complete=judge, fetch_building_photo=lambda qid: None
+        )
+        == "imgB"
+    )
 
 
 def test_cover_idempotent(session):
@@ -160,3 +167,87 @@ def test_cover_idempotent(session):
     m.cover_image_key = "fixed"
     session.commit()
     assert select_cover(session, "orsay", complete=lambda s, u: 1 / 0) == "fixed"
+
+
+class _FakeStorage:
+    def __init__(self):
+        self.put_calls = []
+
+    def exists(self, key):
+        return False
+
+    def put(self, key, data, content_type):
+        self.put_calls.append(key)
+
+
+def _fake_bytes(url):
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (800, 600), color="white").save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+def test_cover_prefers_building_photo_skips_safety_gate(session):
+    # 建筑照优先,不经安全闸(complete 若被调用会 1/0 报错——证明确实跳过)
+    storage = _FakeStorage()
+    key = select_cover(
+        session,
+        "orsay",
+        complete=lambda s, u: 1 / 0,
+        fetch_building_photo=lambda qid: "http://commons.wikimedia.org/x.jpg",
+        storage=storage,
+        fetch_bytes=_fake_bytes,
+    )
+    assert key == "images/Q23402/0"
+    assert storage.put_calls == [
+        "images/Q23402/0_thumb.jpg",
+        "images/Q23402/0_large.jpg",
+    ]
+    assert session.query(Museum).filter_by(slug="orsay").one().cover_image_key == key
+
+
+def test_cover_falls_back_to_artwork_when_no_building_photo(session):
+    _add_obj(session, "Q1", "Water Lilies", 50, key="imgB")
+    key = select_cover(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"appropriate": true}',
+        fetch_building_photo=lambda qid: None,  # 无建筑照
+    )
+    assert key == "imgB"  # 走回原藏品逻辑
+
+
+def test_cover_falls_back_to_artwork_when_materialize_fails(session):
+    _add_obj(session, "Q1", "Water Lilies", 50, key="imgB")
+
+    def _boom(url):
+        raise RuntimeError("network down")
+
+    key = select_cover(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"appropriate": true}',
+        fetch_building_photo=lambda qid: "http://x.jpg",
+        fetch_bytes=_boom,
+        storage=_FakeStorage(),
+    )
+    assert key == "imgB"  # 建筑照下载失败不开天窗,回落藏品
+
+
+def test_cover_no_qid_skips_building_photo(session):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    m.qid = None
+    session.commit()
+    called = {"n": 0}
+
+    def _fbp(qid):
+        called["n"] += 1
+        return "http://x.jpg"
+
+    key = select_cover(
+        session, "orsay", complete=lambda s, u: 1 / 0, fetch_building_photo=_fbp
+    )
+    assert called["n"] == 0 and key is None  # 无qid跳过建筑照;无藏品可退→None
