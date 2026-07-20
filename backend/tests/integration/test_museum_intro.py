@@ -52,19 +52,50 @@ def _mat(qid, **kw):
 
 
 def test_generates_en_and_fills_langs(session):
+    # LLM 返回 JSON 段落数组(不靠自由文本里精确插入\n\n——不可靠,#304踩过坑)
     out = generate_museum_intro(
         session,
         "orsay",
-        complete=lambda s, u: "A grand museum intro.",
+        complete=lambda s, u: '{"paragraphs": ["Para one.", "Para two."]}',
         gate=_Gate(),
         translator=_Tr(),
         langs=["en", "zh", "ja"],
         fetch_material=_mat,
     )
     m = session.query(Museum).one()
-    assert m.description_i18n["en"] == "A grand museum intro."
+    assert (
+        m.description_i18n["en"] == "Para one.\n\nPara two."
+    )  # 后端拼接,不靠模型自己分段
     assert m.description_i18n["zh"].startswith("zh:")
     assert out["generated"] is True and set(out["translated"]) == {"zh", "ja"}
+
+
+def test_generate_json_parse_failure_writes_nothing(session):
+    # 模型没按JSON格式回(自由文本/坏JSON)→ 当生成失败,不落半成品(宁缺毋滥,重跑再试)
+    out = generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: "not json at all",
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_mat,
+    )
+    assert (session.query(Museum).one().description_i18n or {}) == {}
+    assert out["generated"] is False
+
+
+def test_generate_empty_paragraphs_writes_nothing(session):
+    out = generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"paragraphs": []}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_mat,
+    )
+    assert (session.query(Museum).one().description_i18n or {}) == {}
 
 
 def test_idempotent_fills_missing_language_only(session):
@@ -97,7 +128,7 @@ def test_gate_fail_writes_nothing(session):
     generate_museum_intro(
         session,
         "orsay",
-        complete=lambda s, u: "bad",
+        complete=lambda s, u: '{"paragraphs": ["bad"]}',  # JSON合法,gate自己拒
         gate=_Gate(ok=False),
         translator=_Tr(),
         langs=["en", "zh"],
