@@ -211,10 +211,14 @@
 3. **回填显示名**:`python scripts/onboard.py <slug> names --target <env>`
    → 全馆 `title_i18n` + `artist_qid`(P170 批量)+ Artist 名字行(权威标签→翻译→en;幂等)。stub 即有完整多语显示名。
 4. **物化图片**:`python scripts/onboard.py <slug> images --target <env>`
-   → 全馆缺图行下载→两档→R2→署名(幂等;见§图片字段)。
+   → 全馆缺图行下载→两档→R2→署名→**入库即嵌入**(幂等;见§图片字段。存量老库用 `backfill_embeddings.py` 补漏,新馆此步已自动嵌入,无需额外跑)。
 5. **生成内容**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
    → 逐件:stub 抓材料(Wikipedia/Joconde)→ 生成 → 接地闸 → 翻译 → 落库 → `ready`/`empty`。
-6. 端点自动产出上述四个契约;前端零改接入。
+6. **馆介绍+封面**:`python scripts/onboard.py <slug> intro --target <env>`(见§博物馆介绍)
+   → 接地生成馆叙事简介(按语言补缺)+ 选封面。**封面零额外配置**:优先取步骤①已填的
+   `wikidata_qid` 的 Wikidata P18(馆建筑外观照,自动下载物化);无 P18 才回落藏品图逐件
+   得体性判定。**这是"零代码上新馆"最新的一条自动收益**——不用为封面单独准备图源。
+7. 端点自动产出上述五个契约;前端零改接入。
 
 **非 Wikidata 主源的馆**(如美国 Met):一次性写个 `CatalogSource` 连接器(同插件模式,核心零改),其余同上。
 
