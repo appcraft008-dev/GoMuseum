@@ -299,3 +299,38 @@ def test_cover_no_qid_skips_building_photo(session):
         session, "orsay", complete=lambda s, u: 1 / 0, fetch_building_photo=_fbp
     )
     assert called["n"] == 0 and key is None  # 无qid跳过建筑照;无藏品可退→None
+
+
+def test_generate_single_field_falls_back_to_sentence_split(session):
+    # 模型把全部内容塞进一个key(已知失败模式)→ 句子边界确定性切分,不调LLM不改内容
+    text = " ".join(f"Sentence {i}." for i in range(1, 7))  # 6句
+    out = generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: f'{{"history": "{text}"}}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_mat,
+    )
+    en = session.query(Museum).one().description_i18n["en"]
+    assert en.count("\n\n") >= 1  # 确实分了段
+    assert en.replace("\n\n", " ") == text  # 内容一字不改,纯切分
+    assert out["generated"] is True
+
+
+def test_generate_short_single_field_not_split(session):
+    # 太短(不足target段数句子)→ 原样返回,不强行硬切
+    out = generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"history": "Only one sentence here."}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_mat,
+    )
+    assert (
+        session.query(Museum).one().description_i18n["en"] == "Only one sentence here."
+    )
+    assert out["generated"] is True
