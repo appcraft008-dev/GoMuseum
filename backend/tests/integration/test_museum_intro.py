@@ -52,20 +52,22 @@ def _mat(qid, **kw):
 
 
 def test_generates_en_and_fills_langs(session):
-    # LLM 返回 JSON 段落数组(不靠自由文本里精确插入\n\n——不可靠,#304踩过坑)
+    # LLM 返回固定三具名字段JSON(数组约束力不够,staging两轮实测3/3被合并成单段
+    # 后改用具名必填字段——见 museum_intro.py 注释)
     out = generate_museum_intro(
         session,
         "orsay",
-        complete=lambda s, u: '{"paragraphs": ["Para one.", "Para two."]}',
+        complete=lambda s, u: (
+            '{"history": "Para one.", "highlights": "Para two.", '
+            '"invitation": "Para three."}'
+        ),
         gate=_Gate(),
         translator=_Tr(),
         langs=["en", "zh", "ja"],
         fetch_material=_mat,
     )
     m = session.query(Museum).one()
-    assert (
-        m.description_i18n["en"] == "Para one.\n\nPara two."
-    )  # 后端拼接,不靠模型自己分段
+    assert m.description_i18n["en"] == "Para one.\n\nPara two.\n\nPara three."
     assert m.description_i18n["zh"].startswith("zh:")
     assert out["generated"] is True and set(out["translated"]) == {"zh", "ja"}
 
@@ -85,17 +87,32 @@ def test_generate_json_parse_failure_writes_nothing(session):
     assert out["generated"] is False
 
 
-def test_generate_empty_paragraphs_writes_nothing(session):
+def test_generate_empty_fields_writes_nothing(session):
     out = generate_museum_intro(
         session,
         "orsay",
-        complete=lambda s, u: '{"paragraphs": []}',
+        complete=lambda s, u: '{"history": "", "highlights": "", "invitation": ""}',
         gate=_Gate(),
         translator=_Tr(),
         langs=["en"],
         fetch_material=_mat,
     )
     assert (session.query(Museum).one().description_i18n or {}) == {}
+
+
+def test_generate_missing_keys_skips_them_gracefully(session):
+    # 模型漏填某key(常见容错):跳过空key,其余照拼——总比整体失败好
+    out = generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"history": "Only history."}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_mat,
+    )
+    assert session.query(Museum).one().description_i18n["en"] == "Only history."
+    assert out["generated"] is True
 
 
 def test_idempotent_fills_missing_language_only(session):
@@ -128,7 +145,7 @@ def test_gate_fail_writes_nothing(session):
     generate_museum_intro(
         session,
         "orsay",
-        complete=lambda s, u: '{"paragraphs": ["bad"]}',  # JSON合法,gate自己拒
+        complete=lambda s, u: '{"history": "bad"}',  # JSON合法,gate自己拒
         gate=_Gate(ok=False),
         translator=_Tr(),
         langs=["en", "zh"],
