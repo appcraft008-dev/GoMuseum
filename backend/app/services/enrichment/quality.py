@@ -23,6 +23,13 @@ def _split_sentences(text: str | None) -> list[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
+def _split_paragraphs(text: str | None) -> list[str]:
+    """按空行(\\n\\n+)切段;无空行则整体一段。空/None → []。"""
+    if not text or not text.strip():
+        return []
+    return [p.strip() for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
+
+
 @dataclass
 class SectionQuality:
     body: str | None
@@ -62,15 +69,32 @@ class QualityGate:
         `facts` 入参保留以兼容调用方签名。fact-consistency prompt 仍在 prompts.py 备用。
         """
         parse = _parse()
-        sentences = _split_sentences(body)
+        # 段落感知:按 \n\n 拆段,段内逐句;过闸后段内保留句用空格连、段间用 \n\n 连,
+        # 保住多段结构(馆介绍分段/未来多段正文)。单段输入 → 行为与旧版逐字相同。
+        paragraphs = _split_paragraphs(body)
+        para_sentences = [_split_sentences(p) for p in paragraphs]
+        sentences = [s for ps in para_sentences for s in ps]  # 扁平送闸(判定顺序不变)
         if not sentences:
             return SectionQuality(body=None, status="needs_review", grounding_ratio=0.0)
 
         e_sys, e_user = build_entailment_prompt(material, sentences)
         verdicts = parse(self._complete(e_sys, e_user)).get("verdicts") or []
-        kept = [s for s, ok in zip(sentences, verdicts) if ok is True]
-        grounding_ratio = len(kept) / len(sentences)
-        kept_body = " ".join(kept) if kept else None
+        keep = [
+            i < len(verdicts) and verdicts[i] is True for i in range(len(sentences))
+        ]
+
+        idx, kept_total, kept_paras = 0, 0, []
+        for ps in para_sentences:
+            kept_here = []
+            for s in ps:
+                if keep[idx]:
+                    kept_here.append(s)
+                idx += 1
+            if kept_here:
+                kept_paras.append(" ".join(kept_here))
+                kept_total += len(kept_here)
+        grounding_ratio = kept_total / len(sentences)
+        kept_body = "\n\n".join(kept_paras) if kept_paras else None
 
         published = kept_body is not None and grounding_ratio >= GROUNDING_THRESHOLD
         if published:

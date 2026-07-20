@@ -633,4 +633,19 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get camRetake => 'Zrób ponownie';
+
+  @override
+  String get museumCoverTab => 'Okładka';
+
+  @override
+  String get museumCollectionTab => 'Kolekcja';
+
+  @override
+  String get museumOpeningHours => 'Godziny otwarcia';
+
+  @override
+  String get museumOfficialSite => 'Oficjalna strona';
+
+  @override
+  String get museumIntroComingSoon => 'Wprowadzenie do muzeum wkrótce';
 }

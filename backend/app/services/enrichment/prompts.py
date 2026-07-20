@@ -275,12 +275,17 @@ def build_default_guide_prompt(
 
 
 _MUSEUM_INTRO_SYSTEM = (
-    "You write ONE engaging paragraph (~100-160 words) introducing a museum for an "
-    "audio-guide app — the museum's history, identity, star works and style, in a warm "
-    "spoken hook tone. Grounded STRICTLY in the provided MATERIAL — never invent facts; "
-    "weave stable facts (founding year, building, collection era) into the narrative. "
-    "Do NOT mention opening hours, ticket prices, or visitor logistics. Original wording "
-    "— do not copy sentences from the source. Return ONLY the paragraph, no headings."
+    "You write an engaging introduction (~150-220 words total) to a museum for an "
+    "audio-guide app, in a warm spoken hook tone, split into 3 DISTINCT short "
+    "paragraphs so it reads comfortably on a phone screen, not as one dense block. "
+    "Grounded STRICTLY in the provided MATERIAL — never invent facts; weave stable "
+    "facts (founding year, building, collection era) into the narrative. Do NOT "
+    "mention opening hours, ticket prices, or visitor logistics. Original wording — "
+    "do not copy sentences from the source. Return STRICT JSON with EXACTLY these "
+    "three keys, each a non-empty paragraph string — do NOT merge them into one key: "
+    '{"history": "paragraph about history/building", '
+    '"highlights": "paragraph about collection highlights and style", '
+    '"invitation": "one short inviting closing line"}'
 )
 
 

@@ -195,15 +195,12 @@ class _HomePageState extends ConsumerState<HomePage> {
         physics: const _SnapScrollPhysics(itemExtent: _cardExtent),
         itemCount: _nearbyMuseums.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, index) => Align(
-          alignment: Alignment.topCenter,
-          child: _MuseumCard(
-            museum: _nearbyMuseums[index],
-            // 已上线馆(slug 非空)可点进馆藏目录;未上线(卢浮宫)不可点
-            onTap: _nearbyMuseums[index].slug != null
-                ? () => context.push('/museum/${_nearbyMuseums[index].slug}')
-                : null,
-          ),
+        itemBuilder: (context, index) => _MuseumCard(
+          museum: _nearbyMuseums[index],
+          // 已上线馆(slug 非空)可点进馆藏目录;未上线(卢浮宫)不可点
+          onTap: _nearbyMuseums[index].slug != null
+              ? () => context.push('/museum/${_nearbyMuseums[index].slug}')
+              : null,
         ),
       ),
     );
@@ -288,83 +285,95 @@ class _MuseumCard extends StatelessWidget {
     final gm = context.gm;
     final lang = Localizations.localeOf(context).languageCode;
     final l10n = AppLocalizations.of(context)!;
+    // 卡槽高度由 _museumCards 的 SizedBox 撑到 344，但各卡内容高度不一
+    // （橘园无 topWorks 行，比奥赛矮 ~60px）。GestureDetector 必须撑满整个
+    // 卡槽高度、behavior: opaque，否则矮卡下方的空白卡槽是死区点不到
+    // （真机实测反馈：点橘园卡片"没反应"，根因即此）。
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
         width: 268,
-        decoration: BoxDecoration(
-          color: gm.surface,
-          border: Border.all(color: gm.line),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(9, 9, 9, 0),
-              child: GmInnerImage(
-                  image: AssetImage(museum.cover.asset), height: 132),
+        height: double.infinity,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            width: 268,
+            decoration: BoxDecoration(
+              color: gm.surface,
+              border: Border.all(color: gm.line),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(9, 9, 9, 0),
+                  child: GmInnerImage(
+                      image: AssetImage(museum.cover.asset), height: 132),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          museum.localizedName(lang),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              GmText.serif(size: 17, weight: FontWeight.w600),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.statusOpen,
-                        style: GmText.sans(
-                          size: 11.5,
-                          color: gm.accent,
-                          weight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Text(museum.localizedMeta(lang),
-                      style: GmText.sans(size: 12, color: gm.sub)),
-                  if (museum.topWorks.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 11),
-                      child: GmHairline(),
-                    ),
-                    Row(
-                      children: [
-                        for (final work in museum.topWorks) ...[
-                          GmThumb(image: AssetImage(work.asset)),
-                          const SizedBox(width: 6),
-                        ],
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            museum.localizedTopWorks(lang) ?? '',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GmText.sans(
-                                size: 11, color: gm.sub, height: 1.5),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              museum.localizedName(lang),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GmText.serif(
+                                  size: 17, weight: FontWeight.w600),
+                            ),
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.statusOpen,
+                            style: GmText.sans(
+                              size: 11.5,
+                              color: gm.accent,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text(museum.localizedMeta(lang),
+                          style: GmText.sans(size: 12, color: gm.sub)),
+                      if (museum.topWorks.isNotEmpty) ...[
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 11),
+                          child: GmHairline(),
+                        ),
+                        Row(
+                          children: [
+                            for (final work in museum.topWorks) ...[
+                              GmThumb(image: AssetImage(work.asset)),
+                              const SizedBox(width: 6),
+                            ],
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                museum.localizedTopWorks(lang) ?? '',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GmText.sans(
+                                    size: 11, color: gm.sub, height: 1.5),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                  ],
-                ],
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -203,5 +203,10 @@
   "camConfirmStart": "Potwierdź i rozpocznij przewodnik",
   "camNoneSearch": "Żadne z tych? Szukaj po tytule lub numerze tabliczki →",
   "camRecognizeFailed": "Rozpoznawanie nie powiodło się",
-  "camRetake": "Zrób ponownie"
+  "camRetake": "Zrób ponownie",
+  "museumCoverTab": "Okładka",
+  "museumCollectionTab": "Kolekcja",
+  "museumOpeningHours": "Godziny otwarcia",
+  "museumOfficialSite": "Oficjalna strona",
+  "museumIntroComingSoon": "Wprowadzenie do muzeum wkrótce"
 }

@@ -204,5 +204,10 @@
   "camConfirmStart": "确认，开始讲解",
   "camNoneSearch": "都不是？搜索作品名或展签编号 →",
   "camRecognizeFailed": "识别失败",
-  "camRetake": "重新拍摄"
+  "camRetake": "重新拍摄",
+  "museumCoverTab": "封面",
+  "museumCollectionTab": "藏品",
+  "museumOpeningHours": "开放时间",
+  "museumOfficialSite": "官方网站",
+  "museumIntroComingSoon": "馆方介绍生成中，敬请期待"
 }

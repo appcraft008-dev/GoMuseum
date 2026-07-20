@@ -217,5 +217,10 @@
   "camConfirmStart": "Confirm & start guide",
   "camNoneSearch": "None of these? Search by title or label number →",
   "camRecognizeFailed": "Recognition failed",
-  "camRetake": "Retake"
+  "camRetake": "Retake",
+  "museumCoverTab": "Cover",
+  "museumCollectionTab": "Collection",
+  "museumOpeningHours": "Opening Hours",
+  "museumOfficialSite": "Official Website",
+  "museumIntroComingSoon": "Museum introduction coming soon"
 }

@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
@@ -279,14 +280,26 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 占位封面（无网络图片来源于 A1，故用颜色块）
+            // 封面(A1 cover_image，2026-07-20 加法字段；无合规封面 → 占位图标)
             Container(
               height: 124,
               margin: const EdgeInsets.fromLTRB(9, 9, 9, 0),
               color: gm.chipBg,
-              child: Center(
-                child: GmIcon(GmIcons.ticket, size: 36, color: gm.faint),
-              ),
+              child: museum.coverImage != null
+                  ? Image.network(
+                      sizedImageUrl(museum.coverImage!, 600),
+                      fit: BoxFit.cover,
+                      headers: kImageRequestHeaders,
+                      loadingBuilder: (_, child, p) =>
+                          p == null ? child : const SizedBox.shrink(),
+                      errorBuilder: (_, __, ___) => Center(
+                        child:
+                            GmIcon(GmIcons.ticket, size: 36, color: gm.faint),
+                      ),
+                    )
+                  : Center(
+                      child: GmIcon(GmIcons.ticket, size: 36, color: gm.faint),
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -371,7 +384,33 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   weight: FontWeight.w700,
                   letterSpacing: 2),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
+            // 缩略图：与首馆大卡一致的视觉待遇(此前只有首馆有图，其余纯文字行)。
+            ClipRect(
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: museum.coverImage != null
+                    ? Image.network(
+                        sizedImageUrl(museum.coverImage!, 120),
+                        fit: BoxFit.cover,
+                        headers: kImageRequestHeaders,
+                        errorBuilder: (_, __, ___) => ColoredBox(
+                          color: gm.chipBg,
+                          child: Center(
+                              child: GmIcon(GmIcons.ticket,
+                                  size: 16, color: gm.faint)),
+                        ),
+                      )
+                    : ColoredBox(
+                        color: gm.chipBg,
+                        child: Center(
+                            child: GmIcon(GmIcons.ticket,
+                                size: 16, color: gm.faint)),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

@@ -64,8 +64,27 @@ def test_list_shape(session):
         "city_en",
         "country",
         "artwork_count",
+        "cover_image",  # 加法字段:探索页缩略图(spec 2026-07-20)
     }
     assert rows[0]["artwork_count"] == 1
+    assert rows[0]["cover_image"] is None  # 未设 cover_image_key → null(前端隐藏)
+
+
+def test_list_cover_image_thumb_url(session, monkeypatch):
+    from app.models.museum import Museum
+    from app.services import museum_repo
+
+    class _Storage:
+        def public_url(self, key):
+            return f"https://r2/{key}"
+
+    monkeypatch.setattr(museum_repo, "get_object_storage", lambda: _Storage())
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    m.cover_image_key = "images/Q23402/0"
+    session.commit()
+    rows = list_museums(session)
+    row = next(r for r in rows if r["slug"] == "orsay")
+    assert row["cover_image"] == "https://r2/images/Q23402/0_thumb.jpg"
 
 
 def test_pack_shape(session):

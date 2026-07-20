@@ -204,5 +204,10 @@
   "camConfirmStart": "Bestätigen & Führung starten",
   "camNoneSearch": "Nichts dabei? Nach Titel oder Schildnummer suchen →",
   "camRecognizeFailed": "Erkennung fehlgeschlagen",
-  "camRetake": "Wiederholen"
+  "camRetake": "Wiederholen",
+  "museumCoverTab": "Titelseite",
+  "museumCollectionTab": "Sammlung",
+  "museumOpeningHours": "Öffnungszeiten",
+  "museumOfficialSite": "Offizielle Website",
+  "museumIntroComingSoon": "Museumsvorstellung folgt in Kürze"
 }
