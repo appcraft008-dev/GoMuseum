@@ -13,6 +13,7 @@ class MuseumSummary extends Equatable {
     required this.country,
     required this.coordinates,
     required this.artworkCount,
+    this.coverImage,
   });
 
   final String slug;
@@ -37,6 +38,9 @@ class MuseumSummary extends Equatable {
   /// 藏品数，缺则 0。
   final int artworkCount;
 
+  /// 探索页缩略图(thumb 档，加法字段，2026-07-20)；无合规封面 → null，前端显占位图标。
+  final String? coverImage;
+
   /// 按 UI 语言取馆名：zh→中文名；其余（en/fr…）→英文/拉丁名。
   String localizedName(String lang) => lang == 'zh' ? name : nameEn;
 
@@ -59,10 +63,22 @@ class MuseumSummary extends Equatable {
               .toList() ??
           const [],
       artworkCount: (j['artwork_count'] as num?)?.toInt() ?? 0,
+      coverImage: (j['cover_image'] as String?)?.isNotEmpty == true
+          ? j['cover_image'] as String
+          : null,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [slug, name, nameEn, city, cityEn, country, coordinates, artworkCount];
+  List<Object?> get props => [
+        slug,
+        name,
+        nameEn,
+        city,
+        cityEn,
+        country,
+        coordinates,
+        artworkCount,
+        coverImage
+      ];
 }

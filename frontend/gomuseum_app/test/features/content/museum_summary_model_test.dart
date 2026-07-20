@@ -43,4 +43,19 @@ void main() {
     expect(m.coordinates.length, 2);
     expect(m.coordinates[0], closeTo(51.5, 0.001));
   });
+
+  test('cover_image 加法字段(2026-07-20)：解析；空串/缺 → null', () {
+    final m = MuseumSummary.fromJson(const {
+      'slug': 'orsay',
+      'cover_image': 'https://r2/cover_thumb.jpg',
+    });
+    expect(m.coverImage, 'https://r2/cover_thumb.jpg');
+
+    final empty =
+        MuseumSummary.fromJson(const {'slug': 'orsay', 'cover_image': ''});
+    expect(empty.coverImage, isNull);
+
+    final old = MuseumSummary.fromJson(const {'slug': 'orsay'});
+    expect(old.coverImage, isNull);
+  });
 }
