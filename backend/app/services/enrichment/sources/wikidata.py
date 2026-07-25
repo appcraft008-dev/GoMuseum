@@ -14,9 +14,9 @@ USER_AGENT = "GoMuseum/0.1 (enrichment; contact: dev@gomuseum.app)"
 
 QUERY = """
 SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl ?p276 WHERE {{
-  VALUES ?cat {{ {cat_values} }}
   VALUES ?mus {{ {mus_values} }}
-  ?item wdt:P195 ?mus . ?item wdt:P31 ?cat . ?item wdt:P31 ?p31 .
+  ?item wdt:P195 ?mus . ?item wdt:P31 ?p31 .
+  {cat_filter}
   ?item wikibase:sitelinks ?links .
   OPTIONAL {{ ?al_en schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?sitelink_en . }}
   OPTIONAL {{ ?al_cl schema:about ?item ; schema:isPartOf <https://{country_lang}.wikipedia.org/> ; schema:name ?sitelink_cl . }}
@@ -36,6 +36,17 @@ SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?in
 _PAGE = 200  # 每页；大馆翻页
 
 
+def build_cat_filter(cfg) -> str:
+    """category 过滤子句(注入 QUERY 的 {cat_filter})。collect_all_types 馆返回空串
+    = 整部门全收(古物/装饰艺术 P31 长尾不可枚举);否则用 categories/category_filter
+    的 VALUES 过滤到美术类。两个 SPARQL 消费者(fetch/WikidataCatalog)共用。"""
+    if getattr(cfg, "collect_all_types", False):
+        return ""
+    cats = cfg.categories or [cfg.category_filter]
+    cat_values = " ".join(f"wd:{q}" for q in cats)
+    return f"VALUES ?cat {{ {cat_values} }} ?item wdt:P31 ?cat ."
+
+
 class WikidataSource(Source):
     name = "wikidata"
 
@@ -53,10 +64,9 @@ class WikidataSource(Source):
         return r.json()["results"]["bindings"]
 
     def fetch(self, cfg: MuseumConfig) -> Iterable[ObjectContribution]:
-        cats = cfg.categories or [cfg.category_filter]
-        cat_values = " ".join(f"wd:{q}" for q in cats)
         anchors = cfg.collection_qids or [cfg.wikidata_qid]  # 回退:存量单锚点馆
         mus_values = " ".join(f"wd:{q}" for q in anchors)
+        cat_filter = build_cat_filter(cfg)
         seen: set[str] = set()
         fetched = 0
         offset = 0
@@ -65,7 +75,7 @@ class WikidataSource(Source):
             rows = self._run_query(
                 QUERY.format(
                     mus_values=mus_values,
-                    cat_values=cat_values,
+                    cat_filter=cat_filter,
                     country_lang=(cfg.country_lang or "fr"),
                     limit=page,
                     offset=offset,

@@ -149,3 +149,36 @@ def test_single_anchor_falls_back_to_wikidata_qid(monkeypatch):
     list(src.fetch(CFG))  # CFG 无 collection_qids
     assert "wd:Q23402" in captured["q"]
     assert "wdt:P195 ?mus" in captured["q"]
+
+
+def test_collect_all_types_omits_category_filter(monkeypatch):
+    # collect_all_types 馆:SPARQL 去掉 category 过滤(整部门全收古物/装饰艺术)
+    import dataclasses
+
+    cfg = dataclasses.replace(CFG, collect_all_types=True)
+    src = WikidataSource()
+    captured = {}
+
+    def _capture(sparql):
+        captured["q"] = sparql
+        return []
+
+    monkeypatch.setattr(src, "_run_query", _capture)
+    list(src.fetch(cfg))
+    assert "VALUES ?cat" not in captured["q"]
+    assert "?item wdt:P31 ?cat" not in captured["q"]
+    assert "wdt:P195 ?mus" in captured["q"]  # 锚点仍在
+
+
+def test_filtered_museum_keeps_category_values(monkeypatch):
+    # 存量馆(collect_all_types 缺省 False)→ 保留 VALUES ?cat 过滤
+    src = WikidataSource()
+    captured = {}
+
+    def _capture(sparql):
+        captured["q"] = sparql
+        return []
+
+    monkeypatch.setattr(src, "_run_query", _capture)
+    list(src.fetch(CFG))
+    assert "VALUES ?cat" in captured["q"]

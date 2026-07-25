@@ -56,6 +56,7 @@ museums:
                  Q125191]
     country_lang: fr
     sources: [wikipedia]        # v1 不碰 Joconde 142k(留给 Meilisearch 换代)
+    collect_all_types: true     # 百科式大馆:整部门全收(古物/装饰艺术 P31 长尾不可枚举)
     fetch_limit: 40000          # 18.5k 条目 × 多 P31 重复行余量
     sample_size: 30
     sample_qids: []

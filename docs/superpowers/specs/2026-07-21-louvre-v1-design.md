@@ -83,6 +83,21 @@ louvre:
 
 names Batch ~$37 + intro/封面几分钱 ≈ **$40 以内**;llm_usage 账本全程可查。
 
+## 附录:collect_all_types 决策(2026-07-25 prod catalog 实测后)
+
+首次 prod catalog 只落 10372 件(非 18.5k):`categories` 的 13 个"美术类" P31
+过滤把**古物部+装饰艺术部** ~8k 件挡在外(P31 是"钻石/石碑/花瓶/石棺"等)。
+类型呈长尾(top30 仅覆盖 36%),逐个列 category QID 到不了 18k。
+
+**决策(用户 2026-07-25 选"扩类目补古物到~18k"):**
+- `MuseumConfig.collect_all_types: bool`(缺省 False,存量馆零影响)。为 True 时
+  catalog SPARQL 去掉 category 过滤子句(`build_cat_filter` 返回空串),整部门全收。
+- category_config 补 top ~25 古物/装饰艺术 P31 → decorative_arts/artifact/textile/
+  sculpture/manuscript(架构早预留这 8 大类,仅缺 P31 映射);长尾稀有类型留
+  unknown 走 _FALLBACK 段落(宁缺毋滥,讲解仍接地)。
+- louvre yaml 加 `collect_all_types: true`。实测新 query 形态返回 **18379 件**。
+- 惠及未来百科式大馆(大英/Met)零代码上馆。
+
 ## 验收
 
 - staging 小样:catalog 抓到多部门件、names/images/intro 全链通

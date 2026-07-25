@@ -19,6 +19,33 @@ CATEGORY_BY_QID: dict[str, str] = {
     "Q2647254": "works_on_paper",  # 习作
     "Q5078274": "works_on_paper",  # 草图
     "Q125191": "photography",
+    # 古物/装饰艺术(卢浮宫等百科馆 collect_all_types 全收;top P31 类型归类,
+    # 长尾稀有类型留 unknown 走 _FALLBACK 段落。spec 2026-07-21 louvre)。
+    "Q220659": "artifact",  # archaeological artefact
+    "Q178743": "artifact",  # stele(石碑)
+    "Q98929143": "artifact",  # funerary stele
+    "Q144745": "artifact",  # 泛石碑系
+    "Q16744570": "manuscript",  # tablet(泥板/书写)
+    "Q1570005": "manuscript",  # clay tablet(楔形文字)
+    "Q191851": "decorative_arts",  # vase(花瓶)
+    "Q2100893": "decorative_arts",  # cup with stem(高足杯)
+    "Q3391771": "decorative_arts",  # platter(大盘)
+    "Q178401": "decorative_arts",  # amphora
+    "Q476968": "decorative_arts",  # krater
+    "Q831869": "decorative_arts",  # oenochoe
+    "Q13464614": "decorative_arts",  # ceramic art
+    "Q57216": "decorative_arts",  # plate
+    "Q404785": "decorative_arts",  # ewer(执壶)
+    "Q639460": "decorative_arts",  # casket(小匣)
+    "Q131557": "decorative_arts",  # amulet(护身符)
+    "Q245117": "sculpture",  # relief sculpture
+    "Q14562306": "sculpture",  # bas-relief(浅浮雕)
+    "Q2293362": "sculpture",  # group of sculptures
+    "Q48634": "sculpture",  # sarcophagus(石棺,雕刻)
+    "Q28823": "textile",  # textile
+    "Q184296": "textile",  # tapestry(挂毯)
+    "Q133067": "decorative_arts",  # mosaic(马赛克镶嵌)
+    "Q99516640": "painting",  # wall painting(壁画)
 }
 DEFAULT_CATEGORY = "unknown"
 
