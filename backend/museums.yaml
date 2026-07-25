@@ -38,3 +38,24 @@ museums:
     fetch_limit: 500
     sample_size: 10
     sample_qids: []
+  louvre:
+    name_zh: 卢浮宫
+    name_en: Louvre Museum
+    city_zh: 巴黎
+    city_en: Paris
+    country: FR
+    wikidata_qid: Q19675
+    # 12部门+馆本体直挂(WDQS 实测 2026-07-21,合计~18.5k件);馆身份仍 Q19675
+    collection_qids: [Q19675, Q3044768, Q3044772, Q3044751, Q3044747,
+                      Q3044749, Q3044767, Q3044748, Q3044753,
+                      Q106349126, Q121354106, Q683074, Q106824040]
+    category_filter: Q3305213
+    categories: [Q3305213, Q219423,
+                 Q860861, Q179700, Q241045, Q1066288,
+                 Q93184, Q18761202, Q12043905, Q15123870, Q2647254, Q5078274,
+                 Q125191]
+    country_lang: fr
+    sources: [wikipedia]        # v1 不碰 Joconde 142k(留给 Meilisearch 换代)
+    fetch_limit: 40000          # 18.5k 条目 × 多 P31 重复行余量
+    sample_size: 30
+    sample_qids: []

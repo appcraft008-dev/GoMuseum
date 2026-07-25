@@ -26,6 +26,9 @@ class MuseumConfig:
     sources: list[str] = field(default_factory=lambda: ["wikipedia"])
     # Joconde 官方馆名(data.culture.gouv.fr 的 nom_officiel_musee),配了才跑 JocondeCatalog
     joconde_museum: str | None = None
+    # 多QID收藏锚点(卢浮宫等部门制馆:P195 挂部门而非馆本体;spec 2026-07-21)。
+    # 缺省空 → 消费方回退 [wikidata_qid],存量单锚点馆零影响。
+    collection_qids: list[str] = field(default_factory=list)
 
 
 class MuseumCatalog:
@@ -54,6 +57,7 @@ class MuseumCatalog:
                 languages=list(m.get("languages") or []),
                 sources=list(m.get("sources") or ["wikipedia"]),
                 joconde_museum=m.get("joconde_museum"),
+                collection_qids=list(m.get("collection_qids") or []),
             )
         return cls(configs)
 
