@@ -15,7 +15,8 @@ USER_AGENT = "GoMuseum/0.1 (enrichment; contact: dev@gomuseum.app)"
 QUERY = """
 SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl ?p276 WHERE {{
   VALUES ?cat {{ {cat_values} }}
-  ?item wdt:P195 wd:{museum} . ?item wdt:P31 ?cat . ?item wdt:P31 ?p31 .
+  VALUES ?mus {{ {mus_values} }}
+  ?item wdt:P195 ?mus . ?item wdt:P31 ?cat . ?item wdt:P31 ?p31 .
   ?item wikibase:sitelinks ?links .
   OPTIONAL {{ ?al_en schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?sitelink_en . }}
   OPTIONAL {{ ?al_cl schema:about ?item ; schema:isPartOf <https://{country_lang}.wikipedia.org/> ; schema:name ?sitelink_cl . }}
@@ -54,6 +55,8 @@ class WikidataSource(Source):
     def fetch(self, cfg: MuseumConfig) -> Iterable[ObjectContribution]:
         cats = cfg.categories or [cfg.category_filter]
         cat_values = " ".join(f"wd:{q}" for q in cats)
+        anchors = cfg.collection_qids or [cfg.wikidata_qid]  # 回退:存量单锚点馆
+        mus_values = " ".join(f"wd:{q}" for q in anchors)
         seen: set[str] = set()
         fetched = 0
         offset = 0
@@ -61,7 +64,7 @@ class WikidataSource(Source):
             page = min(_PAGE, cfg.fetch_limit - fetched)
             rows = self._run_query(
                 QUERY.format(
-                    museum=cfg.wikidata_qid,
+                    mus_values=mus_values,
                     cat_values=cat_values,
                     country_lang=(cfg.country_lang or "fr"),
                     limit=page,
