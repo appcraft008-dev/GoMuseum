@@ -198,3 +198,61 @@ def test_state_roundtrip(tmp_path):
     save_state(p, "batch-9", 42)
     st = load_state(p)
     assert st["job_id"] == "batch-9" and st["task_count"] == 42
+
+
+class _ChunkClient:
+    """记录每次 submit 的任务数,验证分块;retrieve 恒 completed。"""
+
+    def __init__(self):
+        self.chunk_sizes = []
+        self.job_ids = []
+        outer = self
+
+        class _Files:
+            def create(self, file, purpose):
+                outer.chunk_sizes.append(len(file.read().decode().splitlines()))
+
+                class R:
+                    id = "file-in"
+
+                return R()
+
+            def content(self, fid):
+                class R:
+                    text = ""  # 空结果:本测试只验证提交分块
+
+                return R()
+
+        class _Batches:
+            def create(self, **kw):
+                jid = f"batch-{len(outer.job_ids) + 1}"
+                outer.job_ids.append(jid)
+
+                class R:
+                    id = jid
+
+                return R()
+
+            def retrieve(self, bid):
+                class R:
+                    status = "completed"
+                    output_file_id = "file-out"
+
+                return R()
+
+        self.files, self.batches = _Files(), _Batches()
+
+
+def test_run_chunks_over_openai_50k_limit(session, monkeypatch):
+    # OpenAI Batch 单 job 上限 5万请求;卢浮宫 17283件×10语 远超 → 必须分块
+    # (2026-07-25 prod 实测 maximum_requests_exceeded,提交即拒)
+    from app.services.enrichment import batch_names as bn
+
+    fake_tasks = [bn.BatchTask(f"title|Q{i}|zh", f"N{i}", "zh") for i in range(120_000)]
+    monkeypatch.setattr(bn, "collect_missing", lambda *a, **k: fake_tasks)
+    c = _ChunkClient()
+    out = bn.run(session, "louvre", ["zh"], client=c, state_path="/tmp/_t.json")
+    assert len(c.job_ids) == 3  # 120k / 50k → 3 块
+    assert all(n <= bn.MAX_BATCH_REQUESTS for n in c.chunk_sizes)
+    assert sum(c.chunk_sizes) == 120_000  # 一个任务不丢
+    assert out["job_id"] == ",".join(c.job_ids)  # 多 job 可续传
