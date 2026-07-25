@@ -182,3 +182,49 @@ def test_filtered_museum_keeps_category_values(monkeypatch):
     monkeypatch.setattr(src, "_run_query", _capture)
     list(src.fetch(CFG))
     assert "VALUES ?cat" in captured["q"]
+
+
+def test_run_sparql_retries_transient_then_succeeds(monkeypatch):
+    # WDQS 瞬时超时/5xx → 重试成功(大馆深翻页抗抖动,别整批丢)
+    import requests
+
+    from app.services.enrichment.sources import wikidata as wd
+
+    calls = {"n": 0}
+
+    class _Resp:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"results": {"bindings": [{"ok": 1}]}}
+
+    def _flaky(*a, **kw):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise requests.ReadTimeout("boom")
+        return _Resp()
+
+    monkeypatch.setattr(wd.requests, "get", _flaky)
+    monkeypatch.setattr(wd.time, "sleep", lambda s: None)  # 免真退避
+    out = wd.run_sparql("SELECT ...")
+    assert out == [{"ok": 1}] and calls["n"] == 3
+
+
+def test_run_sparql_raises_after_exhausting_retries(monkeypatch):
+    # 末次仍失败 → 抛出(真错误不吞)
+    import pytest
+    import requests
+
+    from app.services.enrichment.sources import wikidata as wd
+
+    monkeypatch.setattr(
+        wd.requests,
+        "get",
+        lambda *a, **k: (_ for _ in ()).throw(requests.ReadTimeout()),
+    )
+    monkeypatch.setattr(wd.time, "sleep", lambda s: None)
+    with pytest.raises(requests.ReadTimeout):
+        wd.run_sparql("SELECT ...")

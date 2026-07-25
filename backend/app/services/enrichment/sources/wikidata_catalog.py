@@ -7,25 +7,13 @@ from __future__ import annotations
 import time
 from typing import Iterable
 
-import requests
-
 from app.services.enrichment.catalog_source import CatalogSource, StubRecord
 from app.services.enrichment.category_config import category_for
 from app.services.enrichment.sources import wikidata as _wd
 
 
 def _default_run_query(sparql: str) -> list[dict]:
-    r = requests.get(
-        _wd.SPARQL_ENDPOINT,
-        params={"query": sparql, "format": "json"},
-        headers={
-            "User-Agent": _wd.USER_AGENT,
-            "Accept": "application/sparql-results+json",
-        },
-        timeout=60,
-    )
-    r.raise_for_status()
-    return r.json()["results"]["bindings"]
+    return _wd.run_sparql(sparql)  # 带重试+退避(大馆深翻页抗 WDQS 瞬时抖动)
 
 
 _CATALOG_PAGE = 2000  # 目录翻页页宽(与 _wd._PAGE=200 解耦;大页少翻避开深OFFSET超时)
