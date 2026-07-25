@@ -200,3 +200,43 @@ def test_materialize_skips_download_when_r2_already_has_files(session):
     row = session.query(ObjectImage).filter_by(object_id=o.id).one()
     assert row.image_key == "images/Q2/0"
     assert row.license == "Public domain"  # meta 仍补(prod DB 自己的署名)
+
+
+def test_fetch_meta_clips_overlong_credit(monkeypatch):
+    # Commons 部分署名是多段落说明(英法双语+联系方式),超 varchar(255) 会
+    # StringDataRightTruncation 崩掉整轮物化(2026-07-25 卢浮宫 1369/10159 处崩)
+    from app.services.enrichment import materializer as mz
+
+    long_credit = "Marie-Lan Nguyen " + "x" * 600
+
+    class _R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "query": {
+                    "pages": {
+                        "1": {
+                            "imageinfo": [
+                                {
+                                    "extmetadata": {
+                                        "Artist": {"value": long_credit},
+                                        "LicenseShortName": {
+                                            "value": "CC BY 2.5 " + "y" * 300
+                                        },
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+
+    import requests
+
+    monkeypatch.setattr(requests, "get", lambda *a, **k: _R())  # 函数内 import
+    out = mz._default_fetch_meta("http://commons/x.jpg")
+    assert len(out["credit"]) == 255  # 截到列宽
+    assert len(out["license"]) == 128
+    assert out["credit"].startswith("Marie-Lan Nguyen")  # 保留有效署名前缀
