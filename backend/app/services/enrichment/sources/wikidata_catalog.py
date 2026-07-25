@@ -40,6 +40,8 @@ class WikidataCatalog(CatalogSource):
     def list(self, cfg) -> Iterable[StubRecord]:
         cats = cfg.categories or [cfg.category_filter]
         cat_values = " ".join(f"wd:{q}" for q in cats)
+        anchors = cfg.collection_qids or [cfg.wikidata_qid]  # 回退:存量单锚点馆
+        mus_values = " ".join(f"wd:{q}" for q in anchors)
         # 多 P31 作品每个类型一行:缓冲按 qid 归并,已知类目优先于 unknown(行序无关)
         records: dict[str, StubRecord] = {}
         fetched = 0
@@ -51,7 +53,7 @@ class WikidataCatalog(CatalogSource):
             page = min(_CATALOG_PAGE, cfg.fetch_limit - fetched)
             rows = self._run_query(
                 _wd.QUERY.format(
-                    museum=cfg.wikidata_qid,
+                    mus_values=mus_values,
                     cat_values=cat_values,
                     country_lang=(cfg.country_lang or "fr"),
                     limit=page,

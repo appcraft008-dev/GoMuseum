@@ -4,6 +4,7 @@ from app.services.enrichment.sources.wikidata_catalog import WikidataCatalog
 class _Cfg:
     slug = "orsay"
     wikidata_qid = "Q23402"
+    collection_qids = []  # 存量单锚点馆:空 → 回退 wikidata_qid
     categories = ["Q3305213"]
     category_filter = "Q3305213"
     country_lang = "fr"
@@ -79,6 +80,22 @@ def test_wikidata_catalog_query_image_optional():
 
     list(WikidataCatalog(run_query=fake).list(_Cfg()))
     assert "OPTIONAL { ?item wdt:P18 ?image . }" in seen["sparql"]
+
+
+def test_wikidata_catalog_multi_collection_anchors():
+    # 卢浮宫真实路径:collection_qids 多锚点 → SPARQL VALUES 带全部部门
+    class _MultiCfg(_Cfg):
+        collection_qids = ["Q19675", "Q3044768", "Q3044772"]
+
+    seen = {}
+
+    def fake(sparql):
+        seen["sparql"] = sparql
+        return []
+
+    list(WikidataCatalog(run_query=fake).list(_MultiCfg()))
+    assert "wd:Q19675 wd:Q3044768 wd:Q3044772" in seen["sparql"]
+    assert "wdt:P195 ?mus" in seen["sparql"]
 
 
 def test_wikidata_catalog_imageless_stub():
