@@ -76,3 +76,32 @@ def test_orangerie_config_loads():
     assert cfg.wikidata_qid == "Q726781"
     assert cfg.joconde_museum == "musée de l'Orangerie des Tuileries"
     assert cfg.country_lang == "fr" and "joconde" in cfg.sources
+
+
+def test_collection_qids_parsed_and_default_empty(tmp_path):
+    # 多QID收藏锚点(spec 2026-07-21 louvre):馆身份与收藏锚点分离
+    from app.services.enrichment.catalog import MuseumCatalog
+
+    p = tmp_path / "m.yaml"
+    p.write_text(
+        "museums:\n  louvre:\n    name_zh: 卢浮宫\n    name_en: Louvre\n    city_zh: 巴黎\n"
+        "    city_en: Paris\n    country: FR\n    wikidata_qid: Q19675\n"
+        "    collection_qids: [Q19675, Q3044768]\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n"
+        "  orsay:\n    name_zh: 奥赛\n    name_en: Orsay\n    city_zh: 巴黎\n"
+        "    city_en: Paris\n    country: FR\n    wikidata_qid: Q23402\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n",
+        encoding="utf-8",
+    )
+    cat = MuseumCatalog.from_file(p)
+    assert cat.get("louvre").collection_qids == ["Q19675", "Q3044768"]
+    assert cat.get("orsay").collection_qids == []  # 不配 → 空(消费方回退单锚点)
+
+
+def test_louvre_config_loads():
+    # 第三家馆(spec 2026-07-21):12部门+馆本体多锚点,无 joconde(v1 不碰 142k)
+    cat = MuseumCatalog.from_file("museums.yaml")
+    cfg = cat.get("louvre")
+    assert cfg.wikidata_qid == "Q19675"
+    assert len(cfg.collection_qids) == 13 and "Q3044768" in cfg.collection_qids
+    assert cfg.joconde_museum is None and cfg.sources == ["wikipedia"]

@@ -116,3 +116,36 @@ def test_captures_sitelink_titles(monkeypatch):
     c = list(src.fetch(CFG))[0]
     assert c.fields["wiki_titles"]["en"] == "Bedroom_in_Arles"
     assert c.fields["wiki_titles"]["fr"] == "La_Chambre_à_Arles"
+
+
+def test_multi_collection_qids_in_sparql(monkeypatch):
+    # 多锚点(louvre):SPARQL 用 VALUES 带全部 collection_qids
+    import dataclasses
+
+    cfg = dataclasses.replace(CFG, collection_qids=["Q19675", "Q3044768"])
+    src = WikidataSource()
+    captured = {}
+
+    def _capture(sparql):
+        captured["q"] = sparql
+        return []  # 空结果 → fetch 首页即停,不进第二页
+
+    monkeypatch.setattr(src, "_run_query", _capture)
+    list(src.fetch(cfg))
+    assert "wd:Q19675 wd:Q3044768" in captured["q"]
+    assert "wdt:P195 ?mus" in captured["q"]
+
+
+def test_single_anchor_falls_back_to_wikidata_qid(monkeypatch):
+    # 不配 collection_qids(存量馆)→ 回退单锚点,VALUES 单元素语义等价
+    src = WikidataSource()
+    captured = {}
+
+    def _capture(sparql):
+        captured["q"] = sparql
+        return []
+
+    monkeypatch.setattr(src, "_run_query", _capture)
+    list(src.fetch(CFG))  # CFG 无 collection_qids
+    assert "wd:Q23402" in captured["q"]
+    assert "wdt:P195 ?mus" in captured["q"]
