@@ -47,6 +47,13 @@ def _strip_html(s: str) -> str:
     return re.sub(r"<[^>]+>", "", s or "").strip()
 
 
+def _clip(s: str, limit: int) -> str | None:
+    """截断到 DB 列宽;空串 → None。"""
+    if not s:
+        return None
+    return s[:limit]
+
+
 def _default_fetch_meta(source_url: str) -> dict:
     """Commons imageinfo extmetadata → {license, credit}。失败返回 {}(署名可后补)。"""
     import requests
@@ -68,10 +75,14 @@ def _default_fetch_meta(source_url: str) -> dict:
         r.raise_for_status()
         pages = r.json()["query"]["pages"]
         meta = next(iter(pages.values()))["imageinfo"][0]["extmetadata"]
+        # 截断到列宽:部分 Commons 署名是多段落说明(英法双语+联系方式),
+        # 超 varchar(255) 会 StringDataRightTruncation 崩掉整轮物化
+        # (2026-07-25 卢浮宫实测:1369/10159 处崩)。署名截断不影响合规归属。
         return {
-            "license": _strip_html(meta.get("LicenseShortName", {}).get("value", ""))
-            or None,
-            "credit": _strip_html(meta.get("Artist", {}).get("value", "")) or None,
+            "license": _clip(
+                _strip_html(meta.get("LicenseShortName", {}).get("value", "")), 128
+            ),
+            "credit": _clip(_strip_html(meta.get("Artist", {}).get("value", "")), 255),
         }
     except Exception:
         return {}
