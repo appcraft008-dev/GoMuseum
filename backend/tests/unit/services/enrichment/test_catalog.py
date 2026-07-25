@@ -105,3 +105,19 @@ def test_louvre_config_loads():
     assert cfg.wikidata_qid == "Q19675"
     assert len(cfg.collection_qids) == 13 and "Q3044768" in cfg.collection_qids
     assert cfg.joconde_museum is None and cfg.sources == ["wikipedia"]
+    # 百科全书式大馆:整部门全收(古物/装饰艺术 P31 长尾无法逐个列 category)
+    assert cfg.collect_all_types is True
+
+
+def test_collect_all_types_defaults_false(tmp_path):
+    # 存量馆(orsay/orangerie)不写此键 → False,保持 category 过滤行为不变
+    from app.services.enrichment.catalog import MuseumCatalog
+
+    p = tmp_path / "m.yaml"
+    p.write_text(
+        "museums:\n  orsay:\n    name_zh: 奥赛\n    name_en: Orsay\n    city_zh: 巴黎\n"
+        "    city_en: Paris\n    country: FR\n    wikidata_qid: Q23402\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n",
+        encoding="utf-8",
+    )
+    assert MuseumCatalog.from_file(p).get("orsay").collect_all_types is False

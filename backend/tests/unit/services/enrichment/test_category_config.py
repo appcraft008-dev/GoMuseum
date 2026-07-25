@@ -193,3 +193,17 @@ def test_zh_hant_added_to_all_static_label_tables():
         assert m.get("zh-hant"), f"分类 {code} 缺 zh-hant"
     for code, m in SECTION_LABELS.items():
         assert m.get("zh-hant"), f"段落 {code} 缺 zh-hant"
+
+
+def test_antiquity_decorative_arts_qids_map():
+    # 卢浮宫 collect_all_types 全收:top 古物/装饰艺术 P31 类型归类(spec 2026-07-21)
+    assert category_for("Q220659") == "artifact"  # archaeological artefact
+    assert category_for("Q178743") == "artifact"  # stele
+    assert category_for("Q191851") == "decorative_arts"  # vase
+    assert category_for("Q178401") == "decorative_arts"  # amphora
+    assert category_for("Q245117") == "sculpture"  # relief sculpture
+    assert category_for("Q48634") == "sculpture"  # sarcophagus
+    assert category_for("Q184296") == "textile"  # tapestry
+    assert category_for("Q1570005") == "manuscript"  # clay tablet
+    # 长尾稀有类型仍 unknown(走 _FALLBACK 段落,宁缺毋滥)
+    assert category_for("Q99999999") == DEFAULT_CATEGORY
