@@ -17,6 +17,7 @@ from app.services.llm_usage import record_llm_usage
 logger = logging.getLogger(__name__)
 
 MODEL = "gpt-4o"
+MAX_BATCH_REQUESTS = 50_000  # OpenAI Batch 单 job 硬上限,超了提交即拒(不是软限流)
 USAGE_MODEL = "gpt-4o@batch"
 
 
@@ -214,10 +215,25 @@ def run(
         tasks = collect_missing(db, slug, langs, limit=limit)
         if not tasks:
             return {"tasks": 0, "applied": 0, "skipped": 0}
-        job_id = submit(tasks, client)
+        # 分块:OpenAI 单 job 硬上限 5万请求(2026-07-25 卢浮宫 17283件×多语实测
+        # maximum_requests_exceeded,提交即拒)。先全部提交(OpenAI 侧并行),再逐块收。
+        chunks = [
+            tasks[i : i + MAX_BATCH_REQUESTS]
+            for i in range(0, len(tasks), MAX_BATCH_REQUESTS)
+        ]
+        ids = [submit(c, client) for c in chunks]
+        job_id = ",".join(ids)
         save_state(state_path, job_id, len(tasks))
-        logger.info("batch %s 已提交 %d 任务(状态: %s)", job_id, len(tasks), state_path)
-    lines = poll(job_id, client, interval=poll_interval)
+        logger.info(
+            "batch %s 已提交 %d 任务(%d 块,状态: %s)",
+            job_id,
+            len(tasks),
+            len(chunks),
+            state_path,
+        )
+    lines = []
+    for jid in job_id.split(","):  # 逐块轮询+收集(支持 --batch-job 多 id 续传)
+        lines.extend(poll(jid.strip(), client, interval=poll_interval))
     out = apply(db, lines)
     out["tasks"] = len(lines)
     out["job_id"] = job_id
