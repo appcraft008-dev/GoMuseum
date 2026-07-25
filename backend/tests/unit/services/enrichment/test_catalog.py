@@ -96,3 +96,12 @@ def test_collection_qids_parsed_and_default_empty(tmp_path):
     cat = MuseumCatalog.from_file(p)
     assert cat.get("louvre").collection_qids == ["Q19675", "Q3044768"]
     assert cat.get("orsay").collection_qids == []  # 不配 → 空(消费方回退单锚点)
+
+
+def test_louvre_config_loads():
+    # 第三家馆(spec 2026-07-21):12部门+馆本体多锚点,无 joconde(v1 不碰 142k)
+    cat = MuseumCatalog.from_file("museums.yaml")
+    cfg = cat.get("louvre")
+    assert cfg.wikidata_qid == "Q19675"
+    assert len(cfg.collection_qids) == 13 and "Q3044768" in cfg.collection_qids
+    assert cfg.joconde_museum is None and cfg.sources == ["wikipedia"]
