@@ -38,10 +38,9 @@ class WikidataCatalog(CatalogSource):
         self._run_query = run_query or _default_run_query
 
     def list(self, cfg) -> Iterable[StubRecord]:
-        cats = cfg.categories or [cfg.category_filter]
-        cat_values = " ".join(f"wd:{q}" for q in cats)
         anchors = cfg.collection_qids or [cfg.wikidata_qid]  # 回退:存量单锚点馆
         mus_values = " ".join(f"wd:{q}" for q in anchors)
+        cat_filter = _wd.build_cat_filter(cfg)  # collect_all_types 馆返回空=整部门全收
         # 多 P31 作品每个类型一行:缓冲按 qid 归并,已知类目优先于 unknown(行序无关)
         records: dict[str, StubRecord] = {}
         fetched = 0
@@ -54,7 +53,7 @@ class WikidataCatalog(CatalogSource):
             rows = self._run_query(
                 _wd.QUERY.format(
                     mus_values=mus_values,
-                    cat_values=cat_values,
+                    cat_filter=cat_filter,
                     country_lang=(cfg.country_lang or "fr"),
                     limit=page,
                     offset=offset,

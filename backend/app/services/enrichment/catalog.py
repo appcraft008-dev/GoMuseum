@@ -29,6 +29,9 @@ class MuseumConfig:
     # 多QID收藏锚点(卢浮宫等部门制馆:P195 挂部门而非馆本体;spec 2026-07-21)。
     # 缺省空 → 消费方回退 [wikidata_qid],存量单锚点馆零影响。
     collection_qids: list[str] = field(default_factory=list)
+    # 百科全书式大馆:整部门全收,catalog SPARQL 去掉 category 过滤(古物/装饰艺术
+    # P31 长尾几百种无法逐个列 categories)。缺省 False → 存量馆保持类目过滤不变。
+    collect_all_types: bool = False
 
 
 class MuseumCatalog:
@@ -58,6 +61,7 @@ class MuseumCatalog:
                 sources=list(m.get("sources") or ["wikipedia"]),
                 joconde_museum=m.get("joconde_museum"),
                 collection_qids=list(m.get("collection_qids") or []),
+                collect_all_types=bool(m.get("collect_all_types") or False),
             )
         return cls(configs)
 
