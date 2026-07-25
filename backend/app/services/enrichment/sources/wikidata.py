@@ -12,6 +12,41 @@ from app.services.enrichment.sources.base import ObjectContribution, Source
 SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
 USER_AGENT = "GoMuseum/0.1 (enrichment; contact: dev@gomuseum.app)"
 
+# WDQS 大馆全量深翻页(~18k件×大页 ORDER BY)高频撞瞬时超时/5xx——2026-07-25 卢浮宫
+# 三次 catalog 有两次栽在 502/ReadTimeout,且落库全有或全无,一崩整批丢。重试+退避
+# 把瞬时抖动挡在 SPARQL 层,两个消费者(fetch/WikidataCatalog)共用。
+_SPARQL_TIMEOUT = 120  # 重查询深 OFFSET 比 60s 更从容
+_SPARQL_RETRIES = 4
+_RETRY_STATUS = {429, 500, 502, 503, 504}
+
+
+def run_sparql(sparql: str) -> list[dict]:
+    """带重试+指数退避的 WDQS GET。瞬时错误(超时/连接/429/5xx)重试,
+    末次仍失败则抛出(真错误不吞)。"""
+    last = None
+    for attempt in range(_SPARQL_RETRIES):
+        try:
+            r = requests.get(
+                SPARQL_ENDPOINT,
+                params={"query": sparql, "format": "json"},
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Accept": "application/sparql-results+json",
+                },
+                timeout=_SPARQL_TIMEOUT,
+            )
+            if r.status_code in _RETRY_STATUS:
+                raise requests.HTTPError(f"WDQS {r.status_code}", response=r)
+            r.raise_for_status()
+            return r.json()["results"]["bindings"]
+        except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+            last = e
+            if attempt == _SPARQL_RETRIES - 1:
+                break
+            time.sleep(5 * 2**attempt)  # 5s,10s,20s
+    raise last
+
+
 QUERY = """
 SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl ?p276 WHERE {{
   VALUES ?mus {{ {mus_values} }}
@@ -51,17 +86,7 @@ class WikidataSource(Source):
     name = "wikidata"
 
     def _run_query(self, sparql: str) -> list[dict]:
-        r = requests.get(
-            SPARQL_ENDPOINT,
-            params={"query": sparql, "format": "json"},
-            headers={
-                "User-Agent": USER_AGENT,
-                "Accept": "application/sparql-results+json",
-            },
-            timeout=60,
-        )
-        r.raise_for_status()
-        return r.json()["results"]["bindings"]
+        return run_sparql(sparql)
 
     def fetch(self, cfg: MuseumConfig) -> Iterable[ObjectContribution]:
         anchors = cfg.collection_qids or [cfg.wikidata_qid]  # 回退:存量单锚点馆
