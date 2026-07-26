@@ -465,7 +465,11 @@ def cmd_verify(slug: str, langs: str | None, target: str, as_json: bool) -> None
     from app.services.enrichment.lang_config import resolve_languages
     from scripts.onboard_verify import build_checks, print_human
 
-    use = [s.strip() for s in langs.split(",")] if langs else resolve_languages(slug)
+    # 语言集与 names/translate 同源:馆 yaml 的 languages 覆盖,否则全局默认。
+    # (曾误传 slug 进 resolve_languages → list("louvre") 逐字符当语言,全项 0%)
+    cfg = _catalog().get(slug)
+    override = [x.strip() for x in langs.split(",")] if langs else cfg.languages
+    use = resolve_languages(override)
     db = SessionLocal()
     try:
         result = build_checks(db, slug, use)
