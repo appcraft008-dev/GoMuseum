@@ -17,8 +17,6 @@ from app.models.museum_object import MuseumObject, ObjectImage
 
 # 合法 Wikidata QID;其余(blank node genid hex / 合成把手)都不该出现在 artist_qid
 _QNUM = re.compile(r"^Q\d+$")
-# 纯拉丁(含标点数字)——中文视图里出现即未本地化
-_LATIN = re.compile(r"^[A-Za-z0-9 ,.:;!?'()\[\]&/–—-]+$")
 
 
 def _pct(n: int, d: int) -> float:
