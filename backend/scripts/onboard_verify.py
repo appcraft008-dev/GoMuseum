@@ -166,6 +166,24 @@ def build_checks(db, slug: str, langs: list[str]) -> dict:
         )
     )
 
+    # ⑦ 门面响应耗时:规模会让"本来没问题"的设计失效(纪律⑧)。馆包全量曾 8.2s/5MB,
+    # 而 App 只要门面字段——这里量的就是 App 实际拿的那份,涨上去立刻红。
+    import time as _t
+
+    from app.services.museum_repo import get_museum_pack
+
+    t0 = _t.time()
+    get_museum_pack(db, slug, artworks=False)
+    facade_ms = int((_t.time() - t0) * 1000)
+    checks.append(
+        _check(
+            "门面响应 <1s",
+            facade_ms < 1000,
+            f"{facade_ms}ms(App 拿的是 artworks=false 那份)",
+            "查是否又有全量加载混进门面路径(纪律⑧:实测别读代码)",
+        )
+    )
+
     return {"slug": slug, "checks": checks, "passed": all(c["ok"] for c in checks)}
 
 
