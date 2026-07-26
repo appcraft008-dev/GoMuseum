@@ -145,3 +145,31 @@ def test_missing_intro_and_cover_fail(session):
 def test_unknown_museum_fails(session):
     res = build_checks(session, "nope", LANGS)
     assert not res["passed"]
+
+
+def test_langs_from_museum_config_not_slug_chars(monkeypatch, capsys):
+    """回归:cmd_verify 曾把 slug 传进 resolve_languages → list("louvre") 逐字符
+    当语言,每项都 0%、三馆全红(prod 实跑才发现)。语言集必须与 names 同源。"""
+    import scripts.onboard as ob
+
+    seen = {}
+
+    def _fake_build(db, slug, langs):
+        seen["langs"] = langs
+        return {"slug": slug, "checks": [], "passed": True}
+
+    class _Cfg:
+        languages = []
+
+    monkeypatch.setattr(
+        ob, "_catalog", lambda: type("C", (), {"get": lambda s, x: _Cfg()})()
+    )
+    monkeypatch.setattr(
+        ob, "SessionLocal", lambda: type("S", (), {"close": lambda s: None})()
+    )
+    monkeypatch.setattr("scripts.onboard_verify.build_checks", _fake_build)
+    monkeypatch.setattr(ob.settings, "ENVIRONMENT", "production")
+    ob.cmd_verify("louvre", None, "prod", False)
+
+    assert "l" not in seen["langs"], f"逐字符了: {seen['langs']}"
+    assert "en" in seen["langs"] and len(seen["langs"]) > 1
