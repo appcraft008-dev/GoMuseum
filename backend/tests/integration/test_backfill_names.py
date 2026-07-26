@@ -511,3 +511,28 @@ def test_backfill_display_names_respects_limit(session):
         limit=1,
     )
     assert out["titles"] == 1  # 两件待回填,limit=1 只处理一件
+
+
+def test_fetch_creators_skips_blank_node_unknown_value():
+    """P170="未知值"(作者不详)→ Wikidata 返 blank node .well-known/genid/<hex>。
+    rsplit 会把哈希当作者 QID,建出成堆假作者行(卢浮宫 4642 件古物中招,撞
+    artists_pkey 崩溃)。只认真 Q 号,作者不详留空。"""
+    from app.services.enrichment.backfill import _fetch_creators
+
+    def fake_run(sparql):
+        return [
+            {
+                "item": {"value": "http://www.wikidata.org/entity/Q12418"},
+                "creator": {"value": "http://www.wikidata.org/entity/Q762"},
+            },
+            {  # 作者不详的古物
+                "item": {"value": "http://www.wikidata.org/entity/Q88168525"},
+                "creator": {
+                    "value": "http://www.wikidata.org/.well-known/genid/"
+                    "be8e7c9dfff6275cf709bc59fba78ed0"
+                },
+            },
+        ]
+
+    out = _fetch_creators(["Q12418", "Q88168525"], run_query=fake_run)
+    assert out == {"Q12418": "Q762"}  # 真作者留下,blank node 丢弃
