@@ -92,6 +92,10 @@ def build_parser() -> argparse.ArgumentParser:
     )  # 馆介绍+封面(spec 2026-07-18;门面类预生成,幂等按语言补缺)
     it.add_argument("--target", choices=["staging", "prod"], required=True)
     it.add_argument("--force", action="store_true")
+    vf = sub.add_parser("verify")  # 上新馆验收闸(六坑固化,全绿才算上完)
+    vf.add_argument("--target", choices=["staging", "prod"], required=True)
+    vf.add_argument("--langs", default=None)
+    vf.add_argument("--json", action="store_true")
     cr = sub.add_parser("coverage-report")  # 覆盖率报告+museums.stats回写
     cr.add_argument("--museum", required=True)
     cr.add_argument("--json", action="store_true")
@@ -451,6 +455,32 @@ def cmd_intro(slug: str, target: str, force: bool = False) -> None:
     print(f"✓ intro: {out} cover={cover}")
 
 
+def cmd_verify(slug: str, langs: str | None, target: str, as_json: bool) -> None:
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+    from app.services.enrichment.lang_config import resolve_languages
+    from scripts.onboard_verify import build_checks, print_human
+
+    use = [s.strip() for s in langs.split(",")] if langs else resolve_languages(slug)
+    db = SessionLocal()
+    try:
+        result = build_checks(db, slug, use)
+    finally:
+        db.close()
+    if as_json:
+        import json
+
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print_human(result)
+    if not result["passed"]:
+        raise SystemExit(1)  # 非零退出:可直接串进上馆脚本当闸
+
+
 def cmd_coverage_report(museum: str, as_json: bool) -> None:
     from scripts.coverage_report import (
         _print_human,
@@ -523,6 +553,8 @@ def main(argv=None) -> None:
         cmd_display_evidence(ns.museum, ns.limit)
     elif ns.command == "intro":
         cmd_intro(ns.slug, ns.target, ns.force)
+    elif ns.command == "verify":
+        cmd_verify(ns.slug, ns.langs, ns.target, ns.json)
     elif ns.command == "coverage-report":
         cmd_coverage_report(ns.museum, ns.json)
     else:
