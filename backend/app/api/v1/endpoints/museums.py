@@ -175,10 +175,17 @@ def recognize_artwork(
 
 @router.get("/{slug}")
 def get_museum_pack(
-    slug: str, language: str = "zh", db: Session = Depends(get_db)
+    slug: str,
+    language: str = "zh",
+    artworks: bool = True,
+    db: Session = Depends(get_db),
 ) -> dict:
-    """完整馆包：馆元数据 + 按热度排序的馆藏列表"""
-    pack = repo_pack(db, slug, language)
+    """完整馆包：馆元数据 + 按热度排序的馆藏列表。
+
+    `artworks=false` 省掉藏品数组(加法参数,缺省 true 保老 App 不变)——
+    列表页走分页 /objects,门面只要 cover/categories/description。
+    卢浮宫实测:全量 5.0MB/5.7s → 省掉后 KB 级。"""
+    pack = repo_pack(db, slug, language, artworks=artworks)
     if pack is None:
         raise HTTPException(status_code=404, detail=f"museum pack not found: {slug}")
     return pack
