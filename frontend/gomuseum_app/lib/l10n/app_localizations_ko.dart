@@ -522,6 +522,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recShootLabelBtn => '설명판 촬영';
 
   @override
+  String get recSearchWithLabel => '이 텍스트로 검색';
+
+  @override
   String get recShootLabelHint => '미술관 설명판에는 제목과 작가가 있습니다. 촬영하면 작품을 식별할 수 있습니다';
 
   @override

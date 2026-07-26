@@ -521,6 +521,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recShootLabelBtn => '拍下作品旁的说明牌';
 
   @override
+  String get recSearchWithLabel => '用这段文字搜索';
+
+  @override
   String get recShootLabelHint => '博物馆的小标牌上有作品名和作者，拍它我们就能认出来';
 
   @override
@@ -1144,6 +1147,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get recShootLabelBtn => '拍下作品旁的說明牌';
+
+  @override
+  String get recSearchWithLabel => '用這段文字搜尋';
 
   @override
   String get recShootLabelHint => '博物館的小標牌上有作品名和作者，拍它我們就能認出來';

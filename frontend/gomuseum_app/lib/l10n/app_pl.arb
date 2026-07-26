@@ -25,14 +25,12 @@
   "toBeRefined": "W toku",
   "viewAll": "Zobacz wszystko →",
   "all": "Wszystkie",
-
   "homePocketGuide": "Kieszonkowy przewodnik po muzeum",
   "homeSlogan": "Podejdź bliżej dzieła,\nposłuchaj jego historii.",
   "homeCtaRecognize": "Zrób zdjęcie, aby rozpoznać i słuchać",
   "homeFreeLeft": "{count} darmowych skanów · Ulepsz, aby uzyskać pełny dostęp",
   "homeNearby": "Muzea w pobliżu",
   "statusOpen": "Otwarte",
-
   "exploreTitle": "Odkrywaj",
   "searchCityMuseumArtwork": "Szukaj miast, muzeów lub dzieł",
   "searchMuseumsSection": "Muzea",
@@ -42,13 +40,11 @@
   "noMuseums": "Brak muzeów",
   "noMatchedMuseums": "Brak pasujących muzeów",
   "artworkCountLabel": "{count} dzieł",
-
   "recordedCount": "{count} dzieł w kolekcji",
   "museumCatalogNumbers": "Katalog online {catalog} dzieł · archiwum {archive} wpisów (rozpoznawalne/wyszukiwalne)",
   "noArtworks": "Brak dzieł",
   "loadingShown": "Ładowanie · {shown}/{total} pokazano",
   "allLoaded": "Załadowano wszystko · {total} łącznie",
-
   "guideVoiceGuide": "Przewodnik audio",
   "guideGenFailed": "Nie udało się wygenerować opisu",
   "guideWriting": "Piszę Twój opis…",
@@ -80,7 +76,6 @@
   "factBibliography": "Bibliografia",
   "factArtist": "Artysta",
   "factNone": "Brak szczegółowych informacji",
-
   "footprintTitle": "Ślady",
   "noFootprints": "Brak śladów",
   "footprintStat": "{count} dzieł · {days} dni",
@@ -92,7 +87,6 @@
   "yesterday": "Wczoraj",
   "dateMonthDay": "{day}.{month}",
   "deleteFootprintQ": "Usunąć ten ślad?",
-
   "settingsTitle": "Ustawienia",
   "secGeneral": "Ogólne",
   "guideLanguage": "Język przewodnika",
@@ -130,7 +124,6 @@
   "confirmLogout": "Potwierdź wylogowanie",
   "confirmLogoutBody": "Czy na pewno chcesz się wylogować?",
   "confirmYes": "Potwierdź",
-
   "authEmailHint": "E-mail",
   "authEmailRequired": "Wprowadź swój e-mail",
   "authEmailInvalid": "Wprowadź prawidłowy e-mail",
@@ -164,25 +157,22 @@
   "authAppleNotConfigured": "Logowanie przez Apple nie jest skonfigurowane",
   "authGuestFailed": "Logowanie jako gość nie powiodło się, spróbuj ponownie",
   "authGuestError": "Błąd logowania jako gość",
-
   "recCandidatesTitle": "Czy to jest to dzieło?",
   "recNoneOfThese": "Żadne z nich",
   "recNotRecognized": "Nie rozpoznano tego dzieła",
   "recLabelSeen": "Na etykiecie widnieje „{text}” — nie mamy jeszcze pełnego przewodnika, ale odnotowaliśmy Twoją prośbę ✅",
   "recShootLabelBtn": "Sfotografuj tabliczkę",
+  "recSearchWithLabel": "Szukaj tym tekstem",
   "recShootLabelHint": "Muzealne tabliczki podają tytuł i artystę — sfotografuj ją, a rozpoznamy dzieło",
   "recViewfinderLabelHint": "Wyceluj w tekst tabliczki, wypełnij kadr",
-
   "camRecognizeTitle": "Rozpoznaj dzieło",
   "camViewfinderHint": "Zmieść całe dzieło w kadrze",
   "camRecentGallery": "Ostatnie",
   "camAllAlbums": "Wszystkie albumy",
   "camGallery": "Galeria",
   "camSearch": "Szukaj",
-
   "guideUnavailable": "To dzieło ma zbyt mało materiału na przewodnik",
   "guideNotGenerated": "Przewodnik jeszcze nie wygenerowany",
-
   "audioNotReady": "Audio dostępne po przygotowaniu przewodnika",
   "audioFailed": "Audio niedostępne, spróbuj ponownie",
   "deepGenerating": "Generowanie szczegółowej treści…",

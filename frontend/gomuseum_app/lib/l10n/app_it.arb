@@ -25,14 +25,12 @@
   "toBeRefined": "In corso",
   "viewAll": "Vedi tutto →",
   "all": "Tutte",
-
   "homePocketGuide": "Guida da museo tascabile",
   "homeSlogan": "Avvicinati a un'opera,\nascolta la sua storia.",
   "homeCtaRecognize": "Fotografa per riconoscere e ascoltare",
   "homeFreeLeft": "{count} scansioni gratuite rimaste · Passa all'accesso completo",
   "homeNearby": "Musei nelle vicinanze",
   "statusOpen": "Aperto",
-
   "exploreTitle": "Esplora",
   "searchCityMuseumArtwork": "Cerca città, musei o opere",
   "searchMuseumsSection": "Musei",
@@ -42,13 +40,11 @@
   "noMuseums": "Ancora nessun museo",
   "noMatchedMuseums": "Nessun museo corrispondente",
   "artworkCountLabel": "{count} opere",
-
   "recordedCount": "{count} opere nella collezione",
   "museumCatalogNumbers": "Catalogo online {catalog} opere · archivio {archive} voci (riconoscibile/ricercabile)",
   "noArtworks": "Ancora nessuna opera",
   "loadingShown": "Caricamento · {shown}/{total} mostrate",
   "allLoaded": "Tutto caricato · {total} in totale",
-
   "guideVoiceGuide": "Audioguida",
   "guideGenFailed": "Generazione della spiegazione non riuscita",
   "guideWriting": "Sto scrivendo la tua spiegazione…",
@@ -80,7 +76,6 @@
   "factBibliography": "Bibliografia",
   "factArtist": "Artista",
   "factNone": "Nessuna informazione dettagliata",
-
   "footprintTitle": "Impronte",
   "noFootprints": "Ancora nessuna impronta",
   "footprintStat": "{count} opere · {days} giorni",
@@ -92,7 +87,6 @@
   "yesterday": "Ieri",
   "dateMonthDay": "{day}/{month}",
   "deleteFootprintQ": "Eliminare questa impronta?",
-
   "settingsTitle": "Impostazioni",
   "secGeneral": "Generale",
   "guideLanguage": "Lingua della guida",
@@ -130,8 +124,6 @@
   "confirmLogout": "Conferma disconnessione",
   "confirmLogoutBody": "Vuoi davvero uscire?",
   "confirmYes": "Conferma",
-
-
   "authEmailHint": "E-mail",
   "authEmailRequired": "Inserisci la tua e-mail",
   "authEmailInvalid": "Inserisci un'e-mail valida",
@@ -165,25 +157,22 @@
   "authAppleNotConfigured": "Accesso con Apple non configurato",
   "authGuestFailed": "Accesso come ospite non riuscito, riprova",
   "authGuestError": "Errore di accesso come ospite",
-
   "recCandidatesTitle": "È quest'opera?",
   "recNoneOfThese": "Nessuna di queste",
   "recNotRecognized": "Opera non riconosciuta",
   "recLabelSeen": "L'etichetta dice «{text}» — non abbiamo ancora la sua guida completa, ma la tua richiesta è stata registrata ✅",
   "recShootLabelBtn": "Fotografa il cartellino",
+  "recSearchWithLabel": "Cerca con questo testo",
   "recShootLabelHint": "I cartellini del museo mostrano titolo e artista — fotografalo e potremo identificare l'opera",
   "recViewfinderLabelHint": "Inquadra il testo del cartellino, riempi lo schermo",
-
   "camRecognizeTitle": "Identifica opera",
   "camViewfinderHint": "Inquadra tutta l'opera",
   "camRecentGallery": "Recenti",
   "camAllAlbums": "Tutti gli album",
   "camGallery": "Galleria",
   "camSearch": "Cerca",
-
   "guideUnavailable": "Materiale insufficiente per una guida su quest'opera",
   "guideNotGenerated": "Guida non ancora generata",
-
   "audioNotReady": "Audio disponibile quando la guida è pronta",
   "audioFailed": "Audio non disponibile, riprova",
   "deepGenerating": "Generazione dei contenuti di approfondimento…",

@@ -162,6 +162,7 @@
   "recNotRecognized": "沒認出來這件作品",
   "recLabelSeen": "標籤上寫著 \"{text}\"——我們還沒收錄它的完整講解，已記下你的需求 ✅",
   "recShootLabelBtn": "拍下作品旁的說明牌",
+  "recSearchWithLabel": "用這段文字搜尋",
   "recShootLabelHint": "博物館的小標牌上有作品名和作者，拍它我們就能認出來",
   "recViewfinderLabelHint": "對準標籤文字，佔滿畫面",
   "camRecognizeTitle": "識別畫作",
@@ -172,7 +173,6 @@
   "camSearch": "搜尋",
   "guideUnavailable": "該藏品資料不足，暫無講解",
   "guideNotGenerated": "講解暫未生成",
-
   "audioNotReady": "講解生成後可聽",
   "audioFailed": "音訊暫不可用，請重試",
   "deepGenerating": "深度內容生成中…",

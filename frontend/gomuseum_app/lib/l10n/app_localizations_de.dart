@@ -537,6 +537,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recShootLabelBtn => 'Wandschild fotografieren';
 
   @override
+  String get recSearchWithLabel => 'Mit diesem Text suchen';
+
+  @override
   String get recShootLabelHint =>
       'Museumsschilder zeigen Titel und Künstler — fotografieren Sie es und wir erkennen das Werk';
 

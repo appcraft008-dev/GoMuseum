@@ -25,14 +25,12 @@
   "toBeRefined": "In Bearbeitung",
   "viewAll": "Alle ansehen →",
   "all": "Alle",
-
   "homePocketGuide": "Museumsführer für die Tasche",
   "homeSlogan": "Treten Sie näher an ein Werk,\nhören Sie seine Geschichte.",
   "homeCtaRecognize": "Fotografieren, erkennen & hören",
   "homeFreeLeft": "{count} Gratis-Scans übrig · Upgrade für vollen Zugang",
   "homeNearby": "Museen in der Nähe",
   "statusOpen": "Geöffnet",
-
   "exploreTitle": "Entdecken",
   "searchCityMuseumArtwork": "Städte, Museen oder Werke suchen",
   "searchMuseumsSection": "Museen",
@@ -42,13 +40,11 @@
   "noMuseums": "Noch keine Museen",
   "noMatchedMuseums": "Keine passenden Museen",
   "artworkCountLabel": "{count} Werke",
-
   "recordedCount": "{count} Werke in der Sammlung",
   "museumCatalogNumbers": "Online-Katalog {catalog} Werke · Archiv {archive} Einträge (erkennbar/durchsuchbar)",
   "noArtworks": "Noch keine Werke",
   "loadingShown": "Laden · {shown}/{total} angezeigt",
   "allLoaded": "Alle geladen · {total} insgesamt",
-
   "guideVoiceGuide": "Audioguide",
   "guideGenFailed": "Erstellung der Erklärung fehlgeschlagen",
   "guideWriting": "Ihre Erklärung wird geschrieben…",
@@ -80,7 +76,6 @@
   "factBibliography": "Bibliografie",
   "factArtist": "Künstler",
   "factNone": "Keine detaillierten Informationen",
-
   "footprintTitle": "Spuren",
   "noFootprints": "Noch keine Spuren",
   "footprintStat": "{count} Werke · {days} Tage",
@@ -92,7 +87,6 @@
   "yesterday": "Gestern",
   "dateMonthDay": "{day}.{month}",
   "deleteFootprintQ": "Diese Spur löschen?",
-
   "settingsTitle": "Einstellungen",
   "secGeneral": "Allgemein",
   "guideLanguage": "Führungssprache",
@@ -130,8 +124,6 @@
   "confirmLogout": "Abmeldung bestätigen",
   "confirmLogoutBody": "Möchten Sie sich wirklich abmelden?",
   "confirmYes": "Bestätigen",
-
-
   "authEmailHint": "E-Mail",
   "authEmailRequired": "Bitte geben Sie Ihre E-Mail ein",
   "authEmailInvalid": "Bitte geben Sie eine gültige E-Mail ein",
@@ -165,25 +157,22 @@
   "authAppleNotConfigured": "Apple-Anmeldung nicht konfiguriert",
   "authGuestFailed": "Gast-Anmeldung fehlgeschlagen, bitte erneut versuchen",
   "authGuestError": "Gast-Anmeldefehler",
-
   "recCandidatesTitle": "Ist es dieses Werk?",
   "recNoneOfThese": "Keines davon",
   "recNotRecognized": "Werk nicht erkannt",
   "recLabelSeen": "Auf dem Schild steht „{text}\" — wir haben noch keinen vollständigen Guide dazu, aber Ihre Anfrage ist notiert ✅",
   "recShootLabelBtn": "Wandschild fotografieren",
+  "recSearchWithLabel": "Mit diesem Text suchen",
   "recShootLabelHint": "Museumsschilder zeigen Titel und Künstler — fotografieren Sie es und wir erkennen das Werk",
   "recViewfinderLabelHint": "Auf den Schildtext zielen, Rahmen ausfüllen",
-
   "camRecognizeTitle": "Werk erkennen",
   "camViewfinderHint": "Das ganze Werk in den Rahmen",
   "camRecentGallery": "Zuletzt",
   "camAllAlbums": "Alle Alben",
   "camGallery": "Galerie",
   "camSearch": "Suche",
-
   "guideUnavailable": "Zu wenig Material für einen Guide zu diesem Werk",
   "guideNotGenerated": "Guide noch nicht erstellt",
-
   "audioNotReady": "Audio verfügbar, sobald der Guide bereit ist",
   "audioFailed": "Audio nicht verfügbar, bitte erneut versuchen",
   "deepGenerating": "Detailinhalte werden erstellt…",

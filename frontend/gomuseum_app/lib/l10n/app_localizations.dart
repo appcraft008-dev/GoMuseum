@@ -1085,6 +1085,12 @@ abstract class AppLocalizations {
   /// **'Photograph the wall label'**
   String get recShootLabelBtn;
 
+  /// No description provided for @recSearchWithLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search using this text'**
+  String get recSearchWithLabel;
+
   /// No description provided for @recShootLabelHint.
   ///
   /// In en, this message translates to:
