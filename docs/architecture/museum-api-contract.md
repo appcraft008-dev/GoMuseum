@@ -205,7 +205,23 @@
      sources: [joconde, wikipedia]  # 每馆补充源;缺省 [wikipedia]。Wikidata 是脊柱不在此列
      fetch_limit / sample_size / sample_qids
      languages: []             # 空=用 DEFAULT_LANGUAGES;或指定子集
+     # ↓ 仅"部门制/百科式大馆"需要(2026-07-25 卢浮宫定,见下)
+     collection_qids: [Q..., ...]   # P195 挂部门而非馆本体时,列全部部门 QID
+     collect_all_types: true        # 整部门全收,跳过 categories 类目过滤
    ```
+   **⚠️ 两个大馆开关(卢浮宫落地,惠及大英/Met 等百科式馆):**
+   - **`collection_qids`(多收藏锚点)**:大馆藏品的 P195 常挂**部门实体**而非馆本体
+     (卢浮宫 Q19675 直挂仅 17 件,12 个部门合计 18.4k)。**判别方法**——先跑
+     `?item wdt:P195 ?mus . ?mus wdt:P361 wd:<馆QID>` GROUP BY 计数,若部门件数远超
+     馆本体直挂数,就把馆本体+全部部门 QID 列进 `collection_qids`。缺省不写=回退
+     `[wikidata_qid]`,单锚点馆行为逐字不变。**馆身份仍是 `wikidata_qid`**(建筑照 P18/
+     intro 材料/对外把手都用它),身份与收藏锚点是两个概念,不要混用一个字段。
+   - **`collect_all_types`(整部门全收)**:古物/装饰艺术部藏品的 P31 是"钻石/石碑/花瓶/
+     石棺"等**长尾几百种**(卢浮宫实测 top30 类型仅覆盖 36%),`categories` 白名单列不完
+     → 置 true 跳过类目过滤,整部门全收;top 类型在 `category_config` 补 P31 映射
+     (decorative_arts/artifact/textile/manuscript,架构已预留),长尾留 unknown 走
+     `_FALLBACK` 段落(宁缺毋滥,讲解仍接地)。**代价**:件数可能翻倍(卢浮宫 10.4k→17.3k),
+     names 成本同比例上升,先算账再开。
 2. **铺目录**:`python scripts/onboard.py <slug> catalog --target <staging|prod> [--limit N]`
    → `WikidataCatalog.list` 列 stub(只收有图,§收录策略)→ `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。新类目先跑一次 `scripts/seed_sections.py`(幂等)。
 3. **回填显示名**:`python scripts/onboard.py <slug> names --target <env>`
@@ -238,6 +254,19 @@
 >    启动用 `docker exec -d` + `setsid`(SSH 断连不死);日志逐行 flush 到文件(教训:staging Joconde
 >    补名首跑中途死、日志 0 字节,**死因无法回溯**;重建带日志脚本后 1038 件零失败跑完)。
 >    "监控到进程消失"≠"任务成功"——收尾判断只认日志 DONE 行 + 数据核验(纪律 4 幂等保证随时续跑)。
+> 7. **外部服务硬上限 + 外部自由文本必须按列宽截断**(2026-07-25 卢浮宫 17k 件添,三个坑
+>    **全是 staging 小样测不出、只有规模才现形的**)——上更大馆(大英/Met)前按此自查:
+>    - **OpenAI Batch 单 job 上限 5 万请求**(硬限,超了提交即 `maximum_requests_exceeded`,
+>      不是软限流)。件数×语种很容易破:17283×多语 ≫ 5 万 → `batch_names.run` 切 ≤50k 块,
+>      **先全部提交**(OpenAI 侧并行跑,别串行等)再逐块收,`job_id` 存逗号分隔多 id 供续传。
+>      staging 只 810 任务故从未暴露。
+>    - **Commons 署名(credit)是自由文本,可长达数百字**(多段落说明+英法双语+联系方式),
+>      超 `varchar(255)` 直接 `StringDataRightTruncation` **崩掉整轮物化**(实测 1369/10159 处崩)。
+>      入库前一律按列宽截断(`_clip`),截断不影响合规归属。**凡外部来源的自由文本字段,
+>      落库前都要问一句"最长能多长"**。
+>    - **WDQS 深翻页(~18k 件)高频瞬时 502/ReadTimeout**,且 catalog 落库全有或全无、
+>      一崩整批丢 → `run_sparql` 统一重试 4 次指数退避(5/10/20s)+ 超时 120s,两个 SPARQL
+>      消费者共用。三次全量跑两次栽在这上面才补的。
 
 ---
 
