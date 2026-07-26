@@ -5,9 +5,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/home/presentation/pages/home_page.dart';
 import 'package:gomuseum_app/features/payment/domain/entities/user_benefits.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+
+/// 首页馆卡片走 A1 GET /museums(2026-07-26 API 化),测试注入假馆列表。
+MuseumSummary _m(String slug, String name, {int count = 100}) => MuseumSummary(
+      slug: slug,
+      name: name,
+      nameEn: slug,
+      city: '巴黎',
+      cityEn: 'Paris',
+      country: 'FR',
+      coordinates: const [],
+      artworkCount: count,
+    );
+
+final _fakeMuseums = [
+  _m('orsay', '奥赛博物馆', count: 6789),
+  _m('orangerie', '橘园美术馆', count: 140),
+  _m('louvre', '卢浮宫', count: 17283),
+];
 
 class _FakeBenefitsState extends BenefitsState {
   @override
@@ -28,6 +48,7 @@ void main() {
       ProviderScope(
         overrides: [
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
         ],
         child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -37,6 +58,7 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump(); // FutureProvider 落地
 
     expect(find.text('GOMUSEUM'), findsOneWidget);
     expect(find.text('走近一件作品，\n听懂它的故事。'), findsOneWidget);
@@ -67,6 +89,7 @@ void main() {
       ProviderScope(
         overrides: [
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -77,6 +100,7 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump(); // FutureProvider 落地
 
     final cardTopLeft = tester.getTopLeft(find
         .ancestor(of: find.text('橘园美术馆'), matching: find.byType(Container))
@@ -91,5 +115,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('MUSEUM:orangerie'), findsOneWidget);
+  });
+
+  testWidgets('新上线馆(卢浮宫)自动出现在首页且可点进馆(API 化收益)', (tester) async {
+    // 回归:此前首页馆列表硬编码,卢浮宫卡片写死且无 slug → 上线后点不动。
+    // 改走 A1 GET /museums 后,后端上新馆前端零改动自动可用。
+    final router = GoRouter(routes: [
+      GoRoute(path: '/', builder: (_, __) => const HomePage()),
+      GoRoute(
+          path: '/museum/:slug',
+          builder: (c, s) =>
+              Scaffold(body: Text('MUSEUM:${s.pathParameters['slug']}'))),
+      GoRoute(path: '/camera', builder: (_, __) => const SizedBox()),
+      GoRoute(path: '/explore', builder: (_, __) => const SizedBox()),
+    ]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.dragUntilVisible(
+        find.text('卢浮宫'), find.byType(ListView).first, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('卢浮宫'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('MUSEUM:louvre'), findsOneWidget);
   });
 }
