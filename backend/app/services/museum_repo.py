@@ -311,7 +311,12 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
             or o.title_zh
             or o.title_en
             or o.qid,
-            "title_en": o.title_en,
+            # title_en 同样 title_i18n 优先(与上面 title_zh 对称):names(尤其
+            # Batch 路径)只回填 attributes.title_i18n、不写列,法语源大馆的 title_en
+            # 列多为空——卢浮宫实测 9505/17283 件列空、其中 9497 件 i18n 里其实有
+            # 英文名,只读列会让英文用户看到一半藏品标题空白。
+            "title_en": (o.attributes or {}).get("title_i18n", {}).get("en")
+            or o.title_en,
             "artist_zh": o.artist_zh,
             "artist_en": o.artist_en,
             "year": o.year,
