@@ -529,6 +529,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recShootLabelBtn => 'Photograph the wall label';
 
   @override
+  String get recSearchWithLabel => 'Search using this text';
+
+  @override
   String get recShootLabelHint =>
       'Museum labels show the title and artist — snap it and we can identify the work';
 

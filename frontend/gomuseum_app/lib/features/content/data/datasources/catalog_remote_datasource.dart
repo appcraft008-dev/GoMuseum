@@ -50,8 +50,10 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
   @override
   Future<MuseumDetail> getMuseumDetail(
       {required String slug, String language = 'zh'}) async {
-    final r = await dio
-        .get('/api/v1/museums/$slug', queryParameters: {'language': language});
+    // artworks=false:门面只要 cover/categories/description,藏品列表走分页 /objects。
+    // 卢浮宫全量藏品数组 = 5.0MB/5.7s,而 MuseumDetail 根本不解析它——下载完就扔。
+    final r = await dio.get('/api/v1/museums/$slug',
+        queryParameters: {'language': language, 'artworks': 'false'});
     return MuseumDetail.fromJson(r.data as Map<String, dynamic>);
   }
 

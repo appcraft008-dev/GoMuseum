@@ -71,6 +71,15 @@ async def startup_event():
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
+    try:
+        # 搜索索引预热(后台线程,不阻塞启动):构建随藏品量涨,prod 实测 24k 条目
+        # 7.2s——不预热则进程内第一个搜索用户要等这 7 秒。
+        from app.services.search.inprocess import warm_search_index
+
+        warm_search_index()
+        logger.info("Search index warm-up started")
+    except Exception:
+        logger.exception("Search index warm-up failed (will build on first query)")
 
 
 @app.get("/")

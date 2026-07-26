@@ -280,3 +280,62 @@ def test_scoped_search_reuses_global_index(session):
     _, objects = search(session, _FakeStorage(), "starry", museum_id=mid, language="zh")
     assert len(objects) == 2
     assert stmts == []
+
+
+def test_stale_index_served_without_blocking(monkeypatch):
+    """过期时先返回旧索引、后台重建(stale-while-revalidate)。
+    prod 实测构建 24212 条目 7.2s——同步重建=每 TTL 有个倒霉用户等 7 秒。"""
+    import time as _t
+
+    from app.services.search import inprocess as ip
+
+    ip._index_cache.clear()
+    ip._index_cache[None] = (
+        _t.time() - ip._INDEX_TTL - 1,
+        [{"museum_id": 1}],
+    )  # 已过期
+
+    built = {"n": 0}
+    monkeypatch.setattr(ip, "_build_global", lambda db: built.__setitem__("n", 1) or [])
+    spawned = {"n": 0}
+    monkeypatch.setattr(ip, "_refresh_index_async", lambda: spawned.__setitem__("n", 1))
+
+    out = ip.build_search_index(db=None)
+    assert out == [{"museum_id": 1}], "过期时应返回旧索引"
+    assert built["n"] == 0, "不该在请求线程里同步重建"
+    assert spawned["n"] == 1, "应触发后台重建"
+    ip._index_cache.clear()
+
+
+def test_cold_start_builds_synchronously(monkeypatch):
+    """进程内首次无旧索引可用,只能同步建(故另在启动时预热)。"""
+    from app.services.search import inprocess as ip
+
+    ip._index_cache.clear()
+    monkeypatch.setattr(ip, "_build_global", lambda db: [{"museum_id": 7}])
+    out = ip.build_search_index(db=None)
+    assert out == [{"museum_id": 7}]
+    ip._index_cache.clear()
+
+
+def test_refresh_failure_keeps_stale_index(monkeypatch):
+    """后台重建失败不该清掉旧索引——搜不到新件好过整条查询 5xx。"""
+    import time as _t
+
+    from app.services.search import inprocess as ip
+
+    ip._index_cache.clear()
+    stale = [{"museum_id": 9}]
+    ip._index_cache[None] = (_t.time() - ip._INDEX_TTL - 1, stale)
+
+    def _boom(db):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(ip, "_build_global", _boom)
+    ip._refresh_index_async()
+    for _ in range(50):  # 等后台线程跑完
+        if not ip._refreshing:
+            break
+        _t.sleep(0.02)
+    assert ip._index_cache[None][1] is stale, "重建失败应保留旧索引"
+    ip._index_cache.clear()

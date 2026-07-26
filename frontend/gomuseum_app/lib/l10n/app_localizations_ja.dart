@@ -522,6 +522,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recShootLabelBtn => '解説プレートを撮影';
 
   @override
+  String get recSearchWithLabel => 'このテキストで検索';
+
+  @override
   String get recShootLabelHint => '美術館のプレートには題名と作家が書かれています。撮影すれば作品を特定できます';
 
   @override

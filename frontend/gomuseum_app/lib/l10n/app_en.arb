@@ -25,37 +25,81 @@
   "toBeRefined": "In progress",
   "viewAll": "View all →",
   "all": "All",
-
   "homePocketGuide": "Pocket Museum Guide",
   "homeSlogan": "Step closer to one work,\nhear the story behind it.",
   "homeCtaRecognize": "Snap to Recognize & Listen",
   "homeFreeLeft": "{count} free scans left · Upgrade for full access",
-  "@homeFreeLeft": { "placeholders": { "count": { "type": "Object" } } },
+  "@homeFreeLeft": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "homeNearby": "Nearby Museums",
   "statusOpen": "Open",
-
   "exploreTitle": "Explore",
   "searchCityMuseumArtwork": "Search cities, museums or artworks",
   "searchMuseumsSection": "Museums",
   "searchArtworksSection": "Artworks",
   "searchNoResults": "No results found",
   "museumCount": "{count} museums",
-  "@museumCount": { "placeholders": { "count": { "type": "Object" } } },
+  "@museumCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "noMuseums": "No museums yet",
   "noMatchedMuseums": "No matching museums",
   "artworkCountLabel": "{count} works",
-  "@artworkCountLabel": { "placeholders": { "count": { "type": "Object" } } },
-
+  "@artworkCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "recordedCount": "{count} works in collection",
-  "@recordedCount": { "placeholders": { "count": { "type": "Object" } } },
+  "@recordedCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "museumCatalogNumbers": "Online catalog {catalog} works · archive {archive} entries (recognizable/searchable)",
-  "@museumCatalogNumbers": { "placeholders": { "catalog": { "type": "Object" }, "archive": { "type": "Object" } } },
+  "@museumCatalogNumbers": {
+    "placeholders": {
+      "catalog": {
+        "type": "Object"
+      },
+      "archive": {
+        "type": "Object"
+      }
+    }
+  },
   "noArtworks": "No works yet",
   "loadingShown": "Loading · {shown}/{total} shown",
-  "@loadingShown": { "placeholders": { "shown": { "type": "Object" }, "total": { "type": "Object" } } },
+  "@loadingShown": {
+    "placeholders": {
+      "shown": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "allLoaded": "All loaded · {total} in total",
-  "@allLoaded": { "placeholders": { "total": { "type": "Object" } } },
-
+  "@allLoaded": {
+    "placeholders": {
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "guideVoiceGuide": "Audio Guide",
   "guideGenFailed": "Failed to generate explanation",
   "guideWriting": "Writing your explanation…",
@@ -87,22 +131,44 @@
   "factBibliography": "Bibliography",
   "factArtist": "Artist",
   "factNone": "No detailed information",
-
   "footprintTitle": "Footprints",
   "noFootprints": "No footprints yet",
   "footprintStat": "{count} works · {days} days",
-  "@footprintStat": { "placeholders": { "count": { "type": "Object" }, "days": { "type": "Object" } } },
+  "@footprintStat": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
   "footprintLoadFailed": "Failed to load footprints",
   "footprintEmptyHint": "Works you recognize are recorded here automatically",
   "footprintGoRecognize": "Recognize your first work",
   "itemsCount": "{count} works",
-  "@itemsCount": { "placeholders": { "count": { "type": "Object" } } },
+  "@itemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
   "today": "Today",
   "yesterday": "Yesterday",
   "dateMonthDay": "{month}/{day}",
-  "@dateMonthDay": { "placeholders": { "month": { "type": "Object" }, "day": { "type": "Object" } } },
+  "@dateMonthDay": {
+    "placeholders": {
+      "month": {
+        "type": "Object"
+      },
+      "day": {
+        "type": "Object"
+      }
+    }
+  },
   "deleteFootprintQ": "Delete this footprint?",
-
   "settingsTitle": "Settings",
   "secGeneral": "General",
   "guideLanguage": "Guide language",
@@ -118,7 +184,16 @@
   "privacyPolicy": "Privacy policy",
   "freeQuota": "Free scan quota",
   "quotaValue": "{remain} / {total} left",
-  "@quotaValue": { "placeholders": { "remain": { "type": "Object" }, "total": { "type": "Object" } } },
+  "@quotaValue": {
+    "placeholders": {
+      "remain": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
   "upgrade": "Upgrade",
   "loginBind": "Sign in / Link account",
   "notLoggedIn": "Not signed in",
@@ -133,7 +208,13 @@
   "themeDark": "Dark",
   "themeSystem": "System",
   "featureComingSoon": "{feature} is coming soon",
-  "@featureComingSoon": { "placeholders": { "feature": { "type": "String" } } },
+  "@featureComingSoon": {
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
   "privacyBody": "Original photos are not uploaded by default; recognition data is processed temporarily only. You can delete your account and data anytime. Full terms will be provided at official release.",
   "deleteAccountQ": "Permanently delete account?",
   "deleteAccountBody": "This will delete your account profile and remaining quota. This action cannot be undone.",
@@ -142,8 +223,6 @@
   "confirmLogout": "Confirm sign out",
   "confirmLogoutBody": "Are you sure you want to sign out?",
   "confirmYes": "Confirm",
-
-
   "authEmailHint": "Email",
   "authEmailRequired": "Please enter your email",
   "authEmailInvalid": "Please enter a valid email",
@@ -177,26 +256,29 @@
   "authAppleNotConfigured": "Apple sign-in not configured",
   "authGuestFailed": "Guest sign-in failed, please try again",
   "authGuestError": "Guest sign-in error",
-
   "recCandidatesTitle": "Is this the one?",
   "recNoneOfThese": "None of these",
   "recNotRecognized": "Couldn't recognize this work",
   "recLabelSeen": "The label reads \"{text}\" — we haven't added its full guide yet, but we've noted your request ✅",
-  "@recLabelSeen": { "placeholders": { "text": { "type": "String" } } },
+  "@recLabelSeen": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
   "recShootLabelBtn": "Photograph the wall label",
+  "recSearchWithLabel": "Search using this text",
   "recShootLabelHint": "Museum labels show the title and artist — snap it and we can identify the work",
   "recViewfinderLabelHint": "Aim at the label text, fill the frame",
-
   "camRecognizeTitle": "Identify Artwork",
   "camViewfinderHint": "Fit the whole artwork in the frame",
   "camRecentGallery": "Recent",
   "camAllAlbums": "All albums",
   "camGallery": "Gallery",
   "camSearch": "Search",
-
   "guideUnavailable": "This artwork has too little material for a guide",
   "guideNotGenerated": "Guide not generated yet",
-
   "audioNotReady": "Audio available once the guide is ready",
   "audioFailed": "Audio unavailable, please retry",
   "deepGenerating": "Generating in-depth content…",
