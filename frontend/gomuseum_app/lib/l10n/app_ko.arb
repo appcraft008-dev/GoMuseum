@@ -162,6 +162,7 @@
   "recNotRecognized": "이 작품을 인식하지 못했습니다",
   "recLabelSeen": "라벨에 \"{text}\"라고 적혀 있습니다 — 아직 전체 가이드는 없지만 요청을 기록했습니다 ✅",
   "recShootLabelBtn": "설명판 촬영",
+  "recSearchWithLabel": "이 텍스트로 검색",
   "recShootLabelHint": "미술관 설명판에는 제목과 작가가 있습니다. 촬영하면 작품을 식별할 수 있습니다",
   "recViewfinderLabelHint": "설명판 글자를 화면에 가득 채우세요",
   "camRecognizeTitle": "작품 식별",
@@ -172,7 +173,6 @@
   "camSearch": "검색",
   "guideUnavailable": "이 작품은 가이드를 만들 자료가 부족합니다",
   "guideNotGenerated": "아직 가이드가 생성되지 않았습니다",
-
   "audioNotReady": "해설 생성 후 들을 수 있습니다",
   "audioFailed": "오디오를 사용할 수 없습니다. 다시 시도하세요",
   "deepGenerating": "심층 콘텐츠 생성 중…",

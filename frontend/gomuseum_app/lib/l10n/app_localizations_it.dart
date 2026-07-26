@@ -532,6 +532,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recShootLabelBtn => 'Fotografa il cartellino';
 
   @override
+  String get recSearchWithLabel => 'Cerca con questo testo';
+
+  @override
   String get recShootLabelHint =>
       'I cartellini del museo mostrano titolo e artista — fotografalo e potremo identificare l\'opera';
 

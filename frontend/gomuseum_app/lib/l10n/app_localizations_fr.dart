@@ -538,6 +538,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recShootLabelBtn => 'Photographier le cartel';
 
   @override
+  String get recSearchWithLabel => 'Rechercher avec ce texte';
+
+  @override
   String get recShootLabelHint =>
       'Le cartel du musée indique le titre et l\'artiste — photographiez-le et nous pourrons identifier l\'œuvre';
 

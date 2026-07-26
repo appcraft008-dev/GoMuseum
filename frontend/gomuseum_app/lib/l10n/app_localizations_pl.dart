@@ -535,6 +535,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recShootLabelBtn => 'Sfotografuj tabliczkę';
 
   @override
+  String get recSearchWithLabel => 'Szukaj tym tekstem';
+
+  @override
   String get recShootLabelHint =>
       'Muzealne tabliczki podają tytuł i artystę — sfotografuj ją, a rozpoznamy dzieło';
 

@@ -162,6 +162,7 @@
   "recNotRecognized": "この作品を認識できませんでした",
   "recLabelSeen": "ラベルには「{text}」とあります — まだ完全なガイドはありませんが、ご要望を記録しました ✅",
   "recShootLabelBtn": "解説プレートを撮影",
+  "recSearchWithLabel": "このテキストで検索",
   "recShootLabelHint": "美術館のプレートには題名と作家が書かれています。撮影すれば作品を特定できます",
   "recViewfinderLabelHint": "プレートの文字を画面いっぱいに写してください",
   "camRecognizeTitle": "作品を識別",
@@ -172,7 +173,6 @@
   "camSearch": "検索",
   "guideUnavailable": "この作品はガイド用の資料が不足しています",
   "guideNotGenerated": "ガイドはまだ生成されていません",
-
   "audioNotReady": "解説の生成後に再生できます",
   "audioFailed": "音声を利用できません。再試行してください",
   "deepGenerating": "詳細コンテンツを生成中…",

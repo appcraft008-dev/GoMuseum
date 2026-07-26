@@ -19,6 +19,7 @@ import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
+import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -212,7 +213,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     );
   }
 
-  void _showTagSearchSheet() {
+  void _showTagSearchSheet({String? initialQuery}) {
     final gm = context.gm;
     showModalBottomSheet<void>(
       context: context,
@@ -221,8 +222,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
-      builder: (_) =>
-          _TagSearchSheet(lang: apiLanguage(ref.read(languageProvider))),
+      builder: (_) => _TagSearchSheet(
+        lang: apiLanguage(ref.read(languageProvider)),
+        initialQuery: initialQuery,
+      ),
     );
   }
 
@@ -687,10 +690,19 @@ class _CameraPageState extends ConsumerState<CameraPage>
     final l10n = AppLocalizations.of(context)!;
     final label = state.labelText;
     if (label != null) {
+      // 墙签已拍、OCR 出了文字、目录仍没匹配上——此前这里只有"重拍",是死胡同:
+      // 用户手上已有 OCR 文本,却要退出去自己找搜索再手打一遍。给一跳直达搜索。
       return [
         Text(l10n.recLabelSeen(label),
             style: GmText.sans(size: 13, height: 1.5)),
         const SizedBox(height: 16),
+        GmTicketButton(
+          label: l10n.recSearchWithLabel,
+          icon: GmIcons.search,
+          onTap: () =>
+              _showTagSearchSheet(initialQuery: labelSearchQuery(label)),
+        ),
+        const SizedBox(height: 12),
         Center(
           child: GestureDetector(
             onTap: _retake,
@@ -741,9 +753,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
 /// 识别兜底 → 搜索闭环：无图区/未收录时按编号/名称查找（全局即时搜索）。
 /// 命中点击 → 关闭 sheet 后跳讲解页（与识别 match 同款导航）。
 class _TagSearchSheet extends ConsumerStatefulWidget {
-  const _TagSearchSheet({required this.lang});
+  const _TagSearchSheet({required this.lang, this.initialQuery});
 
   final String lang;
+
+  /// 预填查询词(墙签 OCR 文本):可编辑,用户可改可清——OCR 常含馆名/年代等噪音。
+  final String? initialQuery;
 
   @override
   ConsumerState<_TagSearchSheet> createState() => _TagSearchSheetState();
@@ -752,9 +767,18 @@ class _TagSearchSheet extends ConsumerStatefulWidget {
 class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
   String _q = '';
   Timer? _timer;
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initialQuery ?? '');
+
+  @override
+  void initState() {
+    super.initState();
+    _q = (widget.initialQuery ?? '').trim(); // 预填时直接出结果,免再敲一次
+  }
 
   @override
   void dispose() {
+    _ctrl.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -788,6 +812,7 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
           Text(l10n.camTagHint, style: GmText.sans(size: 12, color: gm.sub)),
           const SizedBox(height: 14),
           TextField(
+            controller: _ctrl,
             autofocus: true,
             style: GmText.sans(size: 13.5),
             decoration: InputDecoration(
