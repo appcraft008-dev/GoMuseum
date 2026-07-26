@@ -256,3 +256,61 @@ def test_run_chunks_over_openai_50k_limit(session, monkeypatch):
     assert all(n <= bn.MAX_BATCH_REQUESTS for n in c.chunk_sizes)
     assert sum(c.chunk_sizes) == 120_000  # 一个任务不丢
     assert out["job_id"] == ",".join(c.job_ids)  # 多 job 可续传
+
+
+def test_collect_resolves_creators_and_creates_artist_rows(session):
+    # 路径等价性:batch 路径此前只读已有 artist_qid、从不抓 P170,新馆 catalog 不产
+    # artist_qid → 作者一个都建不了(卢浮宫实测 17283件仅1件有,10041件作者名无中文)
+    from app.models.artist import Artist
+    from app.models.museum import Museum
+    from app.services.enrichment import batch_names as bn
+
+    m = session.query(Museum).one()
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Eugène Delacroix"
+    o.attributes = {}  # 无 artist_qid,模拟新馆 catalog 产物
+    session.commit()
+
+    tasks = bn.collect_missing(
+        session,
+        m.slug,
+        ["en", "zh"],
+        fetch_labels=lambda qid, langs: {},  # 无权威标签 → 该出翻译任务
+        fetch_creators=lambda qids: {"Q1": "Q33477"},  # P170 → 德拉克罗瓦
+    )
+    session.commit()
+    assert (session.query(MuseumObject).filter_by(qid="Q1").one().attributes or {}).get(
+        "artist_qid"
+    ) == "Q33477"  # 解析结果落库
+    art = session.query(Artist).filter_by(qid="Q33477").one()
+    assert art.name_en == "Eugène Delacroix"  # 新馆首跑建行,轴心取自作品行
+    assert any(t.custom_id == "artist|Q33477|zh" for t in tasks)  # 出中文翻译任务
+
+
+def test_collect_prefers_authoritative_artist_labels(session):
+    # 名家在 Wikidata 多语齐全 → 直接落库,不出翻译任务(免费且更准)
+    from app.models.artist import Artist
+    from app.models.museum import Museum
+    from app.services.enrichment import batch_names as bn
+
+    m = session.query(Museum).one()
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Eugène Delacroix"
+    o.attributes = {}
+    session.commit()
+
+    tasks = bn.collect_missing(
+        session,
+        m.slug,
+        ["en", "zh"],
+        fetch_labels=lambda qid, langs: (
+            {"en": "Eugène Delacroix", "zh": "欧仁·德拉克罗瓦"}
+            if qid == "Q33477"
+            else {}
+        ),
+        fetch_creators=lambda qids: {"Q1": "Q33477"},
+    )
+    session.commit()
+    art = session.query(Artist).filter_by(qid="Q33477").one()
+    assert (art.name_i18n or {}).get("zh") == "欧仁·德拉克罗瓦"  # 权威直接落库
+    assert not any(t.custom_id.startswith("artist|Q33477") for t in tasks)  # 无需翻译
