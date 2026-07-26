@@ -295,3 +295,79 @@ def test_fetch_museum_intro_material_no_sitelink():
         "Q1", get_json=lambda u, p: {"entities": {"Q1": {"sitelinks": {}}}}
     )
     assert out["extract_en"] is None
+
+
+def test_fetch_labels_batch_matches_single_semantics():
+    """批量版必须与单件版逐字同义(含 zh 变体收敛),只是网络往返少了 N 倍。"""
+    from app.services.enrichment.material import (
+        fetch_wikidata_labels,
+        fetch_wikidata_labels_batch,
+    )
+
+    def _row(q, lang, val):
+        return {
+            "item": {"value": f"http://www.wikidata.org/entity/{q}"},
+            "l": {"xml:lang": lang, "value": val},
+        }
+
+    rows = [
+        _row("Q12418", "en", "Mona Lisa"),
+        _row("Q12418", "zh-hans", "蒙娜丽莎"),  # 变体应收敛到 zh
+        _row("Q762", "en", "Leonardo"),
+    ]
+    batch = fetch_wikidata_labels_batch(
+        ["Q12418", "Q762"], ["en", "zh"], run_query=lambda s: rows
+    )
+    assert batch["Q12418"] == {"en": "Mona Lisa", "zh": "蒙娜丽莎"}
+    assert batch["Q762"] == {"en": "Leonardo"}
+
+    single = fetch_wikidata_labels(
+        "Q12418",
+        ["en", "zh"],
+        run_query=lambda s: [
+            {"l": {"xml:lang": "en", "value": "Mona Lisa"}},
+            {"l": {"xml:lang": "zh-hans", "value": "蒙娜丽莎"}},
+        ],
+    )
+    assert single == batch["Q12418"]  # 语义一致
+
+
+def test_fetch_labels_batch_chunks_and_skips_non_wikidata():
+    from app.services.enrichment import material as mat
+
+    calls = []
+
+    def fake(sparql):
+        calls.append(sparql)
+        return []
+
+    qids = [f"Q{i}" for i in range(450)] + ["joconde-000SC010033"]
+    mat.fetch_wikidata_labels_batch(qids, ["en"], run_query=fake)
+    assert len(calls) == 3  # 450/200 → 3 批
+    assert "joconde" not in "".join(calls)  # 合成把手不进 SPARQL
+
+
+def test_fetch_labels_batch_survives_failed_chunk(monkeypatch):
+    """单批失败重试一次仍败 → 跳过该批,不炸全局(幂等重跑再补)。"""
+    import time as _t
+
+    from app.services.enrichment import material as mat
+
+    monkeypatch.setattr(_t, "sleep", lambda s: None)  # material 内是函数级 import
+    state = {"n": 0}
+
+    def flaky(sparql):
+        state["n"] += 1
+        if state["n"] <= 2:  # 第一批的两次尝试都失败
+            raise RuntimeError("WDQS down")
+        return [
+            {
+                "item": {"value": "http://www.wikidata.org/entity/Q300"},
+                "l": {"xml:lang": "en", "value": "OK"},
+            }
+        ]
+
+    out = mat.fetch_wikidata_labels_batch(
+        [f"Q{i}" for i in range(250)], ["en"], run_query=flaky
+    )
+    assert out == {"Q300": {"en": "OK"}}  # 第二批的结果仍拿到

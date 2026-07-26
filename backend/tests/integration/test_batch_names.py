@@ -314,3 +314,35 @@ def test_collect_prefers_authoritative_artist_labels(session):
     art = session.query(Artist).filter_by(qid="Q33477").one()
     assert (art.name_i18n or {}).get("zh") == "欧仁·德拉克罗瓦"  # 权威直接落库
     assert not any(t.custom_id.startswith("artist|Q33477") for t in tasks)  # 无需翻译
+
+
+def test_collect_prefetches_labels_in_batch_not_per_object(session, monkeypatch):
+    """上大馆硬前提:标签必须批量取。此前每件一次 SPARQL(卢浮宫 17283 件 ~5h,
+    CPU 仅 12%,全在等网络)。这里断言"网络调用次数 << 件数"。"""
+    from app.models.museum import Museum
+    from app.services.enrichment import batch_names as bn
+
+    m = session.query(Museum).one()
+    for i in range(30):
+        upsert_object(
+            session, m.id, {"qid": f"Q{500 + i}", "title_en": f"W{i}", "attributes": {}}
+        )
+    session.commit()
+
+    calls = {"n": 0}
+
+    def counting_batch(qids, langs, **kw):
+        calls["n"] += 1
+        return {}
+
+    monkeypatch.setattr(bn, "_fetch_creators", lambda qids: {}, raising=False)
+    monkeypatch.setattr(
+        "app.services.enrichment.material.fetch_wikidata_labels_batch",
+        counting_batch,
+    )
+    bn.collect_missing(session, m.slug, ["en", "zh"], fetch_creators=lambda q: {})
+    # 关键性质:抓取次数与件数**无关**(对象一批 + 作者一批,常数级),
+    # 而非旧实现的每件一次。30+ 件若仍是 N+1,这里会是 30+。
+    n_objects = session.query(MuseumObject).filter_by(museum_id=m.id).count()
+    assert n_objects >= 30
+    assert calls["n"] <= 2, f"批量预取未生效,调用了 {calls['n']} 次"

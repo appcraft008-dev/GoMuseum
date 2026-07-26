@@ -282,7 +282,19 @@ def backfill_display_names(
     )
     from app.services.enrichment.pipeline import _fill_i18n
 
+    # 标签批量预取(与 batch 路径同源,两条路径都不能是 N+1)。未注入时用批量缓存;
+    # 注入了 fetch_labels 的调用方(测试)仍走单件语义。
+    _injected = fetch_labels
     fetch_labels = fetch_labels or fetch_wikidata_labels
+    _cache: dict = {}
+
+    def _labels(qid):
+        if _injected is not None:
+            return _injected(qid, langs)
+        if qid not in _cache:  # 未预取到的(如作者)按需补一次单件
+            _cache[qid] = fetch_wikidata_labels(qid, langs)
+        return _cache[qid] or {}
+
     fetch_creators = fetch_creators or _fetch_creators
     fetch_artist_facts_i18n = fetch_artist_facts_i18n or fetch_artist_i18n_facts
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
@@ -294,6 +306,10 @@ def backfill_display_names(
     creators = fetch_creators(
         [o.qid for o in objs if not (o.attributes or {}).get("artist_qid")]
     )
+    if _injected is None:  # 对象标签一次批量取回,后续 _labels 命中缓存
+        from app.services.enrichment.material import fetch_wikidata_labels_batch
+
+        _cache.update(fetch_wikidata_labels_batch([o.qid for o in objs], langs))
     counts = {"titles": 0, "artists": 0, "errors": 0}
     artist_name_en: dict[str, str] = {}  # 作者QID → 来自作品行的 en 名(兜底)
     for i, o in enumerate(objs):
@@ -306,13 +322,13 @@ def backfill_display_names(
                 o.attributes = attrs
             # retranslate:该语言无权威标签则丢弃机翻值,下面 _fill_i18n 用改进版重译
             if retranslate_langs:
-                _rt_labels = fetch_labels(o.qid, langs)
+                _rt_labels = _labels(o.qid)
                 for lang in retranslate_langs:
                     if not _rt_labels.get(lang):
                         ti.pop(lang, None)
             need_fill = any(not ti.get(lang) for lang in langs)
             if need_fill or refresh_langs:
-                labels = fetch_labels(o.qid, langs)
+                labels = _labels(o.qid)
                 # refresh:该语言有权威标签则覆盖存量(繁→简修复);无标签保留(翻译值不动)
                 for lang in refresh_langs or []:
                     if labels.get(lang) and labels[lang] != ti.get(lang):
@@ -354,7 +370,7 @@ def backfill_display_names(
                 art.name_i18n = ni
             need_fill_a = any(not ni.get(lang) for lang in langs)
             if need_fill_a or refresh_langs:
-                alabels = fetch_labels(aqid, langs)
+                alabels = _labels(aqid)
                 for lang in refresh_langs or []:
                     if alabels.get(lang) and alabels[lang] != ni.get(lang):
                         ni = {**ni, lang: alabels[lang]}
