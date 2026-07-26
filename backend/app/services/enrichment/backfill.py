@@ -59,6 +59,7 @@ def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
     import logging
     import time
 
+    from app.services.enrichment.identity import is_wikidata_qid
     from app.services.enrichment.sources.wikidata_catalog import _default_run_query
 
     run_query = run_query or _default_run_query
@@ -84,7 +85,11 @@ def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
         for row in rows:
             item = (row.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
             creator = (row.get("creator") or {}).get("value", "").rsplit("/", 1)[-1]
-            if item and creator:
+            # P170="未知值"(作者不详)时 Wikidata 返回 blank node
+            # (.well-known/genid/<32位hex>),rsplit 会把哈希当成作者 QID →
+            # 建出一堆假作者行(卢浮宫实测 4642 件古物中招,撞 artists_pkey 崩)。
+            # is_wikidata_qid 门控:只认真 Q 号,作者不详就留空(宁缺毋滥)。
+            if item and creator and is_wikidata_qid(creator):
                 out.setdefault(item, creator)
     return out
 
