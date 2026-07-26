@@ -273,15 +273,25 @@ def list_museums(db: Session) -> list[dict]:
     return out
 
 
-def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None:
+def get_museum_pack(
+    db: Session, slug: str, language: str = "zh", *, artworks: bool = True
+) -> dict | None:
+    """完整馆包。artworks=False 时省掉藏品数组(仍返回该键为空列表,形状不变)——
+    列表页走分页 /objects,不需要全量:卢浮宫 17283 件全塞一个响应 = **5MB / 5.7s**,
+    而前端 MuseumDetail 根本不解析 artworks,下载完就扔。缺省 True 保老 App 不变。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return None
+    # artworks=False:整段藏品加载全跳过(查询/图/作者/URL 拼装都省),这才是 5.7s 的来源
     objs = (
-        db.query(MuseumObject)
-        .filter_by(museum_id=m.id)
-        .order_by(MuseumObject.popularity.desc())
-        .all()
+        (
+            db.query(MuseumObject)
+            .filter_by(museum_id=m.id)
+            .order_by(MuseumObject.popularity.desc())
+            .all()
+        )
+        if artworks
+        else []
     )
     obj_ids = [o.id for o in objs]
     # Batch-load all primary images in one query
@@ -390,7 +400,13 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
             "qid": m.qid,
             "source": _LEGACY_SOURCE,
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "artwork_count": len(artworks),
+            # 独立 COUNT:artworks=False 时列表为空,但件数是门面字段(App 显"17283 件"),
+            # 不能从列表长度推(测试 test_pack_skip_artworks_keeps_shape 抓到过)
+            "artwork_count": (
+                len(artworks)
+                if artworks
+                else db.query(MuseumObject).filter_by(museum_id=m.id).count()
+            ),
             "catalog_count": catalog_count,
             "archive_count": archive_count,
             "categories": categories,

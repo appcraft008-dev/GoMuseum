@@ -198,3 +198,39 @@ def test_pack_artist_falls_back_to_column_without_artist_row(session):
     session.commit()
     art = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}["Q8"]
     assert art["artist_en"] == "Anonymous Master"
+
+
+def test_pack_skip_artworks_keeps_shape(session):
+    """artworks=False 省掉藏品数组但**形状不变**(键都在,artworks 为空列表)——
+    契约加法原则:老 App 解析不能因此炸。卢浮宫实测全量 5.0MB/5.7s。"""
+    full = get_museum_pack(session, "orsay")
+    slim = get_museum_pack(session, "orsay", artworks=False)
+    assert set(slim.keys()) == set(full.keys())  # 键集合完全一致
+    assert slim["artworks"] == []
+    assert full["artworks"]  # 缺省仍返回(老 App 不变)
+    # 门面字段必须还在(前端 MuseumDetail 只要这些)
+    for k in ("categories", "description", "cover_image", "artwork_count"):
+        assert slim[k] == full[k]
+
+
+def test_pack_skip_artworks_avoids_object_queries(session):
+    """省掉的必须是**加载本身**,不是加载完再丢——否则没省到时间。
+    数实际发出的 SELECT:跳过藏品时不该出现 object_images 查询。"""
+    from sqlalchemy import event
+
+    seen = []
+
+    def _spy(conn, cur, stmt, params, ctx, many):
+        seen.append(stmt)
+
+    engine = session.get_bind()
+    event.listen(engine, "before_cursor_execute", _spy)
+    try:
+        get_museum_pack(session, "orsay", artworks=False)
+    finally:
+        event.remove(engine, "before_cursor_execute", _spy)
+    joined = " ".join(seen).lower()
+    # 分类/计数 facet 里的 object_images EXISTS 子查询是 app 要的,合理保留;
+    # 该消失的是**逐件行加载**:按热度排序取全部藏品行 + 按 id 批量取图。
+    assert "order by museum_objects.popularity" not in joined, f"仍在全量取藏品: {seen}"
+    assert "object_images.object_id in" not in joined, f"仍在批量取图: {seen}"
