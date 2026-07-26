@@ -173,3 +173,12 @@ def test_langs_from_museum_config_not_slug_chars(monkeypatch, capsys):
 
     assert "l" not in seen["langs"], f"逐字符了: {seen['langs']}"
     assert "en" in seen["langs"] and len(seen["langs"]) > 1
+
+
+def test_facade_latency_check_present(session):
+    """门面耗时进闸(纪律⑧):馆包全量曾 8.2s/5MB,涨上去要能被拦住。"""
+    _healthy(session)
+    res = build_checks(session, "m1", LANGS)
+    c = _by_name(res, "门面响应")
+    assert c["ok"], c["detail"]  # 小库应远小于 1s
+    assert "ms" in c["detail"]
