@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import logging
+import threading
 import time
 
 from app.models.artist import Artist
@@ -23,8 +25,12 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import _pick, _resolve_name, _sized
 from app.services.recognition.matcher import normalize, normalize_inv
 
+logger = logging.getLogger(__name__)
+
 _INDEX_TTL = 600  # 秒
 _index_cache: dict = {}  # 恒单键 None -> (ts, 全局索引)
+_refresh_lock = threading.Lock()
+_refreshing = False  # 后台重建中(防并发重复建)
 _INV_MIN = 3  # 归一化编号 <3 位不做精确匹配(防误伤)
 
 # 匹配分档(排序权重;换引擎后能搜到什么一致,唯排序权重可有细微差别)
@@ -104,17 +110,56 @@ def _build_global(db) -> list[dict]:
     return index
 
 
+def _refresh_index_async() -> None:
+    """后台重建索引(自带 session:不能跨线程用请求的 session)。失败留旧索引,
+    下次过期再试——搜不到新件好过整条查询 5xx。"""
+    global _refreshing
+    with _refresh_lock:
+        if _refreshing:
+            return
+        _refreshing = True
+
+    def _run():
+        global _refreshing
+        try:
+            from app.core.database import SessionLocal
+
+            db2 = SessionLocal()
+            try:
+                _index_cache[None] = (time.time(), _build_global(db2))
+            finally:
+                db2.close()
+        except Exception:
+            logger.exception("search index refresh failed, keeping stale index")
+        finally:
+            _refreshing = False
+
+    threading.Thread(target=_run, daemon=True, name="search-index-refresh").start()
+
+
 def build_search_index(db, museum_id=None) -> list[dict]:
-    """全局索引(进程内缓存);museum_id 给定时按其过滤(共享同一份缓存)。"""
+    """全局索引(进程内缓存);museum_id 给定时按其过滤(共享同一份缓存)。
+
+    **过期不阻塞**:命中过期索引时先返回旧的、后台重建(stale-while-revalidate)。
+    构建耗时随藏品量涨——prod 实测 24212 条目 **7.2s**,若同步重建,每个 worker
+    每 TTL 就有一个倒霉用户等 7 秒(2 worker × 600s TTL)。只有进程内首次(冷启)
+    才不得不同步等,故另在启动时预热。"""
     hit = _index_cache.get(None)
-    if hit and time.time() - hit[0] < _INDEX_TTL:
+    if hit:
+        if time.time() - hit[0] >= _INDEX_TTL:
+            _refresh_index_async()  # 本次仍用旧索引,不让用户等
         index = hit[1]
     else:
-        index = _build_global(db)
+        index = _build_global(db)  # 进程内首次:无旧索引可用,只能同步
         _index_cache[None] = (time.time(), index)
     if museum_id is None:
         return index
     return [e for e in index if e["museum_id"] == museum_id]
+
+
+def warm_search_index() -> None:
+    """启动预热:把冷启的那一次同步构建挪到启动时,用户请求永不撞冷建。"""
+    _refresh_index_async()
 
 
 def _score(entry: dict, qn: str, qinv: str) -> float:
