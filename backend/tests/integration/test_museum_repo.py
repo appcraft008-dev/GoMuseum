@@ -141,3 +141,20 @@ def test_pack_title_zh_falls_back_when_null(session):
     assert by_qid["Q2"]["title_zh"] == "Sunrise"  # 回退 title_en
     assert by_qid["Q3"]["title_zh"] == "Q3"  # 再回退 qid
     assert all(a["title_zh"] is not None for a in by_qid.values())
+
+
+def test_pack_title_en_falls_back_to_i18n(session):
+    # names(Batch 路径)只写 attributes.title_i18n 不写列;法语源大馆 title_en 列多为空
+    # (卢浮宫实测 9505/17283 列空、9497 件 i18n 里有英文名)→ 只读列会让英文用户
+    # 看到一半藏品标题空白。与 title_zh 对称:i18n 优先。
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    o = upsert_object(
+        session,
+        m.id,
+        {"qid": "Q9", "title_zh": None, "title_en": None, "attributes": {}},
+    )
+    o.attributes = {"title_i18n": {"en": "Battle of the Amazons", "zh": "亚马逊之战"}}
+    session.commit()
+    art = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}["Q9"]
+    assert art["title_en"] == "Battle of the Amazons"  # i18n 补上,不再 null
+    assert art["title_zh"] == "亚马逊之战"
