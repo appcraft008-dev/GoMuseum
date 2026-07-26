@@ -108,6 +108,14 @@ _LABELS_QUERY = """
 SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
 """
 
+# 批量版:一次查一批实体的标签。上大馆的硬前提——单件版是 N+1,卢浮宫 17283 件
+# = 17283 次串行 SPARQL(实测 ~5h,CPU 只占 12%,全在等网络)。
+_LABELS_BATCH_QUERY = """
+SELECT ?item ?l WHERE {{ VALUES ?item {{ {values} }} ?item rdfs:label ?l .
+  FILTER(lang(?l) IN ({langs})) }}
+"""
+_LABELS_BATCH = 200  # 与 _CREATORS_BATCH 同量级(URL 长度与 WDQS 超时的折中)
+
 
 # 字形变体语言:同一语言不同字形,可逐字确定性 OpenCC 转换(区别于独立语言 ca/pt——
 # 那些要真翻译)。lang → (Wikidata 标签变体优先序, OpenCC 方向)。
@@ -152,13 +160,7 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
     run_query = (
         run_query or _default_artist_query
     )  # ponytail: same generic SPARQL caller
-    query_langs = list(langs)
-    for lang in langs:
-        if lang in _SCRIPT_VARIANTS:
-            query_langs += [
-                v for v in _SCRIPT_VARIANTS[lang][0] if v not in query_langs
-            ]
-    langlist = ", ".join('"%s"' % x for x in query_langs)
+    langlist = ", ".join('"%s"' % x for x in _query_langs(langs))
     rows = run_query(_LABELS_QUERY.format(qid=qid, langs=langlist))
     raw: dict = {}
     for row in rows:
@@ -167,6 +169,20 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
         val = lv.get("value")
         if lang and val and lang not in raw:
             raw[lang] = val
+    return _collapse_variants(raw, langs)
+
+
+def _query_langs(langs: list) -> list:
+    """目标语言 + 各自的字形变体(zh 要连 zh-hans/zh-cn 一起查)。"""
+    out = list(langs)
+    for lang in langs:
+        if lang in _SCRIPT_VARIANTS:
+            out += [v for v in _SCRIPT_VARIANTS[lang][0] if v not in out]
+    return out
+
+
+def _collapse_variants(raw: dict, langs: list) -> dict:
+    """原始 {语言变体: 标签} → {目标语言: 标签}。单件版与批量版共用同一语义。"""
     out = {}
     for lang in langs:
         if lang in _SCRIPT_VARIANTS:
@@ -178,6 +194,47 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
         elif raw.get(lang):
             out[lang] = raw[lang]
     return out
+
+
+def fetch_wikidata_labels_batch(qids, langs: list, *, run_query=None) -> dict:
+    """批量版:{qid: {lang: label}}(只含查到的)。语义与单件版逐字一致,只是把
+    N 次网络往返压成 N/200 次——上万件大馆的硬前提(卢浮宫单件版跑了 ~5h)。
+    非 Wikidata 把手直接跳过;单批失败重试一次仍败则跳过该批(幂等重跑再补)。"""
+    import logging
+    import time
+
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    real = [q for q in dict.fromkeys(qids) if is_wikidata_qid(q)]
+    if not real:
+        return {}
+    run_query = run_query or _default_artist_query
+    langlist = ", ".join('"%s"' % x for x in _query_langs(langs))
+    raw_by_qid: dict = {}
+    for i in range(0, len(real), _LABELS_BATCH):
+        batch = real[i : i + _LABELS_BATCH]
+        sparql = _LABELS_BATCH_QUERY.format(
+            values=" ".join(f"wd:{q}" for q in batch), langs=langlist
+        )
+        rows = None
+        for attempt in (1, 2):
+            try:
+                rows = run_query(sparql)
+                break
+            except Exception:
+                if attempt == 1:
+                    time.sleep(5)
+                else:
+                    logging.getLogger(__name__).exception(
+                        "labels batch failed, skip %d qids", len(batch)
+                    )
+        for row in rows or []:
+            q = (row.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
+            lv = row.get("l") or {}
+            lang, val = (lv.get("xml:lang") or lv.get("lang")), lv.get("value")
+            if q and lang and val:
+                raw_by_qid.setdefault(q, {}).setdefault(lang, val)
+    return {q: _collapse_variants(raw, langs) for q, raw in raw_by_qid.items()}
 
 
 def fetch_artist_material(qid, registry, *, run_query=None, country_lang="fr") -> dict:

@@ -35,9 +35,8 @@ def collect_missing(
     from app.models.museum import Museum
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.backfill import _clean_i18n, _fetch_creators
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import fetch_wikidata_labels_batch
 
-    fetch_labels = fetch_labels or fetch_wikidata_labels
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return []
@@ -51,6 +50,18 @@ def collect_missing(
     creators = (fetch_creators or _fetch_creators)(
         [o.qid for o in objs if not (o.attributes or {}).get("artist_qid")]
     )
+    # 标签批量预取(上大馆硬前提):单件版是 N+1——卢浮宫 17283 件 = 17283 次串行
+    # SPARQL,实测 ~5h 且 CPU 只占 12%(全在等网络)。批量 200/次 → 往返少 200 倍。
+    # 注入了 fetch_labels 的调用方(测试)仍走单件语义,不破坏既有契约。
+    label_cache: dict = {}
+    if fetch_labels is None:
+        label_cache = fetch_wikidata_labels_batch([o.qid for o in objs], langs)
+
+    def _labels(qid):
+        if fetch_labels is not None:
+            return fetch_labels(qid, langs)
+        return label_cache.get(qid, {})
+
     tasks: list[BatchTask] = []
     artist_qids: set = set()
     artist_name_en: dict = {}  # 作者QID → 作品行上的 en 名(建 Artist 行的轴心)
@@ -68,7 +79,7 @@ def collect_missing(
         missing = [lg for lg in langs if not ti.get(lg)]
         if missing:
             try:
-                labels = fetch_labels(o.qid, langs)
+                labels = _labels(o.qid)
             except Exception:  # 单件网络失败跳过(纪律①),重跑再补
                 continue
             for lg in langs:
@@ -84,6 +95,9 @@ def collect_missing(
                         tasks.append(BatchTask(f"title|{o.qid}|{lg}", pivot, lg))
         if (i + 1) % 200 == 0:
             db.commit()  # 分批落盘(纪律②)
+    # 作者标签同样批量预取(作者 QID 不在对象缓存里,漏了会让作者拿不到权威名)
+    if fetch_labels is None and artist_qids:
+        label_cache.update(fetch_wikidata_labels_batch(sorted(artist_qids), langs))
     for aq in sorted(artist_qids):
         art = db.query(Artist).filter_by(qid=aq).first()
         if not art:  # 新馆首跑无 Artist 行 → 建行(与同步路径一致,否则作者全丢)
@@ -95,7 +109,7 @@ def collect_missing(
         # 权威标签优先(名家在 Wikidata 多语齐全,免翻译且更准)
         if any(not ni.get(lg) for lg in langs):
             try:
-                for lg, v in (fetch_labels(aq, langs) or {}).items():
+                for lg, v in (_labels(aq) or {}).items():
                     if v and not ni.get(lg):
                         ni[lg] = v
             except Exception:  # 单个作者抓取失败跳过(纪律①),重跑再补
