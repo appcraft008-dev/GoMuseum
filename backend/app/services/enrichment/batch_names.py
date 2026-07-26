@@ -28,11 +28,13 @@ class BatchTask:
     lang: str
 
 
-def collect_missing(db, slug, langs, *, fetch_labels=None, limit=None):
+def collect_missing(
+    db, slug, langs, *, fetch_labels=None, fetch_creators=None, limit=None
+):
     from app.models.artist import Artist
     from app.models.museum import Museum
     from app.models.museum_object import MuseumObject
-    from app.services.enrichment.backfill import _clean_i18n
+    from app.services.enrichment.backfill import _clean_i18n, _fetch_creators
     from app.services.enrichment.material import fetch_wikidata_labels
 
     fetch_labels = fetch_labels or fetch_wikidata_labels
@@ -42,13 +44,27 @@ def collect_missing(db, slug, langs, *, fetch_labels=None, limit=None):
     objs = db.query(MuseumObject).filter_by(museum_id=m.id).all()
     if limit:
         objs = objs[:limit]
+    # P170 作者身份解析:与同步 names 路径(backfill)对齐。此前 batch 路径只读
+    # 已有的 artist_qid、从不抓取,新馆 catalog 不产 artist_qid → 作者一个都建不了
+    # (卢浮宫实测 17283 件仅 1 件有 artist_qid,10041 件作者名无中文)。
+    # 路径不等价是最难发现的缺陷:流程全绿、数字漂亮,缺的东西无声无息。
+    creators = (fetch_creators or _fetch_creators)(
+        [o.qid for o in objs if not (o.attributes or {}).get("artist_qid")]
+    )
     tasks: list[BatchTask] = []
     artist_qids: set = set()
+    artist_name_en: dict = {}  # 作者QID → 作品行上的 en 名(建 Artist 行的轴心)
     for i, o in enumerate(objs):
         attrs = dict(o.attributes or {})
         ti = _clean_i18n(attrs.get("title_i18n"))
-        if aq := attrs.get("artist_qid"):
+        aq = attrs.get("artist_qid") or creators.get(o.qid)
+        if aq:
+            if attrs.get("artist_qid") != aq:
+                attrs = {**attrs, "artist_qid": aq}
+                o.attributes = attrs  # 解析结果当场落库(幂等,重跑不再抓)
             artist_qids.add(aq)
+            if o.artist_en:
+                artist_name_en.setdefault(aq, o.artist_en)
         missing = [lg for lg in langs if not ti.get(lg)]
         if missing:
             try:
@@ -70,9 +86,21 @@ def collect_missing(db, slug, langs, *, fetch_labels=None, limit=None):
             db.commit()  # 分批落盘(纪律②)
     for aq in sorted(artist_qids):
         art = db.query(Artist).filter_by(qid=aq).first()
-        if not art:
-            continue
+        if not art:  # 新馆首跑无 Artist 行 → 建行(与同步路径一致,否则作者全丢)
+            art = Artist(qid=aq)
+            db.add(art)
+        if not art.name_en and artist_name_en.get(aq):
+            art.name_en = artist_name_en[aq]
         ni = _clean_i18n(art.name_i18n)
+        # 权威标签优先(名家在 Wikidata 多语齐全,免翻译且更准)
+        if any(not ni.get(lg) for lg in langs):
+            try:
+                for lg, v in (fetch_labels(aq, langs) or {}).items():
+                    if v and not ni.get(lg):
+                        ni[lg] = v
+            except Exception:  # 单个作者抓取失败跳过(纪律①),重跑再补
+                pass
+            art.name_i18n = ni
         pivot = ni.get("en") or art.name_en
         if not pivot:
             continue

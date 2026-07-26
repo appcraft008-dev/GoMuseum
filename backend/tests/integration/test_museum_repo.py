@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import get_museum_pack, list_museums
@@ -18,7 +19,12 @@ def session():
     )
     Base.metadata.create_all(
         bind=engine,
-        tables=[Museum.__table__, MuseumObject.__table__, ObjectImage.__table__],
+        tables=[
+            Museum.__table__,
+            MuseumObject.__table__,
+            ObjectImage.__table__,
+            Artist.__table__,
+        ],
     )
     s = sessionmaker(bind=engine)()
     m = upsert_museum(
@@ -141,3 +147,54 @@ def test_pack_title_zh_falls_back_when_null(session):
     assert by_qid["Q2"]["title_zh"] == "Sunrise"  # 回退 title_en
     assert by_qid["Q3"]["title_zh"] == "Q3"  # 再回退 qid
     assert all(a["title_zh"] is not None for a in by_qid.values())
+
+
+def test_pack_title_en_falls_back_to_i18n(session):
+    # names(Batch 路径)只写 attributes.title_i18n 不写列;法语源大馆 title_en 列多为空
+    # (卢浮宫实测 9505/17283 列空、9497 件 i18n 里有英文名)→ 只读列会让英文用户
+    # 看到一半藏品标题空白。与 title_zh 对称:i18n 优先。
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    o = upsert_object(
+        session,
+        m.id,
+        {"qid": "Q9", "title_zh": None, "title_en": None, "attributes": {}},
+    )
+    o.attributes = {"title_i18n": {"en": "Battle of the Amazons", "zh": "亚马逊之战"}}
+    session.commit()
+    art = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}["Q9"]
+    assert art["title_en"] == "Battle of the Amazons"  # i18n 补上,不再 null
+    assert art["title_zh"] == "亚马逊之战"
+
+
+def test_pack_artist_name_localized_from_artist_i18n(session):
+    # 作者本地化真相源是 Artist.name_i18n(names 写这里,不写 MuseumObject.artist_* 列)。
+    # 馆包此前只读裸列 → 卢浮宫 10041 件作者名在中文视图全显拉丁文。
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    o = upsert_object(
+        session,
+        m.id,
+        {"qid": "Q7", "title_en": "The Barque of Dante", "attributes": {}},
+    )
+    o.artist_en = "Eugène Delacroix"
+    o.attributes = {"artist_qid": "Q33477"}
+    session.add(
+        Artist(
+            qid="Q33477",
+            name_en="Eugène Delacroix",
+            name_i18n={"zh": "欧仁·德拉克罗瓦", "en": "Eugène Delacroix"},
+        )
+    )
+    session.commit()
+    art = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}["Q7"]
+    assert art["artist_zh"] == "欧仁·德拉克罗瓦"  # 不再显拉丁文
+    assert art["artist_en"] == "Eugène Delacroix"
+
+
+def test_pack_artist_falls_back_to_column_without_artist_row(session):
+    # 无 Artist 行(未解析作者)→ 回落对象列,不返 null
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    o = upsert_object(session, m.id, {"qid": "Q8", "title_en": "X", "attributes": {}})
+    o.artist_en = "Anonymous Master"
+    session.commit()
+    art = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}["Q8"]
+    assert art["artist_en"] == "Anonymous Master"

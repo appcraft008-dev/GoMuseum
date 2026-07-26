@@ -205,7 +205,23 @@
      sources: [joconde, wikipedia]  # 每馆补充源;缺省 [wikipedia]。Wikidata 是脊柱不在此列
      fetch_limit / sample_size / sample_qids
      languages: []             # 空=用 DEFAULT_LANGUAGES;或指定子集
+     # ↓ 仅"部门制/百科式大馆"需要(2026-07-25 卢浮宫定,见下)
+     collection_qids: [Q..., ...]   # P195 挂部门而非馆本体时,列全部部门 QID
+     collect_all_types: true        # 整部门全收,跳过 categories 类目过滤
    ```
+   **⚠️ 两个大馆开关(卢浮宫落地,惠及大英/Met 等百科式馆):**
+   - **`collection_qids`(多收藏锚点)**:大馆藏品的 P195 常挂**部门实体**而非馆本体
+     (卢浮宫 Q19675 直挂仅 17 件,12 个部门合计 18.4k)。**判别方法**——先跑
+     `?item wdt:P195 ?mus . ?mus wdt:P361 wd:<馆QID>` GROUP BY 计数,若部门件数远超
+     馆本体直挂数,就把馆本体+全部部门 QID 列进 `collection_qids`。缺省不写=回退
+     `[wikidata_qid]`,单锚点馆行为逐字不变。**馆身份仍是 `wikidata_qid`**(建筑照 P18/
+     intro 材料/对外把手都用它),身份与收藏锚点是两个概念,不要混用一个字段。
+   - **`collect_all_types`(整部门全收)**:古物/装饰艺术部藏品的 P31 是"钻石/石碑/花瓶/
+     石棺"等**长尾几百种**(卢浮宫实测 top30 类型仅覆盖 36%),`categories` 白名单列不完
+     → 置 true 跳过类目过滤,整部门全收;top 类型在 `category_config` 补 P31 映射
+     (decorative_arts/artifact/textile/manuscript,架构已预留),长尾留 unknown 走
+     `_FALLBACK` 段落(宁缺毋滥,讲解仍接地)。**代价**:件数可能翻倍(卢浮宫 10.4k→17.3k),
+     names 成本同比例上升,先算账再开。
 2. **铺目录**:`python scripts/onboard.py <slug> catalog --target <staging|prod> [--limit N]`
    → `WikidataCatalog.list` 列 stub(只收有图,§收录策略)→ `merge_stubs` 去重 → `load_stubs` 落库(`content_status=stub`,元数据+路由 external_ids/wiki_titles)。新类目先跑一次 `scripts/seed_sections.py`(幂等)。
 3. **回填显示名**:`python scripts/onboard.py <slug> names --target <env>`
@@ -219,6 +235,15 @@
    `wikidata_qid` 的 Wikidata P18(馆建筑外观照,自动下载物化);无 P18 才回落藏品图逐件
    得体性判定。**这是"零代码上新馆"最新的一条自动收益**——不用为封面单独准备图源。
 7. 端点自动产出上述五个契约;前端零改接入。
+
+> **⚠️ 上新馆期间的"半成品可见"(2026-07-26 卢浮宫实测)**:`Museum` 无任何可见性开关——
+> **catalog 一跑完,馆就出现在 `GET /museums` 里**,而 names/images 还要跑数小时。用户在这段
+> 窗口会看到半成品:标题中英混杂(权威标签已落、机翻未回填)、作者名全拉丁文、缩略图大面积缺失。
+> 卢浮宫实测该窗口约 **6 小时**。
+> **当前对策(无代码)**:大馆上新按 catalog → names → images 顺序**连续跑完再对外说**,期间不做
+> 版本发布、不引导用户进该馆;小馆(千件级)窗口短可忽略。
+> **待办**:若后续上万件级馆更多,再考虑给 Museum 加发布闸(数据就绪才进 `GET /museums`)——
+> 属功能新增,需契约版本化考量,不在零代码范围内。
 
 **非 Wikidata 主源的馆**(如美国 Met):一次性写个 `CatalogSource` 连接器(同插件模式,核心零改),其余同上。
 
@@ -238,6 +263,19 @@
 >    启动用 `docker exec -d` + `setsid`(SSH 断连不死);日志逐行 flush 到文件(教训:staging Joconde
 >    补名首跑中途死、日志 0 字节,**死因无法回溯**;重建带日志脚本后 1038 件零失败跑完)。
 >    "监控到进程消失"≠"任务成功"——收尾判断只认日志 DONE 行 + 数据核验(纪律 4 幂等保证随时续跑)。
+> 7. **外部服务硬上限 + 外部自由文本必须按列宽截断**(2026-07-25 卢浮宫 17k 件添,三个坑
+>    **全是 staging 小样测不出、只有规模才现形的**)——上更大馆(大英/Met)前按此自查:
+>    - **OpenAI Batch 单 job 上限 5 万请求**(硬限,超了提交即 `maximum_requests_exceeded`,
+>      不是软限流)。件数×语种很容易破:17283×多语 ≫ 5 万 → `batch_names.run` 切 ≤50k 块,
+>      **先全部提交**(OpenAI 侧并行跑,别串行等)再逐块收,`job_id` 存逗号分隔多 id 供续传。
+>      staging 只 810 任务故从未暴露。
+>    - **Commons 署名(credit)是自由文本,可长达数百字**(多段落说明+英法双语+联系方式),
+>      超 `varchar(255)` 直接 `StringDataRightTruncation` **崩掉整轮物化**(实测 1369/10159 处崩)。
+>      入库前一律按列宽截断(`_clip`),截断不影响合规归属。**凡外部来源的自由文本字段,
+>      落库前都要问一句"最长能多长"**。
+>    - **WDQS 深翻页(~18k 件)高频瞬时 502/ReadTimeout**,且 catalog 落库全有或全无、
+>      一崩整批丢 → `run_sparql` 统一重试 4 次指数退避(5/10/20s)+ 超时 120s,两个 SPARQL
+>      消费者共用。三次全量跑两次栽在这上面才补的。
 
 ---
 
@@ -254,6 +292,26 @@
 > **语言无关**:新增语言(de/es/it…)**只加进 `DEFAULT_LANGUAGES` 语言集**,生成时一次性抓该实体全部目标语言的 Wikidata labels、缺的从 en 翻译 —— **同一套机制、零 per-language 代码**。这就是"加语言=加配置"。
 > **配套**:**QID 是全系统匹配键**(识别/查询/去重/跳转都用 qid);显示名纯展示,名字回退绝不影响匹配。避开脏格式(如 Joconde 的 "Lastname First (dates)")。
 > **非 Wikidata 条目的身份(✅2026-07-16 #255 定)**:无 Wikidata 条目的件,qid 位=**合成把手 `<source>-<reference>`**(如 `joconde-000SC010033`)——对外稳定、全系统当 qid 同键用(识别/搜索/跳转零分叉);内部检索按 UUID 回查。`is_wikidata_qid()`(Q+数字)做门控:合成把手**跳过一切 Wikidata SPARQL**(省成本+避免 `wd:<合成号>` 垃圾查询)。**names 配方**:这类件无权威标签可抓 → 直接走显示名规则②(title_en 轴心纯翻译,staging 实证 1038 件×10 语零失败);**无 title_en 则无轴心 → 留空不硬造**(宁缺毋滥)。上新馆接任何非 Wikidata 源(区域目录/官方馆藏库)照此,零核心改动。
+> **⭐ 多语字段的读写对称性(2026-07-26 卢浮宫定,两处实测事故)**:显示名的**写入落在 i18n JSON**
+> (`attributes.title_i18n` / `Artist.name_i18n`),**读取必须 i18n 优先 + 列兜底,且所有语言维度对称**。
+> 不对称 = 数据在库里却到不了用户,而且流程全绿、数字漂亮、无声无息:
+> - `title_zh` 早做了 i18n 优先,`title_en` 只读列 → 卢浮宫 **9505/17283 件列空(其中 9497 件 i18n
+>   里其实有英文名)**,英文用户看到一半藏品标题空白(#323 修)。
+> - 作者本地化名真相源是 `Artist.name_i18n`,馆包却只读 `MuseumObject.artist_*` 裸列(详情接口早用
+>   `_resolve_name` 做对了、馆包漏了)→ 卢浮宫 **10041 件作者名中文视图全显拉丁文**。
+>
+> **自查**:新增/改动任何多语字段时,列出"谁写、谁读",两边必须同源;`_resolve_name(i18n, lang,
+> {列}, 兜底)` 是统一入口,别绕过它直接读列。
+>
+> **⭐ 同一命令多实现路径必须功能等价(2026-07-26 定)**:`names` 有 sync 与 `--use-batch` 两条路径,
+> **batch 路径漏了 P170 作者解析**(只读已有 `artist_qid`、从不抓取)——新馆 catalog 不产 `artist_qid`,
+> 于是 Artist 行一个都建不出来(卢浮宫 17283 件仅 1 件有)。**"用哪条路径跑"绝不该决定数据完整性**。
+> 加/改批命令的任一路径时,逐项对照另一路径的能力清单;差异必须在契约里显式声明并给补救命令。
+>
+> **⭐ 不可假定 en 轴心存在(2026-07-26 定)**:非英语源大馆 catalog 后 `title_en` 列大面积为空
+> (卢浮宫 **55%**,藏品多只有法语标签)。管线任何一步都不能假设"英文一定有"——轴心取
+> `ti["en"] or 任一已有语言`,回退链要能从法语等源语言起步。
+
 > **解析时机 = 铺目录时(2026-07-03 定)**:显示名是**目录元数据、不是生成内容**——catalog 后立即跑 `onboard.py <slug> names --target <env>`(幂等可重跑),全馆补齐 `title_i18n`/`artist_qid`/Artist 名字行;stub 一进目录就有完整多语显示名,**不等内容生成**(此前只在 generate 时填,导致列表页大量 stub 在 zh 视图显英/法文名)。generate 时同一机制增量修补。en 也权威优先(纠正目录把非英文标签误存 title_en,如 "Régates à Argenteuil")。
 
 > **⚠️ 本地化完整性原则(2026-07-03 定,分类标签教训)。**

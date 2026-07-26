@@ -6,73 +6,14 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/network/image_request.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
-
-/// 附近博物馆种子数据（馆方接口接入前的演示内容）。
-/// 中英两套，按 UI 语言显示；状态走 l10n.statusOpen。
-class _NearbyMuseum {
-  const _NearbyMuseum({
-    required this.name,
-    required this.nameEn,
-    required this.meta,
-    required this.metaEn,
-    required this.cover,
-    this.topWorks = const [],
-    this.topWorksLabel,
-    this.topWorksLabelEn,
-    this.slug,
-  });
-
-  final String name;
-  final String nameEn;
-  final String meta;
-  final String metaEn;
-  final GmArtwork cover;
-  final List<GmArtwork> topWorks;
-
-  /// 已上线馆的 slug(可点进馆藏目录);null=未上线(卡片不可点)。
-  final String? slug;
-  final String? topWorksLabel;
-  final String? topWorksLabelEn;
-
-  String localizedName(String lang) => lang == 'zh' ? name : nameEn;
-  String localizedMeta(String lang) => lang == 'zh' ? meta : metaEn;
-  String? localizedTopWorks(String lang) =>
-      lang == 'zh' ? topWorksLabel : topWorksLabelEn;
-}
-
-const _nearbyMuseums = [
-  _NearbyMuseum(
-    name: '奥赛博物馆',
-    nameEn: "Musée d'Orsay",
-    meta: '至 21:45 · 0.8 km · €16',
-    metaEn: 'Until 21:45 · 0.8 km · €16',
-    cover: GmArt.orsayHall,
-    topWorks: [GmArt.rhone, GmArt.self1889, GmArt.bedroom],
-    topWorksLabel: '馆藏 Top 3\n星夜 · 自画像 · 卧室',
-    topWorksLabelEn: 'Top 3\nStarry Night · Self-Portrait · Bedroom',
-    slug: 'orsay',
-  ),
-  _NearbyMuseum(
-    name: '橘园美术馆',
-    nameEn: "Musée de l'Orangerie",
-    meta: '至 18:00 · 1.6 km · €12',
-    metaEn: 'Until 18:00 · 1.6 km · €12',
-    cover: GmArt.plain,
-    slug: 'orangerie',
-  ),
-  _NearbyMuseum(
-    name: '卢浮宫',
-    nameEn: 'Louvre',
-    meta: '至 18:00 · 1.9 km · €22',
-    metaEn: 'Until 18:00 · 1.9 km · €22',
-    cover: GmArt.crows,
-  ),
-];
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -127,7 +68,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    _museumCards(),
+                    // A1 加载中/失败:留白不塞占位馆(宁缺毋滥);探索页有完整重试入口
+                    ref.watch(museumsListProvider).when(
+                          loading: () => const SizedBox(height: 344),
+                          error: (_, __) => const SizedBox(height: 344),
+                          data: (museums) {
+                            if (museums.length != _cardCount) {
+                              WidgetsBinding.instance.addPostFrameCallback(
+                                (_) => mounted
+                                    ? setState(
+                                        () => _cardCount = museums.length)
+                                    : null,
+                              );
+                            }
+                            return _museumCards(museums);
+                          },
+                        ),
                     _pageDots(gm),
                   ],
                 ),
@@ -184,7 +140,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _museumCards() {
+  /// 馆卡片走 A1 `GET /museums`(2026-07-26 API 化):上新馆自动出现在首页,
+  /// 不再硬编码——此前卢浮宫卡片写死且无 slug,上线后点不动(同橘园 #300 教训)。
+  Widget _museumCards(List<MuseumSummary> museums) {
     return SizedBox(
       // 留足余量：拉丁衬线行高略高 + 多语言文案，避免卡片底部溢出。
       height: 344,
@@ -193,26 +151,25 @@ class _HomePageState extends ConsumerState<HomePage> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(left: 26, right: 26),
         physics: const _SnapScrollPhysics(itemExtent: _cardExtent),
-        itemCount: _nearbyMuseums.length,
+        itemCount: museums.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (context, index) => _MuseumCard(
-          museum: _nearbyMuseums[index],
-          // 已上线馆(slug 非空)可点进馆藏目录;未上线(卢浮宫)不可点
-          onTap: _nearbyMuseums[index].slug != null
-              ? () => context.push('/museum/${_nearbyMuseums[index].slug}')
-              : null,
+          museum: museums[index],
+          onTap: () => context.push('/museum/${museums[index].slug}'),
         ),
       ),
     );
   }
 
   static const double _cardExtent = 268 + 14;
+  int _cardCount = 0; // 当前馆数(分页点/滚动 clamp 用;API 到达后更新)
 
   late final ScrollController _cardScrollController = ScrollController()
     ..addListener(() {
+      if (_cardCount == 0) return;
       final page = (_cardScrollController.offset / _cardExtent)
           .round()
-          .clamp(0, _nearbyMuseums.length - 1);
+          .clamp(0, _cardCount - 1);
       if (page != _cardPage) setState(() => _cardPage = page);
     });
 
@@ -228,7 +185,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          for (var i = 0; i < _nearbyMuseums.length; i++) ...[
+          for (var i = 0; i < _cardCount; i++) ...[
             if (i > 0) const SizedBox(width: 6),
             AnimatedContainer(
               duration: const Duration(milliseconds: 150),
@@ -277,7 +234,7 @@ class _SnapScrollPhysics extends ScrollPhysics {
 class _MuseumCard extends StatelessWidget {
   const _MuseumCard({required this.museum, this.onTap});
 
-  final _NearbyMuseum museum;
+  final MuseumSummary museum;
   final VoidCallback? onTap;
 
   @override
@@ -307,10 +264,28 @@ class _MuseumCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(9, 9, 9, 0),
-                  child: GmInnerImage(
-                      image: AssetImage(museum.cover.asset), height: 132),
+                // 封面走 A1 cover_image(建筑外观照);无合规封面 → 占位图标
+                Container(
+                  height: 132,
+                  margin: const EdgeInsets.fromLTRB(9, 9, 9, 0),
+                  color: gm.chipBg,
+                  width: double.infinity,
+                  child: museum.coverImage != null
+                      ? Image.network(
+                          sizedImageUrl(museum.coverImage!, 600),
+                          fit: BoxFit.cover,
+                          headers: kImageRequestHeaders,
+                          loadingBuilder: (_, child, p) =>
+                              p == null ? child : const SizedBox.shrink(),
+                          errorBuilder: (_, __, ___) => Center(
+                            child: GmIcon(GmIcons.ticket,
+                                size: 36, color: gm.faint),
+                          ),
+                        )
+                      : Center(
+                          child:
+                              GmIcon(GmIcons.ticket, size: 36, color: gm.faint),
+                        ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -330,40 +305,22 @@ class _MuseumCard extends StatelessWidget {
                                   size: 17, weight: FontWeight.w600),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.statusOpen,
-                            style: GmText.sans(
-                              size: 11.5,
-                              color: gm.accent,
-                              weight: FontWeight.w600,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Text(museum.localizedMeta(lang),
+                      // meta 只写真实有的(城市 + 藏品数)。营业时间/距离/票价属
+                      // 易变运营数据,后端不存也不脏补(契约红线),前端不再编造。
+                      Text(museum.localizedCity(lang),
                           style: GmText.sans(size: 12, color: gm.sub)),
-                      if (museum.topWorks.isNotEmpty) ...[
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 11),
-                          child: GmHairline(),
-                        ),
+                      if (museum.artworkCount > 0) ...[
+                        const SizedBox(height: 8),
                         Row(
                           children: [
-                            for (final work in museum.topWorks) ...[
-                              GmThumb(image: AssetImage(work.asset)),
-                              const SizedBox(width: 6),
-                            ],
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                museum.localizedTopWorks(lang) ?? '',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: GmText.sans(
-                                    size: 11, color: gm.sub, height: 1.5),
-                              ),
+                            GmIcon(GmIcons.ticket, size: 14, color: gm.faint),
+                            const SizedBox(width: 5),
+                            Text(
+                              l10n.artworkCountLabel(museum.artworkCount),
+                              style: GmText.sans(size: 12, color: gm.sub),
                             ),
                           ],
                         ),

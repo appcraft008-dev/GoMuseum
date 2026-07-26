@@ -294,6 +294,30 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
         ):
             images_by_obj[img.object_id] = img
 
+    # 作者名批量预加载:本地化名的真相源是 Artist.name_i18n(names 写这里,不写
+    # MuseumObject.artist_* 列)。此前馆包只读裸列 → 卢浮宫 10041 件作者名在中文
+    # 视图全显拉丁文。与详情接口的 _resolve_name 同源(那里早就做对了)。
+    artists_by_qid = {}
+    aqids = {aq for o in objs if (aq := (o.attributes or {}).get("artist_qid"))}
+    if aqids:
+        from app.models.artist import Artist
+
+        artists_by_qid = {
+            a.qid: a for a in db.query(Artist).filter(Artist.qid.in_(list(aqids)))
+        }
+
+    def _artist_name(o, language):
+        art = artists_by_qid.get((o.attributes or {}).get("artist_qid"))
+        return _resolve_name(
+            art.name_i18n if art else None,
+            language,
+            {
+                "zh": (art.name_zh if art else None) or o.artist_zh,
+                "en": (art.name_en if art else None) or o.artist_en,
+            },
+            (art.name_en if art else None) or o.artist_en or o.artist_zh,
+        )
+
     storage = get_object_storage()
 
     def _resolve_image(obj_id, fallback_src):
@@ -311,9 +335,15 @@ def get_museum_pack(db: Session, slug: str, language: str = "zh") -> dict | None
             or o.title_zh
             or o.title_en
             or o.qid,
-            "title_en": o.title_en,
-            "artist_zh": o.artist_zh,
-            "artist_en": o.artist_en,
+            # title_en 同样 title_i18n 优先(与上面 title_zh 对称):names(尤其
+            # Batch 路径)只回填 attributes.title_i18n、不写列,法语源大馆的 title_en
+            # 列多为空——卢浮宫实测 9505/17283 件列空、其中 9497 件 i18n 里其实有
+            # 英文名,只读列会让英文用户看到一半藏品标题空白。
+            "title_en": (o.attributes or {}).get("title_i18n", {}).get("en")
+            or o.title_en,
+            # 作者名同样 i18n 优先(真相源 Artist.name_i18n),与 title_* 对称
+            "artist_zh": _artist_name(o, "zh"),
+            "artist_en": _artist_name(o, "en"),
             "year": o.year,
             "period_zh": o.period_zh,
             "period_en": o.period_en,
