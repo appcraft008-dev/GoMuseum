@@ -62,13 +62,13 @@ def build_checks(db, slug: str, langs: list[str]) -> dict:
         return {"slug": slug, "checks": checks, "passed": False}
 
     # ① 各语言译名覆盖(names 漏跑/半途崩 → 列表大面积外文)
-    worst_lang, worst_pct = None, 100.0
+    worst_lang, worst_pct = (langs[0] if langs else "-"), 100.0
     for lg in langs:
         n = sum(
             1 for _q, _t, _a, at in rows if ((at or {}).get("title_i18n") or {}).get(lg)
         )
         p = _pct(n, total)
-        if p < worst_pct:
+        if p <= worst_pct:  # <= 保证全 100% 时也报出一个真实语言名,不显 None
             worst_lang, worst_pct = lg, p
     checks.append(
         _check(
