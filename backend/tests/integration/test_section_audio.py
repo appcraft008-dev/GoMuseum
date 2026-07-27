@@ -62,7 +62,8 @@ def session():
 def test_persist_section_audio_uploads_and_writes_key(session):
     storage = FakeStorage()
     key = persist_section_audio(session, "Q1", "en", "overview", b"MP3", storage)
-    assert key == "object-audio/Q1/en/overview.mp3"
+    # key 带不可推测随机后缀(付费墙前提:旧固定格式可由 qid 拼出直链绕过鉴权)
+    assert key.startswith("object-audio/Q1/en/overview-") and key.endswith(".mp3")
     assert storage.exists(key)
     row = (
         session.query(ObjectContentSection)
@@ -101,15 +102,14 @@ def test_persist_section_audio_upsert_updates_existing_row(session):
         .all()
     )
     assert len(rows) == 1
-    assert rows[0].audio_key == "object-audio/Q1/en/overview.mp3"
+    assert rows[0].audio_key.startswith("object-audio/Q1/en/overview-")
 
 
 def test_get_section_audio_key_returns_key_after_persist(session):
     storage = FakeStorage()
     persist_section_audio(session, "Q1", "en", "overview", b"MP3", storage)
-    assert (
-        get_section_audio_key(session, "Q1", "en", "overview")
-        == "object-audio/Q1/en/overview.mp3"
+    assert get_section_audio_key(session, "Q1", "en", "overview").startswith(
+        "object-audio/Q1/en/overview-"
     )
 
 

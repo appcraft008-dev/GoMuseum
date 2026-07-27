@@ -95,8 +95,10 @@ def test_section_mode_generates_and_persists(ctx):
     assert r.status_code == 200
     body = r.json()
     assert body["cached"] is False
-    assert body["audio_url"] == "https://cdn.test/object-audio/Q1/en/overview.mp3"
-    assert storage.exists("object-audio/Q1/en/overview.mp3")
+    # key 带不可推测随机后缀(付费墙前提),故按前缀断言
+    assert body["audio_url"].startswith("https://cdn.test/object-audio/Q1/en/overview-")
+    key = body["audio_url"].removeprefix("https://cdn.test/")
+    assert storage.exists(key)
     assert fake_tts.calls == 1
 
 
