@@ -13,7 +13,10 @@ from datetime import datetime, timedelta, timezone
 
 from app.models.purchase import Entitlement
 
-FREE_RECOGNITIONS = 5  # 跨馆免费识别次数(3 次太脆:真实场景有失败,体验被消耗)
+# 跨馆免费识别次数。⚠️ 仅当 user_benefits 行不存在时的兜底,**真相源是 DB 里那一列**
+# (模型 default=10)。2026-07-27 曾误以为线上是 3 次、讨论要"给更多改成 5"——
+# 实测 prod 真实用户都是 10,改 5 反而是砍半。保持与模型 default 一致。
+FREE_RECOGNITIONS = 10
 PASS_DURATION = timedelta(days=7)
 
 # 权益状态(对外统一口径)
