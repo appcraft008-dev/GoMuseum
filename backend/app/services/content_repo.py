@@ -46,6 +46,22 @@ def persist_explanation(
     return True
 
 
+def audio_key(*parts: str) -> str:
+    """音频 key 带不可推测随机后缀。
+
+    ⚠️ 付费墙将建在语音上,而 R2 的公开 dev URL 是**整桶级**的(图片必须公开)——
+    key 一旦可推测(旧格式 object-audio/{qid}/{lang}/{section}.mp3),任何人拿 qid
+    就能拼出直链、绕过一切鉴权(2026-07-27 实测无鉴权 HTTP 200 拿到完整音频)。
+    随机后缀让 URL 只能经 API 取得(API 再查权益)。
+
+    这是"不可推测",不是"加密强制":拿到 URL 的人可转发。彻底方案=音频挪私有桶 +
+    短时签名 URL(需在 Cloudflare 建桶),等付费规模起来再上,见 [[monetization-plan]]。
+    """
+    import secrets
+
+    return "/".join(parts) + "-" + secrets.token_urlsafe(12) + ".mp3"
+
+
 def persist_section_audio(
     db: Session,
     qid: str,
@@ -62,7 +78,7 @@ def persist_section_audio(
     obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if not obj:
         return None
-    key = f"object-audio/{qid}/{language}/{section_code}.mp3"
+    key = audio_key("object-audio", qid, language, section_code)
     storage.put(key, audio_bytes, "audio/mpeg")  # 失败则下方不执行，不写 key
     row = db.query(ObjectContentSection).filter_by(
         object_id=obj.id, language=language, section_code=section_code
