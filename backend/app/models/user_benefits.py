@@ -53,6 +53,10 @@ class UserBenefits(Base):
 
     # Referral rewards
     referral_bonus_quota = Column(Integer, nullable=False, default=0)
+    # 首件免费语音:按**作品**认领(非 section、非"一次待花的券")。
+    # 认领时机=首次识别成功后自动播放,保证每个免费用户都体验过语音。
+    free_audio_qid = Column(String(64), nullable=True)
+    free_audio_claimed_at = Column(DateTime, nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, server_default=func.now(), nullable=False)

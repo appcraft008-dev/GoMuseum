@@ -40,11 +40,20 @@ class PoliteSession:
             )
         )
         headers = {"User-Agent": self._ua, "Accept": "application/json"}
+        last_err = None
         for attempt in range(self._max_retries):
             self._throttle()
             resp = get(url, params=params, headers=headers, timeout=self._timeout)
             if resp.status_code == 200:
-                return resp.json()
+                try:
+                    return resp.json()
+                except ValueError as e:
+                    # 200 但 body 不是 JSON(空响应/HTML 错误页)——当作本次失败,
+                    # 重试;耗尽后抛清晰错误,而不是让 JSONDecodeError 冒到调用方
+                    body = (getattr(resp, "text", "") or "")[:120]
+                    last_err = RuntimeError(f"HTTP 200 但非 JSON: {body!r} ({e})")
+                    self._sleep(2.0 * (attempt + 1))
+                    continue
             if resp.status_code in (429, 503):
                 retry_after = resp.headers.get("Retry-After")
                 delay = float(retry_after) if retry_after else 2.0 * (attempt + 1)
@@ -52,4 +61,6 @@ class PoliteSession:
                 continue
             resp_text = getattr(resp, "text", "")
             raise RuntimeError(f"HTTP {resp.status_code}: {resp_text[:200]}")
+        if last_err:
+            raise last_err
         raise RuntimeError(f"耗尽重试（{self._max_retries}）仍失败: {url}")

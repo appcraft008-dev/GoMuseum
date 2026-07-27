@@ -371,3 +371,49 @@ def test_fetch_labels_batch_survives_failed_chunk(monkeypatch):
         [f"Q{i}" for i in range(250)], ["en"], run_query=flaky
     )
     assert out == {"Q300": {"en": "OK"}}  # 第二批的结果仍拿到
+
+
+def test_one_failing_source_does_not_kill_the_item():
+    """纪律①:单源失败跳过继续。此前任一源抛异常会炸掉整个 generate 运行——
+    2026-07-27 实测 Joconde 返回非 JSON 使 orsay/orangerie 预热两次全崩,
+    而只用 wikipedia 的 louvre 完好。"""
+    from app.services.enrichment.material import fetch_object_material
+
+    class _Boom:
+        name = "joconde"
+
+        def enrich(self, qid, ext, ctx):
+            raise RuntimeError("Joconde 返回非 JSON")
+
+    class _Good:
+        name = "wikipedia"
+
+        def enrich(self, qid, ext, ctx):
+            from app.services.enrichment.sources.base import ObjectContribution
+
+            return ObjectContribution(
+                source="wikipedia", qid=qid, raw={}, fields={"summary": "ok"}
+            )
+
+    class _Reg:
+        def route(self, ext):
+            return [_Boom(), _Good()]
+
+    out = fetch_object_material("Q1", {}, {}, _Reg())
+    assert isinstance(out, dict)  # 没抛异常,坏源被跳过
+
+
+def test_all_sources_failing_returns_empty_not_raise():
+    from app.services.enrichment.material import fetch_object_material
+
+    class _Boom:
+        name = "x"
+
+        def enrich(self, qid, ext, ctx):
+            raise RuntimeError("down")
+
+    class _Reg:
+        def route(self, ext):
+            return [_Boom()]
+
+    assert fetch_object_material("Q1", {}, {}, _Reg()) == {}
