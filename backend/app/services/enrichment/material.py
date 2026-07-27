@@ -5,9 +5,13 @@
 
 from __future__ import annotations
 
+import logging
+
 from app.services.enrichment.fetcher import _CORE
 from app.services.enrichment.merge import merge_contributions
 from app.services.enrichment.sources import wikidata as _wd
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_object_material(
@@ -17,7 +21,20 @@ def fetch_object_material(
     context = {"wiki_titles": wiki_titles or {}}
     contribs = []
     for src in registry.route(external_ids or {}):
-        c = src.enrich(qid, external_ids or {}, context)
+        # 单源失败跳过继续(纪律①)。此前任一源抛异常会一路冒到顶、**炸掉整个
+        # generate 运行**——2026-07-27 实测:Joconde 返回非 JSON(200 + 空/HTML body)
+        # 使 orsay/orangerie 预热两次全崩,而只用 wikipedia 的 louvre 完好。
+        # 少一个源的材料 = 内容薄一点(接地闸自会把关),远好过整馆停摆。
+        try:
+            c = src.enrich(qid, external_ids or {}, context)
+        except Exception:
+            logger.warning(
+                "source %s failed for %s, skipping this source",
+                getattr(src, "name", src),
+                qid,
+                exc_info=True,
+            )
+            continue
         if c is not None:
             contribs.append(c)
     if not contribs:
