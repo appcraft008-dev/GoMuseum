@@ -30,7 +30,6 @@ import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_shee
 import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
-import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -84,13 +83,6 @@ class GuideArgs {
 // Legacy QA entry (recognition path)
 // ---------------------------------------------------------------------------
 
-class _QaEntry {
-  const _QaEntry({required this.question, this.answer});
-
-  final String question;
-  final String? answer;
-}
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -132,15 +124,12 @@ class _GuidePageState extends ConsumerState<GuidePage>
 
   // ── legacy recognition path
   final TtsService _legacyTts = TtsService();
-  final TextEditingController _questionController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Explanation? _explanation;
   String? _loadError;
   bool _legacyAudioLoading = false;
   bool _legacyAudioReady = false;
   int _legacySpeedIndex = 0;
-  final List<_QaEntry> _qa = [];
-  bool _asking = false;
 
   // ── language
   String get _language => apiLanguage(ref.read(languageProvider));
@@ -157,7 +146,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
   void dispose() {
     _pollTimer?.cancel();
     _legacyTts.dispose();
-    _questionController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -279,54 +267,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
     setState(
         () => _legacySpeedIndex = (_legacySpeedIndex + 1) % _speeds.length);
     await _legacyTts.setSpeed(_speeds[_legacySpeedIndex]);
-  }
-
-  Future<void> _ask(String question) async {
-    final q = question.trim();
-    if (q.isEmpty || _asking) return;
-    _questionController.clear();
-    setState(() {
-      _asking = true;
-      _qa.add(_QaEntry(question: q));
-    });
-    _scrollToBottom();
-    try {
-      final dio = ref.read(dioProvider);
-      final response = await dio.post('/api/v1/chat/ask', data: {
-        'question': q,
-        'context':
-            '${_result.artworkName}，${_result.artist}，${_result.period}。${_result.description}',
-        'language': _language,
-      });
-      final answer =
-          (response.data as Map<String, dynamic>)['answer'] as String?;
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      setState(() {
-        _qa.last = _QaEntry(question: q, answer: answer ?? l10n.guideNoAnswer);
-        _asking = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      setState(() {
-        _qa.last = _QaEntry(question: q, answer: l10n.guideAnswerFailed);
-        _asking = false;
-      });
-    }
-    _scrollToBottom();
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
-      }
-    });
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -456,15 +396,10 @@ class _GuidePageState extends ConsumerState<GuidePage>
                     const GmHairline(),
                     const SizedBox(height: 12),
                     _legacyBody(),
-                    if (_qa.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      _legacyQaList(),
-                    ],
                   ],
                 ),
               ),
             ),
-            _legacyQaInput(),
           ],
         ),
       ),
@@ -668,128 +603,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
           Text(highlight, style: paragraphStyle, textAlign: TextAlign.justify),
         ],
       ],
-    );
-  }
-
-  Widget _legacyQaList() {
-    final gm = context.gm;
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(children: [
-          Text(l10n.guideQa,
-              style: GmText.serif(
-                  size: 14, weight: FontWeight.w700, color: gm.accentDeep)),
-          const SizedBox(width: 10),
-          const Expanded(child: GmHairline()),
-        ]),
-        for (final entry in _qa) ...[
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-            decoration: BoxDecoration(
-                color: gm.chipBg, borderRadius: BorderRadius.circular(999)),
-            child: Text(entry.question, style: GmText.sans(size: 12)),
-          ),
-          const SizedBox(height: 8),
-          if (entry.answer == null)
-            Row(children: [
-              const SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(strokeWidth: 1.6)),
-              const SizedBox(width: 8),
-              Text(l10n.guideThinking,
-                  style: GmText.sans(size: 12, color: gm.sub)),
-            ])
-          else
-            Text(entry.answer!,
-                style: GmText.sans(size: 13, height: 1.8),
-                textAlign: TextAlign.justify),
-        ],
-      ],
-    );
-  }
-
-  Widget _legacyQaInput() {
-    final gm = context.gm;
-    final l10n = AppLocalizations.of(context)!;
-    final suggestions = [l10n.guideQ1, l10n.guideQ2];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_qa.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  for (final q in suggestions) ...[
-                    GestureDetector(
-                      onTap: () => _ask(q),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 13, vertical: 7),
-                        decoration: BoxDecoration(
-                            color: gm.chipBg,
-                            borderRadius: BorderRadius.circular(999)),
-                        child: Text(q, style: GmText.sans(size: 12)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ],
-              ),
-            ),
-          Row(children: [
-            Expanded(
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                decoration: BoxDecoration(
-                    color: gm.surface,
-                    border: Border.all(color: gm.line),
-                    borderRadius: BorderRadius.circular(999)),
-                alignment: Alignment.centerLeft,
-                child: TextField(
-                  controller: _questionController,
-                  style: GmText.sans(size: 13.5),
-                  decoration: InputDecoration(
-                    hintText: l10n.guideAskHint,
-                    hintStyle: GmText.sans(size: 13.5, color: gm.faint),
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: _ask,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () {
-                if (_questionController.text.trim().isNotEmpty) {
-                  _ask(_questionController.text);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.guideVoiceComingSoon)),
-                  );
-                }
-              },
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration:
-                    BoxDecoration(color: gm.ctaBg, shape: BoxShape.circle),
-                alignment: Alignment.center,
-                child: GmIcon(GmIcons.mic, size: 20, color: gm.ctaInk),
-              ),
-            ),
-          ]),
-        ],
-      ),
     );
   }
 }
