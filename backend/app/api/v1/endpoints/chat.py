@@ -6,7 +6,7 @@ Handles voice Q&A and conversational interactions about artworks
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.core.exceptions import AIServiceException
@@ -49,7 +49,15 @@ class ChatResponse(BaseModel):
 async def ask_question(
     request: ChatRequest, ai_service=Depends(get_ai_service)
 ) -> ChatResponse:
-    """
+    """⛔ 已停用(2026-07-27):这是**未接地**的通用聊天——只喂一段 context 字符串,
+    不查馆藏内容、不带证据包,会脑补。而项目最核心的 AI 原则是"正确性靠构造:
+    生成内容必须接地于来源明确的事实,不许脑补,可溯源"——讲解侧为此建了整套
+    接地闸,问答侧不能双标(尤其付费墙将建在音频/问答上,脑补=差评+退款)。
+
+    接地版的自由问答见 backlog(基于该件已生成讲解+证据包作答,答不了就说答不了);
+    **已生成的接地预设问答**(743条)照常经 `/museums/{slug}/objects/{qid}/content`
+    的 `suggested_questions` 返回,不受影响。
+
     Ask a question about an artwork or art in general
 
     This endpoint powers the voice Q&A feature, allowing users to ask
@@ -73,6 +81,11 @@ async def ask_question(
                  }'
         ```
     """
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="free-form Q&A temporarily disabled (ungrounded); "
+        "use suggested_questions from the object content endpoint",
+    )
     logger.info(
         f"Processing question: '{request.question[:50]}...' in {request.language}"
     )
