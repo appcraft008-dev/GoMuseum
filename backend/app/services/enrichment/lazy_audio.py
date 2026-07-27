@@ -3,7 +3,11 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from app.services.content_repo import get_section_audio_key, persist_section_audio
+from app.services.content_repo import (
+    audio_key,
+    get_section_audio_key,
+    persist_section_audio,
+)
 from app.services.storage import get_object_storage
 
 # 段级音频锁 TTL(音频生成快;短 TTL 防死锁残留)。复用懒锁思路,存对象 attributes。
@@ -110,7 +114,7 @@ def get_or_make_qa_audio_url(db, qid: str, language: str, qa_sort: int):
     try:
         text = f"{row.question}\n\n{row.answer}"  # 问+答连念(闭眼听需上下文)
         audio = _synth(text, language)
-        key = f"object-audio/{qid}/{language}/qa_{qa_sort}.mp3"
+        key = audio_key("object-audio", qid, language, f"qa_{qa_sort}")
         storage.put(key, audio, "audio/mpeg")  # put 成功才写 key
         row.audio_key = key
         db.commit()
@@ -142,7 +146,7 @@ def get_or_make_artist_bio_audio_url(db, qid: str, language: str):
     _set_audio_lock(db, obj, language, section, True)
     try:
         audio = _synth(text, language)
-        key = f"object-audio/artist/{aqid}/{language}.mp3"
+        key = audio_key("object-audio/artist", aqid, language)
         storage.put(key, audio, "audio/mpeg")  # put 成功才写 key
         art.bio_audio = {**(art.bio_audio or {}), language: key}
         db.commit()
