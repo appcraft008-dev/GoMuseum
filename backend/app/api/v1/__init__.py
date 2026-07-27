@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     auth,
     chat,
     content,
+    entitlements,
     history,
     museums,
     payment,
@@ -35,6 +36,9 @@ api_router.include_router(history.router, prefix="/history", tags=["history"])
 
 # Include payment endpoints (IAP verification & benefits)
 api_router.include_router(payment.router, prefix="/payment", tags=["payment"])
+api_router.include_router(
+    entitlements.router, prefix="/entitlements", tags=["entitlements"]
+)
 
 # Include museum pack endpoints (馆藏目录/讲解，第1步数据地基)
 api_router.include_router(museums.router, prefix="/museums", tags=["museums"])
