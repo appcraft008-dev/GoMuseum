@@ -65,6 +65,18 @@ def test_benefits_and_consume_require_auth(client):
     assert client.post("/api/v1/payment/consume").status_code in (401, 403)
 
 
+def test_entitlements_take_user_from_token_not_query(client):
+    """权益是钱:user_id 曾是查询参数,等于谁都能读别人权益、
+    甚至 POST /activate 烧掉别人的 7 天票(激活即计时、幂等不可撤)。"""
+    assert client.get("/api/v1/entitlements/me").status_code in (401, 403)
+    assert client.post("/api/v1/entitlements/activate").status_code in (401, 403)
+    # 带上别人的 user_id 也不该放行——参数已不存在,鉴权仍是唯一入口
+    assert client.get("/api/v1/entitlements/me?user_id=someone-else").status_code in (
+        401,
+        403,
+    )
+
+
 def test_consume_decrements_account_quota(client):
     token = client.post("/api/v1/auth/guest", json={"device_id": "device-q"}).json()[
         "access_token"

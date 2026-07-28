@@ -11,6 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import settings
 from app.core.database import Base
 from app.models.purchase import Entitlement, Purchase
 from app.models.user_benefits import UserBenefits
@@ -92,6 +93,16 @@ def test_free_user_recognition_quota(session):
     out = es.summary(session, "u1", b)
     assert out["free_recognitions_left"] == 5, "剩余=quota本身,不该再减 used"
     assert out["can"]["recognize"] is True
+
+
+def test_summary_reports_denominator_for_progress_ring(session):
+    """前端进度环的分母由后端给,别让前端再写死一个 10。"""
+    b = _ben(session, "u1", quota=2)
+    b.referral_bonus_quota = 3
+    session.commit()
+    out = es.summary(session, "u1", b)
+    assert out["free_recognitions_total"] == settings.FREE_RECOGNITION_QUOTA + 3
+    assert out["free_recognitions_left"] == 5  # 2+3,不超过分母
 
 
 def test_free_user_exhausted_cannot_recognize(session):
