@@ -13,14 +13,12 @@ const _guest = Entitlements(
   canPurchase: false, // 游客:必须先登录才能买
   canRecognize: true,
   canAudioAny: false,
-  canAiAsk: false,
 );
 const _member = Entitlements(
   state: 'not_purchased',
   canPurchase: true,
   canRecognize: true,
   canAudioAny: false,
-  canAiAsk: false,
 );
 
 Widget _wrap(Widget child,

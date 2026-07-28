@@ -24,7 +24,7 @@ void main() {
       'expires_at': '2026-08-04T10:00:00+00:00',
       'free_recognitions_left': null,
       'free_recognitions_total': null,
-      'can': {'recognize': true, 'audio_any': true, 'ai_ask': true},
+      'can': {'recognize': true, 'audio_any': true},
     });
     expect(e.isActive, isTrue);
     expect(e.freeRecognitionsLeft, isNull);
@@ -39,7 +39,7 @@ void main() {
       'free_recognitions_left': 3,
       'free_recognitions_total': 5,
       'free_audio_qid': 'Q12418',
-      'can': {'recognize': true, 'audio_any': false, 'ai_ask': false},
+      'can': {'recognize': true, 'audio_any': false},
     });
     expect(e.canPlayAudio('Q12418'), isTrue);
     expect(e.canPlayAudio('Q12418'), isTrue, reason: '首件可无限重播');
@@ -50,7 +50,7 @@ void main() {
     final e = Entitlements.fromJson({
       'state': 'purchased_not_activated',
       'expires_at': null,
-      'can': {'recognize': true, 'audio_any': false, 'ai_ask': false},
+      'can': {'recognize': true, 'audio_any': false},
     });
     expect(e.isPurchasedNotActivated, isTrue);
     expect(e.isActive, isFalse);
@@ -69,7 +69,6 @@ void main() {
   test('拿不到权益时按免费层保守回退:不假装有通票', () {
     expect(Entitlements.unknown.isActive, isFalse);
     expect(Entitlements.unknown.canAudioAny, isFalse);
-    expect(Entitlements.unknown.canAiAsk, isFalse);
     expect(Entitlements.unknown.canRecognize, isTrue,
         reason: '后端抖动不该把免费用户也挡在识别外');
   });

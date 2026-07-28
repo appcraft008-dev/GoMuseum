@@ -11,6 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import ServiceException
 from app.services.auth_service import AuthService
@@ -147,7 +148,14 @@ async def verify_purchase(
         from app.services import entitlement_service as _es
 
         if request.product_id == _es.PARIS_PASS_7D:
-            txn = verification.get("transaction_id") or request.receipt_data[:255]
+            # ⚠️ 幂等键必须来自**商店**(Play 的 orderId),绝不回退到 receipt_data:
+            # 那是客户端提供的字符串,攻击者改一个字符就能再拿一张票。
+            txn = verification.get("transaction_id")
+            if not txn:
+                raise HTTPException(
+                    status_code=502,
+                    detail={"reason": "store_transaction_id_missing"},
+                )
             _es.grant_from_purchase(
                 db,
                 user_id=auth_user_id,
@@ -348,3 +356,57 @@ def _apply_benefits(
     except Exception as e:
         logger.error(f"Failed to apply benefits: {str(e)}")
         return False
+
+
+class RtdnEnvelope(BaseModel):
+    """Google Pub/Sub 推送信封(RTDN)。message.data 是 base64 的 JSON。"""
+
+    message: dict = Field(default_factory=dict)
+    subscription: Optional[str] = None
+
+
+@router.post("/rtdn", status_code=204)
+async def play_rtdn(
+    payload: RtdnEnvelope,
+    token: Optional[str] = None,
+    db: Session = Depends(get_db),
+) -> None:
+    """Google Play 实时开发者通知(退款/撤销)。
+
+    ⚠️ **退款必须撤权益**:只标订单退款、留着 entitlement 生效 = 退了钱还能用满 7 天。
+    `revoke_for_purchase` 早就写好了,但此前**零调用方** —— 这里是它的入口。
+
+    鉴权:Pub/Sub 推送 URL 上带 `?token=<共享密钥>`(在 Cloud Console 配置推送时写死)。
+    这是 Google 官方推荐的最简方案;没配密钥则拒绝一切请求,不裸奔。
+
+    幂等:revoke_for_purchase 找不到订单返 False,重复推送无副作用。
+    始终返 204 —— 返错误码会让 Pub/Sub 无限重投。
+    """
+    import base64
+    import json as _json
+
+    expected = getattr(settings, "PLAY_RTDN_TOKEN", None)
+    if not expected or token != expected:
+        raise HTTPException(status_code=403, detail={"reason": "bad_rtdn_token"})
+
+    try:
+        raw = payload.message.get("data") or ""
+        body = _json.loads(base64.b64decode(raw).decode("utf-8")) if raw else {}
+    except Exception:
+        logger.warning("RTDN payload undecodable, ignoring")
+        return
+
+    voided = body.get("voidedPurchaseNotification")
+    if not voided:
+        # 订阅/测试通知等:当前只处理退款,其余静默忽略(不重投)
+        return
+
+    from app.services import entitlement_service as _es
+    from app.services.event_log import log_event
+
+    order_id = voided.get("orderId")
+    if not order_id:
+        return
+    revoked = _es.revoke_for_purchase(db, order_id, reason="refunded")
+    log_event(db, "purchase_refunded", product_id=order_id, revoked=revoked)
+    logger.info("RTDN voided purchase %s → revoked=%s", order_id, revoked)

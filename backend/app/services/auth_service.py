@@ -463,6 +463,13 @@ class AuthService:
         """Create and login a guest user
 
         同一 device_id 复用既有游客账号，防止卸载重装刷新免费额度。
+
+        ⚠️**已知且接受的取舍**:device_id 由客户端提供,换一个就能再拿一份免费额度
+        (受 5次/小时 限流约束)。**不做 IP 封堵** —— 博物馆是共享 WiFi/NAT,
+        按 IP 限流会误伤同馆的真实用户,代价远大于收益。根治要靠 Play Integrity
+        设备证明(需 Play Console 配置),等有真实滥用证据再上。
+        现在先**记录可观测信号**:同一 IP 短时间内创建大量游客账号会进事件流,
+        靠 ops_report 发现,而不是靠猜。
         """
         import uuid
 
@@ -523,6 +530,14 @@ class AuthService:
 
         # 绑定设备指纹，新设备初始化默认额度
         db.add(UserBenefits(user_id=str(user.id), device_id=device_id))
+        # 可观测:新游客账号=发出一份免费额度。刷额度的形态是"同 IP 大量新游客",
+        # 靠这条在 ops_report 里看得见,而不是等收入对不上才发现。
+        try:
+            from app.services.event_log import log_event
+
+            log_event(db, "guest_created", device_id=device_id)
+        except Exception:  # 埋点绝不连累登录
+            pass
         db.commit()
 
         # Update last login
@@ -577,10 +592,31 @@ class AuthService:
 
     @staticmethod
     def delete_user_account(db: Session, user: User) -> None:
-        """GDPR 删除权 / App Store 账号删除要求：删除账号及关联个人数据"""
+        """GDPR 删除权 / App Store 账号删除:删账号与个人数据。
+
+        ⚠️ 权益与订单不能一起 delete 了事,两者性质不同:
+        - **Entitlement 必须撤销**(status=revoked)。人没了权益还"生效"是脏数据,
+          且此前完全没处理 —— 通票会变成谁也用不了的孤儿。
+        - **Purchase 保留但匿名化**。财务记录有会计/税务留存义务,不能删;
+          但 receipt_payload 属个人数据,清空;user_id 换成墓碑值切断关联。
+
+        ⚠️ 已知取舍:删号重注册会拿到新的免费额度(新账号=新额度)。
+        这条与"换 device_id 刷额度"同源,靠 Play Integrity 才能根治,MVP 接受。
+        """
+        from app.models.purchase import Entitlement, Purchase
         from app.models.user_benefits import UserBenefits
 
-        db.query(UserBenefits).filter(UserBenefits.user_id == str(user.id)).delete(
+        uid = str(user.id)
+        tomb = f"deleted:{uid[:8]}"
+
+        for ent in db.query(Entitlement).filter(Entitlement.user_id == uid):
+            ent.status = "revoked"
+            ent.user_id = tomb
+        for p in db.query(Purchase).filter(Purchase.user_id == uid):
+            p.user_id = tomb
+            p.receipt_payload = None  # 个人数据清除,金额/时间等财务字段保留
+
+        db.query(UserBenefits).filter(UserBenefits.user_id == uid).delete(
             synchronize_session=False
         )
         db.delete(user)

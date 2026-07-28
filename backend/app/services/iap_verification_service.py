@@ -110,74 +110,94 @@ class IAPVerificationService:
             logger.error(f"Apple receipt verification error: {str(e)}")
             raise ServiceException(f"Apple receipt verification failed: {str(e)}")
 
+    _PLAY_API = "https://androidpublisher.googleapis.com/androidpublisher/v3"
+
+    def _play_access_token(self) -> Optional[str]:
+        """用服务账号换 androidpublisher 访问令牌。未配置返回 None(调用方拒绝)。"""
+        raw = getattr(settings, "GOOGLE_PLAY_SERVICE_ACCOUNT", None)
+        if not raw:
+            return None
+        try:
+            import json as _json
+
+            from google.auth.transport.requests import Request as _GRequest
+            from google.oauth2 import service_account
+
+            info = (
+                _json.loads(raw)
+                if raw.lstrip().startswith("{")
+                else _json.load(open(raw))
+            )
+            creds = service_account.Credentials.from_service_account_info(
+                info, scopes=["https://www.googleapis.com/auth/androidpublisher"]
+            )
+            creds.refresh(_GRequest())
+            return creds.token
+        except Exception:
+            logger.exception("Play service account credential load failed")
+            return None
+
     async def verify_google_receipt(
         self, purchase_token: str, product_id: str, subscription: bool = False
     ) -> Dict[str, any]:
+        """校验 Google Play 购买凭证(Play Developer API v3)。
+
+        ⚠️ **失败一律关闭**。此前这里是 mock:对任何 purchase_token 都返回
+        valid=True,任何登录用户 POST 一个编造的 receipt_data 就能白拿通票;
+        且不返回 transaction_id,导致幂等键回落成攻击者可控的字符串 → 无限刷票。
+
+        返回 `transaction_id` = Play 的 **orderId**(稳定、唯一),权益幂等靠它。
         """
-        Verify Google Play Store receipt
+        logger.info("Verifying Google receipt for product: %s", product_id)
 
-        Args:
-            purchase_token: Purchase token from Android
-            product_id: Product identifier
-            subscription: Whether this is a subscription purchase
-
-        Returns:
-            Dictionary containing verification result
-
-        Raises:
-            ServiceException: If verification fails
-
-        Note:
-            Requires Google Play Developer API credentials to be configured
-        """
-        logger.info(f"Verifying Google receipt for product: {product_id}")
-
-        try:
-            # This is a simplified version - in production, use Google Play Developer API
-            # with proper OAuth2 authentication
-            #
-            # from google.oauth2 import service_account
-            # from googleapiclient.discovery import build
-            #
-            # credentials = service_account.Credentials.from_service_account_file(
-            #     'service_account.json',
-            #     scopes=['https://www.googleapis.com/auth/androidpublisher']
-            # )
-            # service = build('androidpublisher', 'v3', credentials=credentials)
-            #
-            # if subscription:
-            #     result = service.purchases().subscriptions().get(
-            #         packageName=self.google_package_name,
-            #         subscriptionId=product_id,
-            #         token=purchase_token
-            #     ).execute()
-            # else:
-            #     result = service.purchases().products().get(
-            #         packageName=self.google_package_name,
-            #         productId=product_id,
-            #         token=purchase_token
-            #     ).execute()
-
-            # For MVP, return mock verification
-            # TODO: Implement real Google Play verification
-            logger.warning(
-                "Google Play verification not fully implemented - using mock"
-            )
-
+        token = self._play_access_token()
+        if not token:
+            # 没有凭证 = 无法证明这笔购买真实存在 → 拒绝,绝不放行
             return {
-                "valid": True,
-                "status": 0,
-                "product_id": product_id,
-                "purchase_token": purchase_token,
-                "purchase_state": 0,  # 0 = Purchased
-                "is_subscription": subscription,
+                "valid": False,
                 "platform": "android",
-                "mock": True,  # Indicates this is mock verification
+                "error": "google_play_not_configured",
             }
 
+        kind = "subscriptions" if subscription else "products"
+        id_seg = "subscriptionId" if subscription else "productId"
+        url = (
+            f"{self._PLAY_API}/applications/{self.google_package_name}"
+            f"/purchases/{kind}/{product_id}/tokens/{purchase_token}"
+        )
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.get(url, headers={"Authorization": f"Bearer {token}"})
         except Exception as e:
-            logger.error(f"Google receipt verification error: {str(e)}")
-            raise ServiceException(f"Google receipt verification failed: {str(e)}")
+            logger.error("Play API request failed: %s", e)
+            return {"valid": False, "platform": "android", "error": "play_api_error"}
+
+        if r.status_code != 200:
+            # 404 = 该 token 不存在(伪造/已消费);其余按失败处理
+            logger.warning(
+                "Play API %s for %s: %s", r.status_code, id_seg, r.text[:200]
+            )
+            return {
+                "valid": False,
+                "platform": "android",
+                "error": f"play_api_{r.status_code}",
+            }
+
+        data = r.json()
+        # purchaseState: 0=Purchased 1=Canceled 2=Pending —— 只有 0 才发权益
+        state = data.get("purchaseState")
+        order_id = data.get("orderId")
+        return {
+            "valid": state == 0 and bool(order_id),
+            "status": state,
+            "product_id": product_id,
+            "transaction_id": order_id,
+            "purchase_token": purchase_token,
+            "purchase_state": state,
+            "is_subscription": subscription,
+            "platform": "android",
+            "acknowledged": data.get("acknowledgementState"),
+        }
 
     def _get_apple_error_message(self, status: int) -> str:
         """Get human-readable error message for Apple status code"""

@@ -62,6 +62,9 @@ class UserBenefits(Base):
     # 首件免费语音:按**作品**认领(非 section、非"一次待花的券")。
     # 认领时机=首次识别成功后自动播放,保证每个免费用户都体验过语音。
     free_audio_qid = Column(String(64), nullable=True)
+    # 免费试听收敛到 (作品, 语言, 主讲解段):一件作品有多段、每段独立 TTS,
+    # 再乘 10 种语言 —— 只记 qid 的话"免费一件"实际是几十次生成。
+    free_audio_lang = Column(String(16), nullable=True)
     free_audio_claimed_at = Column(DateTime, nullable=True)
 
     # Timestamps
