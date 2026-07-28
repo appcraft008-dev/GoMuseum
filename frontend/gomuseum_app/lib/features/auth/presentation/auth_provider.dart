@@ -29,7 +29,10 @@ final Provider<Dio> dioProvider = Provider<Dio>((ref) {
   final options = BaseOptions(
     baseUrl: _resolveBaseUrl(),
     connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
+    // 30s:馆内蜂窝网/弱 WiFi 下 10s 太紧——真机反馈"卢浮宫经常加载失败"。
+    // 根因是旧版下载 5MB 馆包超时(已由 artworks=false 修掉),但识别/懒生成
+    // 等接口本就可能慢,给足余量;连接超时保持 10s(连不上要快速失败)。
+    receiveTimeout: const Duration(seconds: 30),
   );
   final dio = Dio(options);
   dio.interceptors.add(AuthInterceptor(

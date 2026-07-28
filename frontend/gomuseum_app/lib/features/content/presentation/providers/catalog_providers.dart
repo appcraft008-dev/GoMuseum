@@ -11,12 +11,16 @@ final catalogDataSourceProvider = Provider<CatalogRemoteDataSource>((ref) {
   return CatalogRemoteDataSourceImpl(dio: ref.watch(dioProvider));
 });
 
+/// 缓存键必须含语言:此前只按 slug 做键、却在内部读 languageProvider,
+/// 于是换语言→失效重取,**切回原来的语言→再次重取**,永远不命中缓存
+/// (真机反馈:"切换回我原来选择过的语言又需要重新加载")。
+/// 对照:objectListProvider 本来就按 (slug, category, language) 做键,没这问题。
 final museumDetailProvider =
-    FutureProvider.family<MuseumDetail, String>((ref, slug) {
-  final lang = apiLanguage(ref.watch(languageProvider));
+    FutureProvider.family<MuseumDetail, ({String slug, String language})>(
+        (ref, a) {
   return ref
       .watch(catalogDataSourceProvider)
-      .getMuseumDetail(slug: slug, language: lang);
+      .getMuseumDetail(slug: a.slug, language: a.language);
 });
 
 final objectContentProvider =
