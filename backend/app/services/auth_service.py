@@ -25,8 +25,14 @@ class AuthService:
     """Service for authentication operations"""
 
     @staticmethod
-    def register(db: Session, request: RegisterRequest) -> TokenResponse:
-        """Register a new user"""
+    def register(
+        db: Session, request: RegisterRequest, credentials=None
+    ) -> TokenResponse:
+        """Register a new user
+
+        带游客令牌时**就地转正**(同一 UUID),权益/额度/已听首件原封保留。
+        见 _guest_to_upgrade —— 新建账号会让已购通票凭空消失。
+        """
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == request.email).first()
         if existing_user:
@@ -35,15 +41,22 @@ class AuthService:
                 detail="Email already registered",
             )
 
-        # Create new user
-        user = User(
-            email=request.email,
-            username=request.username,
-            password_hash=hash_password(request.password),
-            is_active=True,
-            is_verified=False,
-        )
-        db.add(user)
+        user = AuthService._guest_to_upgrade(db, credentials)
+        if user is not None:
+            user.email = request.email
+            user.username = request.username
+            user.password_hash = hash_password(request.password)
+            user.is_guest = False
+            user.is_verified = False
+        else:
+            user = User(
+                email=request.email,
+                username=request.username,
+                password_hash=hash_password(request.password),
+                is_active=True,
+                is_verified=False,
+            )
+            db.add(user)
         db.commit()
         db.refresh(user)
 
@@ -215,7 +228,9 @@ class AuthService:
         return user
 
     @staticmethod
-    def oauth_google(db: Session, request: OAuthRequest) -> TokenResponse:
+    def oauth_google(
+        db: Session, request: OAuthRequest, credentials=None
+    ) -> TokenResponse:
         """Authenticate with Google OAuth"""
         google_client_id = getattr(settings, "GOOGLE_CLIENT_ID", None)
         if not google_client_id:
@@ -245,15 +260,23 @@ class AuthService:
                     # Link Google account to existing user
                     user.google_id = google_id
                 else:
-                    # Create new user
-                    user = User(
-                        email=email,
-                        username=username,
-                        google_id=google_id,
-                        is_active=True,
-                        is_verified=True,  # Email verified by Google
-                    )
-                    db.add(user)
+                    # 游客就地转正(保住已购通票与额度),否则才新建
+                    user = AuthService._guest_to_upgrade(db, credentials)
+                    if user is not None:
+                        user.email = email
+                        user.username = username
+                        user.google_id = google_id
+                        user.is_guest = False
+                        user.is_verified = True
+                    else:
+                        user = User(
+                            email=email,
+                            username=username,
+                            google_id=google_id,
+                            is_active=True,
+                            is_verified=True,  # Email verified by Google
+                        )
+                        db.add(user)
 
                 db.commit()
                 db.refresh(user)
@@ -413,6 +436,27 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Apple authentication failed: {str(e)}",
             )
+
+    @staticmethod
+    def _guest_to_upgrade(db: Session, credentials) -> Optional[User]:
+        """当前请求是不是带着游客令牌?是则返回那个游客 User,供**就地转正**。
+
+        ⭐ 为什么必须就地转正,而不是新建账号:
+        游客可以直接买 €7.99 通票(权益挂在游客 UUID 上)。若注册时新建一行,
+        新 user_id 查不到旧权益 → **用户付了钱,一登录票就没了**;而且恢复购买
+        也救不回来(grant_from_purchase 靠 store_transaction_id 幂等,发现收据
+        已存在就返回旧记录、不给新用户发权益,接口却仍返回 verified=true)。
+        顺带堵住"换身份刷免费额度"(游客 5 次 → 注册再 5 次 → Google 再 5 次)。
+
+        令牌无效/不是游客/查无此人 → None(照旧走新建路径)。
+        """
+        if credentials is None:
+            return None
+        try:
+            user = AuthService.get_current_user(db, credentials.credentials)
+        except HTTPException:
+            return None
+        return user if user and user.is_guest else None
 
     @staticmethod
     def guest_login(db: Session, device_id: Optional[str] = None) -> TokenResponse:
