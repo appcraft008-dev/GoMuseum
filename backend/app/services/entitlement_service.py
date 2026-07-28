@@ -224,3 +224,28 @@ def revoke_for_purchase(
         ent.status = reason
     db.commit()
     return True
+
+
+def authorize_audio(db, user_id: str, qid: str) -> bool:
+    """语音闸门:**付费墙真正生效的地方**(前端 UI 只是它的表达)。
+
+    顺序即产品规则:
+      1. 通票生效 → 放行
+      2. 已认领的首件 → 放行(可无限重播,永不弹墙)
+      3. 还没认领过任何一件 → **就地认领这一件**并放行(首件免费试听)
+      4. 其余 → 拒
+
+    ⚠️ 必须在触发 TTS 生成**之前**调用 —— 否则钱已经花掉了,拦也白拦。
+
+    第 3 条是"保证送达的首体验"而非"一张待花的券":券式设计下很多用户到最后
+    压根没用过语音,付费墙就白建了。代价是用户可能把名额用在一件小作品上,
+    所以前端播放时必须明说「免费试听」。
+    """
+    from app.models.user_benefits import UserBenefits
+
+    benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
+    if can_play_audio(db, user_id, qid, benefits):
+        return True
+    if benefits is None:
+        return False
+    return claim_free_audio(db, benefits, qid)
