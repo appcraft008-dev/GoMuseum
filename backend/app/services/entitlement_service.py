@@ -11,12 +11,13 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from app.core.config import settings
 from app.models.purchase import Entitlement
 
-# 跨馆免费识别次数。⚠️ 仅当 user_benefits 行不存在时的兜底,**真相源是 DB 里那一列**
-# (模型 default=10)。2026-07-27 曾误以为线上是 3 次、讨论要"给更多改成 5"——
-# 实测 prod 真实用户都是 10,改 5 反而是砍半。保持与模型 default 一致。
-FREE_RECOGNITIONS = 10
+# 免费识别次数的真相源是 settings.FREE_RECOGNITION_QUOTA(见 config.py),
+# 这里只在 user_benefits 行还不存在时兜底 —— 已存在的行以**该行的剩余数**为准,
+# 改配置不会回收老用户额度。
+
 PASS_DURATION = timedelta(days=7)
 
 # 权益状态(对外统一口径)
@@ -91,10 +92,12 @@ def summary(db, user_id: str, benefits=None) -> dict:
     """
     state, ent = resolve_state(db, user_id)
     active = state == ACTIVE
-    used = getattr(benefits, "total_recognitions_used", 0) or 0
-    quota = getattr(benefits, "recognition_quota", FREE_RECOGNITIONS)
+    # ⚠️ recognition_quota 是**剩余数**(consume_recognition 每次递减),不是上限。
+    # 曾误写成 quota + bonus - used —— 那会重复扣一次 used,少报剩余次数、
+    # 让付费墙提前弹(用户初始10次用3次 → 实际剩7,却报成4)。
+    quota = getattr(benefits, "recognition_quota", settings.FREE_RECOGNITION_QUOTA)
     bonus = getattr(benefits, "referral_bonus_quota", 0) or 0
-    left = max(0, (quota or 0) + bonus - used)
+    left = max(0, (quota or 0) + bonus)
     free_audio_qid = getattr(benefits, "free_audio_qid", None)
     return {
         "state": state,

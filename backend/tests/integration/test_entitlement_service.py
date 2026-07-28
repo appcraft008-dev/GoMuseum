@@ -86,14 +86,16 @@ def test_expiry_computed_live_not_by_cron(session):
 
 
 def test_free_user_recognition_quota(session):
+    # recognition_quota 是**剩余数**(每次识别递减),不是上限——
+    # 曾误算成 quota-used,会重复扣、让付费墙提前弹
     b = _ben(session, "u1", used=2, quota=5)
     out = es.summary(session, "u1", b)
-    assert out["free_recognitions_left"] == 3
+    assert out["free_recognitions_left"] == 5, "剩余=quota本身,不该再减 used"
     assert out["can"]["recognize"] is True
 
 
 def test_free_user_exhausted_cannot_recognize(session):
-    b = _ben(session, "u1", used=5, quota=5)
+    b = _ben(session, "u1", used=5, quota=0)  # 递减到 0 才算用尽
     out = es.summary(session, "u1", b)
     assert out["free_recognitions_left"] == 0
     assert out["can"]["recognize"] is False
@@ -126,7 +128,7 @@ def test_free_audio_cannot_be_claimed_twice(session):
 
 
 def test_referral_bonus_adds_to_quota(session):
-    b = _ben(session, "u1", used=5, quota=5)
+    b = _ben(session, "u1", used=5, quota=2)
     b.referral_bonus_quota = 3
     session.commit()
-    assert es.summary(session, "u1", b)["free_recognitions_left"] == 3
+    assert es.summary(session, "u1", b)["free_recognitions_left"] == 5  # 2+3
