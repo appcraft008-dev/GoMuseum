@@ -226,26 +226,36 @@ def revoke_for_purchase(
     return True
 
 
-def authorize_audio(db, user_id: str, qid: str) -> bool:
+def audio_access(db, user_id: str, qid: str) -> str:
     """语音闸门:**付费墙真正生效的地方**(前端 UI 只是它的表达)。
 
-    顺序即产品规则:
-      1. 通票生效 → 放行
-      2. 已认领的首件 → 放行(可无限重播,永不弹墙)
-      3. 还没认领过任何一件 → **就地认领这一件**并放行(首件免费试听)
-      4. 其余 → 拒
+    返回 "allowed" / "claimable" / "denied",**本身不产生副作用**:
+      allowed   通票生效,或这就是已认领的首件(可无限重播)
+      claimable 还没认领过任何一件 → 可以放行,但**认领要等音频真的送达**
+      denied    其余 → 端点返 402
 
-    ⚠️ 必须在触发 TTS 生成**之前**调用 —— 否则钱已经花掉了,拦也白拦。
+    ⚠️ 必须在触发 TTS **之前**调用 —— 否则钱已经花掉了,拦也白拦。
 
-    第 3 条是"保证送达的首体验"而非"一张待花的券":券式设计下很多用户到最后
-    压根没用过语音,付费墙就白建了。代价是用户可能把名额用在一件小作品上,
-    所以前端播放时必须明说「免费试听」。
+    ⚠️ 认领为什么不在这里做(2026-07-28 staging 实测踩到):
+    闸门跑在生成之前,而生成可能 404(该语言没正文)/409(生成中)/503。
+    在这里认领的话,用户点一件没音频的作品——什么都没听到,免费试听却没了。
+    所以认领挪到端点的成功路径上,见 _claim_after_success。
     """
     from app.models.user_benefits import UserBenefits
 
     benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
     if can_play_audio(db, user_id, qid, benefits):
-        return True
+        return "allowed"
+    if benefits is None:
+        return "denied"
+    return "claimable" if not getattr(benefits, "free_audio_qid", None) else "denied"
+
+
+def claim_audio_now(db, user_id: str, qid: str) -> bool:
+    """音频**确实送达后**才认领首件。与 audio_access 的 claimable 配对使用。"""
+    from app.models.user_benefits import UserBenefits
+
+    benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
     if benefits is None:
         return False
     return claim_free_audio(db, benefits, qid)
