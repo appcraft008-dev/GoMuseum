@@ -313,5 +313,11 @@
   "paywallRestore": "Restore purchase",
   "audioFreePreview": "Free preview",
   "audioLockedHint": "Audio commentary needs the pass — your free preview has been used.",
-  "quotaExhausted": "You've used all your free recognitions."
+  "quotaExhausted": "You've used all your free recognitions.",
+  "activateTitle": "Start your 7-day pass?",
+  "activateBody": "Once started it runs for 7×24 hours without pause. Start it when you're at the museum, not before.",
+  "activateConfirm": "Start now",
+  "activateLater": "Not yet",
+  "paywallLoginToBuy": "Sign in to buy",
+  "paywallLoginWhy": "Your pass is tied to your account, so you keep it on a new phone."
 }

@@ -684,4 +684,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get quotaExhausted => 'Has agotado tus reconocimientos gratuitos.';
+
+  @override
+  String get activateTitle => '¿Empezar tu pase de 7 días?';
+
+  @override
+  String get activateBody =>
+      'Una vez iniciado corre 7×24 horas sin pausa. Actívalo en el museo, no antes.';
+
+  @override
+  String get activateConfirm => 'Empezar ahora';
+
+  @override
+  String get activateLater => 'Todavía no';
+
+  @override
+  String get paywallLoginToBuy => 'Inicia sesión para comprar';
+
+  @override
+  String get paywallLoginWhy =>
+      'El pase va ligado a tu cuenta: lo conservas en un móvil nuevo.';
 }

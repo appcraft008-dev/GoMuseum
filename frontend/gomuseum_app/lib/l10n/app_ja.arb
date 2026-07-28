@@ -207,5 +207,11 @@
   "paywallRestore": "購入を復元",
   "audioFreePreview": "無料試聴",
   "audioLockedHint": "音声解説にはパスが必要です。無料試聴は別の作品で使用済みです。",
-  "quotaExhausted": "無料の認識回数を使い切りました。"
+  "quotaExhausted": "無料の認識回数を使い切りました。",
+  "activateTitle": "7日間パスを開始しますか？",
+  "activateBody": "開始すると 7×24 時間連続で進み、途中で止まりません。館に着いてから開始することをおすすめします。",
+  "activateConfirm": "今すぐ開始",
+  "activateLater": "まだ開始しない",
+  "paywallLoginToBuy": "ログインして購入",
+  "paywallLoginWhy": "パスはアカウントに紐づくので、機種変更しても失われません。"
 }

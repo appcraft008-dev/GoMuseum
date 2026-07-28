@@ -682,4 +682,24 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get quotaExhausted => 'Wykorzystano wszystkie darmowe rozpoznania.';
+
+  @override
+  String get activateTitle => 'Rozpocząć karnet na 7 dni?';
+
+  @override
+  String get activateBody =>
+      'Po uruchomieniu biegnie 7×24 godziny bez przerwy. Uruchom go w muzeum, nie wcześniej.';
+
+  @override
+  String get activateConfirm => 'Rozpocznij teraz';
+
+  @override
+  String get activateLater => 'Jeszcze nie';
+
+  @override
+  String get paywallLoginToBuy => 'Zaloguj się, aby kupić';
+
+  @override
+  String get paywallLoginWhy =>
+      'Karnet jest powiązany z kontem — zachowasz go na nowym telefonie.';
 }

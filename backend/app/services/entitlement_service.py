@@ -82,13 +82,18 @@ def activate(db, user_id: str) -> tuple[str, Entitlement | None]:
     return ACTIVE, ent
 
 
-def summary(db, user_id: str, benefits=None) -> dict:
+def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
     """前端唯一入口。`can` 是前端该看的东西,其余字段供展示。
 
     免费层边界(付费墙建在**现场体验**不在内容):
     - 浏览/搜索/完整文字讲解/接地预设问答 → 永远免费,不在 `can` 里体现
     - 识别 → 免费 5 次,用完需通票
     - 语音 → 首件自动试听(见 free_audio_qid),第二件起需通票
+
+    `can.purchase`:**买票前必须登录**(2026-07-28 定)。通票挂 user_id,而游客
+    身份是设备绑定的 —— 游客买了票,换手机/清数据就永久拿不回(收据已消耗,
+    恢复购买会命中幂等、不给新用户发权益)。强制登录让权益天然跟着账号走,
+    不必再做收据转移。
     """
     state, ent = resolve_state(db, user_id)
     active = state == ACTIVE
@@ -110,6 +115,7 @@ def summary(db, user_id: str, benefits=None) -> dict:
         ),
         "free_audio_qid": free_audio_qid,
         "can": {
+            "purchase": not is_guest,
             "recognize": active or left > 0,
             # 语音:通票内全放行;免费用户只放行已认领的那一件
             "audio_any": active,

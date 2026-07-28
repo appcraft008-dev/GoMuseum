@@ -207,5 +207,11 @@
   "paywallRestore": "回復購買",
   "audioFreePreview": "免費試聽",
   "audioLockedHint": "語音導覽需要通票——免費試聽名額已用在另一件作品上。",
-  "quotaExhausted": "免費辨識次數已用完。"
+  "quotaExhausted": "免費辨識次數已用完。",
+  "activateTitle": "開始你的 7 天通票？",
+  "activateBody": "一旦開始就連續計時 7×24 小時，中途不暫停。建議到館後再開始。",
+  "activateConfirm": "現在開始",
+  "activateLater": "再等等",
+  "paywallLoginToBuy": "登入後購買",
+  "paywallLoginWhy": "通票綁定帳號，換手機也不會遺失。"
 }

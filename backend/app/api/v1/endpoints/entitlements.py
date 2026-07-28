@@ -29,8 +29,10 @@ def _benefits(db: Session, user_id: str):
     return db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
 
 
-def _me(db: Session, credentials: HTTPAuthorizationCredentials) -> str:
-    return str(AuthService.get_current_user(db, credentials.credentials).id)
+def _me(db: Session, credentials: HTTPAuthorizationCredentials):
+    """返回 (user_id, is_guest) —— is_guest 决定 can.purchase(买票前须登录)。"""
+    user = AuthService.get_current_user(db, credentials.credentials)
+    return str(user.id), bool(user.is_guest)
 
 
 @router.get("/me")
@@ -39,8 +41,8 @@ def my_entitlements(
     db: Session = Depends(get_db),
 ) -> dict:
     """当前权益。到期在读取时实时判定,不依赖定时任务(漏跑=白送权限)。"""
-    user_id = _me(db, credentials)
-    return es.summary(db, user_id, _benefits(db, user_id))
+    user_id, is_guest = _me(db, credentials)
+    return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)
 
 
 @router.post("/activate")
@@ -53,7 +55,7 @@ def activate_pass(
     ⚠️ 绝不静默激活:旅游产品用户常提前几天买,误触一次就烧掉整张票=差评来源。
     幂等:已激活再调不续期也不重置。
     """
-    user_id = _me(db, credentials)
+    user_id, is_guest = _me(db, credentials)
     es.activate(db, user_id)
     log_event(db, "pass_activated", user_id=user_id)
-    return es.summary(db, user_id, _benefits(db, user_id))
+    return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)

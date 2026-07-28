@@ -207,5 +207,11 @@
   "paywallRestore": "Ripristina acquisto",
   "audioFreePreview": "Ascolto gratuito",
   "audioLockedHint": "L'audioguida richiede il pass: hai già usato il tuo ascolto gratuito.",
-  "quotaExhausted": "Hai esaurito i riconoscimenti gratuiti."
+  "quotaExhausted": "Hai esaurito i riconoscimenti gratuiti.",
+  "activateTitle": "Avviare il pass di 7 giorni?",
+  "activateBody": "Una volta avviato scorre per 7×24 ore senza pause. Avvialo al museo, non prima.",
+  "activateConfirm": "Avvia ora",
+  "activateLater": "Non ancora",
+  "paywallLoginToBuy": "Accedi per acquistare",
+  "paywallLoginWhy": "Il pass è legato al tuo account: lo ritrovi anche su un nuovo telefono."
 }

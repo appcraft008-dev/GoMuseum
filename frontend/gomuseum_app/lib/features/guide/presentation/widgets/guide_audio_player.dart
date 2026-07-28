@@ -97,9 +97,19 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   static final Set<String> _hintedQids = <String>{};
 
   /// 撞墙时的分档反应。返回 true 表示已拦下(调用方不要继续播)。
-  bool _blockedByPaywall() {
+  ///
+  /// ⚠️ 已购未激活的用户要先走激活确认,不能直接弹付费墙——他已经付过钱了,
+  /// 再让他看购买页是最糟的体验。买了不立即计时是有意设计,这里是它的触发器。
+  Future<bool> _blockedByPaywall() async {
     final ent = ref.read(entitlementsProvider).value;
     if (ent == null || ent.canPlayAudio(widget.qid)) return false;
+
+    if (ent.isPurchasedNotActivated) {
+      if (await ensurePassActivated(context, ref, ent)) return false; // 已生效,继续播
+      if (mounted) setState(() => _ui = _Ui.idle);
+      return true; // 用户选了"再等等"
+    }
+
     if (_hintedQids.add(widget.qid)) {
       showPaywallHint(context);
     } else {
@@ -125,7 +135,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
 
     // 付费墙:必须在取音频之前——后端也会拦(402),这里只是免掉一次往返。
-    if (_blockedByPaywall()) return;
+    if (await _blockedByPaywall()) return;
 
     setState(() => _ui = _Ui.loading);
 
@@ -266,7 +276,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         case GuideAudioPassRequired():
           setState(() => _ui = _Ui.idle);
           // 后端才是付费墙的执行点:客户端闸放行了但后端拒了(权益已变/被绕过)
-          _blockedByPaywall() || _showPaywallAnyway();
+          if (!await _blockedByPaywall()) _showPaywallAnyway();
           return null;
         case GuideAudioFailed():
           setState(() => _ui = _Ui.error);

@@ -207,5 +207,11 @@
   "paywallRestore": "Restaurar compra",
   "audioFreePreview": "Muestra gratuita",
   "audioLockedHint": "La audioguía requiere el pase: ya has usado tu muestra gratuita.",
-  "quotaExhausted": "Has agotado tus reconocimientos gratuitos."
+  "quotaExhausted": "Has agotado tus reconocimientos gratuitos.",
+  "activateTitle": "¿Empezar tu pase de 7 días?",
+  "activateBody": "Una vez iniciado corre 7×24 horas sin pausa. Actívalo en el museo, no antes.",
+  "activateConfirm": "Empezar ahora",
+  "activateLater": "Todavía no",
+  "paywallLoginToBuy": "Inicia sesión para comprar",
+  "paywallLoginWhy": "El pase va ligado a tu cuenta: lo conservas en un móvil nuevo."
 }

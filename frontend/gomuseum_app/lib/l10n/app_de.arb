@@ -207,5 +207,11 @@
   "paywallRestore": "Kauf wiederherstellen",
   "audioFreePreview": "Kostenprobe",
   "audioLockedHint": "Für Audiokommentare wird der Pass benötigt — deine kostenlose Probe ist bereits aufgebraucht.",
-  "quotaExhausted": "Du hast alle kostenlosen Erkennungen aufgebraucht."
+  "quotaExhausted": "Du hast alle kostenlosen Erkennungen aufgebraucht.",
+  "activateTitle": "7-Tage-Pass jetzt starten?",
+  "activateBody": "Einmal gestartet, läuft er 7×24 Stunden ohne Pause. Starte ihn im Museum, nicht vorher.",
+  "activateConfirm": "Jetzt starten",
+  "activateLater": "Später",
+  "paywallLoginToBuy": "Zum Kauf anmelden",
+  "paywallLoginWhy": "Der Pass hängt an deinem Konto – auf einem neuen Handy bleibt er erhalten."
 }
