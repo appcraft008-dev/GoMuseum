@@ -49,7 +49,6 @@ const _fakeEntitlements = Entitlements(
   canPurchase: true,
   canRecognize: true,
   canAudioAny: false,
-  canAiAsk: false,
   freeRecognitionsLeft: 8,
   freeRecognitionsTotal: 5,
 );

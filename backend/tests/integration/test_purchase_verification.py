@@ -1,0 +1,160 @@
+"""收据校验与退款撤销 —— 付费链路最容易白送钱的两处。
+
+⚠️ 此前 verify_google_receipt 是 **mock**:对任何 purchase_token 都返回
+valid=True,任何登录用户 POST 一个编造的 receipt_data 就能白拿 €7.99 通票;
+且不返回 transaction_id → 幂等键回落成客户端提供的字符串 → 无限刷票。
+"""
+
+import base64
+import json
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.core.config import settings
+from app.core.database import Base, get_db
+from app.main import app
+from app.models.purchase import Entitlement, Purchase
+from app.models.user import User
+from app.models.user_benefits import UserBenefits
+from app.services import entitlement_service as es
+from app.services.iap_verification_service import IAPVerificationService
+
+
+@pytest.fixture()
+def client():
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[
+            User.__table__,
+            UserBenefits.__table__,
+            Purchase.__table__,
+            Entitlement.__table__,
+        ],
+    )
+    s = sessionmaker(bind=engine)()
+    app.dependency_overrides[get_db] = lambda: s
+    yield TestClient(app), s
+    app.dependency_overrides.clear()
+    s.close()
+
+
+@pytest.mark.asyncio
+async def test_unconfigured_play_credentials_reject_not_allow(monkeypatch):
+    """没有服务账号 = 无法证明这笔购买真实存在 → **拒绝**,绝不当作有效。
+
+    这正是 mock 版最致命的地方:它在凭证缺失时返回 valid=True。
+    """
+    monkeypatch.setattr(settings, "GOOGLE_PLAY_SERVICE_ACCOUNT", None)
+    out = await IAPVerificationService().verify_google_receipt(
+        purchase_token="随便编的", product_id="paris_pass_7d"
+    )
+    assert out["valid"] is False
+    assert out["error"] == "google_play_not_configured"
+
+
+def test_fake_receipt_grants_nothing(client):
+    """端到端:伪造收据拿不到通票(凭证未配置时全部拒绝)。"""
+    c, db = client
+    tok = c.post(
+        "/api/v1/auth/register",
+        json={"email": "b@gomuseum.app", "username": "b", "password": "Passw0rd!1"},
+    ).json()["access_token"]
+
+    r = c.post(
+        "/api/v1/payment/verify",
+        json={
+            "platform": "android",
+            "receipt_data": "完全编造的凭证",
+            "product_id": "paris_pass_7d",
+            "device_id": "d1",
+        },
+        headers={"Authorization": f"Bearer {tok}"},
+    )
+    assert r.json()["verified"] is False, "伪造收据绝不能通过"
+    assert db.query(Entitlement).count() == 0, "没通过就不该有权益"
+
+
+def test_refund_revokes_the_entitlement(client):
+    """退款必须连权益一起撤 —— 只标订单退款、留着 entitlement 生效
+    = 退了钱还能用满 7 天。revoke_for_purchase 早写好了,此前**零调用方**。"""
+    c, db = client
+    es.grant_from_purchase(
+        db,
+        user_id="u1",
+        platform="android",
+        product_id=es.PARIS_PASS_7D,
+        store_transaction_id="GPA.1234",
+    )
+    es.activate(db, "u1")
+    assert es.resolve_state(db, "u1")[0] == es.ACTIVE
+
+    assert es.revoke_for_purchase(db, "GPA.1234", reason="refunded") is True
+    assert es.resolve_state(db, "u1")[0] == es.NOT_PURCHASED, "退款后不该还生效"
+
+
+def _rtdn(order_id: str) -> dict:
+    body = {"voidedPurchaseNotification": {"orderId": order_id}}
+    return {"message": {"data": base64.b64encode(json.dumps(body).encode()).decode()}}
+
+
+def test_rtdn_requires_shared_token(client, monkeypatch):
+    """回调是公网端点,没密钥就拒绝一切请求,不裸奔。"""
+    c, _ = client
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", "s3cret")
+    assert c.post("/api/v1/payment/rtdn", json=_rtdn("X")).status_code == 403
+    assert (
+        c.post("/api/v1/payment/rtdn?token=wrong", json=_rtdn("X")).status_code == 403
+    )
+
+
+def test_rtdn_voided_purchase_revokes(client, monkeypatch):
+    c, db = client
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", "s3cret")
+    es.grant_from_purchase(
+        db,
+        user_id="u2",
+        platform="android",
+        product_id=es.PARIS_PASS_7D,
+        store_transaction_id="GPA.999",
+    )
+    es.activate(db, "u2")
+
+    r = c.post("/api/v1/payment/rtdn?token=s3cret", json=_rtdn("GPA.999"))
+    assert r.status_code == 204, r.text
+    assert es.resolve_state(db, "u2")[0] == es.NOT_PURCHASED
+
+
+def test_rtdn_ignores_unknown_notifications(client, monkeypatch):
+    """订阅/测试通知等一律静默忽略并返 204 —— 返错误码会让 Pub/Sub 无限重投。"""
+    c, _ = client
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", "s3cret")
+    env = {"message": {"data": base64.b64encode(b'{"testNotification":{}}').decode()}}
+    assert c.post("/api/v1/payment/rtdn?token=s3cret", json=env).status_code == 204
+    assert c.post("/api/v1/payment/rtdn?token=s3cret", json={}).status_code == 204
+
+
+def test_log_event_never_rolls_back_business_data(client):
+    """⭐ 埋点失败绝不能回滚调用方的业务数据。
+
+    曾经在异常分支直接 db.rollback():埋点写失败 → 把调用方**尚未提交的**
+    业务数据一起回滚。实测后果是游客登录刚建的 UserBenefits 被回滚,
+    同设备第二次登录又建新账号 —— 防刷额度直接失效。
+    """
+    from app.services.event_log import log_event
+
+    _, db = client
+    # app_events 表在此 fixture 里不存在 → 写事件必然失败,正是要测的场景
+    db.add(UserBenefits(user_id="biz-1", recognition_quota=5))
+    log_event(db, "guest_created", device_id="d-x")
+    db.commit()
+
+    assert (
+        db.query(UserBenefits).filter_by(user_id="biz-1").one_or_none() is not None
+    ), "埋点失败把业务数据带走了"

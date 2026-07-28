@@ -18,7 +18,6 @@ class Entitlements {
     required this.canPurchase,
     required this.canRecognize,
     required this.canAudioAny,
-    required this.canAiAsk,
     this.expiresAt,
     this.freeRecognitionsLeft,
     this.freeRecognitionsTotal,
@@ -33,7 +32,6 @@ class Entitlements {
   final bool canPurchase;
   final bool canRecognize;
   final bool canAudioAny;
-  final bool canAiAsk;
   final DateTime? expiresAt;
 
   /// 免费层剩余识别次数;通票生效期间为 null(不显示次数)。
@@ -62,7 +60,6 @@ class Entitlements {
     canPurchase: false,
     canRecognize: true,
     canAudioAny: false,
-    canAiAsk: false,
   );
 
   factory Entitlements.fromJson(Map<String, dynamic> json) {
@@ -74,7 +71,6 @@ class Entitlements {
       canPurchase: can['purchase'] == true,
       canRecognize: can['recognize'] as bool? ?? true,
       canAudioAny: can['audio_any'] as bool? ?? false,
-      canAiAsk: can['ai_ask'] as bool? ?? false,
       expiresAt: expires == null ? null : DateTime.tryParse(expires),
       freeRecognitionsLeft: json['free_recognitions_left'] as int?,
       freeRecognitionsTotal: json['free_recognitions_total'] as int?,

@@ -113,6 +113,8 @@ def build(db, days: int) -> dict:
                 "purchase_succeeded",
                 "purchase_failed",
                 "pass_activated",
+                "purchase_refunded",
+                "guest_created",
             )
         },
         "purchase_triggers": dict(triggers),
@@ -171,6 +173,15 @@ def render(r: dict) -> None:
     print(
         f"├─ 跨馆复用  用过≥2馆 {cm['multi']}/{cm['users']} = {cm['reuse_pct']}%  分布 {cm['dist']}"
     )
+    f2 = r["funnel"]
+    if f2.get("guest_created"):
+        print(
+            f"├─ 免费额度发放  新游客 {f2['guest_created']}"
+            f"(异常增长=可能在刷额度;device_id 客户端可控,不做 IP 封堵——"
+            f"博物馆共享 WiFi 会误伤真实用户)"
+        )
+    if f2.get("purchase_refunded"):
+        print(f"├─ 退款 {f2['purchase_refunded']} 笔(已自动撤销权益)")
     print(f"└─ 收入 €{r['revenue_eur']:.2f}")
 
 

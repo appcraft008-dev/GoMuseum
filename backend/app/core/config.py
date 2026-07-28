@@ -65,6 +65,17 @@ class Settings(BaseSettings):
 
     # OAuth providers
     GOOGLE_CLIENT_ID: Optional[str] = None
+
+    # Google Play Developer API 服务账号(校验购买收据)。可以是 JSON 文件路径,
+    # 也可以是 JSON 字符串本身(容器里用环境变量注入更方便)。
+    # ⚠️ **不配置就一律拒绝购买**,绝不回退到"当作有效"——此前 verify_google_receipt
+    # 是 mock,对任何 purchase_token 都返回 valid=True,等于把 €7.99 白送。
+    GOOGLE_PLAY_SERVICE_ACCOUNT: Optional[str] = None
+    GOOGLE_PLAY_PACKAGE_NAME: str = "com.gomuseum.app"
+
+    # Pub/Sub 推送 RTDN 时 URL 上带的共享密钥(?token=...)。
+    # 不配置则 /payment/rtdn 拒绝一切请求,不裸奔。
+    PLAY_RTDN_TOKEN: Optional[str] = None
     APPLE_CLIENT_ID: Optional[str] = None
     APPLE_TEAM_ID: Optional[str] = None
     APPLE_KEY_ID: Optional[str] = None

@@ -20,6 +20,10 @@ from app.models.purchase import Entitlement
 
 PASS_DURATION = timedelta(days=7)
 
+# 免费试听只覆盖**主讲解段**。一件作品还有背景/分析/问答/作者介绍等段落,
+# 每段独立 TTS;不限段的话"免费一件"实际是几十次生成(再乘 10 种语言)。
+FREE_AUDIO_SECTION = "guide"
+
 # 权益状态(对外统一口径)
 NOT_PURCHASED = "not_purchased"
 PURCHASED_NOT_ACTIVATED = "purchased_not_activated"
@@ -117,23 +121,40 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
         "can": {
             "purchase": not is_guest,
             "recognize": active or left > 0,
-            # 语音:通票内全放行;免费用户只放行已认领的那一件
+            # 语音:通票内全放行;免费用户只放行已认领的那一件那种语言的主讲解段
+            # (`ai_ask` 已移除:自由问答停用中 /chat/ask 返 503,
+            #  契约不该承诺一个不存在的能力)
             "audio_any": active,
-            "ai_ask": active,
         },
     }
 
 
-def can_play_audio(db, user_id: str, qid: str, benefits=None) -> bool:
-    """某件的语音能不能放。免费用户只有已认领的首件可放(可无限重播)。"""
+def can_play_audio(
+    db,
+    user_id: str,
+    qid: str,
+    benefits=None,
+    *,
+    language: str = "zh",
+    section: str = FREE_AUDIO_SECTION,
+) -> bool:
+    """某件的语音能不能放。
+
+    免费用户只有**已认领的那一件、那种语言、主讲解段**可放(可无限重播)。
+    收敛到三元组是因为:一件作品多段 × 10 语言 = 几十次 TTS,
+    只按 qid 判等于免费送几十次生成。
+    """
     state, _ = resolve_state(db, user_id)
     if state == ACTIVE:
         return True
+    if section != FREE_AUDIO_SECTION:
+        return False
     claimed = getattr(benefits, "free_audio_qid", None)
-    return bool(claimed) and claimed == qid
+    claimed_lang = getattr(benefits, "free_audio_lang", None)
+    return bool(claimed) and claimed == qid and claimed_lang == language
 
 
-def claim_free_audio(db, benefits, qid: str) -> bool:
+def claim_free_audio(db, benefits, qid: str, language: str = "zh") -> bool:
     """认领首件免费语音。已认领过则不改(不给第二件)。返回是否本次认领。
 
     ⚠️ 认领时机=**首次识别成功后自动播放**,不是"给一张待花的券"——
@@ -142,6 +163,7 @@ def claim_free_audio(db, benefits, qid: str) -> bool:
     if getattr(benefits, "free_audio_qid", None):
         return False
     benefits.free_audio_qid = qid
+    benefits.free_audio_lang = language
     benefits.free_audio_claimed_at = _now()
     db.commit()
     return True
@@ -232,7 +254,14 @@ def revoke_for_purchase(
     return True
 
 
-def audio_access(db, user_id: str, qid: str) -> str:
+def audio_access(
+    db,
+    user_id: str,
+    qid: str,
+    *,
+    language: str = "zh",
+    section: str = FREE_AUDIO_SECTION,
+) -> str:
     """语音闸门:**付费墙真正生效的地方**(前端 UI 只是它的表达)。
 
     返回 "allowed" / "claimable" / "denied",**本身不产生副作用**:
@@ -250,18 +279,21 @@ def audio_access(db, user_id: str, qid: str) -> str:
     from app.models.user_benefits import UserBenefits
 
     benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
-    if can_play_audio(db, user_id, qid, benefits):
+    if can_play_audio(db, user_id, qid, benefits, language=language, section=section):
         return "allowed"
     if benefits is None:
+        return "denied"
+    # 只有主讲解段可认领:深度段/问答/作者介绍属付费内容
+    if section != FREE_AUDIO_SECTION:
         return "denied"
     return "claimable" if not getattr(benefits, "free_audio_qid", None) else "denied"
 
 
-def claim_audio_now(db, user_id: str, qid: str) -> bool:
+def claim_audio_now(db, user_id: str, qid: str, language: str = "zh") -> bool:
     """音频**确实送达后**才认领首件。与 audio_access 的 claimable 配对使用。"""
     from app.models.user_benefits import UserBenefits
 
     benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
     if benefits is None:
         return False
-    return claim_free_audio(db, benefits, qid)
+    return claim_free_audio(db, benefits, qid, language)

@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.purchase import Entitlement, Purchase
 from app.models.user import User
 from app.models.user_benefits import UserBenefits
 
@@ -28,7 +29,12 @@ def client():
     # 只建本用例涉及的表（个别无关模型的 server_default NOW() 不兼容 SQLite）
     Base.metadata.create_all(
         bind=engine,
-        tables=[User.__table__, UserBenefits.__table__],
+        tables=[
+            User.__table__,
+            UserBenefits.__table__,
+            Purchase.__table__,
+            Entitlement.__table__,
+        ],
     )
 
     def override_get_db():
@@ -98,3 +104,66 @@ def test_delete_account_removes_user_and_benefits(client):
 def test_delete_requires_auth(client):
     resp = client.delete("/api/v1/auth/me")
     assert resp.status_code in (401, 403)
+
+
+@pytest.fixture()
+def client_db():
+    """自带会话的 client(现有 fixture 只给 client,断言 DB 需要会话)。"""
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[
+            User.__table__,
+            UserBenefits.__table__,
+            Purchase.__table__,
+            Entitlement.__table__,
+        ],
+    )
+    s = sessionmaker(bind=engine)()
+    app.dependency_overrides[get_db] = lambda: s
+    yield TestClient(app), s
+    app.dependency_overrides.clear()
+    s.close()
+
+
+def test_delete_revokes_entitlement_and_anonymizes_purchase(client_db):
+    """删号时权益与订单性质不同,不能一起 delete 了事:
+
+    - 权益**必须撤销** —— 人没了权益还"生效"是脏数据,此前完全没处理,
+      通票会变成谁也用不了的孤儿。
+    - 订单**保留但匿名化** —— 财务记录有会计/税务留存义务,不能删;
+      但 receipt_payload 属个人数据,必须清空。
+    """
+    from app.services import entitlement_service as es
+    from app.services.auth_service import AuthService
+
+    c, db = client_db
+    tok = c.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "del@gomuseum.app",
+            "username": "del",
+            "password": "Passw0rd!1",
+        },
+    ).json()["access_token"]
+    uid = str(AuthService.get_current_user(db, tok).id)
+
+    es.grant_from_purchase(
+        db,
+        user_id=uid,
+        platform="android",
+        product_id=es.PARIS_PASS_7D,
+        store_transaction_id="txn-del",
+        receipt_payload="SENSITIVE",
+    )
+
+    r = c.delete("/api/v1/auth/me", headers={"Authorization": f"Bearer {tok}"})
+    assert r.status_code == 204, r.text
+
+    ents = db.query(Entitlement).all()
+    assert ents and all(e.status == "revoked" for e in ents), "权益必须撤销"
+    p = db.query(Purchase).filter_by(store_transaction_id="txn-del").one()
+    assert p.receipt_payload is None, "个人数据必须清除"
+    assert p.user_id.startswith("deleted:"), "关联切断,财务记录保留"

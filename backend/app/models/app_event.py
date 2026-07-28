@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.core.database import Base
 
-# 12 个核心事件(改这里前先问:少了它哪个问题答不了?)
+# 14 个核心事件(改这里前先问:少了它哪个问题答不了?)
 EVENTS = (
     # 识别漏斗
     "recognition_succeeded",
@@ -27,6 +27,7 @@ EVENTS = (
     "purchase_started",
     "purchase_succeeded",
     "purchase_failed",
+    "purchase_refunded",
     "pass_activated",
     # 内容入口(判断"搜索绕过付费"是否成立的关键)
     "content_viewed",
@@ -34,6 +35,9 @@ EVENTS = (
     "museum_used",
     # 首件免费语音
     "free_audio_played",
+    # 免费额度发放(刷额度的形态=同 IP 大量新游客;device_id 客户端可控,
+    # 不做 IP 封堵——博物馆共享 WiFi 会误伤真实用户,先观测再决定)
+    "guest_created",
 )
 
 

@@ -29,8 +29,13 @@ def session():
     yield sessionmaker(bind=engine)()
 
 
-def _ben(s, uid="u1", free_audio=None):
-    b = UserBenefits(user_id=uid, recognition_quota=5, free_audio_qid=free_audio)
+def _ben(s, uid="u1", free_audio=None, lang="zh"):
+    b = UserBenefits(
+        user_id=uid,
+        recognition_quota=5,
+        free_audio_qid=free_audio,
+        free_audio_lang=lang if free_audio else None,
+    )
     s.add(b)
     s.commit()
     return b
@@ -160,3 +165,37 @@ def test_tts_generate_requires_auth():
     )
     assert r.status_code == 401, f"未鉴权就放行了: {r.status_code}"
     assert r.json()["detail"]["reason"] == "auth_required"
+
+
+def test_free_preview_is_one_artwork_one_language_one_section(session):
+    """免费试听收敛到 (作品, 语言, 主讲解段)。
+
+    一件作品还有背景/分析/问答/作者介绍等段落,每段独立 TTS,再乘 10 种语言——
+    只按 qid 判的话"免费一件"实际是几十次生成,免费层成本失控。
+    """
+    _ben(session, free_audio="Q12418", lang="zh")
+    # 同件同语言主讲解:可无限重播
+    assert es.audio_access(session, "u1", "Q12418") == "allowed"
+    # 同件但换语言 → 另一次 TTS,不在免费范围
+    assert es.audio_access(session, "u1", "Q12418", language="fr") == "denied"
+    # 同件同语言但深度段/问答/作者介绍 → 各自独立 TTS,属付费内容
+    for sec in ("background", "analysis", "qa", "artist_bio"):
+        assert (
+            es.audio_access(session, "u1", "Q12418", section=sec) == "denied"
+        ), f"{sec} 不该免费"
+
+
+def test_claim_records_the_language(session):
+    b = _ben(session)
+    assert es.audio_access(session, "u1", "Q1", language="fr") == "claimable"
+    es.claim_audio_now(session, "u1", "Q1", "fr")
+    session.refresh(b)
+    assert (b.free_audio_qid, b.free_audio_lang) == ("Q1", "fr")
+    assert es.audio_access(session, "u1", "Q1", language="fr") == "allowed"
+    assert es.audio_access(session, "u1", "Q1", language="zh") == "denied"
+
+
+def test_deep_section_is_never_claimable(session):
+    """深度段不能成为"首件" —— 否则用户在深度段用掉名额,主讲解反而听不了。"""
+    _ben(session)
+    assert es.audio_access(session, "u1", "Q1", section="analysis") == "denied"
