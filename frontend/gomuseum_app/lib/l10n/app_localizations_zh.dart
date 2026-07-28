@@ -630,6 +630,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get museumIntroComingSoon => '馆方介绍生成中，敬请期待';
+
+  @override
+  String get paywallTitle => '巴黎 7 日通票';
+
+  @override
+  String get paywallPitch => '不限次拍照识别，卢浮宫、奥赛、橘园全馆语音讲解。';
+
+  @override
+  String get paywallClockNote => '购买后不立即计时——首次使用高级功能并确认后才开始。';
+
+  @override
+  String get paywallFreeAlways => '浏览、搜索与完整文字讲解始终免费。';
+
+  @override
+  String get paywallBuy => '获取通票';
+
+  @override
+  String get paywallRestore => '恢复购买';
+
+  @override
+  String get audioFreePreview => '免费试听';
+
+  @override
+  String get audioLockedHint => '语音讲解需要通票——免费试听名额已用在另一件作品上。';
+
+  @override
+  String get quotaExhausted => '免费识别次数已用完。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1258,4 +1285,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get museumIntroComingSoon => '館方介紹生成中，敬請期待';
+
+  @override
+  String get paywallTitle => '巴黎 7 日通票';
+
+  @override
+  String get paywallPitch => '不限次拍照辨識，羅浮宮、奧塞、橘園全館語音導覽。';
+
+  @override
+  String get paywallClockNote => '購買後不立即計時——首次使用進階功能並確認後才開始。';
+
+  @override
+  String get paywallFreeAlways => '瀏覽、搜尋與完整文字導覽始終免費。';
+
+  @override
+  String get paywallBuy => '取得通票';
+
+  @override
+  String get paywallRestore => '回復購買';
+
+  @override
+  String get audioFreePreview => '免費試聽';
+
+  @override
+  String get audioLockedHint => '語音導覽需要通票——免費試聽名額已用在另一件作品上。';
+
+  @override
+  String get quotaExhausted => '免費辨識次數已用完。';
 }

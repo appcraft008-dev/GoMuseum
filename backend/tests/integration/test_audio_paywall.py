@@ -106,3 +106,19 @@ def test_endpoint_actually_wires_the_gate():
         r = TestClient(app).get(path)
         assert r.status_code == 401, f"{path} 未鉴权就放行了: {r.status_code}"
         assert r.json()["detail"]["reason"] == "auth_required"
+
+
+def test_paywall_hit_is_recorded(session):
+    """埋点此前**零调用方**:模型/迁移/ops_report 全建好了,但没人写入,
+    付费漏斗报告永远是零。这条锁住撞墙确实留下痕迹。"""
+    from app.models.app_event import AppEvent
+    from app.services.event_log import log_event
+
+    Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
+    _ben(session, free_audio="Q12418")
+    assert es.authorize_audio(session, "u1", "Q151952") is False
+    log_event(session, "paywall_viewed_from_audio", user_id="u1", qid="Q151952")
+
+    ev = session.query(AppEvent).one()
+    assert ev.name == "paywall_viewed_from_audio"
+    assert ev.props["qid"] == "Q151952"

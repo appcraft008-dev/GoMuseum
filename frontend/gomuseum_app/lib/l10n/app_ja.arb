@@ -198,5 +198,14 @@
   "museumCollectionTab": "コレクション",
   "museumOpeningHours": "開館時間",
   "museumOfficialSite": "公式サイト",
-  "museumIntroComingSoon": "館内紹介は準備中です"
+  "museumIntroComingSoon": "館内紹介は準備中です",
+  "paywallTitle": "パリ 7日間パス",
+  "paywallPitch": "撮影による作品認識が無制限、ルーヴル・オルセー・オランジュリーの音声解説がすべて聴けます。",
+  "paywallClockNote": "購入時点では計測を開始しません。プレミアム機能を初めて使い、確認した時点から始まります。",
+  "paywallFreeAlways": "閲覧・検索・テキスト解説の全文は常に無料です。",
+  "paywallBuy": "パスを購入",
+  "paywallRestore": "購入を復元",
+  "audioFreePreview": "無料試聴",
+  "audioLockedHint": "音声解説にはパスが必要です。無料試聴は別の作品で使用済みです。",
+  "quotaExhausted": "無料の認識回数を使い切りました。"
 }

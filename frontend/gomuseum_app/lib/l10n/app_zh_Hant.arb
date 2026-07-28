@@ -198,5 +198,14 @@
   "museumCollectionTab": "藏品",
   "museumOpeningHours": "開放時間",
   "museumOfficialSite": "官方網站",
-  "museumIntroComingSoon": "館方介紹生成中，敬請期待"
+  "museumIntroComingSoon": "館方介紹生成中，敬請期待",
+  "paywallTitle": "巴黎 7 日通票",
+  "paywallPitch": "不限次拍照辨識，羅浮宮、奧塞、橘園全館語音導覽。",
+  "paywallClockNote": "購買後不立即計時——首次使用進階功能並確認後才開始。",
+  "paywallFreeAlways": "瀏覽、搜尋與完整文字導覽始終免費。",
+  "paywallBuy": "取得通票",
+  "paywallRestore": "回復購買",
+  "audioFreePreview": "免費試聽",
+  "audioLockedHint": "語音導覽需要通票——免費試聽名額已用在另一件作品上。",
+  "quotaExhausted": "免費辨識次數已用完。"
 }

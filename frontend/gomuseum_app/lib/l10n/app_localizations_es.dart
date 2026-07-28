@@ -653,4 +653,35 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get museumIntroComingSoon => 'Presentación del museo próximamente';
+
+  @override
+  String get paywallTitle => 'Pase de París de 7 días';
+
+  @override
+  String get paywallPitch =>
+      'Reconocimiento fotográfico ilimitado y audioguía completa en el Louvre, Orsay y la Orangerie.';
+
+  @override
+  String get paywallClockNote =>
+      'El tiempo no empieza al comprar: comienza la primera vez que usas una función premium y lo confirmas.';
+
+  @override
+  String get paywallFreeAlways =>
+      'Explorar, buscar y leer el comentario completo son siempre gratis.';
+
+  @override
+  String get paywallBuy => 'Conseguir el pase';
+
+  @override
+  String get paywallRestore => 'Restaurar compra';
+
+  @override
+  String get audioFreePreview => 'Muestra gratuita';
+
+  @override
+  String get audioLockedHint =>
+      'La audioguía requiere el pase: ya has usado tu muestra gratuita.';
+
+  @override
+  String get quotaExhausted => 'Has agotado tus reconocimientos gratuitos.';
 }

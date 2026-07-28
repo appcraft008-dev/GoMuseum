@@ -631,4 +631,32 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get museumIntroComingSoon => '박물관 소개 준비 중입니다';
+
+  @override
+  String get paywallTitle => '파리 7일 패스';
+
+  @override
+  String get paywallPitch => '사진 인식 무제한, 루브르·오르세·오랑주리 전관 음성 해설을 모두 이용할 수 있습니다.';
+
+  @override
+  String get paywallClockNote =>
+      '구매 시점에는 시간이 흐르지 않습니다. 프리미엄 기능을 처음 사용하고 확인한 때부터 시작됩니다.';
+
+  @override
+  String get paywallFreeAlways => '둘러보기, 검색, 전체 텍스트 해설은 언제나 무료입니다.';
+
+  @override
+  String get paywallBuy => '패스 구매';
+
+  @override
+  String get paywallRestore => '구매 복원';
+
+  @override
+  String get audioFreePreview => '무료 체험';
+
+  @override
+  String get audioLockedHint => '음성 해설에는 패스가 필요합니다. 무료 체험은 다른 작품에 이미 사용되었습니다.';
+
+  @override
+  String get quotaExhausted => '무료 인식 횟수를 모두 사용했습니다.';
 }

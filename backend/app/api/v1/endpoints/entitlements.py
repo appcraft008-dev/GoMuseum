@@ -18,6 +18,7 @@ from app.core.database import get_db
 from app.models.user_benefits import UserBenefits
 from app.services import entitlement_service as es
 from app.services.auth_service import AuthService
+from app.services.event_log import log_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,4 +55,5 @@ def activate_pass(
     """
     user_id = _me(db, credentials)
     es.activate(db, user_id)
+    log_event(db, "pass_activated", user_id=user_id)
     return es.summary(db, user_id, _benefits(db, user_id))

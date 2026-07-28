@@ -140,6 +140,15 @@ async def verify_purchase(
                 store_transaction_id=txn,
                 receipt_payload=request.receipt_data,
             )
+            from app.services.event_log import log_event
+
+            log_event(
+                db,
+                "purchase_succeeded",
+                user_id=request.user_id,
+                device_id=request.device_id,
+                product_id=request.product_id,
+            )
             return VerifyReceiptResponse(
                 verified=True,
                 product_id=request.product_id,

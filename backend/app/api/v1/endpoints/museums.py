@@ -35,11 +35,14 @@ def _require_audio_access(
     """
     from app.services import entitlement_service as es
     from app.services.auth_service import AuthService
+    from app.services.event_log import log_event
 
     if credentials is None:
         raise HTTPException(status_code=401, detail={"reason": "auth_required"})
     user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
     if not es.authorize_audio(db, user_id, qid):
+        # 服务端自己就知道付费墙被撞到了,不必等前端埋点
+        log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
         raise HTTPException(status_code=402, detail={"reason": "pass_required"})
 
 

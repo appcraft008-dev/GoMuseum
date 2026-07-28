@@ -22,6 +22,12 @@ class GuideAudioNotReady extends GuideAudioResult {
 }
 
 /// 503 tts_failed 或网络/其它：音频暂不可用，可重试；不阻塞文字。
+/// 402:需要通票。**必须与失败区分开**——否则付费拒绝会被当成"生成失败"
+/// 反复重试,用户看到的是转圈报错而不是付费页。
+class GuideAudioPassRequired extends GuideAudioResult {
+  const GuideAudioPassRequired();
+}
+
 class GuideAudioFailed extends GuideAudioResult {
   const GuideAudioFailed();
 }

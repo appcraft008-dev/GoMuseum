@@ -198,5 +198,14 @@
   "museumCollectionTab": "Sammlung",
   "museumOpeningHours": "Öffnungszeiten",
   "museumOfficialSite": "Offizielle Website",
-  "museumIntroComingSoon": "Museumsvorstellung folgt in Kürze"
+  "museumIntroComingSoon": "Museumsvorstellung folgt in Kürze",
+  "paywallTitle": "Paris-Pass für 7 Tage",
+  "paywallPitch": "Unbegrenzte Fotoerkennung und vollständige Audiokommentare im Louvre, Musée d'Orsay und in der Orangerie.",
+  "paywallClockNote": "Die Laufzeit beginnt nicht mit dem Kauf, sondern erst bei der ersten bestätigten Nutzung einer Premium-Funktion.",
+  "paywallFreeAlways": "Stöbern, Suche und der vollständige Textkommentar bleiben immer kostenlos.",
+  "paywallBuy": "Pass holen",
+  "paywallRestore": "Kauf wiederherstellen",
+  "audioFreePreview": "Kostenprobe",
+  "audioLockedHint": "Für Audiokommentare wird der Pass benötigt — deine kostenlose Probe ist bereits aufgebraucht.",
+  "quotaExhausted": "Du hast alle kostenlosen Erkennungen aufgebraucht."
 }
