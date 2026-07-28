@@ -207,5 +207,11 @@
   "paywallRestore": "Restaurer l'achat",
   "audioFreePreview": "Écoute gratuite",
   "audioLockedHint": "Le commentaire audio nécessite le pass — votre écoute gratuite a déjà été utilisée.",
-  "quotaExhausted": "Vous avez utilisé toutes vos reconnaissances gratuites."
+  "quotaExhausted": "Vous avez utilisé toutes vos reconnaissances gratuites.",
+  "activateTitle": "Démarrer votre pass 7 jours ?",
+  "activateBody": "Une fois lancé, il court 7×24 heures sans interruption. Démarrez-le au musée, pas avant.",
+  "activateConfirm": "Démarrer",
+  "activateLater": "Plus tard",
+  "paywallLoginToBuy": "Se connecter pour acheter",
+  "paywallLoginWhy": "Le pass est lié à votre compte : vous le gardez sur un nouveau téléphone."
 }

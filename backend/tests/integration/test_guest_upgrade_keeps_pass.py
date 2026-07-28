@@ -114,3 +114,44 @@ def test_register_without_guest_token_still_creates_account(client):
     )
     assert r.status_code in (200, 201), r.text
     assert db.query(User).filter_by(email="e@f.com").one().is_guest is False
+
+
+def test_guest_cannot_purchase(client):
+    """买票前必须登录 —— 通票挂 user_id,而游客身份是**设备绑定**的:
+    游客买了票,换手机/清数据就永久拿不回(收据已消耗,恢复购买命中幂等)。
+    前端会先引导登录,但执行点在这里,不能只靠 UI 拦。"""
+    c, db = client
+    token = _guest(c, device="dev-3")
+    r = c.post(
+        "/api/v1/payment/verify",
+        json={
+            "platform": "android",
+            "receipt_data": "fake",
+            "product_id": "paris_pass_7d",
+            "device_id": "dev-3",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["reason"] == "login_required_to_purchase"
+
+
+def test_entitlements_tell_frontend_whether_purchase_is_allowed(client):
+    """前端只看 can —— 不自己拼身份判断(契约要求)。"""
+    c, db = client
+    token = _guest(c, device="dev-4")
+    can = c.get(
+        "/api/v1/entitlements/me", headers={"Authorization": f"Bearer {token}"}
+    ).json()["can"]
+    assert can["purchase"] is False, "游客不该看到直接购买入口"
+
+    r = c.post(
+        "/api/v1/auth/register",
+        json={"email": "g@h.com", "username": "u4", "password": "Passw0rd!123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    new_token = r.json()["access_token"]
+    can2 = c.get(
+        "/api/v1/entitlements/me", headers={"Authorization": f"Bearer {new_token}"}
+    ).json()["can"]
+    assert can2["purchase"] is True, "转正后应可购买"

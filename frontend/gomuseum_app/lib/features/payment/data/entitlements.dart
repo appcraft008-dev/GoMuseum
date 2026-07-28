@@ -15,6 +15,7 @@ import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 class Entitlements {
   const Entitlements({
     required this.state,
+    required this.canPurchase,
     required this.canRecognize,
     required this.canAudioAny,
     required this.canAiAsk,
@@ -25,6 +26,11 @@ class Entitlements {
   });
 
   final String state;
+
+  /// 能否直接购买。**买票前必须登录**:通票挂 user_id,而游客身份是设备绑定的,
+  /// 游客买了票换手机就永久拿不回(收据已消耗,恢复购买命中幂等)。
+  /// 由后端给,前端不自己拼身份判断(契约:前端只看 can)。
+  final bool canPurchase;
   final bool canRecognize;
   final bool canAudioAny;
   final bool canAiAsk;
@@ -53,6 +59,7 @@ class Entitlements {
   /// 不假装有通票(失败时放行付费功能=白送),也不假装 0 次(会误弹付费墙)。
   static const Entitlements unknown = Entitlements(
     state: 'not_purchased',
+    canPurchase: false,
     canRecognize: true,
     canAudioAny: false,
     canAiAsk: false,
@@ -63,6 +70,8 @@ class Entitlements {
     final expires = json['expires_at'] as String?;
     return Entitlements(
       state: json['state'] as String? ?? 'not_purchased',
+      // 缺字段时保守取 false:宁可多引导一次登录,也不要让游客买了票丢票
+      canPurchase: can['purchase'] == true,
       canRecognize: can['recognize'] as bool? ?? true,
       canAudioAny: can['audio_any'] as bool? ?? false,
       canAiAsk: can['ai_ask'] as bool? ?? false,
@@ -86,3 +95,19 @@ final entitlementsProvider = FutureProvider<Entitlements>((ref) async {
     return Entitlements.unknown;
   }
 });
+
+/// 激活通票:**买了不立即计时**(旅游产品用户常提前几天买),首次使用高级功能
+/// 且用户**显式确认**后才开始连续 7×24h。幂等——再调不续期也不重置。
+///
+/// ⚠️ 这一步此前完全没有触发器:后端设计了 purchased_not_activated 状态,
+/// 但没有任何客户端调 /activate,于是 `can.audio_any = (state == active)` 恒为
+/// false —— 用户付了 €7.99 依然被付费墙拦住。
+Future<Entitlements?> activatePass(WidgetRef ref) async {
+  final dio = ref.read(dioProvider);
+  try {
+    final res = await dio.post('/api/v1/entitlements/activate');
+    return Entitlements.fromJson(res.data as Map<String, dynamic>);
+  } on DioException {
+    return null;
+  }
+}

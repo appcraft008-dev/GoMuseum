@@ -11,6 +11,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -51,16 +55,18 @@ Future<void> showPaywallSheet(
 }
 
 /// 抽出便于单测(不依赖 showModalBottomSheet)。
-class PaywallSheetContent extends StatelessWidget {
+class PaywallSheetContent extends ConsumerWidget {
   const PaywallSheetContent({super.key, this.onBuy, this.onRestore});
 
   final VoidCallback? onBuy;
   final VoidCallback? onRestore;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+    // 游客先登录再买:通票挂账号,游客买了换手机就永久拿不回(后端也会 403 拦)
+    final canBuy = ref.watch(entitlementsProvider).value?.canPurchase ?? false;
     return Container(
       decoration: BoxDecoration(
         color: gm.surface,
@@ -87,12 +93,22 @@ class PaywallSheetContent extends StatelessWidget {
             _note(gm, l10n.paywallFreeAlways),
             const SizedBox(height: 22),
             GmTicketButton(
-              label: l10n.paywallBuy,
+              label: canBuy ? l10n.paywallBuy : l10n.paywallLoginToBuy,
               onTap: () {
                 Navigator.of(context).pop();
-                onBuy?.call();
+                if (canBuy) {
+                  onBuy?.call();
+                } else {
+                  context.push('/login');
+                }
               },
             ),
+            if (!canBuy) ...[
+              const SizedBox(height: 8),
+              Text(l10n.paywallLoginWhy,
+                  textAlign: TextAlign.center,
+                  style: GmText.sans(size: 11.5, color: gm.faint)),
+            ],
             const SizedBox(height: 10),
             Center(
               child: GestureDetector(
@@ -127,4 +143,43 @@ class PaywallSheetContent extends StatelessWidget {
           ),
         ],
       );
+}
+
+/// 已购但未开始计时 → 弹确认再激活。返回 true 表示现在已生效、调用方可继续。
+///
+/// **绝不静默激活**:旅游产品用户常提前几天买,误触一次就烧掉整张票 = 差评来源。
+/// 反过来,不做这一步同样致命——通票会永远停在 purchased_not_activated,
+/// `can.audio_any` 恒 false,用户付了钱依然被拦(此前正是如此)。
+Future<bool> ensurePassActivated(
+  BuildContext context,
+  WidgetRef ref,
+  Entitlements ent,
+) async {
+  if (ent.isActive) return true;
+  if (!ent.isPurchasedNotActivated) return false;
+
+  final l10n = AppLocalizations.of(context)!;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text(l10n.activateTitle, style: GmText.serif(size: 17)),
+      content:
+          Text(l10n.activateBody, style: GmText.sans(size: 13, height: 1.5)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(c).pop(false),
+          child: Text(l10n.activateLater),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(c).pop(true),
+          child: Text(l10n.activateConfirm),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+
+  final updated = await activatePass(ref);
+  ref.invalidate(entitlementsProvider);
+  return updated?.isActive ?? false;
 }

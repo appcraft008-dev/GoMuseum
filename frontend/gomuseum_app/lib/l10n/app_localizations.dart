@@ -1360,6 +1360,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'ve used all your free recognitions.'**
   String get quotaExhausted;
+
+  /// No description provided for @activateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your 7-day pass?'**
+  String get activateTitle;
+
+  /// No description provided for @activateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once started it runs for 7×24 hours without pause. Start it when you\'re at the museum, not before.'**
+  String get activateBody;
+
+  /// No description provided for @activateConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Start now'**
+  String get activateConfirm;
+
+  /// No description provided for @activateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get activateLater;
+
+  /// No description provided for @paywallLoginToBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to buy'**
+  String get paywallLoginToBuy;
+
+  /// No description provided for @paywallLoginWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pass is tied to your account, so you keep it on a new phone.'**
+  String get paywallLoginWhy;
 }
 
 class _AppLocalizationsDelegate

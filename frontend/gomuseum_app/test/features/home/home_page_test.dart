@@ -46,6 +46,7 @@ class _FakeBenefitsState extends BenefitsState {
 /// 首页额度行读 /entitlements/me;不打桩就会真发请求(测试里表现为 pending timer)
 const _fakeEntitlements = Entitlements(
   state: 'not_purchased',
+  canPurchase: true,
   canRecognize: true,
   canAudioAny: false,
   canAiAsk: false,

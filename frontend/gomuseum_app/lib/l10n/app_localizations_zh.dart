@@ -657,6 +657,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get quotaExhausted => '免费识别次数已用完。';
+
+  @override
+  String get activateTitle => '开始你的 7 天通票？';
+
+  @override
+  String get activateBody => '一旦开始就连续计时 7×24 小时，中途不暂停。建议到馆后再开始。';
+
+  @override
+  String get activateConfirm => '现在开始';
+
+  @override
+  String get activateLater => '再等等';
+
+  @override
+  String get paywallLoginToBuy => '登录后购买';
+
+  @override
+  String get paywallLoginWhy => '通票绑定账号，换手机也不会丢。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1312,4 +1330,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get quotaExhausted => '免費辨識次數已用完。';
+
+  @override
+  String get activateTitle => '開始你的 7 天通票？';
+
+  @override
+  String get activateBody => '一旦開始就連續計時 7×24 小時，中途不暫停。建議到館後再開始。';
+
+  @override
+  String get activateConfirm => '現在開始';
+
+  @override
+  String get activateLater => '再等等';
+
+  @override
+  String get paywallLoginToBuy => '登入後購買';
+
+  @override
+  String get paywallLoginWhy => '通票綁定帳號，換手機也不會遺失。';
 }

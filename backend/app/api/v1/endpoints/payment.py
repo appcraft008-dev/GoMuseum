@@ -98,7 +98,15 @@ async def verify_purchase(
                  }'
         ```
     """
-    auth_user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
+    _user = AuthService.get_current_user(db, credentials.credentials)
+    if _user.is_guest:
+        # 买票前必须登录:通票挂 user_id,而游客身份是**设备绑定**的——
+        # 游客买了票,换手机/清数据就永久拿不回(收据已消耗,恢复购买命中幂等、
+        # 不给新用户发权益)。前端会先引导登录;这里是执行点,不能只靠 UI 拦。
+        raise HTTPException(
+            status_code=403, detail={"reason": "login_required_to_purchase"}
+        )
+    auth_user_id = str(_user.id)
     logger.info(
         f"Verifying {request.platform} purchase for product: {request.product_id}"
     )

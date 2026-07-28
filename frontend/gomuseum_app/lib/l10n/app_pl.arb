@@ -207,5 +207,11 @@
   "paywallRestore": "Przywróć zakup",
   "audioFreePreview": "Darmowy odsłuch",
   "audioLockedHint": "Komentarz audio wymaga karnetu — darmowy odsłuch został już wykorzystany.",
-  "quotaExhausted": "Wykorzystano wszystkie darmowe rozpoznania."
+  "quotaExhausted": "Wykorzystano wszystkie darmowe rozpoznania.",
+  "activateTitle": "Rozpocząć karnet na 7 dni?",
+  "activateBody": "Po uruchomieniu biegnie 7×24 godziny bez przerwy. Uruchom go w muzeum, nie wcześniej.",
+  "activateConfirm": "Rozpocznij teraz",
+  "activateLater": "Jeszcze nie",
+  "paywallLoginToBuy": "Zaloguj się, aby kupić",
+  "paywallLoginWhy": "Karnet jest powiązany z kontem — zachowasz go na nowym telefonie."
 }

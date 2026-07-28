@@ -658,4 +658,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get quotaExhausted => '無料の認識回数を使い切りました。';
+
+  @override
+  String get activateTitle => '7日間パスを開始しますか？';
+
+  @override
+  String get activateBody =>
+      '開始すると 7×24 時間連続で進み、途中で止まりません。館に着いてから開始することをおすすめします。';
+
+  @override
+  String get activateConfirm => '今すぐ開始';
+
+  @override
+  String get activateLater => 'まだ開始しない';
+
+  @override
+  String get paywallLoginToBuy => 'ログインして購入';
+
+  @override
+  String get paywallLoginWhy => 'パスはアカウントに紐づくので、機種変更しても失われません。';
 }

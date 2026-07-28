@@ -659,4 +659,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get quotaExhausted => '무료 인식 횟수를 모두 사용했습니다.';
+
+  @override
+  String get activateTitle => '7일 패스를 시작할까요?';
+
+  @override
+  String get activateBody =>
+      '시작하면 7×24시간 연속으로 진행되며 중간에 멈추지 않습니다. 미술관에 도착한 뒤 시작하세요.';
+
+  @override
+  String get activateConfirm => '지금 시작';
+
+  @override
+  String get activateLater => '나중에';
+
+  @override
+  String get paywallLoginToBuy => '로그인 후 구매';
+
+  @override
+  String get paywallLoginWhy => '패스는 계정에 연결되어 새 휴대폰에서도 유지됩니다.';
 }
