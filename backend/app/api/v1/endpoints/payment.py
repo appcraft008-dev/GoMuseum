@@ -125,6 +125,29 @@ async def verify_purchase(
                 message=verification.get("error", "Receipt verification failed"),
             )
 
+        # 巴黎通票:落订单 + 发权益(purchased_not_activated,不开始计时)。
+        # 幂等靠 store_transaction_id —— 恢复购买重复上报同一 token 不会发第二张。
+        # 老商品(recognition_pack/day_pass)仍走下面的 _apply_benefits,老 APK 不破。
+        from app.services import entitlement_service as _es
+
+        if request.product_id == _es.PARIS_PASS_7D:
+            txn = verification.get("transaction_id") or request.receipt_data[:255]
+            _es.grant_from_purchase(
+                db,
+                user_id=request.user_id or request.device_id or "",
+                platform=request.platform,
+                product_id=request.product_id,
+                store_transaction_id=txn,
+                receipt_payload=request.receipt_data,
+            )
+            return VerifyReceiptResponse(
+                verified=True,
+                product_id=request.product_id,
+                transaction_id=verification.get("transaction_id"),
+                benefits_applied=True,
+                message="Pass granted (not activated until first premium use)",
+            )
+
         # Apply benefits based on product ID
         benefits_applied = _apply_benefits(
             product_id=request.product_id,

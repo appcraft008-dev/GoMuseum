@@ -131,3 +131,88 @@ def claim_free_audio(db, benefits, qid: str) -> bool:
     benefits.free_audio_claimed_at = _now()
     db.commit()
     return True
+
+
+PARIS_PASS_7D = "paris_pass_7d"
+
+
+def grant_from_purchase(
+    db,
+    *,
+    user_id: str,
+    platform: str,
+    product_id: str,
+    store_transaction_id: str,
+    amount=None,
+    currency=None,
+    receipt_payload=None,
+) -> tuple:
+    """收据校验通过后:落订单 + 发权益。返回 (purchase, entitlement)。
+
+    **幂等靠 store_transaction_id 唯一** —— 恢复购买会重复上报同一 token,
+    重复调用只返回已有记录,绝不发第二张票(重复发放=白送钱)。
+
+    ⭐ 发出的权益是 `purchased_not_activated`,**不开始计时**:旅游产品用户
+    常提前几天买,立即计时会白烧有效期;首次用高级功能且用户确认才 activate()。
+    """
+    from app.models.purchase import Entitlement, Purchase
+
+    existing = (
+        db.query(Purchase)
+        .filter_by(store_transaction_id=store_transaction_id)
+        .one_or_none()
+    )
+    if existing:  # 恢复购买/重复上报:返回已有,不重复发放
+        ent = (
+            db.query(Entitlement)
+            .filter_by(source_purchase_id=existing.id)
+            .one_or_none()
+        )
+        return existing, ent
+
+    p = Purchase(
+        user_id=user_id,
+        platform=platform,
+        product_id=product_id,
+        store_transaction_id=store_transaction_id,
+        amount=amount,
+        currency=currency,
+        status="purchased",
+        purchased_at=_now(),
+        receipt_payload=receipt_payload,
+    )
+    db.add(p)
+    db.flush()  # 拿 p.id 关联权益
+    ent = Entitlement(
+        user_id=user_id,
+        entitlement_type=product_id,
+        scope="paris",
+        source_purchase_id=p.id,
+        status=PURCHASED_NOT_ACTIVATED,
+        granted_reason="purchase",
+    )
+    db.add(ent)
+    db.commit()
+    return p, ent
+
+
+def revoke_for_purchase(
+    db, store_transaction_id: str, reason: str = "refunded"
+) -> bool:
+    """退款/撤销:订单与权益一并标记。供商店回调(RTDN)或人工使用。
+    **权益必须跟着撤** —— 只标订单不撤权益 = 退了钱还能用。"""
+    from app.models.purchase import Entitlement, Purchase
+
+    p = (
+        db.query(Purchase)
+        .filter_by(store_transaction_id=store_transaction_id)
+        .one_or_none()
+    )
+    if not p:
+        return False
+    p.status = reason
+    p.refunded_at = _now()
+    for ent in db.query(Entitlement).filter_by(source_purchase_id=p.id):
+        ent.status = reason
+    db.commit()
+    return True
