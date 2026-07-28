@@ -103,7 +103,8 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
   Widget build(BuildContext context) {
     final gm = context.gm;
     final lang = apiLanguage(ref.watch(languageProvider));
-    final detailAsync = ref.watch(museumDetailProvider(widget.slug));
+    final detailAsync =
+        ref.watch(museumDetailProvider((slug: widget.slug, language: lang)));
 
     return Scaffold(
       backgroundColor: gm.bg,
