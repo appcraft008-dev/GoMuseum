@@ -128,7 +128,9 @@ def test_content_returns_default_guide(session):
     session.commit()
     d = get_object_content(session, "orsay", "Q1", "zh")
     assert d["default_guide"]["body"] == "单主线默认讲解。"
-    assert "audio_url" in d["default_guide"]
+    # 只给标志位,不给直链:内容接口无鉴权,发直链等于拆掉付费墙
+    assert "has_audio" in d["default_guide"]
+    assert "audio_url" not in d["default_guide"]
     assert all(t["section_code"] != "guide" for t in d["tabs"])
 
 

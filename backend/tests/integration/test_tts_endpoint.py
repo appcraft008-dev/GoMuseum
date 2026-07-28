@@ -73,6 +73,12 @@ def ctx(monkeypatch):
     storage = FakeStorage()
     fake_tts = FakeTTS()
     # 端点 section 模式用 SessionLocal()（非 Depends(get_db)），故替身工厂
+    # 这些用例考的是**生成与复用**;付费墙另有 test_audio_paywall.py 专测。
+    # 闸门在此 no-op,否则每个用例都要建用户+令牌,把测试意图淹没。
+    monkeypatch.setattr(
+        content_ep, "_require_tts_access", lambda *a, **k: ("test-user", "allowed")
+    )
+    monkeypatch.setattr(content_ep, "_claim_tts_after_success", lambda *a, **k: None)
     monkeypatch.setattr(content_ep, "SessionLocal", Session)
     monkeypatch.setattr(content_ep, "get_object_storage", lambda: storage)
     app.dependency_overrides[get_tts_service] = lambda: fake_tts

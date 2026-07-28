@@ -208,7 +208,6 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
             qid: widget.qid!,
             language: widget.language!,
             section: tab.sectionCode,
-            initialUrl: tab.audioUrl,
           ),
           const SizedBox(height: 14),
         ],

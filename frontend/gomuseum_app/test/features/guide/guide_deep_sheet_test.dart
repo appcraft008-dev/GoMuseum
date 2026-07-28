@@ -10,9 +10,9 @@ void main() {
   testWidgets('抽屉渲染 tab 标签与首个 tab 正文，切换 tab 换正文', (t) async {
     final tabs = [
       const ObjectTab(
-          sectionCode: 'artist', label: '作者', body: '作者正文', audioUrl: null),
+          sectionCode: 'artist', label: '作者', body: '作者正文', hasAudio: false),
       const ObjectTab(
-          sectionCode: 'analysis', label: '分析', body: '分析正文', audioUrl: null),
+          sectionCode: 'analysis', label: '分析', body: '分析正文', hasAudio: false),
     ];
     await t.pumpWidget(MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -44,7 +44,7 @@ void main() {
                 sectionCode: 'analysis',
                 label: '分析',
                 body: '分析正文',
-                audioUrl: null),
+                hasAudio: false),
           ],
           artist: Artist(name: '马奈', bio: '一段经历'),
           slug: 'orsay',

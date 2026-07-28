@@ -65,6 +65,29 @@ async def recognize_artwork(
     service: RecognitionService = Depends(get_recognition_service_dependency),
     response: Response = None,
 ) -> RecognitionResponse:
+    """⛔ 已下线(2026-07-28)。
+
+    裸 GPT 猜测流:**不鉴权、不计费、不接地**,返回的名字不可信且不带 qid。
+    交接文档 2026-07-03 就写明"违反接地原则,将下线",一直没摘,结果是一条
+    任何人都能无限调用、烧我们 GPT 额度的后门,也绕过识别次数付费墙。
+    前端早已改走计费路径 /api/v1/recognize(见 recognition_remote_datasource)。
+
+    保留路由只为给可能还在调它的老客户端一个明确信号,不是静默 404。
+    """
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "reason": "endpoint_retired",
+            "use": "POST /api/v1/recognize",
+        },
+    )
+
+
+async def _retired_recognize_artwork(
+    image: UploadFile,
+    service: RecognitionService,
+    response: Response = None,
+) -> RecognitionResponse:
     """
     Recognize artwork from uploaded image
 

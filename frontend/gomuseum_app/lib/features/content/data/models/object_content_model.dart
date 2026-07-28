@@ -91,12 +91,15 @@ class ObjectTab extends Equatable {
     required this.sectionCode,
     required this.label,
     required this.body,
-    required this.audioUrl,
+    required this.hasAudio,
   });
   final String sectionCode;
   final String label;
   final String? body;
-  final String? audioUrl;
+
+  /// 后端只给标志位,**不给直链**——内容接口无鉴权,发直链等于拆掉付费墙。
+  /// 要听走已加闸的 /audio(见 GuideAudioPlayer)。
+  final bool hasAudio;
 
   /// body 空/缺 → 前端显「待完善」。
   bool get hasBody => (body ?? '').trim().isNotEmpty;
@@ -105,10 +108,10 @@ class ObjectTab extends Equatable {
         sectionCode: j['section_code'] as String? ?? '',
         label: j['label'] as String? ?? '段落',
         body: j['body'] as String?,
-        audioUrl: j['audio_url'] as String?,
+        hasAudio: j['has_audio'] == true,
       );
   @override
-  List<Object?> get props => [sectionCode, label, body, audioUrl];
+  List<Object?> get props => [sectionCode, label, body, hasAudio];
 }
 
 class SuggestedQuestion extends Equatable {
@@ -130,20 +133,20 @@ class SuggestedQuestion extends Equatable {
 }
 
 class DefaultGuide extends Equatable {
-  const DefaultGuide({required this.body, required this.audioUrl});
+  const DefaultGuide({required this.body, required this.hasAudio});
   final String body;
-  final String? audioUrl;
+  final bool hasAudio;
 
   bool get hasBody => body.trim().isNotEmpty;
 
   factory DefaultGuide.fromJson(Map<String, dynamic> j) => DefaultGuide(
         // 禁裸 as String：富化字段天然可缺，统一可空 + 回退
         body: j['body'] is String ? j['body'] as String : '',
-        audioUrl: j['audio_url'] is String ? j['audio_url'] as String : null,
+        hasAudio: j['has_audio'] == true,
       );
 
   @override
-  List<Object?> get props => [body, audioUrl];
+  List<Object?> get props => [body, hasAudio];
 }
 
 /// 作者卡（必选常驻；区别于 tabs 的动态隐藏）。
