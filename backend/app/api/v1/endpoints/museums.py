@@ -27,11 +27,13 @@ _bearer = HTTPBearer(auto_error=False)
 
 def _require_audio_access(
     db: Session, credentials: HTTPAuthorizationCredentials | None, qid: str
-) -> None:
+) -> tuple[str, str]:
     """语音付费墙的**唯一执行点**。前端的付费墙 UI 只是它的表达——
     没有这道闸,老 App / curl / 改客户端都能白拿音频,还会触发 TTS 花我们的钱。
 
     必须在触发生成**之前**调用。拒绝返 402(不是 403):前端据此弹付费页。
+    返回 (user_id, kind);kind == "claimable" 时**音频送达后**才认领首件——
+    生成可能 404/409/503,在这里认领会让用户"什么都没听到但名额没了"。
     """
     from app.services import entitlement_service as es
     from app.services.auth_service import AuthService
@@ -40,10 +42,21 @@ def _require_audio_access(
     if credentials is None:
         raise HTTPException(status_code=401, detail={"reason": "auth_required"})
     user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
-    if not es.authorize_audio(db, user_id, qid):
+    kind = es.audio_access(db, user_id, qid)
+    if kind == "denied":
         # 服务端自己就知道付费墙被撞到了,不必等前端埋点
         log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
         raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+    return user_id, kind
+
+
+def _claim_after_success(db: Session, gate: tuple[str, str], qid: str) -> None:
+    """音频确实送达了才认领首件(见 _require_audio_access 的说明)。"""
+    from app.services import entitlement_service as es
+
+    user_id, kind = gate
+    if kind == "claimable":
+        es.claim_audio_now(db, user_id, qid)
 
 
 @router.get("")
@@ -91,7 +104,7 @@ def object_audio(
         get_or_make_qa_audio_url,
     )
 
-    _require_audio_access(db, credentials, qid)
+    gate = _require_audio_access(db, credentials, qid)
 
     try:
         if section == "qa":
@@ -113,6 +126,7 @@ def object_audio(
         raise HTTPException(status_code=409, detail={"reason": "audio_generating"})
     if status == "no_text":
         raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
+    _claim_after_success(db, gate, qid)
     return {"audio_url": url}
 
 
@@ -130,7 +144,7 @@ async def object_audio_stream(
     guide/深度段;qa/artist_bio 仍走非流式 /audio(v1 范围)。"""
     from app.services.enrichment.streaming_audio import stream_section_audio
 
-    _require_audio_access(db, credentials, qid)
+    gate = _require_audio_access(db, credentials, qid)
 
     try:
         status, payload = await stream_section_audio(qid, language, section)
@@ -141,6 +155,7 @@ async def object_audio_stream(
         raise HTTPException(status_code=409, detail={"reason": "audio_generating"})
     if status == "no_text":
         raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
+    _claim_after_success(db, gate, qid)
     if status == "cached":
         # 已落库:不重复生成,直接给 R2 直链(前端从 R2 播)
         return {"audio_url": payload}

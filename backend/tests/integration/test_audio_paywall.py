@@ -36,24 +36,34 @@ def _ben(s, uid="u1", free_audio=None):
     return b
 
 
-def test_first_artwork_is_claimed_and_allowed(session):
-    """首件=**保证送达的首体验**,不是"一张待花的券"——券式设计下很多用户
-    到最后压根没用过语音,付费墙就白建了。"""
+def test_first_artwork_is_claimable_but_not_yet_claimed(session):
+    """⚠️ 判定本身**不能有副作用**(2026-07-28 staging 实测踩到):
+    闸门跑在生成之前,而生成可能 404(该语言没正文)/409/503。
+    若在判定时就认领,用户点一件没音频的作品——什么都没听到,名额却没了。"""
     b = _ben(session)
-    assert es.authorize_audio(session, "u1", "Q12418") is True
+    assert es.audio_access(session, "u1", "Q12418") == "claimable"
     session.refresh(b)
-    assert b.free_audio_qid == "Q12418", "第一次请求就地认领"
+    assert b.free_audio_qid is None, "判定阶段绝不能认领"
+
+
+def test_claim_happens_only_after_delivery(session):
+    b = _ben(session)
+    assert es.audio_access(session, "u1", "Q12418") == "claimable"
+    assert es.claim_audio_now(session, "u1", "Q12418") is True  # 音频送达了
+    session.refresh(b)
+    assert b.free_audio_qid == "Q12418"
+    assert es.audio_access(session, "u1", "Q12418") == "allowed"  # 之后可重播
 
 
 def test_claimed_artwork_replays_forever(session):
     _ben(session, free_audio="Q12418")
     for _ in range(3):
-        assert es.authorize_audio(session, "u1", "Q12418") is True
+        assert es.audio_access(session, "u1", "Q12418") == "allowed"
 
 
 def test_second_artwork_is_denied(session):
     _ben(session, free_audio="Q12418")
-    assert es.authorize_audio(session, "u1", "Q151952") is False
+    assert es.audio_access(session, "u1", "Q151952") == "denied"
 
 
 def test_active_pass_opens_everything(session):
@@ -67,8 +77,8 @@ def test_active_pass_opens_everything(session):
         )
     )
     session.commit()
-    assert es.authorize_audio(session, "u1", "Q151952") is True
-    assert es.authorize_audio(session, "u1", "随便哪件") is True
+    assert es.audio_access(session, "u1", "Q151952") == "allowed"
+    assert es.audio_access(session, "u1", "随便哪件") == "allowed"
 
 
 def test_expired_pass_falls_back_to_free_rules(session):
@@ -83,13 +93,13 @@ def test_expired_pass_falls_back_to_free_rules(session):
         )
     )
     session.commit()
-    assert es.authorize_audio(session, "u1", "Q151952") is False
-    assert es.authorize_audio(session, "u1", "Q12418") is True  # 首件仍可重播
+    assert es.audio_access(session, "u1", "Q151952") == "denied"
+    assert es.audio_access(session, "u1", "Q12418") == "allowed"  # 首件仍可重播
 
 
 def test_unknown_user_denied(session):
     """没有 benefits 行(伪造 user_id)不该白拿。"""
-    assert es.authorize_audio(session, "查无此人", "Q12418") is False
+    assert es.audio_access(session, "查无此人", "Q12418") == "denied"
 
 
 def test_endpoint_actually_wires_the_gate():
@@ -116,7 +126,7 @@ def test_paywall_hit_is_recorded(session):
 
     Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
     _ben(session, free_audio="Q12418")
-    assert es.authorize_audio(session, "u1", "Q151952") is False
+    assert es.audio_access(session, "u1", "Q151952") == "denied"
     log_event(session, "paywall_viewed_from_audio", user_id="u1", qid="Q151952")
 
     ev = session.query(AppEvent).one()
