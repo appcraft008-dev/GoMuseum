@@ -113,6 +113,8 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
       final code = e.response?.statusCode;
       if (code == 409) return const GuideAudioGenerating();
       if (code == 404) return const GuideAudioNotReady();
+      // 402 = 付费墙(后端是唯一执行点);别落进 Failed 被当成可重试
+      if (code == 402) return const GuideAudioPassRequired();
       return const GuideAudioFailed();
     } catch (_) {
       return const GuideAudioFailed();

@@ -1306,6 +1306,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Museum introduction coming soon'**
   String get museumIntroComingSoon;
+
+  /// No description provided for @paywallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paris 7-Day Pass'**
+  String get paywallTitle;
+
+  /// No description provided for @paywallPitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited photo recognition and full audio commentary across the Louvre, Orsay and Orangerie.'**
+  String get paywallPitch;
+
+  /// No description provided for @paywallClockNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The clock does not start at purchase — it begins when you first use a premium feature and confirm.'**
+  String get paywallClockNote;
+
+  /// No description provided for @paywallFreeAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing, search and full written commentary are always free.'**
+  String get paywallFreeAlways;
+
+  /// No description provided for @paywallBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the pass'**
+  String get paywallBuy;
+
+  /// No description provided for @paywallRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchase'**
+  String get paywallRestore;
+
+  /// No description provided for @audioFreePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Free preview'**
+  String get audioFreePreview;
+
+  /// No description provided for @audioLockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio commentary needs the pass — your free preview has been used.'**
+  String get audioLockedHint;
+
+  /// No description provided for @quotaExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve used all your free recognitions.'**
+  String get quotaExhausted;
 }
 
 class _AppLocalizationsDelegate

@@ -651,4 +651,35 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get museumIntroComingSoon => 'Wprowadzenie do muzeum wkrótce';
+
+  @override
+  String get paywallTitle => 'Karnet paryski na 7 dni';
+
+  @override
+  String get paywallPitch =>
+      'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio w Luwrze, Orsay i Orangerie.';
+
+  @override
+  String get paywallClockNote =>
+      'Czas nie zaczyna biec w chwili zakupu — rusza przy pierwszym potwierdzonym użyciu funkcji premium.';
+
+  @override
+  String get paywallFreeAlways =>
+      'Przeglądanie, wyszukiwanie i pełny komentarz tekstowy są zawsze bezpłatne.';
+
+  @override
+  String get paywallBuy => 'Kup karnet';
+
+  @override
+  String get paywallRestore => 'Przywróć zakup';
+
+  @override
+  String get audioFreePreview => 'Darmowy odsłuch';
+
+  @override
+  String get audioLockedHint =>
+      'Komentarz audio wymaga karnetu — darmowy odsłuch został już wykorzystany.';
+
+  @override
+  String get quotaExhausted => 'Wykorzystano wszystkie darmowe rozpoznania.';
 }

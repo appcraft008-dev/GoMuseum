@@ -198,5 +198,14 @@
   "museumCollectionTab": "Kolekcja",
   "museumOpeningHours": "Godziny otwarcia",
   "museumOfficialSite": "Oficjalna strona",
-  "museumIntroComingSoon": "Wprowadzenie do muzeum wkrótce"
+  "museumIntroComingSoon": "Wprowadzenie do muzeum wkrótce",
+  "paywallTitle": "Karnet paryski na 7 dni",
+  "paywallPitch": "Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio w Luwrze, Orsay i Orangerie.",
+  "paywallClockNote": "Czas nie zaczyna biec w chwili zakupu — rusza przy pierwszym potwierdzonym użyciu funkcji premium.",
+  "paywallFreeAlways": "Przeglądanie, wyszukiwanie i pełny komentarz tekstowy są zawsze bezpłatne.",
+  "paywallBuy": "Kup karnet",
+  "paywallRestore": "Przywróć zakup",
+  "audioFreePreview": "Darmowy odsłuch",
+  "audioLockedHint": "Komentarz audio wymaga karnetu — darmowy odsłuch został już wykorzystany.",
+  "quotaExhausted": "Wykorzystano wszystkie darmowe rozpoznania."
 }

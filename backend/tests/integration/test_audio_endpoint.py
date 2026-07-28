@@ -36,6 +36,12 @@ class FakeStorage:
 
 @pytest.fixture()
 def client(monkeypatch):
+    # 这些用例考的是**音频生成**,付费墙另有 test_audio_paywall.py 专测。
+    # 闸门在此 no-op,否则每个用例都要建用户+令牌,把测试意图淹没。
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.museums._require_audio_access",
+        lambda *a, **k: None,
+    )
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )

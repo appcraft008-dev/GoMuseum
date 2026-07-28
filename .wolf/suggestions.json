@@ -1,36 +1,42 @@
 {
-  "generated_at": "2026-06-22T02:00:55.682Z",
+  "generated_at": "2026-07-27T02:01:52.414Z",
   "achievements": [
-    "内容富化 Phase 2 全链路完成并上 prod（PR #56–67）：2a 接地英语轴心生成 → 2b 蕴含/事实一致性质量闸 → 2c 翻译铺语言（en/fr/de/es/it/zh）→ 2d-1 编排管线 → 2d-3 质量报告 → 2d-2 建议问答；在 staging 用真 LLM/真 DB 端到端跑通（《奥林匹亚》Q737062）",
-    "端到端真跑抓到并修复 2 个真 bug：default_complete 硬编码 response_format=json_object 致翻译撞 OpenAI 400（PR #60），以及 fact-consistency 判官把事件年（首展/收购 1865/1890）误判为创作年（1863）冲突的校准（PR #61/#62）",
-    "建议问答 chip 质量标准修正（PR #66）：禁止复述墙签硬事实、好奇心驱动 why/how/who、宁缺毋滥（0–4 非固定），墙签 trivia 全消失",
-    "通用全量目录主干架构定稿（spec 2026-06-22-universal-catalog-spine-design.md）：两层解耦——目录层（CatalogSource 注册表，列几千 stub + 身份去重）+ 内容层（content_status: stub→generating→ready，TOP-N 预生成、其余懒生成）",
-    "Catalog Phase A 合入 staging（PR #71，commit dee19f24）：CatalogSource 抽象 + WikidataCatalog 重构 + content_status 列（迁移 a3b3）+ identity.merge_stubs 去重骨架 + backfill，纯加法行为不变，11 测试绿",
-    "架构硬约束写入项目 CLAUDE.md：前后端解耦·契约为边界、契约前向兼容·加法优先、AI 内容接地不脑补/人审形式不审事实/生成一次永久落库"
+    "卢浮宫 v1 上 prod(#311-#328,2026-07-26):第三家馆,archive 17283 件/有图 10367/向量 10447/译名 10 语 99.9%+,总成本 $40.06 —— 规模检验通过",
+    "卢浮宫暴露的 6 个规模坑全修:WDQS 深翻页重试退避(#315)、Commons 署名超列宽截断(#317)、Batch 5 万请求分块(#319)、title_en i18n 优先补对称(#323)、P170 blank node 假作者过滤(#326)、Wikidata 标签批量抓取消 N+1(#334)",
+    "N+1 消除实测 prod 17283 件:5 小时 → 5 分 25 秒(~60 倍),网络往返 17283 → ~87 次;10 万件外推 ~30 分钟,上大英/Met 的阻塞正式解除",
+    "上新馆验收闸 onboard <slug> verify(#329-#333):六类事故固化成自动检查 + 补救命令 + 非零退出,进契约配方第 7 步;闸首跑就抓出自己的 slug/语言解析 bug,并发现奥赛 4 张残留图",
+    "移动端性能两连:馆包 artworks=false(卢浮宫 5.0MB/5.7s → KB 级,#337)+ 搜索索引 SWR 不阻塞请求 + 启动预热(修 5-6s 卡顿,#339)",
+    "未识别死胡同接上搜索出口(#336,墙签 OCR 文本预填)+ 首页馆卡片改走 A1 GET /museums(#322)→ 上第四家馆前端零改动",
+    "付费墙两个前提落地:停用未接地的 /chat/ask 自由问答 + 删前端脑补路径死代码(#342)、音频 key 改 16 位随机后缀不可推测 + rekey_audio.py 存量迁移脚本(#343)",
+    "收费模式定案(2026-07-27):时长制城市 7 日通票 €7.99,付费墙建在「现场体验」(识别 5 次 + 首件自动播语音)而非内容;单位经济学核实毛利 >90%,MVP 只上一个价不做 A/B"
   ],
   "improvements": [
-    "根目录大量临时/历史文件待清理：ACCEPTANCE_SUMMARY_*.md（7 份）、ci-test*.md/.txt、sonar*-test.md、pr-test.md、trigger.txt、20251004-claude-sesion.md 等，污染仓库根",
-    "backend/.venv 与 .coverage（~38k tok）疑似被 anatomy 追踪/未充分 gitignore，应确认 .gitignore/.dockerignore 完整覆盖虚拟环境与构建产物",
-    "质量闸的接地分（score）与源冲突数（conflicts）目前未落库，质量报告只能算覆盖率/needs_review%，应加 DB 列让 §8B 报告完整可观测",
-    "判官噪声为 LLM-as-judge 固有问题——与其无限调 prompt，应优先建立金标准回归集（§8D）作为兜底校准基线",
-    "default_complete 这类真实 LLM 适配器层无法被注入式单测覆盖，应补少量端到端冒烟测试（真跑一次 generate）纳入流程"
+    "补 .gitignore 的 *.apk:frontend/ 下两个 65MB APK(app-staging-release.apk、gomuseum-staging-search-20260713.apk)当前未被忽略,git check-ignore 无命中",
+    "音频私有化做完另一半:现在是「不可推测」不是「鉴权」,拿到 URL 可永久转发。R2 dev URL 是整桶级 → 需在 Cloudflare 建私有桶 + 短时签名 URL(monetization-plan P0-b)",
+    "对 museum_repo 做一次 i18n 派生字段对称性审计:title_zh 早做了 i18n 优先而 title_en 漏了(#323),同类不对称很可能还有(artist_*、description、category label)",
+    "verify 闸再吃一条:音频 key 格式检查(旧的可预测格式残留 = 付费墙漏洞),与已加的门面耗时检查(#341)同层",
+    "测试覆盖率与 CLAUDE.md 的 75% 目标严重脱节:htmlcov 显示 recognition/service.py、matcher.py、enrichment/pipeline.py、quality.py、museum_repo.py 全 0%,而这几个正是识别与内容正确性的核心路径",
+    "backend/scripts/ 下一次性迁移脚本(rekey_audio.py、clean_blank_node_artists.py)跑完即删,别攒成半永久工具"
   ],
   "next_tasks": [
-    "Catalog Phase A 上 prod（staging→main PR，含迁移 a3b3，部署后跑 backfill）——目前停在 staging 未上 prod",
-    "Catalog Phase B：Fetcher 重接线 + 真去重（(拥有馆,馆藏号)>QID>模糊）+ 列目录/抓材料解耦",
-    "Catalog Phase C（EuropeanaCatalog）→ Phase D（懒生成接线，依赖识别 spec）",
-    "决策暂停中的 prod 全量上馆：A=现在放全量先覆盖（材料厚化后重生成）vs B=先提厚连接器（Wikipedia 全文 + Joconde description/sujet）再放——注意新架构下'全量富化'已变为铺 stub + TOP-N 预生成",
-    "前端分段藏品详情页（tts-audio-persistence 的待建消费者）：后端 per-section 音频/内容契约已就绪，前端尚无消费者；需定'body 未生成时'策略",
-    "补 2b 遗留闸：§8A-4 langdetect 语言检测、§8A-6 moderation 安全审、§8D 金标准回归集",
-    "识别机制独立 brainstorm（recognition-mechanism），是 Phase D 懒生成的前置依赖"
+    "P0-b 收尾:在 prod 跑 rekey_audio.py 迁移存量 27 段(默认 dry-run,确认后实跑),并验证旧 URL 返回 404 —— 存量只有 27 段,这是成本≈0 的最后窗口",
+    "把 staging 的 #341/#342/#343 三个 PR 发 prod(staging→main 由用户点);当前 main 停在 #340",
+    "P0-e 预热 640 件三语(louvre 300 + orsay 200 + orangerie 140,~$11/~12h):新件用 generate --langs en,zh,fr,存量补语言必须用 translate(generate 的跳过条件只看 _has_published_en,会整件跳过不补法语);⚠️跑的 12 小时内禁止发 prod PR(部署 recreate 会杀容器内后台任务)",
+    "P0-a:新建 purchases + entitlements 两表 + 统一权益接口(现有 user_benefits 只有全局配额,无订单表)",
+    "P0-c:免费识别 5 次 + 首次识别成功自动完整播放 1 件(必须显式标注「免费试听」)+ 三档付费墙强度 + 12 个核心埋点",
+    "P0-d:ops_report.py(用户/漏斗/按馆识别成功率/失败 TOP/跨馆复用/成本毛利),沿用 llm_cost_report.py 模式",
+    "并行且不阻塞开发:立刻去 Play Console → Setup → Payments profile 开通商户账号(税务+银行),这是唯一不受我们控制的关键路径",
+    "构建并发布新 staging/prod APK:前端已攒了流式直连、搜索 UI、轮询加密 20→4s、生成中渐进呈现,全部没触达用户"
   ],
   "risks": [
-    "契约前向兼容是最高优先级红线——2026-06-16 事故（title_zh 变 null 破已装 App 的 as String 强转致馆藏页全崩）；任何新字段必须加法、Flutter 侧禁裸 as String、后端给回退",
-    "加依赖后必须 cd backend && poetry lock 重生成 poetry.lock，否则 Docker 部署挂（pyyaml 已踩坑 #42→#43，CI 用 pip 装不暴露但部署会挂）——复发性高",
-    "staging 现有对象多为旧管线 v1 数据（attributes 空，无 extract/Joconde），真端到端验证需先 onboard fetch+load 再 generate，否则验的是空材料",
-    "改函数行为（如 get_object_content）后 grep 范围必须含 tests/，否则 fixture 漏建表致 CI 'no such table'（1b、2d-2a 两次踩同一坑）",
-    "判官偏严不偏松会压低发布覆盖率（金丝雀 needs_review 仍 43%，其中多为合理薄材料而非 bug）——覆盖率提升的真瓶颈是材料厚度，不是 prompt",
-    "改 .github/workflows/ 的提交有时不触发任何 workflow，需补一个不改 workflow 的空提交重触发",
-    "迁移 a3b3 已在 staging 自动 apply 但未上 prod；prod 全量数据生成成本一次性落库，放量前需确认质量闸与材料就绪，避免重付费返工"
+    "音频付费墙前提只做了一半:key 不可预测但桶仍整体公开,任何拿到 URL 的人可无限转发。在此之上建的付费墙是可绕过的 —— 上真实付费前必须补私有桶+签名 URL",
+    "内容冷启动会毁掉首体验:louvre 已生成讲解仅 12/17283(0.1%)、音频 0,与「首次识别自动播语音」叠加 = 新用户第一次扫描就是 ~20 秒白屏。P0-e 预热必须先于 P0-c 上线",
+    "两个 65MB APK 未 gitignore 且未跟踪,一次 git add . 就会把 130MB 二进制永久写进仓库历史",
+    "Play Merchant/Payments profile 审核 lead time 完全不受控,可能长于全部开发工作 —— 现在不启动就会成为发版的唯一阻塞项",
+    "埋点归因陷阱:recognition_events.museum_slug 全空(App 走全局识别端点),按馆统计必须用命中对象的归属馆归因,否则 12 个埋点做完仍拆不出按馆数据",
+    "prod 部署会杀容器内后台任务,与 12 小时预热任务直接冲突;长任务期间的 PR 流程需要人为闸门,目前没有机制防止",
+    "228 条 needs_review 问答是死数据不是待办:契约定「人只审形式安全不审事实对错」→ 没人会去审。想提覆盖率只能改材料/prompt 让通过率上升,别误当积压任务排期",
+    "核心正确性路径(recognition/service、matcher、enrichment/pipeline、quality)测试覆盖 0%,与项目 75% 目标相去甚远;卢浮宫 6 个坑全靠规模实跑和用户截图发现,不是被测试拦下的",
+    "R2 孤儿音频(文本更新失效 audio_key 但不删旧文件)是已知技术债,当前 ~$0.3/月可忽略;rekey 路径已正确删除旧对象,但常规失效路径未做对账 GC"
   ]
 }

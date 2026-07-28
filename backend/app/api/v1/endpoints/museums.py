@@ -22,6 +22,29 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _require_audio_access(
+    db: Session, credentials: HTTPAuthorizationCredentials | None, qid: str
+) -> None:
+    """语音付费墙的**唯一执行点**。前端的付费墙 UI 只是它的表达——
+    没有这道闸,老 App / curl / 改客户端都能白拿音频,还会触发 TTS 花我们的钱。
+
+    必须在触发生成**之前**调用。拒绝返 402(不是 403):前端据此弹付费页。
+    """
+    from app.services import entitlement_service as es
+    from app.services.auth_service import AuthService
+    from app.services.event_log import log_event
+
+    if credentials is None:
+        raise HTTPException(status_code=401, detail={"reason": "auth_required"})
+    user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
+    if not es.authorize_audio(db, user_id, qid):
+        # 服务端自己就知道付费墙被撞到了,不必等前端埋点
+        log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
+        raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+
 
 @router.get("")
 def list_museums(db: Session = Depends(get_db)) -> list[dict]:
@@ -56,6 +79,7 @@ def object_audio(
     language: str = "zh",
     section: str = "guide",
     qa_sort: int | None = None,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     """音频懒生成(点播放触发):guide/深度模块(section=段code)、问答(section=qa&qa_sort=N)、
@@ -66,6 +90,8 @@ def object_audio(
         get_or_make_audio_url,
         get_or_make_qa_audio_url,
     )
+
+    _require_audio_access(db, credentials, qid)
 
     try:
         if section == "qa":
@@ -96,11 +122,15 @@ async def object_audio_stream(
     qid: str,
     language: str = "zh",
     section: str = "guide",
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
 ):
     """流式音频(边生成边播,一次 TTS 调用 tee 落库)。首播缩短等待;缓存命中返 R2 URL。
     落库跑 detached task,用户中途退出也把整段落 R2(tts-1 按字符已付费,抽完最省)。
     guide/深度段;qa/artist_bio 仍走非流式 /audio(v1 范围)。"""
     from app.services.enrichment.streaming_audio import stream_section_audio
+
+    _require_audio_access(db, credentials, qid)
 
     try:
         status, payload = await stream_section_audio(qid, language, section)
@@ -140,9 +170,6 @@ def list_objects(
     if page is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     return page
-
-
-_bearer = HTTPBearer(auto_error=False)
 
 
 @router.post("/{slug}/recognize")

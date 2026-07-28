@@ -198,5 +198,14 @@
   "museumCollectionTab": "Collection",
   "museumOpeningHours": "Horaires d'ouverture",
   "museumOfficialSite": "Site officiel",
-  "museumIntroComingSoon": "Présentation du musée à venir"
+  "museumIntroComingSoon": "Présentation du musée à venir",
+  "paywallTitle": "Pass Paris 7 jours",
+  "paywallPitch": "Reconnaissance photo illimitée et commentaire audio complet au Louvre, à Orsay et à l'Orangerie.",
+  "paywallClockNote": "Le décompte ne démarre pas à l'achat : il commence à la première utilisation d'une fonction premium, après confirmation.",
+  "paywallFreeAlways": "La navigation, la recherche et le commentaire écrit complet restent toujours gratuits.",
+  "paywallBuy": "Obtenir le pass",
+  "paywallRestore": "Restaurer l'achat",
+  "audioFreePreview": "Écoute gratuite",
+  "audioLockedHint": "Le commentaire audio nécessite le pass — votre écoute gratuite a déjà été utilisée.",
+  "quotaExhausted": "Vous avez utilisé toutes vos reconnaissances gratuites."
 }

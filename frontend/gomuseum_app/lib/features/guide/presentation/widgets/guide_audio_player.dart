@@ -14,6 +14,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -92,6 +95,22 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     super.dispose();
   }
 
+  /// 同一件内只轻提示一次:再点才升级到完整付费页(三档强度,避免反复打扰)。
+  static final Set<String> _hintedQids = <String>{};
+
+  /// 撞墙时的分档反应。返回 true 表示已拦下(调用方不要继续播)。
+  bool _blockedByPaywall() {
+    final ent = ref.read(entitlementsProvider).value;
+    if (ent == null || ent.canPlayAudio(widget.qid)) return false;
+    if (_hintedQids.add(widget.qid)) {
+      showPaywallHint(context);
+    } else {
+      showPaywallSheet(context, reason: 'audio');
+    }
+    if (mounted) setState(() => _ui = _Ui.idle);
+    return true;
+  }
+
   Future<void> _onTap() async {
     // 已加载 → 播放/暂停切换（结束则从头）。
     if (_ui == _Ui.loaded) {
@@ -106,6 +125,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
       }
       return;
     }
+
+    // 付费墙:必须在取音频之前——后端也会拦(402),这里只是免掉一次往返。
+    if (_blockedByPaywall()) return;
 
     setState(() => _ui = _Ui.loading);
 
@@ -165,6 +187,25 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// Range 分支对 contentLength=null 空断言崩溃(见 handoff Addendum2/3)，已整体废弃。
   /// 非音频响应(缓存 JSON/409/404)会让播放器快速报错 → 回退老 /audio 分流；
   /// 起播后看门狗兜底(9s position 不动→回退)，永不永久静音。
+  /// 客户端权益缓存过期时,前置闸可能放行而后端拒绝——这里保证仍弹墙。
+  bool _showPaywallAnyway() {
+    ref.invalidate(entitlementsProvider); // 顺便刷新,下次判断就准了
+    showPaywallSheet(context, reason: 'audio');
+    return true;
+  }
+
+  /// 这一件是不是用掉了(或将要用掉)免费名额——通票用户不显示此标。
+  bool _isFreePreview() {
+    final ent = ref.watch(entitlementsProvider).value;
+    if (ent == null || ent.isActive) return false;
+    return ent.freeAudioQid == null || ent.freeAudioQid == widget.qid;
+  }
+
+  Future<Map<String, String>> _authHeaders() async {
+    final token = await ref.read(authRepositoryProvider).getAccessToken();
+    return token == null ? const {} : {'Authorization': 'Bearer $token'};
+  }
+
   Future<void> _loadStreaming() async {
     final url = ref.read(catalogDataSourceProvider).audioStreamUrl(
           slug: widget.slug,
@@ -173,7 +214,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
           section: widget.section,
         );
     try {
-      await _player.setUrl(url); // 预加载：格式就绪即返回（JSON/4xx 在此抛）
+      // ⚠️ setUrl 由系统播放器直取,**不经 Dio 拦截器**,得自己带令牌;
+      // 否则音频端点加鉴权后流式全 401。令牌过期也不致命:401 → 落回
+      // legacy 路径(走 Dio,会自动刷新),只是慢一点。
+      await _player.setUrl(url, headers: await _authHeaders());
       await _player.setSpeed(_speeds[_speedIdx]);
       if (!mounted) return;
       setState(() => _ui = _Ui.loaded);
@@ -224,6 +268,11 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
           continue; // 保持 loading 转圈，重试
         case GuideAudioNotReady():
           setState(() => _ui = _Ui.notReady);
+          return null;
+        case GuideAudioPassRequired():
+          setState(() => _ui = _Ui.idle);
+          // 后端才是付费墙的执行点:客户端闸放行了但后端拒了(权益已变/被绕过)
+          _blockedByPaywall() || _showPaywallAnyway();
           return null;
         case GuideAudioFailed():
           setState(() => _ui = _Ui.error);
@@ -277,6 +326,17 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             ),
           ),
           const SizedBox(width: 10),
+          // 「免费试听」必须明说 —— 否则用户随手在一件小作品上用掉名额,
+          // 走到蒙娜丽莎前发现锁了会觉得被坑(见 memory monetization-plan)。
+          if (_isFreePreview()) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(border: Border.all(color: gm.faint)),
+              child: Text(l10n.audioFreePreview,
+                  style: GmText.sans(size: 10, color: gm.sub)),
+            ),
+            const SizedBox(width: 8),
+          ],
           // 加载后 → 进度条 + 剩余时间；否则文案。
           if (_ui == _Ui.loaded)
             Expanded(child: _progress(gm))
