@@ -63,12 +63,19 @@ class BenefitsResponse(BaseModel):
 @router.post("/verify", response_model=VerifyReceiptResponse)
 async def verify_purchase(
     request: VerifyReceiptRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
     iap_service=Depends(get_iap_verification_service),
     benefits_service=Depends(lambda db=Depends(get_db): get_benefits_service(db)),
 ) -> VerifyReceiptResponse:
     """
     Verify in-app purchase receipt and apply benefits
+
+    ⚠️ user_id **只认令牌**,不认请求体。曾用 `request.user_id or request.device_id`,
+    而前端传 user_id=null → 回落成 device_id → 权益的 user_id 存成设备号字符串,
+    可 /entitlements/me 是按令牌里的 UUID 查的,两者永不相等:
+    **用户付了钱,通票落库了,自己却看不到**。同类错误此前也出现在 /entitlements/me
+    (user_id 当查询参数)。请求体里的 user_id 字段保留只为兼容老客户端,不再采信。
 
     Args:
         request: Receipt verification request
@@ -91,6 +98,7 @@ async def verify_purchase(
                  }'
         ```
     """
+    auth_user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
     logger.info(
         f"Verifying {request.platform} purchase for product: {request.product_id}"
     )
@@ -134,7 +142,7 @@ async def verify_purchase(
             txn = verification.get("transaction_id") or request.receipt_data[:255]
             _es.grant_from_purchase(
                 db,
-                user_id=request.user_id or request.device_id or "",
+                user_id=auth_user_id,
                 platform=request.platform,
                 product_id=request.product_id,
                 store_transaction_id=txn,
@@ -145,7 +153,7 @@ async def verify_purchase(
             log_event(
                 db,
                 "purchase_succeeded",
-                user_id=request.user_id,
+                user_id=auth_user_id,
                 device_id=request.device_id,
                 product_id=request.product_id,
             )
@@ -160,7 +168,7 @@ async def verify_purchase(
         # Apply benefits based on product ID
         benefits_applied = _apply_benefits(
             product_id=request.product_id,
-            user_id=request.user_id,
+            user_id=auth_user_id,
             device_id=request.device_id,
             benefits_service=benefits_service,
         )

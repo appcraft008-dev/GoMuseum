@@ -22,13 +22,20 @@ from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
+# 注册/Google 登录时游客令牌是**可选**的:带了就就地转正,没带才新建
+_optional_bearer = HTTPBearer(auto_error=False)
 
 
 @router.post(
     "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
 )
 @limiter.limit("5/minute")
-def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
+def register(
+    request: Request,
+    payload: RegisterRequest,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+    db: Session = Depends(get_db),
+):
     """
     Register a new user with email and password
 
@@ -38,7 +45,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 
     Returns access token, refresh token, and user profile
     """
-    return AuthService.register(db, payload)
+    return AuthService.register(db, payload, credentials)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -99,7 +106,11 @@ def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
 
 
 @router.post("/google", response_model=TokenResponse)
-def google_login(request: OAuthRequest, db: Session = Depends(get_db)):
+def google_login(
+    request: OAuthRequest,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+    db: Session = Depends(get_db),
+):
     """
     Authenticate with Google Sign-In
 
@@ -113,7 +124,7 @@ def google_login(request: OAuthRequest, db: Session = Depends(get_db)):
     - Set GOOGLE_CLIENT_ID in backend settings
     - Configure Google OAuth 2.0 credentials in Google Cloud Console
     """
-    return AuthService.oauth_google(db, request)
+    return AuthService.oauth_google(db, request, credentials)
 
 
 @router.post("/apple", response_model=TokenResponse)
