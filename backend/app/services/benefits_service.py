@@ -9,6 +9,7 @@ from typing import Dict, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.exceptions import NotFoundException, ServiceException
 from app.models.user_benefits import UserBenefits
 
@@ -87,7 +88,7 @@ class BenefitsService:
         benefits = UserBenefits(
             user_id=user_id,
             device_id=device_id,
-            recognition_quota=10,  # Free tier: 10 recognitions (PRD)
+            recognition_quota=settings.FREE_RECOGNITION_QUOTA,
             is_premium=False,
             day_pass_active=False,
             referral_bonus_quota=0,

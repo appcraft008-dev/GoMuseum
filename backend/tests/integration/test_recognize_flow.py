@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import settings
 from app.core.database import Base
 from app.models.artist import Artist
 from app.models.museum import Museum
@@ -14,6 +15,9 @@ from app.models.recognition_demand import RecognitionDemand
 from app.services.object_importer import upsert_museum, upsert_object
 from app.services.recognition import matcher
 from app.services.recognition.service import recognize
+
+# 断言相对起始额度,不写死数字——免费额度是可调配置(见 config.py)
+FREE = settings.FREE_RECOGNITION_QUOTA
 
 
 def _jpeg():
@@ -233,7 +237,7 @@ def test_billing_match_consumes_one(session):
     )
     assert out["outcome"] == "candidates"  # 文字链→确认卡,仍计费
     b = session.query(UB).one()
-    assert b.recognition_quota == 9  # 10 - 1(candidates 也扣)
+    assert b.recognition_quota == FREE - 1  # candidates 也扣
 
 
 def test_billing_unrecognized_free(session):
@@ -249,7 +253,7 @@ def test_billing_unrecognized_free(session):
         identify_fn=_vision([]),
     )
     assert out["outcome"] == "unrecognized"
-    assert session.query(UB).one().recognition_quota == 10  # 不扣
+    assert session.query(UB).one().recognition_quota == FREE  # 不扣
 
 
 def test_billing_quota_exhausted_raises_before_gpt(session):
@@ -304,4 +308,4 @@ def test_billing_cache_hit_free(session):
     )
     recognize_billed(session, "orsay", img, **kw)
     recognize_billed(session, "orsay", img, **kw)  # 第二次走缓存
-    assert session.query(UB).one().recognition_quota == 9  # 只扣了一次
+    assert session.query(UB).one().recognition_quota == FREE - 1  # 只扣了一次

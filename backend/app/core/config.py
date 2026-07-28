@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     ENABLE_CLAUDE_FALLBACK: bool = True
 
     # Image Processing
+    # 免费层跨馆识别次数(单一真相源;此前散在模型 default / benefits_service /
+    # entitlement_service 三处,改一处漏两处)。2026-07-28 由 10 收紧到 5:
+    # 更早撞墙=用户还在馆里、还兴奋时看到付费页,转化时机更好。边际成本近零,
+    # 5 和 10 都便宜,真正差别只在转化 → 上线后看 ops_report 的
+    # "额度耗尽→付费页→购买" 转化率再调。⚠️ 改这里只影响**新用户**
+    # (quota 是每行剩余数),不回收老用户额度。
+    FREE_RECOGNITION_QUOTA: int = 5
+
     MAX_IMAGE_SIZE_MB: int = 10
     ALLOWED_IMAGE_FORMATS: list = ["JPEG", "PNG"]
     IMAGE_COMPRESSION_QUALITY: int = 85

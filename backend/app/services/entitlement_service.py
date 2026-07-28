@@ -11,12 +11,13 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from app.core.config import settings
 from app.models.purchase import Entitlement
 
-# 跨馆免费识别次数。⚠️ 仅当 user_benefits 行不存在时的兜底,**真相源是 DB 里那一列**
-# (模型 default=10)。2026-07-27 曾误以为线上是 3 次、讨论要"给更多改成 5"——
-# 实测 prod 真实用户都是 10,改 5 反而是砍半。保持与模型 default 一致。
-FREE_RECOGNITIONS = 10
+# 免费识别次数的真相源是 settings.FREE_RECOGNITION_QUOTA(见 config.py),
+# 这里只在 user_benefits 行还不存在时兜底 —— 已存在的行以**该行的剩余数**为准,
+# 改配置不会回收老用户额度。
+
 PASS_DURATION = timedelta(days=7)
 
 # 权益状态(对外统一口径)
@@ -91,10 +92,12 @@ def summary(db, user_id: str, benefits=None) -> dict:
     """
     state, ent = resolve_state(db, user_id)
     active = state == ACTIVE
-    used = getattr(benefits, "total_recognitions_used", 0) or 0
-    quota = getattr(benefits, "recognition_quota", FREE_RECOGNITIONS)
+    # ⚠️ recognition_quota 是**剩余数**(consume_recognition 每次递减),不是上限。
+    # 曾误写成 quota + bonus - used —— 那会重复扣一次 used,少报剩余次数、
+    # 让付费墙提前弹(用户初始10次用3次 → 实际剩7,却报成4)。
+    quota = getattr(benefits, "recognition_quota", settings.FREE_RECOGNITION_QUOTA)
     bonus = getattr(benefits, "referral_bonus_quota", 0) or 0
-    left = max(0, (quota or 0) + bonus - used)
+    left = max(0, (quota or 0) + bonus)
     free_audio_qid = getattr(benefits, "free_audio_qid", None)
     return {
         "state": state,
@@ -129,5 +132,90 @@ def claim_free_audio(db, benefits, qid: str) -> bool:
         return False
     benefits.free_audio_qid = qid
     benefits.free_audio_claimed_at = _now()
+    db.commit()
+    return True
+
+
+PARIS_PASS_7D = "paris_pass_7d"
+
+
+def grant_from_purchase(
+    db,
+    *,
+    user_id: str,
+    platform: str,
+    product_id: str,
+    store_transaction_id: str,
+    amount=None,
+    currency=None,
+    receipt_payload=None,
+) -> tuple:
+    """收据校验通过后:落订单 + 发权益。返回 (purchase, entitlement)。
+
+    **幂等靠 store_transaction_id 唯一** —— 恢复购买会重复上报同一 token,
+    重复调用只返回已有记录,绝不发第二张票(重复发放=白送钱)。
+
+    ⭐ 发出的权益是 `purchased_not_activated`,**不开始计时**:旅游产品用户
+    常提前几天买,立即计时会白烧有效期;首次用高级功能且用户确认才 activate()。
+    """
+    from app.models.purchase import Entitlement, Purchase
+
+    existing = (
+        db.query(Purchase)
+        .filter_by(store_transaction_id=store_transaction_id)
+        .one_or_none()
+    )
+    if existing:  # 恢复购买/重复上报:返回已有,不重复发放
+        ent = (
+            db.query(Entitlement)
+            .filter_by(source_purchase_id=existing.id)
+            .one_or_none()
+        )
+        return existing, ent
+
+    p = Purchase(
+        user_id=user_id,
+        platform=platform,
+        product_id=product_id,
+        store_transaction_id=store_transaction_id,
+        amount=amount,
+        currency=currency,
+        status="purchased",
+        purchased_at=_now(),
+        receipt_payload=receipt_payload,
+    )
+    db.add(p)
+    db.flush()  # 拿 p.id 关联权益
+    ent = Entitlement(
+        user_id=user_id,
+        entitlement_type=product_id,
+        scope="paris",
+        source_purchase_id=p.id,
+        status=PURCHASED_NOT_ACTIVATED,
+        granted_reason="purchase",
+    )
+    db.add(ent)
+    db.commit()
+    return p, ent
+
+
+def revoke_for_purchase(
+    db, store_transaction_id: str, reason: str = "refunded"
+) -> bool:
+    """退款/撤销:订单与权益一并标记。供商店回调(RTDN)或人工使用。
+    **权益必须跟着撤** —— 只标订单不撤权益 = 退了钱还能用。"""
+    from app.models.purchase import Entitlement, Purchase
+
+    p = (
+        db.query(Purchase)
+        .filter_by(store_transaction_id=store_transaction_id)
+        .one_or_none()
+    )
+    if not p:
+        return False
+    p.status = reason
+    p.refunded_at = _now()
+    for ent in db.query(Entitlement).filter_by(source_purchase_id=p.id):
+        ent.status = reason
     db.commit()
     return True

@@ -12,6 +12,13 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 
 
+def _free_quota() -> int:
+    """免费额度默认值(延迟读 settings,便于测试覆盖)。"""
+    from app.core.config import settings
+
+    return settings.FREE_RECOGNITION_QUOTA
+
+
 class UserBenefits(Base):
     """
     Model for storing user benefits and subscription status
@@ -38,9 +45,8 @@ class UserBenefits(Base):
     device_id = Column(String(255), nullable=True, index=True)
 
     # Recognition quota
-    recognition_quota = Column(
-        Integer, nullable=False, default=10
-    )  # Free tier: 10 recognitions (PRD)
+    # 剩余识别次数(每次识别递减,不是上限)。默认值见 settings.FREE_RECOGNITION_QUOTA
+    recognition_quota = Column(Integer, nullable=False, default=lambda: _free_quota())
     total_recognitions_used = Column(Integer, nullable=False, default=0)
 
     # Premium subscription
