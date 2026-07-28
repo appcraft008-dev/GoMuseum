@@ -1110,7 +1110,6 @@ class _A5Body extends StatelessWidget {
               slug: slug,
               qid: content.qid,
               language: language,
-              initialUrl: layer.heroAudioUrl,
             ),
           const SizedBox(height: 14),
           if (layer.hasHero)

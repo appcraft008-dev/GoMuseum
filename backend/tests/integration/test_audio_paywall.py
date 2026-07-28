@@ -132,3 +132,31 @@ def test_paywall_hit_is_recorded(session):
     ev = session.query(AppEvent).one()
     assert ev.name == "paywall_viewed_from_audio"
     assert ev.props["qid"] == "Q151952"
+
+
+def test_content_endpoint_never_leaks_audio_urls():
+    """⭐ 内容接口**无鉴权**(正文免费是策略),所以绝不能下发音频直链——
+    发了等于把付费墙拆了:音频 key 做成不可推测(P0-b)也白搭,我们自己发出去。
+    只给 has_audio 标志位,前端据此显示播放按钮,真要听走已加闸的 /audio。"""
+    import inspect
+
+    from app.services import museum_repo
+
+    src = inspect.getsource(museum_repo.get_object_content)
+    assert '"audio_url"' not in src, "内容接口不得下发音频直链"
+    assert '"has_audio"' in src, "应改为只给标志位"
+
+
+def test_tts_generate_requires_auth():
+    """/content/tts/generate 此前完全没有鉴权:section 模式绕过 /audio 的闸,
+    ad-hoc 模式接受任意文本 = 给全世界免费 TTS,账单算我们的。"""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    r = TestClient(app).post(
+        "/api/v1/content/tts/generate",
+        json={"text": "任意文本", "language": "zh"},
+    )
+    assert r.status_code == 401, f"未鉴权就放行了: {r.status_code}"
+    assert r.json()["detail"]["reason"] == "auth_required"

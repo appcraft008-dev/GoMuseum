@@ -464,9 +464,10 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
                 "label": section_label(cs.section_code, language),
                 "icon": st.icon,
                 "body": body,
-                "audio_url": (
-                    storage.public_url(row.audio_key) if row and row.audio_key else None
-                ),
+                # ⚠️ 只给标志位,**绝不下发直链**:内容接口无鉴权,发直链等于
+                # 把付费墙拆了(音频 key 做成不可推测也白搭——我们自己发出去)。
+                # 前端据此决定显不显示播放按钮,真要听走已加闸的 /audio。
+                "has_audio": bool(row and row.audio_key),
             }
         )
     suggested = [
@@ -538,9 +539,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     default_guide = (
         {
             "body": guide_row.body,
-            "audio_url": (
-                storage.public_url(guide_row.audio_key) if guide_row.audio_key else None
-            ),
+            "has_audio": bool(guide_row.audio_key),
         }
         if guide_row and guide_row.body
         else None

@@ -47,7 +47,6 @@ class GuideAudioPlayer extends ConsumerStatefulWidget {
     required this.language,
     this.section = 'guide',
     this.qaSort,
-    this.initialUrl,
     this.label,
   });
 
@@ -64,7 +63,6 @@ class GuideAudioPlayer extends ConsumerStatefulWidget {
   final int? qaSort;
 
   /// 后端已预生成的音频直链（有则直接用，免懒取）。
-  final String? initialUrl;
 
   /// idle 态按钮文案（默认「听讲解」）。
   final String? label;
@@ -131,14 +129,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
 
     setState(() => _ui = _Ui.loading);
 
-    // 后端已预生成的直链 → 直接播（免懒取/免流式）。
-    final initial = widget.initialUrl;
-    if (initial != null && initial.isNotEmpty) {
-      if (!await _startWith(() => _player.setUrl(initial))) {
-        if (mounted) setState(() => _ui = _Ui.error);
-      }
-      return;
-    }
+    // ⚠️ 曾有一条"直链快路径":内容接口下发 audio_url 就直接 setUrl。
+    // 两个问题:①绕过付费墙闸门 ②那些直链是 P0-b 迁移后的**死链**(实测 404),
+    // 而失败不回落懒取、直接置 error —— 预热过的藏品点播放就是坏的。
+    // 现在统一走已加闸的 /audio(流式优先,失败回落 legacy)。
 
     if (_useStream) {
       await _loadStreaming();
