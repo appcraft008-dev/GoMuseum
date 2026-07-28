@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
-import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -27,14 +27,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   /// 自动保存照片（偏好持久化接入前仅会话内有效）
   bool _autoSavePhoto = false;
 
-  static const int _freeQuotaTotal = 10;
-
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(currentUserProvider);
-    final benefits = ref.watch(benefitsStateProvider);
+    final ent = ref.watch(entitlementsProvider);
     final currentLocale = ref.watch(languageProvider);
 
     return SafeArea(
@@ -60,7 +58,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            _quotaCard(gm, benefits.value?.totalQuota),
+            _quotaCard(gm, ent.value?.freeRecognitionsLeft,
+                ent.value?.freeRecognitionsTotal),
             const SizedBox(height: 20),
             GmSectionHead(number: '01', label: l10n.secGeneral),
             const SizedBox(height: 4),
@@ -126,10 +125,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _quotaCard(GmPalette gm, int? quota) {
+  /// [total] 由后端给(/entitlements/me 的 free_recognitions_total)——
+  /// 别在前端写死:曾写死 10,后端把免费额度调成 5 后新用户会看到 "5/10"。
+  Widget _quotaCard(GmPalette gm, int? quota, int? total) {
     final l10n = AppLocalizations.of(context)!;
     final remaining = quota ?? 0;
-    final progress = (remaining / _freeQuotaTotal).clamp(0.0, 1.0).toDouble();
+    final denominator = (total == null || total <= 0) ? null : total;
+    final progress = denominator == null
+        ? 0.0
+        : (remaining / denominator).clamp(0.0, 1.0).toDouble();
     return Container(
       decoration: BoxDecoration(
         color: gm.surface,
@@ -152,7 +156,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           size: 11.5, letterSpacing: 1, color: gm.sub)),
                   const SizedBox(height: 4),
                   Text(
-                    l10n.quotaValue(quota?.toString() ?? '—', _freeQuotaTotal),
+                    l10n.quotaValue(quota?.toString() ?? '—', denominator ?? 0),
                     style: GmText.serif(size: 17, weight: FontWeight.w700),
                   ),
                   const SizedBox(height: 9),

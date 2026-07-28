@@ -103,6 +103,11 @@ def summary(db, user_id: str, benefits=None) -> dict:
         "state": state,
         "expires_at": ent.expires_at.isoformat() if ent and ent.expires_at else None,
         "free_recognitions_left": None if active else left,
+        # 进度环的分母。前端曾把它写死成 10,后端一调额度就显示 "5/10"
+        # (新用户像是已用掉一半)。server-driven:分母也由后端给。
+        "free_recognitions_total": (
+            None if active else settings.FREE_RECOGNITION_QUOTA + bonus
+        ),
         "free_audio_qid": free_audio_qid,
         "can": {
             "recognize": active or left > 0,

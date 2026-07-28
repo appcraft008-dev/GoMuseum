@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
-import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -29,8 +29,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    final benefits = ref.watch(benefitsStateProvider);
-    final quota = benefits.value?.totalQuota;
+    final quota = ref.watch(entitlementsProvider).value?.freeRecognitionsLeft;
 
     return SafeArea(
       bottom: false,
