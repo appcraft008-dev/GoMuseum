@@ -45,6 +45,7 @@ class GuideAudioPlayer extends ConsumerStatefulWidget {
     required this.slug,
     required this.qid,
     required this.language,
+    this.autoPlay = false,
     this.section = 'guide',
     this.qaSort,
     this.label,
@@ -52,6 +53,10 @@ class GuideAudioPlayer extends ConsumerStatefulWidget {
 
   final String slug;
   final String qid;
+
+  /// 识别成功后自动播。**只在这一件确实能放时才自动播** ——
+  /// 免费用户的第二件自动弹付费墙 = 一进页面就被推销,最差的体验。
+  final bool autoPlay;
 
   /// API 语言参数（繁体已是 zh-hant）。
   final String language;
@@ -117,6 +122,24 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
     if (mounted) setState(() => _ui = _Ui.idle);
     return true;
+  }
+
+  bool _autoPlayed = false;
+
+  /// 自动播的准入:通票内、或这就是免费用户的首件(未认领 / 已认领同一件)。
+  /// 拿不到权益时不自动播 —— 宁可不响,也不要一进页面就撞墙。
+  void _maybeAutoPlay() {
+    if (!widget.autoPlay || _autoPlayed || _ui != _Ui.idle) return;
+    final ent = ref.read(entitlementsProvider).value;
+    if (ent == null) return;
+    final willSucceed = ent.isActive ||
+        ent.freeAudioQid == null ||
+        ent.freeAudioQid == widget.qid;
+    if (!willSucceed) return;
+    _autoPlayed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onTap();
+    });
   }
 
   Future<void> _onTap() async {
@@ -305,6 +328,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+
+    // 权益是异步到达的:initState 时通常还没加载完,所以在 build 里试。
+    // _maybeAutoPlay 自带一次性与准入判断,重复调用无副作用。
+    _maybeAutoPlay();
 
     return Container(
       margin: const EdgeInsets.only(top: 11),

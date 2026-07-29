@@ -137,6 +137,36 @@ class IAPVerificationService:
             logger.exception("Play service account credential load failed")
             return None
 
+    async def acknowledge_google_purchase(
+        self, purchase_token: str, product_id: str
+    ) -> bool:
+        """向 Play 确认已交付。**不做的话 Google 会在 3 天后自动全额退款** ——
+        每一笔收入都会悄悄退掉,而我们这边看起来一切正常。
+
+        幂等:已确认的再调返回 400,视为成功。
+        """
+        token = self._play_access_token()
+        if not token:
+            return False
+        url = (
+            f"{self._PLAY_API}/applications/{self.google_package_name}"
+            f"/purchases/products/{product_id}/tokens/{purchase_token}:acknowledge"
+        )
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.post(
+                    url, headers={"Authorization": f"Bearer {token}"}, json={}
+                )
+        except Exception as e:
+            logger.error("Play acknowledge request failed: %s", e)
+            return False
+        if r.status_code in (200, 204):
+            return True
+        if r.status_code == 400 and "already been acknowledged" in r.text:
+            return True  # 幂等
+        logger.error("Play acknowledge failed %s: %s", r.status_code, r.text[:200])
+        return False
+
     async def verify_google_receipt(
         self, purchase_token: str, product_id: str, subscription: bool = False
     ) -> Dict[str, any]:

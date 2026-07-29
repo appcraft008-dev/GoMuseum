@@ -158,3 +158,63 @@ def test_log_event_never_rolls_back_business_data(client):
     assert (
         db.query(UserBenefits).filter_by(user_id="biz-1").one_or_none() is not None
     ), "埋点失败把业务数据带走了"
+
+
+def test_expired_pass_does_not_shadow_a_newly_bought_one(client):
+    """⭐ 续购必须能激活(2026-07-29 外部评审发现,已复现)。
+
+    到期只在读取时算,DB 里那行**永远停在 ACTIVE**。老票过期后用户续购,
+    新票被那行过期的 ACTIVE 永久遮蔽 → resolve_state 恒为 expired、
+    activate() 拒绝 —— 用户付了第二次钱,票永远激活不了。
+    """
+    from datetime import datetime, timedelta, timezone
+
+    _, db = client
+    db.add(
+        Entitlement(
+            user_id="renew",
+            entitlement_type=es.PARIS_PASS_7D,
+            scope="paris",
+            status=es.ACTIVE,
+            activated_at=datetime.now(timezone.utc) - timedelta(days=8),
+            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+        )
+    )
+    db.commit()
+    assert es.resolve_state(db, "renew")[0] == es.EXPIRED
+
+    es.grant_from_purchase(
+        db,
+        user_id="renew",
+        platform="android",
+        product_id=es.PARIS_PASS_7D,
+        store_transaction_id="txn-renew",
+    )
+    assert es.resolve_state(db, "renew")[0] == es.PURCHASED_NOT_ACTIVATED
+    state, _ = es.activate(db, "renew")
+    assert state == es.ACTIVE, "续购的票必须能激活"
+
+
+def test_receipt_owned_by_another_account_fails_loudly(client):
+    """收据被别人先用过 → 必须显式失败,绝不静默返回成功。
+
+    B 抢先用 A 的 purchase token 上报 → 权益归 B;A 再上报时命中幂等,
+    若接口仍回 verified=true,A 付了钱、权益在 B 手上,还以为买成功了。
+    """
+    _, db = client
+    es.grant_from_purchase(
+        db,
+        user_id="userB",
+        platform="android",
+        product_id=es.PARIS_PASS_7D,
+        store_transaction_id="txn-shared",
+    )
+    with pytest.raises(es.PurchaseOwnershipConflict):
+        es.grant_from_purchase(
+            db,
+            user_id="userA",
+            platform="android",
+            product_id=es.PARIS_PASS_7D,
+            store_transaction_id="txn-shared",
+        )
+    assert es.resolve_state(db, "userA")[0] == es.NOT_PURCHASED

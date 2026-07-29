@@ -147,7 +147,9 @@ async def verify_purchase(
         # 老商品(recognition_pack/day_pass)仍走下面的 _apply_benefits,老 APK 不破。
         from app.services import entitlement_service as _es
 
-        if request.product_id == _es.PARIS_PASS_7D:
+        # ⚠️ 别用等值判断:第二个 SKU(1日票/其他城市/多国票)会掉进下面的
+        # 老商品分支,行为错乱。查商品目录 PASSES。
+        if _es.is_pass_product(request.product_id):
             # ⚠️ 幂等键必须来自**商店**(Play 的 orderId),绝不回退到 receipt_data:
             # 那是客户端提供的字符串,攻击者改一个字符就能再拿一张票。
             txn = verification.get("transaction_id")
@@ -156,14 +158,34 @@ async def verify_purchase(
                     status_code=502,
                     detail={"reason": "store_transaction_id_missing"},
                 )
-            _es.grant_from_purchase(
-                db,
-                user_id=auth_user_id,
-                platform=request.platform,
-                product_id=request.product_id,
-                store_transaction_id=txn,
-                receipt_payload=request.receipt_data,
-            )
+            try:
+                _es.grant_from_purchase(
+                    db,
+                    user_id=auth_user_id,
+                    platform=request.platform,
+                    product_id=request.product_id,
+                    store_transaction_id=txn,
+                    receipt_payload=request.receipt_data,
+                )
+            except _es.PurchaseOwnershipConflict:
+                # 这张收据已归属别的账号:回明确错误,不能假装成功
+                raise HTTPException(
+                    status_code=409,
+                    detail={"reason": "purchase_belongs_to_another_account"},
+                )
+            # ⚠️ 必须向 Play 确认交付,否则 **3 天后自动全额退款** ——
+            # 每笔收入都会悄悄退掉,而我们这边看起来一切正常。
+            if request.platform == "android":
+                ack = await iap_service.acknowledge_google_purchase(
+                    purchase_token=request.receipt_data,
+                    product_id=request.product_id,
+                )
+                if not ack:
+                    logger.error(
+                        "acknowledge 失败,该笔购买将在 3 天后被 Google 自动退款: %s",
+                        txn,
+                    )
+
             from app.services.event_log import log_event
 
             log_event(

@@ -211,7 +211,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     context.pushReplacement(
       '/guide',
-      extra: GuideArgs(slug: slug, qid: qid, imagePath: _captured?.path),
+      extra: GuideArgs(
+        slug: slug,
+        qid: qid,
+        imagePath: _captured?.path,
+        // 识别成功即自动播讲解:这是"保证送达的首体验",
+        // 也是现场"边看边听"的产品形态
+        autoPlayAudio: true,
+      ),
     );
   }
 
