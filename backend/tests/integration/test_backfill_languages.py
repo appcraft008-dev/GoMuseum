@@ -215,3 +215,45 @@ def test_translate_guide_section_first(session, monkeypatch):
     backfill_languages(session, "orsay", langs=["de"], translator=_Tr())
     # Q1 en 有 guide+background,de 缺两者 → guide 先落
     assert order.index("guide") < order.index("background")
+
+
+# —— 并发与选件(2026-07-29:prod 实测串行补两个大馆要 48 小时) ——
+
+
+def test_only_objects_with_en_axis_enter_the_queue(session, monkeypatch):
+    """查询层就滤掉无 en 轴心的件。prod: louvre 17283 件里只有 303 件有内容,
+    不过滤 = 98% 的件白跑一次 translate_object_language 才返回全零。"""
+    import app.services.enrichment.backfill as bf
+
+    seen = []
+    orig = bf.translate_object_language
+
+    def spy(db, o, lang, translator, model="gpt-4o-mini"):
+        seen.append(o.qid)
+        return orig(db, o, lang, translator, model)
+
+    monkeypatch.setattr(bf, "translate_object_language", spy)
+    backfill_languages(session, "orsay", langs=["de"], translator=_Tr())
+    # Q2 是纯 stub(无 en 段)→ 压根不该被取出来
+    assert set(seen) == {"Q1"}
+
+
+def test_single_object_failure_is_skipped_and_counted(session, monkeypatch):
+    """单件失败跳过继续 + 计 errors(批处理纪律①),不炸掉整轮。"""
+    import app.services.enrichment.backfill as bf
+
+    def boom(db, o, lang, translator, model="gpt-4o-mini"):
+        raise RuntimeError("translator exploded")
+
+    monkeypatch.setattr(bf, "translate_object_language", boom)
+    out = backfill_languages(session, "orsay", langs=["de"], translator=_Tr())
+    assert out["errors"] == 1
+    assert out["objects"] == 0
+
+
+def test_parallel_workers_produce_same_result_as_serial(session):
+    """并发只是提速,产出必须与串行逐字一致(同输入同调用集)。"""
+    backfill_languages(session, "orsay", langs=["de"], translator=_Tr(), workers=4)
+    de = _rows(session, "Q1", "de")
+    assert set(de) == {"guide", "background"}
+    assert de["guide"].body == "de EN guide."
