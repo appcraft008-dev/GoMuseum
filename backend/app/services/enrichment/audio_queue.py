@@ -39,9 +39,11 @@ from app.models.museum_object import MuseumObject
 # 自动播的那一段:必须全覆盖
 HERO_SECTION = "guide"
 
-# 不走音频的段落:facts 是列表展示(前端 factsExpanded 开关),不是叙述文本。
-# 放进队列等于白烧 GPU。
-NON_AUDIO_SECTIONS = {"facts"}
+# 不走音频的段落。⚠️ 曾误把 facts 排除在外(从前端 factsExpanded 开关推断它是
+# 元数据列表)—— 实际它是**轶事叙述**("……曾被藏在古董店木板后面,直到 1889 年
+# 被贡库尔发现"),119 字 ≈ 25 秒,是很好的音频内容。作者/尺寸/年代/馆藏编号
+# 来自对象字段,不是 section。**别再凭前端组件名推断内容性质,去看正文。**
+NON_AUDIO_SECTIONS: set[str] = set()
 
 
 @dataclass(frozen=True)

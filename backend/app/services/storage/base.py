@@ -19,6 +19,10 @@ class ObjectStorage(ABC):
     @abstractmethod
     def delete(self, key: str) -> None: ...
 
+    def list_keys(self, prefix: str) -> "Iterator[tuple[str, int, object]]":
+        """枚举前缀下的对象:(key, 字节数, 最后修改时间)。孤儿对账需要。"""
+        raise NotImplementedError
+
     @abstractmethod
     def public_url(self, key: str) -> str:
         """返回可直接给客户端展示的 URL。"""

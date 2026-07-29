@@ -100,13 +100,19 @@ def test_long_tail_gets_hero_only(db):
     assert len({j.section for j in head}) > 1, "头部件应全段"
 
 
-def test_facts_never_enters_the_queue(db):
-    """facts 是列表展示不是叙述文本(前端 factsExpanded 开关),排进去纯属白烧。"""
+def test_facts_is_narrated_not_excluded(db):
+    """facts 是**轶事叙述**,该念。
+
+    曾从前端组件名(factsExpanded)推断它是元数据列表而排除 —— 实际正文是
+    "……曾被藏在古董店木板后面,直到 1889 年被贡库尔发现",119 字 ≈ 25 秒。
+    教训:别凭组件名推断内容性质,去看正文。
+    """
     s, m = db
     o = _obj(s, m, "Q1")
+    _sec(s, o, "guide")
     _sec(s, o, "facts")
-    jobs = aq.build_queue(s, languages=["zh"], target_engine="voxcpm2")
-    assert all(j.section != "facts" for j in jobs)
+    jobs = aq.build_queue(s, languages=["zh"], target_engine="voxcpm2", head_size=10)
+    assert any(j.section == "facts" for j in jobs), "轶事段该进队列"
 
 
 def test_already_target_engine_is_skipped(db):
