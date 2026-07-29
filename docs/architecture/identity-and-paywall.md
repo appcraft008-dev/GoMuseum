@@ -154,8 +154,10 @@ GoMuseum 是**现场**使用的 AI 博物馆导览:用户站在作品前,拍照�
   **拒绝购买**,绝不"当作有效"。*违反的后果*:曾经的 mock 校验对任何 token 返回
   valid=true,任何登录用户编造一个字符串就能白拿 €7.99。
 
-- **I9 · 幂等键必须来自商店(Play 的 `orderId`)。** 绝不回退到客户端提供的
+- **I9 · 幂等键必须是**商店**给出的稳定交易 ID。** 绝不回退到客户端提供的
   `receipt_data` —— 那样改一个字符就能再拿一张票。
+  各商店的字段名不同(Play `orderId`、Apple `transactionId`、国内商店各异),
+  由适配器归一化,核心只认 `store_transaction_id`(见第 8 节)。
 
 - **I10 · 退款必须连权益一起撤。** 只标订单退款、留着权益生效 = 退了钱还能用满 7 天。
 
@@ -254,7 +256,71 @@ TTS,再乘 10 种语言 —— 「免费一件」实际会是几十次生成。
 
 ---
 
+## 8. 商店适配(购买如何进入系统)
+
+### 8.1 目标不是"零代码",是"零核心改动"
+
+上新馆能做到零代码,是因为博物馆真的同质 —— 同样的数据结构、同一条管线,
+差异能用 YAML 表达。**应用商店不同质**:
+
+| | Google Play | App Store | 华为 / 小米 / OPPO |
+|---|---|---|---|
+| 校验协议 | Developer API,服务账号 OAuth2 | Server API,`.p8` 私钥签 JWT,返回 **JWS 签名交易** | 各自 IAP API 与鉴权 |
+| 退款通知 | RTDN → Pub/Sub 推送 | Server Notifications V2,**签名 JWS**,事件类型不同 | 各自回调格式 |
+| 交易标识 | `orderId` | `transactionId` + `originalTransactionId` | 各不相同 |
+| 特殊约束 | **必须 3 天内 acknowledge**,否则自动退款 | 无 | 各异 |
+
+没有任何配置能表达"用 p8 私钥签 JWT 再去验 JWS 签名"。**追求零代码会造出一个
+把所有商店怪癖塞在一起的配置怪物**,比几个各自清晰的适配器更难维护。
+
+所以目标是:**新增商店 = 写一个适配器,不碰权益 / 额度 / 闸门 / 激活任何一行。**
+
+### 8.2 端口
+
+```
+StoreAdapter
+  verify(receipt, product_id)   → {valid, store_txn_id, product_id, state}
+  parse_notification(payload)   → {kind, store_txn_id} | None   # kind: refunded / ...
+  acknowledge(receipt)          → None                          # 仅部分商店需要
+```
+
+归一化的产物只有一个:`store_transaction_id`。核心(`grant_from_purchase` /
+`revoke_for_purchase`)只认它,不认任何商店特有字段。
+
+### 8.3 现状(2026-07-28)
+
+**核心已经是商店无关的** —— `grant_from_purchase(user_id, platform, product_id,
+store_transaction_id, ...)`,`Purchase` 表有 `platform` 列,`entitlement_service`
+里没有任何 Play 特有假设。
+
+**泄漏只在边缘两处**:
+1. `payment.py` 里的 `if platform == "ios" ... elif "android"`(每加一个商店多一个分支)
+2. `/payment/rtdn` 是 Play 专用端点(Apple 的通知格式完全不同)
+
+### 8.4 何时重构
+
+**第二个商店真的要接时,不是现在。** 我们连 Play 都还没上线;为可能永远不来的
+商店建抽象,是拿确定的工作量换不确定的收益,而且现在猜的端口大概率要改 ——
+只有真接第二家时才知道它该长什么样。
+
+### 8.5 接第二个商店时的检查清单
+
+- [ ] 适配器实现 `verify` 与 `parse_notification`,核心**零改动**
+      —— 若必须改核心,说明端口设计错了,回头改端口而不是在核心里加 if
+- [ ] 交易 ID **稳定且唯一**,且来自商店(I9)
+- [ ] 通知来源**可验证**(签名或共享密钥),否则任何人都能伪造退款/发放
+- [ ] 凭证缺失/下游不可达时**拒绝**,不放行(I8、I15)
+- [ ] **沙盒/测试购买不得进入真实权益** —— 各商店都有沙盒,混进来就是白送
+- [ ] 商店特有约束落在适配器内(如 Play 必须 3 天内 acknowledge,漏了会自动退款)
+- [ ] 该商店的钱路径能被 `verify_money_path.py` 覆盖
+
+---
+
 ## 变更记录
 
+- 2026-07-29:加第 8 节「商店适配」。明确**目标是零核心改动而非零代码**
+  (商店间协议/鉴权/载荷结构本质不同,配置表达不了);I9 去掉 Play 特有的
+  `orderId` 假设,改为"商店给出的稳定交易 ID,由适配器归一化"。
+  按 YAGNI **暂不重构**,只定义端口与接入检查清单。
 - 2026-07-28:首版。从需求推导,并把 PR#352–360 期间踩到的教训固化为不变量
   I1–I16 与取舍 6.1–6.5。
