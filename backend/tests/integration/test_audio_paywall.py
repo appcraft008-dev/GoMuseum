@@ -199,3 +199,62 @@ def test_deep_section_is_never_claimable(session):
     """深度段不能成为"首件" —— 否则用户在深度段用掉名额,主讲解反而听不了。"""
     _ben(session)
     assert es.audio_access(session, "u1", "Q1", section="analysis") == "denied"
+
+
+def test_pass_scope_is_actually_enforced(session):
+    """⭐ scope 此前存了却**从未被读过** —— 巴黎通票能解锁马德里。
+
+    多城市那天才会发现,而那时已经在卖了。这条锁住它真的生效。
+    """
+    from datetime import datetime as _dt
+
+    session.add(
+        Entitlement(
+            user_id="u1",
+            entitlement_type="paris_pass_7d",
+            scope="paris",
+            status=es.ACTIVE,
+            expires_at=_dt.now(timezone.utc) + timedelta(days=3),
+        )
+    )
+    _ben(session)
+    session.commit()
+
+    assert es.resolve_state(session, "u1", "Paris")[0] == es.ACTIVE
+    assert es.resolve_state(session, "u1", "Madrid")[0] == es.NOT_PURCHASED
+    # 大小写不敏感
+    assert es.resolve_state(session, "u1", "paris")[0] == es.ACTIVE
+    # 音频闸跟着走:巴黎放行,马德里回落免费规则
+    assert es.audio_access(session, "u1", "Q9", city="Paris") == "allowed"
+    assert es.audio_access(session, "u1", "Q9", city="Madrid") == "claimable"
+
+
+def test_product_catalog_drives_duration_and_scope(session):
+    """新增 SKU 只改 PASSES 一行 —— 时长与 scope 都由目录决定,不是全局常量。"""
+    assert es.is_pass_product("paris_pass_7d") is True
+    assert es.is_pass_product("recognition_pack_10") is False, "老商品不该当通票"
+
+    es.PASSES["madrid_pass_1d"] = {"days": 1, "scope": "madrid"}
+    try:
+        assert es.pass_duration("madrid_pass_1d") == timedelta(days=1)
+        assert es.pass_scope("madrid_pass_1d") == "madrid"
+        es.grant_from_purchase(
+            session,
+            user_id="u2",
+            platform="android",
+            product_id="madrid_pass_1d",
+            store_transaction_id="t-madrid",
+        )
+        _, ent = es.activate(session, "u2")
+        span = ent.expires_at - ent.activated_at
+        assert span == timedelta(days=1), "1 日票不该发 7 天"
+        assert ent.scope == "madrid"
+        assert es.resolve_state(session, "u2", "Paris")[0] == es.NOT_PURCHASED
+    finally:
+        es.PASSES.pop("madrid_pass_1d", None)
+
+
+def test_wildcard_scope_covers_every_city(session):
+    """多国票:scope='*' 覆盖全部城市。"""
+    assert es.covers_museum("*", "Madrid") is True
+    assert es.covers_museum("*", None) is True

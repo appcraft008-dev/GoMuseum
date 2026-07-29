@@ -32,6 +32,7 @@ def _require_audio_access(
     *,
     language: str = "zh",
     section: str = "guide",
+    slug: str | None = None,
 ) -> tuple[str, str]:
     """语音付费墙的**唯一执行点**。前端的付费墙 UI 只是它的表达——
     没有这道闸,老 App / curl / 改客户端都能白拿音频,还会触发 TTS 花我们的钱。
@@ -47,7 +48,16 @@ def _require_audio_access(
     if credentials is None:
         raise HTTPException(status_code=401, detail={"reason": "auth_required"})
     user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
-    kind = es.audio_access(db, user_id, qid, language=language, section=section)
+    # scope 校验:通票只解锁它覆盖的城市。此前 scope 存了却从没读过。
+    city = None
+    if slug:
+        from app.models.museum import Museum
+
+        m = db.query(Museum.city_en).filter(Museum.slug == slug).first()
+        city = m[0] if m else None
+    kind = es.audio_access(
+        db, user_id, qid, language=language, section=section, city=city
+    )
     if kind == "denied":
         # 服务端自己就知道付费墙被撞到了,不必等前端埋点
         log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
@@ -112,7 +122,7 @@ def object_audio(
     )
 
     gate = _require_audio_access(
-        db, credentials, qid, language=language, section=section
+        db, credentials, qid, language=language, section=section, slug=slug
     )
 
     try:
@@ -154,7 +164,7 @@ async def object_audio_stream(
     from app.services.enrichment.streaming_audio import stream_section_audio
 
     gate = _require_audio_access(
-        db, credentials, qid, language=language, section=section
+        db, credentials, qid, language=language, section=section, slug=slug
     )
 
     try:

@@ -18,7 +18,45 @@ from app.models.purchase import Entitlement
 # 这里只在 user_benefits 行还不存在时兜底 —— 已存在的行以**该行的剩余数**为准,
 # 改配置不会回收老用户额度。
 
-PASS_DURATION = timedelta(days=7)
+# ─────────────────────────────────────────────────────────────────────────
+# 商品目录:**新增 SKU 只改这里一行**(再到商店后台建同名商品即可)。
+#
+# ⚠️ 价格不在这里 —— 价格永远来自商店(Play/App Store 的 ProductDetails),
+# 我们只认商品 ID。这样改价、做地区定价、货币本地化都零代码。
+#
+# `scope` 决定这张票能解锁哪些馆(见 covers_museum)。此前 scope 列建了、存了,
+# 却**从未被任何地方读过** —— 巴黎通票能解锁马德里。又一次"写完了没接上"。
+PASSES: dict[str, dict] = {
+    "paris_pass_7d": {"days": 7, "scope": "paris"},
+    # 以后加:
+    # "paris_pass_1d":  {"days": 1,  "scope": "paris"},
+    # "madrid_pass_7d": {"days": 7,  "scope": "madrid"},
+    # "eu_pass_14d":    {"days": 14, "scope": "*"},      # * = 全部城市
+}
+
+# 兼容旧调用点;新代码一律查 PASSES
+PASS_DURATION = timedelta(days=PASSES["paris_pass_7d"]["days"])
+
+
+def is_pass_product(product_id: str) -> bool:
+    """是不是通票类商品。**别再用等值判断** —— 第二个 SKU 会掉进老商品分支。"""
+    return product_id in PASSES
+
+
+def pass_duration(product_id: str) -> timedelta:
+    return timedelta(days=PASSES.get(product_id, {}).get("days", 7))
+
+
+def pass_scope(product_id: str) -> str:
+    return PASSES.get(product_id, {}).get("scope", "paris")
+
+
+def covers_museum(scope: str, museum_city: str | None) -> bool:
+    """该 scope 是否覆盖此馆。`*` 覆盖全部;否则按城市(大小写不敏感)。"""
+    if scope == "*":
+        return True
+    return bool(museum_city) and museum_city.strip().lower() == scope.lower()
+
 
 # 免费试听只覆盖**主讲解段**。一件作品还有背景/分析/问答/作者介绍等段落,
 # 每段独立 TTS;不限段的话"免费一件"实际是几十次生成(再乘 10 种语言)。
@@ -43,8 +81,12 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt.replace(tzinfo=timezone.utc)
 
 
-def _live_entitlement(db, user_id: str):
-    """取该用户最相关的一条权益:优先 active,其次待激活。已退款/撤销不算。"""
+def _live_entitlement(db, user_id: str, city: str | None = None):
+    """取该用户最相关的一条权益:优先 active,其次待激活。已退款/撤销不算。
+
+    [city] 给了就只认**覆盖该城市**的票(scope 校验)。此前 scope 存了却从没读过,
+    等于巴黎通票能解锁马德里 —— 多城市那天才会发现,而那时已经在卖了。
+    """
     rows = (
         db.query(Entitlement)
         .filter(
@@ -54,16 +96,34 @@ def _live_entitlement(db, user_id: str):
         .order_by(Entitlement.created_at.desc())
         .all()
     )
-    for r in rows:  # active 优先(可能同时存在待激活的第二张)
-        if r.status == ACTIVE:
+    if city is not None:
+        rows = [r for r in rows if covers_museum(r.scope or "paris", city)]
+
+    # ⚠️ 顺序不能是"status==ACTIVE 就返回":到期只在读取时算,DB 里那行**永远停在
+    # ACTIVE**。老票过期后用户续购,新票是 purchased_not_activated,却被那行过期的
+    # ACTIVE 永久遮蔽 → resolve_state 恒为 expired、activate() 拒绝 ——
+    # **用户付了第二次钱,票永远激活不了**(2026-07-29 外部评审发现,已复现)。
+    now = _now()
+
+    def _still_live(r) -> bool:
+        exp = _aware(r.expires_at)
+        return r.status == ACTIVE and (exp is None or exp > now)
+
+    for r in rows:  # ① 真正生效中的
+        if _still_live(r):
             return r
-    return rows[0] if rows else None
+    for r in rows:  # ② 未激活的(优先于已过期的,这是续购的路径)
+        if r.status == PURCHASED_NOT_ACTIVATED:
+            return r
+    return rows[0] if rows else None  # ③ 只剩过期的
 
 
-def resolve_state(db, user_id: str) -> tuple[str, Entitlement | None]:
+def resolve_state(
+    db, user_id: str, city: str | None = None
+) -> tuple[str, Entitlement | None]:
     """当前权益状态。**到期判断在这里做**,不依赖任何定时任务把 status 刷成 expired
     ——定时任务漏跑就会白送权限。"""
-    ent = _live_entitlement(db, user_id)
+    ent = _live_entitlement(db, user_id, city)
     if ent is None:
         return NOT_PURCHASED, None
     if ent.status == PURCHASED_NOT_ACTIVATED:
@@ -81,7 +141,8 @@ def activate(db, user_id: str) -> tuple[str, Entitlement | None]:
     now = _now()
     ent.status = ACTIVE
     ent.activated_at = now
-    ent.expires_at = now + PASS_DURATION
+    # 时长取自该商品,不是全局常量 —— 否则 1 日票也会发 7 天
+    ent.expires_at = now + pass_duration(ent.entitlement_type)
     db.commit()
     return ACTIVE, ent
 
@@ -137,6 +198,7 @@ def can_play_audio(
     *,
     language: str = "zh",
     section: str = FREE_AUDIO_SECTION,
+    city: str | None = None,
 ) -> bool:
     """某件的语音能不能放。
 
@@ -144,7 +206,7 @@ def can_play_audio(
     收敛到三元组是因为:一件作品多段 × 10 语言 = 几十次 TTS,
     只按 qid 判等于免费送几十次生成。
     """
-    state, _ = resolve_state(db, user_id)
+    state, _ = resolve_state(db, user_id, city)
     if state == ACTIVE:
         return True
     if section != FREE_AUDIO_SECTION:
@@ -167,6 +229,10 @@ def claim_free_audio(db, benefits, qid: str, language: str = "zh") -> bool:
     benefits.free_audio_claimed_at = _now()
     db.commit()
     return True
+
+
+class PurchaseOwnershipConflict(Exception):
+    """同一张收据被另一个账号用过。绝不静默成功——付钱的人会以为买到了。"""
 
 
 PARIS_PASS_7D = "paris_pass_7d"
@@ -198,7 +264,16 @@ def grant_from_purchase(
         .filter_by(store_transaction_id=store_transaction_id)
         .one_or_none()
     )
-    if existing:  # 恢复购买/重复上报:返回已有,不重复发放
+    if existing:
+        # 恢复购买/重复上报:返回已有,不重复发放。
+        # ⚠️ 但若这张收据**属于别的账号**,绝不能静默返回成功:
+        # B 抢先用 A 的 purchase token 上报 → 权益归 B;A 再上报时命中幂等、
+        # 接口却回 verified=true —— A 付了钱、权益在 B 手上,还以为买成功了。
+        # 归属不同必须显式失败,让调用方返错误码而不是假成功。
+        if existing.user_id != user_id:
+            raise PurchaseOwnershipConflict(
+                f"purchase {store_transaction_id} belongs to another account"
+            )
         ent = (
             db.query(Entitlement)
             .filter_by(source_purchase_id=existing.id)
@@ -222,7 +297,7 @@ def grant_from_purchase(
     ent = Entitlement(
         user_id=user_id,
         entitlement_type=product_id,
-        scope="paris",
+        scope=pass_scope(product_id),
         source_purchase_id=p.id,
         status=PURCHASED_NOT_ACTIVATED,
         granted_reason="purchase",
@@ -261,6 +336,7 @@ def audio_access(
     *,
     language: str = "zh",
     section: str = FREE_AUDIO_SECTION,
+    city: str | None = None,
 ) -> str:
     """语音闸门:**付费墙真正生效的地方**(前端 UI 只是它的表达)。
 
@@ -279,7 +355,9 @@ def audio_access(
     from app.models.user_benefits import UserBenefits
 
     benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
-    if can_play_audio(db, user_id, qid, benefits, language=language, section=section):
+    if can_play_audio(
+        db, user_id, qid, benefits, language=language, section=section, city=city
+    ):
         return "allowed"
     if benefits is None:
         return "denied"
