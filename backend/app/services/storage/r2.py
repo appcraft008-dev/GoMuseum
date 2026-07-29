@@ -61,6 +61,13 @@ class R2ObjectStorage(ObjectStorage):
     def delete(self, key: str) -> None:
         self._s3.delete_object(Bucket=self._bucket, Key=key)
 
+    def size(self, key: str):
+        """HEAD 取大小,不下载内容。"""
+        try:
+            return self._s3.head_object(Bucket=self._bucket, Key=key)["ContentLength"]
+        except Exception:
+            return None
+
     def list_keys(self, prefix: str):
         """分页枚举(R2 单次最多 1000 条)。返回 (key, size, last_modified)。"""
         token = None
