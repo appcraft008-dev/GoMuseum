@@ -307,6 +307,59 @@ def grant_from_purchase(
     return p, ent
 
 
+# 老权益(user_benefits.is_premium / day_pass_active)的兼容类型。
+# scope="*" —— 老权益没有城市概念,覆盖全部(covers_museum 认 "*")。
+LEGACY_PREMIUM = "legacy_premium"
+LEGACY_DAY_PASS = "legacy_day_pass"
+LEGACY_SCOPE = "*"
+
+
+def grant_legacy_pass(db, *, user_id: str, kind: str, expires_at, commit=True):
+    """给老权益补一张等价的 entitlement。**"新付费规则不得影响老用户权益"的兜底。**
+
+    为什么需要:音频闸门只认 entitlements(见 resolve_state),而老商品
+    (premium_annual/day_pass)的购买路径只写 `user_benefits.is_premium` ——
+    **老用户付了钱却听不了音频**。既然真相源统一到 entitlements,老权益就必须
+    被搬过来,而不是让老用户失效。
+
+    ⭐ status 直接给 `ACTIVE`,不是 purchased_not_activated:老用户此前就在用,
+    再要求他点一次"现在开始计时"是凭空多出来的一道坎(而且会让人以为票没了)。
+
+    幂等:同一 user 已有未过期的同类 legacy 权益 → 返回已有,不重复发。
+    """
+    from app.models.purchase import Entitlement
+
+    exp = _aware(expires_at)
+    if exp is not None and exp <= _now():
+        return None  # 已过期的老权益不搬(搬过来也是 expired)
+
+    existing = (
+        db.query(Entitlement)
+        .filter(
+            Entitlement.user_id == user_id,
+            Entitlement.entitlement_type == kind,
+            Entitlement.status.in_([ACTIVE, PURCHASED_NOT_ACTIVATED]),
+        )
+        .first()
+    )
+    if existing:
+        return existing
+
+    ent = Entitlement(
+        user_id=user_id,
+        entitlement_type=kind,
+        scope=LEGACY_SCOPE,
+        status=ACTIVE,
+        activated_at=_now(),
+        expires_at=exp,
+        granted_reason="legacy_migration",
+    )
+    db.add(ent)
+    if commit:
+        db.commit()
+    return ent
+
+
 def revoke_for_purchase(
     db, store_transaction_id: str, reason: str = "refunded"
 ) -> bool:
