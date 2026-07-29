@@ -209,6 +209,13 @@ jobs:
           cd frontend/gomuseum_app
           flutter pub get
 
+      # 本地 pre-push 能被 --no-verify 绕过，CI 不能 —— 格式的最终防线放这里。
+      # 显式 --language-version 与本地钩子保持一致（见 .husky/pre-push 的说明）。
+      - name: Check Dart formatting
+        run: |
+          cd frontend/gomuseum_app
+          dart format --language-version=3.0 --output=none --set-exit-if-changed lib test
+
       - name: Run Flutter tests
         run: |
           cd frontend/gomuseum_app
