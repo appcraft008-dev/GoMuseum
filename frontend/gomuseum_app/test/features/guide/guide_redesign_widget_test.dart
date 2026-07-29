@@ -22,12 +22,12 @@ ObjectContent _sample() => const ObjectContent(
             sectionCode: 'overview',
             label: '通用描述',
             body: '主线讲解正文。',
-            audioUrl: null),
+            hasAudio: false),
         ObjectTab(
             sectionCode: 'background',
             label: '创作背景',
             body: '背景正文。',
-            audioUrl: null),
+            hasAudio: false),
       ],
       suggestedQuestions: [
         SuggestedQuestion(question: '为什么星星这么大？', answer: '因为是煤气灯。'),
@@ -84,7 +84,7 @@ void main() {
       title: '世界的起源',
       images: [],
       facts: ObjectFacts(),
-      defaultGuide: DefaultGuide(body: '主线讲解。', audioUrl: null),
+      defaultGuide: DefaultGuide(body: '主线讲解。', hasAudio: false),
       tabs: [],
       suggestedQuestions: [],
       artist: Artist(name: '库尔贝', bio: '一段经历'),

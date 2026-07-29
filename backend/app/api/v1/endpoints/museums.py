@@ -22,6 +22,59 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _require_audio_access(
+    db: Session,
+    credentials: HTTPAuthorizationCredentials | None,
+    qid: str,
+    *,
+    language: str = "zh",
+    section: str = "guide",
+    slug: str | None = None,
+) -> tuple[str, str]:
+    """语音付费墙的**唯一执行点**。前端的付费墙 UI 只是它的表达——
+    没有这道闸,老 App / curl / 改客户端都能白拿音频,还会触发 TTS 花我们的钱。
+
+    必须在触发生成**之前**调用。拒绝返 402(不是 403):前端据此弹付费页。
+    返回 (user_id, kind);kind == "claimable" 时**音频送达后**才认领首件——
+    生成可能 404/409/503,在这里认领会让用户"什么都没听到但名额没了"。
+    """
+    from app.services import entitlement_service as es
+    from app.services.auth_service import AuthService
+    from app.services.event_log import log_event
+
+    if credentials is None:
+        raise HTTPException(status_code=401, detail={"reason": "auth_required"})
+    user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
+    # scope 校验:通票只解锁它覆盖的城市。此前 scope 存了却从没读过。
+    city = None
+    if slug:
+        from app.models.museum import Museum
+
+        m = db.query(Museum.city_en).filter(Museum.slug == slug).first()
+        city = m[0] if m else None
+    kind = es.audio_access(
+        db, user_id, qid, language=language, section=section, city=city
+    )
+    if kind == "denied":
+        # 服务端自己就知道付费墙被撞到了,不必等前端埋点
+        log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
+        raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+    return user_id, kind
+
+
+def _claim_after_success(
+    db: Session, gate: tuple[str, str], qid: str, language: str = "zh"
+) -> None:
+    """音频确实送达了才认领首件(见 _require_audio_access 的说明)。"""
+    from app.services import entitlement_service as es
+
+    user_id, kind = gate
+    if kind == "claimable":
+        es.claim_audio_now(db, user_id, qid, language)
+
 
 @router.get("")
 def list_museums(db: Session = Depends(get_db)) -> list[dict]:
@@ -56,6 +109,7 @@ def object_audio(
     language: str = "zh",
     section: str = "guide",
     qa_sort: int | None = None,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     """音频懒生成(点播放触发):guide/深度模块(section=段code)、问答(section=qa&qa_sort=N)、
@@ -65,6 +119,10 @@ def object_audio(
         get_or_make_artist_bio_audio_url,
         get_or_make_audio_url,
         get_or_make_qa_audio_url,
+    )
+
+    gate = _require_audio_access(
+        db, credentials, qid, language=language, section=section, slug=slug
     )
 
     try:
@@ -87,6 +145,7 @@ def object_audio(
         raise HTTPException(status_code=409, detail={"reason": "audio_generating"})
     if status == "no_text":
         raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
+    _claim_after_success(db, gate, qid, language)
     return {"audio_url": url}
 
 
@@ -96,11 +155,17 @@ async def object_audio_stream(
     qid: str,
     language: str = "zh",
     section: str = "guide",
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
 ):
     """流式音频(边生成边播,一次 TTS 调用 tee 落库)。首播缩短等待;缓存命中返 R2 URL。
     落库跑 detached task,用户中途退出也把整段落 R2(tts-1 按字符已付费,抽完最省)。
     guide/深度段;qa/artist_bio 仍走非流式 /audio(v1 范围)。"""
     from app.services.enrichment.streaming_audio import stream_section_audio
+
+    gate = _require_audio_access(
+        db, credentials, qid, language=language, section=section, slug=slug
+    )
 
     try:
         status, payload = await stream_section_audio(qid, language, section)
@@ -111,6 +176,7 @@ async def object_audio_stream(
         raise HTTPException(status_code=409, detail={"reason": "audio_generating"})
     if status == "no_text":
         raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
+    _claim_after_success(db, gate, qid, language)
     if status == "cached":
         # 已落库:不重复生成,直接给 R2 直链(前端从 R2 播)
         return {"audio_url": payload}
@@ -140,9 +206,6 @@ def list_objects(
     if page is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     return page
-
-
-_bearer = HTTPBearer(auto_error=False)
 
 
 @router.post("/{slug}/recognize")

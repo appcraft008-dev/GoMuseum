@@ -198,5 +198,20 @@
   "museumCollectionTab": "Colección",
   "museumOpeningHours": "Horario",
   "museumOfficialSite": "Sitio oficial",
-  "museumIntroComingSoon": "Presentación del museo próximamente"
+  "museumIntroComingSoon": "Presentación del museo próximamente",
+  "paywallTitle": "Pase de París de 7 días",
+  "paywallPitch": "Reconocimiento fotográfico ilimitado y audioguía completa en el Louvre, Orsay y la Orangerie.",
+  "paywallClockNote": "El tiempo no empieza al comprar: comienza la primera vez que usas una función premium y lo confirmas.",
+  "paywallFreeAlways": "Explorar, buscar y leer el comentario completo son siempre gratis.",
+  "paywallBuy": "Conseguir el pase",
+  "paywallRestore": "Restaurar compra",
+  "audioFreePreview": "Muestra gratuita",
+  "audioLockedHint": "La audioguía requiere el pase: ya has usado tu muestra gratuita.",
+  "quotaExhausted": "Has agotado tus reconocimientos gratuitos.",
+  "activateTitle": "¿Empezar tu pase de 7 días?",
+  "activateBody": "Una vez iniciado corre 7×24 horas sin pausa. Actívalo en el museo, no antes.",
+  "activateConfirm": "Empezar ahora",
+  "activateLater": "Todavía no",
+  "paywallLoginToBuy": "Inicia sesión para comprar",
+  "paywallLoginWhy": "El pase va ligado a tu cuenta: lo conservas en un móvil nuevo."
 }

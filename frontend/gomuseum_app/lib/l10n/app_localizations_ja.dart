@@ -631,4 +631,50 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get museumIntroComingSoon => '館内紹介は準備中です';
+
+  @override
+  String get paywallTitle => 'パリ 7日間パス';
+
+  @override
+  String get paywallPitch => '撮影による作品認識が無制限、ルーヴル・オルセー・オランジュリーの音声解説がすべて聴けます。';
+
+  @override
+  String get paywallClockNote => '購入時点では計測を開始しません。プレミアム機能を初めて使い、確認した時点から始まります。';
+
+  @override
+  String get paywallFreeAlways => '閲覧・検索・テキスト解説の全文は常に無料です。';
+
+  @override
+  String get paywallBuy => 'パスを購入';
+
+  @override
+  String get paywallRestore => '購入を復元';
+
+  @override
+  String get audioFreePreview => '無料試聴';
+
+  @override
+  String get audioLockedHint => '音声解説にはパスが必要です。無料試聴は別の作品で使用済みです。';
+
+  @override
+  String get quotaExhausted => '無料の認識回数を使い切りました。';
+
+  @override
+  String get activateTitle => '7日間パスを開始しますか？';
+
+  @override
+  String get activateBody =>
+      '開始すると 7×24 時間連続で進み、途中で止まりません。館に着いてから開始することをおすすめします。';
+
+  @override
+  String get activateConfirm => '今すぐ開始';
+
+  @override
+  String get activateLater => 'まだ開始しない';
+
+  @override
+  String get paywallLoginToBuy => 'ログインして購入';
+
+  @override
+  String get paywallLoginWhy => 'パスはアカウントに紐づくので、機種変更しても失われません。';
 }

@@ -304,5 +304,20 @@
   "museumCollectionTab": "Collection",
   "museumOpeningHours": "Opening Hours",
   "museumOfficialSite": "Official Website",
-  "museumIntroComingSoon": "Museum introduction coming soon"
+  "museumIntroComingSoon": "Museum introduction coming soon",
+  "paywallTitle": "Paris 7-Day Pass",
+  "paywallPitch": "Unlimited photo recognition and full audio commentary across the Louvre, Orsay and Orangerie.",
+  "paywallClockNote": "The clock does not start at purchase — it begins when you first use a premium feature and confirm.",
+  "paywallFreeAlways": "Browsing, search and full written commentary are always free.",
+  "paywallBuy": "Get the pass",
+  "paywallRestore": "Restore purchase",
+  "audioFreePreview": "Free preview",
+  "audioLockedHint": "Audio commentary needs the pass — your free preview has been used.",
+  "quotaExhausted": "You've used all your free recognitions.",
+  "activateTitle": "Start your 7-day pass?",
+  "activateBody": "Once started it runs for 7×24 hours without pause. Start it when you're at the museum, not before.",
+  "activateConfirm": "Start now",
+  "activateLater": "Not yet",
+  "paywallLoginToBuy": "Sign in to buy",
+  "paywallLoginWhy": "Your pass is tied to your account, so you keep it on a new phone."
 }

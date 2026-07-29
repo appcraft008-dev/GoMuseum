@@ -198,5 +198,20 @@
   "museumCollectionTab": "藏品",
   "museumOpeningHours": "开放时间",
   "museumOfficialSite": "官方网站",
-  "museumIntroComingSoon": "馆方介绍生成中，敬请期待"
+  "museumIntroComingSoon": "馆方介绍生成中，敬请期待",
+  "paywallTitle": "巴黎 7 日通票",
+  "paywallPitch": "不限次拍照识别，卢浮宫、奥赛、橘园全馆语音讲解。",
+  "paywallClockNote": "购买后不立即计时——首次使用高级功能并确认后才开始。",
+  "paywallFreeAlways": "浏览、搜索与完整文字讲解始终免费。",
+  "paywallBuy": "获取通票",
+  "paywallRestore": "恢复购买",
+  "audioFreePreview": "免费试听",
+  "audioLockedHint": "语音讲解需要通票——免费试听名额已用在另一件作品上。",
+  "quotaExhausted": "免费识别次数已用完。",
+  "activateTitle": "开始你的 7 天通票？",
+  "activateBody": "一旦开始就连续计时 7×24 小时，中途不暂停。建议到馆后再开始。",
+  "activateConfirm": "现在开始",
+  "activateLater": "再等等",
+  "paywallLoginToBuy": "登录后购买",
+  "paywallLoginWhy": "通票绑定账号，换手机也不会丢。"
 }

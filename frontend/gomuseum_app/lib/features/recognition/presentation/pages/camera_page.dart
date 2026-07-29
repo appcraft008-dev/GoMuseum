@@ -26,6 +26,8 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
 
 class CameraPage extends ConsumerStatefulWidget {
   const CameraPage({super.key});
@@ -79,7 +81,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   /// 点缩略图 → 用该图识别（走同一路由）。
   Future<void> _recognizeAsset(AssetEntity asset) async {
-    if (!ref.read(benefitsStateProvider.notifier).hasRecognitionAccess) {
+    if (!_canRecognize() && !await _passActivatedIfPurchased()) {
       _showQuotaExhaustedSheet();
       return;
     }
@@ -139,7 +141,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _shoot() async {
     final controller = _controller;
     if (controller == null || controller.value.isTakingPicture) return;
-    if (!ref.read(benefitsStateProvider.notifier).hasRecognitionAccess) {
+    if (!_canRecognize() && !await _passActivatedIfPurchased()) {
       _showQuotaExhaustedSheet();
       return;
     }
@@ -149,7 +151,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   /// 从图库选图上传识别（无相机拍摄，走同一识别路由）。
   Future<void> _pickFromGallery() async {
-    if (!ref.read(benefitsStateProvider.notifier).hasRecognitionAccess) {
+    if (!_canRecognize() && !await _passActivatedIfPurchased()) {
       _showQuotaExhaustedSheet();
       return;
     }
@@ -209,7 +211,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     context.pushReplacement(
       '/guide',
-      extra: GuideArgs(slug: slug, qid: qid, imagePath: _captured?.path),
+      extra: GuideArgs(
+        slug: slug,
+        qid: qid,
+        imagePath: _captured?.path,
+        // 识别成功即自动播讲解:这是"保证送达的首体验",
+        // 也是现场"边看边听"的产品形态
+        autoPlayAudio: true,
+      ),
     );
   }
 
@@ -227,6 +236,20 @@ class _CameraPageState extends ConsumerState<CameraPage>
         initialQuery: initialQuery,
       ),
     );
+  }
+
+  /// 识别闸:读统一权益的 `can.recognize`,不自行组合布尔值(契约要求)。
+  /// 权益还没加载完时**放行** —— 后端才是真正的闸(超额返 402),
+  /// 在这里保守拦截只会让用户在加载的一瞬间按不动快门。
+  bool _canRecognize() =>
+      ref.read(entitlementsProvider).value?.canRecognize ?? true;
+
+  /// 拦下之前先看是不是"已购未激活"——他付过钱了,该弹激活确认而不是购买页。
+  /// 返回 true 表示现在可以识别了。
+  Future<bool> _passActivatedIfPurchased() async {
+    final ent = ref.read(entitlementsProvider).value;
+    if (ent == null || !ent.isPurchasedNotActivated) return false;
+    return ensurePassActivated(context, ref, ent);
   }
 
   void _showQuotaExhaustedSheet() {

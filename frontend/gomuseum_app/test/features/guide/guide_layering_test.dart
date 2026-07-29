@@ -3,8 +3,8 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
 
-ObjectTab tab(String code, {String? body, String? audio}) =>
-    ObjectTab(sectionCode: code, label: code, body: body, audioUrl: audio);
+ObjectTab tab(String code, {String? body, bool audio = false}) =>
+    ObjectTab(sectionCode: code, label: code, body: body, hasAudio: audio);
 
 ObjectContent content({
   DefaultGuide? guide,
@@ -32,19 +32,19 @@ void main() {
     ]);
     final l = GuideLayering.from(c);
     expect(l.heroBody, '通用正文');
-    expect(l.heroAudioUrl, isNull);
+    expect(l.heroHasAudio, isFalse);
     expect(l.deepTabs.map((t) => t.sectionCode), ['artist', 'analysis']);
     expect(l.deepCount, 2);
   });
 
   test('有 default_guide → 主角用它，overview 从抽屉移除（隐藏通用）', () {
     final c = content(
-      guide: const DefaultGuide(body: 'DG 正文', audioUrl: 'http://a.mp3'),
+      guide: const DefaultGuide(body: 'DG 正文', hasAudio: true),
       tabs: [tab('overview', body: '通用正文'), tab('artist', body: '作者')],
     );
     final l = GuideLayering.from(c);
     expect(l.heroBody, 'DG 正文');
-    expect(l.heroAudioUrl, 'http://a.mp3');
+    expect(l.heroHasAudio, isTrue);
     expect(l.deepTabs.map((t) => t.sectionCode), ['artist']);
   });
 
@@ -73,7 +73,7 @@ void main() {
     // 对齐 staging 现状：default_guide 上线后 tabs=[background,analysis,...]，
     // 不应把首个有正文 tab 当 promoted 误删。
     final c = content(
-      guide: const DefaultGuide(body: '主线讲解', audioUrl: null),
+      guide: const DefaultGuide(body: '主线讲解', hasAudio: false),
       tabs: [
         tab('background', body: '背景'),
         tab('analysis', body: '分析'),

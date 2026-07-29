@@ -117,6 +117,9 @@ def get_or_make_qa_audio_url(db, qid: str, language: str, qa_sort: int):
         key = audio_key("object-audio", qid, language, f"qa_{qa_sort}")
         storage.put(key, audio, "audio/mpeg")  # put 成功才写 key
         row.audio_key = key
+        from app.services.content_repo import _current_tts_engine
+
+        row.audio_engine = _current_tts_engine()
         db.commit()
     finally:
         _set_audio_lock(db, obj, language, section, False)

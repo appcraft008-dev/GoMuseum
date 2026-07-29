@@ -28,7 +28,7 @@ void main() {
           'section_code': 'overview',
           'label': '介绍',
           'body': '正文…',
-          'audio_url': 'https://x/o.mp3'
+          'has_audio': true
         },
         {'section_code': 'author', 'label': '作者', 'body': ''}, // 空 → 待完善
       ],

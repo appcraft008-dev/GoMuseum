@@ -33,7 +33,11 @@ def run_recognition(
     """共享识别逻辑:身份(Bearer 令牌或 device_id)→ 计费识别 → 402/404 映射。
     slug=None 为全局跨馆;slug 给了但目录无此馆 → out is None → 404。
     计费语义不变:配额用尽在 GPT 调用前抛 QuotaExceededError → 402。"""
-    from app.services.recognition.service import QuotaExceededError, recognize_billed
+    from app.services.event_log import log_event
+    from app.services.recognition.service import (
+        QuotaExceededError,
+        recognize_billed,
+    )
 
     user_id = None
     if credentials:
@@ -58,6 +62,14 @@ def run_recognition(
             mode=mode,
         )
     except QuotaExceededError:
+        # 付费漏斗的关键一环:没有它就答不出"多少人撞到额度墙"
+        log_event(
+            db,
+            "free_quota_exhausted",
+            user_id=user_id,
+            device_id=device_id,
+            museum_slug=slug,
+        )
         raise HTTPException(status_code=402, detail={"reason": "quota_exceeded"})
     if out is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")

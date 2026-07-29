@@ -654,4 +654,56 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get museumIntroComingSoon => 'Museumsvorstellung folgt in Kürze';
+
+  @override
+  String get paywallTitle => 'Paris-Pass für 7 Tage';
+
+  @override
+  String get paywallPitch =>
+      'Unbegrenzte Fotoerkennung und vollständige Audiokommentare im Louvre, Musée d\'Orsay und in der Orangerie.';
+
+  @override
+  String get paywallClockNote =>
+      'Die Laufzeit beginnt nicht mit dem Kauf, sondern erst bei der ersten bestätigten Nutzung einer Premium-Funktion.';
+
+  @override
+  String get paywallFreeAlways =>
+      'Stöbern, Suche und der vollständige Textkommentar bleiben immer kostenlos.';
+
+  @override
+  String get paywallBuy => 'Pass holen';
+
+  @override
+  String get paywallRestore => 'Kauf wiederherstellen';
+
+  @override
+  String get audioFreePreview => 'Kostenprobe';
+
+  @override
+  String get audioLockedHint =>
+      'Für Audiokommentare wird der Pass benötigt — deine kostenlose Probe ist bereits aufgebraucht.';
+
+  @override
+  String get quotaExhausted =>
+      'Du hast alle kostenlosen Erkennungen aufgebraucht.';
+
+  @override
+  String get activateTitle => '7-Tage-Pass jetzt starten?';
+
+  @override
+  String get activateBody =>
+      'Einmal gestartet, läuft er 7×24 Stunden ohne Pause. Starte ihn im Museum, nicht vorher.';
+
+  @override
+  String get activateConfirm => 'Jetzt starten';
+
+  @override
+  String get activateLater => 'Später';
+
+  @override
+  String get paywallLoginToBuy => 'Zum Kauf anmelden';
+
+  @override
+  String get paywallLoginWhy =>
+      'Der Pass hängt an deinem Konto – auf einem neuen Handy bleibt er erhalten.';
 }

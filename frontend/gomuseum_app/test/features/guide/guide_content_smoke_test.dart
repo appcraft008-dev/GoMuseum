@@ -43,13 +43,13 @@ ObjectContent _fakeContent() => const ObjectContent(
           sectionCode: 'overview',
           label: '介绍',
           body: '这是一幅充满活力的作品，梵高以鲜艳色彩描绘了卧室的宁静。',
-          audioUrl: null,
+          hasAudio: false,
         ),
         ObjectTab(
           sectionCode: 'author',
           label: '作者',
           body: '', // empty → should show 待完善
-          audioUrl: null,
+          hasAudio: false,
         ),
       ],
       suggestedQuestions: [

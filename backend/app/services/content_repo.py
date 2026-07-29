@@ -69,6 +69,7 @@ def persist_section_audio(
     section_code: str,
     audio_bytes: bytes,
     storage: ObjectStorage,
+    engine: str | None = None,
 ) -> str | None:
     """把一段已生成的音频落库：传 R2 + 写 object_content_sections.audio_key。
 
@@ -86,9 +87,18 @@ def persist_section_audio(
         object_id=obj.id, language=language, section_code=section_code
     )
     row.audio_key = key
+    # 记录生成引擎:自托管迁移要靠它筛"还有哪些是 tts-1 的"
+    row.audio_engine = engine or _current_tts_engine()
     db.add(row)
     db.commit()
     return key
+
+
+def _current_tts_engine() -> str:
+    """当前默认 TTS 引擎标识。别写死 —— 换模型时这里跟着变,历史记录才准。"""
+    from app.core.config import settings
+
+    return getattr(settings, "OPENAI_TTS_MODEL", "tts-1")
 
 
 def get_section_audio_key(

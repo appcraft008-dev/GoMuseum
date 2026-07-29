@@ -9,6 +9,7 @@ import 'package:gomuseum_app/features/content/data/models/museum_summary_model.d
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/home/presentation/pages/home_page.dart';
 import 'package:gomuseum_app/features/payment/domain/entities/user_benefits.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 
 /// 首页馆卡片走 A1 GET /museums(2026-07-26 API 化),测试注入假馆列表。
@@ -42,12 +43,23 @@ class _FakeBenefitsState extends BenefitsState {
       );
 }
 
+/// 首页额度行读 /entitlements/me;不打桩就会真发请求(测试里表现为 pending timer)
+const _fakeEntitlements = Entitlements(
+  state: 'not_purchased',
+  canPurchase: true,
+  canRecognize: true,
+  canAudioAny: false,
+  freeRecognitionsLeft: 8,
+  freeRecognitionsTotal: 5,
+);
+
 void main() {
   testWidgets('首页渲染刊头、门票 CTA、额度与博物馆卡片', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
         ],
         child: const MaterialApp(
@@ -89,6 +101,7 @@ void main() {
       ProviderScope(
         overrides: [
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
         ],
         child: MaterialApp.router(
@@ -133,6 +146,7 @@ void main() {
       ProviderScope(
         overrides: [
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
         ],
         child: MaterialApp.router(

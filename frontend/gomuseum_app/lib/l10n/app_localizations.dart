@@ -1306,6 +1306,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Museum introduction coming soon'**
   String get museumIntroComingSoon;
+
+  /// No description provided for @paywallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paris 7-Day Pass'**
+  String get paywallTitle;
+
+  /// No description provided for @paywallPitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited photo recognition and full audio commentary across the Louvre, Orsay and Orangerie.'**
+  String get paywallPitch;
+
+  /// No description provided for @paywallClockNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The clock does not start at purchase — it begins when you first use a premium feature and confirm.'**
+  String get paywallClockNote;
+
+  /// No description provided for @paywallFreeAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing, search and full written commentary are always free.'**
+  String get paywallFreeAlways;
+
+  /// No description provided for @paywallBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the pass'**
+  String get paywallBuy;
+
+  /// No description provided for @paywallRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchase'**
+  String get paywallRestore;
+
+  /// No description provided for @audioFreePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Free preview'**
+  String get audioFreePreview;
+
+  /// No description provided for @audioLockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio commentary needs the pass — your free preview has been used.'**
+  String get audioLockedHint;
+
+  /// No description provided for @quotaExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve used all your free recognitions.'**
+  String get quotaExhausted;
+
+  /// No description provided for @activateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your 7-day pass?'**
+  String get activateTitle;
+
+  /// No description provided for @activateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once started it runs for 7×24 hours without pause. Start it when you\'re at the museum, not before.'**
+  String get activateBody;
+
+  /// No description provided for @activateConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Start now'**
+  String get activateConfirm;
+
+  /// No description provided for @activateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get activateLater;
+
+  /// No description provided for @paywallLoginToBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to buy'**
+  String get paywallLoginToBuy;
+
+  /// No description provided for @paywallLoginWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pass is tied to your account, so you keep it on a new phone.'**
+  String get paywallLoginWhy;
 }
 
 class _AppLocalizationsDelegate

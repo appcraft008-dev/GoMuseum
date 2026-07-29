@@ -33,3 +33,22 @@ class LocalObjectStorage(ObjectStorage):
 
     def public_url(self, key: str) -> str:
         return f"{self._base}/{key}"
+
+    def size(self, key: str):
+        import os
+
+        root = self._root if hasattr(self, "_root") else "."
+        p = os.path.join(root, key)
+        return os.path.getsize(p) if os.path.exists(p) else None
+
+    def list_keys(self, prefix: str):
+        import os
+
+        root = self._root if hasattr(self, "_root") else "."
+        base = os.path.join(root, prefix)
+        for dirpath, _, files in os.walk(base):
+            for f in files:
+                full = os.path.join(dirpath, f)
+                rel = os.path.relpath(full, root)
+                st = os.stat(full)
+                yield rel, st.st_size, st.st_mtime

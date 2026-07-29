@@ -55,6 +55,7 @@ class GuideArgs {
     this.imageUrl,
     this.slug,
     this.qid,
+    this.autoPlayAudio = false,
   }) : assert(
           (slug != null && qid != null) || result != null,
           'GuideArgs 需提供 (slug+qid) 或 result 其中一种',
@@ -74,6 +75,13 @@ class GuideArgs {
 
   /// 藏品 qid（馆藏列表流程）
   final String? qid;
+
+  /// 识别成功后**自动播放**主讲解。
+  ///
+  /// ⭐ 免费首件靠它"保证送达":券式设计(给一张待花的券)下,很多用户到最后
+  /// 压根没用过语音,付费墙就白建了。自动播让每个免费用户都真的体验过一次。
+  /// 只在识别路径为 true —— 从列表/搜索点进来的不自动出声(用户没预期)。
+  final bool autoPlayAudio;
 
   /// 是否走 A5 内容路径
   bool get useA5 => slug != null && qid != null;
@@ -332,6 +340,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
                 factsExpanded: _factsExpanded,
                 onToggleFacts: () =>
                     setState(() => _factsExpanded = !_factsExpanded),
+                autoPlayAudio: widget.args.autoPlayAudio,
               ),
             ),
             bottomNavigationBar: const _AskBar(),
@@ -1056,6 +1065,7 @@ class _A5Body extends StatelessWidget {
     required this.deepGenerating,
     required this.factsExpanded,
     required this.onToggleFacts,
+    this.autoPlayAudio = false,
   });
 
   final ObjectContent content;
@@ -1068,6 +1078,9 @@ class _A5Body extends StatelessWidget {
   final bool deepGenerating;
   final bool factsExpanded;
   final VoidCallback onToggleFacts;
+
+  /// 识别路径进来 → 自动播主讲解(见 GuideArgs.autoPlayAudio)。
+  final bool autoPlayAudio;
 
   @override
   Widget build(BuildContext context) {
@@ -1110,7 +1123,7 @@ class _A5Body extends StatelessWidget {
               slug: slug,
               qid: content.qid,
               language: language,
-              initialUrl: layer.heroAudioUrl,
+              autoPlay: autoPlayAudio,
             ),
           const SizedBox(height: 14),
           if (layer.hasHero)

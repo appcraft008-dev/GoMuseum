@@ -18,11 +18,11 @@ void main() {
       'qid': 'Q1',
       'title': 'T',
       'status': 'published',
-      'default_guide': {'body': '一分钟主线讲解', 'audio_url': null},
+      'default_guide': {'body': '一分钟主线讲解', 'has_audio': false},
     });
     expect(c.defaultGuide, isNotNull);
     expect(c.defaultGuide!.body, '一分钟主线讲解');
-    expect(c.defaultGuide!.audioUrl, isNull);
+    expect(c.defaultGuide!.hasAudio, isFalse);
   });
 
   test('default_guide 字段类型异常 → 不抛、body 回退空串', () {
@@ -30,10 +30,10 @@ void main() {
       'qid': 'Q1',
       'title': 'T',
       'status': 'published',
-      'default_guide': {'body': 123, 'audio_url': 456},
+      'default_guide': {'body': 123, 'has_audio': 'not-a-bool'},
     });
     expect(c.defaultGuide, isNotNull);
     expect(c.defaultGuide!.body, '');
-    expect(c.defaultGuide!.audioUrl, isNull);
+    expect(c.defaultGuide!.hasAudio, isFalse);
   });
 }

@@ -21,6 +21,10 @@ def test_two_calls_differ():
 
 
 def test_suffix_has_enough_entropy():
+    # ⚠️ 别用 rsplit("-") 反解后缀:token_urlsafe 的字母表**含 `-`**,
+    # 随机串里出现一个就把后缀截短 → 测试 ~22% 概率假红(实测踩到)。
+    # 按已知前缀切,才是真的后缀。
+    prefix = "object-audio/Q1/zh/guide-"
     k = audio_key("object-audio", "Q1", "zh", "guide")
-    suffix = re.sub(r"\.mp3$", "", k).rsplit("-", 1)[-1]
+    suffix = re.sub(r"\.mp3$", "", k)[len(prefix) :]
     assert len(suffix) >= 16, f"后缀太短易爆破: {suffix}"

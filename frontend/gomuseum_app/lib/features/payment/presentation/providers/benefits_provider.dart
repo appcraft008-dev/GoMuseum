@@ -73,7 +73,10 @@ class BenefitsState extends _$BenefitsState {
       final result = await verifyPurchaseUseCase(
         purchase: purchase,
         deviceId: deviceIdValue,
-        userId: null, // 目前支持匿名用户
+        // 身份以**令牌**为准(dio 已挂 AuthInterceptor,游客也有令牌)。
+        // 这里传 null 是刻意的:后端不再采信请求体里的 user_id——曾因回落到
+        // device_id,把权益的 user_id 存成设备号,导致用户付了钱却查不到通票。
+        userId: null,
       );
 
       return result.fold(
@@ -105,7 +108,10 @@ class BenefitsState extends _$BenefitsState {
 
       final result = await consumeRecognitionUseCase(
         deviceId: deviceIdValue,
-        userId: null, // 目前支持匿名用户
+        // 身份以**令牌**为准(dio 已挂 AuthInterceptor,游客也有令牌)。
+        // 这里传 null 是刻意的:后端不再采信请求体里的 user_id——曾因回落到
+        // device_id,把权益的 user_id 存成设备号,导致用户付了钱却查不到通票。
+        userId: null,
       );
 
       return result.fold(

@@ -9,12 +9,14 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 class GuideLayering {
   const GuideLayering({
     required this.heroBody,
-    required this.heroAudioUrl,
+    required this.heroHasAudio,
     required this.deepTabs,
   });
 
   final String heroBody;
-  final String? heroAudioUrl;
+
+  /// 是否有音频可听(标志位,不是直链——直链由已加闸的 /audio 现取)。
+  final bool heroHasAudio;
   final List<ObjectTab> deepTabs;
 
   int get deepCount => deepTabs.length;
@@ -41,9 +43,8 @@ class GuideLayering {
     final guide = c.defaultGuide;
     final usingGuide = guide != null && guide.hasBody;
     final heroBody = usingGuide ? guide.body : (promoted?.body ?? '');
-    final heroAudio = (guide?.audioUrl != null && guide!.audioUrl!.isNotEmpty)
-        ? guide.audioUrl
-        : promoted?.audioUrl;
+    final heroAudio =
+        usingGuide ? (guide.hasAudio) : (promoted?.hasAudio ?? false);
 
     // 抽屉构成：
     // - default_guide 当主角时：保留全部 tab，仅隐藏 overview（通用已被 default_guide 取代）。
@@ -60,7 +61,7 @@ class GuideLayering {
 
     return GuideLayering(
       heroBody: heroBody,
-      heroAudioUrl: heroAudio,
+      heroHasAudio: heroAudio,
       deepTabs: deep,
     );
   }

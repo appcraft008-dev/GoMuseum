@@ -55,6 +55,9 @@ class ObjectContentSection(Base):
     section_code = Column(String(32), ForeignKey("section_types.code"), nullable=False)
     body = Column(Text)
     audio_key = Column(Text, nullable=True)
+    # 哪个引擎生成的(tts-1 / voxcpm2 / ...)。没有它就回答不了"还有多少是
+    # tts-1 的",批量替换与覆盖率报表都无从下手。
+    audio_engine = Column(String(32), nullable=True, index=True)
     status = Column(String(16), default="published")  # draft | published | needs_review
     model = Column(String(64), nullable=True)
     source = Column(String(32), default="ai_generated")  # ai_generated | manual
@@ -86,6 +89,7 @@ class ObjectSuggestedQuestion(Base):
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
     audio_key = Column(Text, nullable=True)  # 问答连念音频(TTS Phase2,懒生成)
+    audio_engine = Column(String(32), nullable=True)
     status = Column(String(16), default="published")  # published | needs_review
     model = Column(String(64), nullable=True)
     generated_at = Column(DateTime, nullable=True)

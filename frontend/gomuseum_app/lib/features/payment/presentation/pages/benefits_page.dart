@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../../../core/services/iap_service.dart';
+import '../../data/entitlements.dart';
 import '../providers/benefits_provider.dart';
 import '../widgets/benefits_status_widget.dart';
 import '../widgets/product_card.dart';
@@ -52,37 +53,36 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     setState(() => _isLoading = false);
   }
 
-  void _handlePurchaseUpdate(PurchaseDetails purchase) async {
+  /// 返回值决定 IapService 是否 completePurchase —— 未验证成功绝不 complete,
+  /// 否则 Consumable 被消耗掉、用户付了钱永久拿不回来(见 IapService 注释)。
+  Future<bool> _handlePurchaseUpdate(PurchaseDetails purchase) async {
+    var verified = false;
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
-      // 验证购买并更新权益
-      final success = await ref
+      verified = await ref
           .read(benefitsStateProvider.notifier)
           .verifyAndUpdateBenefits(purchase);
 
+      // 权益变了,让读 /entitlements/me 的界面重新取
+      ref.invalidate(entitlementsProvider);
+
       if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('购买成功！权益已更新'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('购买验证失败，请联系客服'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(verified ? '购买成功！权益已更新' : '购买验证未完成，重启应用会自动重试'),
+            backgroundColor: verified ? Colors.green : Colors.orange,
+          ),
+        );
       }
     }
 
-    setState(() {
-      _isPurchasing = false;
-      _purchasingProductId = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isPurchasing = false;
+        _purchasingProductId = null;
+      });
+    }
+    return verified;
   }
 
   Future<void> _purchaseProduct(String productId) async {
@@ -226,16 +226,16 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '• 识别包：一次性购买，立即获得指定识别次数\n'
-                    '• 日卡：24小时内无限次识别\n'
-                    '• 年度会员：一年内无限次识别，享受所有高级功能',
+                    '• 巴黎 7 日通票：连续 7×24 小时，覆盖卢浮宫、奥赛、橘园\n'
+                    '• 不限次拍照识别 + 全部语音讲解\n'
+                    '• 购买后不立即计时，首次使用高级功能并确认后才开始',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '购买完成后，权益将自动同步到您的设备',
+                    '文字讲解、搜索与浏览始终免费，无需购买',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[500],
                         ),

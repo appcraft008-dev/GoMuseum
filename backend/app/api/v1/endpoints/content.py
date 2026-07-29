@@ -8,6 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 from app.core.database import SessionLocal
@@ -24,6 +25,43 @@ from app.services.tts_service import get_tts_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _require_tts_access(
+    db, credentials, *, qid: str | None, language: str = "zh", section: str = "guide"
+) -> tuple[str, str]:
+    """TTS 的权益闸。qid 给了就与 /audio 同规则(通票/已认领首件/可认领);
+    没有 qid(ad-hoc 任意文本)则必须通票生效。拒绝一律 402,前端据此弹付费页。
+
+    返回 (user_id, kind)。⚠️ kind == "claimable" 必须在音频**送达后**认领 ——
+    否则永远认领不掉,每件都判 claimable = 免费用户无限听,闸等于没有。"""
+    from app.services import entitlement_service as es
+    from app.services.auth_service import AuthService
+
+    if credentials is None:
+        raise HTTPException(status_code=401, detail={"reason": "auth_required"})
+    user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
+    if qid is None:
+        if es.resolve_state(db, user_id)[0] != es.ACTIVE:
+            raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+        return user_id, "allowed"
+    kind = es.audio_access(db, user_id, qid, language=language, section=section)
+    if kind == "denied":
+        raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+    return user_id, kind
+
+
+def _claim_tts_after_success(
+    db, gate: tuple[str, str], qid: str, language: str = "zh"
+) -> None:
+    from app.services import entitlement_service as es
+
+    user_id, kind = gate
+    if kind == "claimable":
+        es.claim_audio_now(db, user_id, qid, language)
 
 
 # Request/Response Models
@@ -169,9 +207,20 @@ async def generate_explanation(
 
 
 @router.post("/tts/generate")
-async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_service)):
+async def generate_tts_audio(
+    request: TTSRequest,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    tts_service=Depends(get_tts_service),
+):
     """
     Generate TTS audio from text
+
+    ⚠️ **此前完全没有鉴权**,是两个洞叠在一起:
+    ① 付费墙旁路 —— section 模式直接返回 audio_url,绕过已加闸的 /audio;
+    ② 成本洞 —— ad-hoc 模式接受**任意文本**返回 mp3,等于给全世界提供免费 TTS,
+       账单算我们的。
+    现在:section 模式走与 /audio 相同的权益闸;ad-hoc 模式需通票生效
+    (没有 qid 就无法挂靠"首件免费",只能按付费功能处理)。
 
     Args:
         request: TTS generation request with text and parameters
@@ -197,11 +246,19 @@ async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_se
     if request.qid and request.section_code:
         db = SessionLocal()
         try:
+            gate = _require_tts_access(
+                db,
+                credentials,
+                qid=request.qid,
+                language=request.language,
+                section=request.section_code,
+            )
             storage = get_object_storage()
             existing = get_section_audio_key(
                 db, request.qid, request.language, request.section_code
             )
             if existing:
+                _claim_tts_after_success(db, gate, request.qid, request.language)
                 return AudioUrlResponse(
                     audio_url=storage.public_url(existing), cached=True
                 )
@@ -223,9 +280,17 @@ async def generate_tts_audio(request: TTSRequest, tts_service=Depends(get_tts_se
                     status_code=404,
                     detail={"error": "ObjectNotFound", "qid": request.qid},
                 )
+            _claim_tts_after_success(db, gate, request.qid, request.language)
             return AudioUrlResponse(audio_url=storage.public_url(key), cached=False)
         finally:
             db.close()
+
+    # ad-hoc(任意文本)：没有 qid 可挂靠首件免费,按付费功能处理
+    _db = SessionLocal()
+    try:
+        _require_tts_access(_db, credentials, qid=None)
+    finally:
+        _db.close()
 
     logger.info(
         f"Generating TTS audio for text (length: {len(request.text)}) in {request.language}"

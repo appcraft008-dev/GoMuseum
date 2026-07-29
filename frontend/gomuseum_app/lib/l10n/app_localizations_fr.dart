@@ -657,4 +657,56 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get museumIntroComingSoon => 'Présentation du musée à venir';
+
+  @override
+  String get paywallTitle => 'Pass Paris 7 jours';
+
+  @override
+  String get paywallPitch =>
+      'Reconnaissance photo illimitée et commentaire audio complet au Louvre, à Orsay et à l\'Orangerie.';
+
+  @override
+  String get paywallClockNote =>
+      'Le décompte ne démarre pas à l\'achat : il commence à la première utilisation d\'une fonction premium, après confirmation.';
+
+  @override
+  String get paywallFreeAlways =>
+      'La navigation, la recherche et le commentaire écrit complet restent toujours gratuits.';
+
+  @override
+  String get paywallBuy => 'Obtenir le pass';
+
+  @override
+  String get paywallRestore => 'Restaurer l\'achat';
+
+  @override
+  String get audioFreePreview => 'Écoute gratuite';
+
+  @override
+  String get audioLockedHint =>
+      'Le commentaire audio nécessite le pass — votre écoute gratuite a déjà été utilisée.';
+
+  @override
+  String get quotaExhausted =>
+      'Vous avez utilisé toutes vos reconnaissances gratuites.';
+
+  @override
+  String get activateTitle => 'Démarrer votre pass 7 jours ?';
+
+  @override
+  String get activateBody =>
+      'Une fois lancé, il court 7×24 heures sans interruption. Démarrez-le au musée, pas avant.';
+
+  @override
+  String get activateConfirm => 'Démarrer';
+
+  @override
+  String get activateLater => 'Plus tard';
+
+  @override
+  String get paywallLoginToBuy => 'Se connecter pour acheter';
+
+  @override
+  String get paywallLoginWhy =>
+      'Le pass est lié à votre compte : vous le gardez sur un nouveau téléphone.';
 }

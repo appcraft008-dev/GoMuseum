@@ -93,3 +93,14 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no "root@${{ secrets.VPS_HOST }}" \
             "cd '${{ steps.t.outputs.compose_dir }}' && docker compose up -d --build --remove-orphans --wait && docker compose ps"
+
+      # 钱路径端到端验收:**跑真实部署**,不是内存 sqlite。
+      # 本轮几个缺陷在 1000+ 单元测试里全绿,只有真跑才暴露(免费名额被无音频的
+      # 作品烧掉、内容接口泄漏直链、DB 里 audio_key 指向已改名的文件)。
+      # 只在 staging 跑:prod 上跑会造垃圾游客账号。样本自动挑,不写死 qid。
+      - name: 钱路径验收（仅 staging）
+        if: ${{ steps.t.outputs.src_dir == '/opt/gomuseum/staging/backend' }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no "root@${{ secrets.VPS_HOST }}" \
+            "docker exec gomuseum_staging_backend python scripts/verify_money_path.py \
+               --base http://localhost:8000 --slug orsay"

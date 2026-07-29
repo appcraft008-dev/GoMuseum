@@ -14,8 +14,13 @@ fi
 
 if command -v dart >/dev/null 2>&1; then
   echo "[pre-push] 前端 dart format 检查…"
-  dart format --output=none --set-exit-if-changed frontend/gomuseum_app/lib >/dev/null 2>&1 \
-    || { echo "❌ Dart 未格式化：运行  dart format frontend/gomuseum_app/lib"; fail=1; }
+  # --language-version 必须显式给（= pubspec 的 sdk 下界 3.0）。dart 3.7+ 的 formatter
+  # 按 package 的 language version 选风格，读不到就回退到最新的 tall style —— 而它
+  # 只能从 .dart_tool/package_config.json 读，那是 `flutter pub get` 的产物、不进版本库。
+  # 于是在**新 clone 或 git worktree 里**这条检查会把 125 个文件全判为“未格式化”（假红），
+  # 逼人 --no-verify —— 钩子被习惯性绕过就等于没有。
+  dart format --language-version=3.0 --output=none --set-exit-if-changed frontend/gomuseum_app/lib >/dev/null 2>&1 \
+    || { echo "❌ Dart 未格式化：运行  dart format --language-version=3.0 frontend/gomuseum_app/lib"; fail=1; }
 else
   echo "[pre-push] (跳过前端：未装 dart)"
 fi
