@@ -160,6 +160,14 @@ jobs:
           cd backend
           pip install -e ".[dev,test]"
 
+      # 本项目最常见的缺陷不是设计错,是"写完了没接上"(已四次:log_event /
+      # entitlements.activate / revoke_for_purchase / 真实收据校验)。
+      # 这类问题在评审和设计文档里看不见,只能机械检测。见不变量 I16。
+      - name: Check for orphan service functions (I16)
+        run: |
+          cd backend
+          python scripts/check_orphan_services.py --strict
+
       - name: Run backend tests with coverage
         env:
           DATABASE_URL: postgresql://gomuseum:gomuseum_pwd@localhost:5432/gomuseum_db
