@@ -211,6 +211,25 @@ async def verify_purchase(
             benefits_service=benefits_service,
         )
 
+        # ⭐ 老商品只写 user_benefits,而**音频闸门只认 entitlements** ——
+        # 不补这一张,用老 APK 买了 premium_annual/day_pass 的用户付了钱却听不了
+        # 音频。真相源统一到 entitlements 之后,老路径必须自己把权益送过来。
+        if benefits_applied:
+            _b = benefits_service.get_or_create_benefits(
+                auth_user_id, request.device_id
+            )
+            for _kind, _exp in (
+                (_es.LEGACY_PREMIUM, _b.premium_expires_at if _b.is_premium else None),
+                (
+                    _es.LEGACY_DAY_PASS,
+                    _b.day_pass_expires_at if _b.day_pass_active else None,
+                ),
+            ):
+                if _exp is not None:
+                    _es.grant_legacy_pass(
+                        db, user_id=auth_user_id, kind=_kind, expires_at=_exp
+                    )
+
         logger.info(f"Purchase verified and benefits applied: {request.product_id}")
 
         return VerifyReceiptResponse(
