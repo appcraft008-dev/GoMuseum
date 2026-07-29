@@ -76,6 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
     tr.add_argument("--langs", required=True)  # 如 de,es,it
     tr.add_argument("--limit", type=int, default=None)
     tr.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
+    tr.add_argument("--workers", type=int, default=8)  # 并发件数;撞限流就调小
     im = sub.add_parser("images")  # 图像物化:下载→两档→R2→署名(幂等,names 后跑)
     im.add_argument("--target", choices=["staging", "prod"], required=True)
     im.add_argument("--limit", type=int, default=None)
@@ -314,7 +315,12 @@ def cmd_names(
 
 
 def cmd_translate(
-    slug: str, langs: str, limit: int | None, target: str, allow_full: bool = False
+    slug: str,
+    langs: str,
+    limit: int | None,
+    target: str,
+    allow_full: bool = False,
+    workers: int = 8,
 ) -> None:
     from scripts.ops_guard import staging_limit
 
@@ -344,6 +350,7 @@ def cmd_translate(
                 ),
             ),
             limit=limit,
+            workers=workers,
         )
     finally:
         db.close()
@@ -548,7 +555,7 @@ def main(argv=None) -> None:
             ns.batch_job,
         )
     elif ns.command == "translate":
-        cmd_translate(ns.slug, ns.langs, ns.limit, ns.target, ns.allow_full)
+        cmd_translate(ns.slug, ns.langs, ns.limit, ns.target, ns.allow_full, ns.workers)
     elif ns.command == "images":
         cmd_images(ns.slug, ns.limit, ns.target)
     elif ns.command == "views":

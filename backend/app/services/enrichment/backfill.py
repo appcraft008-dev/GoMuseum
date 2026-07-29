@@ -4,12 +4,18 @@
 
 from __future__ import annotations
 
+import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
+
+from sqlalchemy.orm import sessionmaker
 
 from app.models.artist import Artist
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
+
+logger = logging.getLogger(__name__)
 
 
 def artist_names_i18n(db, o) -> dict:
@@ -175,31 +181,78 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
 
 
 def backfill_languages(
-    db, slug, *, langs, translator, limit=None, model="gpt-4o-mini"
+    db, slug, *, langs, translator, limit=None, model="gpt-4o-mini", workers=8
 ) -> dict:
-    """补语种(契约"加语言"checklist⑤):全馆按热度逐件调 translate_object_language。幂等。"""
+    """补语种(契约"加语言"checklist⑤):按热度逐件调 translate_object_language。幂等。
+
+    **只取有 en 轴心内容的件**:补语种是从 en 纯翻译,没有 en 的件本就全零返回
+    (交给生成)。prod 实测 louvre 17283 件里只有 303 件有内容 —— 不过滤 = 98% 空转。
+
+    **并发**:LLM 调用是纯 I/O 等待(prod 实测 12s/段、CPU 近乎空闲),串行补两个大馆
+    要 48 小时 —— 契约实战纪律⑧"CPU 占比远低于墙钟时间 = I/O 阻塞"的典型。
+    每件一个任务、**线程内自带 session**(session 非线程安全,不能共享入参 db);
+    与 pipeline.py 的 qa‖翻译同源纪律。单件失败跳过继续、计 errors(纪律①),
+    幂等重跑补齐。
+    """
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return {"error": "unknown museum"}
+
+    has_en = db.query(ObjectContentSection.object_id).filter(
+        ObjectContentSection.language == "en",
+        ObjectContentSection.status == "published",
+        ObjectContentSection.body.isnot(None),
+    )
     q = (
-        db.query(MuseumObject)
-        .filter_by(museum_id=m.id)
+        db.query(MuseumObject.id)
+        .filter(
+            MuseumObject.museum_id == m.id,
+            MuseumObject.id.in_(has_en),
+        )
         .order_by(MuseumObject.popularity.desc())
     )
     if limit:
         q = q.limit(limit)
-    counts = {"objects": 0, "sections": 0, "qa": 0, "bios": 0}
-    for o in q.all():
-        touched = False
-        for lang in langs:
-            c = translate_object_language(db, o, lang, translator, model)
-            if c["sections"] or c["qa"]:
-                touched = True
-            for k in ("sections", "qa", "bios"):
-                counts[k] += c[k]
-        if touched:
-            counts["objects"] += 1
-    db.commit()
+    ids = [oid for (oid,) in q.all()]
+
+    counts = {"objects": 0, "sections": 0, "qa": 0, "bios": 0, "errors": 0}
+    if not ids:
+        return counts
+
+    # 线程内 session 绑**入参 db 的同一个 engine**(而不是全局 SessionLocal):
+    # 生产里两者一致,测试里则自动跟着 in-memory sqlite —— 否则这段代码不可测。
+    make_session = sessionmaker(bind=db.get_bind())
+
+    def _one(oid):
+        """一件的全部语言。线程内独立 session,失败只影响这一件。"""
+        s = make_session()
+        try:
+            o = s.get(MuseumObject, oid)
+            if o is None:
+                return None
+            local = {"sections": 0, "qa": 0, "bios": 0}
+            for lang in langs:
+                c = translate_object_language(s, o, lang, translator, model)
+                for k in local:
+                    local[k] += c[k]
+            s.commit()
+            return local
+        except Exception:
+            s.rollback()
+            logger.exception("backfill_languages: 单件失败跳过 object_id=%s", oid)
+            return "error"
+        finally:
+            s.close()
+
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+        for r in ex.map(_one, ids):
+            if r == "error":
+                counts["errors"] += 1
+            elif r:
+                if r["sections"] or r["qa"]:
+                    counts["objects"] += 1
+                for k in ("sections", "qa", "bios"):
+                    counts[k] += r[k]
     return counts
 
 
