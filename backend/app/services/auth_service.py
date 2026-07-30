@@ -582,8 +582,6 @@ class AuthService:
                 {
                     "recognition_quota": b.recognition_quota,
                     "total_recognitions_used": b.total_recognitions_used,
-                    "is_premium": b.is_premium,
-                    "day_pass_active": b.day_pass_active,
                     "created_at": b.created_at.isoformat() if b.created_at else None,
                 }
                 for b in benefits

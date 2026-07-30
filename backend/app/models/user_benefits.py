@@ -49,11 +49,15 @@ class UserBenefits(Base):
     recognition_quota = Column(Integer, nullable=False, default=lambda: _free_quota())
     total_recognitions_used = Column(Integer, nullable=False, default=0)
 
-    # Premium subscription
+    # ⚠️ 【已退役 2026-07-30,列暂留待后续迁移删除】
+    # 老商品(premium_annual / day_pass / recognition_pack_10)时代的权益标志。
+    # **任何代码都不得再读写这四列** —— 权益真相源是 entitlements 表(见
+    # entitlement_service.resolve_state);两套并行标志正是 App 显示"会员"
+    # 却被 402 拦下那类不一致的根源。
+    # 下线原因:APK 从未在 Play 正式发布,不存在会买老商品的客户端。
+    # 列没有立即 DROP:先停用代码观察一轮,删早了万一要回滚更麻烦。
     is_premium = Column(Boolean, nullable=False, default=False)
     premium_expires_at = Column(DateTime, nullable=True)
-
-    # Day pass
     day_pass_active = Column(Boolean, nullable=False, default=False)
     day_pass_expires_at = Column(DateTime, nullable=True)
 

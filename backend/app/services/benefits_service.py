@@ -89,8 +89,6 @@ class BenefitsService:
             user_id=user_id,
             device_id=device_id,
             recognition_quota=settings.FREE_RECOGNITION_QUOTA,
-            is_premium=False,
-            day_pass_active=False,
             referral_bonus_quota=0,
             total_recognitions_used=0,
         )
@@ -119,24 +117,14 @@ class BenefitsService:
         has_access = benefits.has_access()
         total_quota = benefits.recognition_quota + benefits.referral_bonus_quota
 
+        # ⚠️ 只报免费层的额度账。通票/会员状态问 entitlements 的 `can` ——
+        # 权益真相源唯一,这里再下发一份就是 I12/I13 的温床。
         return {
             "has_access": has_access,
             "recognition_quota": benefits.recognition_quota,
             "referral_bonus_quota": benefits.referral_bonus_quota,
             "total_quota": total_quota,
-            "is_premium": benefits.is_premium,
-            "day_pass_active": benefits.day_pass_active,
             "total_used": benefits.total_recognitions_used,
-            "premium_expires_at": (
-                benefits.premium_expires_at.isoformat()
-                if benefits.premium_expires_at
-                else None
-            ),
-            "day_pass_expires_at": (
-                benefits.day_pass_expires_at.isoformat()
-                if benefits.day_pass_expires_at
-                else None
-            ),
         }
 
     def consume_recognition(
@@ -176,68 +164,6 @@ class BenefitsService:
             self.db.rollback()
             logger.error(f"Failed to consume recognition: {str(e)}")
             raise ServiceException(f"Failed to consume recognition: {str(e)}")
-
-    def add_recognition_pack(
-        self,
-        user_id: Optional[str] = None,
-        device_id: Optional[str] = None,
-        quantity: int = 10,
-    ):
-        """
-        Add recognition pack to user's quota
-
-        Args:
-            user_id: User identifier
-            device_id: Device identifier
-            quantity: Number of recognitions to add (default 10)
-        """
-        benefits = self.get_or_create_benefits(user_id, device_id)
-        benefits.recognition_quota += quantity
-        self.db.commit()
-
-        logger.info(f"Added {quantity} recognitions for user_id={user_id}")
-
-    def activate_day_pass(
-        self, user_id: Optional[str] = None, device_id: Optional[str] = None
-    ):
-        """
-        Activate 24-hour day pass
-
-        Args:
-            user_id: User identifier
-            device_id: Device identifier
-        """
-        benefits = self.get_or_create_benefits(user_id, device_id)
-
-        benefits.day_pass_active = True
-        benefits.day_pass_expires_at = datetime.utcnow() + timedelta(days=1)
-        self.db.commit()
-
-        logger.info(f"Day pass activated for user_id={user_id}")
-
-    def activate_premium(
-        self,
-        user_id: Optional[str] = None,
-        device_id: Optional[str] = None,
-        duration_days: int = 365,
-    ):
-        """
-        Activate premium subscription
-
-        Args:
-            user_id: User identifier
-            device_id: Device identifier
-            duration_days: Subscription duration (default 365 days)
-        """
-        benefits = self.get_or_create_benefits(user_id, device_id)
-
-        benefits.is_premium = True
-        benefits.premium_expires_at = datetime.utcnow() + timedelta(days=duration_days)
-        self.db.commit()
-
-        logger.info(
-            f"Premium activated for user_id={user_id}, duration={duration_days} days"
-        )
 
     def add_referral_bonus(
         self,
