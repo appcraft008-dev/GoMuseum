@@ -240,9 +240,12 @@ def generate_object(
                     art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
                     # bio 变更 → 对应语言旧音频失效(下次点播放重生成)
                     ba = dict(art.bio_audio or {})
+                    bae = dict(art.bio_audio_engine or {})
                     for _l in bios:
                         ba.pop(_l, None)
+                        bae.pop(_l, None)  # engine 与 key 同进同退
                     art.bio_audio = ba
+                    art.bio_audio_engine = bae
                 db.flush()
             # 国籍/代表作多语(交接③):缺语种才触网,幂等,失败不拖垮生成
             try:
