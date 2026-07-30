@@ -1,26 +1,23 @@
 import 'package:equatable/equatable.dart';
 
+/// 免费层的额度账。
+///
+/// ⚠️ **这里没有会员/通票状态,不要往里加。** 权益真相源是服务端的 entitlements
+/// (读 `/entitlements` 的 `can`)。曾经的 isPremium / dayPassActive 已随老商品
+/// 下线一并移除 —— 两套并行的权益标志正是"App 显示会员却被 402 拦下"的根源。
 class UserBenefits extends Equatable {
   final bool hasAccess;
   final int recognitionQuota;
   final int referralBonusQuota;
   final int totalQuota;
-  final bool isPremium;
-  final bool dayPassActive;
   final int totalUsed;
-  final DateTime? premiumExpiresAt;
-  final DateTime? dayPassExpiresAt;
 
   const UserBenefits({
     required this.hasAccess,
     required this.recognitionQuota,
     required this.referralBonusQuota,
     required this.totalQuota,
-    required this.isPremium,
-    required this.dayPassActive,
     required this.totalUsed,
-    this.premiumExpiresAt,
-    this.dayPassExpiresAt,
   });
 
   /// 无任何权益的默认状态（加载失败时的兜底）
@@ -29,8 +26,6 @@ class UserBenefits extends Equatable {
         recognitionQuota: 0,
         referralBonusQuota: 0,
         totalQuota: 0,
-        isPremium: false,
-        dayPassActive: false,
         totalUsed: 0,
       );
 
@@ -39,22 +34,14 @@ class UserBenefits extends Equatable {
     int? recognitionQuota,
     int? referralBonusQuota,
     int? totalQuota,
-    bool? isPremium,
-    bool? dayPassActive,
     int? totalUsed,
-    DateTime? premiumExpiresAt,
-    DateTime? dayPassExpiresAt,
   }) {
     return UserBenefits(
       hasAccess: hasAccess ?? this.hasAccess,
       recognitionQuota: recognitionQuota ?? this.recognitionQuota,
       referralBonusQuota: referralBonusQuota ?? this.referralBonusQuota,
       totalQuota: totalQuota ?? this.totalQuota,
-      isPremium: isPremium ?? this.isPremium,
-      dayPassActive: dayPassActive ?? this.dayPassActive,
       totalUsed: totalUsed ?? this.totalUsed,
-      premiumExpiresAt: premiumExpiresAt ?? this.premiumExpiresAt,
-      dayPassExpiresAt: dayPassExpiresAt ?? this.dayPassExpiresAt,
     );
   }
 
@@ -64,10 +51,6 @@ class UserBenefits extends Equatable {
         recognitionQuota,
         referralBonusQuota,
         totalQuota,
-        isPremium,
-        dayPassActive,
         totalUsed,
-        premiumExpiresAt,
-        dayPassExpiresAt,
       ];
 }

@@ -48,26 +48,10 @@ class BenefitsStatusWidget extends ConsumerWidget {
                     : '无剩余',
                 isActive: benefits.recognitionQuota > 0,
               ),
-              const SizedBox(height: 12),
-              _buildBenefitItem(
-                context,
-                icon: Icons.today,
-                title: '日卡',
-                value: benefits.dayPassActive
-                    ? _formatExpiry(benefits.dayPassExpiresAt)
-                    : '未激活',
-                isActive: benefits.dayPassActive,
-              ),
-              const SizedBox(height: 12),
-              _buildBenefitItem(
-                context,
-                icon: Icons.star,
-                title: '高级会员',
-                value: benefits.isPremium
-                    ? _formatExpiry(benefits.premiumExpiresAt)
-                    : '未开通',
-                isActive: benefits.isPremium,
-              ),
+              // ⚠️ 这里曾显示「日卡」「高级会员」两行,数据来自 user_benefits 的
+              // is_premium / day_pass_active —— 那是**第二套权益真相源**,已随老商品
+              // 下线移除。通票状态要显示的话,读 `/entitlements` 的 `can`,别再从
+              // 额度账里推断(App 显示"会员"而后端 402 就是这么来的)。
               const SizedBox(height: 16),
               if (!benefits.hasAccess)
                 Container(
@@ -172,19 +156,5 @@ class BenefitsStatusWidget extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  String _formatExpiry(DateTime? expiry) {
-    if (expiry == null) return '长期有效';
-    final now = DateTime.now();
-    final difference = expiry.difference(now);
-
-    if (difference.inDays > 0) {
-      return '剩余${difference.inDays}天';
-    } else if (difference.inHours > 0) {
-      return '剩余${difference.inHours}小时';
-    } else {
-      return '即将过期';
-    }
   }
 }
