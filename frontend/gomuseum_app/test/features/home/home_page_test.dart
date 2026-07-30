@@ -37,8 +37,6 @@ class _FakeBenefitsState extends BenefitsState {
         recognitionQuota: 8,
         referralBonusQuota: 0,
         totalQuota: 8,
-        isPremium: false,
-        dayPassActive: false,
         totalUsed: 2,
       );
 }

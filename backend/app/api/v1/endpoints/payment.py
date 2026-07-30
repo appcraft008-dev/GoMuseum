@@ -50,15 +50,14 @@ class VerifyReceiptResponse(BaseModel):
 class BenefitsResponse(BaseModel):
     """Response model for user benefits"""
 
+    # ⚠️ 通票/会员状态**不在这里**:权益真相源是 entitlements(见 /entitlements 的
+    # `can`)。此处只报免费层的额度账。曾经的 is_premium / day_pass_active 已随
+    # 老商品下线一并移除 —— 它们早就不决定任何事,却还在广播(I13)。
     has_access: bool
     recognition_quota: int
     referral_bonus_quota: int
     total_quota: int
-    is_premium: bool
-    day_pass_active: bool
     total_used: int
-    premium_expires_at: Optional[str]
-    day_pass_expires_at: Optional[str]
 
 
 @router.post("/verify", response_model=VerifyReceiptResponse)
@@ -203,24 +202,23 @@ async def verify_purchase(
                 message="Pass granted (not activated until first premium use)",
             )
 
-        # Apply benefits based on product ID
-        benefits_applied = _apply_benefits(
-            product_id=request.product_id,
-            user_id=auth_user_id,
-            device_id=request.device_id,
-            benefits_service=benefits_service,
+        # 走到这里 = 不是商品目录里的通票。老商品(recognition_pack_10 / day_pass /
+        # premium_annual)已随收费定案下线:APK 从未正式发布过,不存在会买它们的
+        # 老客户端,留着只会长出"写了 user_benefits 却没有 entitlement"的账号 ——
+        # 那种账号付了钱却过不了音频闸门(闸门只认 entitlements)。
+        # 未知商品**显式拒绝**,不再返回 benefits_applied=False 的假成功。
+        logger.warning("未知商品,拒绝: %s", request.product_id)
+        raise HTTPException(
+            status_code=400,
+            detail={"reason": "unknown_product", "product_id": request.product_id},
         )
 
-        logger.info(f"Purchase verified and benefits applied: {request.product_id}")
-
-        return VerifyReceiptResponse(
-            verified=True,
-            product_id=verification["product_id"],
-            transaction_id=verification.get("transaction_id"),
-            benefits_applied=benefits_applied,
-            message="Purchase verified and benefits applied successfully",
-        )
-
+    # ⚠️ 必须放在通配 except 之前:HTTPException 也是 Exception,不透传的话
+    # 本函数里所有精心选好的状态码都会被下面那条吞成 500 —— 包括 I18 要求的
+    # 409(收据属于别的账号)和 502(商店没给交易 ID)。
+    # 前端拿到 500 无法区分"收据被别人用了"和"服务器炸了"。
+    except HTTPException:
+        raise
     except ServiceException as e:
         logger.error(f"Service error: {str(e)}")
         raise HTTPException(
@@ -265,6 +263,8 @@ async def get_benefits(
 
         return BenefitsResponse(**benefits)
 
+    except HTTPException:  # 同上:别把有意义的状态码吞成 500
+        raise
     except ServiceException as e:
         logger.error(f"Service error: {str(e)}")
         raise HTTPException(
@@ -338,46 +338,6 @@ async def consume_recognition(
         raise HTTPException(
             status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
         )
-
-
-def _apply_benefits(
-    product_id: str, user_id: Optional[str], device_id: Optional[str], benefits_service
-) -> bool:
-    """
-    Apply benefits based on purchased product
-
-    Args:
-        product_id: Product identifier
-        user_id: User identifier
-        device_id: Device identifier
-        benefits_service: Benefits service instance
-
-    Returns:
-        True if benefits applied successfully
-    """
-    try:
-        # Recognition pack (10 recognitions)
-        if "recognition_pack_10" in product_id:
-            benefits_service.add_recognition_pack(user_id, device_id, quantity=10)
-            return True
-
-        # Day pass (24 hours unlimited)
-        elif "day_pass" in product_id:
-            benefits_service.activate_day_pass(user_id, device_id)
-            return True
-
-        # Premium annual subscription
-        elif "premium_annual" in product_id:
-            benefits_service.activate_premium(user_id, device_id, duration_days=365)
-            return True
-
-        else:
-            logger.warning(f"Unknown product ID: {product_id}")
-            return False
-
-    except Exception as e:
-        logger.error(f"Failed to apply benefits: {str(e)}")
-        return False
 
 
 class RtdnEnvelope(BaseModel):

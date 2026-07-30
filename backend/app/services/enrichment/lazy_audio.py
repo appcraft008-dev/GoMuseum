@@ -151,7 +151,15 @@ def get_or_make_artist_bio_audio_url(db, qid: str, language: str):
         audio = _synth(text, language)
         key = audio_key("object-audio/artist", aqid, language)
         storage.put(key, audio, "audio/mpeg")  # put 成功才写 key
+        from app.services.content_repo import _current_tts_engine
+
         art.bio_audio = {**(art.bio_audio or {}), language: key}
+        # 与 key 同写:漏了它,这条音频就成了引擎未知的孤儿,迁移时既不会被
+        # 替换也不会出现在覆盖率报表里。
+        art.bio_audio_engine = {
+            **(art.bio_audio_engine or {}),
+            language: _current_tts_engine(),
+        }
         db.commit()
     finally:
         _set_audio_lock(db, obj, language, section, False)

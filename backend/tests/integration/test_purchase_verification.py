@@ -218,3 +218,104 @@ def test_receipt_owned_by_another_account_fails_loudly(client):
             store_transaction_id="txn-shared",
         )
     assert es.resolve_state(db, "userA")[0] == es.NOT_PURCHASED
+
+
+def test_unknown_product_is_rejected_not_silently_ignored(client, monkeypatch):
+    """未知商品 → 400 显式拒绝。
+
+    老商品(recognition_pack_10 / day_pass / premium_annual)已随收费定案下线。
+    此前它们走另一条路:只写 user_benefits、不发 entitlement —— 而音频闸门只认
+    entitlements,于是"付了钱却过不了闸"。下线后必须**显式拒绝**,不能再返回
+    benefits_applied=False 的假成功(客户端会以为买到了东西)。
+    """
+    from app.api.v1.endpoints import payment as pay
+    from app.api.v1.endpoints.payment import get_iap_verification_service
+
+    c, db = client
+    u = User(email="legacy@test.com", is_guest=False)
+    db.add(u)
+    db.commit()
+
+    monkeypatch.setattr(
+        pay.AuthService, "get_current_user", staticmethod(lambda *a, **k: u)
+    )
+
+    class _FakeIAP:
+        async def verify_google_receipt(self, *a, **k):
+            # 收据本身有效 —— 要测的是**它之后**那一步:商品不认识
+            return {
+                "valid": True,
+                "product_id": "premium_annual",
+                "transaction_id": "t1",
+            }
+
+    app.dependency_overrides[get_iap_verification_service] = lambda: _FakeIAP()
+    try:
+        r = c.post(
+            "/api/v1/payment/verify",
+            json={
+                "platform": "android",
+                "product_id": "premium_annual",
+                "receipt_data": "whatever",
+            },
+            headers={"Authorization": "Bearer x"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_iap_verification_service, None)
+
+    assert r.status_code == 400, r.text
+    assert r.json()["detail"]["reason"] == "unknown_product"
+    assert db.query(Entitlement).count() == 0, "未知商品绝不能发出权益"
+
+
+def test_ownership_conflict_surfaces_as_409_not_500(client, monkeypatch):
+    """收据归属冲突必须以 **409** 到达客户端,不能被吞成 500。
+
+    I18 要求"幂等命中 ≠ 购买成功,归属不同必须显式失败"。但 HTTPException 也是
+    Exception —— 端点里的通配 `except Exception` 会把它连同 502/400 一起转成
+    500,前端根本区分不了"收据被别人用了"和"服务器炸了"。
+    """
+    from app.api.v1.endpoints import payment as pay
+    from app.api.v1.endpoints.payment import get_iap_verification_service
+
+    c, db = client
+    u = User(email="a@test.com", is_guest=False)
+    db.add(u)
+    db.commit()
+    # 这张收据已经归属别的账号
+    es.grant_from_purchase(
+        db,
+        user_id="someone-else",
+        platform="android",
+        product_id=es.PARIS_PASS_7D,
+        store_transaction_id="txn-taken",
+    )
+
+    monkeypatch.setattr(
+        pay.AuthService, "get_current_user", staticmethod(lambda *a, **k: u)
+    )
+
+    class _FakeIAP:
+        async def verify_google_receipt(self, *a, **k):
+            return {
+                "valid": True,
+                "product_id": es.PARIS_PASS_7D,
+                "transaction_id": "txn-taken",
+            }
+
+    app.dependency_overrides[get_iap_verification_service] = lambda: _FakeIAP()
+    try:
+        r = c.post(
+            "/api/v1/payment/verify",
+            json={
+                "platform": "android",
+                "product_id": es.PARIS_PASS_7D,
+                "receipt_data": "whatever",
+            },
+            headers={"Authorization": "Bearer x"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_iap_verification_service, None)
+
+    assert r.status_code == 409, r.text
+    assert r.json()["detail"]["reason"] == "purchase_belongs_to_another_account"

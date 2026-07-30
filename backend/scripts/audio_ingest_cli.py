@@ -13,6 +13,8 @@
 
   # ② 传到生成机,按约定文件名生成:  {qid}__{language}__{section}.mp3
   #    例:Q152509__zh__guide.mp3   Q152509__zh__qa_0.mp3
+  #    ⚠️ section="artist_bio" 时 qid 是**作者 qid**(音频按作者共享一份),
+  #       例:Q5582__zh__artist_bio.mp3
 
   # ③ 音频传回 VPS,灌入
   python scripts/audio_ingest_cli.py --jobs jobs.json --dir ./out \\
@@ -34,6 +36,7 @@ from collections import Counter
 sys.path.insert(0, "/app")
 
 from app.core.database import SessionLocal  # noqa: E402
+from app.models.artist import Artist  # noqa: E402
 from app.models.content import (  # noqa: E402
     ObjectContentSection,
     ObjectSuggestedQuestion,
@@ -93,38 +96,66 @@ def main() -> int:
             if not f.exists():
                 stats["missing"] += 1
                 continue
-
-            obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
-            if not obj:
-                stats["unknown_qid"] += 1
-                continue
-
             data = f.read_bytes()
-            text = _source_text(db, obj.id, lang, sec)
+
+            # 两种来源(作品的段/问答、按作者共享的介绍)在这里归一成同一组变量,
+            # 后面的幂等判断、偏差检查、质量闸、落库四步完全共用 —— 分两套写
+            # 迟早有一套漏掉某个护栏。
+            if sec == "artist_bio":
+                art = db.query(Artist).filter_by(qid=qid).one_or_none()
+                if art is None:
+                    stats["unknown_qid"] += 1
+                    continue
+                text = (art.bio or {}).get(lang)
+                cur_engine = (art.bio_audio_engine or {}).get(lang)
+                old_key = (art.bio_audio or {}).get(lang)
+                new_key = audio_key("object-audio/artist", qid, lang)
+
+                def _write(key, art=art, lang=lang):
+                    art.bio_audio = {**(art.bio_audio or {}), lang: key}
+                    art.bio_audio_engine = {
+                        **(art.bio_audio_engine or {}),
+                        lang: ns.engine,
+                    }
+
+            else:
+                obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+                if not obj:
+                    stats["unknown_qid"] += 1
+                    continue
+                if sec.startswith("qa_"):
+                    sort = int(sec.split("_", 1)[1])
+                    row = (
+                        db.query(ObjectSuggestedQuestion)
+                        .filter_by(object_id=obj.id, language=lang, sort=sort)
+                        .one_or_none()
+                    )
+                else:
+                    row = (
+                        db.query(ObjectContentSection)
+                        .filter_by(object_id=obj.id, language=lang, section_code=sec)
+                        .one_or_none()
+                    )
+                if row is None:
+                    stats["no_row"] += 1
+                    continue
+                text = _source_text(db, obj.id, lang, sec)
+                cur_engine = row.audio_engine
+                old_key = row.audio_key
+                new_key = audio_key("object-audio", qid, lang, sec)
+
+                def _write(key, row=row):
+                    row.audio_key = key
+                    row.audio_engine = ns.engine
+
+            if cur_engine == ns.engine:
+                stats["already_done"] += 1  # 幂等:重跑无副作用
+                continue
 
             # 替换场景:拿旧版本时长做偏差检查(最能抓住截断/重复/语速失控)
             prev_dur = None
-            if sec.startswith("qa_"):
-                sort = int(sec.split("_", 1)[1])
-                row = (
-                    db.query(ObjectSuggestedQuestion)
-                    .filter_by(object_id=obj.id, language=lang, sort=sort)
-                    .one_or_none()
-                )
-            else:
-                row = (
-                    db.query(ObjectContentSection)
-                    .filter_by(object_id=obj.id, language=lang, section_code=sec)
-                    .one_or_none()
-                )
-            if row is None:
-                stats["no_row"] += 1
-                continue
-            if row.audio_engine == ns.engine:
-                stats["already_done"] += 1  # 幂等:重跑无副作用
-                continue
-            if row.audio_key:
-                old = storage.size(row.audio_key)
+            if old_key:
+                old = storage.size(old_key)
                 if old:
                     prev_dur = estimate_duration_sec(old)
 
@@ -140,10 +171,8 @@ def main() -> int:
             if not ns.apply:
                 continue
 
-            key = audio_key("object-audio", qid, lang, sec)
-            storage.put(key, data, "audio/mpeg")  # 传成功才写 key
-            row.audio_key = key
-            row.audio_engine = ns.engine
+            storage.put(new_key, data, "audio/mpeg")  # 传成功才写 key
+            _write(new_key)
             db.commit()
             stats["written"] += 1
     finally:

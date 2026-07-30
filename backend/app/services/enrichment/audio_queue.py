@@ -50,10 +50,10 @@ NON_AUDIO_SECTIONS: set[str] = set()
 class AudioJob:
     """一个待生成单元。`kind` 决定调用方走 section 还是 qa 的生成路径。"""
 
-    qid: str
+    qid: str  # 作品 qid;kind="artist_bio" 时是**作者 qid**(音频按作者共享)
     language: str
-    section: str  # section_code,或 qa_{sort}
-    kind: str  # "section" | "qa"
+    section: str  # section_code,或 qa_{sort},或 "artist_bio"
+    kind: str  # "section" | "qa" | "artist_bio"
     museum_slug: str | None
     reason: str  # 为什么排到它:hero_missing / head_full / engine_upgrade
     priority: int  # 越小越先做
@@ -201,12 +201,56 @@ def build_queue(
             )
         )
 
+    # 作者介绍:**按作者共享一份**,所以按 artist qid 去重、不按作品。
+    # 漏掉这一段的后果是迁移完"作品讲解是新音色、点作者介绍变回旧音色" ——
+    # 而 audio_queue 自己的目标就是"一次参观内部音色一致"。
+    # 只给头部件的作者(长尾件的作者介绍几乎没人点),与 qa 同档。
+    from app.models.artist import Artist
+
+    head_aqids = {
+        (o.attributes or {}).get("artist_qid")
+        for o in db.query(MuseumObject).filter(MuseumObject.id.in_(head_ids)).all()
+    } - {None}
+    if head_aqids:
+        seen: set[tuple[str, str]] = set()
+        for art in db.query(Artist).filter(Artist.qid.in_(head_aqids)).all():
+            bio = art.bio or {}
+            keys = art.bio_audio or {}
+            engines = art.bio_audio_engine or {}
+            for lang in languages:
+                if not bio.get(lang):
+                    continue  # 没正文就没得念
+                key = keys.get(lang)
+                if key and engines.get(lang) == target_engine:
+                    continue
+                if key and not include_upgrades:
+                    continue
+                if (art.qid, lang) in seen:
+                    continue
+                seen.add((art.qid, lang))
+                jobs.append(
+                    AudioJob(
+                        art.qid,
+                        lang,
+                        "artist_bio",
+                        "artist_bio",
+                        None,  # 按作者共享,不属于某一个馆
+                        "head_full" if not key else "engine_upgrade",
+                        35 if not key else 75,
+                    )
+                )
+
     jobs.sort(key=lambda j: (j.priority, j.museum_slug or "", j.language, j.qid))
     return jobs[:limit]
 
 
 def coverage(db: Session, languages: list[str]) -> dict:
-    """覆盖率报表:迁移进度不该靠猜。"""
+    """覆盖率报表:迁移进度不该靠猜。
+
+    返回 {"guide": {lang: {engine: n}}, "artist_bio": {lang: {engine: n}}} ——
+    **分内容类型**。此前只报 guide,于是作者介绍(第三处存音频 key 的地方)
+    看着永远是 100%,实际一条都没迁。
+    """
     out: dict[str, dict] = {}
     rows = (
         db.query(
@@ -221,7 +265,27 @@ def coverage(db: Session, languages: list[str]) -> dict:
         )
         .group_by(ObjectContentSection.language, ObjectContentSection.audio_engine)
     )
+    guide_stat: dict[str, dict[str, int]] = {}
     for lang, engine, n in rows:
-        d = out.setdefault(lang, {})
+        d = guide_stat.setdefault(lang, {})
         d[engine or "(无音频)"] = n
+    out["guide"] = guide_stat
+
+    # 作者介绍单列一行:它是第三处存音频 key 的地方,不报的话迁移进度看着
+    # 100% 完成、实际漏了一整类(而且是按作者共享、影响面乘以作品数的那类)。
+    from app.models.artist import Artist
+
+    bio_stat: dict[str, dict[str, int]] = {}
+    for art in db.query(Artist).filter(Artist.bio.isnot(None)).all():
+        bio = art.bio or {}
+        keys = art.bio_audio or {}
+        engines = art.bio_audio_engine or {}
+        for lang in languages:
+            if not bio.get(lang):
+                continue
+            d = bio_stat.setdefault(lang, {})
+            label = engines.get(lang) if keys.get(lang) else None
+            d[label or "(无音频)"] = d.get(label or "(无音频)", 0) + 1
+    if bio_stat:
+        out["artist_bio"] = bio_stat
     return out
