@@ -60,3 +60,26 @@ museums:
     fetch_limit: 40000          # 18.5k 条目 × 多 P31 重复行余量
     sample_size: 30
     sample_qids: []
+  petit_palais:
+    name_zh: 小皇宫美术馆
+    name_en: Petit Palais
+    city_zh: 巴黎
+    city_en: Paris
+    country: FR
+    # ⚠️ 馆的正式名是「musée des Beaux-Arts de la ville de Paris」,Petit Palais 是
+    # 它所在的建筑(P276)。按纪律①核验过:P195 直挂本馆 2186 幅绘画,不是部门制,
+    # 所以不需要 collection_qids。
+    wikidata_qid: Q59546080
+    category_filter: Q3305213
+    # 四大类 + 本馆特有:圣像画(60 件有图)与三种版画(17 件)
+    categories: [Q3305213, Q219423,
+                 Q860861, Q179700, Q241045, Q1066288,
+                 Q93184, Q18761202, Q12043905, Q15123870, Q2647254, Q5078274,
+                 Q125191,
+                 Q132137, Q18218093, Q11060274, Q18219090]
+    country_lang: fr
+    # Joconde 现状不可用(API 返回 HTML);且本馆是**市立**馆,本就未必在其收录范围。
+    sources: [wikipedia]
+    fetch_limit: 8000           # WDQS 实测约 3.7k 条目 × 多 P31 重复行余量
+    sample_size: 20
+    sample_qids: []

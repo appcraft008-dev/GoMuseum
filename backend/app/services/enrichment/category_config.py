@@ -46,6 +46,13 @@ CATEGORY_BY_QID: dict[str, str] = {
     "Q184296": "textile",  # tapestry(挂毯)
     "Q133067": "decorative_arts",  # mosaic(马赛克镶嵌)
     "Q99516640": "painting",  # wall painting(壁画)
+    # 小皇宫补充(2026-07-30):圣像画本质是画在木板上的绘画;三种版画归纸上作品。
+    # 不补的话这 77 件会落进 unknown 走 _FALLBACK —— 仍能出讲解,但分类 facet 里
+    # 归不了位,用户按类目浏览时看不到它们。
+    "Q132137": "painting",  # icône(圣像画)
+    "Q18218093": "works_on_paper",  # eau-forte(蚀刻版画)
+    "Q11060274": "works_on_paper",  # estampe(版画)
+    "Q18219090": "works_on_paper",  # xylogravure(木刻版画)
 }
 DEFAULT_CATEGORY = "unknown"
 
