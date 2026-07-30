@@ -666,22 +666,26 @@ class _CameraPageState extends ConsumerState<CameraPage>
           border: Border.all(color: gm.line),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // 竖长比例(非正方形)：画作多为竖构图，方形裁切会切掉大半画面，
+            // 与刚拍的照片难以比对(真机反馈)。候选恒 ≤3 个(后端 cands[:3])，
+            // 放大不会撑爆底部面板(非滚动 Column)。
             SizedBox(
-              width: 52,
-              height: 52,
+              width: 72,
+              height: 92,
               child: c.thumbnail != null
-                  ? Image.network(sizedImageUrl(c.thumbnail!, 200),
+                  ? Image.network(sizedImageUrl(c.thumbnail!, 280),
                       fit: BoxFit.cover,
                       headers: kImageRequestHeaders,
                       errorBuilder: (_, __, ___) => ColoredBox(
                           color: gm.chipBg,
                           child: Center(
                               child: GmIcon(GmIcons.photo,
-                                  size: 20, color: gm.faint))))
+                                  size: 26, color: gm.faint))))
                   : ColoredBox(color: gm.chipBg),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
