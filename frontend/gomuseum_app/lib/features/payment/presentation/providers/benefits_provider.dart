@@ -144,14 +144,9 @@ class BenefitsState extends _$BenefitsState {
     }
   }
 
-  /// 检查是否有识别权限
-  bool get hasRecognitionAccess {
-    final benefits = state.value;
-    if (benefits == null) return false;
-
-    // 有配额、日卡激活或高级会员，都可以识别
-    return benefits.recognitionQuota > 0 ||
-        benefits.dayPassActive ||
-        benefits.isPremium;
-  }
+  // ⚠️ 这里曾有 `hasRecognitionAccess`,用 `quota > 0 || dayPassActive ||
+  // isPremium` **自行组合**权益 —— 契约明令禁止(前端只看服务端下发的 `can`,
+  // 多端各拼一套必然不一致)。它零调用方,且正确的替代品早就在:
+  // `Entitlements.canRecognize`(读 `/entitlements` 的 `can.recognize`)。
+  // 所以直接删,不是改写。
 }
