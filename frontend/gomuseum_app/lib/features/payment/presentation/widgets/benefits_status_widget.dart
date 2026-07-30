@@ -67,7 +67,7 @@ class BenefitsStatusWidget extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '您当前无识别权限，请购买识别包、日卡或开通会员',
+                          '免费识别次数已用完，购买通票可继续使用',
                           style: TextStyle(
                             color: Colors.orange[700],
                             fontSize: 13,
