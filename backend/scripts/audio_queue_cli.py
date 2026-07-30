@@ -51,11 +51,20 @@ def main() -> None:
     try:
         if ns.cmd == "coverage":
             cov = coverage(db, langs)
-            print("主讲解段(guide)音频覆盖率 —— 按语言 × 引擎")
-            for lang, d in sorted(cov.items()):
-                total = sum(d.values())
-                parts = "  ".join(f"{k}={v}" for k, v in sorted(d.items()))
-                print(f"  {lang:8s} 共 {total:6d}   {parts}")
+            titles = {
+                "guide": "主讲解段(guide)",
+                "artist_bio": "作者介绍(按作者共享,一条影响该作者所有作品)",
+            }
+            for kind in ("guide", "artist_bio"):
+                by_lang = cov.get(kind)
+                if not by_lang:
+                    continue
+                print(f"{titles.get(kind, kind)}音频覆盖率 —— 按语言 × 引擎")
+                for lang, d in sorted(by_lang.items()):
+                    total = sum(d.values())
+                    parts = "  ".join(f"{k}={v}" for k, v in sorted(d.items()))
+                    print(f"  {lang:8s} 共 {total:6d}   {parts}")
+                print()
             return
 
         jobs = build_queue(

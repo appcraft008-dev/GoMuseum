@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.content import (
     CategorySection,
     ObjectContentSection,
@@ -36,6 +37,7 @@ def db():
             CategorySection.__table__,
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
+            Artist.__table__,
         ],
     )
     s = sessionmaker(bind=e)()
@@ -192,3 +194,88 @@ def test_empty_audio_is_rejected():
 
 def test_duration_estimate_matches_bitrate():
     assert abs(estimate_duration_sec(_bytes_for(30)) - 30) < 0.1
+
+
+# —— 作者介绍:第三处存音频 key 的地方(2026-07-30 补) ——
+
+
+def _artist(s, o, aqid, bio=None, key=None, engine=None):
+    """建作者并挂到作品上(bio 音频按作者共享,key 走 artist qid)。"""
+    s.add(
+        Artist(
+            qid=aqid,
+            bio=bio or {"zh": "作者生平" * 50},
+            bio_audio={"zh": key} if key else None,
+            bio_audio_engine={"zh": engine} if engine else None,
+        )
+    )
+    o.attributes = {**(o.attributes or {}), "artist_qid": aqid}
+    s.commit()
+
+
+def test_artist_bio_enters_the_migration_queue(db):
+    """作者介绍必须进队列。
+
+    漏掉它 = 迁移完"作品讲解是新音色、点作者介绍变回旧音色",而 audio_queue
+    自己的目标就是"一次参观内部音色一致"。bio 还是按作者共享的,一条音频在
+    该作者所有作品下播放,影响面要乘以作品数。
+    """
+    s, m = db
+    o = _obj(s, m, "Q1")
+    _sec(s, o, "guide")
+    _artist(s, o, "Q5582")
+
+    jobs = aq.build_queue(s, languages=["zh"], target_engine="voxcpm2")
+    bio_jobs = [j for j in jobs if j.kind == "artist_bio"]
+    assert len(bio_jobs) == 1
+    assert bio_jobs[0].qid == "Q5582", "按作者 qid 排,不是作品 qid"
+    assert bio_jobs[0].section == "artist_bio"
+
+
+def test_artist_bio_already_on_target_engine_is_skipped(db):
+    """已经是目标引擎的不重做 —— 否则每次跑队列都白烧一遍 GPU。"""
+    s, m = db
+    o = _obj(s, m, "Q1")
+    _sec(s, o, "guide")
+    _artist(s, o, "Q5582", key="k", engine="voxcpm2")
+
+    jobs = aq.build_queue(s, languages=["zh"], target_engine="voxcpm2")
+    assert [j for j in jobs if j.kind == "artist_bio"] == []
+
+
+def test_artist_bio_on_old_engine_is_an_upgrade(db):
+    """旧引擎生成的 → 排进音色统一批次(这正是当初漏掉的那类)。"""
+    s, m = db
+    o = _obj(s, m, "Q1")
+    _sec(s, o, "guide")
+    _artist(s, o, "Q5582", key="k", engine="tts-1")
+
+    jobs = aq.build_queue(s, languages=["zh"], target_engine="voxcpm2")
+    bio = [j for j in jobs if j.kind == "artist_bio"][0]
+    assert bio.reason == "engine_upgrade"
+
+
+def test_shared_artist_is_not_queued_once_per_artwork(db):
+    """同一作者的多件作品只排一条 —— 音频按作者共享,排 N 次就是白做 N-1 次。"""
+    s, m = db
+    for qid in ("Q1", "Q2", "Q3"):
+        o = _obj(s, m, qid)
+        _sec(s, o, "guide")
+        o.attributes = {"artist_qid": "Q5582"}
+    s.add(Artist(qid="Q5582", bio={"zh": "作者生平" * 50}))
+    s.commit()
+
+    jobs = aq.build_queue(s, languages=["zh"], target_engine="voxcpm2")
+    assert len([j for j in jobs if j.kind == "artist_bio"]) == 1
+
+
+def test_coverage_reports_artist_bio_separately(db):
+    """报表要单列作者介绍 —— 只报 guide 的话,它看着永远 100%,实际一条没迁。"""
+    s, m = db
+    o = _obj(s, m, "Q1")
+    _sec(s, o, "guide", key="k1", engine="tts-1")
+    _artist(s, o, "Q5582", key="k2", engine="tts-1")
+
+    cov = aq.coverage(s, ["zh"])
+    assert cov["guide"]["zh"]["tts-1"] == 1
+    assert cov["artist_bio"]["zh"]["tts-1"] == 1

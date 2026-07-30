@@ -26,6 +26,13 @@ class Artist(Base):
     bio_audio = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
     )  # {lang: audio_key} 作者介绍音频,按作者共享一份(TTS Phase2)
+    # {lang: engine} 与 bio_audio **同进同退**:哪条 key 是哪个引擎生成的。
+    # 音频 key 存在三处,这是最容易被漏掉的一处 —— 没有它,作者介绍既进不了
+    # 迁移队列也不进覆盖率报表,自托管替换完会残留旧音色(而 bio 按作者共享,
+    # 一条音频在该作者所有作品下播放)。
+    bio_audio_engine = Column(
+        MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
+    )
     name_i18n = Column(
         MutableDict.as_mutable(JSON().with_variant(JSONB, "postgresql")), nullable=True
     )  # {lang: name} 多语显示名
