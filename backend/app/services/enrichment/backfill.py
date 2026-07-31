@@ -244,8 +244,11 @@ def backfill_languages(
         finally:
             s.close()
 
+    logger.info(
+        "translate %s: %d 件待补(langs=%s, workers=%d)", slug, len(ids), langs, workers
+    )
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
-        for r in ex.map(_one, ids):
+        for n, r in enumerate(ex.map(_one, ids), 1):
             if r == "error":
                 counts["errors"] += 1
             elif r:
@@ -253,6 +256,16 @@ def backfill_languages(
                     counts["objects"] += 1
                 for k in ("sections", "qa", "bios"):
                     counts[k] += r[k]
+            if n % 50 == 0:
+                logger.info(
+                    "translate %s 进度 %d/%d sections=%d qa=%d errors=%d",
+                    slug,
+                    n,
+                    len(ids),
+                    counts["sections"],
+                    counts["qa"],
+                    counts["errors"],
+                )
     return counts
 
 
@@ -356,13 +369,18 @@ def backfill_display_names(
     objs = db.query(MuseumObject).filter_by(museum_id=m.id).all()
     if limit:
         objs = objs[:limit]
+    # ⚠️ 下面两步是**长时间静默**的批量外部查询(各自可能几分钟),打点标出边界:
+    # 没有它就分不清"卡在预取"还是"卡在主循环第 N 件"。
+    logger.info("names %s: %d 件,开始批量取作者", slug, len(objs))
     creators = fetch_creators(
         [o.qid for o in objs if not (o.attributes or {}).get("artist_qid")]
     )
+    logger.info("names %s: 作者取回 %d 条,开始批量取标签", slug, len(creators or {}))
     if _injected is None:  # 对象标签一次批量取回,后续 _labels 命中缓存
         from app.services.enrichment.material import fetch_wikidata_labels_batch
 
         _cache.update(fetch_wikidata_labels_batch([o.qid for o in objs], langs))
+    logger.info("names %s: 标签预取完成(%d 条),进入主循环", slug, len(_cache))
     counts = {"titles": 0, "artists": 0, "errors": 0}
     artist_name_en: dict[str, str] = {}  # 作者QID → 来自作品行的 en 名(兜底)
     for i, o in enumerate(objs):
@@ -410,6 +428,17 @@ def backfill_display_names(
             counts["errors"] += 1
         if (i + 1) % 50 == 0:
             db.commit()  # 分批落盘:中途崩溃不丢已完成进度
+            # 与 commit 同频打点:卡死时这行就是"最后活着的位置"。
+            # 没有它,3000 件的任务停在哪一件全靠猜(2026-07-30 实战教训)。
+            logger.info(
+                "names %s 进度 %d/%d titles=%d artists=%d errors=%d",
+                slug,
+                i + 1,
+                len(objs),
+                counts["titles"],
+                counts["artists"],
+                counts["errors"],
+            )
     for j, (aqid, en_name) in enumerate(artist_name_en.items()):
         try:
             art = db.query(Artist).filter_by(qid=aqid).first()
