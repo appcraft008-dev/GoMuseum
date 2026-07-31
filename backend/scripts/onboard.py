@@ -9,10 +9,27 @@
 from __future__ import annotations
 
 import argparse
+import faulthandler
+import logging
+import signal
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+# 批任务动辄跑几小时,**必须能回答"现在到哪了、卡在哪"**(纪律⑥:日志实时落地)。
+# 服务层用 logger 打进度,这里统一开到 stdout —— 否则 logger.info 默认不输出,
+# 长任务日志就是 0 字节,卡死时连"最后处理到第几件"都无从知道。
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    stream=sys.stdout,
+)
+
+# 卡住时 `kill -USR1 <pid>` 直接把**所有线程的 Python 堆栈**打进日志。
+# 2026-07-30 小皇宫 names 卡死 47 分钟(wchan=ep_poll)就是因为没有这个 ——
+# 进程活着、日志空白,只能靠猜。容器里没有 py-spy,faulthandler 是标准库,零依赖。
+faulthandler.register(signal.SIGUSR1, file=sys.stdout, all_threads=True)
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import SessionLocal  # noqa: E402
