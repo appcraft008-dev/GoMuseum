@@ -75,6 +75,7 @@ dependencies:
   dart_jsonwebtoken: ^2.12.1
   google_fonts: ^8.1.0
   flutter_svg: ^2.3.0
+  android_id: ^0.5.2+1
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.1
