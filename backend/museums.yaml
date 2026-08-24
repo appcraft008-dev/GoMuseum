@@ -70,6 +70,9 @@ museums:
     # 它所在的建筑(P276)。按纪律①核验过:P195 直挂本馆 2186 幅绘画,不是部门制,
     # 所以不需要 collection_qids。
     wikidata_qid: Q59546080
+    # 馆本体只有 commonswiki,英文维基文章挂在建筑 Petit Palais(Q820892)上,
+    # 故介绍材料从建筑条目取(那篇文章写的正是本馆)。不动 wikidata_qid:P195 挂在馆本体。
+    intro_qid: Q820892
     category_filter: Q3305213
     # 四大类 + 本馆特有:圣像画(60 件有图)与三种版画(17 件)
     categories: [Q3305213, Q219423,

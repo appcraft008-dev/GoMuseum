@@ -32,6 +32,11 @@ class MuseumConfig:
     # 百科全书式大馆:整部门全收,catalog SPARQL 去掉 category 过滤(古物/装饰艺术
     # P31 长尾几百种无法逐个列 categories)。缺省 False → 存量馆保持类目过滤不变。
     collect_all_types: bool = False
+    # 馆介绍的接地材料来源 QID。缺省 None → 用 wikidata_qid。
+    # 用于「馆本体没有 enwiki 条目、英文文章挂在建筑上」的馆(小皇宫:馆=Q59546080
+    # 只有 commonswiki,Petit Palais 建筑=Q820892 才有 enwiki)。显式配置而非自动
+    # 跟随 P276——P276 也可能指向城市,那会拿城市文章当馆介绍材料。
+    intro_qid: str | None = None
 
 
 class MuseumCatalog:
@@ -62,6 +67,7 @@ class MuseumCatalog:
                 joconde_museum=m.get("joconde_museum"),
                 collection_qids=list(m.get("collection_qids") or []),
                 collect_all_types=bool(m.get("collect_all_types") or False),
+                intro_qid=m.get("intro_qid"),
             )
         return cls(configs)
 

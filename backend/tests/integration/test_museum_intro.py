@@ -334,3 +334,44 @@ def test_generate_short_single_field_not_split(session):
         session.query(Museum).one().description_i18n["en"] == "Only one sentence here."
     )
     assert out["generated"] is True
+
+
+def test_material_qid_overrides_museum_qid(session):
+    # 馆本体无 enwiki(小皇宫:Q59546080 只有 commonswiki),材料要从配置的
+    # intro_qid(建筑条目)取——传了就用它,没传才回落 m.qid。
+    seen = []
+
+    def _fetch(qid):
+        seen.append(qid)
+        return {"extract_en": "A 1900 Beaux-Arts palace housing the city's fine arts."}
+
+    generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"history": "H.", "highlights": "L."}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_fetch,
+        material_qid="Q820892",
+    )
+    assert seen == ["Q820892"]  # 不是 Museum.qid 的 Q23402
+
+
+def test_material_qid_absent_falls_back_to_museum_qid(session):
+    seen = []
+
+    def _fetch(qid):
+        seen.append(qid)
+        return {"extract_en": "Housed in a 1900 railway station..."}
+
+    generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"history": "H.", "highlights": "L."}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_fetch,
+    )
+    assert seen == ["Q23402"]

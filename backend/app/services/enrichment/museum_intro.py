@@ -46,6 +46,7 @@ def generate_museum_intro(
     langs: list,
     force: bool = False,
     fetch_material=None,
+    material_qid: str | None = None,
 ) -> dict:
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
@@ -54,7 +55,7 @@ def generate_museum_intro(
     out = {"generated": False, "translated": [], "skipped": None}
 
     if not di.get("en"):
-        mat = (fetch_material or fetch_museum_intro_material)(m.qid)
+        mat = (fetch_material or fetch_museum_intro_material)(material_qid or m.qid)
         extract = mat.get("extract_en")
         if not extract:
             out["skipped"] = "no_material"  # 宁缺毋滥:源薄不硬写
