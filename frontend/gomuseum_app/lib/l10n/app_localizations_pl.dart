@@ -51,6 +51,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get language => 'Język';
 
   @override
+  String get languageFollowSystem => 'Zgodnie z systemem';
+
+  @override
   String get selectLanguage => 'Wybierz język';
 
   @override

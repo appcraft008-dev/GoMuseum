@@ -3,9 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 
 void main() {
-  test('supportedLocales tags in order (zh-Hant distinct from zh)', () {
-    expect(kSupportedLocales.map(localeTag).toList(),
-        ['zh', 'en', 'fr', 'de', 'es', 'it', 'pl', 'ja', 'ko', 'zh-Hant']);
+  // 断言的是「十种语言齐全，且 zh-Hant 与 zh 是两个不同的 tag」这个性质。
+  // ⛔ 别改回硬编码顺序数组：展示顺序按字母序排，由
+  // language_follow_system_test 的排序断言负责，两处写死会互相打架。
+  test('supportedLocales tags complete (zh-Hant distinct from zh)', () {
+    expect(kSupportedLocales.map(localeTag).toSet(),
+        {'zh', 'en', 'fr', 'de', 'es', 'it', 'pl', 'ja', 'ko', 'zh-Hant'});
+    expect(kSupportedLocales.length, 10); // 无重复
   });
 
   test('languageDisplayName maps each supported locale', () {

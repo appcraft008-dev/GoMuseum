@@ -14,6 +14,7 @@
   "comingSoon": "近日公開",
   "comingSoonShort": "近日公開",
   "language": "言語",
+  "languageFollowSystem": "システムに従う",
   "selectLanguage": "言語を選択",
   "retry": "再試行",
   "cancel": "キャンセル",
