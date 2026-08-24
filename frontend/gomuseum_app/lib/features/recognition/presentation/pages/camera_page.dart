@@ -36,6 +36,19 @@ class CameraPage extends ConsumerStatefulWidget {
   ConsumerState<CameraPage> createState() => _CameraPageState();
 }
 
+/// 捏合手势 → 目标变焦倍率。**必须钳制**:超出设备 min/max 调
+/// `setZoomLevel` 会抛 CameraException,部分机型还会黑屏。
+/// `scale` 是相对手势起点的比例(起点恒为 1.0),故要乘以手势开始时的倍率,
+/// 否则每次 update 都从 1× 重算,连续缩放会跳变。
+@visibleForTesting
+double computeZoomLevel({
+  required double startZoom,
+  required double scale,
+  required double min,
+  required double max,
+}) =>
+    (startZoom * scale).clamp(min, max);
+
 class _CameraPageState extends ConsumerState<CameraPage>
     with WidgetsBindingObserver {
   CameraController? _controller;
@@ -47,6 +60,13 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   /// 「最近图库」缩略图条的最近图片资产（相册权限拿到后填充）。
   List<AssetEntity> _recentAssets = const [];
+
+  /// 变焦：博物馆里常常靠不近展品，取景框必须支持双指拉近。
+  /// min/max 由设备决定（`getMinZoomLevel`/`getMaxZoomLevel`），相机重启后重读。
+  double _minZoom = 1.0;
+  double _maxZoom = 1.0;
+  double _zoom = 1.0;
+  double _zoomOnGestureStart = 1.0;
 
   @override
   void initState() {
@@ -112,7 +132,24 @@ class _CameraPageState extends ConsumerState<CameraPage>
         await controller.dispose();
         return;
       }
-      setState(() => _controller = controller);
+      // 变焦范围因机型而异（广角机 min 可能 < 1）；取不到就退化成不可变焦。
+      double min = 1.0, max = 1.0;
+      try {
+        min = await controller.getMinZoomLevel();
+        max = await controller.getMaxZoomLevel();
+      } on CameraException {
+        // 少数机型不支持查询变焦：保持 1.0/1.0，手势自然失效，不影响拍摄。
+      }
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+        _minZoom = min;
+        _maxZoom = max;
+        _zoom = 1.0.clamp(min, max); // 相机重启回到 1×
+      });
     } on CameraException catch (e) {
       setState(() => _cameraError =
           e.description ?? AppLocalizations.of(context)!.camInitFailed);
@@ -136,6 +173,27 @@ class _CameraPageState extends ConsumerState<CameraPage>
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleZoomUpdate(ScaleUpdateDetails d) async {
+    // 单指拖动也会走 onScaleUpdate（scale 恒为 1），过滤掉省得空转。
+    if (d.pointerCount < 2) return;
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final next = computeZoomLevel(
+      startZoom: _zoomOnGestureStart,
+      scale: d.scale,
+      min: _minZoom,
+      max: _maxZoom,
+    );
+    // 抑制高频微小变化：每帧都 setState + 平台调用不值当。
+    if ((next - _zoom).abs() < 0.01) return;
+    setState(() => _zoom = next);
+    try {
+      await controller.setZoomLevel(next);
+    } on CameraException {
+      // 个别机型在边界值上会抛；忽略即可，下一次手势更新会自愈。
+    }
   }
 
   Future<void> _shoot() async {
@@ -314,7 +372,13 @@ class _CameraPageState extends ConsumerState<CameraPage>
         if (_captured != null)
           Image.file(File(_captured!.path), fit: BoxFit.cover)
         else if (_controller != null && _controller!.value.isInitialized)
-          CameraPreview(_controller!)
+          GestureDetector(
+            // 双指捏合拉近/推远。博物馆里常常隔着围栏、离画三五米，
+            // 没有变焦就只能拍到一小块画面，识别命中率会明显变差。
+            onScaleStart: (_) => _zoomOnGestureStart = _zoom,
+            onScaleUpdate: _handleZoomUpdate,
+            child: CameraPreview(_controller!),
+          )
         else
           Center(
             child: _cameraError != null
@@ -362,6 +426,27 @@ class _CameraPageState extends ConsumerState<CameraPage>
         ),
         // 四角取景框
         ..._cornerBrackets(),
+        // 变焦倍率：只在放大时出现，放底部靠近快门（中间会被捏合的手指挡住）。
+        if (_captured == null && _zoom > _minZoom + 0.05)
+          Positioned(
+            bottom: 18,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0x8C171310),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${_zoom.toStringAsFixed(1)}\u00D7',
+                  style: GmText.sans(size: 12.5, color: GmColors.scanInk),
+                ),
+              ),
+            ),
+          ),
         // 取景框中央提示（拍签模式显拍签提示）
         if (state is RecognitionInitial && _captured == null)
           Align(
