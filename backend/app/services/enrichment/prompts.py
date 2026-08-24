@@ -126,6 +126,7 @@ def build_translation_prompt(
     target_lang: str,
     title: str | None = None,
     artist: str | None = None,
+    museum: str | None = None,
 ):
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _TRANSLATION_SYSTEM.format(lang=lang)
@@ -143,6 +144,15 @@ def build_translation_prompt(
             f" IMPORTANT: the artist's canonical {lang} name is 「{artist}」 — "
             f"whenever the text refers to the artist by name, use EXACTLY this "
             f"rendering, do not use any alternative transliteration."
+        )
+    if museum:
+        # 馆名真相唯一化(标题/作者之外的第三类名字):正文提到本馆一律用配置的
+        # 权威译名。可字面直译的馆名(Petit Palais)模型会自选直译("小宫殿"),
+        # 与馆列表显示的 name_zh("小皇宫美术馆")分叉。
+        system += (
+            f" IMPORTANT: this museum's canonical {lang} name is 「{museum}」 — "
+            f"whenever the text refers to the museum by name, use EXACTLY this "
+            f"name, do not translate it literally or invent an alternative."
         )
     user = f"English:\n{en_body}"
     return system, user

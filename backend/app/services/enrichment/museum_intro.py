@@ -11,6 +11,7 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.content_enricher import _parse_json
 from app.services.enrichment.material import (
+    _variant_convert,
     fetch_museum_building_photo,
     fetch_museum_intro_material,
 )
@@ -34,6 +35,15 @@ def _split_into_paragraphs(text: str, target: int = 3) -> str:
     per = -(-len(sentences) // target)  # 向上取整,保证段数不超 target
     chunks = [" ".join(sentences[i : i + per]) for i in range(0, len(sentences), per)]
     return "\n\n".join(c.strip() for c in chunks if c.strip())
+
+
+def _canonical_museum_name(m, lang: str) -> str | None:
+    """馆名真相唯一化(#277 的第三类名字)。只钉有权威译名的语言:zh 用配置的
+    name_zh,zh-hant 由 OpenCC 逐字转(复用 _SCRIPT_VARIANTS,不另配)。其余语言
+    无真相源 → 返 None 不钉;硬钉 name_en 反而会在日文正文里留拉丁残片。"""
+    if lang not in ("zh", "zh-hant") or not m.name_zh:
+        return None
+    return _variant_convert(lang, m.name_zh)
 
 
 def generate_museum_intro(
@@ -93,7 +103,9 @@ def generate_museum_intro(
         if lang == "en" or di.get(lang):
             continue
         try:
-            di[lang] = translator.translate_section(di["en"], lang)
+            di[lang] = translator.translate_section(
+                di["en"], lang, museum=_canonical_museum_name(m, lang)
+            )
             out["translated"].append(lang)
         except Exception:
             logger.exception("museum intro translate %s failed: %s", lang, slug)
