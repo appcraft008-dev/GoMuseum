@@ -44,4 +44,5 @@ def build_generation_components(slug: str, langs_override=None) -> dict:
         "registry": build_registry(cfg.sources, session=session),
         "target_langs": resolve_languages(langs_override or cfg.languages),
         "country_lang": cfg.country_lang,
+        "intro_qid": cfg.intro_qid,
     }

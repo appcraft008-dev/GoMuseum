@@ -466,6 +466,7 @@ def cmd_intro(slug: str, target: str, force: bool = False) -> None:
             translator=c["translator"],
             langs=c["target_langs"],  # 馆配置驱动(resolve_languages),不硬编
             force=force,
+            material_qid=c["intro_qid"],
         )
         cover = select_cover(
             db,
