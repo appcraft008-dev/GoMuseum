@@ -334,3 +334,71 @@ def test_generate_short_single_field_not_split(session):
         session.query(Museum).one().description_i18n["en"] == "Only one sentence here."
     )
     assert out["generated"] is True
+
+
+def test_material_qid_overrides_museum_qid(session):
+    # 馆本体无 enwiki(小皇宫:Q59546080 只有 commonswiki),材料要从配置的
+    # intro_qid(建筑条目)取——传了就用它,没传才回落 m.qid。
+    seen = []
+
+    def _fetch(qid):
+        seen.append(qid)
+        return {"extract_en": "A 1900 Beaux-Arts palace housing the city's fine arts."}
+
+    generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"history": "H.", "highlights": "L."}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_fetch,
+        material_qid="Q820892",
+    )
+    assert seen == ["Q820892"]  # 不是 Museum.qid 的 Q23402
+
+
+def test_material_qid_absent_falls_back_to_museum_qid(session):
+    seen = []
+
+    def _fetch(qid):
+        seen.append(qid)
+        return {"extract_en": "Housed in a 1900 railway station..."}
+
+    generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"history": "H.", "highlights": "L."}',
+        gate=_Gate(),
+        translator=_Tr(),
+        langs=["en"],
+        fetch_material=_fetch,
+    )
+    assert seen == ["Q23402"]
+
+
+def test_museum_name_pinned_for_zh_variants_only(session):
+    # 馆名真相唯一化:可字面直译的馆名(Petit Palais→"小宫殿")会与馆列表显示的
+    # name_zh 分叉。zh/zh-hant 钉配置译名(繁体走 OpenCC),无真相源的语言不钉。
+    seen = {}
+
+    class _TrSpy:
+        def translate_section(self, body, lang, museum=None, **kw):
+            seen[lang] = museum
+            return f"{lang}:{body}"
+
+    m = session.query(Museum).one()
+    m.name_zh = "小皇宫美术馆"
+    session.flush()
+    generate_museum_intro(
+        session,
+        "orsay",
+        complete=lambda s, u: '{"history": "H.", "highlights": "L."}',
+        gate=_Gate(),
+        translator=_TrSpy(),
+        langs=["en", "zh", "zh-hant", "fr"],
+        fetch_material=_mat,
+    )
+    assert seen["zh"] == "小皇宫美术馆"
+    assert seen["zh-hant"] == "小皇宮美術館"  # OpenCC 逐字转,不另配
+    assert seen["fr"] is None  # 无权威译名 → 不钉

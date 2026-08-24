@@ -37,9 +37,18 @@ class ContentTranslator:
         self._complete_strong = complete_strong
 
     def translate_section(
-        self, en_body: str, target_lang: str, *, strong=False, title=None, artist=None
+        self,
+        en_body: str,
+        target_lang: str,
+        *,
+        strong=False,
+        title=None,
+        artist=None,
+        museum=None,
     ) -> str:
-        system, user = build_translation_prompt(en_body, target_lang, title, artist)
+        system, user = build_translation_prompt(
+            en_body, target_lang, title, artist, museum
+        )
         fn = (
             self._complete_strong
             if (strong and self._complete_strong)
