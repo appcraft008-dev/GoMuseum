@@ -56,7 +56,9 @@ class GoMuseumApp extends ConsumerWidget {
       // 路由配置 - 带认证守卫
       routerConfig: router,
 
-      // 国际化配置 —— UI 语言跟随设置页选择（languageProvider 持久化）
+      // 国际化配置 —— UI 语言跟随设置页选择（languageProvider 持久化）。
+      // **null = 跟随系统**（未选过的用户的默认值）：Flutter 拿设备语言匹配
+      // supportedLocales，匹配不上回退首项（en）。
       locale: ref.watch(languageProvider),
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -64,18 +66,7 @@ class GoMuseumApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en'), // 英语
-        Locale('zh'), // 中文
-        Locale('fr'), // 法语
-        Locale('de'), // 德语
-        Locale('es'), // 西班牙语
-        Locale('it'), // 意大利语
-        Locale('pl'), // 波兰语
-        Locale('ja'), // 日语
-        Locale('ko'), // 韩语
-        Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'), // 繁体中文
-      ],
+      supportedLocales: kAppLocalesInResolutionOrder,
 
       // 调试配置
       debugShowCheckedModeBanner: false,

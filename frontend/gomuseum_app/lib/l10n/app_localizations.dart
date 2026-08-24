@@ -197,6 +197,12 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// Language option meaning: use the device's system language
+  ///
+  /// In en, this message translates to:
+  /// **'Follow system'**
+  String get languageFollowSystem;
+
   /// No description provided for @selectLanguage.
   ///
   /// In en, this message translates to:

@@ -67,7 +67,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               gm: gm,
               icon: GmIcons.globe,
               label: l10n.guideLanguage,
-              value: languageDisplayName(currentLocale),
+              value: languageSettingLabel(
+                  currentLocale, l10n.languageFollowSystem),
               onTap: _pickLanguage,
             ),
             _row(
@@ -380,8 +381,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  /// 「跟随系统」在弹窗里的哨兵值 —— 直接 pop(null) 会和「用户取消」混淆。
+  static const Locale _kFollowSystem = Locale('\u0000follow-system');
+
   Future<void> _pickLanguage() async {
     final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
     final current = ref.read(languageProvider);
     final picked = await showModalBottomSheet<Locale>(
       context: context,
@@ -399,14 +404,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             shrinkWrap: true,
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
+              // 跟随系统排在最前:它是默认值,也是多数人想要的。
+              // 用 sentinel 而非 null 回传,因为 pop(null) 与「用户取消」无法区分。
+              ListTile(
+                title: Text(l10n.languageFollowSystem,
+                    style: GmText.sans(size: 15, color: gm.ink)),
+                trailing: current == null
+                    ? GmIcon(GmIcons.check, size: 18, color: gm.ink)
+                    : null,
+                onTap: () => Navigator.of(ctx).pop(_kFollowSystem),
+              ),
               for (final loc in kSupportedLocales)
                 ListTile(
                   title: Text(languageDisplayName(loc),
                       style: GmText.sans(size: 15, color: gm.ink)),
                   // 按完整 tag 比：简体 zh 与繁体 zh-Hant 的 languageCode 都是 'zh'，会误勾。
-                  trailing: localeTag(loc) == localeTag(current)
-                      ? GmIcon(GmIcons.check, size: 18, color: gm.ink)
-                      : null,
+                  trailing:
+                      current != null && localeTag(loc) == localeTag(current)
+                          ? GmIcon(GmIcons.check, size: 18, color: gm.ink)
+                          : null,
                   onTap: () => Navigator.of(ctx).pop(loc),
                 ),
             ],
@@ -414,9 +430,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
       ),
     );
-    if (picked != null) {
-      await ref.read(languageProvider.notifier).setLanguage(picked);
-    }
+    if (picked == null) return; // 用户点了空白处取消
+    await ref
+        .read(languageProvider.notifier)
+        .setLanguage(picked == _kFollowSystem ? null : picked);
   }
 
   void _comingSoon(String feature) {

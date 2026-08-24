@@ -172,7 +172,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _recognizeImage(XFile shot) async {
     setState(() => _captured = shot);
     final benefits = ref.read(benefitsStateProvider.notifier);
-    final lang = apiLanguage(ref.read(languageProvider));
+    final lang = apiLanguage(ref.read(resolvedLocaleProvider));
     final mode = _labelMode ? 'label' : 'artwork';
     await ref
         .read(recognitionNotifierProvider.notifier)
@@ -232,7 +232,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (_) => _TagSearchSheet(
-        lang: apiLanguage(ref.read(languageProvider)),
+        lang: apiLanguage(ref.read(resolvedLocaleProvider)),
         initialQuery: initialQuery,
       ),
     );

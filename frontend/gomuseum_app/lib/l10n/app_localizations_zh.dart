@@ -51,6 +51,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get language => '语言';
 
   @override
+  String get languageFollowSystem => '跟随系统';
+
+  @override
   String get selectLanguage => '选择语言';
 
   @override
@@ -722,6 +725,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get language => '語言';
+
+  @override
+  String get languageFollowSystem => '跟隨系統';
 
   @override
   String get selectLanguage => '選擇語言';

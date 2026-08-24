@@ -140,7 +140,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
   int _legacySpeedIndex = 0;
 
   // ── language
-  String get _language => apiLanguage(ref.read(languageProvider));
+  String get _language => apiLanguage(ref.read(resolvedLocaleProvider));
 
   @override
   void initState() {

@@ -25,7 +25,7 @@ final museumDetailProvider =
 
 final objectContentProvider =
     FutureProvider.family<ObjectContent, ({String slug, String qid})>((ref, a) {
-  final lang = apiLanguage(ref.watch(languageProvider));
+  final lang = apiLanguage(ref.watch(resolvedLocaleProvider));
   return ref
       .watch(catalogDataSourceProvider)
       .getObjectContent(slug: a.slug, qid: a.qid, language: lang);
