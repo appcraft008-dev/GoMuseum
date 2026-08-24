@@ -3,11 +3,15 @@
     <!-- Permissions for GoMuseum app -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <!-- Android 13+ 读相册图片（photo_manager「最近图库」缩略图条） -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+
+    <!-- camera_android 为「录像带声音」而声明 RECORD_AUDIO;我们只拍照
+         (CameraController 已设 enableAudio: false),不需要麦克风。
+         留着会与数据安全表单「不收集音频」矛盾。 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
 
     <!-- 不使用广告 ID（与 Play Console 广告 ID 声明保持一致），移除 Firebase 库引入的权限 -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
