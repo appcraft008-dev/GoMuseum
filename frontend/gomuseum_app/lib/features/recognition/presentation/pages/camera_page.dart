@@ -178,6 +178,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _handleZoomUpdate(ScaleUpdateDetails d) async {
     // 单指拖动也会走 onScaleUpdate（scale 恒为 1），过滤掉省得空转。
     if (d.pointerCount < 2) return;
+    if (_captured != null) return; // 已拍完、显示静态图时预览不可见，变焦无意义
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
     final next = computeZoomLevel(
@@ -366,108 +367,113 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Widget _viewfinder(RecognitionState state) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (_captured != null)
-          Image.file(File(_captured!.path), fit: BoxFit.cover)
-        else if (_controller != null && _controller!.value.isInitialized)
-          GestureDetector(
-            // 双指捏合拉近/推远。博物馆里常常隔着围栏、离画三五米，
-            // 没有变焦就只能拍到一小块画面，识别命中率会明显变差。
-            onScaleStart: (_) => _zoomOnGestureStart = _zoom,
-            onScaleUpdate: _handleZoomUpdate,
-            child: CameraPreview(_controller!),
-          )
-        else
-          Center(
-            child: _cameraError != null
-                ? Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      _cameraError!,
-                      textAlign: TextAlign.center,
-                      // 取景器文字使用固定浅色
-                      style: GmText.sans(size: 13, color: GmColors.scanInk),
+    // ⚠️ 手势必须包在**整个 Stack 外面**，不能只包 CameraPreview。
+    // 暗角那层 `ColoredBox` 铺满全屏且命中测试不透明，装在预览上的
+    // GestureDetector 收不到任何触摸（真机实测：捏合完全无反应）。
+    // 不透明子级挡得住它*后面的兄弟*，但挡不住*祖先* —— 提到外层之后，
+    // 以后再往 Stack 里加任何装饰层都不会再吞掉变焦手势。
+    // 关闭按钮等内层 onTap 照常工作：单指点击在手势竞技场里由内层赢。
+    return GestureDetector(
+      onScaleStart: (_) => _zoomOnGestureStart = _zoom,
+      onScaleUpdate: _handleZoomUpdate,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (_captured != null)
+            Image.file(File(_captured!.path), fit: BoxFit.cover)
+          else if (_controller != null && _controller!.value.isInitialized)
+            CameraPreview(_controller!)
+          else
+            Center(
+              child: _cameraError != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        _cameraError!,
+                        textAlign: TextAlign.center,
+                        // 取景器文字使用固定浅色
+                        style: GmText.sans(size: 13, color: GmColors.scanInk),
+                      ),
+                    )
+                  : const CircularProgressIndicator(color: GmColors.scanInk),
+            ),
+          // 轻微暗角
+          const ColoredBox(color: Color(0x2E171310)),
+          // 顶部：关闭 / 标题「识别画作」/ 闪光（钉顶部，避免被 StackFit.expand 拉满居中）
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.camRecognizeTitle,
+                      style: GmText.serif(
+                          size: 15.5,
+                          weight: FontWeight.w700,
+                          color: GmColors.scanInk),
                     ),
-                  )
-                : const CircularProgressIndicator(color: GmColors.scanInk),
-          ),
-        // 轻微暗角
-        const ColoredBox(color: Color(0x2E171310)),
-        // 顶部：关闭 / 标题「识别画作」/ 闪光（钉顶部，避免被 StackFit.expand 拉满居中）
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.camRecognizeTitle,
-                    style: GmText.serif(
-                        size: 15.5,
-                        weight: FontWeight.w700,
-                        color: GmColors.scanInk),
-                  ),
-                  // 闪光已移除：博物馆多禁闪光，且玻璃/画框眩光反伤识别
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _roundButton(GmIcons.close, () => context.pop()),
-                  ),
-                ],
+                    // 闪光已移除：博物馆多禁闪光，且玻璃/画框眩光反伤识别
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _roundButton(GmIcons.close, () => context.pop()),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        // 四角取景框
-        ..._cornerBrackets(),
-        // 变焦倍率：只在放大时出现，放底部靠近快门（中间会被捏合的手指挡住）。
-        if (_captured == null && _zoom > _minZoom + 0.05)
-          Positioned(
-            bottom: 18,
-            left: 0,
-            right: 0,
-            child: Center(
+          // 四角取景框
+          ..._cornerBrackets(),
+          // 变焦倍率：只在放大时出现，放底部靠近快门（中间会被捏合的手指挡住）。
+          if (_captured == null && _zoom > _minZoom + 0.05)
+            Positioned(
+              bottom: 18,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0x8C171310),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${_zoom.toStringAsFixed(1)}\u00D7',
+                    style: GmText.sans(size: 12.5, color: GmColors.scanInk),
+                  ),
+                ),
+              ),
+            ),
+          // 取景框中央提示（拍签模式显拍签提示）
+          if (state is RecognitionInitial && _captured == null)
+            Align(
+              alignment: Alignment.center,
               child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                 decoration: BoxDecoration(
                   color: const Color(0x8C171310),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '${_zoom.toStringAsFixed(1)}\u00D7',
+                  _labelMode
+                      ? AppLocalizations.of(context)!.recViewfinderLabelHint
+                      : AppLocalizations.of(context)!.camViewfinderHint,
+                  textAlign: TextAlign.center,
                   style: GmText.sans(size: 12.5, color: GmColors.scanInk),
                 ),
               ),
             ),
-          ),
-        // 取景框中央提示（拍签模式显拍签提示）
-        if (state is RecognitionInitial && _captured == null)
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              decoration: BoxDecoration(
-                color: const Color(0x8C171310),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                _labelMode
-                    ? AppLocalizations.of(context)!.recViewfinderLabelHint
-                    : AppLocalizations.of(context)!.camViewfinderHint,
-                textAlign: TextAlign.center,
-                style: GmText.sans(size: 12.5, color: GmColors.scanInk),
-              ),
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
