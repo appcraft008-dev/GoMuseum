@@ -149,6 +149,10 @@ def build_queue(
         ObjectContentSection.body.isnot(None),
         func.length(ObjectContentSection.body) > 0,
         ObjectContentSection.language.in_(languages),
+        # 只排已发布的:needs_review 的段前端不返回,给它生成音频等于白跑一趟,
+        # 灌入时质量闸还取不回文本 → 直接算失败。(2026-08 橘园试点实测:
+        # 30 个任务里 2 个是 needs_review,占 6.7%)
+        ObjectContentSection.status == "published",
     )
     for oid, lang, code, key, engine in rows:
         if oid not in objs or code in NON_AUDIO_SECTIONS:
@@ -182,7 +186,11 @@ def build_queue(
         ObjectSuggestedQuestion.sort,
         ObjectSuggestedQuestion.audio_key,
         ObjectSuggestedQuestion.audio_engine,
-    ).filter(ObjectSuggestedQuestion.language.in_(languages))
+    ).filter(
+        ObjectSuggestedQuestion.language.in_(languages),
+        # 同 section:未发布的问答不该进队列
+        ObjectSuggestedQuestion.status == "published",
+    )
     for oid, lang, sort, key, engine in qa_rows:
         if oid not in head_ids or oid not in objs:
             continue
