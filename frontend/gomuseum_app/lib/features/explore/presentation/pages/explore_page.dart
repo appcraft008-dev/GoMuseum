@@ -80,7 +80,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    final lang = apiLanguage(ref.watch(languageProvider));
+    final lang = apiLanguage(ref.watch(resolvedLocaleProvider));
     final async = ref.watch(museumsListProvider);
 
     return SafeArea(

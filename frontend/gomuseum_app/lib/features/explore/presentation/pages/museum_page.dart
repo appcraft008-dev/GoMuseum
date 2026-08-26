@@ -87,7 +87,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
   void _onScroll() {
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 200) {
-      final lang = apiLanguage(ref.read(languageProvider));
+      final lang = apiLanguage(ref.read(resolvedLocaleProvider));
       final notifier = ref.read(objectListProvider(
               (slug: widget.slug, category: _selectedCategory, language: lang))
           .notifier);
@@ -102,7 +102,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
-    final lang = apiLanguage(ref.watch(languageProvider));
+    final lang = apiLanguage(ref.watch(resolvedLocaleProvider));
     final detailAsync =
         ref.watch(museumDetailProvider((slug: widget.slug, language: lang)));
 
@@ -600,7 +600,7 @@ class _ObjectGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    final lang = apiLanguage(ref.watch(languageProvider));
+    final lang = apiLanguage(ref.watch(resolvedLocaleProvider));
     final state = ref.watch(
         objectListProvider((slug: slug, category: category, language: lang)));
     final items = state.items;

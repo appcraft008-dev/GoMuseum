@@ -114,7 +114,7 @@ final deleteHistoryItemUseCaseProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DeleteHistoryItemUseCaseRef = AutoDisposeProviderRef<DeleteHistoryItem>;
-String _$historyHash() => r'1e424768357ab91551b747a88a48a0b5c657c293';
+String _$historyHash() => r'5900d05bd44afb7c19d31a1c9f70a73af0f8f814';
 
 /// History provider
 ///

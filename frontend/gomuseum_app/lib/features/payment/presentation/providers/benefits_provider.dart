@@ -1,5 +1,9 @@
+import 'dart:math';
+
+import 'package:android_id/android_id.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/entities/user_benefits.dart';
@@ -7,26 +11,54 @@ import 'payment_providers.dart';
 
 part 'benefits_provider.g.dart';
 
-/// 设备ID Provider
+const _kFallbackDeviceIdKey = 'device_id_fallback';
+
+/// 平台标识取不到时的兜底:本地持久化一个随机 ID。
+///
+/// ⚠️ **绝不返回常量**。返回常量正是本次修复的 bug ——
+/// 后端按 device_id 复用游客账号,所有落进同一个值的设备会被认成同一个用户,
+/// 共享同一份免费额度(5 次识别 + 1 件语音)。
+@visibleForTesting
+Future<String> resolveFallbackDeviceId({
+  required Future<String?> Function() read,
+  required Future<void> Function(String) write,
+}) async {
+  final existing = await read();
+  if (existing != null && existing.isNotEmpty) return existing;
+  final rnd = Random.secure();
+  final id = 'fb_'
+      '${List.generate(16, (_) => rnd.nextInt(256).toRadixString(16).padLeft(2, '0')).join()}';
+  await write(id);
+  return id;
+}
+
+/// 设备ID Provider —— 后端据此复用游客账号(见 auth_service.guest_login)。
+/// 要求:**同设备稳定、跨设备唯一**,且尽量扛卸载重装(否则免费额度可被反复刷)。
 @riverpod
 Future<String> deviceId(DeviceIdRef ref) async {
-  final deviceInfo = DeviceInfoPlugin();
-
   try {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      final iosInfo = await deviceInfo.iosInfo;
-      return iosInfo.identifierForVendor ?? 'unknown_ios';
+      // per-vendor per-device;卸载本厂商全部 app 才重置。
+      final v = (await DeviceInfoPlugin().iosInfo).identifierForVendor;
+      if (v != null && v.isNotEmpty) return v;
     } else if (defaultTargetPlatform == TargetPlatform.android) {
-      final androidInfo = await deviceInfo.androidInfo;
-      return androidInfo.id;
-    } else {
-      // Web或其他平台，使用随机生成的ID
-      return 'web_${DateTime.now().millisecondsSinceEpoch}';
+      // Settings.Secure.ANDROID_ID:每设备 × 每签名密钥唯一,卸载重装不变。
+      // ⛔ **别改回 `androidInfo.id`** —— 那是 `Build.ID`(系统构建号,形如
+      // TQ3A.230805.001),同一 ROM 版本的所有设备完全相同。用它当身份会让
+      // 后端把成千上万个用户复用成同一个游客账号、共享一份免费额度:
+      // 第一个人用完 5 次,之后所有同 ROM 的新用户打开就是 0 次。
+      final v = await const AndroidId().getId();
+      if (v != null && v.isNotEmpty) return v;
     }
   } catch (e) {
-    debugPrint('Failed to get device ID: $e');
-    return 'unknown_device';
+    debugPrint('Failed to get platform device ID: $e');
   }
+  // Web / 取不到 / 抛异常 → 落一个持久化的随机 ID,而不是常量。
+  const storage = FlutterSecureStorage();
+  return resolveFallbackDeviceId(
+    read: () => storage.read(key: _kFallbackDeviceIdKey),
+    write: (v) => storage.write(key: _kFallbackDeviceIdKey, value: v),
+  );
 }
 
 /// 用户权益状态Provider

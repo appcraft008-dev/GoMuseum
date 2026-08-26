@@ -140,7 +140,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
   int _legacySpeedIndex = 0;
 
   // ── language
-  String get _language => apiLanguage(ref.read(languageProvider));
+  String get _language => apiLanguage(ref.read(resolvedLocaleProvider));
 
   @override
   void initState() {
@@ -343,7 +343,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
                 autoPlayAudio: widget.args.autoPlayAudio,
               ),
             ),
-            bottomNavigationBar: const _AskBar(),
           );
         }
 
@@ -1220,51 +1219,6 @@ class _A5Body extends StatelessWidget {
               );
             }),
         ],
-      ),
-    );
-  }
-}
-
-/// 底部常驻追问栏（静态壳；多轮对话留给后续 session B）。
-class _AskBar extends StatelessWidget {
-  const _AskBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final gm = context.gm;
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      decoration: BoxDecoration(
-        color: gm.bg,
-        border: Border(top: BorderSide(color: gm.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 9, 20, 14),
-          child: Row(children: [
-            Expanded(
-              child: Container(
-                height: 44,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                decoration: BoxDecoration(
-                    color: gm.surface, border: Border.all(color: gm.line)),
-                child: Text(l10n.guideAskPlaceholder,
-                    style: GmText.sans(size: 13, color: gm.faint)),
-              ),
-            ),
-            const SizedBox(width: 9),
-            Container(
-              width: 44,
-              height: 44,
-              decoration:
-                  BoxDecoration(color: gm.ctaBg, shape: BoxShape.circle),
-              alignment: Alignment.center,
-              child: GmIcon(GmIcons.mic, size: 18, color: gm.ctaInk),
-            ),
-          ]),
-        ),
       ),
     );
   }

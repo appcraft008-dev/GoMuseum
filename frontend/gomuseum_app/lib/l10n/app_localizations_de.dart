@@ -51,6 +51,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get language => 'Sprache';
 
   @override
+  String get languageFollowSystem => 'Systemsprache';
+
+  @override
   String get selectLanguage => 'Sprache wählen';
 
   @override

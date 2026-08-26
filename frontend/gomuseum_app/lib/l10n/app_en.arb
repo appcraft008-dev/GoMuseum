@@ -14,6 +14,10 @@
   "comingSoon": "Coming Soon",
   "comingSoonShort": "Coming soon",
   "language": "Language",
+  "languageFollowSystem": "Follow system",
+  "@languageFollowSystem": {
+    "description": "Language option meaning: use the device's system language"
+  },
   "selectLanguage": "Select Language",
   "retry": "Retry",
   "cancel": "Cancel",
