@@ -71,7 +71,7 @@ class _Tr:
     def translate_section(self, text, lang, *, strong=False, title=None, artist=None):
         return f"{artist or ''}译:{text}"
 
-    def check_faithfulness(self, en, tr, lang):
+    def check_faithfulness(self, en, tr, lang, title=None, artist=None):
         return True, []
 
 

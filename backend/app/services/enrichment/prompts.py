@@ -195,27 +195,45 @@ _FAITHFULNESS_SYSTEM = (
 
 
 def build_faithfulness_prompt(
-    en_body: str, translated: str, target_lang: str, title: str | None = None
+    en_body: str,
+    translated: str,
+    target_lang: str,
+    title: str | None = None,
+    artist: str | None = None,
 ):
-    """[title] 该作品在目标语言的**规范标题**(来自 title_i18n / Wikidata 标签)。
+    """[title]/[artist] 该作品与其作者在目标语言的**规范名**
+    (来自 title_i18n / artists.name_i18n,源头是 Wikidata 标签)。
 
-    ⚠️ 必须告诉检查器,否则它拿英文标题的直译当标准,把正确的传统名判成错译。
-    实测 Q3745385《Red-Haired Girl》:德语传统名是「Russisches Mädchen」、
-    意语 Wikidata 标签是「Fille rousse」(别名 ragazza russa) —— 都是有来源的事实,
-    但检查器报 "incorrectly refers to the painting as ... instead of
-    'Rothaariges Mädchen'",于是 de/it 两段被永久卡在 needs_review:
-    翻译侧注入规范标题(为消除标题分叉,是对的)→ 检查侧不知情判不忠实 →
-    强模型重译仍用同一标题 → 还是不过。**重跑一万次也修不好,因为两侧假设冲突。**
+    ⚠️ 翻译侧注入了什么规范名,检查侧就必须知道什么 —— 否则它拿英文的直译当标准,
+    把正确的传统名判成错译,而强模型重译仍用同一个名字 →
+    **重跑一万次也修不好,因为两侧假设冲突**(契约纪律 22)。
+
+    实测两个同构实例:
+    - 标题:Q3745385《Red-Haired Girl》德语传统名「Russisches Mädchen」、
+      意语 Wikidata 标签「Fille rousse」—— 检查器报 "incorrectly refers to the
+      painting as ... instead of 'Rothaariges Mädchen'",de/it 两段永久卡死。
+    - 作者:539 段复检里判「真不忠实」的 147 段,抱怨的几乎全是作者名
+      (「'Michel-Ange Buronarroti' 应为 'Michel-Ange'」「'Vouet' 不该译成 '西蒙·沃特'」)。
+
+    末句的 "ONLY to these name forms" 是**防止整体放宽**的护栏:实测这段 NOTE 不是
+    在放水(60 条抽样里约 50 条抱怨的确实是标题),但加入作者名后覆盖面更宽,
+    必须显式圈定它只豁免名字写法,其余照常判。
     """
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _FAITHFULNESS_SYSTEM.format(lang=lang)
-    note = ""
+    names = []
     if title:
+        names.append(f"the artwork's title is 「{title}」")
+    if artist:
+        names.append(f"the artist's name is 「{artist}」")
+    note = ""
+    if names:
         note = (
-            f"NOTE: the artwork's canonical title in {lang} is 「{title}」. Many works "
-            f"carry a different traditional name in each language, so this may not be a "
-            f"literal translation of the English title — using it is CORRECT and must "
-            f"NOT be reported as an infidelity.\n\n"
+            f"NOTE: the canonical {lang} forms are — {'; '.join(names)}. Many works and "
+            f"artists carry a different traditional name in each language, so these may "
+            f"not be literal translations of the English forms — using them is CORRECT "
+            f"and must NOT be reported as an infidelity. This applies ONLY to these name "
+            f"forms; judge everything else normally.\n\n"
         )
     user = f"{note}SOURCE (English):\n{en_body}\n\nTRANSLATION ({lang}):\n{translated}"
     return system, user

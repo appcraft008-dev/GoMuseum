@@ -1087,7 +1087,7 @@ def test_translate_qa_items_threads_title(session):
             seen.append(title)
             return "译:" + text
 
-        def check_faithfulness(self, en, tr, lang):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
             return True, []
 
     translate_qa_items(
@@ -1154,7 +1154,7 @@ def test_translate_qa_items_threads_artist(session):
             seen.append(artist)
             return "译:" + text
 
-        def check_faithfulness(self, en, tr, lang):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
             return True, []
 
     translate_qa_items(

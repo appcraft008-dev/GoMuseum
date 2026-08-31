@@ -252,6 +252,31 @@ def test_zh_hant_converts_simplified_to_traditional_when_only_hans():
     assert out["zh-hant"] == "愛德華·馬奈"  # 简→繁 s2t
 
 
+def test_zh_hant_prefers_mandarin_over_cantonese_hk_label():
+    """zh-hk 是粤语拼读的另一套音译传统,不能压过 zh 转繁。
+
+    实测 Q35548 Cézanne:Wikidata 无 zh-hant/zh-tw 标签,zh-hk 标签是「保羅·施傘」,
+    旧回退序取到它,于是每一段繁体讲解都把塞尚叫成施傘(污染 27 段)。
+    """
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [
+        {"l": {"value": "保羅·施傘", "xml:lang": "zh-hk"}},
+        {"l": {"value": "保罗·塞尚", "xml:lang": "zh"}},
+    ]
+    out = fetch_wikidata_labels("Q35548", ["zh-hant"], run_query=lambda s: rows)
+    assert out["zh-hant"] == "保羅·塞尚"
+
+
+def test_zh_hant_still_uses_hk_label_as_last_resort():
+    """但 zh-hk 仍留在链尾:它是唯一的中文标签时,人工标签好过机翻兜底。"""
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    rows = [{"l": {"value": "梵高", "xml:lang": "zh-hk"}}]
+    out = fetch_wikidata_labels("Q5582", ["zh-hant"], run_query=lambda s: rows)
+    assert out["zh-hant"] == "梵高"
+
+
 def test_zh_still_simplified_regression():
     from app.services.enrichment.material import fetch_wikidata_labels
 

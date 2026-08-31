@@ -83,7 +83,7 @@ class _CleanTr:
     def translate_section(self, text, lang, *, strong=False, title=None, artist=None):
         return "这是干净的中文重译内容，讲述绘画。"
 
-    def check_faithfulness(self, en, tr, lang):
+    def check_faithfulness(self, en, tr, lang, title=None, artist=None):
         return True, []
 
 
