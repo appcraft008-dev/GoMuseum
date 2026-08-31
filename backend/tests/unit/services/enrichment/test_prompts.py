@@ -321,13 +321,56 @@ def test_faithfulness_prompt_declares_canonical_title_authoritative():
     )
     assert "Russisches Mädchen" in user, "规范标题必须出现在给检查器的消息里"
     low = user.lower()
-    assert "canonical title" in low
+    assert "canonical" in low
     assert "correct" in low and "not be reported" in low, "必须明确声明它不算不忠实"
 
-    # 不传标题时行为不变(老调用方不受影响)
+    # 不传规范名时行为不变(老调用方不受影响)
     _, plain = build_faithfulness_prompt("A.", "B.", "de")
-    assert "canonical title" not in plain.lower()
+    assert "canonical" not in plain.lower()
     assert plain.startswith("SOURCE (English):")
+
+
+def test_faithfulness_prompt_declares_canonical_artist_authoritative():
+    """作者规范名是标题那桩冤案的**同构第二例**,同一个注入机制的另一半。
+
+    翻译侧把 artists.name_i18n 当 glossary 注入译文(消除作者称呼分叉,是对的),
+    检查侧却不知情 → 把规范作者名判成错译。实测 539 段复检里判「真不忠实」的
+    147 段,抱怨的几乎全是作者名:「'Michel-Ange Buronarroti' 应为 'Michel-Ange'」、
+    「'Vouet' 不该译成 '西蒙·沃特'」。修一个实例时要把整类一起修(契约纪律 22)。
+    """
+    from app.services.enrichment.prompts import build_faithfulness_prompt
+
+    _, user = build_faithfulness_prompt(
+        "Vouet painted this in Rome.",
+        "西蒙·沃埃在罗马画了这幅作品。",
+        "zh",
+        artist="西蒙·沃埃",
+    )
+    assert "西蒙·沃埃" in user, "规范作者名必须出现在给检查器的消息里"
+    low = user.lower()
+    assert "canonical" in low and "artist" in low
+    assert "not be reported" in low
+
+    # 标题与作者可同时给,也可只给其一
+    _, both = build_faithfulness_prompt(
+        "A.", "B.", "zh", title="奥林匹亚", artist="马奈"
+    )
+    assert "奥林匹亚" in both and "马奈" in both
+
+
+def test_faithfulness_note_does_not_grant_blanket_leniency():
+    """NOTE 必须显式圈定「只豁免名字写法」,否则等于把检查器整体调宽松。
+
+    这条不是假想:539 段复检里 68.8% 因加了标题提示而翻盘,当时的替代解释正是
+    "NOTE 只是让检查器变宽容了"。抽 60 条重跑旧 prompt 读原始抱怨才排除掉
+    (约 50 条抱怨的确实是标题)。加入作者名后覆盖面更宽,护栏必须写进 prompt。
+    """
+    from app.services.enrichment.prompts import build_faithfulness_prompt
+
+    _, user = build_faithfulness_prompt("A.", "B.", "de", title="X", artist="Y")
+    low = user.lower()
+    assert "only to these name forms" in low, "缺少防整体放宽的护栏句"
+    assert "judge everything else normally" in low
 
 
 def test_translation_prompt_does_not_demo_language_label_format():

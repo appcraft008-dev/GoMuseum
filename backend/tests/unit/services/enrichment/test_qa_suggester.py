@@ -39,7 +39,7 @@ class _Translator:
     def translate_section(self, body, lang, *, strong=False, title=None, artist=None):
         return f"[{lang}] {body}"
 
-    def check_faithfulness(self, en, tr, lang):
+    def check_faithfulness(self, en, tr, lang, title=None, artist=None):
         return True, []
 
 
@@ -131,7 +131,7 @@ def test_translate_qa_appends_qmark_not_english_fallback():
             # 模拟翻译丢了问号(陈述句式)
             return "梵高的信件揭示了什么" if "?" in text else f"{text}译"
 
-        def check_faithfulness(self, en, tr, lang):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
             return True, []
 
     out = translate_qa_items(
@@ -153,7 +153,7 @@ def test_qa_gates_wrong_language():
                 "This whole answer leaked into English instead of the Chinese language."
             )
 
-        def check_faithfulness(self, en, tr, lang):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
             return True, []
 
     out = translate_qa_items(

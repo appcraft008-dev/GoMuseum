@@ -48,7 +48,9 @@ def translate_qa_items(
                 tq = stripped.rstrip("。.！!？?") + ("？" if cjk else "?")
             else:
                 tq = it["question"]
-        ok, _ = translator.check_faithfulness(it["answer"], ta, lang)
+        # 翻译侧注入了 title/artist,检查侧也必须知道 —— 否则它拿英文直译当标准,
+        # 把规范名判成错译(契约纪律 22;prod 存量 595 条非英语问答卡在 needs_review)。
+        ok, _ = translator.check_faithfulness(it["answer"], ta, lang, title, artist)
         from app.services.enrichment.lang_detect import text_in_language
 
         # 语言闸:问句或答案不是目标语(混英文等)→ 不发布
