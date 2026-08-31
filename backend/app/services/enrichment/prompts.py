@@ -190,10 +190,30 @@ _FAITHFULNESS_SYSTEM = (
 )
 
 
-def build_faithfulness_prompt(en_body: str, translated: str, target_lang: str):
+def build_faithfulness_prompt(
+    en_body: str, translated: str, target_lang: str, title: str | None = None
+):
+    """[title] 该作品在目标语言的**规范标题**(来自 title_i18n / Wikidata 标签)。
+
+    ⚠️ 必须告诉检查器,否则它拿英文标题的直译当标准,把正确的传统名判成错译。
+    实测 Q3745385《Red-Haired Girl》:德语传统名是「Russisches Mädchen」、
+    意语 Wikidata 标签是「Fille rousse」(别名 ragazza russa) —— 都是有来源的事实,
+    但检查器报 "incorrectly refers to the painting as ... instead of
+    'Rothaariges Mädchen'",于是 de/it 两段被永久卡在 needs_review:
+    翻译侧注入规范标题(为消除标题分叉,是对的)→ 检查侧不知情判不忠实 →
+    强模型重译仍用同一标题 → 还是不过。**重跑一万次也修不好,因为两侧假设冲突。**
+    """
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _FAITHFULNESS_SYSTEM.format(lang=lang)
-    user = f"SOURCE (English):\n{en_body}\n\nTRANSLATION ({lang}):\n{translated}"
+    note = ""
+    if title:
+        note = (
+            f"NOTE: the artwork's canonical title in {lang} is 「{title}」. Many works "
+            f"carry a different traditional name in each language, so this may not be a "
+            f"literal translation of the English title — using it is CORRECT and must "
+            f"NOT be reported as an infidelity.\n\n"
+        )
+    user = f"{note}SOURCE (English):\n{en_body}\n\nTRANSLATION ({lang}):\n{translated}"
     return system, user
 
 
