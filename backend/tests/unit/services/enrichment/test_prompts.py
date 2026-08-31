@@ -354,7 +354,15 @@ def test_strip_language_label_handles_english_and_native_names():
     assert strip("Italiano: Questo disegno") == "Questo disegno"  # 同行也要剥
     assert strip("日本語：\nこの絵画は") == "この絵画は"  # 全角冒号
     assert strip("Traditional Chinese:\n這幅畫") == "這幅畫"  # 多词语言名
-    # 不误伤:正文可能合法地以某个词加冒号开头
+    assert strip("中文（繁體）：\n這幅畫") == "這幅畫"  # 语言名带括号补充
+    assert strip("Français :\nPrenez un") == "Prenez un"  # 法式排版冒号前有空格
+
+    # 绝不能误伤 —— 以下都是 prod 里 facts 段的**合法开头**(广谱扫描实测存在)。
+    # 如果按"短词+冒号"通用剥离,这些正文会被削掉头。误伤比漏网糟。
+    assert strip("Oto ciekawostka: Gustave") == "Oto ciekawostka: Gustave"
+    assert strip("Ecco un curioso aneddoto: Il") == "Ecco un curioso aneddoto: Il"
+    assert strip("흥미로운 사실이 있습니다: 이") == "흥미로운 사실이 있습니다: 이"
+    assert strip("這裡有個有趣的小知識：這幅") == "這裡有個有趣的小知識：這幅"
     assert strip("Notes: 这是合法正文") == "Notes: 这是合法正文"
     assert strip("正常正文，没有前缀") == "正常正文，没有前缀"
     assert strip("") == ""

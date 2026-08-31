@@ -47,8 +47,13 @@ def strip_language_label(text: str) -> str:
 
     names = set(LANG_NAMES.values()) | set(_NATIVE_LANG_NAMES)
     alt = "|".join(sorted((re.escape(n) for n in names), key=len, reverse=True))
+    # 语言名后允许一个括号补充(实测存量有「中文（繁體）：」),冒号前允许空格
+    # (法式排版「Français :」)。
     return re.sub(
-        rf"^[ \t]*(?:{alt})[ \t]*[:\uff1a][ \t]*\r?\n?", "", text or "", count=1
+        rf"^[ \t]*(?:{alt})[ \t]*(?:[（(][^）)]{{0,10}}[）)])?[ \t]*[:\uff1a][ \t]*\r?\n?",
+        "",
+        text or "",
+        count=1,
     )
 
 
