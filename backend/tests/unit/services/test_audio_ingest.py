@@ -98,19 +98,19 @@ def test_rejected_audio_must_not_replace_existing():
 
 
 def test_deviation_check_uses_previous_size():
-    """旧版本时长从 R2 对象大小估,不必下载内容。"""
+    """旧版本时长从 R2 对象大小估,不必下载内容。
+
+    ⚠️ 这个测试原来写成 `estimate_duration_sec(n if isinstance(n, bytes) else _audio(60))`
+    —— isinstance 恒为假,于是**永远在测 bytes 路径**,恰好绕开了它声称要测的
+    `storage.size()` 返回 int 这条路。结果替换路径首次真跑就炸(TypeError: object of
+    type 'int' has no len())。**测试里的条件分支若绕开被测路径,测试就是假的。**
+    """
     from app.services.enrichment.audio_quality import estimate_duration_sec
 
-    old_bytes = len(_audio(60))
-    assert (
-        abs(
-            estimate_duration_sec(
-                old_bytes if isinstance(old_bytes, bytes) else _audio(60)
-            )
-            - 60
-        )
-        < 0.1
-    )
+    n_bytes = len(_audio(60))
+    assert isinstance(n_bytes, int)
+    assert abs(estimate_duration_sec(n_bytes) - 60) < 0.1, "字节数(int)必须能直接估时长"
+    assert abs(estimate_duration_sec(_audio(60)) - 60) < 0.1, "音频字节同样要支持"
 
 
 def test_cli_is_dry_run_by_default(tmp_path):
@@ -141,8 +141,15 @@ def _run_main(db_session, tmp_path, *extra, engine="voxcpm2"):
     written: list[str] = []
 
     class _Storage:
+        """size() 返回 int —— 和真实 R2 一致(HEAD 拿 ContentLength)。
+
+        ⚠️ 起初这里写的是 `return None`,于是替换路径的偏差检查整段被跳过,
+        我新加的两个测试同样没能挡住那个 int/bytes bug。**替身的返回类型
+        必须跟真实实现一致**,否则测的是一条现实中不存在的路径。
+        """
+
         def size(self, key):
-            return None
+            return len(_audio(60)) if key else None
 
         def put(self, key, data, ct):
             written.append(key)
