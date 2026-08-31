@@ -3,6 +3,7 @@ LLM 经注入式 complete，单测离线。spec §14 / §8A-5。"""
 
 from __future__ import annotations
 
+from app.services.enrichment.lang_config import strip_language_label
 from app.services.enrichment.prompts import (
     build_faithfulness_prompt,
     build_name_translation_prompt,
