@@ -40,8 +40,19 @@ class QualityVerdict:
     duration_sec: float
 
 
-def estimate_duration_sec(data: bytes, bitrate_bps: int = DEFAULT_BITRATE_BPS) -> float:
-    return len(data) * 8 / bitrate_bps if data else 0.0
+def estimate_duration_sec(
+    data: bytes | int, bitrate_bps: int = DEFAULT_BITRATE_BPS
+) -> float:
+    """[data] 可以是音频字节,也可以是**字节数**。
+
+    替换场景要估旧版本时长,而旧版本在 R2 上 —— 只 HEAD 拿 ContentLength(int),
+    不下载内容。两种入参走同一个公式,别为此在调用方写转换:
+    `storage.size()` 返回 int,调用方一不留神就把 int 喂给 `len()`。
+    (2026-08 实测:替换路径首次真跑就炸在这里 —— 在此之前所有灌入都是首次灌入,
+    old_key 为 None,这条分支一次都没执行过。)
+    """
+    n = data if isinstance(data, int) else len(data)
+    return n * 8 / bitrate_bps if n else 0.0
 
 
 def expected_duration_sec(text: str, language: str) -> float:
