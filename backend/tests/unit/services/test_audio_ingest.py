@@ -132,3 +132,80 @@ def test_cli_is_dry_run_by_default(tmp_path):
         text=True,
     )
     assert "dry-run" in out.stdout, out.stdout + out.stderr
+
+
+def _run_main(db_session, tmp_path, *extra, engine="voxcpm2"):
+    """跑 CLI 的 main(),把 DB/存储换成测试替身。返回 (stats 输出, 写入的 key 列表)."""
+    import audio_ingest_cli as cli
+
+    written: list[str] = []
+
+    class _Storage:
+        def size(self, key):
+            return None
+
+        def put(self, key, data, ct):
+            written.append(key)
+
+    s, obj = db_session
+    monkey = pytest.MonkeyPatch()
+    monkey.setattr(cli, "SessionLocal", lambda: s)
+    monkey.setattr(cli, "get_object_storage", lambda: _Storage())
+    jobs = tmp_path / "jobs.json"
+    jobs.write_text(json.dumps([{"qid": "Q1", "language": "zh", "section": "guide"}]))
+    (tmp_path / "Q1__zh__guide.mp3").write_bytes(_audio(60))
+    monkey.setattr(
+        sys,
+        "argv",
+        [
+            "x",
+            "--jobs",
+            str(jobs),
+            "--dir",
+            str(tmp_path),
+            "--engine",
+            engine,
+            "--apply",
+            *extra,
+        ],
+    )
+    try:
+        cli.main()
+    finally:
+        monkey.undo()
+    return written
+
+
+@pytest.fixture()
+def db_with_existing(db):
+    """已经灌过 voxcpm2 的一条 guide —— 重灌场景的起点。"""
+    s, obj = db
+    s.add(
+        ObjectContentSection(
+            object_id=obj.id,
+            language="zh",
+            section_code="guide",
+            body="正" * 280,
+            status="published",
+            audio_key="object-audio/old.mp3",
+            audio_engine="voxcpm2",
+        )
+    )
+    s.commit()
+    return s, obj
+
+
+def test_same_engine_skipped_without_force(db_with_existing, tmp_path, capsys):
+    """默认必须幂等跳过。写反了会静默覆盖 prod 已有音频 —— 不可逆。"""
+    written = _run_main(db_with_existing, tmp_path)
+    assert written == [], "没给 --force 就不该重写同引擎的音频"
+    assert "already_done" in capsys.readouterr().out
+
+
+def test_same_engine_rewritten_with_force(db_with_existing, tmp_path):
+    """--force 用于修生成侧 bug 后重灌(引擎没变,坏的是产物)。"""
+    written = _run_main(db_with_existing, tmp_path, "--force")
+    assert len(written) == 1, "--force 应当重灌同引擎的条目"
+    s, _ = db_with_existing
+    row = s.query(ObjectContentSection).one()
+    assert row.audio_key == written[0], "DB 的 key 必须指向新写入的对象"

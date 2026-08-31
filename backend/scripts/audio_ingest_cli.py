@@ -22,6 +22,16 @@
   python scripts/audio_ingest_cli.py --jobs jobs.json --dir ./out \\
       --engine voxcpm2 --apply
 
+## 同引擎重灌要 --force
+
+幂等按 `audio_engine` 判断:已经是目标引擎的直接跳过,所以重复执行无副作用。
+但**修生成侧的 bug 后重灌**是个真实场景 —— 引擎没变,坏的是产物。
+(2026-08 橘园:生产脚本漏了语速对齐,28 条全部偏快 15%;其中一条还是模型复读崩坏。)
+这时加 `--force` 跳过幂等,质量闸和偏差检查照常跑,该拦的还是拦。
+
+  python scripts/audio_ingest_cli.py --jobs jobs.json --dir ./out \
+      --engine voxcpm2 --force --apply
+
 ## 质量闸不过 = 不落库,保留旧版本
 
 拿自托管模型覆盖已能用的音频有下行风险:模型回归会**静默**毁掉音频库,
@@ -78,6 +88,11 @@ def main() -> int:
     ap.add_argument("--dir", required=True, help="音频文件目录")
     ap.add_argument("--engine", required=True, help="生成引擎标记,如 voxcpm2")
     ap.add_argument("--apply", action="store_true", help="真写(默认 dry-run)")
+    ap.add_argument(
+        "--force",
+        action="store_true",
+        help="同引擎也重灌(质量修复场景)。默认幂等跳过已是该引擎的条目。",
+    )
     ns = ap.parse_args()
 
     import pathlib
@@ -148,7 +163,7 @@ def main() -> int:
                     row.audio_key = key
                     row.audio_engine = ns.engine
 
-            if cur_engine == ns.engine:
+            if cur_engine == ns.engine and not ns.force:
                 stats["already_done"] += 1  # 幂等:重跑无副作用
                 continue
 

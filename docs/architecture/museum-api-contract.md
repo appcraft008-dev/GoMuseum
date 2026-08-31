@@ -420,6 +420,10 @@
 ③ VPS 灌入     audio_ingest_cli.py --jobs jobs.json --dir ./out --engine <名>
                (默认 dry-run;确认无误再 --apply)
 ```
+
+**幂等按 `audio_engine` 判断**:已是目标引擎的直接跳过,所以重复执行无副作用。
+**修了生成侧的 bug 要重灌时加 `--force`** —— 引擎没变,坏的是产物,幂等会挡住修复。
+`--force` 只跳过幂等,质量闸与偏差检查照常跑。
 自托管生成跑在另一台机器(如 Mac mini),那台机器**不该也不方便直连 prod**。
 这样分工的收益:生成侧零凭证、零 DB 依赖;灌入侧统一过闸、统一写 `audio_engine` 标记。
 
