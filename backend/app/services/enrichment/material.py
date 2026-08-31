@@ -139,10 +139,15 @@ _LABELS_BATCH = 200  # 与 _CREATORS_BATCH 同量级(URL 长度与 WDQS 超时�
 # 加变体语言=加一行;非变体语言不在表里、走默认路径不受影响。
 _SCRIPT_VARIANTS = {
     "zh": (("zh-hans", "zh-cn", "zh"), "t2s"),  # 收敛简体
+    # ⚠️ zh-hk 排在 zh 之后是**故意的**:港式音译是粤语拼读的另一套传统
+    # (Cézanne→施傘 / Giorgione→佐助彌 / Christoffer→基斯杜化),把它排在 zh 前面
+    # 等于"宁可要另一个传统的音译,也不要本传统的简体转繁"。实测 Q35548 无
+    # zh-hant/zh-tw 标签 → 旧序取 zh-hk 得「保羅·施傘」,新序取 zh 转繁得「保羅·塞尚」。
+    # 仍留在链尾:当它是唯一的中文标签时,人工标签好过机翻兜底。
     "zh-hant": (
-        ("zh-hant", "zh-tw", "zh-hk", "zh", "zh-hans", "zh-cn"),
+        ("zh-hant", "zh-tw", "zh", "zh-hans", "zh-cn", "zh-hk"),
         "s2t",
-    ),  # 繁体优先,简体兜底再转
+    ),  # 繁体优先,简体兜底再转,港式垫底
 }
 
 _opencc: dict = {}
