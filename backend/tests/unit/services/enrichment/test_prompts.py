@@ -328,3 +328,41 @@ def test_faithfulness_prompt_declares_canonical_title_authoritative():
     _, plain = build_faithfulness_prompt("A.", "B.", "de")
     assert "canonical title" not in plain.lower()
     assert plain.startswith("SOURCE (English):")
+
+
+def test_translation_prompt_does_not_demo_language_label_format():
+    """输入不得写成「语言名: 内容」—— 那是格式示范,模型会照猫画虎回贴目标语言名。
+
+    实测 prod 存量 **1088 段**译文以 "Polish:" / "Italiano:" / "German:" 开头
+    (pl 289 / it 267 / de 144 / es 144 / ja 98 / fr 91 …,涉及 900+ 件作品),
+    根因就是 user 消息曾写成 `English:\n{en_body}`。system 里那句
+    "Return ONLY the translated text" 拦不住 —— **格式示范比指令更强**。
+    """
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    _, user = build_translation_prompt("Take a look at the painting.", "pl")
+    assert not user.lstrip().lower().startswith("english:"), "不得用语言名标签开头"
+    assert "Take a look at the painting." in user
+
+
+def test_strip_language_label_handles_english_and_native_names():
+    """两道闸都抓不到这种形式缺陷,所以要有独立的形式检查兜底。"""
+    from app.services.enrichment.lang_config import strip_language_label as strip
+
+    assert strip("Polish:\nPoświęć chwilę") == "Poświęć chwilę"
+    assert strip("Italiano:  \nMentre ti trovi") == "Mentre ti trovi"
+    assert strip("Italiano: Questo disegno") == "Questo disegno"  # 同行也要剥
+    assert strip("日本語：\nこの絵画は") == "この絵画は"  # 全角冒号
+    assert strip("Traditional Chinese:\n這幅畫") == "這幅畫"  # 多词语言名
+    assert strip("中文（繁體）：\n這幅畫") == "這幅畫"  # 语言名带括号补充
+    assert strip("Français :\nPrenez un") == "Prenez un"  # 法式排版冒号前有空格
+
+    # 绝不能误伤 —— 以下都是 prod 里 facts 段的**合法开头**(广谱扫描实测存在)。
+    # 如果按"短词+冒号"通用剥离,这些正文会被削掉头。误伤比漏网糟。
+    assert strip("Oto ciekawostka: Gustave") == "Oto ciekawostka: Gustave"
+    assert strip("Ecco un curioso aneddoto: Il") == "Ecco un curioso aneddoto: Il"
+    assert strip("흥미로운 사실이 있습니다: 이") == "흥미로운 사실이 있습니다: 이"
+    assert strip("這裡有個有趣的小知識：這幅") == "這裡有個有趣的小知識：這幅"
+    assert strip("Notes: 这是合法正文") == "Notes: 这是合法正文"
+    assert strip("正常正文，没有前缀") == "正常正文，没有前缀"
+    assert strip("") == ""
