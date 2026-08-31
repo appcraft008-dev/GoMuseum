@@ -63,8 +63,12 @@ class ContentTranslator:
         fn = self._complete_strong or self._complete
         return strip_name(fn(system, user))
 
-    def check_faithfulness(self, en_body: str, translated: str, target_lang: str):
-        system, user = build_faithfulness_prompt(en_body, translated, target_lang)
+    def check_faithfulness(
+        self, en_body: str, translated: str, target_lang: str, title: str | None = None
+    ):
+        system, user = build_faithfulness_prompt(
+            en_body, translated, target_lang, title
+        )
         data = _parse()(self._complete(system, user))
         return bool(data.get("faithful")), (data.get("issues") or [])
 
@@ -94,7 +98,7 @@ class ContentTranslator:
                 translated = self.translate_section(
                     en_body, lang, title=title, artist=artist
                 )
-                ok, issues = self.check_faithfulness(en_body, translated, lang)
+                ok, issues = self.check_faithfulness(en_body, translated, lang, title)
                 lang_ok = _lang_ok(translated, lang)
                 if (not ok or not lang_ok) and self._complete_strong:
                     # 不忠实 或 语言不符 → 强模型(gpt-4o)重译一次并采用
@@ -102,7 +106,9 @@ class ContentTranslator:
                     translated = self.translate_section(
                         en_body, lang, strong=True, title=title, artist=artist
                     )
-                    ok, issues = self.check_faithfulness(en_body, translated, lang)
+                    ok, issues = self.check_faithfulness(
+                        en_body, translated, lang, title
+                    )
                     lang_ok = _lang_ok(translated, lang)
                 published = ok and lang_ok  # 忠实且语言正确才发布
                 lang_result[code] = SectionQuality(
