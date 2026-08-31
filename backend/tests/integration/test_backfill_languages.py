@@ -101,7 +101,7 @@ class _Tr:
         self.calls.append(("sec", lang, text))
         return f"{text}?" if "?" in text else f"{text}_{lang}"
 
-    def check_faithfulness(self, en, translated, lang):
+    def check_faithfulness(self, en, translated, lang, title=None, artist=None):
         return True, []
 
 

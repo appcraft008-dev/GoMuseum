@@ -63,3 +63,53 @@ def test_translate_object_skips_empty_section_bodies():
     t = ContentTranslator(router)
     out = t.translate_object({"overview": "ok", "artist": None}, ["fr"])
     assert set(out["fr"].keys()) == {"overview"}  # artist(None) 不翻
+
+
+def test_translate_object_threads_artist_into_faithfulness_check():
+    """透传测试:光给 build_faithfulness_prompt 加参数不够,translate_object 得真传进去。
+
+    上一轮修语言标签时就栽在这:只测了零件(prompt 构造)、没测装配(translate_section
+    的调用),漏掉的 import 靠 CI 才抓到。零件对 ≠ 装配对。
+    """
+    seen = []
+
+    def router(system, user):
+        if "quality judge" in system.lower():
+            seen.append(user)
+            return json.dumps({"faithful": True, "issues": []})
+        return "译文"
+
+    t = ContentTranslator(router)
+    t.translate_object(
+        {"guide": "Vouet painted this."},
+        ["zh"],
+        titles={"zh": "圣殿献耶稣"},
+        artists={"zh": "西蒙·沃埃"},
+    )
+    assert seen, "忠实度检查没被调用"
+    assert "西蒙·沃埃" in seen[0], "作者规范名没传到检查器"
+    assert "圣殿献耶稣" in seen[0], "标题规范名没传到检查器"
+
+
+def test_translate_qa_items_threads_names_into_faithfulness_check():
+    """问答侧是同一个 bug 的第三个实例:翻译注入了 title/artist,检查侧原本一个没传。"""
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    seen = []
+
+    def router(system, user):
+        if "quality judge" in system.lower():
+            seen.append(user)
+            return json.dumps({"faithful": True, "issues": []})
+        return "这是中文答案。"
+
+    t = ContentTranslator(router)
+    translate_qa_items(
+        t,
+        [{"question": "Who painted it?", "answer": "Vouet did."}],
+        "zh",
+        title="圣殿献耶稣",
+        artist="西蒙·沃埃",
+    )
+    assert seen, "问答的忠实度检查没被调用"
+    assert "西蒙·沃埃" in seen[0] and "圣殿献耶稣" in seen[0]
