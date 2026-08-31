@@ -154,7 +154,11 @@ def build_translation_prompt(
             f"whenever the text refers to the museum by name, use EXACTLY this "
             f"name, do not translate it literally or invent an alternative."
         )
-    user = f"English:\n{en_body}"
+    # ⚠️ 别写成 `English:\n{en_body}` —— 那是「语言名: 内容」的格式示范,
+    # 模型会照猫画虎在译文前回贴目标语言名(实测 prod 存量 1088 段带
+    # "Polish:"/"Italiano:" 前缀)。system 里的 "Return ONLY the translated text"
+    # 拦不住:**格式示范比指令更强**。用 XML 标签包裹,不给它可模仿的标签模式。
+    user = f"<source_text>\n{en_body}\n</source_text>"
     return system, user
 
 

@@ -54,7 +54,10 @@ class ContentTranslator:
             if (strong and self._complete_strong)
             else self._complete
         )
-        return (fn(system, user) or "").strip()
+        # 剥掉模型回贴的语言标签 —— 根因已在 prompt 侧修掉(不再用「语言名: 内容」
+        # 的格式示范),这里是兜底:形式缺陷两道闸都抓不到(忠实度看事实、
+        # 语言检测看语种),漏出去就是 1088 段那样的存量。
+        return strip_language_label((fn(system, user) or "").strip()).strip()
 
     def translate_name(self, name: str, target_lang: str) -> str:
         """显示名(标题/人名)专用翻译:只返名字;剥模型仍套上的书名号/引号。
