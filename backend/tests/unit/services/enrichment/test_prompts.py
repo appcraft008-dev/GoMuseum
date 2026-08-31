@@ -300,3 +300,31 @@ def test_name_translation_prompt_no_fragments_and_standard():
     low = system.lower()
     assert "fragment" in low or "every word" in low
     assert "standard" in low or "conventional" in low
+
+
+def test_faithfulness_prompt_declares_canonical_title_authoritative():
+    """规范标题必须告知检查器,否则它拿英文直译当标准、把传统名判成错译。
+
+    实测 Q3745385《Red-Haired Girl》:德语传统名是「Russisches Mädchen」、
+    意语 Wikidata 标签是「Fille rousse」—— 都是有来源的事实。不告知时检查器报
+    "incorrectly refers to the painting as ... instead of 'Rothaariges Mädchen'",
+    于是这两段被永久卡在 needs_review:翻译侧注入规范标题(对的)→ 检查侧不知情
+    判不忠实 → 强模型重译仍用同一标题 → 还是不过。**两侧假设冲突,重跑修不好。**
+    """
+    from app.services.enrichment.prompts import build_faithfulness_prompt
+
+    _, user = build_faithfulness_prompt(
+        "Take a look at the Red-Haired Girl by Modigliani.",
+        "Betrachten Sie das „Russische Mädchen“ von Modigliani.",
+        "de",
+        title="Russisches Mädchen",
+    )
+    assert "Russisches Mädchen" in user, "规范标题必须出现在给检查器的消息里"
+    low = user.lower()
+    assert "canonical title" in low
+    assert "correct" in low and "not be reported" in low, "必须明确声明它不算不忠实"
+
+    # 不传标题时行为不变(老调用方不受影响)
+    _, plain = build_faithfulness_prompt("A.", "B.", "de")
+    assert "canonical title" not in plain.lower()
+    assert plain.startswith("SOURCE (English):")
