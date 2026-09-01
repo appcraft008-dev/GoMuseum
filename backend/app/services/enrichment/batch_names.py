@@ -62,13 +62,20 @@ def collect_missing(
             return fetch_labels(qid, langs)
         return label_cache.get(qid, {})
 
+    # 作者名一次批量取回(同 backfill,防 N+1)——标题清洗靠它认消歧后缀
+    _anames = {
+        a.qid: {
+            v for v in list((a.name_i18n or {}).values()) + [a.name_en, a.name_zh] if v
+        }
+        for a in db.query(Artist).all()
+    }
     tasks: list[BatchTask] = []
     artist_qids: set = set()
     artist_name_en: dict = {}  # 作者QID → 作品行上的 en 名(建 Artist 行的轴心)
     for i, o in enumerate(objs):
         attrs = dict(o.attributes or {})
-        ti = _clean_i18n(attrs.get("title_i18n"))
         aq = attrs.get("artist_qid") or creators.get(o.qid)
+        ti = _clean_i18n(attrs.get("title_i18n"), _anames.get(aq))
         if aq:
             if attrs.get("artist_qid") != aq:
                 attrs = {**attrs, "artist_qid": aq}
