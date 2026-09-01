@@ -383,8 +383,11 @@ def _clean_i18n(i18n, artist_names=None) -> dict:
 def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
     """作者国籍/代表作多语填充(交接③):权威标签优先→已有保留→en 轴(legacy 列)翻译兜底。
     data=fetch_artist_i18n_facts 结果。幂等只补缺;返回是否有变更。"""
-    nat = {**(data.get("nationality_i18n") or {}), **(art.nationality_i18n or {})}
-    works = {**(data.get("notable_works_i18n") or {}), **(art.notable_works_i18n or {})}
+    # ⚠️ 权威标签**压过**库里已有 —— 顺序曾经是反的(已有在后、赢),于是某语言
+    # 第一次抓到 1 条就永久锁死,后续 names 重跑再也修不好(实测 zh 卡在 1 条,
+    # 而 Wikidata 有 4 条)。docstring 一直写的是「权威标签优先」,代码没照做。
+    nat = {**(art.nationality_i18n or {}), **(data.get("nationality_i18n") or {})}
+    works = {**(art.notable_works_i18n or {}), **(data.get("notable_works_i18n") or {})}
     if not nat.get("en") and art.nationality:
         nat["en"] = art.nationality
     if not works.get("en") and art.notable_works:
