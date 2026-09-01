@@ -13,6 +13,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
@@ -136,13 +137,26 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
 
     if (_hintedQids.add(widget.qid)) {
-      showPaywallHint(context);
+      showPaywallHint(context, onLearnMore: _showPaywall);
     } else {
-      showPaywallSheet(context, reason: 'audio');
+      _showPaywall();
     }
     if (mounted) setState(() => _ui = _Ui.idle);
     return true;
   }
+
+  /// 付费墙的「获取通票 / 恢复购买」出口。
+  ///
+  /// ⚠️ 必须显式传 onBuy/onRestore：`paywall_sheet` 里是 `onBuy?.call()`,
+  /// 不传就等于按钮只关弹窗、什么都不做——付费墙形同虚设(实测撞到过)。
+  /// 购买全流程(IAP 初始化/查商品/验证/发权益)只在权益页有完整实现,
+  /// 这里统一跳过去,不在播放器里另搭一套。
+  void _showPaywall() => showPaywallSheet(
+        context,
+        reason: 'audio',
+        onBuy: () => context.push('/benefits'),
+        onRestore: () => context.push('/benefits'),
+      );
 
   bool _autoPlayed = false;
 
@@ -237,7 +251,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 客户端权益缓存过期时,前置闸可能放行而后端拒绝——这里保证仍弹墙。
   bool _showPaywallAnyway() {
     ref.invalidate(entitlementsProvider); // 顺便刷新,下次判断就准了
-    showPaywallSheet(context, reason: 'audio');
+    _showPaywall();
     return true;
   }
 

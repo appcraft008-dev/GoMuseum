@@ -60,14 +60,14 @@ void main() {
 
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
-    showPaywallSheet(ctx, onRestore: () => restored = true);
+    showPaywallSheet(ctx, onBuy: () {}, onRestore: () => restored = true);
     await t.pumpAndSettle();
     await t.tap(find.text(l10n.paywallRestore));
     await t.pumpAndSettle();
     expect(restored, isTrue);
     expect(find.text(l10n.paywallRestore), findsNothing, reason: '点完应关闭');
 
-    showPaywallSheet(ctx, onBuy: () => bought = true);
+    showPaywallSheet(ctx, onBuy: () => bought = true, onRestore: () {});
     await t.pumpAndSettle();
     await t.tap(find.text(l10n.paywallBuy));
     await t.pumpAndSettle();
