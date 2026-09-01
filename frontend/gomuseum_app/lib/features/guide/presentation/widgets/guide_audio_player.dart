@@ -4,7 +4,8 @@
 /// 直播流路径，边生成边播）；非音频响应(缓存 JSON/409/404)→播放器报错→回退老 /audio。
 /// 流式起播有看门狗：position 不推进(静音/卡死)即回退老 /audio，保证可靠出声。
 /// qa 连念/作者介绍仍走老 /audio（后端 v1 不支持流式）。
-/// 语速 0.75/1/1.5/2x（客户端 setSpeed，零后端成本）；加载后显进度条+剩余时间。
+/// 语速 0.75/1/1.5/2x（客户端 setSpeed，零后端成本）；加载后显进度条+剩余时间，
+/// 总时长已知时进度条可点/可拖 seek（流式无 Content-Length 那条分支不可拖）。
 /// 409「生成中」静默转圈指数退避重试（2→4→8→16s，≤60s）；404「讲解生成后可听」；503「暂不可用可重试」。
 library;
 
@@ -38,6 +39,11 @@ class _ActiveAudio {
 }
 
 enum _Ui { idle, loading, loaded, notReady, error }
+
+/// 播放条当前在放「哪一段」。变了就得停掉重来 —— 见 didUpdateWidget。
+@visibleForTesting
+String audioSourceId(GuideAudioPlayer w) =>
+    '${w.qid}|${w.language}|${w.section}|${w.qaSort}';
 
 class GuideAudioPlayer extends ConsumerStatefulWidget {
   const GuideAudioPlayer({
@@ -96,6 +102,20 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     _ActiveAudio.release(this);
     _player.dispose();
     super.dispose();
+  }
+
+  /// 切 tab 时 Flutter 把同位置同类型的播放条 **State 原地复用**、只换 widget 字段：
+  /// 播放器实例没动,于是继续放上一段(实测:深度抽屉切 tab 音频不跟着换)。
+  /// 换语言、问答换 sort 是同一个洞。停掉复位、**不自动播新段** —— 翻 tab 是浏览,
+  /// 不是点播。放在这里而不是让四个调用点各加 Key：调用点会忘,这里忘不了。
+  @override
+  void didUpdateWidget(covariant GuideAudioPlayer old) {
+    super.didUpdateWidget(old);
+    if (audioSourceId(widget) == audioSourceId(old)) return;
+    _ActiveAudio.release(this);
+    unawaited(_player.stop());
+    _autoPlayed = false;
+    _ui = _Ui.idle; // didUpdateWidget 后必有 build,无需 setState
   }
 
   /// 同一件内只轻提示一次:再点才升级到完整付费页(三档强度,避免反复打扰)。
@@ -416,24 +436,13 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              height: 3,
-              child: known
-                  ? Stack(children: [
-                      Container(color: gm.line),
-                      FractionallySizedBox(
-                        widthFactor: (pos.inMilliseconds / dur.inMilliseconds)
-                            .clamp(0.0, 1.0),
-                        child: Container(color: gm.accent),
-                      ),
-                    ])
-                  : LinearProgressIndicator(
-                      backgroundColor: gm.line,
-                      color: gm.accent,
-                      minHeight: 3,
-                    ),
-            ),
-            const SizedBox(height: 4),
+            known
+                ? _seekBar(gm, pos, dur)
+                : _hit(LinearProgressIndicator(
+                    backgroundColor: gm.line,
+                    color: gm.accent,
+                    minHeight: 3,
+                  )),
             Align(
               alignment: Alignment.centerRight,
               child: Text(
@@ -448,6 +457,34 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         );
       },
     );
+  }
+
+  /// 3px 的线拇指点不中：上下各留 6px 透明热区。两个分支共用,时长到位时不跳高。
+  static Widget _hit(Widget bar) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: SizedBox(height: 3, child: bar),
+      );
+
+  /// 可拖进度条。**只在总时长已知时可拖** —— 流式 chunked MP3 没有 Content-Length,
+  /// 既算不出落点也无字节范围可 seek,那条分支保持不确定进度条(扫动)。
+  Widget _seekBar(GmPalette gm, Duration pos, Duration dur) {
+    return LayoutBuilder(builder: (_, c) {
+      void seek(double dx) =>
+          _player.seek(dur * (dx / c.maxWidth).clamp(0.0, 1.0));
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (d) => seek(d.localPosition.dx),
+        onHorizontalDragUpdate: (d) => seek(d.localPosition.dx),
+        child: _hit(Stack(children: [
+          Container(color: gm.line),
+          FractionallySizedBox(
+            widthFactor:
+                (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0),
+            child: Container(color: gm.accent),
+          ),
+        ])),
+      );
+    });
   }
 
   static String _fmt(int ms) {
