@@ -1,0 +1,14 @@
+# 生成机(Mac mini M4 / MPS)专用,**不要装进 backend 容器** ——
+# 后端只负责出队列和灌入,生成侧零 DB、零 R2 凭证(契约「音频批量生产与灌入」①)。
+#
+#   python3.11 -m venv venv && ./venv/bin/pip install -r requirements.txt
+#
+voxcpm==2.0.3
+torch>=2.13          # MPS 后端
+soundfile
+numpy
+requests
+librosa              # 谐波锐度(丝丝判据)
+mlx-whisper          # 转写,用于内容一致性
+opencc-python-reimplemented   # 繁→简归一化;后端也有同一个包
+pytest               # 跑 test_consistency.py

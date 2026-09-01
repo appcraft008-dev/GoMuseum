@@ -28,6 +28,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
       workflow: ${{ steps.filter.outputs.workflow }}
+      tools: ${{ steps.filter.outputs.tools }}
     steps:
       - uses: actions/checkout@v4
       - id: filter
@@ -40,6 +41,8 @@ jobs:
               - 'frontend/**'
             workflow:
               - '.github/workflows/**'
+            tools:
+              - 'tools/**'
 
   # 密钥扫描（gitleaks 专扫硬编码密钥，与 Trivy 漏洞扫描互补）
   gitleaks:
@@ -231,10 +234,34 @@ jobs:
           fail_ci_if_error: false
 
   # 最终状态检查（确保所有任务都通过）
+  # 自托管 TTS 生成侧的判定函数(tools/tts/consistency.py)。
+  # 单独一个 job 而不是并进 backend-tests:它跑在**另一台机器**上,
+  # 没有 DB/Redis,依赖也只有 opencc —— 混进去要么污染后端依赖,
+  # 要么因为 backend-tests 的 path 过滤而在改 tools 时根本不跑。
+  # 这段逻辑已经静默坏过三次(autojunk / 漏归一化 / 日语浊点),
+  # 坏了不报错、只是把合格内容永久标成失败,所以必须有闸。
+  tts-tools-tests:
+    name: TTS Tools Tests (Python)
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: ${{ needs.changes.outputs.tools == 'true' || needs.changes.outputs.workflow == 'true' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install (仅纯文本依赖,不装 voxcpm/torch 那套重的)
+        run: pip install pytest opencc-python-reimplemented
+      - name: Run consistency tests
+        run: |
+          cd tools/tts
+          pytest test_consistency.py -v
+
   ci-status:
     name: CI Status Check
     runs-on: ubuntu-latest
-    needs: [security-scan, gitleaks, build-check, backend-tests, flutter-tests]
+    needs: [security-scan, gitleaks, build-check, backend-tests, flutter-tests, tts-tools-tests]
     if: always()
 
     steps:
@@ -245,13 +272,15 @@ jobs:
           echo "Build Check: ${{ needs.build-check.result }}"
           echo "Backend Tests: ${{ needs.backend-tests.result }}"
           echo "Flutter Tests: ${{ needs.flutter-tests.result }}"
+          echo "TTS Tools Tests: ${{ needs.tts-tools-tests.result }}"
 
           # 失败/取消才算挂；skipped（path 过滤未命中该端）与 success 都算通过
           for r in "${{ needs.security-scan.result }}" \
                    "${{ needs.gitleaks.result }}" \
                    "${{ needs.build-check.result }}" \
                    "${{ needs.backend-tests.result }}" \
-                   "${{ needs.flutter-tests.result }}"; do
+                   "${{ needs.flutter-tests.result }}" \
+                   "${{ needs.tts-tools-tests.result }}"; do
             if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
               echo "❌ CI Failed: 有任务失败/取消"
               exit 1
