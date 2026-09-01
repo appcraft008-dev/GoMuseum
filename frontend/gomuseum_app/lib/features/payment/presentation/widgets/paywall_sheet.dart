@@ -23,7 +23,12 @@ import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_ticket_button.dart';
 
 /// 轻提示条:第一次撞墙时只轻碰一下,不打断现场体验。
-void showPaywallHint(BuildContext context, {VoidCallback? onLearnMore}) {
+///
+/// [onLearnMore] 必填:此前它可选、缺省回落到 `showPaywallSheet(context)`,
+/// 而那个 sheet 不带 onBuy —— 用户点"获取通票"只会关掉弹窗、什么都不发生。
+/// 改必填是让编译器堵死这条路,不能再"忘了传"。
+void showPaywallHint(BuildContext context,
+    {required VoidCallback onLearnMore}) {
   final l10n = AppLocalizations.of(context)!;
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
@@ -31,18 +36,23 @@ void showPaywallHint(BuildContext context, {VoidCallback? onLearnMore}) {
       duration: const Duration(seconds: 4),
       action: SnackBarAction(
         label: l10n.paywallBuy,
-        onPressed: onLearnMore ?? () => showPaywallSheet(context),
+        onPressed: onLearnMore,
       ),
     ),
   );
 }
 
 /// 完整付费页。[reason] 仅用于埋点区分是哪一档触发的。
+///
+/// [onBuy]/[onRestore] 必填:曾经它们可选,而 `guide_audio_player` 两处调用都
+/// 没传 —— 按钮点下去只 pop 弹窗,`onBuy?.call()` 静默跳过,付费墙整个是死的
+/// (2026-09-02 真机实测撞到,versionCode 12 及之前全部受影响)。
+/// 改必填后"忘了传"变成编译错误,不再依赖人记得。
 Future<void> showPaywallSheet(
   BuildContext context, {
   String reason = 'unknown',
-  VoidCallback? onBuy,
-  VoidCallback? onRestore,
+  required VoidCallback onBuy,
+  required VoidCallback onRestore,
 }) {
   final gm = context.gm;
   return showModalBottomSheet<void>(
