@@ -281,14 +281,84 @@ def bio_en_usable(bio) -> bool:
     return bool(en) and text_in_language(en, "en")
 
 
-def _clean_i18n(i18n) -> dict:
-    """清洗显示名:剥外层书名号/引号(旧翻译残留,与权威标签风格一致);
-    zh 位无汉字 = 翻译失败残留(如《Vue de toits》)→ 当缺失重解析。
-    ponytail: 只查 zh;加 ja/ko 等非拉丁语言时再扩。"""
+# 尾部括号里**只有这些**才剥 —— 白名单,不做通用的「尾括号一律砍」。
+# 通用剥离会削掉标题/名字自带的括号:高更《餐（香蕉）》、Bruyn（長者）都是名字的一部分。
+# (同 strip_language_label 的教训:误伤比漏网糟,见契约纪律 20。)
+_DISAMB_CATALOG = re.compile(r"^[A-Z]{1,3}[\s.\-]?\d{1,5}[A-Za-z]?$")  # E 647 / F 627
+_DISAMB_DATES = re.compile(r"^\d{3,4}\s*[-–—]\s*\d{3,4}$|^\d{4}$")  # 1627-1704 / 1889
+_DISAMB_KIND = (
+    "painting peinture gemälde gemalde dipinto pintura obraz 絵画 絵 彫刻 그림 회화 "
+    "sculpture escultura scultura skulptura rzeźba 雕塑 조각 drawing dessin zeichnung "
+    "disegno dibujo rysunek 素描 소묘 oil öl olio óleo olej 油画 油畫 画家 畫家 "
+    "peintre painter pintor pittore maler malarz 화가 escultor sculpteur bildhauer"
+).split()
+_PAREN_TAIL = re.compile(r"\s*[（(]\s*([^）)]{1,40}?)\s*[）)]\s*$")
+
+
+def _is_disambiguator(inner: str, artist_names) -> bool:
+    """括号内容是否为「消歧后缀」而非标题的一部分。
+
+    三类算消歧:馆藏编号(E 647)、生卒/年份(1627-1704)、作品类别或作者名(马奈)/(obraz Vermeera)。
+    其余一律保留 —— 判不准就不动,漏网好过误伤。
+    """
+    low = inner.lower()
+    if _DISAMB_CATALOG.match(inner) or _DISAMB_DATES.match(inner.replace(" ", "")):
+        return True
+    for k in _DISAMB_KIND:
+        # 拉丁词必须整词匹配 —— 子串匹配会让 (Kölner Meister) 撞上 "öl"、
+        # (boiler) 撞上 "oil"。CJK 无词间空格,只能子串。
+        if k.isascii() or not any(
+            "\u4e00" <= c <= "\u9fff"
+            or "\u3040" <= c <= "\u30ff"
+            or "\uac00" <= c <= "\ud7af"
+            for c in k
+        ):
+            if re.search(rf"(?<!\w){re.escape(k)}(?!\w)", low):
+                return True
+        elif k in low:
+            return True
+    for n in artist_names or ():
+        n = (n or "").strip().lower()
+        # 「(马奈)」整体是作者名;「(obraz Vermeera)」括号里含作者名 —— 两向都要认。
+        # 反向包含要有长度下限,否则 inner="de" 会被任何含 de 的作者名吞掉。
+        if len(n) >= 2 and (n in low or (len(low) >= 3 and low in n)):
+            return True
+    return False
+
+
+def strip_disambiguator(value: str, artist_names=None) -> str:
+    """剥掉显示名尾部的消歧括号。只剥一层,只剥白名单内的。"""
+    m = _PAREN_TAIL.search(value or "")
+    if not m or not _is_disambiguator(m.group(1), artist_names):
+        return value
+    stripped = value[: m.start()].strip()
+    return stripped or value  # 剥完成空 → 宁可不剥
+
+
+# 各语言「本族文字」——该语言的显示名里一个本族字都没有 = 翻译失败残留,当缺失重解析
+_NATIVE_SCRIPT = {
+    "zh": _CJK,
+    "zh-hant": _CJK,
+    "ja": re.compile(r"[一-鿿぀-ゟ゠-ヿ]"),
+    "ko": re.compile(r"[가-힣]"),
+}
+
+
+def _clean_i18n(i18n, artist_names=None) -> dict:
+    """清洗显示名:剥外层书名号/引号(旧翻译残留)+ 尾部消歧括号;
+    非拉丁语言位无本族文字 = 翻译失败残留(如《Vue de toits》)→ 当缺失重解析。
+
+    [artist_names] 该作品作者的各语言规范名。给了才能认出「(马奈)」这类
+    以作者名消歧的后缀 —— 全库实测标题里约 3500 个这类后缀
+    (투우 (마네) / Koronczarka (obraz Vermeera) / 聖母の誕生 (ムリーリョ))。
+    清洗作者名本身时不传,于是 Bruyn（長者）这种名字自带的括号不会被误剥。
+    """
     out = {}
     for k, v in (i18n or {}).items():
         v = (v or "").strip("《》\"'“”‘’«»")
-        if v and not (k in ("zh", "zh-hant") and not _CJK.search(v)):
+        v = strip_disambiguator(v, artist_names)
+        native = _NATIVE_SCRIPT.get(k)
+        if v and not (native and not native.search(v)):
             out[k] = v
     return out
 
@@ -383,11 +453,20 @@ def backfill_display_names(
     logger.info("names %s: 标签预取完成(%d 条),进入主循环", slug, len(_cache))
     counts = {"titles": 0, "artists": 0, "errors": 0}
     artist_name_en: dict[str, str] = {}  # 作者QID → 来自作品行的 en 名(兜底)
+    # 作者名一次批量取回(不是每件查一次)——标题清洗要靠它认出「(马奈)」这类消歧后缀。
+    _anames = {
+        a.qid: {
+            v for v in list((a.name_i18n or {}).values()) + [a.name_en, a.name_zh] if v
+        }
+        for a in db.query(Artist).all()
+    }
     for i, o in enumerate(objs):
         # 单件容错:一次 Wikidata 超时不炸整馆(prod 253/1942 即死教训);失败跳过重跑再补
         try:
             attrs = o.attributes or {}
-            ti = _clean_i18n(attrs.get("title_i18n"))
+            ti = _clean_i18n(
+                attrs.get("title_i18n"), _anames.get(attrs.get("artist_qid"))
+            )
             if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
                 attrs = {**attrs, "title_i18n": ti}
                 o.attributes = attrs
