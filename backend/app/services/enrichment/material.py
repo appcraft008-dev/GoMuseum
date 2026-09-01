@@ -298,19 +298,25 @@ SELECT ?natLabel ?work ?workLabel WHERE {{
 """
 
 
-def _pick_work_label(labels: dict, lang: str) -> str | None:
-    """一件作品在某语言下的显示名:权威标签 → 字形变体链(繁体取简体转) → 英文 → 任意。
-
-    **刻意不做 LLM 翻译。** 代表作是馆藏外的作品,没有真相源可校 ——
-    给一幅没有既定译名的画编一个中文名就是脑补(总则「正确性靠构造」)。
-    没有本地化标签时显示原名/英文名,是博物馆的通行做法,也是可溯源的那一侧。
-    """
+def authoritative_work_label(labels: dict, lang: str) -> str | None:
+    """一件作品在某语言下的**权威**显示名:本语言标签 → 字形变体链(繁体取简体转)。
+    都没有 → None,由调用方决定是翻译还是回退原文(见 fill_artist_i18n_facts)。"""
     if labels.get(lang):
         return labels[lang]
     for src in (_SCRIPT_VARIANTS.get(lang) or ((), None))[0]:
         if labels.get(src):
             return _variant_convert(lang, labels[src])
-    return labels.get("en") or next(iter(labels.values()), None)
+    return None
+
+
+def _pick_work_label(labels: dict, lang: str) -> str | None:
+    """权威名,没有就回退英文/原名。**纯数据层的兜底** —— 拿不到翻译器的调用方
+    (pipeline 直接用 fetch 结果)至少能拿到同一批作品,而不是整件缺席。"""
+    return (
+        authoritative_work_label(labels, lang)
+        or labels.get("en")
+        or next(iter(labels.values()), None)
+    )
 
 
 def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
@@ -352,7 +358,14 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
         vals = [v for v in (_pick_work_label(ls, lang) for _, ls in top) if v]
         if vals:
             works_i18n[lang] = vals
-    return {"nationality_i18n": nat_i18n, "notable_works_i18n": works_i18n}
+    return {
+        "nationality_i18n": nat_i18n,
+        "notable_works_i18n": works_i18n,
+        # 逐件的原始标签(有序,与上面各语言列表一一对应)。调用方靠它分辨
+        # "这一件本来就有权威译名"和"这一件是回退的英文名,该翻" —— 只比对
+        # 字符串猜不出来(法语的 Olympia 就等于英语的 Olympia)。
+        "notable_works_labels": [ls for _, ls in top],
+    }
 
 
 def fetch_museum_intro_material(qid: str, *, get_json=None) -> dict:

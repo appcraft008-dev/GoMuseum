@@ -539,3 +539,18 @@ def test_notable_works_zh_hant_converts_from_zh_not_english():
     ]
     out = fetch_artist_i18n_facts("Q1", ["en", "zh-hant"], run_query=lambda s: rows)
     assert out["notable_works_i18n"]["zh-hant"] == ["奧林匹亞"]
+
+
+def test_artist_i18n_query_selects_every_binding_the_parser_reads():
+    """解析侧按 row["work"] 给作品分组,查询就必须 SELECT ?work。
+
+    ⚠️ 上面那些桩数据单测**永远抓不到这一条** —— 桩里的 work 字段是我自己造的,
+    它当然在。真实查询漏 SELECT 时解析侧读到空,works 全空、返回 {} ——
+    库里数据不会被抹(合并时空字典不覆盖),但**整个修复静默失效**:
+    单测全绿、上线后一点变化都没有。
+    """
+    from app.services.enrichment.material import _ARTIST_I18N_FACTS_QUERY
+
+    selected = _ARTIST_I18N_FACTS_QUERY.split("WHERE")[0].split()
+    for var in ("?natLabel", "?work", "?workLabel"):
+        assert var in selected, f"{var} 没进 SELECT,解析侧只会读到空"
