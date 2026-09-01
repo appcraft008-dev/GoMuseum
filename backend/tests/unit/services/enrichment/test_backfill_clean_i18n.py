@@ -121,3 +121,44 @@ def test_clean_i18n_preserves_inner_quotes():
 
     t = 'Coupe à décor dit "grain de riz"'
     assert _clean_i18n({"fr": t}) == {"fr": t}
+
+
+def test_authoritative_facts_override_stored_ones():
+    """权威标签必须压过库里已有 —— 顺序曾经是反的,于是某语言第一次抓到 1 条
+    就永久锁死(实测 prod:zh 卡在 1 条,而 Wikidata 有 4 条),names 重跑修不好。
+    docstring 一直写的是「权威标签优先」,代码没照做。"""
+    from types import SimpleNamespace
+
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art = SimpleNamespace(
+        nationality="France",
+        nationality_i18n={"zh": "法國"},  # 陈旧(繁体,该被权威简体覆盖)
+        notable_works=["Olympia"],
+        notable_works_i18n={"zh": ["奥林匹亚"]},  # 陈旧:只有 1 条
+    )
+    data = {
+        "nationality_i18n": {"zh": "法国"},
+        "notable_works_i18n": {"zh": ["奥林匹亚", "草地上的午餐", "吹笛少年"]},
+    }
+    changed = fill_artist_i18n_facts(art, ["zh"], translator=None, data=data)
+    assert changed
+    assert art.nationality_i18n["zh"] == "法国"
+    assert art.notable_works_i18n["zh"] == ["奥林匹亚", "草地上的午餐", "吹笛少年"]
+
+
+def test_stored_language_kept_when_authority_has_none():
+    """反向:权威源没有这个语言时,库里已有的不能被抹掉。"""
+    from types import SimpleNamespace
+
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art = SimpleNamespace(
+        nationality="France",
+        nationality_i18n={"ko": "프랑스"},
+        notable_works=["Olympia"],
+        notable_works_i18n={"ko": ["올랭피아"]},
+    )
+    fill_artist_i18n_facts(art, ["ko"], translator=None, data={})
+    assert art.notable_works_i18n["ko"] == ["올랭피아"]
+    assert art.nationality_i18n["ko"] == "프랑스"
