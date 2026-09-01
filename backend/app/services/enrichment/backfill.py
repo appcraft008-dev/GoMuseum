@@ -418,18 +418,21 @@ def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
                 works[lang] = [tr(w, lang) for w in works["en"]]
             except Exception:
                 pass
-        elif tr and lang != "en" and len(works.get(lang) or []) == len(per_work):
+        elif tr and lang != "en":
             # **逐件**兜底,不是整语言全翻或全不翻:有权威译名的必须原样保留
             # (那才是真相源),只把 fetch 回退成英文/原名的那几件翻过来。
             # 否则中日韩用户看到的是"5 件里 3 件外文"的半截列表。
-            works[lang] = [
-                (
-                    v
-                    if authoritative_work_label(per_work[i], lang)
-                    else _tr_or_keep(tr, v, lang)
-                )
-                for i, v in enumerate(works[lang])
-            ]
+            # ⚠️ cur 必须先取出再判空:两边都为空时长度也相等,直接 works[lang] 会 KeyError。
+            cur = works.get(lang)
+            if cur and len(cur) == len(per_work):
+                works[lang] = [
+                    (
+                        v
+                        if authoritative_work_label(per_work[i], lang)
+                        else _tr_or_keep(tr, v, lang)
+                    )
+                    for i, v in enumerate(cur)
+                ]
     changed = nat != (art.nationality_i18n or {}) or works != (
         art.notable_works_i18n or {}
     )

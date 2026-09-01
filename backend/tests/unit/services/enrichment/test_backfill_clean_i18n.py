@@ -224,3 +224,16 @@ def test_notable_works_lengths_stay_equal_when_translation_fails():
     fill_artist_i18n_facts(art, ["en", "ja"], Boom(), data)
     assert art.notable_works_i18n["ja"] == ["A", "B"]
     assert len(art.notable_works_i18n["ja"]) == len(art.notable_works_i18n["en"])
+
+
+def test_no_crash_when_language_absent_and_no_work_labels():
+    """两边都空时长度也相等 —— 直接 works[lang] 会 KeyError。
+    真实触发路径:pipeline 的作者没有 P800 数据(per_work 为空),
+    而目标语言也还没有任何代表作。CI 的集成测试抓到过一次。"""
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art, tr = _artist(), _Tr()
+    art.nationality = "France"
+    data = {"nationality_i18n": {"zh": "法国"}}  # 无 notable_works_*
+    fill_artist_i18n_facts(art, ["en", "zh", "it"], tr, data)
+    assert art.nationality_i18n["zh"] == "法国"
