@@ -86,3 +86,38 @@ def test_clean_i18n_threads_artist_names_into_stripping():
     assert _clean_i18n({"ko": "투우 (마네)"}) == {
         "ko": "투우 (마네)"
     }  # 不给作者名就不剥
+
+
+def test_strips_only_wrapping_quotes_not_one_sided():
+    """引号在标题**中间**时不能动 —— 单侧剥会留下孤引号。
+
+    prod 实测 565 个标题因此不配对(2026-09-01):
+        Coupe à décor dit "grain de riz"  →  Coupe à décor dit "grain de riz
+    根因是 str.strip(引号集) 语义是「两端各自独立地剥」,不是「剥成对的外层引号」。
+    """
+    from app.services.enrichment.backfill import _strip_wrapping_quotes
+
+    # 中间带引号 → 原样保留
+    for s in (
+        'Coupe à décor dit "grain de riz"',
+        'Tapis dit "Holbein à petits motifs"',
+        'Afrodita, tipo de la "Venus Esquilina"',
+    ):
+        assert _strip_wrapping_quotes(s) == s
+
+    # 真正的外层包裹 → 剥掉
+    assert _strip_wrapping_quotes("《睡莲》") == "睡莲"
+    assert _strip_wrapping_quotes('"Olympia"') == "Olympia"
+    assert _strip_wrapping_quotes("「玩紙牌者」") == "玩紙牌者"
+    assert _strip_wrapping_quotes("“Le Bain”") == "Le Bain"
+
+    # 只有一侧 → 不动(宁可漏,不可伤)
+    assert _strip_wrapping_quotes('"Olympia') == '"Olympia'
+    assert _strip_wrapping_quotes('Olympia"') == 'Olympia"'
+
+
+def test_clean_i18n_preserves_inner_quotes():
+    from app.services.enrichment.backfill import _clean_i18n
+
+    t = 'Coupe à décor dit "grain de riz"'
+    assert _clean_i18n({"fr": t}) == {"fr": t}
