@@ -162,3 +162,78 @@ def test_stored_language_kept_when_authority_has_none():
     fill_artist_i18n_facts(art, ["ko"], translator=None, data={})
     assert art.notable_works_i18n["ko"] == ["올랭피아"]
     assert art.nationality_i18n["ko"] == "프랑스"
+
+
+class _Tr:
+    """把任何输入标成 译<原文>,便于分辨哪几件被翻过。"""
+
+    def __init__(self):
+        self.calls = []
+
+    def translate_name(self, text, lang):
+        self.calls.append((text, lang))
+        return f"译<{text}>"
+
+
+def _artist():
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        nationality=None,
+        nationality_i18n={},
+        notable_works=None,
+        notable_works_i18n={},
+    )
+
+
+def test_notable_works_translated_per_work_not_per_language():
+    """有权威译名的那件必须原样保留(它才是真相源),只翻 fetch 回退成英文的那几件。
+    旧行为是"整语言全翻或全不翻",于是中日韩看到的是半截外文列表。"""
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art, tr = _artist(), _Tr()
+    data = {
+        "notable_works_i18n": {
+            "en": ["Olympia", "The Fifer"],
+            "zh": ["奥林匹亚", "The Fifer"],  # 第 2 件 fetch 回退成了英文
+        },
+        "notable_works_labels": [
+            {"en": "Olympia", "zh": "奥林匹亚"},  # 有权威中文标签
+            {"en": "The Fifer"},  # 没有 → 该翻
+        ],
+    }
+    fill_artist_i18n_facts(art, ["en", "zh"], tr, data)
+    assert art.notable_works_i18n["zh"] == ["奥林匹亚", "译<The Fifer>"]
+    assert art.notable_works_i18n["en"] == ["Olympia", "The Fifer"], "轴心语不该被翻"
+    assert tr.calls == [("The Fifer", "zh")], f"只该翻缺译名的那一件,实际 {tr.calls}"
+
+
+def test_notable_works_lengths_stay_equal_when_translation_fails():
+    """翻译抛异常时留原文,绝不丢条目 —— 丢了列表就又长短不一,回到最初的 bug。"""
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    class Boom:
+        def translate_name(self, text, lang):
+            raise RuntimeError("上游挂了")
+
+    art = _artist()
+    data = {
+        "notable_works_i18n": {"en": ["A", "B"], "ja": ["A", "B"]},
+        "notable_works_labels": [{"en": "A"}, {"en": "B"}],
+    }
+    fill_artist_i18n_facts(art, ["en", "ja"], Boom(), data)
+    assert art.notable_works_i18n["ja"] == ["A", "B"]
+    assert len(art.notable_works_i18n["ja"]) == len(art.notable_works_i18n["en"])
+
+
+def test_no_crash_when_language_absent_and_no_work_labels():
+    """两边都空时长度也相等 —— 直接 works[lang] 会 KeyError。
+    真实触发路径:pipeline 的作者没有 P800 数据(per_work 为空),
+    而目标语言也还没有任何代表作。CI 的集成测试抓到过一次。"""
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art, tr = _artist(), _Tr()
+    art.nationality = "France"
+    data = {"nationality_i18n": {"zh": "法国"}}  # 无 notable_works_*
+    fill_artist_i18n_facts(art, ["en", "zh", "it"], tr, data)
+    assert art.nationality_i18n["zh"] == "法国"

@@ -14,6 +14,7 @@ from app.models.artist import Artist
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
+from app.services.enrichment.material import authoritative_work_label
 
 logger = logging.getLogger(__name__)
 
@@ -380,9 +381,19 @@ def _clean_i18n(i18n, artist_names=None) -> dict:
     return out
 
 
+def _tr_or_keep(tr, value, lang):
+    """翻不动就留原文 —— 代表作缺一件比留个英文名更糟(列表会长短不一)。"""
+    try:
+        return tr(value, lang) or value
+    except Exception:
+        return value
+
+
 def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
-    """作者国籍/代表作多语填充(交接③):权威标签优先→已有保留→en 轴(legacy 列)翻译兜底。
-    data=fetch_artist_i18n_facts 结果。幂等只补缺;返回是否有变更。"""
+    """作者国籍/代表作多语填充(交接③):权威标签优先→已有保留→翻译兜底。
+    代表作的兜底是**逐件**的:某件在该语言有权威标签就原样用,没有才翻。
+    data=fetch_artist_i18n_facts 结果(含 notable_works_labels 逐件标签)。
+    幂等只补缺;返回是否有变更。"""
     # ⚠️ 权威标签**压过**库里已有 —— 顺序曾经是反的(已有在后、赢),于是某语言
     # 第一次抓到 1 条就永久锁死,后续 names 重跑再也修不好(实测 zh 卡在 1 条,
     # 而 Wikidata 有 4 条)。docstring 一直写的是「权威标签优先」,代码没照做。
@@ -395,6 +406,7 @@ def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
     tr = getattr(translator, "translate_name", None) or getattr(
         translator, "translate_section", None
     )
+    per_work = data.get("notable_works_labels") or []
     for lang in langs:
         if not nat.get(lang) and nat.get("en") and tr:
             try:
@@ -406,6 +418,21 @@ def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
                 works[lang] = [tr(w, lang) for w in works["en"]]
             except Exception:
                 pass
+        elif tr and lang != "en":
+            # **逐件**兜底,不是整语言全翻或全不翻:有权威译名的必须原样保留
+            # (那才是真相源),只把 fetch 回退成英文/原名的那几件翻过来。
+            # 否则中日韩用户看到的是"5 件里 3 件外文"的半截列表。
+            # ⚠️ cur 必须先取出再判空:两边都为空时长度也相等,直接 works[lang] 会 KeyError。
+            cur = works.get(lang)
+            if cur and len(cur) == len(per_work):
+                works[lang] = [
+                    (
+                        v
+                        if authoritative_work_label(per_work[i], lang)
+                        else _tr_or_keep(tr, v, lang)
+                    )
+                    for i, v in enumerate(cur)
+                ]
     changed = nat != (art.nationality_i18n or {}) or works != (
         art.notable_works_i18n or {}
     )
