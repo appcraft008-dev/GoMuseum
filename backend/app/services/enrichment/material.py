@@ -289,7 +289,7 @@ def fetch_artist_material(qid, registry, *, run_query=None, country_lang="fr") -
 
 
 _ARTIST_I18N_FACTS_QUERY = """
-SELECT ?natLabel ?workLabel WHERE {{
+SELECT ?natLabel ?work ?workLabel WHERE {{
   OPTIONAL {{ wd:{qid} wdt:P27 ?nat . ?nat rdfs:label ?natLabel .
              FILTER(lang(?natLabel) IN ({langs})) }}
   OPTIONAL {{ wd:{qid} wdt:P800 ?work . ?work rdfs:label ?workLabel .
@@ -298,16 +298,45 @@ SELECT ?natLabel ?workLabel WHERE {{
 """
 
 
+def authoritative_work_label(labels: dict, lang: str) -> str | None:
+    """一件作品在某语言下的**权威**显示名:本语言标签 → 字形变体链(繁体取简体转)。
+    都没有 → None,由调用方决定是翻译还是回退原文(见 fill_artist_i18n_facts)。"""
+    if labels.get(lang):
+        return labels[lang]
+    for src in (_SCRIPT_VARIANTS.get(lang) or ((), None))[0]:
+        if labels.get(src):
+            return _variant_convert(lang, labels[src])
+    return None
+
+
+def _pick_work_label(labels: dict, lang: str) -> str | None:
+    """权威名,没有就回退英文/原名。**纯数据层的兜底** —— 拿不到翻译器的调用方
+    (pipeline 直接用 fetch 结果)至少能拿到同一批作品,而不是整件缺席。"""
+    return (
+        authoritative_work_label(labels, lang)
+        or labels.get("en")
+        or next(iter(labels.values()), None)
+    )
+
+
 def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
     """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
     单查询 rdfs:label 语言过滤(同 _LABELS_QUERY 款,一作者一查)。
-    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]}};
-    无标签的语言缺席(由调用方翻译兜底)。"""
+    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]}}。
+    代表作**先选作品集合再逐语言取标签**,所以各语言列的是同一批作品、长度一致;
+    国籍无标签的语言仍缺席(由调用方翻译兜底)。"""
     run_query = run_query or _default_artist_query
-    langlist = ", ".join('"%s"' % x for x in langs)
+    # 变体语言要连它的兜底源一起取:zh-hant 的链里有 zh,若只按 langs 过滤,
+    # 请求 zh-hant 而没请求 zh 时链就断了、只能掉到英文。
+    wanted = list(
+        dict.fromkeys(
+            [*langs, *(v for x in langs for v in (_SCRIPT_VARIANTS.get(x) or ((),))[0])]
+        )
+    )
+    langlist = ", ".join('"%s"' % x for x in wanted)
     rows = run_query(_ARTIST_I18N_FACTS_QUERY.format(qid=artist_qid, langs=langlist))
     nat_i18n: dict = {}
-    works_i18n: dict = {}
+    works: dict = {}  # 作品 qid -> {lang: label}
     for row in rows:
         nl = row.get("natLabel") or {}
         wl = row.get("workLabel") or {}
@@ -315,14 +344,27 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
         wlang, wv = wl.get("xml:lang") or wl.get("lang"), wl.get("value")
         if nv and nlang in langs and not _is_raw_qid(nv) and nlang not in nat_i18n:
             nat_i18n[nlang] = _variant_convert(nlang, nv)
-        if wv and wlang in langs and not _is_raw_qid(wv):
-            wv = _variant_convert(wlang, wv)
-            works_i18n.setdefault(wlang, [])
-            if wv not in works_i18n[wlang]:
-                works_i18n[wlang].append(wv)
+        wq = ((row.get("work") or {}).get("value") or "").rsplit("/", 1)[-1]
+        if wq and wv and wlang in wanted and not _is_raw_qid(wv):
+            works.setdefault(wq, {}).setdefault(wlang, _variant_convert(wlang, wv))
+    # ⚠️ 先选作品(语言无关)、再逐语言取标签。此前是每个语言各自 append 再各自 [:5] ——
+    # 于是**不同语言展示的是不同的画**,不是同一批的不同译名。实测莫迪利亚尼:
+    # P800 十语共 10 件,西语那 4 幅和英语那 5 幅没有交集,用户换个 App 语言
+    # 作者卡就换了一批作品。排序判据:被这些语言标注得最全的排前(近似"最知名"),
+    # 同分按 qid 稳定排 —— 必须与语言无关,否则又回到各挑各的。
+    top = sorted(works.items(), key=lambda kv: (-len(kv[1]), kv[0]))[:5]
+    works_i18n: dict = {}
+    for lang in langs:
+        vals = [v for v in (_pick_work_label(ls, lang) for _, ls in top) if v]
+        if vals:
+            works_i18n[lang] = vals
     return {
         "nationality_i18n": nat_i18n,
-        "notable_works_i18n": {k: v[:5] for k, v in works_i18n.items()},
+        "notable_works_i18n": works_i18n,
+        # 逐件的原始标签(有序,与上面各语言列表一一对应)。调用方靠它分辨
+        # "这一件本来就有权威译名"和"这一件是回退的英文名,该翻" —— 只比对
+        # 字符串猜不出来(法语的 Olympia 就等于英语的 Olympia)。
+        "notable_works_labels": [ls for _, ls in top],
     }
 
 

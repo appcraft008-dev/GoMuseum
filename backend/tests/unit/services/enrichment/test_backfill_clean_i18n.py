@@ -121,3 +121,119 @@ def test_clean_i18n_preserves_inner_quotes():
 
     t = 'Coupe à décor dit "grain de riz"'
     assert _clean_i18n({"fr": t}) == {"fr": t}
+
+
+def test_authoritative_facts_override_stored_ones():
+    """权威标签必须压过库里已有 —— 顺序曾经是反的,于是某语言第一次抓到 1 条
+    就永久锁死(实测 prod:zh 卡在 1 条,而 Wikidata 有 4 条),names 重跑修不好。
+    docstring 一直写的是「权威标签优先」,代码没照做。"""
+    from types import SimpleNamespace
+
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art = SimpleNamespace(
+        nationality="France",
+        nationality_i18n={"zh": "法國"},  # 陈旧(繁体,该被权威简体覆盖)
+        notable_works=["Olympia"],
+        notable_works_i18n={"zh": ["奥林匹亚"]},  # 陈旧:只有 1 条
+    )
+    data = {
+        "nationality_i18n": {"zh": "法国"},
+        "notable_works_i18n": {"zh": ["奥林匹亚", "草地上的午餐", "吹笛少年"]},
+    }
+    changed = fill_artist_i18n_facts(art, ["zh"], translator=None, data=data)
+    assert changed
+    assert art.nationality_i18n["zh"] == "法国"
+    assert art.notable_works_i18n["zh"] == ["奥林匹亚", "草地上的午餐", "吹笛少年"]
+
+
+def test_stored_language_kept_when_authority_has_none():
+    """反向:权威源没有这个语言时,库里已有的不能被抹掉。"""
+    from types import SimpleNamespace
+
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art = SimpleNamespace(
+        nationality="France",
+        nationality_i18n={"ko": "프랑스"},
+        notable_works=["Olympia"],
+        notable_works_i18n={"ko": ["올랭피아"]},
+    )
+    fill_artist_i18n_facts(art, ["ko"], translator=None, data={})
+    assert art.notable_works_i18n["ko"] == ["올랭피아"]
+    assert art.nationality_i18n["ko"] == "프랑스"
+
+
+class _Tr:
+    """把任何输入标成 译<原文>,便于分辨哪几件被翻过。"""
+
+    def __init__(self):
+        self.calls = []
+
+    def translate_name(self, text, lang):
+        self.calls.append((text, lang))
+        return f"译<{text}>"
+
+
+def _artist():
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        nationality=None,
+        nationality_i18n={},
+        notable_works=None,
+        notable_works_i18n={},
+    )
+
+
+def test_notable_works_translated_per_work_not_per_language():
+    """有权威译名的那件必须原样保留(它才是真相源),只翻 fetch 回退成英文的那几件。
+    旧行为是"整语言全翻或全不翻",于是中日韩看到的是半截外文列表。"""
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art, tr = _artist(), _Tr()
+    data = {
+        "notable_works_i18n": {
+            "en": ["Olympia", "The Fifer"],
+            "zh": ["奥林匹亚", "The Fifer"],  # 第 2 件 fetch 回退成了英文
+        },
+        "notable_works_labels": [
+            {"en": "Olympia", "zh": "奥林匹亚"},  # 有权威中文标签
+            {"en": "The Fifer"},  # 没有 → 该翻
+        ],
+    }
+    fill_artist_i18n_facts(art, ["en", "zh"], tr, data)
+    assert art.notable_works_i18n["zh"] == ["奥林匹亚", "译<The Fifer>"]
+    assert art.notable_works_i18n["en"] == ["Olympia", "The Fifer"], "轴心语不该被翻"
+    assert tr.calls == [("The Fifer", "zh")], f"只该翻缺译名的那一件,实际 {tr.calls}"
+
+
+def test_notable_works_lengths_stay_equal_when_translation_fails():
+    """翻译抛异常时留原文,绝不丢条目 —— 丢了列表就又长短不一,回到最初的 bug。"""
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    class Boom:
+        def translate_name(self, text, lang):
+            raise RuntimeError("上游挂了")
+
+    art = _artist()
+    data = {
+        "notable_works_i18n": {"en": ["A", "B"], "ja": ["A", "B"]},
+        "notable_works_labels": [{"en": "A"}, {"en": "B"}],
+    }
+    fill_artist_i18n_facts(art, ["en", "ja"], Boom(), data)
+    assert art.notable_works_i18n["ja"] == ["A", "B"]
+    assert len(art.notable_works_i18n["ja"]) == len(art.notable_works_i18n["en"])
+
+
+def test_no_crash_when_language_absent_and_no_work_labels():
+    """两边都空时长度也相等 —— 直接 works[lang] 会 KeyError。
+    真实触发路径:pipeline 的作者没有 P800 数据(per_work 为空),
+    而目标语言也还没有任何代表作。CI 的集成测试抓到过一次。"""
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art, tr = _artist(), _Tr()
+    art.nationality = "France"
+    data = {"nationality_i18n": {"zh": "法国"}}  # 无 notable_works_*
+    fill_artist_i18n_facts(art, ["en", "zh", "it"], tr, data)
+    assert art.nationality_i18n["zh"] == "法国"
