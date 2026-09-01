@@ -335,6 +335,23 @@ def strip_disambiguator(value: str, artist_names=None) -> str:
     return stripped or value  # 剥完成空 → 宁可不剥
 
 
+_QUOTES = "《》\"'“”‘’«»「」『』"
+
+
+def _strip_wrapping_quotes(v: str) -> str:
+    """只在**两端都是**引号时剥外层引号。
+
+    ⚠️ 不能用 `v.strip(_QUOTES)`:那是「两端各自独立地剥」,遇到引号只在一侧的标题
+    会把那一侧吃掉,留下孤引号 —— prod 实测 565 个标题中招,例:
+        Coupe à décor dit "grain de riz"  →  Coupe à décor dit "grain de riz
+    这类标题的引号在**中间**(引用某个名号),本来就不该动。
+    """
+    v = v.strip()
+    while len(v) >= 2 and v[0] in _QUOTES and v[-1] in _QUOTES:
+        v = v[1:-1].strip()
+    return v
+
+
 # 各语言「本族文字」——该语言的显示名里一个本族字都没有 = 翻译失败残留,当缺失重解析
 _NATIVE_SCRIPT = {
     "zh": _CJK,
@@ -355,7 +372,7 @@ def _clean_i18n(i18n, artist_names=None) -> dict:
     """
     out = {}
     for k, v in (i18n or {}).items():
-        v = (v or "").strip("《》\"'“”‘’«»")
+        v = _strip_wrapping_quotes(v or "")
         v = strip_disambiguator(v, artist_names)
         native = _NATIVE_SCRIPT.get(k)
         if v and not (native and not native.search(v)):
