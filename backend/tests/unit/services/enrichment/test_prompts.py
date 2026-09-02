@@ -252,15 +252,37 @@ def test_translation_prompt_forbids_source_fragments_language_agnostic():
         assert "chinese-only" not in low
 
 
-def test_faithfulness_prompt_flags_untranslated_fragments():
-    # 闸假阴性修复:忠实度闸也要抓'未翻译的源语言残片'(修放行"卧 nude"类)
+def test_faithfulness_prompt_judges_facts_only():
+    """忠实度闸**只判事实一致**,不判翻译完整性(契约纪律 26:一个闸只判一件事)。
+
+    这条取代了原来的 test_faithfulness_prompt_flags_untranslated_fragments。
+    两件事压在同一个布尔里时,实测拦截理由绝大多数是"有词没翻译",而且判得很差 ——
+    把德语规范译名 Freiheit erleuchtet die Welt 说成「Statue of Liberty 没翻译」、
+    把法语地名 Canal du Loing、波兰语 Tiara Sajtafernesa 说成"英语没翻译"。
+    翻译完整性/语言混杂由 lang_detect 独立判(见下一条测试),这里必须闭嘴。
+    """
     from app.services.enrichment.prompts import build_faithfulness_prompt
 
     system, _ = build_faithfulness_prompt("A nude figure.", "《卧 nude》", "zh")
     low = system.lower()
-    assert "untranslated" in low or "source-language" in low or "残" in system
-    # 专有名词/标题豁免(不误判保留的原文标题)
-    assert "proper noun" in low or "title" in low
+    assert "fact" in low, "必须自我定位为事实判定"
+    assert "do not judge translation completeness" in low, "必须显式放弃判完整性"
+    assert "checked elsewhere" in low, "必须说明语言检查在别处"
+    # 专有名词豁免仍要在(否则规范译名又会被当错译)
+    assert "proper noun" in low and "not a fault" in low
+
+
+def test_language_gate_catches_what_faithfulness_stopped_judging():
+    """职责移交必须有人接住 —— 否则就是把检查丢了,不是拆开。
+
+    忠实度闸不再管"有英文词没翻译"(上一条),那它必须被 lang_detect 接住:
+    「卧 nude」这类混杂文本要判否,纯中文要判是。两处调用方(qa_suggester 的
+    lang_ok、translator 的 _lang_ok)会把两个闸 and 起来。
+    """
+    from app.services.enrichment.lang_detect import text_in_language
+
+    assert text_in_language("这是一幅描绘卧姿人体的油画作品,笔触细腻。", "zh")
+    assert not text_in_language("This is an oil painting of a reclining figure.", "zh")
 
 
 def test_translation_prompt_prefers_established_exonym():
