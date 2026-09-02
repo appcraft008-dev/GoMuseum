@@ -1017,7 +1017,7 @@ def test_translate_retries_with_strong_model_on_faithfulness_fail(session):
     calls = {"mini": 0, "strong": 0, "faith": 0}
 
     def mini(system, user):
-        if "quality judge" in system:  # faithfulness
+        if '"faithful"' in system:  # faithfulness
             calls["faith"] += 1
             # mini 译文含残片 → 第一次判不忠实,重译后忠实
             return (
@@ -1045,7 +1045,7 @@ def test_translate_no_strong_retry_when_faithful(session):
     strong_calls = {"n": 0}
 
     def mini(system, user):
-        if "quality judge" in system:
+        if '"faithful"' in system:
             return '{"faithful": true, "issues": []}'
         return "忠实译文"
 
@@ -1065,7 +1065,7 @@ def test_translate_object_threads_canonical_title(session):
     seen = {}
 
     def fake(system, user):
-        if "quality judge" in system.lower():
+        if '"faithful"' in system:
             return '{"faithful": true, "issues": []}'
         seen["system"] = system
         return "译文"
@@ -1103,14 +1103,14 @@ def test_translate_object_gates_wrong_language(session):
     calls = {"strong": 0}
 
     def mini(system, user):
-        if "quality judge" in system.lower():
+        if '"faithful"' in system:
             return '{"faithful": true, "issues": []}'
         return (
             "This is an English sentence that leaked into a French translation badly."
         )
 
     def strong(system, user):
-        if "quality judge" in system.lower():
+        if '"faithful"' in system:
             return '{"faithful": true, "issues": []}'
         calls["strong"] += 1
         return "Ceci est une phrase française correcte au sujet du tableau et de son histoire."
@@ -1130,7 +1130,7 @@ def test_translate_object_threads_artist_name(session):
     seen = {}
 
     def fake(system, user):
-        if "quality judge" in system.lower():
+        if '"faithful"' in system:
             return '{"faithful": true, "issues": []}'
         seen["system"] = system
         return "译文"

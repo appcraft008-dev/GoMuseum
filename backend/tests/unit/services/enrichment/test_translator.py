@@ -37,7 +37,7 @@ def test_translate_object_skips_en_and_marks_unfaithful():
     # fr 忠实→published；de 不忠实→needs_review
     def router(system, user):
         s = system.lower()
-        if "quality judge" not in s:  # 翻译调用(非忠实判官)
+        if '"faithful"' not in s:  # 翻译调用(非忠实判官)
             return "translated body"
         # 忠实判定：fr 忠实、de 不忠实（按 system 里的语言名区分）
         if "german" in s:
@@ -74,7 +74,7 @@ def test_translate_object_threads_artist_into_faithfulness_check():
     seen = []
 
     def router(system, user):
-        if "quality judge" in system.lower():
+        if '"faithful"' in system:
             seen.append(user)
             return json.dumps({"faithful": True, "issues": []})
         return "译文"
@@ -98,7 +98,7 @@ def test_translate_qa_items_threads_names_into_faithfulness_check():
     seen = []
 
     def router(system, user):
-        if "quality judge" in system.lower():
+        if '"faithful"' in system:
             seen.append(user)
             return json.dumps({"faithful": True, "issues": []})
         return "这是中文答案。"

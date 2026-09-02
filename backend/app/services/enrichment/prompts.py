@@ -180,15 +180,24 @@ def build_name_translation_prompt(name: str, target_lang: str):
     return _NAME_TRANSLATION_SYSTEM.format(lang=lang), f"Name:\n{name}"
 
 
+# 这个闸**只判事实一致**,不判翻译完整性 —— 后者由 `lang_detect.text_in_language`
+# 独立判(qa_suggester 的 lang_ok / translator 的 _lang_ok),两处调用方都会 and 起来。
+# 曾经两件事压在同一个布尔里,实测拦截理由绝大多数是后者、且判得很差:
+#   「'Statue of Liberty' 没翻译,留成 'Freiheit erleuchtet die Welt'」——那正是德语规范译名
+#   「'which translates to' 没翻译」「'Canal du Loing' 没翻译」(法语地名本就该保留)
+#   「'Tiara Sajtafernesa' 是英语没翻译」(那是波兰语)
+# 拆开后实测(40 挂起 / 30 已发布 / 15 人为破坏三组对照):挂起组 2%→45% 判通过,
+# 已发布组 100%→100% 零误伤,**人为破坏组 0% 通过、零漏网**(闸没被拆坏)。契约纪律 26。
 _FAITHFULNESS_SYSTEM = (
-    "You are a translation quality judge. You are given an English SOURCE and its {lang} "
-    "TRANSLATION. Decide whether the translation is faithful: it must convey exactly the "
-    "same facts with nothing added and nothing omitted (wording/fluency differences are "
-    "fine). ALSO mark it UNFAITHFUL if the TRANSLATION still contains any untranslated "
-    "source-language (English) words or phrases that should have been rendered in {lang} "
-    '(e.g. a common noun like "nude" or "severed head" left in English mid-text). '
-    "EXCEPTION: proper nouns (people/places) and work TITLES kept in their conventional "
-    "original/exonym form are fine and must NOT be flagged. "
+    "You are a translation FACT judge. You are given an English SOURCE and its {lang} "
+    "TRANSLATION. Judge ONE thing only: does the translation state the same facts as the "
+    "source — nothing added, nothing omitted, nothing altered (names, dates, places, "
+    "attributions, what is depicted)? Wording, fluency, style and word order differences "
+    "are fine.\n"
+    "Do NOT judge translation completeness or terminology choice. In particular, a proper "
+    "noun, place name, institution or work title left in its original or conventional form "
+    "is NOT a fault — never flag it. Whether the text is written in {lang} is checked "
+    "elsewhere; ignore it here.\n"
     'Return STRICT JSON: {{"faithful": true|false, "issues": ["..."]}} '
     "(issues empty if faithful). No commentary."
 )
