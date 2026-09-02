@@ -323,5 +323,19 @@
   "activateConfirm": "Start now",
   "activateLater": "Not yet",
   "paywallLoginToBuy": "Sign in to buy",
-  "paywallLoginWhy": "Your pass is tied to your account, so you keep it on a new phone."
+  "paywallLoginWhy": "Your pass is tied to your account, so you keep it on a new phone.",
+  "passActive": "Pass active",
+  "passExpiresOn": "Expires {date}",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "Purchased · not activated",
+  "passActivateHint": "Starts when you first play a guide",
+  "viewBenefits": "View benefits",
+  "unlimited": "Unlimited"
 }

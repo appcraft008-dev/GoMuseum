@@ -698,4 +698,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get paywallLoginWhy =>
       'Your pass is tied to your account, so you keep it on a new phone.';
+
+  @override
+  String get passActive => 'Pass active';
+
+  @override
+  String passExpiresOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Expires $dateString';
+  }
+
+  @override
+  String get passPendingActivation => 'Purchased · not activated';
+
+  @override
+  String get passActivateHint => 'Starts when you first play a guide';
+
+  @override
+  String get viewBenefits => 'View benefits';
+
+  @override
+  String get unlimited => 'Unlimited';
 }

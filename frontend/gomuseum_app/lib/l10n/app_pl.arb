@@ -214,5 +214,19 @@
   "activateConfirm": "Rozpocznij teraz",
   "activateLater": "Jeszcze nie",
   "paywallLoginToBuy": "Zaloguj się, aby kupić",
-  "paywallLoginWhy": "Karnet jest powiązany z kontem — zachowasz go na nowym telefonie."
+  "paywallLoginWhy": "Karnet jest powiązany z kontem — zachowasz go na nowym telefonie.",
+  "passActive": "Karnet aktywny",
+  "passExpiresOn": "Wygasa {date}",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "Kupiony · nieaktywowany",
+  "passActivateHint": "Startuje przy pierwszym odtworzeniu",
+  "viewBenefits": "Zobacz korzyści",
+  "unlimited": "Bez limitu"
 }

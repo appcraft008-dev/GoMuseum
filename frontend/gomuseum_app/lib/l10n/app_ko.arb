@@ -214,5 +214,19 @@
   "activateConfirm": "지금 시작",
   "activateLater": "나중에",
   "paywallLoginToBuy": "로그인 후 구매",
-  "paywallLoginWhy": "패스는 계정에 연결되어 새 휴대폰에서도 유지됩니다."
+  "paywallLoginWhy": "패스는 계정에 연결되어 새 휴대폰에서도 유지됩니다.",
+  "passActive": "패스 사용 중",
+  "passExpiresOn": "{date} 만료",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "구매함 · 미활성화",
+  "passActivateHint": "첫 재생 시 시작됩니다",
+  "viewBenefits": "혜택 보기",
+  "unlimited": "무제한"
 }

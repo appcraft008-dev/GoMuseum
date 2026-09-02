@@ -680,4 +680,27 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get paywallLoginWhy => 'パスはアカウントに紐づくので、機種変更しても失われません。';
+
+  @override
+  String get passActive => 'パス有効';
+
+  @override
+  String passExpiresOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString まで';
+  }
+
+  @override
+  String get passPendingActivation => '購入済み · 未有効化';
+
+  @override
+  String get passActivateHint => '初回再生時に開始します';
+
+  @override
+  String get viewBenefits => '特典を見る';
+
+  @override
+  String get unlimited => '無制限';
 }

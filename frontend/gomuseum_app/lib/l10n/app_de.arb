@@ -214,5 +214,19 @@
   "activateConfirm": "Jetzt starten",
   "activateLater": "Später",
   "paywallLoginToBuy": "Zum Kauf anmelden",
-  "paywallLoginWhy": "Der Pass hängt an deinem Konto – auf einem neuen Handy bleibt er erhalten."
+  "paywallLoginWhy": "Der Pass hängt an deinem Konto – auf einem neuen Handy bleibt er erhalten.",
+  "passActive": "Pass aktiv",
+  "passExpiresOn": "Läuft am {date} ab",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "Gekauft · nicht aktiviert",
+  "passActivateHint": "Startet beim ersten Abspielen",
+  "viewBenefits": "Vorteile ansehen",
+  "unlimited": "Unbegrenzt"
 }
