@@ -344,7 +344,9 @@ def test_faithfulness_prompt_declares_canonical_title_authoritative():
     assert "Russisches Mädchen" in user, "规范标题必须出现在给检查器的消息里"
     low = user.lower()
     assert "canonical" in low
-    assert "correct" in low and "not be reported" in low, "必须明确声明它不算不忠实"
+    assert (
+        "correct" in low and "cannot be an infidelity" in low
+    ), "必须明确声明它不算不忠实"
 
     # 不传规范名时行为不变(老调用方不受影响)
     _, plain = build_faithfulness_prompt("A.", "B.", "de")
@@ -371,7 +373,7 @@ def test_faithfulness_prompt_declares_canonical_artist_authoritative():
     assert "西蒙·沃埃" in user, "规范作者名必须出现在给检查器的消息里"
     low = user.lower()
     assert "canonical" in low and "artist" in low
-    assert "not be reported" in low
+    assert "cannot be an infidelity" in low
 
     # 标题与作者可同时给,也可只给其一
     _, both = build_faithfulness_prompt(
@@ -386,13 +388,17 @@ def test_faithfulness_note_does_not_grant_blanket_leniency():
     这条不是假想:539 段复检里 68.8% 因加了标题提示而翻盘,当时的替代解释正是
     "NOTE 只是让检查器变宽容了"。抽 60 条重跑旧 prompt 读原始抱怨才排除掉
     (约 50 条抱怨的确实是标题)。加入作者名后覆盖面更宽,护栏必须写进 prompt。
+
+    2026-09-03 note 措辞改成 STEP0/STEP1 两步式(见 build_faithfulness_prompt
+    docstring),断言随之改为新措辞,但意图不变:STEP1 必须显式把"判断范围"
+    限定回"剩下的事实"，不能通篇不再提"其余照常判"。
     """
     from app.services.enrichment.prompts import build_faithfulness_prompt
 
     _, user = build_faithfulness_prompt("A.", "B.", "de", title="X", artist="Y")
     low = user.lower()
-    assert "only to these name forms" in low, "缺少防整体放宽的护栏句"
-    assert "judge everything else normally" in low
+    assert "name/title translation choice" in low, "缺少防整体放宽的护栏句"
+    assert "step 1" in low and "judge only the remaining facts" in low
 
 
 def test_translation_prompt_does_not_demo_language_label_format():

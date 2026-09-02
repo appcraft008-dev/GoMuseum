@@ -227,22 +227,41 @@ def build_faithfulness_prompt(
     末句的 "ONLY to these name forms" 是**防止整体放宽**的护栏:实测这段 NOTE 不是
     在放水(60 条抽样里约 50 条抱怨的确实是标题),但加入作者名后覆盖面更宽,
     必须显式圈定它只豁免名字写法,其余照常判。
+
+    ⚠️ 2026-09-03 复测:上面这版 NOTE **仍会被判定模型无视**——原样复现
+    Q3745385/de(「Russisches Mädchen」),issues 报 "'Red-Haired Girl' should be
+    'Russisches Mädchen'"(mini 判/gpt-4o 判定通道各判 3 次,结果完全一致,非随机)。
+    NOTE 的问题是"陈述规则"而非"给出指令"——模型仍把名字差异当证据去推理。
+    改成 STEP0/STEP1 两步式:先明确要求"删除/忽略这两个字符串再判"、配一个
+    与本作品无关的示例(The Hague/Den Haag,字母全不沾边但正确)让模型认出这
+    一类模式,才稳定判 faithful(mini 3/3 True;换成逐字对应本案例的示例效果一样,
+    但通用示例不用多传英文原名参数,更省)。人为破坏对照组(改年份+加事实)
+    3/3 正确拒绝,只传 artist 不传 title 的路径也验过、不崩、照样正确拒绝——
+    闸没被拆松。契约纪律 26 的方法论在此复用。
     """
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _FAITHFULNESS_SYSTEM.format(lang=lang)
     names = []
     if title:
-        names.append(f"the artwork's title is 「{title}」")
+        names.append(f"title -> 「{title}」")
     if artist:
-        names.append(f"the artist's name is 「{artist}」")
+        names.append(f"artist -> 「{artist}」")
     note = ""
     if names:
+        mapping = "; ".join(names)
         note = (
-            f"NOTE: the canonical {lang} forms are — {'; '.join(names)}. Many works and "
-            f"artists carry a different traditional name in each language, so these may "
-            f"not be literal translations of the English forms — using them is CORRECT "
-            f"and must NOT be reported as an infidelity. This applies ONLY to these name "
-            f"forms; judge everything else normally.\n\n"
+            f"STEP 0 (do this first, silently): the translation is REQUIRED to render "
+            f"these using their canonical {lang} forms, NOT a literal translation of the "
+            f"English: {mapping}. Delete/ignore every occurrence of these strings in the "
+            f"TRANSLATION before you judge anything else — they are pre-approved and "
+            f"structurally CANNOT be an infidelity, no matter how different they look from "
+            f"the English (many artwork titles and artist names are conventionally quite "
+            f"different across languages, e.g. an English 'The Hague' is 'Den Haag' in "
+            f"Dutch with no shared letters, and that mismatch is CORRECT, not an error). "
+            f"Do not reason about them, do not mention them, do not include any issue "
+            f"whose subject is a name/title translation choice.\n"
+            f"STEP 1: now judge only the remaining facts (dates, places, what is depicted, "
+            f"attributions, events) for the usual add/omit/alter faithfulness check.\n\n"
         )
     user = f"{note}SOURCE (English):\n{en_body}\n\nTRANSLATION ({lang}):\n{translated}"
     return system, user
