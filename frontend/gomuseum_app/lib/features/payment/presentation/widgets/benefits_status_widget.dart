@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/benefits_provider.dart';
 
 /// 权益状态Widget
+///
+/// ⚠️ 取主色一律用 `colorScheme.primary`,**别用 `Theme.of(context).primaryColor`**:
+/// ThemeData 在深色主题下把 primaryColor 默认成 `colorScheme.surface`
+/// (flutter/src/material/theme_data.dart:447 `primarySurfaceColor`),
+/// 那正是本卡片的背景色 —— 文字和图标会与底色同色、整个看不见。
+/// 2026-09-02 真机上「识别次数」的数值就这样凭空消失了。
 class BenefitsStatusWidget extends ConsumerWidget {
   const BenefitsStatusWidget({super.key});
 
@@ -26,7 +32,7 @@ class BenefitsStatusWidget extends ConsumerWidget {
                 children: [
                   Icon(
                     Icons.card_membership,
-                    color: Theme.of(context).primaryColor,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 28,
                   ),
                   const SizedBox(width: 12),
@@ -128,13 +134,14 @@ class BenefitsStatusWidget extends ConsumerWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: isActive
-                ? Theme.of(context).primaryColor.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
                 : Colors.grey[200],
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             icon,
-            color: isActive ? Theme.of(context).primaryColor : Colors.grey,
+            color:
+                isActive ? Theme.of(context).colorScheme.primary : Colors.grey,
             size: 20,
           ),
         ),
@@ -150,7 +157,7 @@ class BenefitsStatusWidget extends ConsumerWidget {
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: isActive
-                    ? Theme.of(context).primaryColor
+                    ? Theme.of(context).colorScheme.primary
                     : Colors.grey[600],
               ),
         ),

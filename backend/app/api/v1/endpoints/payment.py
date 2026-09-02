@@ -174,14 +174,20 @@ async def verify_purchase(
                 )
             # ⚠️ 必须向 Play 确认交付,否则 **3 天后自动全额退款** ——
             # 每笔收入都会悄悄退掉,而我们这边看起来一切正常。
+            #
+            # 但失败**不一定**意味着会退款:消耗型商品被客户端 consume 掉之后
+            # 就已隐含确认,这里再 acknowledge 会得到 400 "not in a valid state"。
+            # 那是正常路径,不是事故 —— 老客户端(autoConsume 默认 true)每笔都会
+            # 走到这里。所以降为 warning,别用 error 淹没真正的告警。
             if request.platform == "android":
                 ack = await iap_service.acknowledge_google_purchase(
                     purchase_token=request.receipt_data,
                     product_id=request.product_id,
                 )
                 if not ack:
-                    logger.error(
-                        "acknowledge 失败,该笔购买将在 3 天后被 Google 自动退款: %s",
+                    logger.warning(
+                        "acknowledge 未成功(若该笔已被客户端 consume 则属正常,"
+                        "consume 隐含确认);否则 3 天后会被 Google 自动退款: %s",
                         txn,
                     )
 
