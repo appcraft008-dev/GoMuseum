@@ -214,5 +214,19 @@
   "activateConfirm": "現在開始",
   "activateLater": "再等等",
   "paywallLoginToBuy": "登入後購買",
-  "paywallLoginWhy": "通票綁定帳號，換手機也不會遺失。"
+  "paywallLoginWhy": "通票綁定帳號，換手機也不會遺失。",
+  "passActive": "通票生效中",
+  "passExpiresOn": "{date} 到期",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "已購買 · 待啟用",
+  "passActivateHint": "首次播放導覽時開始計時",
+  "viewBenefits": "查看權益",
+  "unlimited": "不限次"
 }

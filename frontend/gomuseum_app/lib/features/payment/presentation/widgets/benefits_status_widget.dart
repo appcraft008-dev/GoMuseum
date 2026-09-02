@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import '../providers/benefits_provider.dart';
 
 /// 权益状态Widget
@@ -15,6 +17,7 @@ class BenefitsStatusWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final benefitsAsync = ref.watch(benefitsStateProvider);
+    final ent = ref.watch(entitlementsProvider).value;
 
     return benefitsAsync.when(
       data: (benefits) => Card(
@@ -45,21 +48,47 @@ class BenefitsStatusWidget extends ConsumerWidget {
                 ],
               ),
               const Divider(height: 24),
+              // 通票状态。真相源是 `/entitlements` 的 state —— **不要**从 user_benefits
+              // 的额度账里推断(那是第二套真相源,App 显示"会员"而后端 402 就是这么来的)。
+              // 缺了这一行,已付费用户在这一页只看得到「识别次数」和一个商品列表,
+              // 全程没有一处确认票在手上(2026-09-02 用户提出)。
+              if (ent != null && (ent.isActive || ent.isPurchasedNotActivated))
+                _buildBenefitItem(
+                  context,
+                  icon: Icons.confirmation_number,
+                  title: ent.isActive
+                      ? AppLocalizations.of(context)!.passActive
+                      : AppLocalizations.of(context)!.passPendingActivation,
+                  value: ent.isActive && ent.expiresAt != null
+                      ? AppLocalizations.of(context)!
+                          .passExpiresOn(ent.expiresAt!)
+                      : AppLocalizations.of(context)!.passActivateHint,
+                  isActive: true,
+                ),
+              if (ent != null && (ent.isActive || ent.isPurchasedNotActivated))
+                const SizedBox(height: 12),
               _buildBenefitItem(
                 context,
                 icon: Icons.image_search,
                 title: '识别次数',
-                value: benefits.recognitionQuota > 0
-                    ? '${benefits.recognitionQuota}次'
-                    : '无剩余',
-                isActive: benefits.recognitionQuota > 0,
+                // 通票期间识别不限次 —— 照 user_benefits 的余额渲染会在
+                // 「通票生效中」旁边写一个次数,像是仍有上限。
+                value: ent != null && ent.isActive
+                    ? AppLocalizations.of(context)!.unlimited
+                    : benefits.recognitionQuota > 0
+                        ? '${benefits.recognitionQuota}次'
+                        : '无剩余',
+                isActive: (ent != null && ent.isActive) ||
+                    benefits.recognitionQuota > 0,
               ),
               // ⚠️ 这里曾显示「日卡」「高级会员」两行,数据来自 user_benefits 的
               // is_premium / day_pass_active —— 那是**第二套权益真相源**,已随老商品
               // 下线移除。通票状态要显示的话,读 `/entitlements` 的 `can`,别再从
               // 额度账里推断(App 显示"会员"而后端 402 就是这么来的)。
               const SizedBox(height: 16),
-              if (!benefits.hasAccess)
+              // 有通票就别再劝购 —— `hasAccess` 来自 user_benefits 那套老额度账,
+              // 它不认通票,不挡的话已付费用户会看到「买通票可继续使用」。
+              if (!benefits.hasAccess && !(ent?.isActive ?? false))
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(

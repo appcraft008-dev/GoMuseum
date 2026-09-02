@@ -678,6 +678,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get paywallLoginWhy => '通票绑定账号，换手机也不会丢。';
+
+  @override
+  String get passActive => '通票生效中';
+
+  @override
+  String passExpiresOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString 到期';
+  }
+
+  @override
+  String get passPendingActivation => '已购买 · 待激活';
+
+  @override
+  String get passActivateHint => '首次播放讲解时开始计时';
+
+  @override
+  String get viewBenefits => '查看权益';
+
+  @override
+  String get unlimited => '不限次';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1354,4 +1377,27 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paywallLoginWhy => '通票綁定帳號，換手機也不會遺失。';
+
+  @override
+  String get passActive => '通票生效中';
+
+  @override
+  String passExpiresOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString 到期';
+  }
+
+  @override
+  String get passPendingActivation => '已購買 · 待啟用';
+
+  @override
+  String get passActivateHint => '首次播放導覽時開始計時';
+
+  @override
+  String get viewBenefits => '查看權益';
+
+  @override
+  String get unlimited => '不限次';
 }
