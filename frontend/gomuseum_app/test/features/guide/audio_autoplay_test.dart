@@ -9,6 +9,7 @@ import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 /// 与 GuideAudioPlayer._maybeAutoPlay 的准入条件一致。
 bool willAutoPlay(Entitlements? ent, String qid) {
   if (ent == null) return false;
+  if (ent.isPurchasedNotActivated) return false;
   return ent.isActive || ent.freeAudioQid == null || ent.freeAudioQid == qid;
 }
 
@@ -54,9 +55,10 @@ void main() {
       canRecognize: true,
       canAudioAny: false,
     );
-    // 未激活时 isActive=false、freeAudioQid=null → 会走免费首件那条路,
-    // 由 _blockedByPaywall 弹激活确认,不会静默消耗通票有效期
-    expect(pending.isActive, isFalse);
+    // ⚠️ 这里以前只断言了两个布尔量,而没断言 willAutoPlay ——
+    // 于是"不自动播"这个标题其实从未被验证:未激活时 isActive=false、
+    // freeAudioQid=null,旧条件会返回 true,一进页面就弹激活确认。
     expect(pending.isPurchasedNotActivated, isTrue);
+    expect(willAutoPlay(pending, 'Q12418'), isFalse);
   });
 }
