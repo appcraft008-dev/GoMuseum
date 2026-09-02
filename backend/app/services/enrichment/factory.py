@@ -7,6 +7,31 @@ from pathlib import Path
 CATALOG_PATH = Path(__file__).resolve().parents[3] / "museums.yaml"
 
 
+def build_translator(channel: str = "translate"):
+    """ContentTranslator 的**唯一**构造入口。
+
+    别在调用点各拼一个 —— 这段装配曾原样复制在 4 处(factory / lazy / onboard×2),
+    于是 PR #430 给忠实度闸接确定性通道时只改到了 1 处,另外 3 条路径(懒生成、
+    onboard names、onboard translate)照旧用 temperature=0.3 判定,而单测全绿。
+    构造分散 = 下次加参数还会漏,所以收敛成一个函数,不是补三个补丁。
+    """
+    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.translator import ContentTranslator
+
+    return ContentTranslator(
+        lambda s, u, model="gpt-4o-mini": default_complete(
+            s, u, model, channel=channel
+        ),
+        complete_strong=lambda s, u: default_complete(
+            s, u, model="gpt-4o", channel=channel
+        ),
+        # 判定要可复现,不能跟着翻译一起随机(契约纪律 27)
+        complete_judge=lambda s, u, model="gpt-4o-mini": default_complete(
+            s, u, model, channel=channel, temperature=0
+        ),
+    )
+
+
 def build_generation_components(slug: str, langs_override=None) -> dict:
     from app.services.enrichment.catalog import MuseumCatalog
     from app.services.enrichment.content_enricher import (
@@ -32,13 +57,7 @@ def build_generation_components(slug: str, langs_override=None) -> dict:
 
     cfg = MuseumCatalog.from_file(CATALOG_PATH).get(slug)
     gate = QualityGate(_tagged("gate", temperature=0))
-    translator = ContentTranslator(
-        _tagged("translate"),
-        complete_strong=lambda s, u: default_complete(
-            s, u, model="gpt-4o", channel="translate"
-        ),
-        complete_judge=_tagged("translate", temperature=0),
-    )
+    translator = build_translator("translate")
     ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
     session = PoliteSession(user_agent=ua, min_interval=1.0)
     return {
