@@ -282,9 +282,8 @@ def cmd_names(
             f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
         )
     from app.services.enrichment.backfill import backfill_display_names
-    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.factory import build_translator
     from app.services.enrichment.lang_config import resolve_languages
-    from app.services.enrichment.translator import ContentTranslator
 
     cfg = _catalog().get(slug)
     override = [s.strip() for s in langs.split(",")] if langs else cfg.languages
@@ -307,14 +306,7 @@ def cmd_names(
         out = backfill_display_names(
             db,
             slug,
-            translator=ContentTranslator(
-                lambda s, u, model="gpt-4o-mini": default_complete(
-                    s, u, model, channel="names"
-                ),
-                complete_strong=lambda s, u: default_complete(
-                    s, u, model="gpt-4o", channel="names"
-                ),
-            ),
+            translator=build_translator("names"),
             langs=target_langs,
             refresh_langs=(
                 [x.strip() for x in refresh_langs.split(",")] if refresh_langs else None
@@ -349,8 +341,7 @@ def cmd_translate(
             f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
         )
     from app.services.enrichment.backfill import backfill_languages
-    from app.services.enrichment.content_enricher import default_complete
-    from app.services.enrichment.translator import ContentTranslator
+    from app.services.enrichment.factory import build_translator
 
     db = SessionLocal()
     try:
@@ -358,14 +349,7 @@ def cmd_translate(
             db,
             slug,
             langs=[s.strip() for s in langs.split(",")],
-            translator=ContentTranslator(
-                lambda s, u, model="gpt-4o-mini": default_complete(
-                    s, u, model, channel="translate"
-                ),
-                complete_strong=lambda s, u: default_complete(
-                    s, u, model="gpt-4o", channel="translate"
-                ),
-            ),
+            translator=build_translator("translate"),
             limit=limit,
             workers=workers,
         )
