@@ -81,22 +81,14 @@ def _generate(db, qid: str, language: str | None = None) -> dict:
 def _translate(db, qid: str, language: str) -> dict:
     """懒翻译本体:单件单语言从 en 段纯翻译(补语种原语)。测试 monkeypatch 此处。"""
     from app.services.enrichment.backfill import translate_object_language
-    from app.services.enrichment.content_enricher import default_complete
-    from app.services.enrichment.translator import ContentTranslator
+    from app.services.enrichment.factory import build_translator
 
     o = db.query(MuseumObject).filter_by(qid=qid).one()
     out = translate_object_language(
         db,
         o,
         language,
-        ContentTranslator(
-            lambda s, u, model="gpt-4o-mini": default_complete(
-                s, u, model, channel="translate"
-            ),
-            complete_strong=lambda s, u: default_complete(
-                s, u, model="gpt-4o", channel="translate"
-            ),
-        ),
+        build_translator("translate"),
     )
     db.commit()
     return out
