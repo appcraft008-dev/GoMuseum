@@ -198,10 +198,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ⚠️ 这个版本必须跟**出包用的本地 Flutter** 一致。3.35.5 时期 CI 的 Dart
+      # 是 3.9,`in_app_purchase: ^3.1.11` 在那里解析到旧版、带
+      # in_app_purchase_android ^0.3.x;而本地 3.41.2 解析到 3.3.0 + 0.5.0。
+      # 也就是 **CI 测的插件树和用户手机上跑的不是同一套** —— 2026-09-02 那个
+      # autoConsume 吞购买的 bug 正好长在这条缝里,单测怎么跑都碰不到。
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.5'
+          flutter-version: '3.41.2'
           channel: 'stable'
 
       - name: Flutter doctor

@@ -128,13 +128,20 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 再让他看购买页是最糟的体验。买了不立即计时是有意设计,这里是它的触发器。
   Future<bool> _blockedByPaywall() async {
     final ent = ref.read(entitlementsProvider).value;
-    if (ent == null || ent.canPlayAudio(widget.qid)) return false;
+    if (ent == null) return false;
 
+    // ⚠️ 这一段**必须排在 canPlayAudio 之前**。免费试听那一件的 qid 会让
+    // canPlayAudio 返回 true,于是已付费用户在那一件上被当成免费用户直接放行,
+    // 激活入口彻底消失 —— 他点多少次都等不到"开始你的 7 天通票?",
+    // 只会撞后端 402(免费试听只放行主讲解段,问答/作者介绍段不在内),
+    // 最后以为没买成功而**重复购买**。2026-09-02 真机实测撞到,买了两次。
     if (ent.isPurchasedNotActivated) {
       if (await ensurePassActivated(context, ref, ent)) return false; // 已生效,继续播
       if (mounted) setState(() => _ui = _Ui.idle);
       return true; // 用户选了"再等等"
     }
+
+    if (ent.canPlayAudio(widget.qid)) return false;
 
     if (_hintedQids.add(widget.qid)) {
       showPaywallHint(context, onLearnMore: _showPaywall);
@@ -151,11 +158,14 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 不传就等于按钮只关弹窗、什么都不做——付费墙形同虚设(实测撞到过)。
   /// 购买全流程(IAP 初始化/查商品/验证/发权益)只在权益页有完整实现,
   /// 这里统一跳过去,不在播放器里另搭一套。
+  /// `restore=1` 让权益页初始化完自动跑一次恢复购买 —— 别再和 onBuy 一样
+  /// 只是跳过去:已买过的人点「恢复购买」却落在一个摆着购买按钮的页面上,
+  /// 会以为要再买一次(真金白银的重复购买风险)。
   void _showPaywall() => showPaywallSheet(
         context,
         reason: 'audio',
         onBuy: () => context.push('/benefits'),
-        onRestore: () => context.push('/benefits'),
+        onRestore: () => context.push('/benefits?restore=1'),
       );
 
   bool _autoPlayed = false;
@@ -166,6 +176,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     if (!widget.autoPlay || _autoPlayed || _ui != _Ui.idle) return;
     final ent = ref.read(entitlementsProvider).value;
     if (ent == null) return;
+    // 已购未激活:绝不自动播——那会在进页面的瞬间弹出激活确认,等于替用户
+    // 决定何时开始烧那 7×24 小时。等他主动点播放键再问(见 _blockedByPaywall)。
+    if (ent.isPurchasedNotActivated) return;
     final willSucceed = ent.isActive ||
         ent.freeAudioQid == null ||
         ent.freeAudioQid == widget.qid;
@@ -256,9 +269,14 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   }
 
   /// 这一件是不是用掉了(或将要用掉)免费名额——通票用户不显示此标。
+  ///
+  /// ⚠️ `purchased_not_activated` 也是通票用户(已付款,只是没开始计时),
+  /// 只判 isActive 会让刚买完的人继续看到「免费试听」——他刚付了钱,
+  /// 这个标只会让他怀疑购买没成功。
   bool _isFreePreview() {
     final ent = ref.watch(entitlementsProvider).value;
-    if (ent == null || ent.isActive) return false;
+    if (ent == null || ent.isActive || ent.isPurchasedNotActivated)
+      return false;
     return ent.freeAudioQid == null || ent.freeAudioQid == widget.qid;
   }
 

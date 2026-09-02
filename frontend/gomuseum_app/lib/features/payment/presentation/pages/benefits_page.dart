@@ -9,7 +9,11 @@ import '../widgets/product_card.dart';
 
 /// 权益与购买页面
 class BenefitsPage extends ConsumerStatefulWidget {
-  const BenefitsPage({super.key});
+  const BenefitsPage({super.key, this.autoRestore = false});
+
+  /// 从付费墙的「恢复购买」进来时为 true:IAP 就绪后自动跑一次恢复,
+  /// 免得已购用户落在购买页上以为要再买一次。
+  final bool autoRestore;
 
   @override
   ConsumerState<BenefitsPage> createState() => _BenefitsPageState();
@@ -51,6 +55,10 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     }
 
     setState(() => _isLoading = false);
+
+    if (success && widget.autoRestore) {
+      await _restorePurchases();
+    }
   }
 
   /// 返回值决定 IapService 是否 completePurchase —— 未验证成功绝不 complete,

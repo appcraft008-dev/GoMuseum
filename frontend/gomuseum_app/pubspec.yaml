@@ -50,6 +50,9 @@ dependencies:
 
   # 应用内购买
   in_app_purchase: ^3.1.11
+  # Android 消耗型商品要显式 consume(见 iap_service._verifyAndDeliverProduct),
+  # 那个 API 只在平台包里,必须直接依赖而不是靠传递依赖。
+  in_app_purchase_android: ^0.5.0
 
   # 设备信息
   device_info_plus: ^10.1.0

@@ -146,11 +146,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             MuseumPage(slug: state.pathParameters['slug'] ?? 'orsay'),
       ),
 
-      // 升级 / 权益页
+      // 升级 / 权益页。`?restore=1` 来自付费墙的「恢复购买」出口。
       GoRoute(
         path: '/benefits',
         name: 'benefits',
-        builder: (context, state) => const BenefitsPage(),
+        builder: (context, state) => BenefitsPage(
+          autoRestore: state.uri.queryParameters['restore'] == '1',
+        ),
       ),
     ],
 

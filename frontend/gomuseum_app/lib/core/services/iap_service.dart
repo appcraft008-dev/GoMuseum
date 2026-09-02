@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 /// 应用内购买服务
 class IapService {
@@ -98,7 +101,19 @@ class IapService {
 
     try {
       // 通票是 Consumable:到期后用户要能再买一张(见 kParisPass7d 注释)
-      return await _iap.buyConsumable(purchaseParam: purchaseParam);
+      //
+      // ⚠️ `autoConsume: false` 是**必须的**,别图省事去掉。插件默认 true,
+      // 而 `_maybeAutoConsumePurchase` 是在把购买投递给 purchaseStream **之前**
+      // 就消耗掉(in_app_purchase_android 0.5.0 platform:199/281)——等
+      // `_verifyAndDeliverProduct` 拿到回调时木已成舟,下面那套"验证失败就留
+      // pending 待重试"的保护**在 Android 上完全失效**:后端抖一下,用户付了钱、
+      // 通票发不出来,消耗型商品又不在 restorePurchases 列表里 → 永久拿不回。
+      // 2026-09-02 真机实测撞到:验证失败(API 未启用)却 consumptionState=1。
+      // 消耗改到后端验证成功之后做,见 _verifyAndDeliverProduct。
+      return await _iap.buyConsumable(
+        purchaseParam: purchaseParam,
+        autoConsume: false,
+      );
     } catch (e) {
       debugPrint('购买失败: $e');
       return false;
@@ -158,6 +173,7 @@ class IapService {
   /// 网络抖一下,用户付了钱、后端没发权益,且**永久无法补发**。
   ///
   /// 验证失败就把它留在 pending —— 下次启动 purchaseStream 会重新投递,自动重试。
+  /// (这条保护只在 `buyConsumable(autoConsume: false)` 下成立,见 purchaseProduct。)
   Future<void> _verifyAndDeliverProduct(
     PurchaseDetails purchase,
     Future<bool> Function(PurchaseDetails) onPurchaseUpdated,
@@ -170,7 +186,14 @@ class IapService {
         onError?.call(IapError(message: '购买验证未完成,重启应用会自动重试'));
         return;
       }
-      if (purchase.pendingCompletePurchase) {
+      if (Platform.isAndroid) {
+        // Android 消耗型**必须 consume**:`completePurchase` 只 acknowledge
+        // (platform:206-226),不消耗的话 Google 认为用户仍持有该商品,
+        // 通票到期后买不了第二张。consume 隐含 acknowledge,不必再 complete。
+        await _iap
+            .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>()
+            .consumePurchase(purchase);
+      } else if (purchase.pendingCompletePurchase) {
         await _iap.completePurchase(purchase);
       }
     } catch (e) {
