@@ -20,19 +20,24 @@ def build_generation_components(slug: str, langs_override=None) -> dict:
     from app.services.enrichment.registry import build_registry
     from app.services.enrichment.translator import ContentTranslator
 
-    def _tagged(channel):
-        """用量记账通路打标(成本工程①):同一 default_complete,只多 channel 标签。"""
+    def _tagged(channel, temperature=0.3):
+        """用量记账通路打标(成本工程①):同一 default_complete,只多 channel 标签。
+
+        temperature=0 的两个通路是**判定**(接地闸、译文忠实闸),不是创作 —— 见
+        default_complete 的 docstring:0.3 会让同一条内容重跑给出不同结论(实测 13.3%)。
+        """
         return lambda s, u, model="gpt-4o-mini": default_complete(
-            s, u, model, channel=channel
+            s, u, model, channel=channel, temperature=temperature
         )
 
     cfg = MuseumCatalog.from_file(CATALOG_PATH).get(slug)
-    gate = QualityGate(_tagged("gate"))
+    gate = QualityGate(_tagged("gate", temperature=0))
     translator = ContentTranslator(
         _tagged("translate"),
         complete_strong=lambda s, u: default_complete(
             s, u, model="gpt-4o", channel="translate"
         ),
+        complete_judge=_tagged("translate", temperature=0),
     )
     ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
     session = PoliteSession(user_agent=ua, min_interval=1.0)

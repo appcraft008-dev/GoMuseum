@@ -126,7 +126,11 @@ class ContentEnricher:
 
 
 def default_complete(
-    system: str, user: str, model: str = "gpt-4o-mini", channel: str = "misc"
+    system: str,
+    user: str,
+    model: str = "gpt-4o-mini",
+    channel: str = "misc",
+    temperature: float = 0.3,
 ) -> str:
     """默认 LLM 调用（OpenAI，便宜模型）。grounded 生成是受约束改写，不需顶配。
 
@@ -134,6 +138,12 @@ def default_complete(
     prompt「Return STRICT JSON」+ 容错解析 `_parse_json` 兜底，纯文本调用方（翻译段）也能用
     同一个 complete。json_object 模式会要求 messages 含 "json"，翻译 prompt 无此词会 400。
     channel=用量记账通路标签(成本工程①,factory 打标;缺省 misc)。
+
+    temperature:**判定类调用必须传 0**(接地闸/忠实度闸)。判定是分类不是创作,同一段
+    内容重跑该给同一个答案。默认 0.3 是给生成/翻译用的 —— 实测(2026-09-02,prod 英语
+    问答 120+78 抽样)判定通道用 0.3 时,同一条内容三遍重跑有 **13.3%** 给出不一致的
+    结论;换 0 后两遍一致率升到 **95%**。⚠️ 不是 100%:OpenAI 的 temperature=0 不保证
+    确定性,所以**批量重判仍须多遍取交集**,别指望这个参数根治(契约纪律 21)。
     """
     import asyncio
 
@@ -155,7 +165,7 @@ def default_complete(
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            temperature=0.3,
+            temperature=temperature,
         )
         u = getattr(resp, "usage", None)
         return resp.choices[0].message.content, u
