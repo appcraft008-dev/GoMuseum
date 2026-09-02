@@ -32,10 +32,14 @@ def _lang_ok(text, lang):
 
 
 class ContentTranslator:
-    def __init__(self, complete, complete_strong=None):
+    def __init__(self, complete, complete_strong=None, complete_judge=None):
         self._complete = complete  # complete(system, user) -> str (默认 gpt-4o-mini)
         # 闸失败时的强模型重译(gpt-4o);语言无关,靠闸信号触发(不硬编语言名单)
         self._complete_strong = complete_strong
+        # 忠实度**判定**专用(temperature=0)。翻译要创作、判定要复现,共用一个
+        # complete 会把判定也带上随机性 —— 同一条译文重跑给不同结论,存量因此
+        # 积压误判(2026-09-02 实测)。缺省回退 _complete,老调用方行为不变。
+        self._complete_judge = complete_judge or complete
 
     def translate_section(
         self,
@@ -78,7 +82,7 @@ class ContentTranslator:
         system, user = build_faithfulness_prompt(
             en_body, translated, target_lang, title, artist
         )
-        data = _parse()(self._complete(system, user))
+        data = _parse()(self._complete_judge(system, user))
         return bool(data.get("faithful")), (data.get("issues") or [])
 
     def translate_object(

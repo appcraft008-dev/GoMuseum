@@ -297,3 +297,87 @@ def test_default_complete_logs_strong_model_use(monkeypatch, caplog):
     with caplog.at_level(logging.INFO):
         ce.default_complete("s", "u")  # 默认mini不打
     assert not any("STRONG_MODEL_USE" in r.message for r in caplog.records)
+
+
+def _capture_client(sink):
+    """记下每次调用真正发给 OpenAI 的 kwargs。判定通道的 temperature 只能这样验 ——
+    断言函数签名有 temperature 参数是**假测试**:参数存在不等于它被传下去了。"""
+
+    class _FakeMsg:
+        content = '{"verdicts": [true]}'
+
+    class _FakeChoice:
+        message = _FakeMsg()
+
+    class _FakeResp:
+        choices = [_FakeChoice()]
+        usage = None
+
+    class _FakeCompletions:
+        async def create(self, **kw):
+            sink.append(kw)
+            return _FakeResp()
+
+    class _FakeChat:
+        completions = _FakeCompletions()
+
+    class _FakeClient:
+        chat = _FakeChat()
+
+    return _FakeClient()
+
+
+def test_default_complete_passes_temperature_through(monkeypatch):
+    """temperature 必须真的进到 API 调用里,且默认仍是 0.3(生成/翻译行为不变)。"""
+    from app.services.enrichment import content_enricher as ce
+
+    sink = []
+    monkeypatch.setattr(
+        "app.services.content_generation_service._get_openai_client",
+        lambda: _capture_client(sink),
+    )
+    ce.default_complete("s", "u")
+    ce.default_complete("s", "u", temperature=0)
+    assert [k["temperature"] for k in sink] == [0.3, 0]
+
+
+def test_judging_channels_are_deterministic(monkeypatch):
+    """接地闸和忠实度闸走 temperature=0,翻译走 0.3。
+
+    判定是分类不是创作:同一条内容重跑必须给同一个答案。0.3 时实测三遍重跑有 13.3%
+    结论不一致,存量因此积压误判(2026-09-02,prod 英语问答 120 条抽样)。
+    ⚠️ 这条测试守的是**装配**(factory 把哪个 complete 交给谁),不是 default_complete
+    的签名 —— 上一条测签名传递,两条缺一不可。
+    """
+    from app.services.enrichment.factory import build_generation_components
+
+    sink = []
+    monkeypatch.setattr(
+        "app.services.content_generation_service._get_openai_client",
+        lambda: _capture_client(sink),
+    )
+    c = build_generation_components("orsay")
+
+    c["gate"].check_section("material", "facts", "One sentence.")
+    assert sink[-1]["temperature"] == 0, "接地闸必须确定性"
+
+    c["translator"].check_faithfulness("en body", "译文", "zh")
+    assert sink[-1]["temperature"] == 0, "忠实度闸必须确定性"
+
+    c["translator"].translate_section("en body", "zh")
+    assert sink[-1]["temperature"] == 0.3, "翻译是创作,不该被一起改成 0"
+
+
+def test_translator_judge_defaults_to_complete():
+    """不传 complete_judge 时回退 _complete —— 老调用方(测试/pipeline)行为不变。"""
+    from app.services.enrichment.translator import ContentTranslator
+
+    calls = []
+
+    def fake(system, user):
+        calls.append(system)
+        return '{"faithful": true}'
+
+    tr = ContentTranslator(fake)
+    assert tr.check_faithfulness("en", "zh 译文", "zh")[0] is True
+    assert len(calls) == 1
