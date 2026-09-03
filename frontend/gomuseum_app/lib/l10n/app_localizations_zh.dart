@@ -638,10 +638,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallTitle => '巴黎 7 日通票';
 
   @override
-  String get paywallPitch => '不限次拍照识别，卢浮宫、奥赛、橘园全馆语音讲解。';
-
-  @override
-  String get paywallClockNote => '购买后不立即计时——首次使用高级功能并确认后才开始。';
+  String get paywallPitch => '不限次拍照识别，卢浮宫、奥赛、橘园、小皇宫四馆全部语音讲解。';
 
   @override
   String get paywallFreeAlways => '浏览、搜索与完整文字讲解始终免费。';
@@ -662,16 +659,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get quotaExhausted => '免费识别次数已用完。';
 
   @override
-  String get activateTitle => '开始你的 7 天通票？';
-
-  @override
-  String get activateBody => '一旦开始就连续计时 7×24 小时，中途不暂停。建议到馆后再开始。';
-
-  @override
-  String get activateConfirm => '现在开始';
-
-  @override
-  String get activateLater => '再等等';
+  String get activateLater => '稍后再说';
 
   @override
   String get paywallLoginToBuy => '登录后购买';
@@ -701,6 +689,85 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unlimited => '不限次';
+
+  @override
+  String get paywallPriceNote => '一次性 · 非订阅';
+
+  @override
+  String get paywallClockHead => '买了不马上开始计时';
+
+  @override
+  String get paywallClockBody => '首次使用高级功能并确认后才开始 7 天计时。提前买好票，到馆再开始。';
+
+  @override
+  String get ticketPaid => '已付';
+
+  @override
+  String get ticketStub => '存根';
+
+  @override
+  String get ticketStubPending => '到期日待填';
+
+  @override
+  String get ticketStubUntorn => '未撕开';
+
+  @override
+  String get ticketValidUntil => '有效至';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return '剩 $days 天';
+  }
+
+  @override
+  String get activateSheetTitle => '现在开始 7 天？';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '确认后开始计时，到 $dateString $timeString 结束。这一步不可撤销。';
+  }
+
+  @override
+  String get activateTear => '撕开，现在开始';
+
+  @override
+  String get activateWaiting => '正在确认…';
+
+  @override
+  String get activateWaitingNote => '票还没撕开，确认成功后才生效';
+
+  @override
+  String get activateDoneTitle => '通票已开始';
+
+  @override
+  String get activateDoneBody => '四馆语音讲解与不限次识别已解锁。';
+
+  @override
+  String get activateDoneCta => '继续';
+
+  @override
+  String get activateFailTitle => '没能确认，票没有被使用';
+
+  @override
+  String get activateFailBody => '网络没接通，7 天还没开始计时。通票仍然完整，可以再试一次。';
+
+  @override
+  String get activateRetry => '再试一次';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1337,10 +1404,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paywallTitle => '巴黎 7 日通票';
 
   @override
-  String get paywallPitch => '不限次拍照辨識，羅浮宮、奧塞、橘園全館語音導覽。';
-
-  @override
-  String get paywallClockNote => '購買後不立即計時——首次使用進階功能並確認後才開始。';
+  String get paywallPitch => '不限次拍照辨識，羅浮宮、奧塞、橘園、小皇宮四館全部語音導覽。';
 
   @override
   String get paywallFreeAlways => '瀏覽、搜尋與完整文字導覽始終免費。';
@@ -1361,16 +1425,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get quotaExhausted => '免費辨識次數已用完。';
 
   @override
-  String get activateTitle => '開始你的 7 天通票？';
-
-  @override
-  String get activateBody => '一旦開始就連續計時 7×24 小時，中途不暫停。建議到館後再開始。';
-
-  @override
-  String get activateConfirm => '現在開始';
-
-  @override
-  String get activateLater => '再等等';
+  String get activateLater => '稍後再說';
 
   @override
   String get paywallLoginToBuy => '登入後購買';
@@ -1400,4 +1455,83 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get unlimited => '不限次';
+
+  @override
+  String get paywallPriceNote => '一次性 · 非訂閱';
+
+  @override
+  String get paywallClockHead => '買了不馬上開始計時';
+
+  @override
+  String get paywallClockBody => '首次使用進階功能並確認後才開始 7 天計時。提前買好票，到館再開始。';
+
+  @override
+  String get ticketPaid => '已付';
+
+  @override
+  String get ticketStub => '存根';
+
+  @override
+  String get ticketStubPending => '到期日待填';
+
+  @override
+  String get ticketStubUntorn => '未撕開';
+
+  @override
+  String get ticketValidUntil => '有效至';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return '剩 $days 天';
+  }
+
+  @override
+  String get activateSheetTitle => '現在開始 7 天？';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '確認後開始計時，到 $dateString $timeString 結束。這一步不可撤銷。';
+  }
+
+  @override
+  String get activateTear => '撕開，現在開始';
+
+  @override
+  String get activateWaiting => '正在確認…';
+
+  @override
+  String get activateWaitingNote => '票還沒撕開，確認成功後才生效';
+
+  @override
+  String get activateDoneTitle => '通票已開始';
+
+  @override
+  String get activateDoneBody => '四館語音導覽與不限次辨識已解鎖。';
+
+  @override
+  String get activateDoneCta => '繼續';
+
+  @override
+  String get activateFailTitle => '沒能確認，票沒有被使用';
+
+  @override
+  String get activateFailBody => '網路沒接通，7 天還沒開始計時。通票仍然完整，可以再試一次。';
+
+  @override
+  String get activateRetry => '再試一次';
 }

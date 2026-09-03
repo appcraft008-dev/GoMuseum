@@ -310,18 +310,14 @@
   "museumOfficialSite": "Official Website",
   "museumIntroComingSoon": "Museum introduction coming soon",
   "paywallTitle": "Paris 7-Day Pass",
-  "paywallPitch": "Unlimited photo recognition and full audio commentary across the Louvre, Orsay and Orangerie.",
-  "paywallClockNote": "The clock does not start at purchase — it begins when you first use a premium feature and confirm.",
+  "paywallPitch": "Unlimited photo recognition and full audio commentary across the Louvre, Orsay, the Orangerie and the Petit Palais.",
   "paywallFreeAlways": "Browsing, search and full written commentary are always free.",
   "paywallBuy": "Get the pass",
   "paywallRestore": "Restore purchase",
   "audioFreePreview": "Free preview",
   "audioLockedHint": "Audio commentary needs the pass — your free preview has been used.",
   "quotaExhausted": "You've used all your free recognitions.",
-  "activateTitle": "Start your 7-day pass?",
-  "activateBody": "Once started it runs for 7×24 hours without pause. Start it when you're at the museum, not before.",
-  "activateConfirm": "Start now",
-  "activateLater": "Not yet",
+  "activateLater": "Later",
   "paywallLoginToBuy": "Sign in to buy",
   "paywallLoginWhy": "Your pass is tied to your account, so you keep it on a new phone.",
   "passActive": "Pass active",
@@ -337,5 +333,57 @@
   "passPendingActivation": "Purchased · not activated",
   "passActivateHint": "Starts when you first play a guide",
   "viewBenefits": "View benefits",
-  "unlimited": "Unlimited"
+  "unlimited": "Unlimited",
+  "paywallPriceNote": "One-time · not a subscription",
+  "paywallClockHead": "The clock doesn't start at purchase",
+  "paywallClockBody": "Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.",
+  "ticketPaid": "Paid",
+  "ticketStub": "Stub",
+  "ticketStubPending": "expiry to be filled",
+  "ticketStubUntorn": "not torn",
+  "ticketValidUntil": "Valid until",
+  "ticketDateTime": "{date} {time}",
+  "@ticketDateTime": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      },
+      "time": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "ticketDaysLeft": "{days} days left",
+  "@ticketDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "activateSheetTitle": "Start your 7 days now?",
+  "activateSheetBody": "The clock starts on confirm and ends {date} {time}. This can't be undone.",
+  "@activateSheetBody": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      },
+      "time": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "activateTear": "Tear it, start now",
+  "activateWaiting": "Confirming…",
+  "activateWaitingNote": "The ticket isn't torn yet — it starts once confirmed",
+  "activateDoneTitle": "Your pass has started",
+  "activateDoneBody": "Audio commentary at all four museums and unlimited recognition are unlocked.",
+  "activateDoneCta": "Continue",
+  "activateFailTitle": "Couldn't confirm — your ticket wasn't used",
+  "activateFailBody": "No connection, so the 7 days haven't started. Your pass is still intact; try again.",
+  "activateRetry": "Try again"
 }

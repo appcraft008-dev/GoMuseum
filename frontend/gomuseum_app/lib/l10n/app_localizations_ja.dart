@@ -639,10 +639,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get paywallTitle => 'パリ 7日間パス';
 
   @override
-  String get paywallPitch => '撮影による作品認識が無制限、ルーヴル・オルセー・オランジュリーの音声解説がすべて聴けます。';
-
-  @override
-  String get paywallClockNote => '購入時点では計測を開始しません。プレミアム機能を初めて使い、確認した時点から始まります。';
+  String get paywallPitch =>
+      '撮影による作品認識が無制限、ルーヴル・オルセー・オランジュリー・プティ パレ 4館の音声解説がすべて聴けます。';
 
   @override
   String get paywallFreeAlways => '閲覧・検索・テキスト解説の全文は常に無料です。';
@@ -663,17 +661,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get quotaExhausted => '無料の認識回数を使い切りました。';
 
   @override
-  String get activateTitle => '7日間パスを開始しますか？';
-
-  @override
-  String get activateBody =>
-      '開始すると 7×24 時間連続で進み、途中で止まりません。館に着いてから開始することをおすすめします。';
-
-  @override
-  String get activateConfirm => '今すぐ開始';
-
-  @override
-  String get activateLater => 'まだ開始しない';
+  String get activateLater => 'あとで';
 
   @override
   String get paywallLoginToBuy => 'ログインして購入';
@@ -703,4 +691,84 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get unlimited => '無制限';
+
+  @override
+  String get paywallPriceNote => '買い切り · サブスクではありません';
+
+  @override
+  String get paywallClockHead => '購入時点では計測を開始しません';
+
+  @override
+  String get paywallClockBody =>
+      'プレミアム機能を初めて使い、確認した時点から 7 日間が始まります。先に買っておき、館に着いてから開始できます。';
+
+  @override
+  String get ticketPaid => '支払い済み';
+
+  @override
+  String get ticketStub => '半券';
+
+  @override
+  String get ticketStubPending => '期限は未記入';
+
+  @override
+  String get ticketStubUntorn => '未使用';
+
+  @override
+  String get ticketValidUntil => '有効期限';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return '残り $days 日';
+  }
+
+  @override
+  String get activateSheetTitle => '7日間を今すぐ開始しますか？';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '確認すると計測が始まり、$dateString $timeString に終了します。この操作は取り消せません。';
+  }
+
+  @override
+  String get activateTear => '切り取って開始';
+
+  @override
+  String get activateWaiting => '確認しています…';
+
+  @override
+  String get activateWaitingNote => 'チケットはまだ切り取られていません。確認できてから有効になります';
+
+  @override
+  String get activateDoneTitle => 'パスを開始しました';
+
+  @override
+  String get activateDoneBody => '4館の音声解説と無制限の作品認識が使えます。';
+
+  @override
+  String get activateDoneCta => '続ける';
+
+  @override
+  String get activateFailTitle => '確認できませんでした。チケットは使われていません';
+
+  @override
+  String get activateFailBody => '通信できず、7 日間はまだ始まっていません。パスはそのままです。もう一度お試しください。';
+
+  @override
+  String get activateRetry => 'もう一度試す';
 }

@@ -639,11 +639,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get paywallTitle => '파리 7일 패스';
 
   @override
-  String get paywallPitch => '사진 인식 무제한, 루브르·오르세·오랑주리 전관 음성 해설을 모두 이용할 수 있습니다.';
-
-  @override
-  String get paywallClockNote =>
-      '구매 시점에는 시간이 흐르지 않습니다. 프리미엄 기능을 처음 사용하고 확인한 때부터 시작됩니다.';
+  String get paywallPitch =>
+      '사진 인식 무제한, 루브르·오르세·오랑주리·프티 팔레 4개 관의 음성 해설을 모두 이용할 수 있습니다.';
 
   @override
   String get paywallFreeAlways => '둘러보기, 검색, 전체 텍스트 해설은 언제나 무료입니다.';
@@ -662,16 +659,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get quotaExhausted => '무료 인식 횟수를 모두 사용했습니다.';
-
-  @override
-  String get activateTitle => '7일 패스를 시작할까요?';
-
-  @override
-  String get activateBody =>
-      '시작하면 7×24시간 연속으로 진행되며 중간에 멈추지 않습니다. 미술관에 도착한 뒤 시작하세요.';
-
-  @override
-  String get activateConfirm => '지금 시작';
 
   @override
   String get activateLater => '나중에';
@@ -704,4 +691,85 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unlimited => '무제한';
+
+  @override
+  String get paywallPriceNote => '1회 결제 · 구독 아님';
+
+  @override
+  String get paywallClockHead => '구매 시점에는 시간이 흐르지 않습니다';
+
+  @override
+  String get paywallClockBody =>
+      '프리미엄 기능을 처음 사용하고 확인한 때부터 7일이 시작됩니다. 미리 사 두고 미술관에서 시작하세요.';
+
+  @override
+  String get ticketPaid => '결제 완료';
+
+  @override
+  String get ticketStub => '반권';
+
+  @override
+  String get ticketStubPending => '만료일 미기재';
+
+  @override
+  String get ticketStubUntorn => '미사용';
+
+  @override
+  String get ticketValidUntil => '유효 기간';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return '$days일 남음';
+  }
+
+  @override
+  String get activateSheetTitle => '지금 7일을 시작할까요?';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '확인하면 시간이 시작되어 $dateString $timeString에 종료됩니다. 되돌릴 수 없습니다.';
+  }
+
+  @override
+  String get activateTear => '뜯고 시작하기';
+
+  @override
+  String get activateWaiting => '확인하는 중…';
+
+  @override
+  String get activateWaitingNote => '티켓은 아직 뜯지 않았습니다. 확인된 뒤에 시작됩니다';
+
+  @override
+  String get activateDoneTitle => '패스가 시작되었습니다';
+
+  @override
+  String get activateDoneBody => '4개 관의 음성 해설과 무제한 인식이 열렸습니다.';
+
+  @override
+  String get activateDoneCta => '계속';
+
+  @override
+  String get activateFailTitle => '확인하지 못했습니다. 티켓은 사용되지 않았습니다';
+
+  @override
+  String get activateFailBody =>
+      '연결되지 않아 7일이 시작되지 않았습니다. 패스는 그대로입니다. 다시 시도하세요.';
+
+  @override
+  String get activateRetry => '다시 시도';
 }

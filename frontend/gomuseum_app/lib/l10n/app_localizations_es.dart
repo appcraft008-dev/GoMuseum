@@ -662,11 +662,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paywallPitch =>
-      'Reconocimiento fotográfico ilimitado y audioguía completa en el Louvre, Orsay y la Orangerie.';
-
-  @override
-  String get paywallClockNote =>
-      'El tiempo no empieza al comprar: comienza la primera vez que usas una función premium y lo confirmas.';
+      'Reconocimiento fotográfico ilimitado y audioguía completa en el Louvre, Orsay, la Orangerie y el Petit Palais.';
 
   @override
   String get paywallFreeAlways =>
@@ -689,17 +685,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get quotaExhausted => 'Has agotado tus reconocimientos gratuitos.';
 
   @override
-  String get activateTitle => '¿Empezar tu pase de 7 días?';
-
-  @override
-  String get activateBody =>
-      'Una vez iniciado corre 7×24 horas sin pausa. Actívalo en el museo, no antes.';
-
-  @override
-  String get activateConfirm => 'Empezar ahora';
-
-  @override
-  String get activateLater => 'Todavía no';
+  String get activateLater => 'Más tarde';
 
   @override
   String get paywallLoginToBuy => 'Inicia sesión para comprar';
@@ -730,4 +716,88 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get unlimited => 'Ilimitado';
+
+  @override
+  String get paywallPriceNote => 'Pago único · no es suscripción';
+
+  @override
+  String get paywallClockHead => 'El tiempo no empieza al comprar';
+
+  @override
+  String get paywallClockBody =>
+      'Tus 7 días empiezan la primera vez que usas una función premium y lo confirmas. Compra antes, empieza en el museo.';
+
+  @override
+  String get ticketPaid => 'Pagado';
+
+  @override
+  String get ticketStub => 'Resguardo';
+
+  @override
+  String get ticketStubPending => 'fecha de fin por rellenar';
+
+  @override
+  String get ticketStubUntorn => 'sin desprender';
+
+  @override
+  String get ticketValidUntil => 'Válido hasta';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return 'quedan $days días';
+  }
+
+  @override
+  String get activateSheetTitle => '¿Empezar tus 7 días ahora?';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return 'Al confirmar empieza el tiempo y termina el $dateString a las $timeString. Esto no se puede deshacer.';
+  }
+
+  @override
+  String get activateTear => 'Desprender y empezar';
+
+  @override
+  String get activateWaiting => 'Confirmando…';
+
+  @override
+  String get activateWaitingNote =>
+      'La entrada aún no está desprendida: empieza al confirmar';
+
+  @override
+  String get activateDoneTitle => 'Tu pase ha empezado';
+
+  @override
+  String get activateDoneBody =>
+      'La audioguía de los cuatro museos y el reconocimiento ilimitado están desbloqueados.';
+
+  @override
+  String get activateDoneCta => 'Continuar';
+
+  @override
+  String get activateFailTitle =>
+      'No se pudo confirmar: tu entrada no se ha usado';
+
+  @override
+  String get activateFailBody =>
+      'Sin conexión, los 7 días no han empezado. Tu pase sigue intacto; inténtalo de nuevo.';
+
+  @override
+  String get activateRetry => 'Reintentar';
 }
