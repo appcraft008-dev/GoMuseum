@@ -205,6 +205,8 @@
   "paywallFreeAlways": "La navigation, la recherche et le commentaire écrit complet restent toujours gratuits.",
   "paywallBuy": "Obtenir le pass",
   "paywallRestore": "Restaurer l'achat",
+  "restoreInProgress": "Restauration…",
+  "restoreNothingFound": "Aucun achat à restaurer",
   "audioFreePreview": "Écoute gratuite",
   "audioLockedHint": "Le commentaire audio nécessite le pass — votre écoute gratuite a déjà été utilisée.",
   "quotaExhausted": "Vous avez utilisé toutes vos reconnaissances gratuites.",

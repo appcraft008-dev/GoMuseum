@@ -205,6 +205,8 @@
   "paywallFreeAlways": "Przeglądanie, wyszukiwanie i pełny komentarz tekstowy są zawsze bezpłatne.",
   "paywallBuy": "Kup karnet",
   "paywallRestore": "Przywróć zakup",
+  "restoreInProgress": "Przywracanie…",
+  "restoreNothingFound": "Brak zakupów do przywrócenia",
   "audioFreePreview": "Darmowy odsłuch",
   "audioLockedHint": "Komentarz audio wymaga karnetu — darmowy odsłuch został już wykorzystany.",
   "quotaExhausted": "Wykorzystano wszystkie darmowe rozpoznania.",

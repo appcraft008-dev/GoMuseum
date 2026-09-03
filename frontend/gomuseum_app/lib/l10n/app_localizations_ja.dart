@@ -652,6 +652,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get paywallRestore => '購入を復元';
 
   @override
+  String get restoreInProgress => '復元中…';
+
+  @override
+  String get restoreNothingFound => '復元できる購入はありません';
+
+  @override
   String get audioFreePreview => '無料試聴';
 
   @override

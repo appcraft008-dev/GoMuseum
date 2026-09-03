@@ -60,6 +60,11 @@ class BenefitsPage extends ConsumerStatefulWidget {
 class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   late final IapService _iapService;
   bool _isPurchasing = false;
+  bool _isRestoring = false;
+
+  /// Play 回放过来的购买计数。用来回答"这次恢复到底捞到东西没有" ——
+  /// 光看 restorePurchases() 有没有抛异常是答不出来的,它不抛也可能一无所获。
+  int _restoredSeen = 0;
 
   /// 收据冲突:**不是可重试的失败**,所以它是一个状态而不是一条 SnackBar。
   /// 弹完就消失的提示会让用户反复点购买 —— 而这条路永远走不通。
@@ -97,6 +102,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     var outcome = VerifyOutcome.failed;
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
+      if (purchase.status == PurchaseStatus.restored) _restoredSeen++;
       outcome = await ref
           .read(benefitsStateProvider.notifier)
           .verifyAndUpdateBenefits(purchase);
@@ -132,13 +138,37 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     }
   }
 
+  /// 恢复购买。**必须自己说话** —— 成功路径的反馈完全来自 Play 回放购买时的
+  /// [_handlePurchaseUpdate];而通票是消耗型商品,验证成功后就被 completePurchase
+  /// 消耗掉,**已消耗的购买不在 restorePurchases 列表里**。也就是说对一个买成功
+  /// 过的人,这里恒定什么都捞不到 —— 那是最常见的情况,却也正是原来完全静默的
+  /// 情况:不转圈、不提示,用户分不清"正在恢复""没有可恢复的""失败了"。
+  ///
+  /// 这个入口真正的用武之地只有一个:**付了钱但后端验证没成功**的窗口
+  /// (购买还挂在 Play 名下没被消耗)。2026-09-02 那次 androidpublisher API
+  /// 没启用就是这种局面。
   Future<void> _restorePurchases() async {
+    if (_isRestoring) return;
+    final seenBefore = _restoredSeen;
+    setState(() => _isRestoring = true);
     try {
       await _iapService.restorePurchases();
+      // Play 是通过 purchaseStream 异步回放的,restorePurchases() 返回时
+      // 东西还没到。给它一个窗口再判断"什么都没来"。
+      await Future<void>.delayed(const Duration(seconds: 3));
+      if (mounted && _restoredSeen == seenBefore) {
+        _toast(AppLocalizations.of(context)!.restoreNothingFound);
+      }
     } catch (_) {
       if (mounted) _toast(AppLocalizations.of(context)!.purchaseFailed);
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
     }
   }
+
+  /// 恢复期间按钮的文案:哑着比说错强,但什么都不说最差。
+  String _restoreLabel(AppLocalizations l10n) =>
+      _isRestoring ? l10n.restoreInProgress : l10n.paywallRestore;
 
   Future<void> _activate() async {
     final ent = ref.read(entitlementsProvider).value;
@@ -281,7 +311,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       const SizedBox(height: 18),
       _buyCta(l10n, ent),
       const SizedBox(height: 3),
-      BenSecondaryAction(label: l10n.paywallRestore, onTap: _restorePurchases),
+      BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
     ];
   }
 
@@ -408,7 +438,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       const SizedBox(height: 18),
       _buyCta(l10n, ent),
       const SizedBox(height: 3),
-      BenSecondaryAction(label: l10n.paywallRestore, onTap: _restorePurchases),
+      BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
     ];
   }
 

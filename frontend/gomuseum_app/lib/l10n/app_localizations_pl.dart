@@ -673,6 +673,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get paywallRestore => 'Przywróć zakup';
 
   @override
+  String get restoreInProgress => 'Przywracanie…';
+
+  @override
+  String get restoreNothingFound => 'Brak zakupów do przywrócenia';
+
+  @override
   String get audioFreePreview => 'Darmowy odsłuch';
 
   @override

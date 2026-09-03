@@ -205,6 +205,8 @@
   "paywallFreeAlways": "Stöbern, Suche und der vollständige Textkommentar bleiben immer kostenlos.",
   "paywallBuy": "Pass holen",
   "paywallRestore": "Kauf wiederherstellen",
+  "restoreInProgress": "Wird wiederhergestellt…",
+  "restoreNothingFound": "Keine Käufe zum Wiederherstellen",
   "audioFreePreview": "Kostenprobe",
   "audioLockedHint": "Für Audiokommentare wird der Pass benötigt — deine kostenlose Probe ist bereits aufgebraucht.",
   "quotaExhausted": "Du hast alle kostenlosen Erkennungen aufgebraucht.",

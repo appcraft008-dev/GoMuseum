@@ -650,6 +650,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallRestore => '恢复购买';
 
   @override
+  String get restoreInProgress => '正在恢复…';
+
+  @override
+  String get restoreNothingFound => '没有可恢复的购买';
+
+  @override
   String get audioFreePreview => '免费试听';
 
   @override
@@ -1567,6 +1573,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paywallRestore => '回復購買';
+
+  @override
+  String get restoreInProgress => '正在恢復…';
+
+  @override
+  String get restoreNothingFound => '沒有可恢復的購買';
 
   @override
   String get audioFreePreview => '免費試聽';

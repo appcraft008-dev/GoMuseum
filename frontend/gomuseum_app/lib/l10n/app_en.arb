@@ -314,6 +314,8 @@
   "paywallFreeAlways": "Browsing, search and full written commentary are always free.",
   "paywallBuy": "Get the pass",
   "paywallRestore": "Restore purchase",
+  "restoreInProgress": "Restoring…",
+  "restoreNothingFound": "No purchases to restore",
   "audioFreePreview": "Free preview",
   "audioLockedHint": "Audio commentary needs the pass — your free preview has been used.",
   "quotaExhausted": "You've used all your free recognitions.",

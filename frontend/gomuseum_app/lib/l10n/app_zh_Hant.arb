@@ -205,6 +205,8 @@
   "paywallFreeAlways": "瀏覽、搜尋與完整文字導覽始終免費。",
   "paywallBuy": "取得通票",
   "paywallRestore": "回復購買",
+  "restoreInProgress": "正在恢復…",
+  "restoreNothingFound": "沒有可恢復的購買",
   "audioFreePreview": "免費試聽",
   "audioLockedHint": "語音導覽需要通票——免費試聽名額已用在另一件作品上。",
   "quotaExhausted": "免費辨識次數已用完。",

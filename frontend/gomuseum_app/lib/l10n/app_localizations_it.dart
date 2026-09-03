@@ -672,6 +672,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get paywallRestore => 'Ripristina acquisto';
 
   @override
+  String get restoreInProgress => 'Ripristino…';
+
+  @override
+  String get restoreNothingFound => 'Nessun acquisto da ripristinare';
+
+  @override
   String get audioFreePreview => 'Ascolto gratuito';
 
   @override

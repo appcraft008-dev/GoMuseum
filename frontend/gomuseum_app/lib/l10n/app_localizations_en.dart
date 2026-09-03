@@ -666,6 +666,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallRestore => 'Restore purchase';
 
   @override
+  String get restoreInProgress => 'Restoring…';
+
+  @override
+  String get restoreNothingFound => 'No purchases to restore';
+
+  @override
   String get audioFreePreview => 'Free preview';
 
   @override
