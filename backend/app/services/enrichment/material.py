@@ -44,11 +44,93 @@ def fetch_object_material(
     return {k: v for k, v in merged.items() if k not in _CORE}
 
 
+# 一件作品可以有多条 P170(合作、翻铸、"归于"/"可能出自")。此前三条独立路径
+# 各自「取第一个」:fetch_artist_material 取到 A、fetch_artist_facts 取到 B、
+# backfill._fetch_creators 取到 C —— 谁都没错,但拼出来的是同一件作品三个作者。
+# ⚠️ 更隐蔽的是 fetch_artist_facts 会**逐行合并**:artist_qid 取第一行,生卒/国籍/
+# 代表作各取"第一个非空",于是能拼出 A 的 qid + B 的生年。
+# 2026-09-03 实例:橘园 Q64309678《静物,梨和青苹果》—— Wikidata 同时挂着
+# 塞尚(限定 presumably,引用=橘园官网)与加歇医生(限定 possibly,零引用);
+# 管线把加歇的维基传记灌进 artist_extract_*,10 语 78 条正文全在讲"梵高的医生
+# 画了这幅静物",而结构化字段是塞尚的生卒年和代表作。
+# → 解析一次、传下去。排序键用 Wikidata 自己的不确定性标记,不是随机取首个。
+_CREATOR_QUERY = """
+SELECT ?artist ?rank ?cert (COUNT(?ref) AS ?refs) WHERE {{
+  wd:{qid} p:P170 ?st .
+  ?st ps:P170 ?artist ; wikibase:rank ?rank .
+  OPTIONAL {{ ?st pq:P1480 ?cert . }}
+  OPTIONAL {{ ?st prov:wasDerivedFrom ?ref . }}
+}} GROUP BY ?artist ?rank ?cert
+"""
+
+_RANK_ORDER = {"PreferredRank": 0, "NormalRank": 1}
+# P1480 "sourcing circumstances":无限定=直接断言最强,其次 presumably,再次 possibly。
+# 未知限定词按最弱处理(宁可信有标记的那条更不确定)。
+_CERT_ORDER = {None: 0, "Q18122778": 1, "Q30230067": 3}
+_CERT_UNKNOWN = 2
+
+
+def creator_candidate(row, *, var="artist"):
+    """P170 语句行 → (排序键, 作者QID);blank node / deprecated rank → None。
+
+    单件版(resolve_creator_qid)与批量版(backfill._fetch_creators)共用同一把尺子 ——
+    两处各写一份排序规则,就是本 bug 的翻版。
+    """
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    aq = (row.get(var) or {}).get("value", "").rsplit("/", 1)[-1]
+    if not is_wikidata_qid(aq):
+        # P170="未知值" 时 Wikidata 返回 blank node(.well-known/genid/<hex>),
+        # rsplit 会把哈希当作者 QID → 建出一堆假作者(卢浮宫 4642 件实测崩过)。
+        return None
+    rank = (row.get("rank") or {}).get("value", "").rsplit("#", 1)[-1]
+    if rank == "DeprecatedRank":
+        return None
+    cert = (row.get("cert") or {}).get("value", "").rsplit("/", 1)[-1] or None
+    try:
+        refs = int((row.get("refs") or {}).get("value") or 0)
+    except ValueError:
+        refs = 0
+    key = (
+        _RANK_ORDER.get(rank, 2),
+        _CERT_ORDER.get(cert, _CERT_UNKNOWN),
+        -refs,
+        int(aq[1:]),  # 全部打平时按 QID 定序,保证跨次运行可复现
+    )
+    return key, aq
+
+
+def resolve_creator_qid(qid, *, run_query=None) -> str | None:
+    """作品 QID → **唯一**作者 QID。多值时按 (rank, 不确定性限定词, 引用数) 择优。
+
+    全流程只应调这一次,结果传给 fetch_artist_facts / fetch_artist_material。
+    无作者、或 P170 是"未知值"(blank node)→ None(宁缺毋滥,不猜)。
+    """
+    run_query = run_query or _default_artist_query
+    cands = [
+        c
+        for c in (
+            creator_candidate(r)
+            for r in run_query(_CREATOR_QUERY.format(qid=qid)) or []
+        )
+        if c
+    ]
+    return min(cands)[1] if cands else None
+
+
 _ARTIST_QUERY = """
 SELECT ?al_en ?al_cl WHERE {{
   wd:{qid} wdt:P170 ?artist .
   OPTIONAL {{ ?a_en schema:about ?artist ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?al_en . }}
   OPTIONAL {{ ?a_cl schema:about ?artist ; schema:isPartOf <https://{cl}.wikipedia.org/> ; schema:name ?al_cl . }}
+}} LIMIT 1
+"""
+
+# artist_qid 已由 resolve_creator_qid 定好时走这条:直接问作者实体,不再跳 P170。
+_ARTIST_TITLES_QUERY = """
+SELECT ?al_en ?al_cl WHERE {{
+  OPTIONAL {{ ?a_en schema:about wd:{aqid} ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?al_en . }}
+  OPTIONAL {{ ?a_cl schema:about wd:{aqid} ; schema:isPartOf <https://{cl}.wikipedia.org/> ; schema:name ?al_cl . }}
 }} LIMIT 1
 """
 
@@ -74,6 +156,18 @@ def _is_raw_qid(v: str) -> bool:
     return bool(v) and v[0] in "QP" and v[1:].isdigit()
 
 
+# 同上:作者已定则直接问作者实体。走 P170 版本时多作者会**逐行串味**
+# (artist_qid 来自 A、生年来自 B),这正是 Q64309678 的病灶之一。
+_ARTIST_FACTS_BY_ARTIST_QUERY = """
+SELECT ?birth ?death ?natLabel ?workLabel WHERE {{
+  OPTIONAL {{ wd:{aqid} wdt:P569 ?birth. }}
+  OPTIONAL {{ wd:{aqid} wdt:P570 ?death. }}
+  OPTIONAL {{ wd:{aqid} wdt:P27 ?nat. }}
+  OPTIONAL {{ wd:{aqid} wdt:P800 ?work. }}
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+}}
+"""
+
 _ARTIST_FACTS_QUERY = """
 SELECT ?artist ?birth ?death ?natLabel ?workLabel WHERE {{
   wd:{qid} wdt:P170 ?artist .
@@ -86,13 +180,20 @@ SELECT ?artist ?birth ?death ?natLabel ?workLabel WHERE {{
 """
 
 
-def fetch_artist_facts(qid, *, run_query=None) -> dict:
-    """作者 Wikidata 实体结构化属性 → {artist_birth/death/nationality/notable_works}。无→{}。"""
+def fetch_artist_facts(qid, *, run_query=None, artist_qid=None) -> dict:
+    """作者 Wikidata 实体结构化属性 → {artist_birth/death/nationality/notable_works}。无→{}。
+
+    artist_qid 已由 resolve_creator_qid 定好时直接问该实体 —— 多作者作品必须走这条,
+    否则字段会跨作者串味。不传则退回 P170 遍历(兼容老调用点)。
+    """
     run_query = run_query or _default_artist_query
-    rows = run_query(_ARTIST_FACTS_QUERY.format(qid=qid))
+    if artist_qid:
+        rows = run_query(_ARTIST_FACTS_BY_ARTIST_QUERY.format(aqid=artist_qid))
+    else:
+        rows = run_query(_ARTIST_FACTS_QUERY.format(qid=qid))
     if not rows:
-        return {}
-    out = {}
+        return {"artist_qid": artist_qid} if artist_qid else {}
+    out = {"artist_qid": artist_qid} if artist_qid else {}
     works = []
     for row in rows:
         b = (row.get("birth") or {}).get("value")
@@ -259,10 +360,19 @@ def fetch_wikidata_labels_batch(qids, langs: list, *, run_query=None) -> dict:
     return {q: _collapse_variants(raw, langs) for q, raw in raw_by_qid.items()}
 
 
-def fetch_artist_material(qid, registry, *, run_query=None, country_lang="fr") -> dict:
-    """抓作者实体 Wikipedia(作品→P170→作者维基标题→extract)。无作者/无维基→{}。"""
+def fetch_artist_material(
+    qid, registry, *, run_query=None, country_lang="fr", artist_qid=None
+) -> dict:
+    """抓作者实体 Wikipedia(作者→维基标题→extract)。无作者/无维基→{}。
+
+    artist_qid 已定则直接问该实体;不传则退回作品→P170 遍历(兼容老调用点)。
+    """
     run_query = run_query or _default_artist_query
-    rows = run_query(_ARTIST_QUERY.format(qid=qid, cl=country_lang or "fr"))
+    cl = country_lang or "fr"
+    if artist_qid:
+        rows = run_query(_ARTIST_TITLES_QUERY.format(aqid=artist_qid, cl=cl))
+    else:
+        rows = run_query(_ARTIST_QUERY.format(qid=qid, cl=cl))
     if not rows:
         return {}
     row = rows[0]

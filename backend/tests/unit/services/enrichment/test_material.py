@@ -554,3 +554,104 @@ def test_artist_i18n_query_selects_every_binding_the_parser_reads():
     selected = _ARTIST_I18N_FACTS_QUERY.split("WHERE")[0].split()
     for var in ("?natLabel", "?work", "?workLabel"):
         assert var in selected, f"{var} 没进 SELECT,解析侧只会读到空"
+
+
+def _creator_row(aq, rank="NormalRank", cert=None, refs=0, var="artist"):
+    r = {
+        var: {"value": f"http://www.wikidata.org/entity/{aq}"},
+        "rank": {"value": f"http://wikiba.se/ontology#{rank}"},
+        "refs": {"value": str(refs)},
+    }
+    if cert:
+        r["cert"] = {"value": f"http://www.wikidata.org/entity/{cert}"}
+    return r
+
+
+# 真实形状:橘园 Q64309678《静物,梨和青苹果》—— 塞尚(presumably,引用=橘园官网)
+# 与加歇医生(possibly,零引用)同挂 P170。旧代码"取首个"把加歇的传记灌进了
+# artist_extract_*,10 语 78 条正文全在讲梵高的医生画了这幅静物。
+_Q64309678 = [
+    _creator_row("Q35548", cert="Q18122778", refs=1),  # Cézanne, presumably
+    _creator_row("Q1369513", cert="Q30230067", refs=0),  # Gachet, possibly
+]
+
+
+def test_resolve_creator_prefers_better_sourced_claim():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    assert resolve_creator_qid("Q64309678", run_query=lambda s: _Q64309678) == "Q35548"
+    # 行序不该影响结果 —— SPARQL 不保证顺序,这正是旧代码的病根
+    assert (
+        resolve_creator_qid("Q64309678", run_query=lambda s: _Q64309678[::-1])
+        == "Q35548"
+    )
+
+
+def test_resolve_creator_rank_beats_qualifier():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    rows = [
+        _creator_row("Q1", cert="Q30230067", rank="PreferredRank"),
+        _creator_row("Q2", refs=9),  # 无限定 + 多引用,但只是 normal rank
+    ]
+    assert resolve_creator_qid("Qx", run_query=lambda s: rows) == "Q1"
+
+
+def test_resolve_creator_skips_blank_node_and_deprecated():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    rows = [
+        {
+            "artist": {"value": "http://www.wikidata.org/.well-known/genid/abc123"},
+            "rank": {"value": "http://wikiba.se/ontology#NormalRank"},
+        },
+        _creator_row("Q7", rank="DeprecatedRank"),
+    ]
+    assert resolve_creator_qid("Qx", run_query=lambda s: rows) is None
+
+
+def test_fetch_artist_facts_with_artist_qid_does_not_traverse_p170():
+    """给定作者时必须直接问该实体 —— 否则多作者会逐行串味(qid 来自 A、生年来自 B)。"""
+    from app.services.enrichment.material import fetch_artist_facts
+
+    seen = {}
+
+    def fake(sparql):
+        seen["sparql"] = sparql
+        return [{"birth": {"value": "1839-01-19T00:00:00Z"}}]
+
+    f = fetch_artist_facts("Q64309678", run_query=fake, artist_qid="Q35548")
+    assert "wdt:P170" not in seen["sparql"] and "wd:Q35548" in seen["sparql"]
+    assert f["artist_qid"] == "Q35548" and f["artist_birth"] == "1839"
+
+
+def test_fetch_artist_material_with_artist_qid_does_not_traverse_p170():
+    from app.services.enrichment.material import fetch_artist_material
+    from app.services.enrichment.registry import SourceRegistry
+
+    seen = {}
+
+    def fake(sparql):
+        seen["sparql"] = sparql
+        return []
+
+    fetch_artist_material(
+        "Q64309678", SourceRegistry([]), run_query=fake, artist_qid="Q35548"
+    )
+    assert "wdt:P170" not in seen["sparql"] and "wd:Q35548" in seen["sparql"]
+
+
+def test_fetch_creators_batch_picks_same_winner_as_single():
+    """批量路径与单件路径必须给出同一个人 —— 两把尺子就是本 bug 的翻版。"""
+    from app.services.enrichment.backfill import _fetch_creators
+
+    rows = [
+        dict(r, item={"value": "http://www.wikidata.org/entity/Q64309678"})
+        for r in (
+            _creator_row("Q35548", cert="Q18122778", refs=1, var="creator"),
+            _creator_row("Q1369513", cert="Q30230067", var="creator"),
+        )
+    ]
+    assert _fetch_creators(["Q64309678"], run_query=lambda s: rows[::-1]) == {
+        "Q64309678": "Q35548"
+    }
