@@ -116,8 +116,39 @@ def get_section_audio_key(
     return row.audio_key if row else None
 
 
+def _demote_orphan_translations(db, obj, code):
+    """英文段不再 published → 同段的译文一并下架(契约「英语轴心」的不变量)。
+
+    译文的正当性来自英文源:接地闸只在英语判一遍,其它语言靠忠实翻译继承。英文段被
+    闸拦下时,`translate_object_language` 只翻**已发布**的英文段 → 译文既不会被重写、
+    也不会失效,于是继续 published、继续对用户下发 —— **成了没有源头的孤儿**。
+
+    实例(2026-09-03):橘园 Q64309678 修完作者归属后重生成,英文 significance 因整段
+    没有材料支持被闸清空,9 条译文原地留存 —— 正文已换成塞尚,significance 还在讲
+    梵高的医生加歇。0 条有音频纯属侥幸:再晚一步就会被灌成音频、永久落库。
+
+    改 status 而非删行:可逆,且英文段将来补上时会被重译覆盖(自愈)。
+    """
+    for row in (
+        db.query(ObjectContentSection)
+        .filter(
+            ObjectContentSection.object_id == obj.id,
+            ObjectContentSection.section_code == code,
+            ObjectContentSection.language != "en",
+            ObjectContentSection.status == "published",
+        )
+        .all()
+    ):
+        row.status = "needs_review"
+        db.add(row)
+
+
 def _upsert_section(db, obj, language, code, body, status, model):
-    """查/建 (obj,lang,section) 行并赋值。供 persist_generated_sections / persist_gated_sections 复用。"""
+    """查/建 (obj,lang,section) 行并赋值。供 persist_generated_sections / persist_gated_sections 复用。
+
+    这里是**所有**段落写入(英文与译文)的唯一咽喉 —— 英文段的降级级联放在这一处,
+    而不是每个调用点各加一遍检查。
+    """
     row = (
         db.query(ObjectContentSection)
         .filter_by(object_id=obj.id, language=language, section_code=code)
@@ -131,6 +162,8 @@ def _upsert_section(db, obj, language, code, body, status, model):
     row.model = model
     row.generated_at = datetime.now(timezone.utc)
     db.add(row)
+    if language == "en" and status != "published":
+        _demote_orphan_translations(db, obj, code)
 
 
 def persist_generated_sections(
