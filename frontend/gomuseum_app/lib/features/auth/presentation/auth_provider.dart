@@ -71,31 +71,30 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  /// 一次登录尝试。**失败绝不改动 [state]** —— 这是白屏事故的根因所在:
+  ///
+  /// 曾经失败时写 `state = AsyncValue.error(...)`,而 `AsyncError.value` 在
+  /// Riverpod 里是**会 rethrow 的**;路由 provider 里那句 `authState.value`
+  /// 于是在 build 期抛出 → release 模式下 ErrorWidget 是一整块灰,而且
+  /// provider 卡在 error 态再也回不来 —— 邮箱重复、密码打错这种日常失败,
+  /// 用户拿到的是一个必须杀进程的死 App。
+  ///
+  /// 语义上也本该如此:**没登上 ≠ 登出**。失败信息由返回值 false 交给页面弹
+  /// toast,不需要污染全局登录态(尤其游客升级失败时不该把游客也踢掉)。
+  Future<bool> _attempt(Future<User> Function() run) async {
     try {
-      state = const AsyncValue.loading();
-      final user = await _repository.login(email, password);
-      state = AsyncValue.data(user);
+      state = AsyncValue.data(await run());
       return true;
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
+    } catch (_) {
       return false;
     }
   }
 
-  Future<bool> register(String email, String password,
-      {String? username}) async {
-    try {
-      state = const AsyncValue.loading();
-      final user =
-          await _repository.register(email, password, username: username);
-      state = AsyncValue.data(user);
-      return true;
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-      return false;
-    }
-  }
+  Future<bool> login(String email, String password) =>
+      _attempt(() => _repository.login(email, password));
+
+  Future<bool> register(String email, String password, {String? username}) =>
+      _attempt(() => _repository.register(email, password, username: username));
 
   Future<void> logout() async {
     await _repository.logout();
@@ -114,43 +113,14 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   /// Login with Google
-  Future<bool> loginWithGoogle(String idToken, {String? username}) async {
-    try {
-      state = const AsyncValue.loading();
-      final user =
-          await _repository.loginWithGoogle(idToken, username: username);
-      state = AsyncValue.data(user);
-      return true;
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-      return false;
-    }
-  }
+  Future<bool> loginWithGoogle(String idToken, {String? username}) =>
+      _attempt(() => _repository.loginWithGoogle(idToken, username: username));
 
   /// Login with Apple
-  Future<bool> loginWithApple(String idToken, {String? username}) async {
-    try {
-      state = const AsyncValue.loading();
-      final user =
-          await _repository.loginWithApple(idToken, username: username);
-      state = AsyncValue.data(user);
-      return true;
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-      return false;
-    }
-  }
+  Future<bool> loginWithApple(String idToken, {String? username}) =>
+      _attempt(() => _repository.loginWithApple(idToken, username: username));
 
   /// Login as guest user
-  Future<bool> loginAsGuest({String? deviceId}) async {
-    try {
-      state = const AsyncValue.loading();
-      final user = await _repository.loginAsGuest(deviceId: deviceId);
-      state = AsyncValue.data(user);
-      return true;
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-      return false;
-    }
-  }
+  Future<bool> loginAsGuest({String? deviceId}) =>
+      _attempt(() => _repository.loginAsGuest(deviceId: deviceId));
 }
