@@ -729,9 +729,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Un pass non attivato scade 30 giorni dopo l\'acquisto.';
 
   @override
-  String get ticketPaid => 'Pagato';
-
-  @override
   String get ticketStub => 'Matrice';
 
   @override
@@ -801,4 +798,161 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get activateRetry => 'Riprova';
+
+  @override
+  String get benefitsMyPass => 'Il mio pass';
+
+  @override
+  String get benefitsSecFreeQuota => 'Quota gratuita';
+
+  @override
+  String get benefitsSecFeatures => 'Funzioni';
+
+  @override
+  String get benefitsSecBuyable => 'Disponibile';
+
+  @override
+  String get benefitsSecIncluded => 'Incluso';
+
+  @override
+  String get benefitsSecUnlocked => 'Sbloccato';
+
+  @override
+  String get benefitsSecPurchases => 'Acquisti';
+
+  @override
+  String get benefitsSecCurrentQuota => 'La tua quota adesso';
+
+  @override
+  String get benefitsSecBuyAnother => 'Un altro pass';
+
+  @override
+  String get benefitsRecognition => 'Riconoscimento foto';
+
+  @override
+  String get benefitsFreeAudioNote =>
+      'Puoi ascoltare gratis il commento audio principale di un\'opera.';
+
+  @override
+  String get benefitsFeatBrowse =>
+      'Navigazione, ricerca, commento scritto completo';
+
+  @override
+  String get benefitsFeatPresetQa => 'Risposte alle domande suggerite';
+
+  @override
+  String get benefitsFeatRecognition => 'Riconoscimento foto illimitato';
+
+  @override
+  String get benefitsFeatAllAudio =>
+      'Commento audio in tutti e quattro i musei';
+
+  @override
+  String get benefitsFeatDeepAudio => 'Audio delle sezioni di approfondimento';
+
+  @override
+  String get benefitsNeedsPass => 'Serve il pass';
+
+  @override
+  String get benefitsNotStartedHead => 'Il conteggio non è ancora partito';
+
+  @override
+  String get benefitsNotStartedBody =>
+      'La prima volta che userai il commento audio o il riconoscimento al museo ti chiederemo una conferma. I tuoi 7 giorni partono da quel momento.';
+
+  @override
+  String get benefitsMuseums => 'Louvre · Orsay · Orangerie · Petit Palais';
+
+  @override
+  String get benefitsStartNow => 'Comincia ora i 7 giorni';
+
+  @override
+  String get benefitsStartNowNote =>
+      'Se non sei ancora al museo, conviene aspettare';
+
+  @override
+  String get benefitsExpiredBody =>
+      'I tuoi 7 giorni sono finiti. La quota gratuita è tornata e il commento scritto resta completo.';
+
+  @override
+  String benefitsPrevPass(DateTime start, DateTime end) {
+    final intl.DateFormat startDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String startString = startDateFormat.format(start);
+    final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String endString = endDateFormat.format(end);
+
+    return 'Pass precedente esaurito · $startString – $endString';
+  }
+
+  @override
+  String get benefitsEndedAt => 'Terminato il';
+
+  @override
+  String benefitsDateOnly(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get edgeUnknownHead => 'Ora non riusciamo a leggere il tuo pass';
+
+  @override
+  String get edgeUnknownBody =>
+      'Senza connessione non possiamo confermare se hai già un pass, né avviare un acquisto in sicurezza.';
+
+  @override
+  String get edgeUnknownNote =>
+      'Se ne hai già comprato uno, tornerà da solo appena sei online. Non ti verrà addebitato due volte.';
+
+  @override
+  String get edgeSeeFree => 'Vedi i contenuti gratuiti';
+
+  @override
+  String get edgeSignedOutHead => 'Il pass è legato a un account';
+
+  @override
+  String get edgeSignedOutBody =>
+      'Accedi prima di acquistare: il pass sopravvive a un nuovo telefono o a una reinstallazione.';
+
+  @override
+  String get edgeConflictTitle => 'Questo pass è legato a un altro account';
+
+  @override
+  String get edgeConflictBody =>
+      'Questo acquisto appartiene a un altro account GoMuseum. Lo stesso pass non può servire due account, quindi qui non può essere ripristinato.';
+
+  @override
+  String get edgeConflictBound => 'Legato a';
+
+  @override
+  String get edgeConflictOther => 'un altro account';
+
+  @override
+  String get edgeConflictHelp =>
+      'Per usare questo pass esci e rientra con quell\'account. Se pensi che sia un errore, scrivici.';
+
+  @override
+  String get edgeSwitchAccount => 'Cambia account';
+
+  @override
+  String get edgeContactSupport => 'Scrivici';
+
+  @override
+  String get drawerLockedHint =>
+      'L\'audio delle sezioni di approfondimento richiede il pass. Tutto il testo è gratis.';
+
+  @override
+  String get drawerLockedCta => 'Vedi il pass';
+
+  @override
+  String get purchaseSuccess => 'Acquisto riuscito. Il tuo pass è pronto.';
+
+  @override
+  String get purchaseVerifyPending =>
+      'Acquisto non ancora confermato. Riaprendo l\'app riproveremo.';
+
+  @override
+  String get purchaseFailed => 'L\'acquisto non è andato a buon fine. Riprova.';
 }

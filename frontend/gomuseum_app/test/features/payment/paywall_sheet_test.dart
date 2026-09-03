@@ -126,7 +126,22 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallLoginToBuy), findsOneWidget);
     expect(find.text(l10n.paywallBuy), findsNothing);
-    expect(find.text(l10n.paywallLoginWhy), findsOneWidget, reason: '要说清为什么');
+    expect(find.text(l10n.edgeSignedOutHead), findsOneWidget, reason: '要说清为什么');
+    expect(find.text(l10n.edgeSignedOutBody), findsOneWidget);
+  });
+
+  testWidgets('权益读不到时绝不说「登录后购买」 —— 用户可能已登录,只是断网了', (t) async {
+    // ⚠️ Entitlements.unknown 的 canPurchase 也是 false。少了 known 标记,
+    // 这里就会对着一个已登录的用户要求登录 —— 他照做也没用。
+    await t.pumpWidget(
+        _wrap(const PaywallSheetContent(), ent: Entitlements.unknown));
+    await t.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    expect(find.text(l10n.paywallLoginToBuy), findsNothing);
+    expect(find.text(l10n.edgeUnknownHead), findsOneWidget);
+    expect(find.text(l10n.retry), findsOneWidget, reason: '给重试,不给购买');
+    expect(find.text(l10n.paywallBuy), findsNothing,
+        reason: '读不到已有权益就买 = 诱导重复购买');
   });
 
   testWidgets('已登录用户直接看到购买按钮', (t) async {
@@ -149,8 +164,9 @@ void main() {
     expect(find.text(l10n.activateTear), findsOneWidget);
     expect(find.text(l10n.ticketStubPending), findsOneWidget);
     expect(find.textContaining('不可撤销'), findsOneWidget);
-    // 已购之后价格是收据,不是要价
-    expect(find.text(l10n.ticketPaid), findsOneWidget);
+    // 已购之后**不显示价格**:唯一能拿到的数字是商店当前售价,
+    // 而那不是用户当时付的钱(见 GmTicketFace.priceNote 的注释)
+    expect(find.text('€7.99'), findsNothing);
   });
 
   testWidgets('后端确认失败:明说票没被使用,可重试 —— 不能让用户以为钱白花了', (t) async {
@@ -193,7 +209,6 @@ void main() {
         l10n.quotaExhausted,
         l10n.paywallLoginToBuy,
         l10n.paywallLoginWhy,
-        l10n.ticketPaid,
         l10n.ticketStub,
         l10n.ticketStubPending,
         l10n.ticketStubUntorn,

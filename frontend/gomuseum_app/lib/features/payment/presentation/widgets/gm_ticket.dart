@@ -23,6 +23,7 @@ class GmTicket extends StatelessWidget {
     this.stub,
     this.torn = 0.0,
     this.dim = false,
+    this.faded = false,
   });
 
   /// 票面主体,通常是 [GmTicketFace]。
@@ -38,31 +39,49 @@ class GmTicket extends StatelessWidget {
   /// 网络确认中把票压暗:告诉用户"这张票正被处理",但**不撕**。
   final bool dim;
 
+  /// 用过的票:去掉大部分饱和度。**和 [dim] 不是一回事** —— dim 说的是
+  /// "正在处理中",faded 说的是"这张已经作废了",两者会同时出现在权益页上,
+  /// 挤成一个参数就分不出"在转圈"和"已过期"。
+  final bool faded;
+
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
-    return Opacity(
-      opacity: dim ? 0.55 : 1,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: gm.bg,
-          border: Border.all(color: gm.line),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _header(context, gm),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
-              child: child,
-            ),
-            if (stub != null) _tearAndStub(gm),
-          ],
-        ),
+    Widget ticket = DecoratedBox(
+      decoration: BoxDecoration(
+        color: gm.bg,
+        border: Border.all(color: gm.line),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _header(context, gm),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 15, 16, 14),
+            child: child,
+          ),
+          if (stub != null) _tearAndStub(gm),
+        ],
       ),
     );
+    if (faded) {
+      ticket = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(_desaturate),
+        child: ticket,
+      );
+    }
+    return Opacity(opacity: dim ? 0.55 : 1, child: ticket);
   }
+
+  /// 饱和度降到 0.4 的标准亮度矩阵(Rec. 601 权重)。
+  /// 缺口用的是 `gm.surface`,和票背后那层同色,所以跟着一起褪也不露馅。
+  static const List<double> _desaturate = <double>[
+    0.7126, 0.2848, 0.0426, 0, 0, //
+    0.1278, 0.8696, 0.0426, 0, 0, //
+    0.1278, 0.2848, 0.6174, 0, 0, //
+    0, 0, 0, 1, 0, //
+  ];
 
   /// 票头。GOMUSEUM · PARIS / 7 JOURS 是票面刻印,**不翻译** ——
   /// 它是品牌标记不是文案(纸质门票上的印刷也不会随读者语言变)。
@@ -185,7 +204,6 @@ class GmTicketFace extends StatelessWidget {
     required this.pitch,
     this.price,
     this.priceNote,
-    this.paidLabel,
   });
 
   final String title;
@@ -196,12 +214,12 @@ class GmTicketFace extends StatelessWidget {
   final String? price;
 
   /// 未购时的价格注解(「一次性 · 非订阅」)。
+  ///
+  /// ⚠️ **已购之后不显示价格**(整块不传 price)。曾经这里画过「已付 €7.99」,
+  /// 而那个数字来自商店的**当前售价** —— 涨一次价,老用户的票面就在宣称
+  /// 他付了一个他没付过的金额。真实已付金额后端没落库(`purchases.amount`
+  /// 恒 NULL),拿不到就不显示,和 passPriceProvider 是同一条原则。
   final String? priceNote;
-
-  /// 已购后价格降级成收据:小字、faint 色,注解换成「已付」。
-  final String? paidLabel;
-
-  bool get _paid => paidLabel != null;
 
   @override
   Widget build(BuildContext context) {
@@ -226,29 +244,25 @@ class GmTicketFace extends StatelessWidget {
             ),
             if (price != null) ...[
               const SizedBox(width: 12),
-              Padding(
-                // 已付时价格是 14px,顶对齐会浮在 21px 标题上方,压下来对齐基线
-                padding: EdgeInsets.only(top: _paid ? 5 : 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      price!,
-                      style: GmText.serif(
-                        size: _paid ? 14 : 21,
-                        weight: FontWeight.w700,
-                        color: _paid ? gm.faint : gm.ink,
-                        letterSpacing: 0.5,
-                      ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    price!,
+                    style: GmText.serif(
+                      size: 21,
+                      weight: FontWeight.w700,
+                      color: gm.ink,
+                      letterSpacing: 0.5,
                     ),
-                    if (paidLabel != null || priceNote != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(paidLabel ?? priceNote!,
-                            style: GmText.sans(size: 10, color: gm.faint)),
-                      ),
-                  ],
-                ),
+                  ),
+                  if (priceNote != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(priceNote!,
+                          style: GmText.sans(size: 10, color: gm.faint)),
+                    ),
+                ],
               ),
             ],
           ],

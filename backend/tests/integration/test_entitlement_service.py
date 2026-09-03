@@ -152,6 +152,44 @@ def test_activate_by_is_absent_once_the_clock_runs(session):
     assert es.summary(session, "u1", _ben(session, "u1"))["activate_by"] is None
 
 
+# ── 票据历史(权益页的「购买记录」与「上一张票」) ──
+
+
+def test_history_gives_each_pass_its_own_outcome(session):
+    """历史要的是**每张票各自的结局**,不是"当前哪张说了算"。"""
+    now = datetime.now(timezone.utc)
+    _ent(
+        session,
+        "u1",
+        es.ACTIVE,
+        expires=now - timedelta(days=1),
+        created=now - timedelta(days=8),
+    )  # 用完的旧票
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=now)  # 新买的
+    rows = es.history(session, "u1")
+    assert [r["state"] for r in rows] == [es.PURCHASED_NOT_ACTIVATED, es.EXPIRED]
+    assert rows[0]["purchased_at"] is not None
+
+
+def test_history_marks_lapsed_unactivated_as_expired(session):
+    """过保质期的未激活票在历史里也是 expired,不能显示成"还能用"。"""
+    bought = datetime.now(timezone.utc) - es.ACTIVATION_WINDOW - timedelta(days=1)
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=bought)
+    assert es.history(session, "u1")[0]["state"] == es.EXPIRED
+
+
+def test_history_keeps_refunded_rows_visible(session):
+    """退款的票不隐藏 —— 用户问"我的钱去哪了"时,这一行就是答案。"""
+    _ent(session, "u1", "refunded")
+    assert es.history(session, "u1")[0]["state"] == "refunded"
+
+
+def test_history_is_per_user(session):
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED)
+    _ent(session, "u2", es.PURCHASED_NOT_ACTIVATED)
+    assert len(es.history(session, "u1")) == 1
+
+
 def test_free_user_recognition_quota(session):
     # recognition_quota 是**剩余数**(每次识别递减),不是上限——
     # 曾误算成 quota-used,会重复扣、让付费墙提前弹

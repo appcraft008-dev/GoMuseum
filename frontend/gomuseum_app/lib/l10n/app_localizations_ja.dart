@@ -706,9 +706,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get paywallLapseNote => '有効化していないパスは購入から 30 日で失効します。';
 
   @override
-  String get ticketPaid => '支払い済み';
-
-  @override
   String get ticketStub => '半券';
 
   @override
@@ -774,4 +771,153 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get activateRetry => 'もう一度試す';
+
+  @override
+  String get benefitsMyPass => 'マイパス';
+
+  @override
+  String get benefitsSecFreeQuota => '無料枠';
+
+  @override
+  String get benefitsSecFeatures => '機能';
+
+  @override
+  String get benefitsSecBuyable => '購入できるもの';
+
+  @override
+  String get benefitsSecIncluded => '含まれるもの';
+
+  @override
+  String get benefitsSecUnlocked => '解除済み';
+
+  @override
+  String get benefitsSecPurchases => '購入履歴';
+
+  @override
+  String get benefitsSecCurrentQuota => '現在の枠';
+
+  @override
+  String get benefitsSecBuyAnother => 'もう一枚';
+
+  @override
+  String get benefitsRecognition => '写真認識';
+
+  @override
+  String get benefitsFreeAudioNote => '作品 1 点の音声ガイド本編を無料で試聴できます。';
+
+  @override
+  String get benefitsFeatBrowse => '閲覧・検索・テキスト解説の全文';
+
+  @override
+  String get benefitsFeatPresetQa => 'おすすめの質問への回答';
+
+  @override
+  String get benefitsFeatRecognition => '写真認識が無制限';
+
+  @override
+  String get benefitsFeatAllAudio => '4 館すべての音声ガイド';
+
+  @override
+  String get benefitsFeatDeepAudio => '詳細コンテンツの音声';
+
+  @override
+  String get benefitsNeedsPass => 'パスが必要';
+
+  @override
+  String get benefitsNotStartedHead => 'まだ計測は始まっていません';
+
+  @override
+  String get benefitsNotStartedBody =>
+      '館内で音声ガイドまたは認識を初めて使うときに確認をお願いします。7 日間はその時点から始まります。';
+
+  @override
+  String get benefitsMuseums => 'ルーヴル · オルセー · オランジュリー · プティ・パレ';
+
+  @override
+  String get benefitsStartNow => '今すぐ 7 日間を始める';
+
+  @override
+  String get benefitsStartNowNote => '館内でなければ、到着してから始めるのがおすすめです';
+
+  @override
+  String get benefitsExpiredBody =>
+      '7 日間が終了しました。無料枠は戻り、テキスト解説は引き続き全文お読みいただけます。';
+
+  @override
+  String benefitsPrevPass(DateTime start, DateTime end) {
+    final intl.DateFormat startDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String startString = startDateFormat.format(start);
+    final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String endString = endDateFormat.format(end);
+
+    return '前のパスは使い切りました · $startString – $endString';
+  }
+
+  @override
+  String get benefitsEndedAt => '終了日';
+
+  @override
+  String benefitsDateOnly(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get edgeUnknownHead => 'いま権利を読み取れません';
+
+  @override
+  String get edgeUnknownBody => '接続がないため、すでにパスをお持ちかどうか確認できず、購入も安全に開始できません。';
+
+  @override
+  String get edgeUnknownNote =>
+      'すでに購入済みなら、オンラインに戻り次第自動で復元されます。二重に請求されることはありません。';
+
+  @override
+  String get edgeSeeFree => '無料コンテンツを見る';
+
+  @override
+  String get edgeSignedOutHead => 'パスはアカウントに紐づきます';
+
+  @override
+  String get edgeSignedOutBody => 'ログインしてから購入すれば、機種変更や再インストールでも失われません。';
+
+  @override
+  String get edgeConflictTitle => 'このパスは別のアカウントに紐づいています';
+
+  @override
+  String get edgeConflictBody =>
+      'この購入は別の GoMuseum アカウントのものです。1 枚のパスを 2 つのアカウントで使うことはできないため、ここでは復元できません。';
+
+  @override
+  String get edgeConflictBound => '紐づけ先';
+
+  @override
+  String get edgeConflictOther => '別のアカウント';
+
+  @override
+  String get edgeConflictHelp =>
+      'このパスを使うには、いったんログアウトしてそのアカウントでログインしてください。誤りだと思われる場合はご連絡ください。';
+
+  @override
+  String get edgeSwitchAccount => 'アカウントを切り替える';
+
+  @override
+  String get edgeContactSupport => '問い合わせる';
+
+  @override
+  String get drawerLockedHint => '詳細コンテンツの音声にはパスが必要です。テキストはすべて無料です。';
+
+  @override
+  String get drawerLockedCta => 'パスを見る';
+
+  @override
+  String get purchaseSuccess => '購入が完了し、パスが有効になりました。';
+
+  @override
+  String get purchaseVerifyPending => '購入をまだ確認できていません。アプリを開き直すと再試行します。';
+
+  @override
+  String get purchaseFailed => '購入できませんでした。もう一度お試しください。';
 }

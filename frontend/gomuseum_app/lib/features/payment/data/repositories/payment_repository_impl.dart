@@ -37,6 +37,9 @@ class PaymentRepositoryImpl implements PaymentRepository {
         deviceId: deviceId,
       );
       return Right(result);
+    } on PurchaseConflictException catch (e) {
+      // 必须走自己的 Failure:UI 要给"换账号登录",不是"再试一次"
+      return Left(PurchaseConflictFailure(e.message));
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {

@@ -6,10 +6,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:gomuseum_app/core/error/failures.dart';
 import '../../domain/entities/user_benefits.dart';
 import 'payment_providers.dart';
 
 part 'benefits_provider.g.dart';
+
+/// 购买验证的结局。**`conflict` 必须与 `failed` 分开** ——
+/// 前者重试永远不会成功(票归别的账号),UI 要给"换账号登录";
+/// 后者是网络/服务端抖动,重试是对的。
+enum VerifyOutcome { ok, failed, conflict }
 
 const _kFallbackDeviceIdKey = 'device_id_fallback';
 
@@ -96,8 +102,14 @@ class BenefitsState extends _$BenefitsState {
     state = await AsyncValue.guard(() => _loadBenefits());
   }
 
-  /// 验证购买并更新权益
-  Future<bool> verifyAndUpdateBenefits(PurchaseDetails purchase) async {
+  /// 验证购买并更新权益。
+  ///
+  /// ⚠️ 返回 [VerifyOutcome] 而不是 bool:**收据冲突必须与普通失败分开**。
+  /// 它是唯一一种"重试永远不会成功"的失败(票已归属别的账号),压成 false
+  /// 就会显示成「购买失败,请重试」——用户点到死也不会好,最后要么重复购买、
+  /// 要么申请退款。
+  Future<VerifyOutcome> verifyAndUpdateBenefits(
+      PurchaseDetails purchase) async {
     try {
       final deviceIdValue = await ref.read(deviceIdProvider.future);
       final verifyPurchaseUseCase = ref.read(verifyPurchaseUseCaseProvider);
@@ -114,20 +126,22 @@ class BenefitsState extends _$BenefitsState {
       return result.fold(
         (failure) {
           debugPrint('Purchase verification failed: ${failure.message}');
-          return false;
+          return failure is PurchaseConflictFailure
+              ? VerifyOutcome.conflict
+              : VerifyOutcome.failed;
         },
         (purchaseResult) async {
           if (purchaseResult.verified && purchaseResult.benefitsApplied) {
             // 验证成功，刷新权益
             await refresh();
-            return true;
+            return VerifyOutcome.ok;
           }
-          return false;
+          return VerifyOutcome.failed;
         },
       );
     } catch (e) {
       debugPrint('Error verifying purchase: $e');
-      return false;
+      return VerifyOutcome.failed;
     }
   }
 
