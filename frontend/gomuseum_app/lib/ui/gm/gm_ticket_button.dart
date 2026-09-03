@@ -18,6 +18,7 @@ class GmTicketButton extends StatelessWidget {
     this.onTap,
     this.height = 44,
     this.fontSize = 15,
+    this.busy = false,
   });
 
   final String label;
@@ -27,11 +28,15 @@ class GmTicketButton extends StatelessWidget {
   final double height;
   final double fontSize;
 
+  /// 等待网络确认:按钮内转圈并吃掉点击。**等待发生在按钮里**,
+  /// 不遮全屏 —— 用户正站在展品前,全屏 loading 挡路。
+  final bool busy;
+
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
     return GestureDetector(
-      onTap: onTap,
+      onTap: busy ? null : onTap,
       child: Container(
         decoration: BoxDecoration(
           color: gm.ctaBg,
@@ -45,7 +50,18 @@ class GmTicketButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (icon != null) ...[
+                if (busy) ...[
+                  SizedBox(
+                    width: fontSize,
+                    height: fontSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: gm.ctaInk,
+                      backgroundColor: gm.ctaInk.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                ] else if (icon != null) ...[
                   GmIcon(icon!, size: fontSize + 8, color: gm.ctaInk),
                   const SizedBox(width: 11),
                 ],

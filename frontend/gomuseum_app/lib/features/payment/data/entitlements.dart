@@ -19,10 +19,19 @@ class Entitlements {
     required this.canRecognize,
     required this.canAudioAny,
     this.expiresAt,
+    this.activateBy,
     this.freeRecognitionsLeft,
     this.freeRecognitionsTotal,
     this.freeAudioQid,
+    this.known = true,
   });
+
+  /// 这份权益是**真的从后端读到的**吗?
+  ///
+  /// ⚠️ 没有这个标记就会出一个很难看的 bug:离线回退的 [unknown] 里
+  /// `canPurchase` 也是 false,于是付费墙对着一个**已登录**的用户说
+  /// 「登录后购买」—— 他只是断网了。两种 false 必须分得开。
+  final bool known;
 
   final String state;
 
@@ -33,6 +42,12 @@ class Entitlements {
   final bool canRecognize;
   final bool canAudioAny;
   final DateTime? expiresAt;
+
+  /// 未激活票的**最后激活时刻**(后端 `ACTIVATION_WINDOW`,购买后 30 天)。
+  /// 过了这个点票作废,state 变 `expired`。只在 `purchased_not_activated`
+  /// 时非空。⚠️ 别拿它和 [expiresAt] 混用:一个是"再不撕就作废",
+  /// 另一个是"撕开后什么时候烧完"。
+  final DateTime? activateBy;
 
   /// 免费层剩余识别次数;通票生效期间为 null(不显示次数)。
   final int? freeRecognitionsLeft;
@@ -49,6 +64,10 @@ class Entitlements {
   /// 已购但未开始计时(旅游产品:用户常提前几天买)。
   bool get isPurchasedNotActivated => state == 'purchased_not_activated';
 
+  /// 票用完了(7 天跑完,或买了 30 天没激活)。**与"没买过"不同** ——
+  /// 这类用户见过通票的样子,权益页该给他看用过的那张票,不是一个空商店。
+  bool get isExpired => state == 'expired';
+
   /// 某件的语音能不能放:通票内全放,免费用户只放已认领的首件。
   bool canPlayAudio(String qid) =>
       canAudioAny || (freeAudioQid != null && freeAudioQid == qid);
@@ -60,11 +79,13 @@ class Entitlements {
     canPurchase: false,
     canRecognize: true,
     canAudioAny: false,
+    known: false,
   );
 
   factory Entitlements.fromJson(Map<String, dynamic> json) {
     final can = json['can'] as Map<String, dynamic>? ?? const {};
     final expires = json['expires_at'] as String?;
+    final lapse = json['activate_by'] as String?;
     return Entitlements(
       state: json['state'] as String? ?? 'not_purchased',
       // 缺字段时保守取 false:宁可多引导一次登录,也不要让游客买了票丢票
@@ -72,6 +93,7 @@ class Entitlements {
       canRecognize: can['recognize'] as bool? ?? true,
       canAudioAny: can['audio_any'] as bool? ?? false,
       expiresAt: expires == null ? null : DateTime.tryParse(expires),
+      activateBy: lapse == null ? null : DateTime.tryParse(lapse),
       freeRecognitionsLeft: json['free_recognitions_left'] as int?,
       freeRecognitionsTotal: json['free_recognitions_total'] as int?,
       freeAudioQid: json['free_audio_qid'] as String?,

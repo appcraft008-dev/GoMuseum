@@ -310,18 +310,14 @@
   "museumOfficialSite": "Official Website",
   "museumIntroComingSoon": "Museum introduction coming soon",
   "paywallTitle": "Paris 7-Day Pass",
-  "paywallPitch": "Unlimited photo recognition and full audio commentary across the Louvre, Orsay and Orangerie.",
-  "paywallClockNote": "The clock does not start at purchase — it begins when you first use a premium feature and confirm.",
+  "paywallPitch": "Unlimited photo recognition and full audio commentary across the Louvre, Orsay, the Orangerie and the Petit Palais.",
   "paywallFreeAlways": "Browsing, search and full written commentary are always free.",
   "paywallBuy": "Get the pass",
   "paywallRestore": "Restore purchase",
   "audioFreePreview": "Free preview",
   "audioLockedHint": "Audio commentary needs the pass — your free preview has been used.",
   "quotaExhausted": "You've used all your free recognitions.",
-  "activateTitle": "Start your 7-day pass?",
-  "activateBody": "Once started it runs for 7×24 hours without pause. Start it when you're at the museum, not before.",
-  "activateConfirm": "Start now",
-  "activateLater": "Not yet",
+  "activateLater": "Later",
   "paywallLoginToBuy": "Sign in to buy",
   "paywallLoginWhy": "Your pass is tied to your account, so you keep it on a new phone.",
   "passActive": "Pass active",
@@ -337,5 +333,126 @@
   "passPendingActivation": "Purchased · not activated",
   "passActivateHint": "Starts when you first play a guide",
   "viewBenefits": "View benefits",
-  "unlimited": "Unlimited"
+  "unlimited": "Unlimited",
+  "paywallPriceNote": "One-time · not a subscription",
+  "paywallClockHead": "The clock doesn't start at purchase",
+  "paywallClockBody": "Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.",
+  "paywallLapseNote": "An unactivated pass lapses 30 days after purchase.",
+  "@paywallLapseNote": {
+    "description": "Paywall: unactivated passes expire. Required disclosure — the backend really does forfeit them (ACTIVATION_WINDOW), so this line must ship with it."
+  },
+  "ticketStub": "Stub",
+  "ticketStubPending": "expiry to be filled",
+  "ticketStubUntorn": "not torn",
+  "ticketValidUntil": "Valid until",
+  "ticketDateTime": "{date} {time}",
+  "@ticketDateTime": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      },
+      "time": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "ticketDaysLeft": "{days} days left",
+  "@ticketDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "activateSheetTitle": "Start your 7 days now?",
+  "activateSheetBody": "The clock starts on confirm and ends {date} {time}. This can't be undone.",
+  "@activateSheetBody": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      },
+      "time": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "activateTear": "Tear it, start now",
+  "activateWaiting": "Confirming…",
+  "activateWaitingNote": "The ticket isn't torn yet — it starts once confirmed",
+  "activateDoneTitle": "Your pass has started",
+  "activateDoneBody": "Audio commentary at all four museums and unlimited recognition are unlocked.",
+  "activateDoneCta": "Continue",
+  "activateFailTitle": "Couldn't confirm — your ticket wasn't used",
+  "activateFailBody": "No connection, so the 7 days haven't started. Your pass is still intact; try again.",
+  "activateRetry": "Try again",
+  "benefitsMyPass": "My pass",
+  "benefitsSecFreeQuota": "Free allowance",
+  "benefitsSecFeatures": "Features",
+  "benefitsSecBuyable": "Available",
+  "benefitsSecIncluded": "Included",
+  "benefitsSecUnlocked": "Unlocked",
+  "benefitsSecPurchases": "Purchases",
+  "benefitsSecCurrentQuota": "Your allowance now",
+  "benefitsSecBuyAnother": "Another pass",
+  "benefitsRecognition": "Photo recognition",
+  "benefitsFreeAudioNote": "You can preview the main audio commentary on one artwork for free.",
+  "benefitsFeatBrowse": "Browsing, search, full written commentary",
+  "benefitsFeatPresetQa": "Suggested questions answered",
+  "benefitsFeatRecognition": "Unlimited photo recognition",
+  "benefitsFeatAllAudio": "Audio commentary across all four museums",
+  "benefitsFeatDeepAudio": "Audio for in-depth sections",
+  "benefitsNeedsPass": "Pass needed",
+  "benefitsNotStartedHead": "The clock hasn't started",
+  "benefitsNotStartedBody": "The first time you use audio commentary or recognition at the museum, we'll ask you to confirm. Your 7 days start from that moment.",
+  "benefitsMuseums": "Louvre · Orsay · Orangerie · Petit Palais",
+  "benefitsStartNow": "Start my 7 days now",
+  "benefitsStartNowNote": "If you're not at the museum yet, it's better to wait",
+  "benefitsExpiredBody": "Your 7 days are up. Your free allowance is back, and written commentary is still complete.",
+  "benefitsPrevPass": "Previous pass used up · {start} – {end}",
+  "@benefitsPrevPass": {
+    "description": "Benefits page: the previous pass, already used up.",
+    "placeholders": {
+      "start": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      },
+      "end": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "benefitsEndedAt": "Ended",
+  "benefitsDateOnly": "{date}",
+  "@benefitsDateOnly": {
+    "description": "Benefits page: purchase record date.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "edgeUnknownHead": "Can't read your pass right now",
+  "edgeUnknownBody": "There's no connection, so we can't confirm whether you already have a pass — or start a purchase safely.",
+  "edgeUnknownNote": "If you've already bought one, it comes back automatically once you're online. You won't be charged twice.",
+  "edgeSeeFree": "Browse the free content",
+  "edgeSignedOutHead": "The pass belongs to an account",
+  "edgeSignedOutBody": "Sign in before buying and it survives a new phone or a reinstall.",
+  "edgeConflictTitle": "This pass is tied to another account",
+  "edgeConflictBody": "This purchase belongs to a different GoMuseum account. One pass can't serve two accounts, so it can't be restored here.",
+  "edgeConflictBound": "Tied to",
+  "edgeConflictOther": "another account",
+  "edgeConflictHelp": "To use this pass, sign out and sign back in with that account. If you think this is a mistake, get in touch and we'll sort it out.",
+  "edgeSwitchAccount": "Switch account",
+  "edgeContactSupport": "Contact us",
+  "drawerLockedHint": "Audio for in-depth sections needs the pass. All the text is free.",
+  "drawerLockedCta": "See the pass",
+  "purchaseSuccess": "Purchased. Your pass is ready.",
+  "purchaseVerifyPending": "We couldn't confirm the purchase yet. Reopening the app will retry.",
+  "purchaseFailed": "The purchase didn't go through. Please try again."
 }

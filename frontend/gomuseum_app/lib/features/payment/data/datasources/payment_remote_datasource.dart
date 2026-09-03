@@ -87,6 +87,10 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
         throw const TimeoutException('Request timeout');
       } else if (e.type == DioExceptionType.connectionError) {
         throw const NetworkException('Network connection failed');
+      } else if (e.response?.statusCode == 409) {
+        // 这张收据已归属别的账号。**唯一一种重试永远不会成功的失败** ——
+        // 压成 ServerException 就会显示「购买失败,请重试」,用户点到死也不会好。
+        throw const PurchaseConflictException();
       } else {
         throw ServerException('Server error: ${e.message}');
       }

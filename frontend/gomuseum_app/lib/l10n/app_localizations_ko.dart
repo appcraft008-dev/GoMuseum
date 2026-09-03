@@ -639,11 +639,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get paywallTitle => '파리 7일 패스';
 
   @override
-  String get paywallPitch => '사진 인식 무제한, 루브르·오르세·오랑주리 전관 음성 해설을 모두 이용할 수 있습니다.';
-
-  @override
-  String get paywallClockNote =>
-      '구매 시점에는 시간이 흐르지 않습니다. 프리미엄 기능을 처음 사용하고 확인한 때부터 시작됩니다.';
+  String get paywallPitch =>
+      '사진 인식 무제한, 루브르·오르세·오랑주리·프티 팔레 4개 관의 음성 해설을 모두 이용할 수 있습니다.';
 
   @override
   String get paywallFreeAlways => '둘러보기, 검색, 전체 텍스트 해설은 언제나 무료입니다.';
@@ -662,16 +659,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get quotaExhausted => '무료 인식 횟수를 모두 사용했습니다.';
-
-  @override
-  String get activateTitle => '7일 패스를 시작할까요?';
-
-  @override
-  String get activateBody =>
-      '시작하면 7×24시간 연속으로 진행되며 중간에 멈추지 않습니다. 미술관에 도착한 뒤 시작하세요.';
-
-  @override
-  String get activateConfirm => '지금 시작';
 
   @override
   String get activateLater => '나중에';
@@ -704,4 +691,235 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unlimited => '무제한';
+
+  @override
+  String get paywallPriceNote => '1회 결제 · 구독 아님';
+
+  @override
+  String get paywallClockHead => '구매 시점에는 시간이 흐르지 않습니다';
+
+  @override
+  String get paywallClockBody =>
+      '프리미엄 기능을 처음 사용하고 확인한 때부터 7일이 시작됩니다. 미리 사 두고 미술관에서 시작하세요.';
+
+  @override
+  String get paywallLapseNote => '활성화하지 않은 패스는 구매 후 30일이 지나면 만료됩니다.';
+
+  @override
+  String get ticketStub => '반권';
+
+  @override
+  String get ticketStubPending => '만료일 미기재';
+
+  @override
+  String get ticketStubUntorn => '미사용';
+
+  @override
+  String get ticketValidUntil => '유효 기간';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return '$days일 남음';
+  }
+
+  @override
+  String get activateSheetTitle => '지금 7일을 시작할까요?';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '확인하면 시간이 시작되어 $dateString $timeString에 종료됩니다. 되돌릴 수 없습니다.';
+  }
+
+  @override
+  String get activateTear => '뜯고 시작하기';
+
+  @override
+  String get activateWaiting => '확인하는 중…';
+
+  @override
+  String get activateWaitingNote => '티켓은 아직 뜯지 않았습니다. 확인된 뒤에 시작됩니다';
+
+  @override
+  String get activateDoneTitle => '패스가 시작되었습니다';
+
+  @override
+  String get activateDoneBody => '4개 관의 음성 해설과 무제한 인식이 열렸습니다.';
+
+  @override
+  String get activateDoneCta => '계속';
+
+  @override
+  String get activateFailTitle => '확인하지 못했습니다. 티켓은 사용되지 않았습니다';
+
+  @override
+  String get activateFailBody =>
+      '연결되지 않아 7일이 시작되지 않았습니다. 패스는 그대로입니다. 다시 시도하세요.';
+
+  @override
+  String get activateRetry => '다시 시도';
+
+  @override
+  String get benefitsMyPass => '내 패스';
+
+  @override
+  String get benefitsSecFreeQuota => '무료 이용량';
+
+  @override
+  String get benefitsSecFeatures => '기능';
+
+  @override
+  String get benefitsSecBuyable => '구매 가능';
+
+  @override
+  String get benefitsSecIncluded => '포함 사항';
+
+  @override
+  String get benefitsSecUnlocked => '잠금 해제됨';
+
+  @override
+  String get benefitsSecPurchases => '구매 내역';
+
+  @override
+  String get benefitsSecCurrentQuota => '현재 이용량';
+
+  @override
+  String get benefitsSecBuyAnother => '한 장 더';
+
+  @override
+  String get benefitsRecognition => '사진 인식';
+
+  @override
+  String get benefitsFreeAudioNote => '작품 한 점의 주요 음성 해설을 무료로 들어볼 수 있습니다.';
+
+  @override
+  String get benefitsFeatBrowse => '둘러보기, 검색, 텍스트 해설 전문';
+
+  @override
+  String get benefitsFeatPresetQa => '추천 질문에 대한 답변';
+
+  @override
+  String get benefitsFeatRecognition => '무제한 사진 인식';
+
+  @override
+  String get benefitsFeatAllAudio => '네 개 미술관 전체 음성 해설';
+
+  @override
+  String get benefitsFeatDeepAudio => '심화 콘텐츠 음성';
+
+  @override
+  String get benefitsNeedsPass => '패스 필요';
+
+  @override
+  String get benefitsNotStartedHead => '아직 시간이 시작되지 않았습니다';
+
+  @override
+  String get benefitsNotStartedBody =>
+      '미술관에서 음성 해설이나 인식을 처음 사용할 때 한 번 확인을 요청합니다. 7일은 그 순간부터 시작됩니다.';
+
+  @override
+  String get benefitsMuseums => '루브르 · 오르세 · 오랑주리 · 프티 팔레';
+
+  @override
+  String get benefitsStartNow => '지금 7일 시작하기';
+
+  @override
+  String get benefitsStartNowNote => '아직 미술관이 아니라면 도착한 뒤에 시작하는 편이 좋습니다';
+
+  @override
+  String get benefitsExpiredBody =>
+      '7일이 모두 지났습니다. 무료 이용량은 복구되었고 텍스트 해설은 그대로 전부 볼 수 있습니다.';
+
+  @override
+  String benefitsPrevPass(DateTime start, DateTime end) {
+    final intl.DateFormat startDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String startString = startDateFormat.format(start);
+    final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String endString = endDateFormat.format(end);
+
+    return '이전 패스 사용 완료 · $startString – $endString';
+  }
+
+  @override
+  String get benefitsEndedAt => '종료일';
+
+  @override
+  String benefitsDateOnly(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get edgeUnknownHead => '지금은 권한을 확인할 수 없습니다';
+
+  @override
+  String get edgeUnknownBody =>
+      '연결이 없어 이미 패스가 있는지 확인할 수 없고, 구매도 안전하게 시작할 수 없습니다.';
+
+  @override
+  String get edgeUnknownNote =>
+      '이미 구매하셨다면 온라인에 연결되는 즉시 자동으로 복구됩니다. 이중으로 청구되지 않습니다.';
+
+  @override
+  String get edgeSeeFree => '무료 콘텐츠 보기';
+
+  @override
+  String get edgeSignedOutHead => '패스는 계정에 연결됩니다';
+
+  @override
+  String get edgeSignedOutBody => '로그인한 뒤 구매하면 기기를 바꾸거나 재설치해도 잃지 않습니다.';
+
+  @override
+  String get edgeConflictTitle => '이 패스는 다른 계정에 연결되어 있습니다';
+
+  @override
+  String get edgeConflictBody =>
+      '이 구매는 다른 GoMuseum 계정의 것입니다. 하나의 패스를 두 계정이 함께 쓸 수 없어 여기서는 복구할 수 없습니다.';
+
+  @override
+  String get edgeConflictBound => '연결된 계정';
+
+  @override
+  String get edgeConflictOther => '다른 계정';
+
+  @override
+  String get edgeConflictHelp =>
+      '이 패스를 사용하려면 로그아웃한 뒤 그 계정으로 다시 로그인하세요. 잘못된 것 같다면 저희에게 알려 주세요.';
+
+  @override
+  String get edgeSwitchAccount => '계정 전환';
+
+  @override
+  String get edgeContactSupport => '문의하기';
+
+  @override
+  String get drawerLockedHint => '심화 콘텐츠의 음성에는 패스가 필요합니다. 텍스트는 모두 무료입니다.';
+
+  @override
+  String get drawerLockedCta => '패스 보기';
+
+  @override
+  String get purchaseSuccess => '구매가 완료되어 패스가 준비되었습니다.';
+
+  @override
+  String get purchaseVerifyPending => '아직 구매를 확인하지 못했습니다. 앱을 다시 열면 재시도합니다.';
+
+  @override
+  String get purchaseFailed => '구매가 완료되지 않았습니다. 다시 시도해 주세요.';
 }

@@ -663,11 +663,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get paywallPitch =>
-      'Unbegrenzte Fotoerkennung und vollständige Audiokommentare im Louvre, Musée d\'Orsay und in der Orangerie.';
-
-  @override
-  String get paywallClockNote =>
-      'Die Laufzeit beginnt nicht mit dem Kauf, sondern erst bei der ersten bestätigten Nutzung einer Premium-Funktion.';
+      'Unbegrenzte Fotoerkennung und vollständige Audiokommentare im Louvre, Musée d\'Orsay, in der Orangerie und im Petit Palais.';
 
   @override
   String get paywallFreeAlways =>
@@ -689,16 +685,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get quotaExhausted =>
       'Du hast alle kostenlosen Erkennungen aufgebraucht.';
-
-  @override
-  String get activateTitle => '7-Tage-Pass jetzt starten?';
-
-  @override
-  String get activateBody =>
-      'Einmal gestartet, läuft er 7×24 Stunden ohne Pause. Starte ihn im Museum, nicht vorher.';
-
-  @override
-  String get activateConfirm => 'Jetzt starten';
 
   @override
   String get activateLater => 'Später';
@@ -732,4 +718,246 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get unlimited => 'Unbegrenzt';
+
+  @override
+  String get paywallPriceNote => 'Einmalkauf · kein Abo';
+
+  @override
+  String get paywallClockHead => 'Die Laufzeit beginnt nicht mit dem Kauf';
+
+  @override
+  String get paywallClockBody =>
+      'Deine 7 Tage starten, wenn du eine Premium-Funktion zum ersten Mal nutzt und bestätigst. Vorab kaufen, im Museum starten.';
+
+  @override
+  String get paywallLapseNote =>
+      'Ein nicht aktivierter Pass verfällt 30 Tage nach dem Kauf.';
+
+  @override
+  String get ticketStub => 'Abschnitt';
+
+  @override
+  String get ticketStubPending => 'Enddatum offen';
+
+  @override
+  String get ticketStubUntorn => 'nicht abgerissen';
+
+  @override
+  String get ticketValidUntil => 'Gültig bis';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return 'noch $days Tage';
+  }
+
+  @override
+  String get activateSheetTitle => 'Die 7 Tage jetzt starten?';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return 'Mit dem Bestätigen läuft die Zeit und endet am $dateString um $timeString. Das lässt sich nicht rückgängig machen.';
+  }
+
+  @override
+  String get activateTear => 'Abreißen und starten';
+
+  @override
+  String get activateWaiting => 'Wird bestätigt…';
+
+  @override
+  String get activateWaitingNote =>
+      'Das Ticket ist noch nicht abgerissen — es gilt erst nach der Bestätigung';
+
+  @override
+  String get activateDoneTitle => 'Dein Pass läuft';
+
+  @override
+  String get activateDoneBody =>
+      'Audiokommentare in allen vier Museen und unbegrenzte Erkennung sind freigeschaltet.';
+
+  @override
+  String get activateDoneCta => 'Weiter';
+
+  @override
+  String get activateFailTitle =>
+      'Nicht bestätigt — dein Ticket wurde nicht verwendet';
+
+  @override
+  String get activateFailBody =>
+      'Keine Verbindung, die 7 Tage haben nicht begonnen. Dein Pass ist unversehrt, versuche es erneut.';
+
+  @override
+  String get activateRetry => 'Erneut versuchen';
+
+  @override
+  String get benefitsMyPass => 'Mein Pass';
+
+  @override
+  String get benefitsSecFreeQuota => 'Kostenloses Kontingent';
+
+  @override
+  String get benefitsSecFeatures => 'Funktionen';
+
+  @override
+  String get benefitsSecBuyable => 'Verfügbar';
+
+  @override
+  String get benefitsSecIncluded => 'Enthalten';
+
+  @override
+  String get benefitsSecUnlocked => 'Freigeschaltet';
+
+  @override
+  String get benefitsSecPurchases => 'Käufe';
+
+  @override
+  String get benefitsSecCurrentQuota => 'Ihr aktuelles Kontingent';
+
+  @override
+  String get benefitsSecBuyAnother => 'Noch ein Pass';
+
+  @override
+  String get benefitsRecognition => 'Fotoerkennung';
+
+  @override
+  String get benefitsFreeAudioNote =>
+      'Den Haupt-Audiokommentar zu einem Werk können Sie kostenlos anhören.';
+
+  @override
+  String get benefitsFeatBrowse =>
+      'Stöbern, Suche, vollständiger Textkommentar';
+
+  @override
+  String get benefitsFeatPresetQa => 'Antworten auf vorgeschlagene Fragen';
+
+  @override
+  String get benefitsFeatRecognition => 'Unbegrenzte Fotoerkennung';
+
+  @override
+  String get benefitsFeatAllAudio => 'Audiokommentar in allen vier Museen';
+
+  @override
+  String get benefitsFeatDeepAudio => 'Audio für die Vertiefungsabschnitte';
+
+  @override
+  String get benefitsNeedsPass => 'Pass nötig';
+
+  @override
+  String get benefitsNotStartedHead => 'Die Uhr läuft noch nicht';
+
+  @override
+  String get benefitsNotStartedBody =>
+      'Wenn Sie im Museum zum ersten Mal den Audiokommentar oder die Erkennung nutzen, bitten wir Sie um eine Bestätigung. Ab diesem Moment laufen Ihre 7 Tage.';
+
+  @override
+  String get benefitsMuseums => 'Louvre · Orsay · Orangerie · Petit Palais';
+
+  @override
+  String get benefitsStartNow => 'Meine 7 Tage jetzt starten';
+
+  @override
+  String get benefitsStartNowNote =>
+      'Wenn Sie noch nicht im Museum sind, warten Sie besser';
+
+  @override
+  String get benefitsExpiredBody =>
+      'Ihre 7 Tage sind vorbei. Das kostenlose Kontingent ist zurück, der Textkommentar bleibt vollständig.';
+
+  @override
+  String benefitsPrevPass(DateTime start, DateTime end) {
+    final intl.DateFormat startDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String startString = startDateFormat.format(start);
+    final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String endString = endDateFormat.format(end);
+
+    return 'Vorheriger Pass aufgebraucht · $startString – $endString';
+  }
+
+  @override
+  String get benefitsEndedAt => 'Beendet am';
+
+  @override
+  String benefitsDateOnly(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get edgeUnknownHead => 'Ihr Pass ist gerade nicht lesbar';
+
+  @override
+  String get edgeUnknownBody =>
+      'Ohne Verbindung können wir weder bestätigen, dass Sie bereits einen Pass haben, noch einen Kauf sicher starten.';
+
+  @override
+  String get edgeUnknownNote =>
+      'Falls Sie schon einen gekauft haben, kommt er online automatisch zurück. Doppelt belastet werden Sie nicht.';
+
+  @override
+  String get edgeSeeFree => 'Kostenlose Inhalte ansehen';
+
+  @override
+  String get edgeSignedOutHead => 'Der Pass gehört zu einem Konto';
+
+  @override
+  String get edgeSignedOutBody =>
+      'Melden Sie sich vor dem Kauf an — dann übersteht der Pass ein neues Handy oder eine Neuinstallation.';
+
+  @override
+  String get edgeConflictTitle => 'Dieser Pass gehört zu einem anderen Konto';
+
+  @override
+  String get edgeConflictBody =>
+      'Dieser Kauf gehört zu einem anderen GoMuseum-Konto. Ein Pass kann nicht zwei Konten dienen und lässt sich hier deshalb nicht wiederherstellen.';
+
+  @override
+  String get edgeConflictBound => 'Gehört zu';
+
+  @override
+  String get edgeConflictOther => 'einem anderen Konto';
+
+  @override
+  String get edgeConflictHelp =>
+      'Um diesen Pass zu nutzen, melden Sie sich ab und mit jenem Konto wieder an. Halten Sie das für einen Fehler, schreiben Sie uns.';
+
+  @override
+  String get edgeSwitchAccount => 'Konto wechseln';
+
+  @override
+  String get edgeContactSupport => 'Kontakt aufnehmen';
+
+  @override
+  String get drawerLockedHint =>
+      'Audio für die Vertiefungsabschnitte braucht den Pass. Alle Texte sind kostenlos.';
+
+  @override
+  String get drawerLockedCta => 'Pass ansehen';
+
+  @override
+  String get purchaseSuccess => 'Gekauft. Ihr Pass ist bereit.';
+
+  @override
+  String get purchaseVerifyPending =>
+      'Der Kauf ist noch nicht bestätigt. Beim erneuten Öffnen versuchen wir es wieder.';
+
+  @override
+  String get purchaseFailed =>
+      'Der Kauf hat nicht geklappt. Bitte erneut versuchen.';
 }
