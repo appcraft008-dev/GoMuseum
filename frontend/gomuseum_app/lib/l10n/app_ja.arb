@@ -139,7 +139,7 @@
   "authNoAccount": "アカウントがない？登録",
   "authHaveAccount": "アカウントがある？ログイン",
   "authCreateAccount": "アカウント作成",
-  "authOrLoginWith": "または次でログイン",
+  "authOrWithEmail": "またはメールで",
   "authGoogleLogin": "Googleでログイン",
   "authAppleLogin": "Appleでログイン",
   "authOr": "または",

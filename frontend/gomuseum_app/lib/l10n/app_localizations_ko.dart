@@ -451,7 +451,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authCreateAccount => '계정 만들기';
 
   @override
-  String get authOrLoginWith => '또는 다음으로 로그인';
+  String get authOrWithEmail => '또는 이메일로';
 
   @override
   String get authGoogleLogin => 'Google로 로그인';

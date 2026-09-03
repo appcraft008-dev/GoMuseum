@@ -139,7 +139,7 @@
   "authNoAccount": "계정이 없나요? 가입",
   "authHaveAccount": "계정이 있나요? 로그인",
   "authCreateAccount": "계정 만들기",
-  "authOrLoginWith": "또는 다음으로 로그인",
+  "authOrWithEmail": "또는 이메일로",
   "authGoogleLogin": "Google로 로그인",
   "authAppleLogin": "Apple로 로그인",
   "authOr": "또는",

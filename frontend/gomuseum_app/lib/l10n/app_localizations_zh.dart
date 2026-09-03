@@ -450,7 +450,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authCreateAccount => '创建账号';
 
   @override
-  String get authOrLoginWith => '或使用以下方式登录';
+  String get authOrWithEmail => '或使用邮箱';
 
   @override
   String get authGoogleLogin => '使用 Google 登录';
@@ -1369,7 +1369,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authCreateAccount => '建立賬號';
 
   @override
-  String get authOrLoginWith => '或使用以下方式登入';
+  String get authOrWithEmail => '或使用電子郵件';
 
   @override
   String get authGoogleLogin => '使用 Google 登入';

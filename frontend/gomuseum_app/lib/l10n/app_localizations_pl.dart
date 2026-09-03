@@ -455,7 +455,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get authCreateAccount => 'Utwórz konto';
 
   @override
-  String get authOrLoginWith => 'Lub zaloguj się przez';
+  String get authOrWithEmail => 'Lub przez e-mail';
 
   @override
   String get authGoogleLogin => 'Zaloguj się przez Google';

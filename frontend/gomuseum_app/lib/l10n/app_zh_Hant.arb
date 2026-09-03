@@ -139,7 +139,7 @@
   "authNoAccount": "還沒有賬號？註冊",
   "authHaveAccount": "已有賬號？登入",
   "authCreateAccount": "建立賬號",
-  "authOrLoginWith": "或使用以下方式登入",
+  "authOrWithEmail": "或使用電子郵件",
   "authGoogleLogin": "使用 Google 登入",
   "authAppleLogin": "使用 Apple 登入",
   "authOr": "或",

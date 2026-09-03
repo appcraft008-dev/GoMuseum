@@ -49,4 +49,20 @@ void main() {
     expect(find.text('Sign in with Google'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
+
+  // 社交登录必须排在邮箱表单之上:邮箱密码是唯一没有找回路径的入口,
+  // 谁在最上面决定了多少用户掉进去。顺序回退不会报错、只会静默失效,
+  // 所以这条断的是**相对位置**,不是"按钮存在"。
+  testWidgets('社交登录在邮箱表单之上,游客仍在最下', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await _pumpLogin(tester);
+
+    final google = tester.getTopLeft(find.text('Sign in with Google')).dy;
+    final email = tester.getTopLeft(find.byType(TextFormField).first).dy;
+    final guest = tester.getTopLeft(find.text('Continue as guest')).dy;
+
+    expect(google, lessThan(email));
+    expect(guest, greaterThan(email));
+    debugDefaultTargetPlatformOverride = null;
+  });
 }

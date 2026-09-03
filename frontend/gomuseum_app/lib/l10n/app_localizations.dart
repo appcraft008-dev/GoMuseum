@@ -947,11 +947,11 @@ abstract class AppLocalizations {
   /// **'Create account'**
   String get authCreateAccount;
 
-  /// No description provided for @authOrLoginWith.
+  /// No description provided for @authOrWithEmail.
   ///
   /// In en, this message translates to:
-  /// **'Or log in with'**
-  String get authOrLoginWith;
+  /// **'Or with email'**
+  String get authOrWithEmail;
 
   /// No description provided for @authGoogleLogin.
   ///

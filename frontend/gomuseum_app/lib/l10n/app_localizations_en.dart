@@ -454,7 +454,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authCreateAccount => 'Create account';
 
   @override
-  String get authOrLoginWith => 'Or log in with';
+  String get authOrWithEmail => 'Or with email';
 
   @override
   String get authGoogleLogin => 'Sign in with Google';
