@@ -139,7 +139,7 @@
   "authNoAccount": "¿No tienes cuenta? Regístrate",
   "authHaveAccount": "¿Ya tienes cuenta? Inicia sesión",
   "authCreateAccount": "Crear cuenta",
-  "authOrLoginWith": "O inicia sesión con",
+  "authOrWithEmail": "O con correo electrónico",
   "authGoogleLogin": "Iniciar sesión con Google",
   "authAppleLogin": "Iniciar sesión con Apple",
   "authOr": "O",

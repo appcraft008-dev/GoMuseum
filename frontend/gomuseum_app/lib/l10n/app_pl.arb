@@ -139,7 +139,7 @@
   "authNoAccount": "Nie masz konta? Zarejestruj się",
   "authHaveAccount": "Masz konto? Zaloguj się",
   "authCreateAccount": "Utwórz konto",
-  "authOrLoginWith": "Lub zaloguj się przez",
+  "authOrWithEmail": "Lub przez e-mail",
   "authGoogleLogin": "Zaloguj się przez Google",
   "authAppleLogin": "Zaloguj się przez Apple",
   "authOr": "Lub",

@@ -456,7 +456,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authCreateAccount => 'Crear cuenta';
 
   @override
-  String get authOrLoginWith => 'O inicia sesión con';
+  String get authOrWithEmail => 'O con correo electrónico';
 
   @override
   String get authGoogleLogin => 'Iniciar sesión con Google';

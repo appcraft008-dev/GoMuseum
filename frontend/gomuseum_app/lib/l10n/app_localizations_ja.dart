@@ -451,7 +451,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authCreateAccount => 'アカウント作成';
 
   @override
-  String get authOrLoginWith => 'または次でログイン';
+  String get authOrWithEmail => 'またはメールで';
 
   @override
   String get authGoogleLogin => 'Googleでログイン';

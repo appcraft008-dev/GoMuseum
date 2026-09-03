@@ -66,6 +66,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
                 ),
                 const SizedBox(height: 40),
+                // 社交登录置顶。理由不是"它更常用",而是:**邮箱密码是唯一
+                // 没有找回路径的入口**(找回密码尚未实现,见 backlog),而
+                // Google/Apple 用户根本没有密码可忘。页面把谁放在最上面,
+                // 就决定了多少用户掉进那条没有退路的路。
+                //
+                // 游客按钮**故意不跟着上移**:它最省事,但游客不能购买,
+                // 提上来是拿收入换点击率。"最常用的放最显眼"在这里不成立 ——
+                // 判据是"最省事 **且** 不把人带进死路"。
+                if (_appleLoginSupported) ...[
+                  _socialButton(gm, l10n.authAppleLogin, _handleAppleLogin),
+                  const SizedBox(height: 10),
+                ],
+                _socialButton(gm, l10n.authGoogleLogin, _handleGoogleLogin),
+                const SizedBox(height: 24),
+                _divider(l10n.authOrWithEmail),
+                const SizedBox(height: 18),
                 _gmField(
                   gm: gm,
                   controller: _emailController,
@@ -107,18 +123,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _divider(l10n.authOrLoginWith),
-                const SizedBox(height: 18),
-                _socialButton(gm, l10n.authGoogleLogin, _handleGoogleLogin),
-                // Apple 登录只在 Apple 平台露面:安卓上点它唯一的结果是弹
-                // 「仅支持 iOS 和 macOS」——一个必然失败的按钮不该占位子。
-                // 反向不成立:iOS 上两个都留着(4.8 条款只约束 Apple 平台,
-                // 且大部分 Apple 用户也有 Google 账号)。
-                if (_appleLoginSupported) ...[
-                  const SizedBox(height: 10),
-                  _socialButton(gm, l10n.authAppleLogin, _handleAppleLogin),
-                ],
-                const SizedBox(height: 18),
                 _divider(l10n.authOr),
                 const SizedBox(height: 18),
                 _socialButton(gm, l10n.authGuestLogin, _handleGuestLogin,
@@ -306,6 +310,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  /// Apple 登录只在 Apple 平台露面:安卓上点它唯一的结果是弹「仅支持 iOS 和
+  /// macOS」——必然失败的按钮不该占位子。反向不成立,iOS 上两个都留着
+  /// (4.8 条款只约束 Apple 平台,且多数 Apple 用户也有 Google 账号)。
+  ///
   /// 单一真相源:按钮的显隐和处理函数的守卫必须用同一个判据,
   /// 分成两套迟早会出现"按钮在、点了报错"或反过来。
   bool get _appleLoginSupported =>

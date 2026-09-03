@@ -459,7 +459,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authCreateAccount => 'Créer un compte';
 
   @override
-  String get authOrLoginWith => 'Ou connectez-vous avec';
+  String get authOrWithEmail => 'Ou par e-mail';
 
   @override
   String get authGoogleLogin => 'Se connecter avec Google';
