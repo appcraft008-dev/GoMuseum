@@ -19,12 +19,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 路由配置提供者 - 带认证守卫
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(currentUserProvider);
-
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
-      final isLoggedIn = authState.value != null;
+      // 登录态在 redirect 里**读**、不在 provider 体里 watch:watch 会让每次
+      // 登录态变化都重建整个 GoRouter,把当前位置一起丢掉(点"注册"的瞬间就被
+      // 弹回登录页)。刷新由下面的 refreshListenable 负责,那才是 go_router
+      // 设计的入口。
+      //
+      // `valueOrNull` 而非 `value`:AsyncError 的 `.value` 会 rethrow,在
+      // provider build 期抛出就是 release 下的整屏灰。这里读不到登录态时
+      // 一律按"未登录"处理 —— 最坏是多登一次,而不是死一个 App。
+      final isLoggedIn = ref.read(currentUserProvider).valueOrNull != null;
       final isLoginRoute = state.uri.path == '/login';
       final isRegisterRoute = state.uri.path == '/register';
       final isPublicRoute = isLoginRoute || isRegisterRoute;

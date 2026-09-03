@@ -1,4 +1,6 @@
 /// 登录页 — 暖纸手册风格（设计稿外页面，按定稿风格补齐）
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +11,6 @@ import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'dart:io' show Platform;
 import 'auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -109,8 +110,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 _divider(l10n.authOrLoginWith),
                 const SizedBox(height: 18),
                 _socialButton(gm, l10n.authGoogleLogin, _handleGoogleLogin),
-                const SizedBox(height: 10),
-                _socialButton(gm, l10n.authAppleLogin, _handleAppleLogin),
+                // Apple 登录只在 Apple 平台露面:安卓上点它唯一的结果是弹
+                // 「仅支持 iOS 和 macOS」——一个必然失败的按钮不该占位子。
+                // 反向不成立:iOS 上两个都留着(4.8 条款只约束 Apple 平台,
+                // 且大部分 Apple 用户也有 Google 账号)。
+                if (_appleLoginSupported) ...[
+                  const SizedBox(height: 10),
+                  _socialButton(gm, l10n.authAppleLogin, _handleAppleLogin),
+                ],
                 const SizedBox(height: 18),
                 _divider(l10n.authOr),
                 const SizedBox(height: 18),
@@ -299,9 +306,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  /// 单一真相源:按钮的显隐和处理函数的守卫必须用同一个判据,
+  /// 分成两套迟早会出现"按钮在、点了报错"或反过来。
+  bool get _appleLoginSupported =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   Future<void> _handleAppleLogin() async {
-    // Check if running on iOS/macOS
-    if (!Platform.isIOS && !Platform.isMacOS) {
+    // 守卫留着:按钮已经不该出现在安卓上,但这层不花钱,且挡住将来别处
+    // 误接这个入口。
+    if (!_appleLoginSupported) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

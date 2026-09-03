@@ -294,6 +294,14 @@ GoMuseum 是**现场**使用的 AI 博物馆导览:用户站在作品前,拍照�
   **新增服务层函数时必须能回答"谁调它";新增状态字段时必须能回答"谁读它"。**
   本项目已六次踩此坑,是我们最高频的失效模式(见第 7 节的机械检测)。
 
+- **I23 · 一次操作失败,不许写进全局身份态。** 登录/注册失败只回 `false` 让页面
+  弹提示;**不得** `state = AsyncValue.error(...)`,也不得置空。两个理由:
+  ①**没登上 ≠ 登出** —— 游客升级失败会把游客一起踢掉;
+  ②Riverpod 的 `AsyncError.value` 是**会 rethrow 的**,一旦路由/守卫在 build 期
+  读它,release 模式下就是整屏灰的 `ErrorWidget`,且 provider 卡在 error 态回不来
+  —— 邮箱重复这种日常失败换来一个必须杀进程的死 App(v15 真机实测)。
+  配套:守卫侧一律用 `valueOrNull`,读不到按未登录处理(最坏多登一次,而不是死一个 App)。
+
 ---
 
 ## 5. 端点闸门矩阵
@@ -434,6 +442,10 @@ store_transaction_id, ...)`,`Purchase` 表有 `platform` 列,`entitlement_servic
 
 ## 变更记录
 
+- 2026-09-03(v15 真机):新增 **I23**(一次登录尝试失败不许写进全局身份态)。
+  用已注册的邮箱再注册 → 后端 400 → 旧代码把失败写成 `AsyncValue.error` →
+  路由 provider 那句 `authState.value` 在 build 期 rethrow → 整屏灰、进程不重启
+  就回不来。同一形状在 login/register/google/apple/guest 五处各写了一遍。
 - 2026-09-03:未激活票的保质期落地。新增 **§3.2**(`ACTIVATION_WINDOW` = 30 天,
   判定在读取时算、`_live_entitlement` 排掉过期未激活票、契约加法字段 `activate_by`)
   与 **I20**(没收已付款项必须先披露,披露与代码成对上线)。
