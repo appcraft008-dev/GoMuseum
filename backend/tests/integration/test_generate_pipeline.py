@@ -22,6 +22,9 @@ def _offline_artist_i18n(monkeypatch):
         "_artist_i18n_facts",
         lambda qid, langs: {"nationality_i18n": {}, "notable_works_i18n": {}},
     )
+    # 作者解析同样默认打桩:generate 现在先解析唯一作者再抓材料(多值 P170 修复),
+    # 不打桩会让每个既有测试多打一次 SPARQL。
+    monkeypatch.setattr(pl, "_resolve_creator", lambda qid: None)
 
 
 @pytest.fixture()
@@ -573,7 +576,10 @@ def test_generate_object_stores_artist_facts(session, monkeypatch):
     monkeypatch.setattr(
         pl,
         "_artist_facts",
-        lambda qid: {"artist_birth": "1832", "artist_nationality": "France"},
+        lambda qid, artist_qid=None: {
+            "artist_birth": "1832",
+            "artist_nationality": "France",
+        },
     )
     generate_object(
         session,
@@ -671,7 +677,7 @@ def test_generate_object_creates_and_reuses_artist(session, monkeypatch):
     monkeypatch.setattr(
         pl,
         "_artist_facts",
-        lambda qid: {"artist_qid": "Q296", "artist_birth": "1853"},
+        lambda qid, artist_qid=None: {"artist_qid": "Q296", "artist_birth": "1853"},
     )
     calls = {"n": 0}
 
@@ -712,7 +718,9 @@ def test_generate_object_translates_missing_artist_name_zh(session, monkeypatch)
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q7"})
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: {"artist_qid": "Q7"}
+    )
 
     class _Enr(_FakeEnricher):
         def generate_artist_bio(self, artist_obj):
@@ -745,7 +753,9 @@ def test_generate_fills_title_and_artist_name_i18n(session, monkeypatch):
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q7"})
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: {"artist_qid": "Q7"}
+    )
     # work Q1: fr 权威有、de 无(翻译兜底);artist Q7: 无权威(翻译兜底)
     monkeypatch.setattr(
         pl,
@@ -788,7 +798,9 @@ def test_generate_fills_bio_when_artist_exists_without_bio(session, monkeypatch)
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q34618"})
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: {"artist_qid": "Q34618"}
+    )
     monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
     session.add(Artist(qid="Q34618", name_en="Courbet", name_i18n={"en": "Courbet"}))
     o = session.query(MuseumObject).filter_by(qid="Q1").one()
@@ -823,7 +835,9 @@ def test_generate_tops_up_missing_bio_languages_for_existing_artist(
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q40599"})
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: {"artist_qid": "Q40599"}
+    )
     monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
     session.add(
         Artist(qid="Q40599", name_en="Manet", bio={"en": "EN bio.", "zh": "中文生平。"})
@@ -863,7 +877,9 @@ def test_generate_regenerates_bio_when_en_is_junk(session, monkeypatch):
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q39931"})
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: {"artist_qid": "Q39931"}
+    )
     monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
     session.add(
         Artist(
@@ -903,11 +919,13 @@ def test_generate_object_passes_country_lang_to_artist_material(session, monkeyp
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {})
+    monkeypatch.setattr(pl, "_artist_facts", lambda qid, artist_qid=None: {})
     monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
     seen = {}
 
-    def fake_artist_material(qid, registry, *, run_query=None, country_lang="fr"):
+    def fake_artist_material(
+        qid, registry, *, run_query=None, country_lang="fr", artist_qid=None
+    ):
         seen["country_lang"] = country_lang
         return {}
 
@@ -935,7 +953,9 @@ def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
     from app.models.museum_object import MuseumObject
     from app.services.enrichment.pipeline import generate_object
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q9"})
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: {"artist_qid": "Q9"}
+    )
     calls = {"n": 0}
 
     class _Enr(_FakeEnricher):
@@ -976,7 +996,10 @@ def test_generate_fills_artist_facts_i18n(session, monkeypatch):
     monkeypatch.setattr(
         pl,
         "_artist_facts",
-        lambda qid: {"artist_qid": "Q296", "artist_nationality": "France"},
+        lambda qid, artist_qid=None: {
+            "artist_qid": "Q296",
+            "artist_nationality": "France",
+        },
     )
     monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
     monkeypatch.setattr(
@@ -1171,7 +1194,9 @@ def test_generate_passes_artist_glossary_to_translations(session, monkeypatch):
     from app.services.enrichment.pipeline import generate_object
     from app.services.enrichment.quality import SectionQuality
 
-    monkeypatch.setattr(pl, "_artist_facts", lambda qid: {"artist_qid": "Q296"})
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: {"artist_qid": "Q296"}
+    )
     monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
     session.add(
         Artist(qid="Q296", name_en="Georges Seurat", name_i18n={"zh": "乔治·秀拉"})
