@@ -89,7 +89,11 @@ jobs:
   build-check:
     name: Build Check
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # ⚠️ 别调回 5:`npm ci` 稳定要 ~4m40s,5 分钟的上限会在**保存 npm
+    # 缓存**那一步把已经跑完的 job 砍掉(#459 实测:三步全 success,死在
+    # Post Setup Node.js)。而且是自我维持的——缓存永远存不下来,下次
+    # 装依赖照样慢。抬上限才是让缓存生效的前提。
+    timeout-minutes: 10
     needs: [security-scan]
 
     steps:
