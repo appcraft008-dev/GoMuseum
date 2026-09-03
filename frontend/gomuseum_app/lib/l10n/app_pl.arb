@@ -228,6 +228,7 @@
   "paywallPriceNote": "Jednorazowo · to nie abonament",
   "paywallClockHead": "Czas nie zaczyna biec w chwili zakupu",
   "paywallClockBody": "Twoje 7 dni rusza przy pierwszym potwierdzonym użyciu funkcji premium. Kup wcześniej, uruchom w muzeum.",
+  "paywallLapseNote": "Nieaktywowany bilet wygasa 30 dni po zakupie.",
   "ticketPaid": "Opłacone",
   "ticketStub": "Odcinek",
   "ticketStubPending": "data końca do uzupełnienia",

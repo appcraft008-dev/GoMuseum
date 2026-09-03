@@ -228,6 +228,7 @@
   "paywallPriceNote": "Achat unique · sans abonnement",
   "paywallClockHead": "Le décompte ne démarre pas à l'achat",
   "paywallClockBody": "Vos 7 jours commencent à la première utilisation d'une fonction premium, après confirmation. Achetez à l'avance, démarrez au musée.",
+  "paywallLapseNote": "Un pass non activé expire 30 jours après l'achat.",
   "ticketPaid": "Payé",
   "ticketStub": "Talon",
   "ticketStubPending": "date de fin à remplir",

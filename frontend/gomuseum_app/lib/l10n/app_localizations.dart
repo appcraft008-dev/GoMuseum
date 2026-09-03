@@ -1433,6 +1433,12 @@ abstract class AppLocalizations {
   /// **'Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.'**
   String get paywallClockBody;
 
+  /// Paywall: unactivated passes expire. Required disclosure — the backend really does forfeit them (ACTIVATION_WINDOW), so this line must ship with it.
+  ///
+  /// In en, this message translates to:
+  /// **'An unactivated pass lapses 30 days after purchase.'**
+  String get paywallLapseNote;
+
   /// No description provided for @ticketPaid.
   ///
   /// In en, this message translates to:

@@ -700,6 +700,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallClockBody => '首次使用高级功能并确认后才开始 7 天计时。提前买好票，到馆再开始。';
 
   @override
+  String get paywallLapseNote => '未激活的通票在购买后 30 天失效。';
+
+  @override
   String get ticketPaid => '已付';
 
   @override
@@ -1464,6 +1467,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paywallClockBody => '首次使用進階功能並確認後才開始 7 天計時。提前買好票，到館再開始。';
+
+  @override
+  String get paywallLapseNote => '未啟用的通票將於購買後 30 天失效。';
 
   @override
   String get ticketPaid => '已付';

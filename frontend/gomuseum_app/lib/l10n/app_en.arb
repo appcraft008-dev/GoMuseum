@@ -337,6 +337,10 @@
   "paywallPriceNote": "One-time · not a subscription",
   "paywallClockHead": "The clock doesn't start at purchase",
   "paywallClockBody": "Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.",
+  "paywallLapseNote": "An unactivated pass lapses 30 days after purchase.",
+  "@paywallLapseNote": {
+    "description": "Paywall: unactivated passes expire. Required disclosure — the backend really does forfeit them (ACTIVATION_WINDOW), so this line must ship with it."
+  },
   "ticketPaid": "Paid",
   "ticketStub": "Stub",
   "ticketStubPending": "expiry to be filled",

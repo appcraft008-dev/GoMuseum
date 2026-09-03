@@ -223,6 +223,12 @@ class PaywallSheetContent extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(l10n.paywallClockBody,
               style: GmText.sans(size: 12, color: gm.sub, height: 1.6)),
+          const SizedBox(height: 4),
+          // ⚠️ **合规必需,不是装饰**:后端 `ACTIVATION_WINDOW` 会真的作废
+          // 30 天未激活的票。没收已付的款必须在**购买前**告知 ——
+          // 这一行和那段代码是一对,删掉任何一半都不成立。
+          Text(l10n.paywallLapseNote,
+              style: GmText.sans(size: 11.5, color: gm.faint, height: 1.6)),
         ],
       );
 }

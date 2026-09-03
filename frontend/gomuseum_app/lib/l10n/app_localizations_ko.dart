@@ -703,6 +703,9 @@ class AppLocalizationsKo extends AppLocalizations {
       '프리미엄 기능을 처음 사용하고 확인한 때부터 7일이 시작됩니다. 미리 사 두고 미술관에서 시작하세요.';
 
   @override
+  String get paywallLapseNote => '활성화하지 않은 패스는 구매 후 30일이 지나면 만료됩니다.';
+
+  @override
   String get ticketPaid => '결제 완료';
 
   @override

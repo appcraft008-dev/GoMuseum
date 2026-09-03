@@ -30,10 +30,12 @@ def session():
     yield sessionmaker(bind=engine)()
 
 
-def _ent(s, uid, status, expires=None):
+def _ent(s, uid, status, expires=None, created=None):
     e = Entitlement(
         user_id=uid, entitlement_type="paris_pass_7d", status=status, expires_at=expires
     )
+    if created is not None:
+        e.created_at = created  # 测未激活票的保质期要能把购买时刻推到过去
     s.add(e)
     s.commit()
     return e
@@ -84,6 +86,70 @@ def test_expiry_computed_live_not_by_cron(session):
     past = datetime.now(timezone.utc) - timedelta(hours=1)
     _ent(session, "u1", es.ACTIVE, expires=past)
     assert es.resolve_state(session, "u1")[0] == es.EXPIRED
+
+
+# ── 未激活票的保质期(买了不激活,30 天后作废) ──
+
+
+def test_unactivated_pass_expires_after_the_window(session):
+    """未激活票此前**永不过期** = 每笔收入背一份无限期负债。"""
+    bought = datetime.now(timezone.utc) - es.ACTIVATION_WINDOW - timedelta(hours=1)
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=bought)
+    assert es.resolve_state(session, "u1")[0] == es.EXPIRED
+
+
+def test_unactivated_pass_survives_right_up_to_the_deadline(session):
+    """差一小时到期仍然可用 —— 边界错一天就是白没收一个用户的票。"""
+    bought = datetime.now(timezone.utc) - es.ACTIVATION_WINDOW + timedelta(hours=1)
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=bought)
+    assert es.resolve_state(session, "u1")[0] == es.PURCHASED_NOT_ACTIVATED
+
+
+def test_expired_unactivated_pass_cannot_be_activated(session):
+    """过保质期的票不能再激活 —— 否则窗口形同虚设。"""
+    bought = datetime.now(timezone.utc) - es.ACTIVATION_WINDOW - timedelta(days=1)
+    e = _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=bought)
+    state, _ = es.activate(session, "u1")
+    assert state == es.EXPIRED
+    session.refresh(e)
+    assert e.status == es.PURCHASED_NOT_ACTIVATED and e.expires_at is None
+
+
+def test_expired_unactivated_pass_does_not_shadow_a_new_one(session):
+    """过期的旧票不能挡住续购的新票 —— 挡住了就是"付了第二次钱也用不了"。"""
+    old = datetime.now(timezone.utc) - es.ACTIVATION_WINDOW - timedelta(days=5)
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=old)
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=datetime.now(timezone.utc))
+    assert es.resolve_state(session, "u1")[0] == es.PURCHASED_NOT_ACTIVATED
+    assert es.activate(session, "u1")[0] == es.ACTIVE
+
+
+def test_missing_created_at_never_forfeits_the_pass(session):
+    """拿不到购买时刻就**不没收**:漏没收只是少赚,错没收是拿了钱不给货。"""
+    e = _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED)
+    e.created_at = None
+    session.commit()
+    assert es.resolve_state(session, "u1")[0] == es.PURCHASED_NOT_ACTIVATED
+    assert es.activation_deadline(e) is None
+
+
+def test_summary_tells_the_frontend_when_the_pass_lapses(session):
+    """前端要能显示「X 月 X 日前激活」,否则用户不知道票在倒计时。"""
+    bought = datetime.now(timezone.utc) - timedelta(days=2)
+    _ent(session, "u1", es.PURCHASED_NOT_ACTIVATED, created=bought)
+    out = es.summary(session, "u1", _ben(session, "u1"))
+    assert out["state"] == es.PURCHASED_NOT_ACTIVATED
+    assert out["activate_by"] is not None
+    lapse = datetime.fromisoformat(out["activate_by"])
+    assert abs(lapse - (bought + es.ACTIVATION_WINDOW)) < timedelta(seconds=5)
+
+
+def test_activate_by_is_absent_once_the_clock_runs(session):
+    """已激活的票没有"激活截止" —— 留着会让前端显示一个无意义的日期。"""
+    _ent(
+        session, "u1", es.ACTIVE, expires=datetime.now(timezone.utc) + timedelta(days=3)
+    )
+    assert es.summary(session, "u1", _ben(session, "u1"))["activate_by"] is None
 
 
 def test_free_user_recognition_quota(session):

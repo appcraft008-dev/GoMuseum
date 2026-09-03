@@ -703,6 +703,9 @@ class AppLocalizationsJa extends AppLocalizations {
       'プレミアム機能を初めて使い、確認した時点から 7 日間が始まります。先に買っておき、館に着いてから開始できます。';
 
   @override
+  String get paywallLapseNote => '有効化していないパスは購入から 30 日で失効します。';
+
+  @override
   String get ticketPaid => '支払い済み';
 
   @override

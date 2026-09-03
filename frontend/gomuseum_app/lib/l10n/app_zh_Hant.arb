@@ -228,6 +228,7 @@
   "paywallPriceNote": "一次性 · 非訂閱",
   "paywallClockHead": "買了不馬上開始計時",
   "paywallClockBody": "首次使用進階功能並確認後才開始 7 天計時。提前買好票，到館再開始。",
+  "paywallLapseNote": "未啟用的通票將於購買後 30 天失效。",
   "ticketPaid": "已付",
   "ticketStub": "存根",
   "ticketStubPending": "到期日待填",

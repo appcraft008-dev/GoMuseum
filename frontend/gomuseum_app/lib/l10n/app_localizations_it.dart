@@ -725,6 +725,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'I tuoi 7 giorni iniziano al primo utilizzo confermato di una funzione premium. Compra prima, avvia al museo.';
 
   @override
+  String get paywallLapseNote =>
+      'Un pass non attivato scade 30 giorni dopo l\'acquisto.';
+
+  @override
   String get ticketPaid => 'Pagato';
 
   @override
