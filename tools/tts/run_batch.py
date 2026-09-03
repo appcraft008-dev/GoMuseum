@@ -177,6 +177,13 @@ def main():
                 best = (ok, sharp, ratio)
             if ok:
                 break
+        if not best[0]:
+            # 三次都没过闸 → 删掉最后一次的产物。留着它是有害的:灌入端的
+            # check_audio 只判时长比例与替换偏差,**不看锐度/一致性**,
+            # 不合格音频会一路绿灯进 prod(实测已漏进去一条 Q3937645/ja/qa_0)。
+            # state 里的 ok=False 保留,重跑时会自动重做这一条。
+            (outdir / name).unlink(missing_ok=True)
+
         state[name] = {"ok": bool(best[0]), "sharp": round(best[1], 1),
                        "consist": round(best[2], 2), "lenratio": round(lr, 2),
                        "seed": SEED_OF[lang],
