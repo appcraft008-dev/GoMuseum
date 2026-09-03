@@ -282,12 +282,14 @@
   "edgeConflictBody": "この購入は別の GoMuseum アカウントのものです。1 枚のパスを 2 つのアカウントで使うことはできないため、ここでは復元できません。",
   "edgeConflictBound": "紐づけ先",
   "edgeConflictOther": "別のアカウント",
-  "edgeConflictHelp": "このパスを使うには、いったんログアウトしてそのアカウントでログインしてください。誤りだと思われる場合はご連絡ください。",
+  "edgeConflictHelp": "購入時に使ったアカウントでログインしてください。どのアカウントか分からない場合や、誤りだと思われる場合はお問い合わせください。こちらで確認できます。",
   "edgeSwitchAccount": "アカウントを切り替える",
   "edgeContactSupport": "問い合わせる",
   "drawerLockedHint": "詳細コンテンツの音声にはパスが必要です。テキストはすべて無料です。",
   "drawerLockedCta": "パスを見る",
   "purchaseSuccess": "購入が完了し、パスが有効になりました。",
   "purchaseVerifyPending": "購入をまだ確認できていません。アプリを開き直すと再試行します。",
-  "purchaseFailed": "購入できませんでした。もう一度お試しください。"
+  "purchaseFailed": "購入できませんでした。もう一度お試しください。",
+  "ticketPaid": "支払い済み",
+  "edgeSupportCopied": "サポート用アドレスをコピーしました：{email}"
 }

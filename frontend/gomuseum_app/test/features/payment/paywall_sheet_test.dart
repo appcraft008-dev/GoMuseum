@@ -164,8 +164,9 @@ void main() {
     expect(find.text(l10n.activateTear), findsOneWidget);
     expect(find.text(l10n.ticketStubPending), findsOneWidget);
     expect(find.textContaining('不可撤销'), findsOneWidget);
-    // 已购之后**不显示价格**:唯一能拿到的数字是商店当前售价,
-    // 而那不是用户当时付的钱(见 GmTicketFace.priceNote 的注释)
+    // 已购之后**留字不留数**:显示「已付」但不显示金额 —— 唯一能拿到的
+    // 数字是商店当前售价,而那不是用户当时付的钱(见 GmTicketFace.paidLabel)
+    expect(find.text(l10n.ticketPaid), findsOneWidget);
     expect(find.text('€7.99'), findsNothing);
   });
 
@@ -201,6 +202,7 @@ void main() {
         l10n.paywallClockHead,
         l10n.paywallClockBody,
         l10n.paywallLapseNote,
+        l10n.ticketPaid,
         l10n.paywallFreeAlways,
         l10n.paywallBuy,
         l10n.paywallRestore,

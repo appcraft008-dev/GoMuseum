@@ -204,6 +204,7 @@ class GmTicketFace extends StatelessWidget {
     required this.pitch,
     this.price,
     this.priceNote,
+    this.paidLabel,
   });
 
   final String title;
@@ -214,12 +215,17 @@ class GmTicketFace extends StatelessWidget {
   final String? price;
 
   /// 未购时的价格注解(「一次性 · 非订阅」)。
-  ///
-  /// ⚠️ **已购之后不显示价格**(整块不传 price)。曾经这里画过「已付 €7.99」,
-  /// 而那个数字来自商店的**当前售价** —— 涨一次价,老用户的票面就在宣称
-  /// 他付了一个他没付过的金额。真实已付金额后端没落库(`purchases.amount`
-  /// 恒 NULL),拿不到就不显示,和 passPriceProvider 是同一条原则。
   final String? priceNote;
+
+  /// 已购后的付款标记(「已付」),渲染成一枚**不带数字**的描边徽章。
+  ///
+  /// ⚠️ **已购之后绝不显示金额**。曾经这里画过「已付 €7.99」,而那个数字来自
+  /// 商店的**当前售价** —— 涨一次价,老用户的票面就在宣称他付了一个他没付过的
+  /// 金额。真实已付金额后端没落库(`purchases.amount` 恒 NULL)。
+  ///
+  /// 但也不能什么都不显示:用户需要看到"这张票付过钱了"。所以留字不留数 ——
+  /// 价格只出现在**购买前**(那时是商店实时价,真实)。
+  final String? paidLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -242,7 +248,18 @@ class GmTicketFace extends StatelessWidget {
                 ),
               ),
             ),
-            if (price != null) ...[
+            if (paidLabel != null) ...[
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(border: Border.all(color: gm.line)),
+                child: Text(
+                  paidLabel!,
+                  style: GmText.sans(
+                      size: 11, color: gm.faint, letterSpacing: 1.5),
+                ),
+              ),
+            ] else if (price != null) ...[
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

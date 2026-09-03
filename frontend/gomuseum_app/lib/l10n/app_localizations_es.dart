@@ -933,7 +933,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get edgeConflictHelp =>
-      'Para usar este pase, cierra sesión y vuelve a entrar con esa cuenta. Si crees que es un error, escríbenos.';
+      'Inicia sesión con la cuenta que usaste al comprar. Si no recuerdas cuál era, o crees que es un error, escríbenos y lo comprobamos.';
 
   @override
   String get edgeSwitchAccount => 'Cambiar de cuenta';
@@ -957,4 +957,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get purchaseFailed => 'La compra no se completó. Inténtalo de nuevo.';
+
+  @override
+  String get ticketPaid => 'Pagado';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return 'Dirección de soporte copiada: $email';
+  }
 }

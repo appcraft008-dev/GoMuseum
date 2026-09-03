@@ -900,7 +900,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get edgeConflictHelp =>
-      '이 패스를 사용하려면 로그아웃한 뒤 그 계정으로 다시 로그인하세요. 잘못된 것 같다면 저희에게 알려 주세요.';
+      '구매할 때 사용한 계정으로 로그인해 주세요. 어떤 계정인지 모르겠거나 잘못된 것 같다면 문의해 주시면 저희가 확인해 드립니다.';
 
   @override
   String get edgeSwitchAccount => '계정 전환';
@@ -922,4 +922,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get purchaseFailed => '구매가 완료되지 않았습니다. 다시 시도해 주세요.';
+
+  @override
+  String get ticketPaid => '결제 완료';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return '지원 이메일을 복사했습니다: $email';
+  }
 }

@@ -938,7 +938,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get edgeConflictHelp =>
-      'Pour utiliser ce pass, déconnectez-vous et reconnectez-vous avec ce compte. Si vous pensez qu\'il s\'agit d\'une erreur, écrivez-nous.';
+      'Connectez-vous avec le compte utilisé lors de l\'achat. Si vous ne savez plus lequel, ou si vous pensez qu\'il s\'agit d\'une erreur, écrivez-nous : nous pouvons vérifier.';
 
   @override
   String get edgeSwitchAccount => 'Changer de compte';
@@ -962,4 +962,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get purchaseFailed => 'L\'achat n\'a pas abouti. Veuillez réessayer.';
+
+  @override
+  String get ticketPaid => 'Payé';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return 'Adresse d\'assistance copiée : $email';
+  }
 }

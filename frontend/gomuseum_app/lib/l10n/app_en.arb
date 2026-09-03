@@ -447,12 +447,22 @@
   "edgeConflictBody": "This purchase belongs to a different GoMuseum account. One pass can't serve two accounts, so it can't be restored here.",
   "edgeConflictBound": "Tied to",
   "edgeConflictOther": "another account",
-  "edgeConflictHelp": "To use this pass, sign out and sign back in with that account. If you think this is a mistake, get in touch and we'll sort it out.",
+  "edgeConflictHelp": "Sign in with the account you bought it on. If you're not sure which one, or you think this is a mistake, get in touch and we can look it up.",
   "edgeSwitchAccount": "Switch account",
   "edgeContactSupport": "Contact us",
   "drawerLockedHint": "Audio for in-depth sections needs the pass. All the text is free.",
   "drawerLockedCta": "See the pass",
   "purchaseSuccess": "Purchased. Your pass is ready.",
   "purchaseVerifyPending": "We couldn't confirm the purchase yet. Reopening the app will retry.",
-  "purchaseFailed": "The purchase didn't go through. Please try again."
+  "purchaseFailed": "The purchase didn't go through. Please try again.",
+  "ticketPaid": "Paid",
+  "edgeSupportCopied": "Support address copied: {email}",
+  "@edgeSupportCopied": {
+    "description": "Toast after copying the support email on the receipt-conflict screen.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -931,7 +931,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get edgeConflictHelp =>
-      'Per usare questo pass esci e rientra con quell\'account. Se pensi che sia un errore, scrivici.';
+      'Accedi con l\'account che hai usato per l\'acquisto. Se non ricordi quale sia, o pensi che sia un errore, scrivici e lo verifichiamo.';
 
   @override
   String get edgeSwitchAccount => 'Cambia account';
@@ -955,4 +955,12 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get purchaseFailed => 'L\'acquisto non è andato a buon fine. Riprova.';
+
+  @override
+  String get ticketPaid => 'Pagato';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return 'Indirizzo di assistenza copiato: $email';
+  }
 }

@@ -891,7 +891,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get edgeConflictOther => '另一个账号';
 
   @override
-  String get edgeConflictHelp => '要用这张票，请退出当前账号、改用那个账号登录。如果你认为这是错误，可以联系我们处理。';
+  String get edgeConflictHelp => '请用当时购买的那个账号登录。如果不确定是哪个，或认为这是错误，联系客服可以帮你查。';
 
   @override
   String get edgeSwitchAccount => '切换账号';
@@ -913,6 +913,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get purchaseFailed => '购买失败，请重试';
+
+  @override
+  String get ticketPaid => '已付';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return '已复制支持邮箱：$email';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1802,7 +1810,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get edgeConflictOther => '另一個帳號';
 
   @override
-  String get edgeConflictHelp => '要用這張票，請登出目前帳號、改用那個帳號登入。如果你認為這是錯誤，可以聯絡我們處理。';
+  String get edgeConflictHelp => '請用當時購買的那個帳號登入。如果不確定是哪一個，或認為這是錯誤，聯絡客服可以幫你查。';
 
   @override
   String get edgeSwitchAccount => '切換帳號';
@@ -1824,4 +1832,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get purchaseFailed => '購買失敗，請重試';
+
+  @override
+  String get ticketPaid => '已付';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return '已複製支援信箱：$email';
+  }
 }

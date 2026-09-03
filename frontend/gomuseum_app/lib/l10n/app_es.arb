@@ -282,12 +282,14 @@
   "edgeConflictBody": "Esta compra pertenece a otra cuenta de GoMuseum. Un mismo pase no puede servir a dos cuentas, así que aquí no se puede restaurar.",
   "edgeConflictBound": "Ligado a",
   "edgeConflictOther": "otra cuenta",
-  "edgeConflictHelp": "Para usar este pase, cierra sesión y vuelve a entrar con esa cuenta. Si crees que es un error, escríbenos.",
+  "edgeConflictHelp": "Inicia sesión con la cuenta que usaste al comprar. Si no recuerdas cuál era, o crees que es un error, escríbenos y lo comprobamos.",
   "edgeSwitchAccount": "Cambiar de cuenta",
   "edgeContactSupport": "Escríbenos",
   "drawerLockedHint": "El audio de las secciones en profundidad requiere el pase. Todo el texto es gratis.",
   "drawerLockedCta": "Ver el pase",
   "purchaseSuccess": "Compra realizada. Tu pase está listo.",
   "purchaseVerifyPending": "Aún no hemos podido confirmar la compra. Al reabrir la app lo reintentaremos.",
-  "purchaseFailed": "La compra no se completó. Inténtalo de nuevo."
+  "purchaseFailed": "La compra no se completó. Inténtalo de nuevo.",
+  "ticketPaid": "Pagado",
+  "edgeSupportCopied": "Dirección de soporte copiada: {email}"
 }
