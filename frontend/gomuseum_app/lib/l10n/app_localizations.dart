@@ -1322,14 +1322,8 @@ abstract class AppLocalizations {
   /// No description provided for @paywallPitch.
   ///
   /// In en, this message translates to:
-  /// **'Unlimited photo recognition and full audio commentary across the Louvre, Orsay and Orangerie.'**
+  /// **'Unlimited photo recognition and full audio commentary across the Louvre, Orsay, the Orangerie and the Petit Palais.'**
   String get paywallPitch;
-
-  /// No description provided for @paywallClockNote.
-  ///
-  /// In en, this message translates to:
-  /// **'The clock does not start at purchase — it begins when you first use a premium feature and confirm.'**
-  String get paywallClockNote;
 
   /// No description provided for @paywallFreeAlways.
   ///
@@ -1367,28 +1361,10 @@ abstract class AppLocalizations {
   /// **'You\'ve used all your free recognitions.'**
   String get quotaExhausted;
 
-  /// No description provided for @activateTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Start your 7-day pass?'**
-  String get activateTitle;
-
-  /// No description provided for @activateBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Once started it runs for 7×24 hours without pause. Start it when you\'re at the museum, not before.'**
-  String get activateBody;
-
-  /// No description provided for @activateConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Start now'**
-  String get activateConfirm;
-
   /// No description provided for @activateLater.
   ///
   /// In en, this message translates to:
-  /// **'Not yet'**
+  /// **'Later'**
   String get activateLater;
 
   /// No description provided for @paywallLoginToBuy.
@@ -1438,6 +1414,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unlimited'**
   String get unlimited;
+
+  /// No description provided for @paywallPriceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time · not a subscription'**
+  String get paywallPriceNote;
+
+  /// No description provided for @paywallClockHead.
+  ///
+  /// In en, this message translates to:
+  /// **'The clock doesn\'t start at purchase'**
+  String get paywallClockHead;
+
+  /// No description provided for @paywallClockBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.'**
+  String get paywallClockBody;
+
+  /// No description provided for @ticketPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get ticketPaid;
+
+  /// No description provided for @ticketStub.
+  ///
+  /// In en, this message translates to:
+  /// **'Stub'**
+  String get ticketStub;
+
+  /// No description provided for @ticketStubPending.
+  ///
+  /// In en, this message translates to:
+  /// **'expiry to be filled'**
+  String get ticketStubPending;
+
+  /// No description provided for @ticketStubUntorn.
+  ///
+  /// In en, this message translates to:
+  /// **'not torn'**
+  String get ticketStubUntorn;
+
+  /// No description provided for @ticketValidUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid until'**
+  String get ticketValidUntil;
+
+  /// No description provided for @ticketDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} {time}'**
+  String ticketDateTime(DateTime date, DateTime time);
+
+  /// No description provided for @ticketDaysLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days left'**
+  String ticketDaysLeft(int days);
+
+  /// No description provided for @activateSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your 7 days now?'**
+  String get activateSheetTitle;
+
+  /// No description provided for @activateSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The clock starts on confirm and ends {date} {time}. This can\'t be undone.'**
+  String activateSheetBody(DateTime date, DateTime time);
+
+  /// No description provided for @activateTear.
+  ///
+  /// In en, this message translates to:
+  /// **'Tear it, start now'**
+  String get activateTear;
+
+  /// No description provided for @activateWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming…'**
+  String get activateWaiting;
+
+  /// No description provided for @activateWaitingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The ticket isn\'t torn yet — it starts once confirmed'**
+  String get activateWaitingNote;
+
+  /// No description provided for @activateDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pass has started'**
+  String get activateDoneTitle;
+
+  /// No description provided for @activateDoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio commentary at all four museums and unlimited recognition are unlocked.'**
+  String get activateDoneBody;
+
+  /// No description provided for @activateDoneCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get activateDoneCta;
+
+  /// No description provided for @activateFailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t confirm — your ticket wasn\'t used'**
+  String get activateFailTitle;
+
+  /// No description provided for @activateFailBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection, so the 7 days haven\'t started. Your pass is still intact; try again.'**
+  String get activateFailBody;
+
+  /// No description provided for @activateRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get activateRetry;
 }
 
 class _AppLocalizationsDelegate

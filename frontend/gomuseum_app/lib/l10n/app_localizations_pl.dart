@@ -660,11 +660,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get paywallPitch =>
-      'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio w Luwrze, Orsay i Orangerie.';
-
-  @override
-  String get paywallClockNote =>
-      'Czas nie zaczyna biec w chwili zakupu — rusza przy pierwszym potwierdzonym użyciu funkcji premium.';
+      'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio w Luwrze, Orsay, Orangerie i Petit Palais.';
 
   @override
   String get paywallFreeAlways =>
@@ -687,17 +683,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get quotaExhausted => 'Wykorzystano wszystkie darmowe rozpoznania.';
 
   @override
-  String get activateTitle => 'Rozpocząć karnet na 7 dni?';
-
-  @override
-  String get activateBody =>
-      'Po uruchomieniu biegnie 7×24 godziny bez przerwy. Uruchom go w muzeum, nie wcześniej.';
-
-  @override
-  String get activateConfirm => 'Rozpocznij teraz';
-
-  @override
-  String get activateLater => 'Jeszcze nie';
+  String get activateLater => 'Później';
 
   @override
   String get paywallLoginToBuy => 'Zaloguj się, aby kupić';
@@ -728,4 +714,88 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get unlimited => 'Bez limitu';
+
+  @override
+  String get paywallPriceNote => 'Jednorazowo · to nie abonament';
+
+  @override
+  String get paywallClockHead => 'Czas nie zaczyna biec w chwili zakupu';
+
+  @override
+  String get paywallClockBody =>
+      'Twoje 7 dni rusza przy pierwszym potwierdzonym użyciu funkcji premium. Kup wcześniej, uruchom w muzeum.';
+
+  @override
+  String get ticketPaid => 'Opłacone';
+
+  @override
+  String get ticketStub => 'Odcinek';
+
+  @override
+  String get ticketStubPending => 'data końca do uzupełnienia';
+
+  @override
+  String get ticketStubUntorn => 'nieoderwany';
+
+  @override
+  String get ticketValidUntil => 'Ważny do';
+
+  @override
+  String ticketDateTime(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return '$dateString $timeString';
+  }
+
+  @override
+  String ticketDaysLeft(int days) {
+    return 'pozostało $days dni';
+  }
+
+  @override
+  String get activateSheetTitle => 'Rozpocząć 7 dni teraz?';
+
+  @override
+  String activateSheetBody(DateTime date, DateTime time) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+    final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
+    final String timeString = timeDateFormat.format(time);
+
+    return 'Po potwierdzeniu czas rusza i kończy się $dateString o $timeString. Tego nie da się cofnąć.';
+  }
+
+  @override
+  String get activateTear => 'Oderwij i zacznij';
+
+  @override
+  String get activateWaiting => 'Potwierdzanie…';
+
+  @override
+  String get activateWaitingNote =>
+      'Bilet nie jest jeszcze oderwany — zacznie działać po potwierdzeniu';
+
+  @override
+  String get activateDoneTitle => 'Twój karnet ruszył';
+
+  @override
+  String get activateDoneBody =>
+      'Komentarz audio w czterech muzeach i nielimitowane rozpoznawanie są odblokowane.';
+
+  @override
+  String get activateDoneCta => 'Dalej';
+
+  @override
+  String get activateFailTitle =>
+      'Nie udało się potwierdzić — bilet nie został użyty';
+
+  @override
+  String get activateFailBody =>
+      'Brak połączenia, 7 dni jeszcze nie ruszyło. Karnet jest nienaruszony, spróbuj ponownie.';
+
+  @override
+  String get activateRetry => 'Spróbuj ponownie';
 }
