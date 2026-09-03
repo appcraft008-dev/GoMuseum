@@ -214,5 +214,19 @@
   "activateConfirm": "Empezar ahora",
   "activateLater": "Todavía no",
   "paywallLoginToBuy": "Inicia sesión para comprar",
-  "paywallLoginWhy": "El pase va ligado a tu cuenta: lo conservas en un móvil nuevo."
+  "paywallLoginWhy": "El pase va ligado a tu cuenta: lo conservas en un móvil nuevo.",
+  "passActive": "Pase activo",
+  "passExpiresOn": "Caduca el {date}",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "Comprado · sin activar",
+  "passActivateHint": "Empieza en la primera reproducción",
+  "viewBenefits": "Ver ventajas",
+  "unlimited": "Ilimitado"
 }

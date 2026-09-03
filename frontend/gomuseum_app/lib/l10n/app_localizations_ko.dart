@@ -681,4 +681,27 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get paywallLoginWhy => '패스는 계정에 연결되어 새 휴대폰에서도 유지됩니다.';
+
+  @override
+  String get passActive => '패스 사용 중';
+
+  @override
+  String passExpiresOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString 만료';
+  }
+
+  @override
+  String get passPendingActivation => '구매함 · 미활성화';
+
+  @override
+  String get passActivateHint => '첫 재생 시 시작됩니다';
+
+  @override
+  String get viewBenefits => '혜택 보기';
+
+  @override
+  String get unlimited => '무제한';
 }

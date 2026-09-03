@@ -214,5 +214,19 @@
   "activateConfirm": "今すぐ開始",
   "activateLater": "まだ開始しない",
   "paywallLoginToBuy": "ログインして購入",
-  "paywallLoginWhy": "パスはアカウントに紐づくので、機種変更しても失われません。"
+  "paywallLoginWhy": "パスはアカウントに紐づくので、機種変更しても失われません。",
+  "passActive": "パス有効",
+  "passExpiresOn": "{date} まで",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "購入済み · 未有効化",
+  "passActivateHint": "初回再生時に開始します",
+  "viewBenefits": "特典を見る",
+  "unlimited": "無制限"
 }

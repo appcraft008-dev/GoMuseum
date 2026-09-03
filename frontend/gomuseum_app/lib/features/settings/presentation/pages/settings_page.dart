@@ -58,8 +58,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            _quotaCard(gm, ent.value?.freeRecognitionsLeft,
-                ent.value?.freeRecognitionsTotal),
+            _quotaCard(gm, ent.value),
             const SizedBox(height: 20),
             GmSectionHead(number: '01', label: l10n.secGeneral),
             const SizedBox(height: 4),
@@ -126,15 +125,42 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  /// 额度卡 / 通票卡（同一个位置,按权益状态换内容）。
+  ///
+  /// ⚠️ 已购用户**不能**再看到「免费识别额度 —/0」和一个「升级」按钮:
+  /// 通票生效期间后端把 free_recognitions_left/total 返回 null(不限次),
+  /// 照原样渲染就是一张空额度卡 + 一个把人再送进商店的按钮 ——
+  /// 用户付了钱、App 从头到尾没有一处告诉他票在手上(2026-09-02 用户提出)。
+  ///
   /// [total] 由后端给(/entitlements/me 的 free_recognitions_total)——
   /// 别在前端写死:曾写死 10,后端把免费额度调成 5 后新用户会看到 "5/10"。
-  Widget _quotaCard(GmPalette gm, int? quota, int? total) {
+  Widget _quotaCard(GmPalette gm, Entitlements? ent) {
     final l10n = AppLocalizations.of(context)!;
-    final remaining = quota ?? 0;
+    final hasPass =
+        ent != null && (ent.isActive || ent.isPurchasedNotActivated);
+    final remaining = ent?.freeRecognitionsLeft ?? 0;
+    final total = ent?.freeRecognitionsTotal;
     final denominator = (total == null || total <= 0) ? null : total;
     final progress = denominator == null
         ? 0.0
         : (remaining / denominator).clamp(0.0, 1.0).toDouble();
+
+    final String label;
+    final String value;
+    if (ent != null && ent.isActive) {
+      label = l10n.passActive;
+      // expires_at 理论上必有,但契约要求不裸取:缺了就只显示状态、不显示日期。
+      value = ent.expiresAt == null
+          ? l10n.passActive
+          : l10n.passExpiresOn(ent.expiresAt!);
+    } else if (ent != null && ent.isPurchasedNotActivated) {
+      label = l10n.passPendingActivation;
+      value = l10n.passActivateHint;
+    } else {
+      label = l10n.freeQuota;
+      value = l10n.quotaValue(
+          ent?.freeRecognitionsLeft?.toString() ?? '—', denominator ?? 0);
+    }
     return Container(
       decoration: BoxDecoration(
         color: gm.surface,
@@ -152,24 +178,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.freeQuota,
+                  Text(label,
                       style: GmText.sans(
                           size: 11.5, letterSpacing: 1, color: gm.sub)),
                   const SizedBox(height: 4),
                   Text(
-                    l10n.quotaValue(quota?.toString() ?? '—', denominator ?? 0),
+                    value,
                     style: GmText.serif(size: 17, weight: FontWeight.w700),
                   ),
-                  const SizedBox(height: 9),
-                  Stack(
-                    children: [
-                      Container(height: 3, color: gm.chipBg),
-                      FractionallySizedBox(
-                        widthFactor: progress,
-                        child: Container(height: 3, color: gm.accent),
-                      ),
-                    ],
-                  ),
+                  // 进度条只在免费层有意义:通票不限次,画一根满格或空的槽
+                  // 都是在暗示一个并不存在的额度。
+                  if (!hasPass) ...[
+                    const SizedBox(height: 9),
+                    Stack(
+                      children: [
+                        Container(height: 3, color: gm.chipBg),
+                        FractionallySizedBox(
+                          widthFactor: progress,
+                          child: Container(height: 3, color: gm.accent),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -181,7 +211,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
                 color: gm.ctaBg,
                 child: Text(
-                  l10n.upgrade,
+                  hasPass ? l10n.viewBenefits : l10n.upgrade,
                   style: GmText.serif(
                       size: 13,
                       weight: FontWeight.w600,

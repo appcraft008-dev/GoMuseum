@@ -705,4 +705,27 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get paywallLoginWhy =>
       'Karnet jest powiązany z kontem — zachowasz go na nowym telefonie.';
+
+  @override
+  String get passActive => 'Karnet aktywny';
+
+  @override
+  String passExpiresOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Wygasa $dateString';
+  }
+
+  @override
+  String get passPendingActivation => 'Kupiony · nieaktywowany';
+
+  @override
+  String get passActivateHint => 'Startuje przy pierwszym odtworzeniu';
+
+  @override
+  String get viewBenefits => 'Zobacz korzyści';
+
+  @override
+  String get unlimited => 'Bez limitu';
 }

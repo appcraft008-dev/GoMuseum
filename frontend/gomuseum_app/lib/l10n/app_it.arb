@@ -214,5 +214,19 @@
   "activateConfirm": "Avvia ora",
   "activateLater": "Non ancora",
   "paywallLoginToBuy": "Accedi per acquistare",
-  "paywallLoginWhy": "Il pass è legato al tuo account: lo ritrovi anche su un nuovo telefono."
+  "paywallLoginWhy": "Il pass è legato al tuo account: lo ritrovi anche su un nuovo telefono.",
+  "passActive": "Pass attivo",
+  "passExpiresOn": "Scade il {date}",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "Acquistato · non attivato",
+  "passActivateHint": "Parte alla prima riproduzione",
+  "viewBenefits": "Vedi vantaggi",
+  "unlimited": "Illimitato"
 }

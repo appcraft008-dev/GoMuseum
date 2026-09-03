@@ -1402,6 +1402,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your pass is tied to your account, so you keep it on a new phone.'**
   String get paywallLoginWhy;
+
+  /// No description provided for @passActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass active'**
+  String get passActive;
+
+  /// No description provided for @passExpiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires {date}'**
+  String passExpiresOn(DateTime date);
+
+  /// No description provided for @passPendingActivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased · not activated'**
+  String get passPendingActivation;
+
+  /// No description provided for @passActivateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts when you first play a guide'**
+  String get passActivateHint;
+
+  /// No description provided for @viewBenefits.
+  ///
+  /// In en, this message translates to:
+  /// **'View benefits'**
+  String get viewBenefits;
+
+  /// No description provided for @unlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get unlimited;
 }
 
 class _AppLocalizationsDelegate

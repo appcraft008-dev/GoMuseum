@@ -214,5 +214,19 @@
   "activateConfirm": "现在开始",
   "activateLater": "再等等",
   "paywallLoginToBuy": "登录后购买",
-  "paywallLoginWhy": "通票绑定账号，换手机也不会丢。"
+  "paywallLoginWhy": "通票绑定账号，换手机也不会丢。",
+  "passActive": "通票生效中",
+  "passExpiresOn": "{date} 到期",
+  "@passExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "passPendingActivation": "已购买 · 待激活",
+  "passActivateHint": "首次播放讲解时开始计时",
+  "viewBenefits": "查看权益",
+  "unlimited": "不限次"
 }
