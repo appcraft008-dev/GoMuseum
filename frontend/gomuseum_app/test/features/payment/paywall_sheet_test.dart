@@ -73,6 +73,14 @@ void main() {
     expect(find.textContaining('始终免费'), findsOneWidget);
   });
 
+  testWidgets('说清"未激活会失效" —— 后端真会没收,不告知就是偷偷吃票', (t) async {
+    // ⚠️ 这条与后端 ACTIVATION_WINDOW 成对存在。删了这句 = 没披露就没收
+    // 已付的款(Play 合规问题),删了那段代码 = 票面印了个假承诺。
+    await t.pumpWidget(_wrap(const PaywallSheetContent()));
+    await t.pumpAndSettle();
+    expect(find.textContaining('30 天失效'), findsOneWidget);
+  });
+
   testWidgets('显示价格 —— 此前弹层里根本没有价格,用户不知道多少钱就在点购买', (t) async {
     await t.pumpWidget(_wrap(const PaywallSheetContent()));
     await t.pumpAndSettle();
@@ -176,6 +184,7 @@ void main() {
         l10n.paywallPriceNote,
         l10n.paywallClockHead,
         l10n.paywallClockBody,
+        l10n.paywallLapseNote,
         l10n.paywallFreeAlways,
         l10n.paywallBuy,
         l10n.paywallRestore,

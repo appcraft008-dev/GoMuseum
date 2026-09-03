@@ -726,6 +726,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Twoje 7 dni rusza przy pierwszym potwierdzonym użyciu funkcji premium. Kup wcześniej, uruchom w muzeum.';
 
   @override
+  String get paywallLapseNote =>
+      'Nieaktywowany bilet wygasa 30 dni po zakupie.';
+
+  @override
   String get ticketPaid => 'Opłacone';
 
   @override

@@ -19,6 +19,7 @@ class Entitlements {
     required this.canRecognize,
     required this.canAudioAny,
     this.expiresAt,
+    this.activateBy,
     this.freeRecognitionsLeft,
     this.freeRecognitionsTotal,
     this.freeAudioQid,
@@ -33,6 +34,12 @@ class Entitlements {
   final bool canRecognize;
   final bool canAudioAny;
   final DateTime? expiresAt;
+
+  /// 未激活票的**最后激活时刻**(后端 `ACTIVATION_WINDOW`,购买后 30 天)。
+  /// 过了这个点票作废,state 变 `expired`。只在 `purchased_not_activated`
+  /// 时非空。⚠️ 别拿它和 [expiresAt] 混用:一个是"再不撕就作废",
+  /// 另一个是"撕开后什么时候烧完"。
+  final DateTime? activateBy;
 
   /// 免费层剩余识别次数;通票生效期间为 null(不显示次数)。
   final int? freeRecognitionsLeft;
@@ -65,6 +72,7 @@ class Entitlements {
   factory Entitlements.fromJson(Map<String, dynamic> json) {
     final can = json['can'] as Map<String, dynamic>? ?? const {};
     final expires = json['expires_at'] as String?;
+    final lapse = json['activate_by'] as String?;
     return Entitlements(
       state: json['state'] as String? ?? 'not_purchased',
       // 缺字段时保守取 false:宁可多引导一次登录,也不要让游客买了票丢票
@@ -72,6 +80,7 @@ class Entitlements {
       canRecognize: can['recognize'] as bool? ?? true,
       canAudioAny: can['audio_any'] as bool? ?? false,
       expiresAt: expires == null ? null : DateTime.tryParse(expires),
+      activateBy: lapse == null ? null : DateTime.tryParse(lapse),
       freeRecognitionsLeft: json['free_recognitions_left'] as int?,
       freeRecognitionsTotal: json['free_recognitions_total'] as int?,
       freeAudioQid: json['free_audio_qid'] as String?,

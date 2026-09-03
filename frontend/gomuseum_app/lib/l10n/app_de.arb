@@ -228,6 +228,7 @@
   "paywallPriceNote": "Einmalkauf · kein Abo",
   "paywallClockHead": "Die Laufzeit beginnt nicht mit dem Kauf",
   "paywallClockBody": "Deine 7 Tage starten, wenn du eine Premium-Funktion zum ersten Mal nutzt und bestätigst. Vorab kaufen, im Museum starten.",
+  "paywallLapseNote": "Ein nicht aktivierter Pass verfällt 30 Tage nach dem Kauf.",
   "ticketPaid": "Bezahlt",
   "ticketStub": "Abschnitt",
   "ticketStubPending": "Enddatum offen",

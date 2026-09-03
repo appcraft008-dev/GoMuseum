@@ -40,6 +40,20 @@ PASSES: dict[str, dict] = {
 # 兼容旧调用点;新代码一律查 PASSES
 PASS_DURATION = timedelta(days=PASSES["paris_pass_7d"]["days"])
 
+# 未激活票的**保质期**:买了一直不激活,30 天后作废。
+#
+# 为什么要有:`purchased_not_activated` 此前**永不过期**,等于每笔收入背一份
+# 无限期负债 —— 用户三年后想起来激活,那时的内容/TTS 成本/汇率全变了。
+#
+# ⚠️ 这是**没收用户已付的款**,两条硬约束不能省:
+#   1. **购买前必须披露**。付费墙票面那句「一个月内不激活自动失效」就是披露点,
+#      它和这段代码是一对,少了任何一半都不成立(单有文案=骗人,单有代码=偷偷没收)。
+#   2. **`created_at` 缺失时不失效**(见 activation_deadline)。宁可漏没收,
+#      不可错没收 —— 前者少赚一点,后者是拿了钱不给货。
+#
+# ponytail: 单一常量,不进 PASSES。真出了保质期不同的 SKU 再挪进商品目录。
+ACTIVATION_WINDOW = timedelta(days=30)
+
 
 def is_pass_product(product_id: str) -> bool:
     """是不是通票类商品。**别再用等值判断** —— 第二个 SKU 会掉进老商品分支。"""
@@ -84,6 +98,22 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt.replace(tzinfo=timezone.utc)
 
 
+def activation_deadline(ent) -> datetime | None:
+    """未激活票的最后激活时刻。
+
+    返回 `None` = **这张票不失效**:`created_at` 拿不到时(理论上不该发生,
+    但它是 server_default 填的,flush 前读就是 None)按"不没收"处理。
+    """
+    created = _aware(getattr(ent, "created_at", None))
+    return None if created is None else created + ACTIVATION_WINDOW
+
+
+def _unactivated_expired(ent) -> bool:
+    """未激活票是否已过保质期。"""
+    deadline = activation_deadline(ent)
+    return deadline is not None and deadline <= _now()
+
+
 def _live_entitlement(db, user_id: str, city: str | None = None):
     """取该用户最相关的一条权益:优先 active,其次待激活。已退款/撤销不算。
 
@@ -115,8 +145,8 @@ def _live_entitlement(db, user_id: str, city: str | None = None):
     for r in rows:  # ① 真正生效中的
         if _still_live(r):
             return r
-    for r in rows:  # ② 未激活的(优先于已过期的,这是续购的路径)
-        if r.status == PURCHASED_NOT_ACTIVATED:
+    for r in rows:  # ② 未激活**且还在保质期内**的(优先于已过期的,这是续购的路径)
+        if r.status == PURCHASED_NOT_ACTIVATED and not _unactivated_expired(r):
             return r
     return rows[0] if rows else None  # ③ 只剩过期的
 
@@ -130,6 +160,10 @@ def resolve_state(
     if ent is None:
         return NOT_PURCHASED, None
     if ent.status == PURCHASED_NOT_ACTIVATED:
+        # 买了一直不激活也会作废(见 ACTIVATION_WINDOW)。与 ACTIVE 的到期一样
+        # **在读取时算**,不靠定时任务把 status 刷成 expired —— 漏跑就白送权限。
+        if _unactivated_expired(ent):
+            return EXPIRED, ent
         return PURCHASED_NOT_ACTIVATED, ent
     if _aware(ent.expires_at) and _aware(ent.expires_at) <= _now():
         return EXPIRED, ent
@@ -172,9 +206,16 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
     bonus = getattr(benefits, "referral_bonus_quota", 0) or 0
     left = max(0, (quota or 0) + bonus)
     free_audio_qid = getattr(benefits, "free_audio_qid", None)
+    # 未激活票的最后激活时刻,给前端显示「X 月 X 日前激活」。
+    # **加法字段**:老 App 不认识就忽略,契约前向兼容。
+    activate_by = None
+    if state == PURCHASED_NOT_ACTIVATED and ent is not None:
+        deadline = activation_deadline(ent)
+        activate_by = deadline.isoformat() if deadline else None
     return {
         "state": state,
         "expires_at": ent.expires_at.isoformat() if ent and ent.expires_at else None,
+        "activate_by": activate_by,
         "free_recognitions_left": None if active else left,
         # 进度环的分母。前端曾把它写死成 10,后端一调额度就显示 "5/10"
         # (新用户像是已用掉一半)。server-driven:分母也由后端给。

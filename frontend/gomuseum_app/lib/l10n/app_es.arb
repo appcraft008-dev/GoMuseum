@@ -228,6 +228,7 @@
   "paywallPriceNote": "Pago único · no es suscripción",
   "paywallClockHead": "El tiempo no empieza al comprar",
   "paywallClockBody": "Tus 7 días empiezan la primera vez que usas una función premium y lo confirmas. Compra antes, empieza en el museo.",
+  "paywallLapseNote": "Un pase sin activar caduca 30 días después de la compra.",
   "ticketPaid": "Pagado",
   "ticketStub": "Resguardo",
   "ticketStubPending": "fecha de fin por rellenar",
