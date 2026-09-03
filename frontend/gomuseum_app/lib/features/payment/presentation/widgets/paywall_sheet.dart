@@ -20,6 +20,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/data/pass_product.dart';
+import 'package:gomuseum_app/features/payment/presentation/widgets/benefits_sections.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/gm_ticket.dart';
 
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -144,10 +145,16 @@ class PaywallSheetContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+    final ent = ref.watch(entitlementsProvider).value;
     // 游客先登录再买:通票挂账号,游客买了换手机就永久拿不回(后端也会 403 拦)
-    final canBuy = ref.watch(entitlementsProvider).value?.canPurchase ?? false;
+    final canBuy = ent?.canPurchase ?? false;
+    // ⚠️ 权益**读不到**(离线)和**未登录**是两回事。混在一起就会对着一个
+    // 已登录、只是断网的用户说「登录后购买」,他照做也没用。
+    final unknown = ent != null && !ent.known;
     // 拿不到价格就不显示价格块 —— 见 passPriceProvider,绝不显示假金额
     final price = ref.watch(passPriceProvider).value;
+
+    if (unknown) return _unknownSheet(context, gm, l10n, ref);
 
     return _PaywallSheetShell(
       children: [
@@ -160,6 +167,12 @@ class PaywallSheetContent extends ConsumerWidget {
             priceNote: l10n.paywallPriceNote,
           ),
         ),
+        // 未登录:说清"为什么要先登录",而不是只把按钮换个字
+        if (!canBuy)
+          BenNotice(
+            head: l10n.edgeSignedOutHead,
+            body: l10n.edgeSignedOutBody,
+          ),
         const SizedBox(height: 13),
         // 让用户知道自己没被锁在内容外面(付费墙在现场体验,不在内容)
         Row(
@@ -188,12 +201,6 @@ class PaywallSheetContent extends ConsumerWidget {
             }
           },
         ),
-        if (!canBuy) ...[
-          const SizedBox(height: 8),
-          Text(l10n.paywallLoginWhy,
-              textAlign: TextAlign.center,
-              style: GmText.sans(size: 11.5, color: gm.faint)),
-        ],
         const SizedBox(height: 3),
         _SecondaryAction(
           label: l10n.paywallRestore,
@@ -205,6 +212,41 @@ class PaywallSheetContent extends ConsumerWidget {
       ],
     );
   }
+
+  /// 权益读不到(离线)。**不说"登录后购买"** —— 用户可能早就登录了,
+  /// 只是网络断了;也不发起购买 —— 读不到已有权益就买,等于诱导重复购买。
+  ///
+  /// 用「—」价格 + 空存根表达"未知",而不是把整张票压暗:压暗看起来像
+  /// "这张票有问题",实际是我们这边看不见。
+  Widget _unknownSheet(BuildContext context, GmPalette gm,
+          AppLocalizations l10n, WidgetRef ref) =>
+      _PaywallSheetShell(
+        children: [
+          GmTicket(
+            stub: const SizedBox(height: 1),
+            child: GmTicketFace(
+              title: l10n.paywallTitle,
+              pitch: l10n.paywallPitch,
+              price: '—',
+            ),
+          ),
+          BenNotice(
+            head: l10n.edgeUnknownHead,
+            body: l10n.edgeUnknownBody,
+            note: l10n.edgeUnknownNote,
+          ),
+          const SizedBox(height: 18),
+          GmTicketButton(
+            label: l10n.retry,
+            onTap: () => ref.invalidate(entitlementsProvider),
+          ),
+          const SizedBox(height: 3),
+          _SecondaryAction(
+            label: l10n.edgeSeeFree,
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ],
+      );
 
   /// ⭐ 旅游产品的关键承诺:买了不马上开始烧有效期。
   /// 放在**存根位**(撕下去的那半)——它讲的正是"什么时候撕"。
@@ -320,9 +362,6 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
               child: GmTicketFace(
                 title: l10n.paywallTitle,
                 pitch: l10n.paywallPitch,
-                // 已购:价格降级成收据(小字 + 「已付」),不再是要价
-                price: ref.watch(passPriceProvider).value,
-                paidLabel: l10n.ticketPaid,
               ),
             ),
           ),

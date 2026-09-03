@@ -730,9 +730,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nieaktywowany bilet wygasa 30 dni po zakupie.';
 
   @override
-  String get ticketPaid => 'Opłacone';
-
-  @override
   String get ticketStub => 'Odcinek';
 
   @override
@@ -802,4 +799,162 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get activateRetry => 'Spróbuj ponownie';
+
+  @override
+  String get benefitsMyPass => 'Mój bilet';
+
+  @override
+  String get benefitsSecFreeQuota => 'Darmowa pula';
+
+  @override
+  String get benefitsSecFeatures => 'Funkcje';
+
+  @override
+  String get benefitsSecBuyable => 'Do kupienia';
+
+  @override
+  String get benefitsSecIncluded => 'W zestawie';
+
+  @override
+  String get benefitsSecUnlocked => 'Odblokowane';
+
+  @override
+  String get benefitsSecPurchases => 'Zakupy';
+
+  @override
+  String get benefitsSecCurrentQuota => 'Twoja pula teraz';
+
+  @override
+  String get benefitsSecBuyAnother => 'Kolejny bilet';
+
+  @override
+  String get benefitsRecognition => 'Rozpoznawanie ze zdjęcia';
+
+  @override
+  String get benefitsFreeAudioNote =>
+      'Główny komentarz audio do jednego dzieła możesz odsłuchać za darmo.';
+
+  @override
+  String get benefitsFeatBrowse =>
+      'Przeglądanie, wyszukiwanie, pełny komentarz tekstowy';
+
+  @override
+  String get benefitsFeatPresetQa => 'Odpowiedzi na proponowane pytania';
+
+  @override
+  String get benefitsFeatRecognition =>
+      'Nieograniczone rozpoznawanie ze zdjęcia';
+
+  @override
+  String get benefitsFeatAllAudio =>
+      'Komentarz audio we wszystkich czterech muzeach';
+
+  @override
+  String get benefitsFeatDeepAudio => 'Audio do sekcji pogłębionych';
+
+  @override
+  String get benefitsNeedsPass => 'Wymaga biletu';
+
+  @override
+  String get benefitsNotStartedHead => 'Odliczanie jeszcze się nie zaczęło';
+
+  @override
+  String get benefitsNotStartedBody =>
+      'Gdy pierwszy raz użyjesz w muzeum komentarza audio lub rozpoznawania, poprosimy o potwierdzenie. Twoje 7 dni ruszy w tym momencie.';
+
+  @override
+  String get benefitsMuseums => 'Luwr · Orsay · Orangerie · Petit Palais';
+
+  @override
+  String get benefitsStartNow => 'Zacznij moje 7 dni teraz';
+
+  @override
+  String get benefitsStartNowNote =>
+      'Jeśli nie jesteś jeszcze w muzeum, lepiej poczekaj';
+
+  @override
+  String get benefitsExpiredBody =>
+      'Twoje 7 dni dobiegło końca. Darmowa pula wróciła, a komentarz tekstowy nadal jest pełny.';
+
+  @override
+  String benefitsPrevPass(DateTime start, DateTime end) {
+    final intl.DateFormat startDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String startString = startDateFormat.format(start);
+    final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String endString = endDateFormat.format(end);
+
+    return 'Poprzedni bilet wykorzystany · $startString – $endString';
+  }
+
+  @override
+  String get benefitsEndedAt => 'Zakończony';
+
+  @override
+  String benefitsDateOnly(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get edgeUnknownHead => 'Nie możemy teraz odczytać Twojego biletu';
+
+  @override
+  String get edgeUnknownBody =>
+      'Bez połączenia nie potwierdzimy, czy masz już bilet, ani nie rozpoczniemy bezpiecznie zakupu.';
+
+  @override
+  String get edgeUnknownNote =>
+      'Jeśli już go kupiłeś, wróci automatycznie po połączeniu. Nie zapłacisz drugi raz.';
+
+  @override
+  String get edgeSeeFree => 'Zobacz darmowe treści';
+
+  @override
+  String get edgeSignedOutHead => 'Bilet jest powiązany z kontem';
+
+  @override
+  String get edgeSignedOutBody =>
+      'Zaloguj się przed zakupem, a bilet przetrwa zmianę telefonu i ponowną instalację.';
+
+  @override
+  String get edgeConflictTitle => 'Ten bilet należy do innego konta';
+
+  @override
+  String get edgeConflictBody =>
+      'Ten zakup należy do innego konta GoMuseum. Jeden bilet nie może służyć dwóm kontom, więc nie da się go tu przywrócić.';
+
+  @override
+  String get edgeConflictBound => 'Powiązany z';
+
+  @override
+  String get edgeConflictOther => 'innym kontem';
+
+  @override
+  String get edgeConflictHelp =>
+      'Aby użyć tego biletu, wyloguj się i zaloguj na tamto konto. Jeśli uważasz, że to pomyłka, napisz do nas.';
+
+  @override
+  String get edgeSwitchAccount => 'Zmień konto';
+
+  @override
+  String get edgeContactSupport => 'Napisz do nas';
+
+  @override
+  String get drawerLockedHint =>
+      'Audio sekcji pogłębionych wymaga biletu. Cały tekst jest darmowy.';
+
+  @override
+  String get drawerLockedCta => 'Zobacz bilet';
+
+  @override
+  String get purchaseSuccess => 'Zakup udany. Twój bilet jest gotowy.';
+
+  @override
+  String get purchaseVerifyPending =>
+      'Nie potwierdziliśmy jeszcze zakupu. Ponowne otwarcie aplikacji spróbuje jeszcze raz.';
+
+  @override
+  String get purchaseFailed => 'Zakup się nie powiódł. Spróbuj ponownie.';
 }

@@ -23,7 +23,15 @@ class Entitlements {
     this.freeRecognitionsLeft,
     this.freeRecognitionsTotal,
     this.freeAudioQid,
+    this.known = true,
   });
+
+  /// 这份权益是**真的从后端读到的**吗?
+  ///
+  /// ⚠️ 没有这个标记就会出一个很难看的 bug:离线回退的 [unknown] 里
+  /// `canPurchase` 也是 false,于是付费墙对着一个**已登录**的用户说
+  /// 「登录后购买」—— 他只是断网了。两种 false 必须分得开。
+  final bool known;
 
   final String state;
 
@@ -56,6 +64,10 @@ class Entitlements {
   /// 已购但未开始计时(旅游产品:用户常提前几天买)。
   bool get isPurchasedNotActivated => state == 'purchased_not_activated';
 
+  /// 票用完了(7 天跑完,或买了 30 天没激活)。**与"没买过"不同** ——
+  /// 这类用户见过通票的样子,权益页该给他看用过的那张票,不是一个空商店。
+  bool get isExpired => state == 'expired';
+
   /// 某件的语音能不能放:通票内全放,免费用户只放已认领的首件。
   bool canPlayAudio(String qid) =>
       canAudioAny || (freeAudioQid != null && freeAudioQid == qid);
@@ -67,6 +79,7 @@ class Entitlements {
     canPurchase: false,
     canRecognize: true,
     canAudioAny: false,
+    known: false,
   );
 
   factory Entitlements.fromJson(Map<String, dynamic> json) {

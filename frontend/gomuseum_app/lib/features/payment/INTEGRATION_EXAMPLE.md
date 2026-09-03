@@ -187,7 +187,7 @@ class _RecognitionPageState extends ConsumerState<RecognitionPage> {
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../payment/presentation/widgets/benefits_status_widget.dart';
+import '../../../payment/presentation/pages/benefits_page.dart';
 import '../../../payment/presentation/pages/benefits_page.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -207,7 +207,7 @@ class SettingsPage extends ConsumerWidget {
               context,
               MaterialPageRoute(builder: (_) => const BenefitsPage()),
             ),
-            child: const BenefitsStatusWidget(),
+            child: const BenefitsPage(),
           ),
 
           // 其他设置选项

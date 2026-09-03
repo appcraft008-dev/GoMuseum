@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_artist_card.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -31,6 +34,61 @@ Future<void> showGuideDeepSheet(
           tabs: tabs, artist: artist, slug: slug, qid: qid, language: language),
     ),
   );
+}
+
+/// 钉在抽屉顶部的锁态提示条:**五条音频共用一条**。
+///
+/// 深度内容有五个 tab、每个 tab 一条音频,逐条弹付费墙等于连撞五次墙。
+/// 把"为什么听不了"说在最上面一次,下面的音频条就安静地锁着 ——
+/// 顺带把"文字全部免费"讲清楚,免得用户以为整个抽屉都是付费内容。
+///
+/// 用 Consumer 就地读权益:外层抽屉是普通 StatefulWidget,
+/// 为一条提示条把整棵树改成 Consumer 版不划算。
+class _DeepAudioLockBar extends StatelessWidget {
+  const _DeepAudioLockBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    return Consumer(
+      builder: (context, ref, _) {
+        final ent = ref.watch(entitlementsProvider).value;
+        // 通票内不显示;权益读不到时也不显示 —— 拿不准就别在人家脸上贴锁
+        if (ent == null || !ent.known || ent.canAudioAny) {
+          return const SizedBox.shrink();
+        }
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => context.push('/benefits'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+            decoration: BoxDecoration(
+              color: gm.bg,
+              border: Border(bottom: BorderSide(color: gm.line)),
+            ),
+            child: Row(
+              children: [
+                GmIcon(GmIcons.lock, size: 13, color: gm.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(l10n.drawerLockedHint,
+                      style:
+                          GmText.sans(size: 11.5, color: gm.sub, height: 1.5)),
+                ),
+                const SizedBox(width: 8),
+                Text('${l10n.drawerLockedCta} ›',
+                    style: GmText.sans(
+                        size: 11.5,
+                        color: gm.accentDeep,
+                        weight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// 抽屉内容（抽出便于单测，不依赖 showModalBottomSheet）。
@@ -116,6 +174,7 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
             ),
           ),
           Container(height: 1.5, color: gm.line),
+          const _DeepAudioLockBar(),
           // Tab 栏（横滚，粘顶）
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,

@@ -234,6 +234,52 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
     }
 
 
+def history(db, user_id: str, limit: int = 20) -> list[dict]:
+    """该用户的票据历史,新到旧。权益页的「购买记录」与「上一张票」用它。
+
+    **不塞进 summary()**:summary 是热路径(每次权益判断都调),而历史只有
+    权益页要看 —— 混进去等于每次判权益都多查一张表。
+
+    ⚠️ **金额不在这里**。`purchases.amount` 从来没被写过
+    (`grant_from_purchase` 的调用方没传),库里恒为 NULL。想补金额得改购买
+    上报链路,而那条链路只能靠真机真购买验收。**绝不能拿商店当前售价顶替**
+    —— 那是"现在卖多少",不是"当时付了多少",涨一次价收据就开始说谎。
+    """
+    rows = (
+        db.query(Entitlement)
+        .filter(Entitlement.user_id == user_id)
+        .order_by(Entitlement.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    now = _now()
+
+    def _state(r) -> str:
+        """展示用状态。与 resolve_state 同源的判定,但**逐行**算 ——
+        resolve_state 只回答"当前哪张票说了算",历史要每张票各自的结局。"""
+        if r.status not in (ACTIVE, PURCHASED_NOT_ACTIVATED):
+            return r.status  # refunded / revoked 原样透出
+        if r.status == PURCHASED_NOT_ACTIVATED:
+            return EXPIRED if _unactivated_expired(r) else PURCHASED_NOT_ACTIVATED
+        exp = _aware(r.expires_at)
+        return EXPIRED if exp and exp <= now else ACTIVE
+
+    def _iso(dt):
+        dt = _aware(dt)
+        return dt.isoformat() if dt else None
+
+    return [
+        {
+            "product_id": r.entitlement_type,
+            "state": _state(r),
+            "purchased_at": _iso(r.created_at),
+            "activated_at": _iso(r.activated_at),
+            "expires_at": _iso(r.expires_at),
+        }
+        for r in rows
+    ]
+
+
 def can_play_audio(
     db,
     user_id: str,

@@ -703,9 +703,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallLapseNote => '未激活的通票在购买后 30 天失效。';
 
   @override
-  String get ticketPaid => '已付';
-
-  @override
   String get ticketStub => '存根';
 
   @override
@@ -771,6 +768,151 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get activateRetry => '再试一次';
+
+  @override
+  String get benefitsMyPass => '我的通票';
+
+  @override
+  String get benefitsSecFreeQuota => '免费额度';
+
+  @override
+  String get benefitsSecFeatures => '功能';
+
+  @override
+  String get benefitsSecBuyable => '可购买';
+
+  @override
+  String get benefitsSecIncluded => '已包含';
+
+  @override
+  String get benefitsSecUnlocked => '已解锁';
+
+  @override
+  String get benefitsSecPurchases => '购买记录';
+
+  @override
+  String get benefitsSecCurrentQuota => '现在的额度';
+
+  @override
+  String get benefitsSecBuyAnother => '再来一张';
+
+  @override
+  String get benefitsRecognition => '拍照识别';
+
+  @override
+  String get benefitsFreeAudioNote => '语音讲解可免费试听 1 件作品的主讲解段。';
+
+  @override
+  String get benefitsFeatBrowse => '浏览、搜索、完整文字讲解';
+
+  @override
+  String get benefitsFeatPresetQa => '预设问题解答';
+
+  @override
+  String get benefitsFeatRecognition => '不限次拍照识别';
+
+  @override
+  String get benefitsFeatAllAudio => '四馆全部语音讲解';
+
+  @override
+  String get benefitsFeatDeepAudio => '深度内容音频';
+
+  @override
+  String get benefitsNeedsPass => '需通票';
+
+  @override
+  String get benefitsNotStartedHead => '还没开始计时';
+
+  @override
+  String get benefitsNotStartedBody => '到馆后首次使用语音讲解或识别时，会请你确认一次，7 天从那一刻开始。';
+
+  @override
+  String get benefitsMuseums => '卢浮宫 · 奥赛 · 橘园 · 小皇宫';
+
+  @override
+  String get benefitsStartNow => '现在就开始 7 天';
+
+  @override
+  String get benefitsStartNowNote => '不在馆里的话，建议到馆再开始';
+
+  @override
+  String get benefitsExpiredBody => '7 天已经用完。免费额度已恢复，文字讲解仍然完整。';
+
+  @override
+  String benefitsPrevPass(DateTime start, DateTime end) {
+    final intl.DateFormat startDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String startString = startDateFormat.format(start);
+    final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String endString = endDateFormat.format(end);
+
+    return '上一张已用完 · $startString – $endString';
+  }
+
+  @override
+  String get benefitsEndedAt => '结束于';
+
+  @override
+  String benefitsDateOnly(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get edgeUnknownHead => '暂时读不到你的权益';
+
+  @override
+  String get edgeUnknownBody => '网络没接通，现在无法确认你是否已有通票，也没法安全地发起购买。';
+
+  @override
+  String get edgeUnknownNote => '如果你已经买过，连上网络后会自动恢复，不会重复收费。';
+
+  @override
+  String get edgeSeeFree => '先去看免费内容';
+
+  @override
+  String get edgeSignedOutHead => '通票绑定账号';
+
+  @override
+  String get edgeSignedOutBody => '登录后购买，换手机或重装也不会丢。';
+
+  @override
+  String get edgeConflictTitle => '这张票已经绑在另一个账号上';
+
+  @override
+  String get edgeConflictBody =>
+      '这笔购买记录属于另一个 GoMuseum 账号。同一张票不能同时给两个账号使用，所以这里没法恢复。';
+
+  @override
+  String get edgeConflictBound => '已绑定';
+
+  @override
+  String get edgeConflictOther => '另一个账号';
+
+  @override
+  String get edgeConflictHelp => '要用这张票，请退出当前账号、改用那个账号登录。如果你认为这是错误，可以联系我们处理。';
+
+  @override
+  String get edgeSwitchAccount => '切换账号';
+
+  @override
+  String get edgeContactSupport => '联系客服';
+
+  @override
+  String get drawerLockedHint => '深度内容的音频需要通票，文字全部免费';
+
+  @override
+  String get drawerLockedCta => '看通票';
+
+  @override
+  String get purchaseSuccess => '购买成功，权益已更新';
+
+  @override
+  String get purchaseVerifyPending => '购买验证未完成，重开应用会自动重试';
+
+  @override
+  String get purchaseFailed => '购买失败，请重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1472,9 +1614,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paywallLapseNote => '未啟用的通票將於購買後 30 天失效。';
 
   @override
-  String get ticketPaid => '已付';
-
-  @override
   String get ticketStub => '存根';
 
   @override
@@ -1540,4 +1679,149 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get activateRetry => '再試一次';
+
+  @override
+  String get benefitsMyPass => '我的通票';
+
+  @override
+  String get benefitsSecFreeQuota => '免費額度';
+
+  @override
+  String get benefitsSecFeatures => '功能';
+
+  @override
+  String get benefitsSecBuyable => '可購買';
+
+  @override
+  String get benefitsSecIncluded => '已包含';
+
+  @override
+  String get benefitsSecUnlocked => '已解鎖';
+
+  @override
+  String get benefitsSecPurchases => '購買紀錄';
+
+  @override
+  String get benefitsSecCurrentQuota => '目前的額度';
+
+  @override
+  String get benefitsSecBuyAnother => '再來一張';
+
+  @override
+  String get benefitsRecognition => '拍照辨識';
+
+  @override
+  String get benefitsFreeAudioNote => '語音導覽可免費試聽 1 件作品的主導覽段。';
+
+  @override
+  String get benefitsFeatBrowse => '瀏覽、搜尋、完整文字導覽';
+
+  @override
+  String get benefitsFeatPresetQa => '預設問題解答';
+
+  @override
+  String get benefitsFeatRecognition => '不限次拍照辨識';
+
+  @override
+  String get benefitsFeatAllAudio => '四館全部語音導覽';
+
+  @override
+  String get benefitsFeatDeepAudio => '深度內容音訊';
+
+  @override
+  String get benefitsNeedsPass => '需通票';
+
+  @override
+  String get benefitsNotStartedHead => '還沒開始計時';
+
+  @override
+  String get benefitsNotStartedBody => '到館後首次使用語音導覽或辨識時，會請你確認一次，7 天從那一刻開始。';
+
+  @override
+  String get benefitsMuseums => '羅浮宮 · 奧賽 · 橘園 · 小皇宮';
+
+  @override
+  String get benefitsStartNow => '現在就開始 7 天';
+
+  @override
+  String get benefitsStartNowNote => '不在館裡的話，建議到館再開始';
+
+  @override
+  String get benefitsExpiredBody => '7 天已經用完。免費額度已恢復，文字導覽仍然完整。';
+
+  @override
+  String benefitsPrevPass(DateTime start, DateTime end) {
+    final intl.DateFormat startDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String startString = startDateFormat.format(start);
+    final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String endString = endDateFormat.format(end);
+
+    return '上一張已用完 · $startString – $endString';
+  }
+
+  @override
+  String get benefitsEndedAt => '結束於';
+
+  @override
+  String benefitsDateOnly(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get edgeUnknownHead => '暫時讀不到你的權益';
+
+  @override
+  String get edgeUnknownBody => '網路沒接通，現在無法確認你是否已有通票，也沒辦法安全地發起購買。';
+
+  @override
+  String get edgeUnknownNote => '如果你已經買過，連上網路後會自動恢復，不會重複收費。';
+
+  @override
+  String get edgeSeeFree => '先去看免費內容';
+
+  @override
+  String get edgeSignedOutHead => '通票綁定帳號';
+
+  @override
+  String get edgeSignedOutBody => '登入後購買，換手機或重裝也不會遺失。';
+
+  @override
+  String get edgeConflictTitle => '這張票已經綁在另一個帳號上';
+
+  @override
+  String get edgeConflictBody =>
+      '這筆購買紀錄屬於另一個 GoMuseum 帳號。同一張票不能同時給兩個帳號使用，所以這裡沒辦法恢復。';
+
+  @override
+  String get edgeConflictBound => '已綁定';
+
+  @override
+  String get edgeConflictOther => '另一個帳號';
+
+  @override
+  String get edgeConflictHelp => '要用這張票，請登出目前帳號、改用那個帳號登入。如果你認為這是錯誤，可以聯絡我們處理。';
+
+  @override
+  String get edgeSwitchAccount => '切換帳號';
+
+  @override
+  String get edgeContactSupport => '聯絡客服';
+
+  @override
+  String get drawerLockedHint => '深度內容的音訊需要通票，文字全部免費';
+
+  @override
+  String get drawerLockedCta => '看通票';
+
+  @override
+  String get purchaseSuccess => '購買成功，權益已更新';
+
+  @override
+  String get purchaseVerifyPending => '購買驗證尚未完成，重開應用程式會自動重試';
+
+  @override
+  String get purchaseFailed => '購買失敗，請重試';
 }

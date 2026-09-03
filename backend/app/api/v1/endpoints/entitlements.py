@@ -46,6 +46,20 @@ def my_entitlements(
     return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)
 
 
+@router.get("/history")
+def my_pass_history(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> dict:
+    """票据历史(新到旧),供权益页显示「购买记录」与「上一张票」。
+
+    **加法端点**:老 App 不知道它存在,契约前向兼容。
+    与 `/me` 分开是因为 `/me` 是热路径 —— 历史只有这一页要看。
+    """
+    user_id, _ = _me(db, credentials)
+    return {"passes": es.history(db, user_id)}
+
+
 @router.post("/activate")
 def activate_pass(
     credentials: HTTPAuthorizationCredentials = Depends(security),

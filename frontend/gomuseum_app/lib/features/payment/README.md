@@ -33,8 +33,9 @@ payment/
     ├── pages/               # 页面
     │   └── benefits_page.dart          # 权益与购买页面
     └── widgets/             # 组件
-        ├── product_card.dart           # 商品卡片
-        └── benefits_status_widget.dart # 权益状态组件
+        ├── benefits_sections.dart      # 权益页零件(分节头/额度条/功能行/说明块)
+        ├── gm_ticket.dart              # 票据外壳(付费→激活→到期共用)
+        └── paywall_sheet.dart          # 付费墙 + 激活四态 + 边缘态
 ```
 
 ## 功能特性
@@ -160,7 +161,7 @@ class RecognitionWidget extends ConsumerWidget {
 ### 4. 使用权益状态Widget
 
 ```dart
-import 'package:gomuseum_app/features/payment/presentation/widgets/benefits_status_widget.dart';
+import 'package:gomuseum_app/features/payment/presentation/pages/benefits_page.dart';
 
 class SettingsPage extends StatelessWidget {
   @override
@@ -170,7 +171,7 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         children: [
           // 显示权益状态
-          BenefitsStatusWidget(),
+          BenefitsPage(),
           // 其他设置选项...
         ],
       ),

@@ -1439,12 +1439,6 @@ abstract class AppLocalizations {
   /// **'An unactivated pass lapses 30 days after purchase.'**
   String get paywallLapseNote;
 
-  /// No description provided for @ticketPaid.
-  ///
-  /// In en, this message translates to:
-  /// **'Paid'**
-  String get ticketPaid;
-
   /// No description provided for @ticketStub.
   ///
   /// In en, this message translates to:
@@ -1546,6 +1540,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try again'**
   String get activateRetry;
+
+  /// No description provided for @benefitsMyPass.
+  ///
+  /// In en, this message translates to:
+  /// **'My pass'**
+  String get benefitsMyPass;
+
+  /// No description provided for @benefitsSecFreeQuota.
+  ///
+  /// In en, this message translates to:
+  /// **'Free allowance'**
+  String get benefitsSecFreeQuota;
+
+  /// No description provided for @benefitsSecFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Features'**
+  String get benefitsSecFeatures;
+
+  /// No description provided for @benefitsSecBuyable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get benefitsSecBuyable;
+
+  /// No description provided for @benefitsSecIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Included'**
+  String get benefitsSecIncluded;
+
+  /// No description provided for @benefitsSecUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked'**
+  String get benefitsSecUnlocked;
+
+  /// No description provided for @benefitsSecPurchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases'**
+  String get benefitsSecPurchases;
+
+  /// No description provided for @benefitsSecCurrentQuota.
+  ///
+  /// In en, this message translates to:
+  /// **'Your allowance now'**
+  String get benefitsSecCurrentQuota;
+
+  /// No description provided for @benefitsSecBuyAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'Another pass'**
+  String get benefitsSecBuyAnother;
+
+  /// No description provided for @benefitsRecognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo recognition'**
+  String get benefitsRecognition;
+
+  /// No description provided for @benefitsFreeAudioNote.
+  ///
+  /// In en, this message translates to:
+  /// **'You can preview the main audio commentary on one artwork for free.'**
+  String get benefitsFreeAudioNote;
+
+  /// No description provided for @benefitsFeatBrowse.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing, search, full written commentary'**
+  String get benefitsFeatBrowse;
+
+  /// No description provided for @benefitsFeatPresetQa.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested questions answered'**
+  String get benefitsFeatPresetQa;
+
+  /// No description provided for @benefitsFeatRecognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited photo recognition'**
+  String get benefitsFeatRecognition;
+
+  /// No description provided for @benefitsFeatAllAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio commentary across all four museums'**
+  String get benefitsFeatAllAudio;
+
+  /// No description provided for @benefitsFeatDeepAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio for in-depth sections'**
+  String get benefitsFeatDeepAudio;
+
+  /// No description provided for @benefitsNeedsPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass needed'**
+  String get benefitsNeedsPass;
+
+  /// No description provided for @benefitsNotStartedHead.
+  ///
+  /// In en, this message translates to:
+  /// **'The clock hasn\'t started'**
+  String get benefitsNotStartedHead;
+
+  /// No description provided for @benefitsNotStartedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The first time you use audio commentary or recognition at the museum, we\'ll ask you to confirm. Your 7 days start from that moment.'**
+  String get benefitsNotStartedBody;
+
+  /// No description provided for @benefitsMuseums.
+  ///
+  /// In en, this message translates to:
+  /// **'Louvre · Orsay · Orangerie · Petit Palais'**
+  String get benefitsMuseums;
+
+  /// No description provided for @benefitsStartNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Start my 7 days now'**
+  String get benefitsStartNow;
+
+  /// No description provided for @benefitsStartNowNote.
+  ///
+  /// In en, this message translates to:
+  /// **'If you\'re not at the museum yet, it\'s better to wait'**
+  String get benefitsStartNowNote;
+
+  /// No description provided for @benefitsExpiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your 7 days are up. Your free allowance is back, and written commentary is still complete.'**
+  String get benefitsExpiredBody;
+
+  /// Benefits page: the previous pass, already used up.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous pass used up · {start} – {end}'**
+  String benefitsPrevPass(DateTime start, DateTime end);
+
+  /// No description provided for @benefitsEndedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get benefitsEndedAt;
+
+  /// Benefits page: purchase record date.
+  ///
+  /// In en, this message translates to:
+  /// **'{date}'**
+  String benefitsDateOnly(DateTime date);
+
+  /// No description provided for @edgeUnknownHead.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t read your pass right now'**
+  String get edgeUnknownHead;
+
+  /// No description provided for @edgeUnknownBody.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no connection, so we can\'t confirm whether you already have a pass — or start a purchase safely.'**
+  String get edgeUnknownBody;
+
+  /// No description provided for @edgeUnknownNote.
+  ///
+  /// In en, this message translates to:
+  /// **'If you\'ve already bought one, it comes back automatically once you\'re online. You won\'t be charged twice.'**
+  String get edgeUnknownNote;
+
+  /// No description provided for @edgeSeeFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the free content'**
+  String get edgeSeeFree;
+
+  /// No description provided for @edgeSignedOutHead.
+  ///
+  /// In en, this message translates to:
+  /// **'The pass belongs to an account'**
+  String get edgeSignedOutHead;
+
+  /// No description provided for @edgeSignedOutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in before buying and it survives a new phone or a reinstall.'**
+  String get edgeSignedOutBody;
+
+  /// No description provided for @edgeConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This pass is tied to another account'**
+  String get edgeConflictTitle;
+
+  /// No description provided for @edgeConflictBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This purchase belongs to a different GoMuseum account. One pass can\'t serve two accounts, so it can\'t be restored here.'**
+  String get edgeConflictBody;
+
+  /// No description provided for @edgeConflictBound.
+  ///
+  /// In en, this message translates to:
+  /// **'Tied to'**
+  String get edgeConflictBound;
+
+  /// No description provided for @edgeConflictOther.
+  ///
+  /// In en, this message translates to:
+  /// **'another account'**
+  String get edgeConflictOther;
+
+  /// No description provided for @edgeConflictHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'To use this pass, sign out and sign back in with that account. If you think this is a mistake, get in touch and we\'ll sort it out.'**
+  String get edgeConflictHelp;
+
+  /// No description provided for @edgeSwitchAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch account'**
+  String get edgeSwitchAccount;
+
+  /// No description provided for @edgeContactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us'**
+  String get edgeContactSupport;
+
+  /// No description provided for @drawerLockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio for in-depth sections needs the pass. All the text is free.'**
+  String get drawerLockedHint;
+
+  /// No description provided for @drawerLockedCta.
+  ///
+  /// In en, this message translates to:
+  /// **'See the pass'**
+  String get drawerLockedCta;
+
+  /// No description provided for @purchaseSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased. Your pass is ready.'**
+  String get purchaseSuccess;
+
+  /// No description provided for @purchaseVerifyPending.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t confirm the purchase yet. Reopening the app will retry.'**
+  String get purchaseVerifyPending;
+
+  /// No description provided for @purchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The purchase didn\'t go through. Please try again.'**
+  String get purchaseFailed;
 }
 
 class _AppLocalizationsDelegate
