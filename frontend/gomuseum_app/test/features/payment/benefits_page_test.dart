@@ -125,7 +125,9 @@ void main() {
     await _pump(t, _wrap(_active, history: [_usedUpPass]));
     final l10n = await _l10n();
     expect(find.text(l10n.benefitsSecPurchases), findsOneWidget);
-    // €7.99 是**现在的售价**,不是当时付的价 —— 后端 amount 恒 NULL,不能顶替
+    // 留字不留数:票面写「已付」,但不写金额 —— €7.99 是**现在的售价**,
+    // 不是当时付的价(后端 amount 恒 NULL,不能拿现价顶替)
+    expect(find.text(l10n.ticketPaid), findsOneWidget);
     expect(find.textContaining('€7.99'), findsNothing);
   });
 
@@ -151,6 +153,14 @@ void main() {
     expect(find.text(l10n.retry), findsOneWidget);
     expect(find.text(l10n.paywallLoginToBuy), findsNothing);
     expect(find.text(l10n.paywallBuy), findsNothing);
+  });
+
+  testWidgets('收据冲突页必须给出一个能真正联系上人的地址,不能是「即将推出」', (t) async {
+    // 票面不显示对方邮箱(隐私),用户很可能不知道该登哪个账号 ——
+    // 没有这条出口他就彻底卡住。设计明确说这是必需出口,不是装饰。
+    final l10n = await _l10n();
+    expect(kSupportEmail, contains('@'));
+    expect(l10n.edgeSupportCopied(kSupportEmail), contains(kSupportEmail));
   });
 
   testWidgets('十种语言都不缺键(缺了会抛,不是显示英文)', (t) async {
@@ -183,6 +193,7 @@ void main() {
         l10n.benefitsExpiredBody,
         l10n.benefitsPrevPass(d, d),
         l10n.benefitsEndedAt,
+        l10n.ticketPaid,
         l10n.benefitsDateOnly(d),
         l10n.edgeUnknownHead,
         l10n.edgeUnknownBody,
@@ -197,6 +208,7 @@ void main() {
         l10n.edgeConflictHelp,
         l10n.edgeSwitchAccount,
         l10n.edgeContactSupport,
+        l10n.edgeSupportCopied('a@b.c'),
         l10n.drawerLockedHint,
         l10n.drawerLockedCta,
         l10n.purchaseSuccess,

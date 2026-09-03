@@ -22,11 +22,18 @@ logger = logging.getLogger(__name__)
 _FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
 
 
-def _artist_facts(qid):
+def _resolve_creator(qid):
+    """薄包装：作品→唯一作者 QID（测试 monkeypatch 此处避免触网）。"""
+    from app.services.enrichment.material import resolve_creator_qid
+
+    return resolve_creator_qid(qid)
+
+
+def _artist_facts(qid, artist_qid=None):
     """薄包装：调结构化作者属性获取（测试 monkeypatch 此处避免触网）。"""
     from app.services.enrichment.material import fetch_artist_facts
 
-    return fetch_artist_facts(qid)
+    return fetch_artist_facts(qid, artist_qid=artist_qid)
 
 
 def _wikidata_labels(qid, langs):
@@ -158,10 +165,19 @@ def generate_object(
 
         from app.services.enrichment.material import fetch_artist_material
 
+        # 作者**解析一次**,传给下面两个抓取器。此前 material / facts 各自跳一遍
+        # P170,多作者作品会各取一个不同的人 —— 橘园 Q64309678 就这么把梵高的
+        # 医生写成了静物画的作者(见 material.resolve_creator_qid 注释)。
+        # 已存的 artist_qid 优先:names 回填过就别再问一次,也保证两条路径一致。
+        try:
+            aqid = (o.attributes or {}).get("artist_qid") or _resolve_creator(o.qid)
+        except Exception:
+            aqid = (o.attributes or {}).get("artist_qid")
+
         # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
         try:
             artist_mat = fetch_artist_material(
-                o.qid, registry, country_lang=country_lang or "fr"
+                o.qid, registry, country_lang=country_lang or "fr", artist_qid=aqid
             )
         except Exception:
             artist_mat = {}
@@ -170,7 +186,7 @@ def generate_object(
             db.flush()
 
         try:
-            af = _artist_facts(o.qid)
+            af = _artist_facts(o.qid, artist_qid=aqid)
         except Exception:
             af = {}
         if af:

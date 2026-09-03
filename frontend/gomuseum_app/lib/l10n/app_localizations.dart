@@ -1760,7 +1760,7 @@ abstract class AppLocalizations {
   /// No description provided for @edgeConflictHelp.
   ///
   /// In en, this message translates to:
-  /// **'To use this pass, sign out and sign back in with that account. If you think this is a mistake, get in touch and we\'ll sort it out.'**
+  /// **'Sign in with the account you bought it on. If you\'re not sure which one, or you think this is a mistake, get in touch and we can look it up.'**
   String get edgeConflictHelp;
 
   /// No description provided for @edgeSwitchAccount.
@@ -1804,6 +1804,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The purchase didn\'t go through. Please try again.'**
   String get purchaseFailed;
+
+  /// No description provided for @ticketPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get ticketPaid;
+
+  /// Toast after copying the support email on the receipt-conflict screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Support address copied: {email}'**
+  String edgeSupportCopied(String email);
 }
 
 class _AppLocalizationsDelegate

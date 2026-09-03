@@ -14,6 +14,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -32,6 +33,18 @@ import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 import 'package:gomuseum_app/ui/gm/gm_ticket_button.dart';
+
+/// 支持邮箱。收据冲突时用户唯一的人工出口(见 `_conflictState` 的注释)。
+///
+/// ⚠️ **必须与 Play Console「商店设置 → 商品详情 → 开发者联系方式 → 电子邮件」
+/// 完全一致**。那个地址本来就对所有用户公开(商店页面上就能看到),所以在
+/// App 内展示它不构成新增暴露;但两处不一致的话,用户发出来的求助会石沉大海。
+///
+/// ponytail: 用剪贴板而不是 `mailto:` —— 那需要引入 `url_launcher` 这个
+/// **原生插件**,会改动插件树;本项目在 #434 已经被"CI 与出包解析出不同插件树"
+/// 坑过一次,而那类问题只有真机能发现。复制地址零依赖、离线可用,
+/// 而且把地址直接摆在界面上比藏在 mailto 后面更透明。
+const kSupportEmail = 'appcraft008@gmail.com';
 
 class BenefitsPage extends ConsumerStatefulWidget {
   const BenefitsPage({super.key, this.autoRestore = false});
@@ -283,6 +296,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         child: GmTicketFace(
           title: l10n.paywallTitle,
           pitch: l10n.paywallPitch,
+          paidLabel: l10n.ticketPaid,
         ),
       ),
       BenNotice(
@@ -339,6 +353,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         child: GmTicketFace(
           title: l10n.paywallTitle,
           pitch: l10n.paywallPitch,
+          paidLabel: l10n.ticketPaid,
         ),
       ),
       BenSectionHead(l10n.benefitsSecUnlocked),
@@ -371,6 +386,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         child: GmTicketFace(
           title: l10n.paywallTitle,
           pitch: l10n.paywallPitch,
+          paidLabel: l10n.ticketPaid,
         ),
       ),
       Padding(
@@ -454,6 +470,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           child: GmTicketFace(
             title: l10n.paywallTitle,
             pitch: l10n.paywallPitch,
+            paidLabel: l10n.ticketPaid,
           ),
         ),
         Padding(
@@ -470,9 +487,15 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           },
         ),
         const SizedBox(height: 3),
+        // ⚠️ 这个出口**是必需的,不是装饰**:票面不显示对方邮箱(隐私),
+        // 用户很可能根本不知道该登哪个账号 —— 没有这条路他就彻底卡住。
+        // 所以这里必须给出一个能真正联系上人的地址,不能是「即将推出」。
         BenSecondaryAction(
-          label: l10n.edgeContactSupport,
-          onTap: () => _toast(l10n.featureComingSoon(l10n.edgeContactSupport)),
+          label: '${l10n.edgeContactSupport} · $kSupportEmail',
+          onTap: () async {
+            await Clipboard.setData(const ClipboardData(text: kSupportEmail));
+            if (mounted) _toast(l10n.edgeSupportCopied(kSupportEmail));
+          },
         ),
       ];
 
