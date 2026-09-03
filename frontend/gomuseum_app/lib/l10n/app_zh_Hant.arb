@@ -282,12 +282,14 @@
   "edgeConflictBody": "這筆購買紀錄屬於另一個 GoMuseum 帳號。同一張票不能同時給兩個帳號使用，所以這裡沒辦法恢復。",
   "edgeConflictBound": "已綁定",
   "edgeConflictOther": "另一個帳號",
-  "edgeConflictHelp": "要用這張票，請登出目前帳號、改用那個帳號登入。如果你認為這是錯誤，可以聯絡我們處理。",
+  "edgeConflictHelp": "請用當時購買的那個帳號登入。如果不確定是哪一個，或認為這是錯誤，聯絡客服可以幫你查。",
   "edgeSwitchAccount": "切換帳號",
   "edgeContactSupport": "聯絡客服",
   "drawerLockedHint": "深度內容的音訊需要通票，文字全部免費",
   "drawerLockedCta": "看通票",
   "purchaseSuccess": "購買成功，權益已更新",
   "purchaseVerifyPending": "購買驗證尚未完成，重開應用程式會自動重試",
-  "purchaseFailed": "購買失敗，請重試"
+  "purchaseFailed": "購買失敗，請重試",
+  "ticketPaid": "已付",
+  "edgeSupportCopied": "已複製支援信箱：{email}"
 }

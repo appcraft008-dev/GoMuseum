@@ -282,12 +282,14 @@
   "edgeConflictBody": "Ten zakup należy do innego konta GoMuseum. Jeden bilet nie może służyć dwóm kontom, więc nie da się go tu przywrócić.",
   "edgeConflictBound": "Powiązany z",
   "edgeConflictOther": "innym kontem",
-  "edgeConflictHelp": "Aby użyć tego biletu, wyloguj się i zaloguj na tamto konto. Jeśli uważasz, że to pomyłka, napisz do nas.",
+  "edgeConflictHelp": "Zaloguj się na konto, z którego kupowałeś. Jeśli nie pamiętasz które to było albo uważasz, że to pomyłka, napisz do nas — sprawdzimy.",
   "edgeSwitchAccount": "Zmień konto",
   "edgeContactSupport": "Napisz do nas",
   "drawerLockedHint": "Audio sekcji pogłębionych wymaga biletu. Cały tekst jest darmowy.",
   "drawerLockedCta": "Zobacz bilet",
   "purchaseSuccess": "Zakup udany. Twój bilet jest gotowy.",
   "purchaseVerifyPending": "Nie potwierdziliśmy jeszcze zakupu. Ponowne otwarcie aplikacji spróbuje jeszcze raz.",
-  "purchaseFailed": "Zakup się nie powiódł. Spróbuj ponownie."
+  "purchaseFailed": "Zakup się nie powiódł. Spróbuj ponownie.",
+  "ticketPaid": "Opłacone",
+  "edgeSupportCopied": "Skopiowano adres pomocy: {email}"
 }

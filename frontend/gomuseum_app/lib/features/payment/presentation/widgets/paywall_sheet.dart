@@ -1,10 +1,14 @@
 /// 付费墙 + 激活确认:**票据版全链路**(Claude Design `paywall-flow.jsx`)。
 ///
-/// 付费墙三个触发点共用一个(语音第二件 / 识别额度耗尽 / AI 问答),三档强度
+/// 付费墙**两个**触发点共用一个(语音第二件 / 识别额度耗尽),三档强度
 /// 避免反复打扰:
 ///   第 2 件点语音     → 轻提示条 `showPaywallHint`
 ///   同一件再点/点了解 → 完整付费页 `showPaywallSheet`
 ///   识别额度耗尽      → 完整付费页(强节点)
+///
+/// ⚠️ 这里曾写着第三个触发点「AI 问答」——**那个功能已经下线**
+/// (`/chat/ask` 返 503)。付费墙不该承诺一个不存在的能力;
+/// 预设问答是免费的,见 `paywallFreeAlways`。
 ///
 /// ⚠️ 付费墙建在**现场体验**(识别/语音/问答),不建在**内容**——
 /// 浏览、搜索、完整文字讲解永远免费,所以这里明说"始终免费"那一行,
@@ -362,6 +366,7 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
               child: GmTicketFace(
                 title: l10n.paywallTitle,
                 pitch: l10n.paywallPitch,
+                paidLabel: l10n.ticketPaid,
               ),
             ),
           ),

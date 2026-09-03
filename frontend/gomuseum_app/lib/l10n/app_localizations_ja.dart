@@ -898,7 +898,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get edgeConflictHelp =>
-      'このパスを使うには、いったんログアウトしてそのアカウントでログインしてください。誤りだと思われる場合はご連絡ください。';
+      '購入時に使ったアカウントでログインしてください。どのアカウントか分からない場合や、誤りだと思われる場合はお問い合わせください。こちらで確認できます。';
 
   @override
   String get edgeSwitchAccount => 'アカウントを切り替える';
@@ -920,4 +920,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get purchaseFailed => '購入できませんでした。もう一度お試しください。';
+
+  @override
+  String get ticketPaid => '支払い済み';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return 'サポート用アドレスをコピーしました：$email';
+  }
 }

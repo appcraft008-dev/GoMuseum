@@ -933,7 +933,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get edgeConflictHelp =>
-      'Aby użyć tego biletu, wyloguj się i zaloguj na tamto konto. Jeśli uważasz, że to pomyłka, napisz do nas.';
+      'Zaloguj się na konto, z którego kupowałeś. Jeśli nie pamiętasz które to było albo uważasz, że to pomyłka, napisz do nas — sprawdzimy.';
 
   @override
   String get edgeSwitchAccount => 'Zmień konto';
@@ -957,4 +957,12 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get purchaseFailed => 'Zakup się nie powiódł. Spróbuj ponownie.';
+
+  @override
+  String get ticketPaid => 'Opłacone';
+
+  @override
+  String edgeSupportCopied(String email) {
+    return 'Skopiowano adres pomocy: $email';
+  }
 }
