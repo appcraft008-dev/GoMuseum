@@ -100,28 +100,36 @@ class GmTicket extends StatelessWidget {
   /// 斜盖的作废戳。用 [GmPalette.accentDeep] 而不是 accent:后者是购买 CTA 的
   /// 颜色,拿来说"作废"会串味;accentDeep 是它的深墨版,读起来像印泥而不像按钮。
   /// 也不用 error 红 —— 通票到期是正常结束,不是出错。
+  ///
+  /// ⚠️ **尺寸和透明度是一对,不能只调一个。** 2026-09-04 真机:17px / 62% 时
+  /// 戳和票面正文(13px)差得太近,叠在一起像两层同级的字在打架,两边都难读。
+  /// 真印章之所以不挡阅读,靠的是**比正文大得多、也淡得多** —— 大让它成为
+  /// 另一个层次,淡让底下的字透出来。所以放大就必须同时压低透明度;
+  /// 只放大不压淡,只会挡得更狠。
   Widget _stamp(GmPalette gm) => IgnorePointer(
         child: Transform.rotate(
           angle: -0.17, // ≈ -10°,手盖上去的角度
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(
-                color: gm.accentDeep.withValues(alpha: 0.5),
-                width: 2,
+                color: gm.accentDeep.withValues(alpha: 0.38),
+                width: 2.5,
               ),
             ),
-            // 德语 ABGELAUFEN 之类的长词在窄屏上会顶出票面
+            // 德语 ABGELAUFEN 之类的长词在窄屏上会顶出票面。
+            // 24px 时它约 200px 宽,窄屏票面净宽还有富余;真顶到了 FittedBox
+            // 会把这一种语言缩小 —— 各语言戳不等大,但不会破版。
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
                 voidStamp!,
                 maxLines: 1,
                 style: GmText.sans(
-                  size: 17,
+                  size: 24,
                   weight: FontWeight.w700,
-                  letterSpacing: 3,
-                  color: gm.accentDeep.withValues(alpha: 0.62),
+                  letterSpacing: 4,
+                  color: gm.accentDeep.withValues(alpha: 0.45),
                 ),
               ),
             ),
