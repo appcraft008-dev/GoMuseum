@@ -18,7 +18,14 @@ STALL=${STALL:-1800}          # 最新文件多久没更新算卡死
   while true; do
     n=$(ls "$DIR"/*.mp3 2>/dev/null | wc -l | tr -d ' ')
     if grep -q ALLDONE "$LOG" 2>/dev/null; then echo "✅ 生成完成 ${n}/${TOTAL}"; break; fi
-    if ! pgrep -f run_batch.py >/dev/null && ! pgrep -f run_chunked.sh >/dev/null; then
+    # ⚠️ 模式必须能排除**看门狗自己** —— 本脚本的命令行里就写着这些进程名,
+    # 用 `pgrep -f run_batch.py` 会匹配到自身,「进程消失」永远不触发
+    # (2026-09-04 实测:这个检测装上去就是坏的,而坏法恰好是"永远安静")。
+    # 带上 bin/python / bash 前缀,且用 [^ ]* 而不是 .* —— .* 会跨过空格,
+    # 把「命令行里顺带提到这个名字」的进程也算进来(测试实测抓到过)。
+    # 前提:仓库与 lab 路径不含空格。
+    if ! pgrep -f "bin/python [^ ]*run_batch\.py" >/dev/null \
+       && ! pgrep -f "bash [^ ]*run_chunked\.sh" >/dev/null; then
       echo "🔴 生成进程消失,停在 ${n}/${TOTAL} —— $(tail -3 "$LOG" 2>/dev/null | tr '\n' ' ')"; break
     fi
     newest=$(ls -t "$DIR"/*.mp3 2>/dev/null | head -1)
