@@ -239,7 +239,6 @@ void main() {
         l10n.edgeUnknownHead,
         l10n.edgeUnknownBody,
         l10n.edgeUnknownNote,
-        l10n.edgeSeeFree,
         l10n.edgeSignedOutHead,
         l10n.edgeSignedOutBody,
         l10n.edgeConflictTitle,

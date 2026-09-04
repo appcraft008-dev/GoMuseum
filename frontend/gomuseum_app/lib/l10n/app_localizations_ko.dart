@@ -385,13 +385,26 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      '원본 사진은 기본적으로 업로드되지 않으며, 인식 데이터는 임시로만 처리됩니다. 언제든지 계정과 데이터를 삭제할 수 있습니다. 정식 출시 시 전체 약관을 제공합니다.';
+      '원본 사진은 기본적으로 업로드되지 않으며 인식 데이터는 일시적으로만 처리됩니다. 계정과 데이터는 설정 → 계정 삭제에서 언제든지 삭제할 수 있습니다.';
+
+  @override
+  String get privacyFullPolicy => '개인정보처리방침 전문';
+
+  @override
+  String get privacyCopyLink => '링크 복사';
+
+  @override
+  String get privacyLinkCopied => '링크가 복사되었습니다';
 
   @override
   String get deleteAccountQ => '계정을 영구 삭제할까요?';
 
   @override
   String get deleteAccountBody => '계정 프로필과 남은 한도가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.';
+
+  @override
+  String get deleteAccountBodyPass =>
+      '구매한 패스는 즉시 무효가 되며 복원할 수 없습니다. 다시 가입해도 돌아오지 않으므로 새로 구매해야 합니다.';
 
   @override
   String get permanentDelete => '영구 삭제';
@@ -649,13 +662,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get paywallBuy => '패스 구매';
 
   @override
-  String get paywallRestore => '구매 복원';
+  String get paywallRestore => '결제했는데 패스가 없나요?';
 
   @override
   String get restoreInProgress => '복원 중…';
 
   @override
-  String get restoreNothingFound => '복원할 구매 내역이 없습니다';
+  String get restoreNothingFound => '미완료 결제를 찾지 못했습니다';
 
   @override
   String get restoreSucceeded => '패스를 복원했습니다';
@@ -894,9 +907,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       '이미 구매하셨다면 온라인에 연결되는 즉시 자동으로 복구됩니다. 이중으로 청구되지 않습니다.';
-
-  @override
-  String get edgeSeeFree => '무료 콘텐츠 보기';
 
   @override
   String get edgeSignedOutHead => '패스는 계정에 연결됩니다';

@@ -100,28 +100,36 @@ class GmTicket extends StatelessWidget {
   /// 斜盖的作废戳。用 [GmPalette.accentDeep] 而不是 accent:后者是购买 CTA 的
   /// 颜色,拿来说"作废"会串味;accentDeep 是它的深墨版,读起来像印泥而不像按钮。
   /// 也不用 error 红 —— 通票到期是正常结束,不是出错。
+  ///
+  /// ⚠️ **尺寸和透明度是一对,不能只调一个。** 2026-09-04 真机:17px / 62% 时
+  /// 戳和票面正文(13px)差得太近,叠在一起像两层同级的字在打架,两边都难读。
+  /// 真印章之所以不挡阅读,靠的是**比正文大得多、也淡得多** —— 大让它成为
+  /// 另一个层次,淡让底下的字透出来。所以放大就必须同时压低透明度;
+  /// 只放大不压淡,只会挡得更狠。
   Widget _stamp(GmPalette gm) => IgnorePointer(
         child: Transform.rotate(
           angle: -0.17, // ≈ -10°,手盖上去的角度
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(
-                color: gm.accentDeep.withValues(alpha: 0.5),
-                width: 2,
+                color: gm.accentDeep.withValues(alpha: 0.38),
+                width: 2.5,
               ),
             ),
-            // 德语 ABGELAUFEN 之类的长词在窄屏上会顶出票面
+            // 德语 ABGELAUFEN 之类的长词在窄屏上会顶出票面。
+            // 24px 时它约 200px 宽,窄屏票面净宽还有富余;真顶到了 FittedBox
+            // 会把这一种语言缩小 —— 各语言戳不等大,但不会破版。
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
                 voidStamp!,
                 maxLines: 1,
                 style: GmText.sans(
-                  size: 17,
+                  size: 24,
                   weight: FontWeight.w700,
-                  letterSpacing: 3,
-                  color: gm.accentDeep.withValues(alpha: 0.62),
+                  letterSpacing: 4,
+                  color: gm.accentDeep.withValues(alpha: 0.45),
                 ),
               ),
             ),
@@ -256,14 +264,18 @@ class GmTicketFace extends StatelessWidget {
   const GmTicketFace({
     super.key,
     required this.title,
-    required this.pitch,
+    this.pitch,
     this.price,
     this.priceNote,
     this.paidLabel,
   });
 
   final String title;
-  final String pitch;
+
+  /// 卖点描述。**作废票不要传** —— 对一张已经结束的票,「不限次拍照识别…」
+  /// 既没有意义,又正好被作废戳压住;而同一屏下面「再来一张」的在售票上,
+  /// 一模一样的这句话还会再出现一次。
+  final String? pitch;
 
   /// Play 返回的**本地化**价格串。拿不到就整块不显示 —— 见 passPriceProvider,
   /// 宁可不显示价格,也不显示一个在当地是错的金额。
@@ -339,9 +351,18 @@ class GmTicketFace extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: 10),
-        Text(pitch,
-            style: GmText.sans(size: 12.5, color: gm.sub, height: 1.65)),
+        if (pitch != null) ...[
+          const SizedBox(height: 10),
+          Text(pitch!,
+              style: GmText.sans(size: 12.5, color: gm.sub, height: 1.65)),
+        ] else
+          // 戳盖在**整张票**上、垂直居中。没有正文时票会塌到只剩标题行,
+          // 戳就骑到标题上 —— 等于换了个字去压。这段空白把戳的落点
+          // 留在标题下方的空处。
+          //
+          // 40 不是随手写的:改到 30 时戳的包围盒会和标题擦上 1.1px,
+          // stamp_clearance_test 那条「戳不压票上任何一个字」立刻变红。
+          const SizedBox(height: 40),
       ],
     );
   }

@@ -4,6 +4,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
@@ -15,6 +16,19 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
+
+/// 完整隐私政策的网址。App 内只放摘要,完整版在这里 —— Google Play 要求
+/// 用户能取得完整政策,而弹窗里塞不下一份完整政策。
+///
+/// ⛔ **不要为了"点一下就打开"引入 `url_launcher`**:它是原生插件、会改插件树,
+/// 而 #434 那个致命缺陷正长在插件树差异的缝里(CI 与出包机解析出不同的树),
+/// 只有真机能发现。照 `kSupportEmail` 的做法用剪贴板。
+const kPrivacyPolicyUrl = 'https://gomuseum.app/privacy.html';
+
+/// 版本脚注。**不会自动跟着 pubspec 走** —— `package_info_plus` 同样是
+/// 原生插件(理由见 [kPrivacyPolicyUrl]),所以这里是手写的。
+/// 发版改 pubspec 时必须一起改;忘了会被 `settings_version_test` 拦下。
+const kVersionFootnote = 'GoMuseum 1.0.0 (18)';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -114,7 +128,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const SizedBox(height: 28),
             Center(
               child: Text(
-                'GoMuseum 0.1.0 · MVP',
+                kVersionFootnote,
                 style: GmText.sans(size: 11, color: gm.faint),
               ),
             ),
@@ -483,11 +497,45 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         backgroundColor: gm.surface,
         title: Text(l10n.privacyPolicy,
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
-        content: Text(
-          l10n.privacyBody,
-          style: GmText.sans(size: 13, height: 1.7),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.privacyBody, style: GmText.sans(size: 13, height: 1.7)),
+            const SizedBox(height: 16),
+            Text(
+              l10n.privacyFullPolicy,
+              style: GmText.sans(size: 11, color: gm.faint, letterSpacing: 1),
+            ),
+            const SizedBox(height: 3),
+            // 摘要不是政策。完整版在网上,这里把地址给全 ——
+            // 打不开链接的用户至少能照着抄。
+            SelectableText(
+              kPrivacyPolicyUrl,
+              style: GmText.sans(size: 12.5, color: gm.accent, height: 1.5),
+            ),
+          ],
         ),
         actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(
+                  const ClipboardData(text: kPrivacyPolicyUrl));
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (mounted) {
+                ScaffoldMessenger.of(context)
+                  ..clearSnackBars()
+                  ..showSnackBar(SnackBar(
+                    content: Text(l10n.privacyLinkCopied),
+                    duration: const Duration(seconds: 3),
+                    // 见 paywall_sheet:带 action 的 SnackBar 默认 persist,
+                    // 这条没 action 所以本不必写 —— 但显式写着不吃亏。
+                    persist: false,
+                  ));
+              }
+            },
+            child: Text(l10n.privacyCopyLink, style: GmText.sans(size: 13)),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.gotIt, style: GmText.sans(size: 13)),
@@ -497,9 +545,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  /// 删号弹窗要不要点名「通票一并作废」。
+  ///
+  /// ⚠️ **权益读不到时也要说** —— 「读不到」不等于「没有」(契约 I21)。
+  /// 这里宁可对一个没买过票的人多说一句,也不能对一个刚买完票的人漏说:
+  /// 前者只是多看一行字,后者是钱付了、票没了、还不知道为什么。
+  bool _mayHavePass() {
+    final ent = ref.read(entitlementsProvider).valueOrNull;
+    if (ent == null || !ent.known) return true;
+    return ent.isActive || ent.isPurchasedNotActivated;
+  }
+
   Future<void> _handleDeleteAccount() async {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+    // 后端 delete_user_account 会把 entitlement 置 revoked;而通票是消耗型商品,
+    // 验证成功即被 Google 消耗 —— restorePurchases 之后永远回放不出来,
+    // 重装重注册也只能再买一次。契约 I20:没收已付款项必须**事前**披露。
+    final body = _mayHavePass() ? l10n.deleteAccountBodyPass : null;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -507,7 +570,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: Text(l10n.deleteAccountQ,
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(
-          l10n.deleteAccountBody,
+          body == null
+              ? l10n.deleteAccountBody
+              : '${l10n.deleteAccountBody}\n\n$body',
           style: GmText.sans(size: 13, height: 1.7),
         ),
         actions: [

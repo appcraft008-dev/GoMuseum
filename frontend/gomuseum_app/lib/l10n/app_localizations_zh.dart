@@ -384,13 +384,25 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get privacyBody => '照片默认不上传原图，识别数据仅作临时处理；你可以随时删除账户与数据。完整条款将在正式发布时提供。';
+  String get privacyBody => '照片默认不上传原图，识别数据仅作临时处理；你可以随时在「设置 → 删除账号」删除账号与数据。';
+
+  @override
+  String get privacyFullPolicy => '完整隐私政策';
+
+  @override
+  String get privacyCopyLink => '复制链接';
+
+  @override
+  String get privacyLinkCopied => '已复制链接';
 
   @override
   String get deleteAccountQ => '永久删除账号？';
 
   @override
   String get deleteAccountBody => '将删除你的账号资料与剩余额度，此操作不可恢复。';
+
+  @override
+  String get deleteAccountBodyPass => '已购通票会立即作废，且无法找回 —— 重新注册也不行，只能重新购买。';
 
   @override
   String get permanentDelete => '永久删除';
@@ -647,13 +659,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallBuy => '获取通票';
 
   @override
-  String get paywallRestore => '恢复购买';
+  String get paywallRestore => '已付款但没拿到通票？';
 
   @override
   String get restoreInProgress => '正在恢复…';
 
   @override
-  String get restoreNothingFound => '没有可恢复的购买';
+  String get restoreNothingFound => '没有找到未完成的付款';
 
   @override
   String get restoreSucceeded => '已恢复你的通票';
@@ -885,9 +897,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get edgeUnknownNote => '如果你已经买过，连上网络后会自动恢复，不会重复收费。';
-
-  @override
-  String get edgeSeeFree => '先去看免费内容';
 
   @override
   String get edgeSignedOutHead => '通票绑定账号';
@@ -1324,13 +1333,25 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get privacyBody => '照片預設不上傳原圖，識別資料僅作臨時處理；你可以隨時刪除賬戶與資料。完整條款將在正式釋出時提供。';
+  String get privacyBody => '照片預設不上傳原圖，識別資料僅作暫時處理；你可以隨時在「設置 → 刪除賬號」刪除賬號與資料。';
+
+  @override
+  String get privacyFullPolicy => '完整隱私政策';
+
+  @override
+  String get privacyCopyLink => '複製連結';
+
+  @override
+  String get privacyLinkCopied => '已複製連結';
 
   @override
   String get deleteAccountQ => '永久刪除賬號？';
 
   @override
   String get deleteAccountBody => '將刪除你的賬號資料與剩餘額度，此操作不可恢復。';
+
+  @override
+  String get deleteAccountBodyPass => '已購通票會立即作廢，且無法找回 —— 重新註冊也不行，只能重新購買。';
 
   @override
   String get permanentDelete => '永久刪除';
@@ -1587,13 +1608,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paywallBuy => '取得通票';
 
   @override
-  String get paywallRestore => '回復購買';
+  String get paywallRestore => '已付款但沒拿到通票？';
 
   @override
   String get restoreInProgress => '正在恢復…';
 
   @override
-  String get restoreNothingFound => '沒有可恢復的購買';
+  String get restoreNothingFound => '沒有找到未完成的付款';
 
   @override
   String get restoreSucceeded => '已恢復你的通票';
@@ -1825,9 +1846,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get edgeUnknownNote => '如果你已經買過，連上網路後會自動恢復，不會重複收費。';
-
-  @override
-  String get edgeSeeFree => '先去看免費內容';
 
   @override
   String get edgeSignedOutHead => '通票綁定帳號';

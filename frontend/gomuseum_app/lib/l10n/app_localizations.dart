@@ -818,8 +818,26 @@ abstract class AppLocalizations {
   /// No description provided for @privacyBody.
   ///
   /// In en, this message translates to:
-  /// **'Original photos are not uploaded by default; recognition data is processed temporarily only. You can delete your account and data anytime. Full terms will be provided at official release.'**
+  /// **'Original photos are not uploaded by default and recognition data is processed temporarily only. You can delete your account and data any time under Settings → Delete account.'**
   String get privacyBody;
+
+  /// No description provided for @privacyFullPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Full privacy policy'**
+  String get privacyFullPolicy;
+
+  /// No description provided for @privacyCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get privacyCopyLink;
+
+  /// No description provided for @privacyLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get privacyLinkCopied;
 
   /// No description provided for @deleteAccountQ.
   ///
@@ -832,6 +850,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This will delete your account profile and remaining quota. This action cannot be undone.'**
   String get deleteAccountBody;
+
+  /// No description provided for @deleteAccountBodyPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Any pass you bought is voided immediately and cannot be recovered — not even by signing up again. You would have to buy it anew.'**
+  String get deleteAccountBodyPass;
 
   /// No description provided for @permanentDelete.
   ///
@@ -1340,7 +1364,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallRestore.
   ///
   /// In en, this message translates to:
-  /// **'Restore purchase'**
+  /// **'Paid but no pass?'**
   String get paywallRestore;
 
   /// No description provided for @restoreInProgress.
@@ -1352,7 +1376,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreNothingFound.
   ///
   /// In en, this message translates to:
-  /// **'No purchases to restore'**
+  /// **'No incomplete payment found'**
   String get restoreNothingFound;
 
   /// No description provided for @restoreSucceeded.
@@ -1750,12 +1774,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'If you\'ve already bought one, it comes back automatically once you\'re online. You won\'t be charged twice.'**
   String get edgeUnknownNote;
-
-  /// No description provided for @edgeSeeFree.
-  ///
-  /// In en, this message translates to:
-  /// **'Browse the free content'**
-  String get edgeSeeFree;
 
   /// No description provided for @edgeSignedOutHead.
   ///

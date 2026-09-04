@@ -388,7 +388,16 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Oryginalne zdjęcia domyślnie nie są przesyłane; dane rozpoznawania są przetwarzane tylko tymczasowo. Możesz w każdej chwili usunąć konto i dane. Pełny regulamin zostanie udostępniony przy oficjalnej premierze.';
+      'Oryginalne zdjęcia nie są domyślnie przesyłane, a dane rozpoznawania są przetwarzane wyłącznie tymczasowo. Konto i dane możesz usunąć w każdej chwili w Ustawienia → Usuń konto.';
+
+  @override
+  String get privacyFullPolicy => 'Pełna polityka prywatności';
+
+  @override
+  String get privacyCopyLink => 'Kopiuj link';
+
+  @override
+  String get privacyLinkCopied => 'Skopiowano link';
 
   @override
   String get deleteAccountQ => 'Trwale usunąć konto?';
@@ -396,6 +405,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get deleteAccountBody =>
       'Spowoduje to usunięcie profilu konta i pozostałego limitu. Tej operacji nie można cofnąć.';
+
+  @override
+  String get deleteAccountBodyPass =>
+      'Zakupiony karnet zostaje natychmiast unieważniony i nie da się go odzyskać — nawet po ponownej rejestracji. Trzeba kupić go od nowa.';
 
   @override
   String get permanentDelete => 'Usuń trwale';
@@ -670,13 +683,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get paywallBuy => 'Kup karnet';
 
   @override
-  String get paywallRestore => 'Przywróć zakup';
+  String get paywallRestore => 'Zapłacono, ale brak karnetu?';
 
   @override
   String get restoreInProgress => 'Przywracanie…';
 
   @override
-  String get restoreNothingFound => 'Brak zakupów do przywrócenia';
+  String get restoreNothingFound => 'Nie znaleziono oczekującej płatności';
 
   @override
   String get restoreSucceeded => 'Twój bilet został przywrócony';
@@ -926,9 +939,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       'Jeśli już go kupiłeś, wróci automatycznie po połączeniu. Nie zapłacisz drugi raz.';
-
-  @override
-  String get edgeSeeFree => 'Zobacz darmowe treści';
 
   @override
   String get edgeSignedOutHead => 'Bilet jest powiązany z kontem';

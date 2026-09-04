@@ -390,7 +390,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Les photos originales ne sont pas téléchargées par défaut ; les données de reconnaissance sont traitées temporairement. Vous pouvez supprimer votre compte et vos données à tout moment. Les conditions complètes seront fournies lors de la sortie officielle.';
+      'Les photos originales ne sont pas envoyées par défaut et les données de reconnaissance sont traitées de manière temporaire uniquement. Vous pouvez supprimer votre compte et vos données à tout moment dans Paramètres → Supprimer le compte.';
+
+  @override
+  String get privacyFullPolicy => 'Politique de confidentialité complète';
+
+  @override
+  String get privacyCopyLink => 'Copier le lien';
+
+  @override
+  String get privacyLinkCopied => 'Lien copié';
 
   @override
   String get deleteAccountQ => 'Supprimer définitivement le compte ?';
@@ -398,6 +407,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get deleteAccountBody =>
       'Cela supprimera votre profil et le quota restant. Cette action est irréversible.';
+
+  @override
+  String get deleteAccountBodyPass =>
+      'Tout pass acheté est immédiatement annulé et irrécupérable — même en créant un nouveau compte. Il faudrait le racheter.';
 
   @override
   String get permanentDelete => 'Supprimer définitivement';
@@ -676,13 +689,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get paywallBuy => 'Obtenir le pass';
 
   @override
-  String get paywallRestore => 'Restaurer l\'achat';
+  String get paywallRestore => 'Payé mais pas de pass ?';
 
   @override
   String get restoreInProgress => 'Restauration…';
 
   @override
-  String get restoreNothingFound => 'Aucun achat à restaurer';
+  String get restoreNothingFound => 'Aucun paiement en attente';
 
   @override
   String get restoreSucceeded => 'Votre pass a été restauré';
@@ -931,9 +944,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       'Si vous en avez déjà acheté un, il reviendra automatiquement une fois en ligne. Vous ne serez pas facturé deux fois.';
-
-  @override
-  String get edgeSeeFree => 'Voir le contenu gratuit';
 
   @override
   String get edgeSignedOutHead => 'Le pass est lié à un compte';

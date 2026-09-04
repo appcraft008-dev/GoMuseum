@@ -185,6 +185,11 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   }
 
   /// 恢复期间按钮的文案:哑着比说错强,但什么都不说最差。
+  ///
+  /// ⚠️ `paywallRestore` 现在是**「已付款但没拿到通票？」而不是「恢复购买」**,
+  /// 别改回术语。"恢复购买"是商店行话,普通用户读不出它什么时候该点;而这个入口
+  /// 恰恰只在上面那一个场景有用,不如直接把场景写在标签上。同理 `restoreNothingFound`
+  /// 说的是「没有找到未完成的付款」——跟着标签的口径走,而不是"没有可恢复的购买"。
   String _restoreLabel(AppLocalizations l10n) =>
       _isRestoring ? l10n.restoreInProgress : l10n.paywallRestore;
 
@@ -441,9 +446,9 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
                 value: l10n.ticketDateTime(bought, bought),
                 muted: true,
               ),
+        // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
           title: l10n.paywallTitle,
-          pitch: l10n.paywallPitch,
           paidLabel: l10n.ticketPaid,
         ),
       ),
@@ -494,9 +499,9 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           value: l10n.ticketDateTime(used.expiresAt!, used.expiresAt!),
           muted: true,
         ),
+        // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
           title: l10n.paywallTitle,
-          pitch: l10n.paywallPitch,
           paidLabel: l10n.ticketPaid,
         ),
       ),
@@ -548,7 +553,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         ),
         const SizedBox(height: 3),
         BenSecondaryAction(
-          label: l10n.edgeSeeFree,
+          label: l10n.activateLater,
           onTap: () => Navigator.of(context).maybePop(),
         ),
       ];

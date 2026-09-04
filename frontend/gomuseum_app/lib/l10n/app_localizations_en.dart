@@ -387,7 +387,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Original photos are not uploaded by default; recognition data is processed temporarily only. You can delete your account and data anytime. Full terms will be provided at official release.';
+      'Original photos are not uploaded by default and recognition data is processed temporarily only. You can delete your account and data any time under Settings → Delete account.';
+
+  @override
+  String get privacyFullPolicy => 'Full privacy policy';
+
+  @override
+  String get privacyCopyLink => 'Copy link';
+
+  @override
+  String get privacyLinkCopied => 'Link copied';
 
   @override
   String get deleteAccountQ => 'Permanently delete account?';
@@ -395,6 +404,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deleteAccountBody =>
       'This will delete your account profile and remaining quota. This action cannot be undone.';
+
+  @override
+  String get deleteAccountBodyPass =>
+      'Any pass you bought is voided immediately and cannot be recovered — not even by signing up again. You would have to buy it anew.';
 
   @override
   String get permanentDelete => 'Delete permanently';
@@ -663,13 +676,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallBuy => 'Get the pass';
 
   @override
-  String get paywallRestore => 'Restore purchase';
+  String get paywallRestore => 'Paid but no pass?';
 
   @override
   String get restoreInProgress => 'Restoring…';
 
   @override
-  String get restoreNothingFound => 'No purchases to restore';
+  String get restoreNothingFound => 'No incomplete payment found';
 
   @override
   String get restoreSucceeded => 'Your pass has been restored';
@@ -916,9 +929,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       'If you\'ve already bought one, it comes back automatically once you\'re online. You won\'t be charged twice.';
-
-  @override
-  String get edgeSeeFree => 'Browse the free content';
 
   @override
   String get edgeSignedOutHead => 'The pass belongs to an account';

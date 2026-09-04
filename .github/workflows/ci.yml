@@ -262,10 +262,12 @@ jobs:
           python-version: '3.11'
       - name: Install (仅纯文本依赖,不装 voxcpm/torch 那套重的)
         run: pip install pytest opencc-python-reimplemented
-      - name: Run consistency tests
+      - name: Run tools/tts tests
+        # 跑全部 test_*.py,不点名文件 —— 曾经写死 test_consistency.py,
+        # 新增的 test_watch_run.py 悄无声息地不在 CI 里。
         run: |
           cd tools/tts
-          pytest test_consistency.py -v
+          pytest -v
 
   ci-status:
     name: CI Status Check

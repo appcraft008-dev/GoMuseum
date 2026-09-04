@@ -161,7 +161,13 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   void _showPaywall() => showPaywallSheet(
         context,
         reason: 'audio',
-        onBuy: () => context.push('/benefits'),
+        onBuy: () {
+          // 提示条挂在**根 ScaffoldMessenger** 上,不属于当前页 —— 不清掉的话
+          // 它会跟着飘到权益页,在那儿悬着一个多余的「获取通票」,而那一页
+          // 本来就有自己的购买入口(2026-09-04 真机实测撞到)。
+          ScaffoldMessenger.of(context).clearSnackBars();
+          context.push('/benefits');
+        },
       );
 
   bool _autoPlayed = false;

@@ -49,10 +49,19 @@ const Duration _kPassDuration = Duration(days: 7);
 void showPaywallHint(BuildContext context,
     {required VoidCallback onLearnMore}) {
   final l10n = AppLocalizations.of(context)!;
+  // 清队列:`ScaffoldMessenger` 是 **MaterialApp 根上那一个**,提示条会排队挨个
+  // 播完。连点几件锁着的作品就攒出一串,而这条提示的本意是"轻碰一下"。
+  ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(l10n.audioLockedHint),
       duration: const Duration(seconds: 4),
+      // ⚠️ **必须显式写 false,否则 duration 是句空话。**
+      // Flutter 的 `SnackBar` 构造器里:`persist = persist ?? action != null`
+      // (snack_bar.dart)—— 带 action 的提示条**默认永不自动消失**,计时器到点
+      // 后看见 persist 直接 return。2026-09-04 真机撞到:提示条一路飘到权益页
+      // 还赖着不走。这跟无障碍设置无关,是无条件的默认值。
+      persist: false,
       action: SnackBarAction(
         label: l10n.paywallBuy,
         onPressed: onLearnMore,
@@ -242,7 +251,7 @@ class PaywallSheetContent extends ConsumerWidget {
           ),
           const SizedBox(height: 3),
           _SecondaryAction(
-            label: l10n.edgeSeeFree,
+            label: l10n.activateLater,
             onTap: () => Navigator.of(context).pop(),
           ),
         ],

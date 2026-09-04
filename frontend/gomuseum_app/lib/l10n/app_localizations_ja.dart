@@ -385,13 +385,26 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      '元の写真はデフォルトでアップロードされません。認識データは一時的にのみ処理されます。アカウントとデータはいつでも削除できます。正式リリース時に完全な規約を提供します。';
+      '元の写真はデフォルトでアップロードされず、認識データは一時的にのみ処理されます。アカウントとデータは「設定 → アカウント削除」からいつでも削除できます。';
+
+  @override
+  String get privacyFullPolicy => 'プライバシーポリシー全文';
+
+  @override
+  String get privacyCopyLink => 'リンクをコピー';
+
+  @override
+  String get privacyLinkCopied => 'リンクをコピーしました';
 
   @override
   String get deleteAccountQ => 'アカウントを完全に削除しますか？';
 
   @override
   String get deleteAccountBody => 'アカウントのプロフィールと残りの枠が削除されます。この操作は取り消せません。';
+
+  @override
+  String get deleteAccountBodyPass =>
+      '購入済みのパスは直ちに無効になり、復元できません。登録し直しても戻らず、買い直しが必要です。';
 
   @override
   String get permanentDelete => '完全に削除';
@@ -649,13 +662,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get paywallBuy => 'パスを購入';
 
   @override
-  String get paywallRestore => '購入を復元';
+  String get paywallRestore => '支払い済みなのにパスがない？';
 
   @override
   String get restoreInProgress => '復元中…';
 
   @override
-  String get restoreNothingFound => '復元できる購入はありません';
+  String get restoreNothingFound => '未完了の支払いは見つかりませんでした';
 
   @override
   String get restoreSucceeded => 'パスを復元しました';
@@ -892,9 +905,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       'すでに購入済みなら、オンラインに戻り次第自動で復元されます。二重に請求されることはありません。';
-
-  @override
-  String get edgeSeeFree => '無料コンテンツを見る';
 
   @override
   String get edgeSignedOutHead => 'パスはアカウントに紐づきます';
