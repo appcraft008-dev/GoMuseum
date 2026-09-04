@@ -3,6 +3,7 @@
 
 用法: run_batch.py <jobs.json> <输出目录>
 """
+import hashlib
 import json
 import os
 import subprocess
@@ -191,10 +192,15 @@ def main():
                 rej.mkdir(exist_ok=True)
                 failed.replace(rej / name)
 
+        # md5 让灌入端能核验"传过去的就是判定过的那一份"(契约 音频节⑫)。
+        # 不合格条目的文件已被移走,算不到 md5,记 None。
+        final = outdir / name
         state[name] = {"ok": bool(best[0]), "sharp": round(best[1], 1),
                        "consist": round(best[2], 2), "lenratio": round(lr, 2),
                        "seed": SEED_OF[lang],
-                       "atempo": round(at, 3)}
+                       "atempo": round(at, 3),
+                       "md5": (hashlib.md5(final.read_bytes()).hexdigest()
+                               if final.exists() else None)}
         statef.write_text(json.dumps(state, ensure_ascii=False, indent=1))
 
     done = sum(1 for v in state.values() if v.get("ok"))

@@ -4,6 +4,7 @@
 (生成机会重传,不能每次都重新上传+改 key)。
 """
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -134,7 +135,7 @@ def test_cli_is_dry_run_by_default(tmp_path):
     assert "dry-run" in out.stdout, out.stdout + out.stderr
 
 
-def _run_main(db_session, tmp_path, *extra, engine="voxcpm2"):
+def _run_main(db_session, tmp_path, *extra, engine="voxcpm2", verdict=True):
     """跑 CLI 的 main(),把 DB/存储换成测试替身。返回 (stats 输出, 写入的 key 列表)."""
     import audio_ingest_cli as cli
 
@@ -160,7 +161,23 @@ def _run_main(db_session, tmp_path, *extra, engine="voxcpm2"):
     monkey.setattr(cli, "get_object_storage", lambda: _Storage())
     jobs = tmp_path / "jobs.json"
     jobs.write_text(json.dumps([{"qid": "Q1", "language": "zh", "section": "guide"}]))
-    (tmp_path / "Q1__zh__guide.mp3").write_bytes(_audio(60))
+    data = _audio(60)
+    (tmp_path / "Q1__zh__guide.mp3").write_bytes(data)
+    # 生成侧的合格判定必须随文件一起交付(契约 音频节⑫);缺它 --apply 会被拒。
+    # 真实目录里本来就有这个文件,测试替身也得有,否则测的是现实中不存在的路径。
+    if verdict is not None:
+        (tmp_path / "_state.json").write_text(
+            json.dumps(
+                {
+                    "Q1__zh__guide.mp3": {
+                        "ok": verdict,
+                        "md5": hashlib.md5(data).hexdigest(),
+                        "sharp": 120.0,
+                        "consist": 0.99,
+                    }
+                }
+            )
+        )
     monkey.setattr(
         sys,
         "argv",
@@ -216,3 +233,22 @@ def test_same_engine_rewritten_with_force(db_with_existing, tmp_path):
     s, _ = db_with_existing
     row = s.query(ObjectContentSection).one()
     assert row.audio_key == written[0], "DB 的 key 必须指向新写入的对象"
+
+
+def test_gate_failed_clip_is_not_written(db_with_existing, tmp_path, capsys):
+    """契约 音频节⑫:生成侧判定不合格的产物,即使躺在灌入目录里也不许落库。
+
+    这条是 CLI 全链路的,不是纯函数级 —— 2026-09-04 的实测教训:
+    我先只测了 `verdict_problem` 这个纯函数,接线对不对完全没测到,
+    是 CI 里两个既有测试撞上 SystemExit 才证明守卫真的接上了。
+    """
+    written = _run_main(db_with_existing, tmp_path, "--force", verdict=False)
+    assert written == [], "未过闸的产物不该被写入"
+    out = capsys.readouterr().out
+    assert "unverified" in out, "拒绝原因要单独计数,不能混进质量闸的 rejected"
+
+
+def test_apply_without_state_file_is_refused(db_with_existing, tmp_path):
+    """没有 _state.json 就 --apply → 报错退出,不许悄悄降级成不校验。"""
+    with pytest.raises(SystemExit):
+        _run_main(db_with_existing, tmp_path, verdict=None)
