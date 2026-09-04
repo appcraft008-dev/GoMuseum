@@ -178,11 +178,18 @@ def main():
             if ok:
                 break
         if not best[0]:
-            # 三次都没过闸 → 删掉最后一次的产物。留着它是有害的:灌入端的
-            # check_audio 只判时长比例与替换偏差,**不看锐度/一致性**,
-            # 不合格音频会一路绿灯进 prod(实测已漏进去一条 Q3937645/ja/qa_0)。
+            # 三次都没过闸 → 把产物移出灌入目录(不是删掉)。
+            # 必须移走:灌入端的 check_audio 只判时长比例与替换偏差,**不看锐度/
+            # 一致性**,留在原地会一路绿灯进 prod(实测已漏进去一条 Q3937645/ja/qa_0)。
+            # 又必须留着:排查"到底哪里不合格"要拿这条音频去转写比对 —— 第一版直接
+            # unlink,结果查确定性失败时发现证据已被自己删干净。
+            # _rejected/ 不在灌入端的查找路径上(它按 outdir/<name> 精确取文件)。
             # state 里的 ok=False 保留,重跑时会自动重做这一条。
-            (outdir / name).unlink(missing_ok=True)
+            failed = outdir / name
+            if failed.exists():
+                rej = outdir / "_rejected"
+                rej.mkdir(exist_ok=True)
+                failed.replace(rej / name)
 
         state[name] = {"ok": bool(best[0]), "sharp": round(best[1], 1),
                        "consist": round(best[2], 2), "lenratio": round(lr, 2),
