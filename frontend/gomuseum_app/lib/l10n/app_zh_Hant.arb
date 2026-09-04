@@ -294,5 +294,6 @@
   "purchaseVerifyPending": "購買驗證尚未完成，重開應用程式會自動重試",
   "purchaseFailed": "購買失敗，請重試",
   "ticketPaid": "已付",
+  "ticketVoid": "已結束",
   "edgeSupportCopied": "已複製支援信箱：{email}"
 }

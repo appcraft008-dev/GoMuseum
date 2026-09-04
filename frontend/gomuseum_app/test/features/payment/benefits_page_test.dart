@@ -139,6 +139,21 @@ void main() {
     expect(find.text(l10n.paywallBuy), findsOneWidget, reason: '可以续购');
   });
 
+  // 真机实测:作废票和下面在售的那张并排放着像双胞胎 —— 撕线和褪色在这套
+  // 暖纸配色里几乎产生不了对比(饱和度本来就只有个位数,没什么可减的)。
+  // 断的是"有没有一个正向标记",不是"有没有褪色":褪色测不出来,这正是问题所在。
+  testWidgets('已到期:票上必须有作废戳 —— 光靠褪色在这套配色里看不出来', (t) async {
+    await _pump(t, _wrap(_expired, history: [_usedUpPass]));
+    final l10n = await _l10n();
+    expect(find.text(l10n.ticketVoid), findsOneWidget);
+  });
+
+  testWidgets('在售的票不许盖作废戳', (t) async {
+    await _pump(t, _wrap(_free));
+    final l10n = await _l10n();
+    expect(find.text(l10n.ticketVoid), findsNothing);
+  });
+
   testWidgets('已到期但历史读不到:退回未购态,不编一张票出来', (t) async {
     await _pump(t, _wrap(_expired));
     final l10n = await _l10n();

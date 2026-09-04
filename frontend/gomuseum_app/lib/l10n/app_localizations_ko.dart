@@ -936,6 +936,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ticketPaid => '결제 완료';
 
   @override
+  String get ticketVoid => '종료됨';
+
+  @override
   String edgeSupportCopied(String email) {
     return '지원 이메일을 복사했습니다: $email';
   }

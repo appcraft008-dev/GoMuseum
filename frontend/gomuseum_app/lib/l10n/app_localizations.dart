@@ -110,7 +110,7 @@ abstract class AppLocalizations {
     Locale('ko'),
     Locale('pl'),
     Locale('zh'),
-    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
+    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
   /// No description provided for @home.
@@ -1829,6 +1829,12 @@ abstract class AppLocalizations {
   /// **'Paid'**
   String get ticketPaid;
 
+  /// No description provided for @ticketVoid.
+  ///
+  /// In en, this message translates to:
+  /// **'EXPIRED'**
+  String get ticketVoid;
+
   /// Toast after copying the support email on the receipt-conflict screen.
   ///
   /// In en, this message translates to:
@@ -1855,7 +1861,7 @@ class _AppLocalizationsDelegate
         'ja',
         'ko',
         'pl',
-        'zh'
+        'zh',
       ].contains(locale.languageCode);
 
   @override
@@ -1898,8 +1904,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

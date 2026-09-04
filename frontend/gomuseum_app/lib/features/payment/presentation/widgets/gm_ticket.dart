@@ -24,6 +24,7 @@ class GmTicket extends StatelessWidget {
     this.torn = 0.0,
     this.dim = false,
     this.faded = false,
+    this.voidStamp,
   });
 
   /// 票面主体,通常是 [GmTicketFace]。
@@ -42,7 +43,20 @@ class GmTicket extends StatelessWidget {
   /// 用过的票:去掉大部分饱和度。**和 [dim] 不是一回事** —— dim 说的是
   /// "正在处理中",faded 说的是"这张已经作废了",两者会同时出现在权益页上,
   /// 挤成一个参数就分不出"在转圈"和"已过期"。
+  ///
+  /// ⚠️ **单靠它读不出"作废"**,必须配 [voidStamp]。见那里的说明。
   final bool faded;
+
+  /// 作废戳的文案(如「已结束」)。非空时在票面上斜盖一枚半透明印记。
+  ///
+  /// 为什么需要它:[faded] 是个**减法**信号 —— 把饱和度降到 40%。而这套暖纸
+  /// 配色本来就几乎没有饱和度可减(bg 8%→3%、line 16%→6%,肉眼无差),
+  /// 整个"作废"信号最后只落在那个 9px 的 accent ◆ 上。真机实测:作废票和
+  /// 在售票并排放着像双胞胎,得读文字才分得清。
+  ///
+  /// 减法减不出来就得用加法 —— 一个明确说"作废"的正向标记。纸质票据本来
+  /// 就有这个词汇:用过的票会被盖戳。
+  final String? voidStamp;
 
   @override
   Widget build(BuildContext context) {
@@ -71,8 +85,49 @@ class GmTicket extends StatelessWidget {
         child: ticket,
       );
     }
+    if (voidStamp != null) {
+      // ⚠️ 戳必须盖在 ColorFiltered **外面**:放进去会被一起去饱和,
+      // 那就又变回一个看不见的信号了。层次上也对 —— 票是旧的,
+      // 墨是后来盖上去的。
+      ticket = Stack(
+        alignment: Alignment.center,
+        children: [ticket, _stamp(gm)],
+      );
+    }
     return Opacity(opacity: dim ? 0.55 : 1, child: ticket);
   }
+
+  /// 斜盖的作废戳。用 [GmPalette.accentDeep] 而不是 accent:后者是购买 CTA 的
+  /// 颜色,拿来说"作废"会串味;accentDeep 是它的深墨版,读起来像印泥而不像按钮。
+  /// 也不用 error 红 —— 通票到期是正常结束,不是出错。
+  Widget _stamp(GmPalette gm) => IgnorePointer(
+        child: Transform.rotate(
+          angle: -0.17, // ≈ -10°,手盖上去的角度
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: gm.accentDeep.withValues(alpha: 0.5),
+                width: 2,
+              ),
+            ),
+            // 德语 ABGELAUFEN 之类的长词在窄屏上会顶出票面
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                voidStamp!,
+                maxLines: 1,
+                style: GmText.sans(
+                  size: 17,
+                  weight: FontWeight.w700,
+                  letterSpacing: 3,
+                  color: gm.accentDeep.withValues(alpha: 0.62),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 
   /// 饱和度降到 0.4 的标准亮度矩阵(Rec. 601 权重)。
   /// 缺口用的是 `gm.surface`,和票背后那层同色,所以跟着一起褪也不露馅。

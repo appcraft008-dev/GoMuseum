@@ -294,5 +294,6 @@
   "purchaseVerifyPending": "Aún no hemos podido confirmar la compra. Al reabrir la app lo reintentaremos.",
   "purchaseFailed": "La compra no se completó. Inténtalo de nuevo.",
   "ticketPaid": "Pagado",
+  "ticketVoid": "CADUCADO",
   "edgeSupportCopied": "Dirección de soporte copiada: {email}"
 }

@@ -934,6 +934,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ticketPaid => '支払い済み';
 
   @override
+  String get ticketVoid => '終了';
+
+  @override
   String edgeSupportCopied(String email) {
     return 'サポート用アドレスをコピーしました：$email';
   }

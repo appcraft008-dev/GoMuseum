@@ -425,6 +425,9 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       GmTicket(
         torn: 1,
         faded: true,
+        // 撕线 + 褪色都太轻了(见 GmTicket.voidStamp 的说明):真机上这张票
+        // 和下面在售的那张像双胞胎。作废戳是这一态唯一一眼能读出来的信号。
+        voidStamp: l10n.ticketVoid,
         stub: BenStubDate(
           label: l10n.benefitsEndedAt,
           value: l10n.ticketDateTime(used.expiresAt!, used.expiresAt!),

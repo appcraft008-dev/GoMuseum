@@ -971,6 +971,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ticketPaid => 'Pagado';
 
   @override
+  String get ticketVoid => 'CADUCADO';
+
+  @override
   String edgeSupportCopied(String email) {
     return 'Dirección de soporte copiada: $email';
   }

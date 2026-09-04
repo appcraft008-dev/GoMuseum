@@ -294,5 +294,6 @@
   "purchaseVerifyPending": "Achat pas encore confirmé. Rouvrez l'application pour réessayer.",
   "purchaseFailed": "L'achat n'a pas abouti. Veuillez réessayer.",
   "ticketPaid": "Payé",
+  "ticketVoid": "EXPIRÉ",
   "edgeSupportCopied": "Adresse d'assistance copiée : {email}"
 }

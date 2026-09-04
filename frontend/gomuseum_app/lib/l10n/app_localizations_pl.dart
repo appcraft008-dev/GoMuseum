@@ -971,6 +971,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get ticketPaid => 'Opłacone';
 
   @override
+  String get ticketVoid => 'WYGASŁ';
+
+  @override
   String edgeSupportCopied(String email) {
     return 'Skopiowano adres pomocy: $email';
   }
