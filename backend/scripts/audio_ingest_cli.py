@@ -57,6 +57,10 @@ from app.services.enrichment.audio_quality import (  # noqa: E402
     check_audio,
     estimate_duration_sec,
 )
+from app.services.enrichment.audio_verdict import (  # noqa: E402
+    load_verdicts,
+    verdict_problem,
+)
 from app.services.storage import get_object_storage  # noqa: E402
 
 
@@ -93,12 +97,18 @@ def main() -> int:
         action="store_true",
         help="同引擎也重灌(质量修复场景)。默认幂等跳过已是该引擎的条目。",
     )
+    ap.add_argument(
+        "--allow-unverified",
+        action="store_true",
+        help="没有 _state.json 也允许 --apply(逃生口,仅用于外部引擎产出的音频)",
+    )
     ns = ap.parse_args()
 
     import pathlib
 
     jobs = json.load(open(ns.jobs))
     root = pathlib.Path(ns.dir)
+    verdicts = load_verdicts(root, apply=ns.apply, allow_unverified=ns.allow_unverified)
     storage = get_object_storage()
     db = SessionLocal()
     stats = Counter()
@@ -112,6 +122,19 @@ def main() -> int:
                 stats["missing"] += 1
                 continue
             data = f.read_bytes()
+
+            # 契约「音频批量生产与灌入」⑫:只有生成侧判定合格的产物才准落库。
+            # 本文件的 check_audio 只判时长比例与替换偏差,**不看锐度和内容一致性**
+            # —— 生成侧唯一的质量判据在这里没有对应护栏,目录里放什么就传什么。
+            # 实测已漏进 prod 一条(Q3937645/ja/qa_0,一致性未达门槛),而当时
+            # md5 逐条核对 127/127 全过:核的是"上传的和本地一致",
+            # 验不出"本地这条本身没过闸"。
+            if verdicts is not None:
+                bad = verdict_problem(verdicts, f.name, data)
+                if bad:
+                    stats["unverified"] += 1
+                    rejected.append((f"{qid}/{lang}/{sec}", bad))
+                    continue
 
             # 两种来源(作品的段/问答、按作者共享的介绍)在这里归一成同一组变量,
             # 后面的幂等判断、偏差检查、质量闸、落库四步完全共用 —— 分两套写
@@ -199,6 +222,7 @@ def main() -> int:
         "written",
         "already_done",
         "rejected",
+        "unverified",
         "missing",
         "no_row",
         "unknown_qid",
