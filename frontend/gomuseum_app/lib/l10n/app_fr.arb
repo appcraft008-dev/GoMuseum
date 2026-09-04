@@ -120,6 +120,7 @@
   "privacyBody": "Les photos originales ne sont pas téléchargées par défaut ; les données de reconnaissance sont traitées temporairement. Vous pouvez supprimer votre compte et vos données à tout moment. Les conditions complètes seront fournies lors de la sortie officielle.",
   "deleteAccountQ": "Supprimer définitivement le compte ?",
   "deleteAccountBody": "Cela supprimera votre profil et le quota restant. Cette action est irréversible.",
+  "deleteAccountBodyPass": "Tout pass acheté est immédiatement annulé et irrécupérable — même en créant un nouveau compte. Il faudrait le racheter.",
   "permanentDelete": "Supprimer définitivement",
   "deleteFailed": "Échec de la suppression, veuillez réessayer plus tard",
   "confirmLogout": "Confirmer la déconnexion",

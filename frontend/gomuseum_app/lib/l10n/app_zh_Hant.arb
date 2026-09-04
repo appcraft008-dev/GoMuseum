@@ -120,6 +120,7 @@
   "privacyBody": "照片預設不上傳原圖，識別資料僅作臨時處理；你可以隨時刪除賬戶與資料。完整條款將在正式釋出時提供。",
   "deleteAccountQ": "永久刪除賬號？",
   "deleteAccountBody": "將刪除你的賬號資料與剩餘額度，此操作不可恢復。",
+  "deleteAccountBodyPass": "已購通票會立即作廢，且無法找回 —— 重新註冊也不行，只能重新購買。",
   "permanentDelete": "永久刪除",
   "deleteFailed": "刪除失敗，請稍後再試",
   "confirmLogout": "確認登出",

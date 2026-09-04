@@ -398,6 +398,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Spowoduje to usunięcie profilu konta i pozostałego limitu. Tej operacji nie można cofnąć.';
 
   @override
+  String get deleteAccountBodyPass =>
+      'Zakupiony karnet zostaje natychmiast unieważniony i nie da się go odzyskać — nawet po ponownej rejestracji. Trzeba kupić go od nowa.';
+
+  @override
   String get permanentDelete => 'Usuń trwale';
 
   @override

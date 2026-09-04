@@ -120,6 +120,7 @@
   "privacyBody": "Originalfotos werden standardmäßig nicht hochgeladen; Erkennungsdaten werden nur vorübergehend verarbeitet. Sie können Ihr Konto und Ihre Daten jederzeit löschen. Vollständige Bedingungen folgen zur offiziellen Veröffentlichung.",
   "deleteAccountQ": "Konto dauerhaft löschen?",
   "deleteAccountBody": "Dies löscht Ihr Kontoprofil und das verbleibende Kontingent. Diese Aktion kann nicht rückgängig gemacht werden.",
+  "deleteAccountBodyPass": "Ein gekaufter Pass verfällt sofort und lässt sich nicht wiederherstellen — auch nicht mit einem neuen Konto. Er müsste erneut gekauft werden.",
   "permanentDelete": "Dauerhaft löschen",
   "deleteFailed": "Löschen fehlgeschlagen, bitte später erneut versuchen",
   "confirmLogout": "Abmeldung bestätigen",

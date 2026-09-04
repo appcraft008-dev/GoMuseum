@@ -400,6 +400,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Cela supprimera votre profil et le quota restant. Cette action est irréversible.';
 
   @override
+  String get deleteAccountBodyPass =>
+      'Tout pass acheté est immédiatement annulé et irrécupérable — même en créant un nouveau compte. Il faudrait le racheter.';
+
+  @override
   String get permanentDelete => 'Supprimer définitivement';
 
   @override

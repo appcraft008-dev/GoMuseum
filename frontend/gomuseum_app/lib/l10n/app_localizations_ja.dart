@@ -394,6 +394,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get deleteAccountBody => 'アカウントのプロフィールと残りの枠が削除されます。この操作は取り消せません。';
 
   @override
+  String get deleteAccountBodyPass =>
+      '購入済みのパスは直ちに無効になり、復元できません。登録し直しても戻らず、買い直しが必要です。';
+
+  @override
   String get permanentDelete => '完全に削除';
 
   @override

@@ -120,6 +120,7 @@
   "privacyBody": "Oryginalne zdjęcia domyślnie nie są przesyłane; dane rozpoznawania są przetwarzane tylko tymczasowo. Możesz w każdej chwili usunąć konto i dane. Pełny regulamin zostanie udostępniony przy oficjalnej premierze.",
   "deleteAccountQ": "Trwale usunąć konto?",
   "deleteAccountBody": "Spowoduje to usunięcie profilu konta i pozostałego limitu. Tej operacji nie można cofnąć.",
+  "deleteAccountBodyPass": "Zakupiony karnet zostaje natychmiast unieważniony i nie da się go odzyskać — nawet po ponownej rejestracji. Trzeba kupić go od nowa.",
   "permanentDelete": "Usuń trwale",
   "deleteFailed": "Usuwanie nie powiodło się, spróbuj później",
   "confirmLogout": "Potwierdź wylogowanie",

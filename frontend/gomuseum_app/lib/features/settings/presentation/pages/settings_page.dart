@@ -497,9 +497,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  /// 删号弹窗要不要点名「通票一并作废」。
+  ///
+  /// ⚠️ **权益读不到时也要说** —— 「读不到」不等于「没有」(契约 I21)。
+  /// 这里宁可对一个没买过票的人多说一句,也不能对一个刚买完票的人漏说:
+  /// 前者只是多看一行字,后者是钱付了、票没了、还不知道为什么。
+  bool _mayHavePass() {
+    final ent = ref.read(entitlementsProvider).valueOrNull;
+    if (ent == null || !ent.known) return true;
+    return ent.isActive || ent.isPurchasedNotActivated;
+  }
+
   Future<void> _handleDeleteAccount() async {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+    // 后端 delete_user_account 会把 entitlement 置 revoked;而通票是消耗型商品,
+    // 验证成功即被 Google 消耗 —— restorePurchases 之后永远回放不出来,
+    // 重装重注册也只能再买一次。契约 I20:没收已付款项必须**事前**披露。
+    final body = _mayHavePass() ? l10n.deleteAccountBodyPass : null;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -507,7 +522,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: Text(l10n.deleteAccountQ,
             style: GmText.serif(size: 16, weight: FontWeight.w700)),
         content: Text(
-          l10n.deleteAccountBody,
+          body == null
+              ? l10n.deleteAccountBody
+              : '${l10n.deleteAccountBody}\n\n$body',
           style: GmText.sans(size: 13, height: 1.7),
         ),
         actions: [

@@ -397,6 +397,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This will delete your account profile and remaining quota. This action cannot be undone.';
 
   @override
+  String get deleteAccountBodyPass =>
+      'Any pass you bought is voided immediately and cannot be recovered — not even by signing up again. You would have to buy it anew.';
+
+  @override
   String get permanentDelete => 'Delete permanently';
 
   @override
