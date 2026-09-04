@@ -676,13 +676,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get paywallBuy => 'Obtenir le pass';
 
   @override
-  String get paywallRestore => 'Restaurer l\'achat';
+  String get paywallRestore => 'Payé mais pas de pass ?';
 
   @override
   String get restoreInProgress => 'Restauration…';
 
   @override
-  String get restoreNothingFound => 'Aucun achat à restaurer';
+  String get restoreNothingFound => 'Aucun paiement en attente';
 
   @override
   String get restoreSucceeded => 'Votre pass a été restauré';

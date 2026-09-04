@@ -647,13 +647,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallBuy => '获取通票';
 
   @override
-  String get paywallRestore => '恢复购买';
+  String get paywallRestore => '已付款但没拿到通票？';
 
   @override
   String get restoreInProgress => '正在恢复…';
 
   @override
-  String get restoreNothingFound => '没有可恢复的购买';
+  String get restoreNothingFound => '没有找到未完成的付款';
 
   @override
   String get restoreSucceeded => '已恢复你的通票';
@@ -1587,13 +1587,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paywallBuy => '取得通票';
 
   @override
-  String get paywallRestore => '回復購買';
+  String get paywallRestore => '已付款但沒拿到通票？';
 
   @override
   String get restoreInProgress => '正在恢復…';
 
   @override
-  String get restoreNothingFound => '沒有可恢復的購買';
+  String get restoreNothingFound => '沒有找到未完成的付款';
 
   @override
   String get restoreSucceeded => '已恢復你的通票';

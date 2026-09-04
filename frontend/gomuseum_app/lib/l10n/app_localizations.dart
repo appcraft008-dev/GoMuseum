@@ -1340,7 +1340,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallRestore.
   ///
   /// In en, this message translates to:
-  /// **'Restore purchase'**
+  /// **'Paid but no pass?'**
   String get paywallRestore;
 
   /// No description provided for @restoreInProgress.
@@ -1352,7 +1352,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreNothingFound.
   ///
   /// In en, this message translates to:
-  /// **'No purchases to restore'**
+  /// **'No incomplete payment found'**
   String get restoreNothingFound;
 
   /// No description provided for @restoreSucceeded.

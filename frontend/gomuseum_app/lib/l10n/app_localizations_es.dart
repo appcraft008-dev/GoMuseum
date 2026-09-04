@@ -672,13 +672,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paywallBuy => 'Conseguir el pase';
 
   @override
-  String get paywallRestore => 'Restaurar compra';
+  String get paywallRestore => '¿Pagaste y no tienes el pase?';
 
   @override
   String get restoreInProgress => 'Restaurando…';
 
   @override
-  String get restoreNothingFound => 'No hay compras que restaurar';
+  String get restoreNothingFound => 'No se encontró ningún pago pendiente';
 
   @override
   String get restoreSucceeded => 'Tu pase ha sido restaurado';

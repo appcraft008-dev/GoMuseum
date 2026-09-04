@@ -670,13 +670,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get paywallBuy => 'Kup karnet';
 
   @override
-  String get paywallRestore => 'Przywróć zakup';
+  String get paywallRestore => 'Zapłacono, ale brak karnetu?';
 
   @override
   String get restoreInProgress => 'Przywracanie…';
 
   @override
-  String get restoreNothingFound => 'Brak zakupów do przywrócenia';
+  String get restoreNothingFound => 'Nie znaleziono oczekującej płatności';
 
   @override
   String get restoreSucceeded => 'Twój bilet został przywrócony';

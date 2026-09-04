@@ -663,13 +663,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallBuy => 'Get the pass';
 
   @override
-  String get paywallRestore => 'Restore purchase';
+  String get paywallRestore => 'Paid but no pass?';
 
   @override
   String get restoreInProgress => 'Restoring…';
 
   @override
-  String get restoreNothingFound => 'No purchases to restore';
+  String get restoreNothingFound => 'No incomplete payment found';
 
   @override
   String get restoreSucceeded => 'Your pass has been restored';

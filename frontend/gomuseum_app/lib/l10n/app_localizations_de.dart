@@ -673,13 +673,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get paywallBuy => 'Pass holen';
 
   @override
-  String get paywallRestore => 'Kauf wiederherstellen';
+  String get paywallRestore => 'Bezahlt, aber kein Pass?';
 
   @override
   String get restoreInProgress => 'Wird wiederhergestellt…';
 
   @override
-  String get restoreNothingFound => 'Keine Käufe zum Wiederherstellen';
+  String get restoreNothingFound => 'Keine offene Zahlung gefunden';
 
   @override
   String get restoreSucceeded => 'Dein Pass wurde wiederhergestellt';
