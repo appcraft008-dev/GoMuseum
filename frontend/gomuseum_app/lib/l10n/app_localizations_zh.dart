@@ -656,6 +656,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restoreNothingFound => '没有可恢复的购买';
 
   @override
+  String get restoreSucceeded => '已恢复你的通票';
+
+  @override
   String get audioFreePreview => '免费试听';
 
   @override
@@ -1579,6 +1582,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get restoreNothingFound => '沒有可恢復的購買';
+
+  @override
+  String get restoreSucceeded => '已恢復你的通票';
 
   @override
   String get audioFreePreview => '免費試聽';

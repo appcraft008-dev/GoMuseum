@@ -94,10 +94,9 @@ void main() {
     expect(find.text(l10n.paywallPriceNote), findsNothing);
   });
 
-  testWidgets('购买与恢复购买都在 —— 缺恢复入口会被应用商店打回', (t) async {
+  testWidgets('付费墙只有「获取通票」一个出口 —— 恢复购买不该摆在这里', (t) async {
     // 走真实的 sheet 路径:组件会 Navigator.pop 自己,直接塞进 Scaffold 会炸
     var bought = false;
-    var restored = false;
     late BuildContext ctx;
     await t.pumpWidget(_wrap(Builder(builder: (c) {
       ctx = c;
@@ -106,15 +105,16 @@ void main() {
 
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
-    showPaywallSheet(ctx, onBuy: () {}, onRestore: () => restored = true);
+    showPaywallSheet(ctx, onBuy: () => bought = true);
     await t.pumpAndSettle();
-    await t.tap(find.text(l10n.paywallRestore));
-    await t.pumpAndSettle();
-    expect(restored, isTrue);
-    expect(find.text(l10n.paywallRestore), findsNothing, reason: '点完应关闭');
 
-    showPaywallSheet(ctx, onBuy: () => bought = true, onRestore: () {});
-    await t.pumpAndSettle();
+    // 通票是消耗型商品,验证成功即被消耗 → 对买成功过的人恢复恒定捞不到东西。
+    // 把这么一个空操作摆在主 CTA 正下方,只会让人以为自己漏了一步。
+    // 唯一真实场景(付了钱但验证没成功)已改为权益页自动静默恢复。
+    // Google Play 不要求展示恢复入口;Apple 3.1.1 只对非消耗型/订阅要求
+    // —— 若日后通票改成非消耗型或上 iOS,这条断言要连同实现一起重看。
+    expect(find.text(l10n.paywallRestore), findsNothing);
+
     await t.tap(find.text(l10n.paywallBuy));
     await t.pumpAndSettle();
     expect(bought, isTrue);

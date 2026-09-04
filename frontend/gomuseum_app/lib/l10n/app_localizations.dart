@@ -1355,6 +1355,12 @@ abstract class AppLocalizations {
   /// **'No purchases to restore'**
   String get restoreNothingFound;
 
+  /// No description provided for @restoreSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pass has been restored'**
+  String get restoreSucceeded;
+
   /// No description provided for @audioFreePreview.
   ///
   /// In en, this message translates to:

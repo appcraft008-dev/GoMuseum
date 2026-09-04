@@ -679,6 +679,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get restoreNothingFound => 'Brak zakupów do przywrócenia';
 
   @override
+  String get restoreSucceeded => 'Twój bilet został przywrócony';
+
+  @override
   String get audioFreePreview => 'Darmowy odsłuch';
 
   @override

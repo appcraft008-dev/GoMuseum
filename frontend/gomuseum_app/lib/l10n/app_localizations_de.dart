@@ -682,6 +682,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get restoreNothingFound => 'Keine Käufe zum Wiederherstellen';
 
   @override
+  String get restoreSucceeded => 'Dein Pass wurde wiederhergestellt';
+
+  @override
   String get audioFreePreview => 'Kostenprobe';
 
   @override

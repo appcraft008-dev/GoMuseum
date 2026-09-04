@@ -316,6 +316,7 @@
   "paywallRestore": "Restore purchase",
   "restoreInProgress": "Restoring…",
   "restoreNothingFound": "No purchases to restore",
+  "restoreSucceeded": "Your pass has been restored",
   "audioFreePreview": "Free preview",
   "audioLockedHint": "Audio commentary needs the pass — your free preview has been used.",
   "quotaExhausted": "You've used all your free recognitions.",

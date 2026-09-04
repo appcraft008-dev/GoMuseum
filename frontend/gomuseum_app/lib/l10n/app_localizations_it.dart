@@ -678,6 +678,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get restoreNothingFound => 'Nessun acquisto da ripristinare';
 
   @override
+  String get restoreSucceeded => 'Il tuo pass è stato ripristinato';
+
+  @override
   String get audioFreePreview => 'Ascolto gratuito';
 
   @override

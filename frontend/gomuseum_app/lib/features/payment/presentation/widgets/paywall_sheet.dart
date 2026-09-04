@@ -63,15 +63,20 @@ void showPaywallHint(BuildContext context,
 
 /// 完整付费页。[reason] 仅用于埋点区分是哪一档触发的。
 ///
-/// [onBuy]/[onRestore] 必填:曾经它们可选,而 `guide_audio_player` 两处调用都
-/// 没传 —— 按钮点下去只 pop 弹窗,`onBuy?.call()` 静默跳过,付费墙整个是死的
+/// [onBuy] 必填:曾经它可选,而 `guide_audio_player` 两处调用都没传 ——
+/// 按钮点下去只 pop 弹窗,`onBuy?.call()` 静默跳过,付费墙整个是死的
 /// (2026-09-02 真机实测撞到,versionCode 12 及之前全部受影响)。
 /// 改必填后"忘了传"变成编译错误,不再依赖人记得。
+///
+/// ⛔ **这里没有「恢复购买」,是有意的。** 通票是消耗型商品,验证成功即被消耗,
+/// 之后恢复恒定捞不到东西 —— 对绝大多数人那是个空操作按钮,却摆在主 CTA
+/// 正下方。它唯一覆盖的场景(付了钱但后端验证没成功)**机器自己认得出**
+/// (Play 有购买 + 后端无权益),已改为权益页自动静默恢复。
+/// 手动入口只在权益页底部留一个兜底。
 Future<void> showPaywallSheet(
   BuildContext context, {
   String reason = 'unknown',
   required VoidCallback onBuy,
-  required VoidCallback onRestore,
 }) {
   final gm = context.gm;
   return showModalBottomSheet<void>(
@@ -79,7 +84,7 @@ Future<void> showPaywallSheet(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: gm.ink.withValues(alpha: 0.32),
-    builder: (_) => PaywallSheetContent(onBuy: onBuy, onRestore: onRestore),
+    builder: (_) => PaywallSheetContent(onBuy: onBuy),
   );
 }
 
@@ -140,10 +145,9 @@ class _SecondaryAction extends StatelessWidget {
 
 /// 屏 1 · 付费页。抽出便于单测(不依赖 showModalBottomSheet)。
 class PaywallSheetContent extends ConsumerWidget {
-  const PaywallSheetContent({super.key, this.onBuy, this.onRestore});
+  const PaywallSheetContent({super.key, this.onBuy});
 
   final VoidCallback? onBuy;
-  final VoidCallback? onRestore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -203,14 +207,6 @@ class PaywallSheetContent extends ConsumerWidget {
             } else {
               context.push('/login');
             }
-          },
-        ),
-        const SizedBox(height: 3),
-        _SecondaryAction(
-          label: l10n.paywallRestore,
-          onTap: () {
-            Navigator.of(context).pop();
-            onRestore?.call();
           },
         ),
       ],

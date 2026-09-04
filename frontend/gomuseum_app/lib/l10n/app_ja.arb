@@ -207,6 +207,7 @@
   "paywallRestore": "購入を復元",
   "restoreInProgress": "復元中…",
   "restoreNothingFound": "復元できる購入はありません",
+  "restoreSucceeded": "パスを復元しました",
   "audioFreePreview": "無料試聴",
   "audioLockedHint": "音声解説にはパスが必要です。無料試聴は別の作品で使用済みです。",
   "quotaExhausted": "無料の認識回数を使い切りました。",

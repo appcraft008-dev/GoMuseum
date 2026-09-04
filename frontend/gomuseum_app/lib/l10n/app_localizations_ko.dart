@@ -658,6 +658,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restoreNothingFound => '복원할 구매 내역이 없습니다';
 
   @override
+  String get restoreSucceeded => '패스를 복원했습니다';
+
+  @override
   String get audioFreePreview => '무료 체험';
 
   @override

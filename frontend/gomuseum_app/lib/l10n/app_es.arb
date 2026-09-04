@@ -207,6 +207,7 @@
   "paywallRestore": "Restaurar compra",
   "restoreInProgress": "Restaurando…",
   "restoreNothingFound": "No hay compras que restaurar",
+  "restoreSucceeded": "Tu pase ha sido restaurado",
   "audioFreePreview": "Muestra gratuita",
   "audioLockedHint": "La audioguía requiere el pase: ya has usado tu muestra gratuita.",
   "quotaExhausted": "Has agotado tus reconocimientos gratuitos.",

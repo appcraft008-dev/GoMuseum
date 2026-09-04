@@ -207,6 +207,7 @@
   "paywallRestore": "恢复购买",
   "restoreInProgress": "正在恢复…",
   "restoreNothingFound": "没有可恢复的购买",
+  "restoreSucceeded": "已恢复你的通票",
   "audioFreePreview": "免费试听",
   "audioLockedHint": "语音讲解需要通票——免费试听名额已用在另一件作品上。",
   "quotaExhausted": "免费识别次数已用完。",

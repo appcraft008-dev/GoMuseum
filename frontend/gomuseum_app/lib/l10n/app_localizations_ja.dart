@@ -658,6 +658,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreNothingFound => '復元できる購入はありません';
 
   @override
+  String get restoreSucceeded => 'パスを復元しました';
+
+  @override
   String get audioFreePreview => '無料試聴';
 
   @override

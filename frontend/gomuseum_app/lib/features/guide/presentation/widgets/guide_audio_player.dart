@@ -152,20 +152,16 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     return true;
   }
 
-  /// 付费墙的「获取通票 / 恢复购买」出口。
+  /// 付费墙的「获取通票」出口。
   ///
-  /// ⚠️ 必须显式传 onBuy/onRestore：`paywall_sheet` 里是 `onBuy?.call()`,
+  /// ⚠️ 必须显式传 onBuy：`paywall_sheet` 里是 `onBuy?.call()`,
   /// 不传就等于按钮只关弹窗、什么都不做——付费墙形同虚设(实测撞到过)。
   /// 购买全流程(IAP 初始化/查商品/验证/发权益)只在权益页有完整实现,
   /// 这里统一跳过去,不在播放器里另搭一套。
-  /// `restore=1` 让权益页初始化完自动跑一次恢复购买 —— 别再和 onBuy 一样
-  /// 只是跳过去:已买过的人点「恢复购买」却落在一个摆着购买按钮的页面上,
-  /// 会以为要再买一次(真金白银的重复购买风险)。
   void _showPaywall() => showPaywallSheet(
         context,
         reason: 'audio',
         onBuy: () => context.push('/benefits'),
-        onRestore: () => context.push('/benefits?restore=1'),
       );
 
   bool _autoPlayed = false;

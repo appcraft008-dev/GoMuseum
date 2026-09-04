@@ -207,6 +207,7 @@
   "paywallRestore": "Restaurer l'achat",
   "restoreInProgress": "Restauration…",
   "restoreNothingFound": "Aucun achat à restaurer",
+  "restoreSucceeded": "Votre pass a été restauré",
   "audioFreePreview": "Écoute gratuite",
   "audioLockedHint": "Le commentaire audio nécessite le pass — votre écoute gratuite a déjà été utilisée.",
   "quotaExhausted": "Vous avez utilisé toutes vos reconnaissances gratuites.",
