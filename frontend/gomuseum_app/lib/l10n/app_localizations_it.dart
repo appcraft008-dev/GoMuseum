@@ -926,9 +926,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Se ne hai già comprato uno, tornerà da solo appena sei online. Non ti verrà addebitato due volte.';
 
   @override
-  String get edgeSeeFree => 'Vedi i contenuti gratuiti';
-
-  @override
   String get edgeSignedOutHead => 'Il pass è legato a un account';
 
   @override

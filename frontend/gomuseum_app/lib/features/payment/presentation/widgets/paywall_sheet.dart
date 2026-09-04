@@ -242,7 +242,7 @@ class PaywallSheetContent extends ConsumerWidget {
           ),
           const SizedBox(height: 3),
           _SecondaryAction(
-            label: l10n.edgeSeeFree,
+            label: l10n.activateLater,
             onTap: () => Navigator.of(context).pop(),
           ),
         ],

@@ -281,7 +281,6 @@
   "edgeUnknownHead": "Nie możemy teraz odczytać Twojego biletu",
   "edgeUnknownBody": "Bez połączenia nie potwierdzimy, czy masz już bilet, ani nie rozpoczniemy bezpiecznie zakupu.",
   "edgeUnknownNote": "Jeśli już go kupiłeś, wróci automatycznie po połączeniu. Nie zapłacisz drugi raz.",
-  "edgeSeeFree": "Zobacz darmowe treści",
   "edgeSignedOutHead": "Bilet jest powiązany z kontem",
   "edgeSignedOutBody": "Zaloguj się przed zakupem, a bilet przetrwa zmianę telefonu i ponowną instalację.",
   "edgeConflictTitle": "Ten bilet należy do innego konta",

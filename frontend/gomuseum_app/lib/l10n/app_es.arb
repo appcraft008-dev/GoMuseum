@@ -281,7 +281,6 @@
   "edgeUnknownHead": "Ahora no podemos leer tu pase",
   "edgeUnknownBody": "Sin conexión no podemos confirmar si ya tienes un pase, ni iniciar una compra de forma segura.",
   "edgeUnknownNote": "Si ya compraste uno, volverá automáticamente al conectarte. No se te cobrará dos veces.",
-  "edgeSeeFree": "Ver el contenido gratuito",
   "edgeSignedOutHead": "El pase va ligado a una cuenta",
   "edgeSignedOutBody": "Inicia sesión antes de comprar y el pase sobrevivirá a un móvil nuevo o a una reinstalación.",
   "edgeConflictTitle": "Este pase está ligado a otra cuenta",

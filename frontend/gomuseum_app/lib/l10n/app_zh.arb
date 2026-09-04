@@ -281,7 +281,6 @@
   "edgeUnknownHead": "暂时读不到你的权益",
   "edgeUnknownBody": "网络没接通，现在无法确认你是否已有通票，也没法安全地发起购买。",
   "edgeUnknownNote": "如果你已经买过，连上网络后会自动恢复，不会重复收费。",
-  "edgeSeeFree": "先去看免费内容",
   "edgeSignedOutHead": "通票绑定账号",
   "edgeSignedOutBody": "登录后购买，换手机或重装也不会丢。",
   "edgeConflictTitle": "这张票已经绑在另一个账号上",

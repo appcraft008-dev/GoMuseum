@@ -281,7 +281,6 @@
   "edgeUnknownHead": "Ihr Pass ist gerade nicht lesbar",
   "edgeUnknownBody": "Ohne Verbindung können wir weder bestätigen, dass Sie bereits einen Pass haben, noch einen Kauf sicher starten.",
   "edgeUnknownNote": "Falls Sie schon einen gekauft haben, kommt er online automatisch zurück. Doppelt belastet werden Sie nicht.",
-  "edgeSeeFree": "Kostenlose Inhalte ansehen",
   "edgeSignedOutHead": "Der Pass gehört zu einem Konto",
   "edgeSignedOutBody": "Melden Sie sich vor dem Kauf an — dann übersteht der Pass ein neues Handy oder eine Neuinstallation.",
   "edgeConflictTitle": "Dieser Pass gehört zu einem anderen Konto",

@@ -281,7 +281,6 @@
   "edgeUnknownHead": "暫時讀不到你的權益",
   "edgeUnknownBody": "網路沒接通，現在無法確認你是否已有通票，也沒辦法安全地發起購買。",
   "edgeUnknownNote": "如果你已經買過，連上網路後會自動恢復，不會重複收費。",
-  "edgeSeeFree": "先去看免費內容",
   "edgeSignedOutHead": "通票綁定帳號",
   "edgeSignedOutBody": "登入後購買，換手機或重裝也不會遺失。",
   "edgeConflictTitle": "這張票已經綁在另一個帳號上",

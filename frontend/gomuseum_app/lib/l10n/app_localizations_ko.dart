@@ -896,9 +896,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '이미 구매하셨다면 온라인에 연결되는 즉시 자동으로 복구됩니다. 이중으로 청구되지 않습니다.';
 
   @override
-  String get edgeSeeFree => '무료 콘텐츠 보기';
-
-  @override
   String get edgeSignedOutHead => '패스는 계정에 연결됩니다';
 
   @override

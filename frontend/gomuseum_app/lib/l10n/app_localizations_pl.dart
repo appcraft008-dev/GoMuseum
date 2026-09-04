@@ -928,9 +928,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Jeśli już go kupiłeś, wróci automatycznie po połączeniu. Nie zapłacisz drugi raz.';
 
   @override
-  String get edgeSeeFree => 'Zobacz darmowe treści';
-
-  @override
   String get edgeSignedOutHead => 'Bilet jest powiązany z kontem';
 
   @override

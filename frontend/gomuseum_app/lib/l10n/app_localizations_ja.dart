@@ -894,9 +894,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'すでに購入済みなら、オンラインに戻り次第自動で復元されます。二重に請求されることはありません。';
 
   @override
-  String get edgeSeeFree => '無料コンテンツを見る';
-
-  @override
   String get edgeSignedOutHead => 'パスはアカウントに紐づきます';
 
   @override

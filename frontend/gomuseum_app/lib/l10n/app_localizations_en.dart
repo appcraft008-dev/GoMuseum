@@ -918,9 +918,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'If you\'ve already bought one, it comes back automatically once you\'re online. You won\'t be charged twice.';
 
   @override
-  String get edgeSeeFree => 'Browse the free content';
-
-  @override
   String get edgeSignedOutHead => 'The pass belongs to an account';
 
   @override

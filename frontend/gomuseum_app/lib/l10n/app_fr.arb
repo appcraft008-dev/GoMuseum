@@ -281,7 +281,6 @@
   "edgeUnknownHead": "Impossible de lire votre pass",
   "edgeUnknownBody": "Sans connexion, nous ne pouvons ni confirmer que vous avez déjà un pass, ni lancer un achat en toute sécurité.",
   "edgeUnknownNote": "Si vous en avez déjà acheté un, il reviendra automatiquement une fois en ligne. Vous ne serez pas facturé deux fois.",
-  "edgeSeeFree": "Voir le contenu gratuit",
   "edgeSignedOutHead": "Le pass est lié à un compte",
   "edgeSignedOutBody": "Connectez-vous avant d'acheter : le pass survivra à un changement de téléphone ou à une réinstallation.",
   "edgeConflictTitle": "Ce pass est lié à un autre compte",

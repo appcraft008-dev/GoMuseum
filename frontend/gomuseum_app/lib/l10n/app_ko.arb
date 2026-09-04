@@ -281,7 +281,6 @@
   "edgeUnknownHead": "지금은 권한을 확인할 수 없습니다",
   "edgeUnknownBody": "연결이 없어 이미 패스가 있는지 확인할 수 없고, 구매도 안전하게 시작할 수 없습니다.",
   "edgeUnknownNote": "이미 구매하셨다면 온라인에 연결되는 즉시 자동으로 복구됩니다. 이중으로 청구되지 않습니다.",
-  "edgeSeeFree": "무료 콘텐츠 보기",
   "edgeSignedOutHead": "패스는 계정에 연결됩니다",
   "edgeSignedOutBody": "로그인한 뒤 구매하면 기기를 바꾸거나 재설치해도 잃지 않습니다.",
   "edgeConflictTitle": "이 패스는 다른 계정에 연결되어 있습니다",

@@ -446,7 +446,6 @@
   "edgeUnknownHead": "Can't read your pass right now",
   "edgeUnknownBody": "There's no connection, so we can't confirm whether you already have a pass — or start a purchase safely.",
   "edgeUnknownNote": "If you've already bought one, it comes back automatically once you're online. You won't be charged twice.",
-  "edgeSeeFree": "Browse the free content",
   "edgeSignedOutHead": "The pass belongs to an account",
   "edgeSignedOutBody": "Sign in before buying and it survives a new phone or a reinstall.",
   "edgeConflictTitle": "This pass is tied to another account",

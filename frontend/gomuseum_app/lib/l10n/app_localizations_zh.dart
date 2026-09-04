@@ -887,9 +887,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get edgeUnknownNote => '如果你已经买过，连上网络后会自动恢复，不会重复收费。';
 
   @override
-  String get edgeSeeFree => '先去看免费内容';
-
-  @override
   String get edgeSignedOutHead => '通票绑定账号';
 
   @override
@@ -1825,9 +1822,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get edgeUnknownNote => '如果你已經買過，連上網路後會自動恢復，不會重複收費。';
-
-  @override
-  String get edgeSeeFree => '先去看免費內容';
 
   @override
   String get edgeSignedOutHead => '通票綁定帳號';

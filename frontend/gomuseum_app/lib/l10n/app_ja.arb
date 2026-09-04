@@ -281,7 +281,6 @@
   "edgeUnknownHead": "いま権利を読み取れません",
   "edgeUnknownBody": "接続がないため、すでにパスをお持ちかどうか確認できず、購入も安全に開始できません。",
   "edgeUnknownNote": "すでに購入済みなら、オンラインに戻り次第自動で復元されます。二重に請求されることはありません。",
-  "edgeSeeFree": "無料コンテンツを見る",
   "edgeSignedOutHead": "パスはアカウントに紐づきます",
   "edgeSignedOutBody": "ログインしてから購入すれば、機種変更や再インストールでも失われません。",
   "edgeConflictTitle": "このパスは別のアカウントに紐づいています",

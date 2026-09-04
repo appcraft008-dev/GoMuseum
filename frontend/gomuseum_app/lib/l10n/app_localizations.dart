@@ -1751,12 +1751,6 @@ abstract class AppLocalizations {
   /// **'If you\'ve already bought one, it comes back automatically once you\'re online. You won\'t be charged twice.'**
   String get edgeUnknownNote;
 
-  /// No description provided for @edgeSeeFree.
-  ///
-  /// In en, this message translates to:
-  /// **'Browse the free content'**
-  String get edgeSeeFree;
-
   /// No description provided for @edgeSignedOutHead.
   ///
   /// In en, this message translates to:

@@ -553,7 +553,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         ),
         const SizedBox(height: 3),
         BenSecondaryAction(
-          label: l10n.edgeSeeFree,
+          label: l10n.activateLater,
           onTap: () => Navigator.of(context).maybePop(),
         ),
       ];
