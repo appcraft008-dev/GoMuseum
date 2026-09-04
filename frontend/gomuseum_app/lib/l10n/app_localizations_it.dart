@@ -388,7 +388,16 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Le foto originali non vengono caricate per impostazione predefinita; i dati di riconoscimento sono elaborati solo temporaneamente. Puoi eliminare il tuo account e i tuoi dati in qualsiasi momento. I termini completi saranno forniti al lancio ufficiale.';
+      'Le foto originali non vengono caricate per impostazione predefinita e i dati di riconoscimento sono elaborati solo temporaneamente. Puoi eliminare account e dati in qualsiasi momento da Impostazioni → Elimina account.';
+
+  @override
+  String get privacyFullPolicy => 'Informativa sulla privacy completa';
+
+  @override
+  String get privacyCopyLink => 'Copia link';
+
+  @override
+  String get privacyLinkCopied => 'Link copiato';
 
   @override
   String get deleteAccountQ => 'Eliminare definitivamente l\'account?';

@@ -389,7 +389,16 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Originalfotos werden standardmäßig nicht hochgeladen; Erkennungsdaten werden nur vorübergehend verarbeitet. Sie können Ihr Konto und Ihre Daten jederzeit löschen. Vollständige Bedingungen folgen zur offiziellen Veröffentlichung.';
+      'Originalfotos werden standardmäßig nicht hochgeladen, Erkennungsdaten nur vorübergehend verarbeitet. Konto und Daten können Sie jederzeit unter Einstellungen → Konto löschen löschen.';
+
+  @override
+  String get privacyFullPolicy => 'Vollständige Datenschutzerklärung';
+
+  @override
+  String get privacyCopyLink => 'Link kopieren';
+
+  @override
+  String get privacyLinkCopied => 'Link kopiert';
 
   @override
   String get deleteAccountQ => 'Konto dauerhaft löschen?';
