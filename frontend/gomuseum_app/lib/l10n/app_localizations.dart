@@ -1709,6 +1709,24 @@ abstract class AppLocalizations {
   /// **'Ended'**
   String get benefitsEndedAt;
 
+  /// No description provided for @benefitsLapsedHead.
+  ///
+  /// In en, this message translates to:
+  /// **'This pass was never started'**
+  String get benefitsLapsedHead;
+
+  /// No description provided for @benefitsLapsedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It was not used within 30 days of purchase, so it has expired. Your free quota is back, and full text guides remain available.'**
+  String get benefitsLapsedBody;
+
+  /// No description provided for @benefitsBoughtOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased'**
+  String get benefitsBoughtOn;
+
   /// Benefits page: purchase record date.
   ///
   /// In en, this message translates to:

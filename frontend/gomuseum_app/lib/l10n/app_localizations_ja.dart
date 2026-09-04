@@ -866,6 +866,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get benefitsEndedAt => '終了日';
 
   @override
+  String get benefitsLapsedHead => 'このパスは使い始められませんでした';
+
+  @override
+  String get benefitsLapsedBody =>
+      '購入から 30 日以内に使用されなかったため、失効しました。無料枠は戻っており、テキスト解説は引き続きすべてご利用いただけます。';
+
+  @override
+  String get benefitsBoughtOn => '購入日';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);

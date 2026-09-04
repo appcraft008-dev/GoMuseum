@@ -430,6 +430,9 @@
     }
   },
   "benefitsEndedAt": "Ended",
+  "benefitsLapsedHead": "This pass was never started",
+  "benefitsLapsedBody": "It was not used within 30 days of purchase, so it has expired. Your free quota is back, and full text guides remain available.",
+  "benefitsBoughtOn": "Purchased",
   "benefitsDateOnly": "{date}",
   "@benefitsDateOnly": {
     "description": "Benefits page: purchase record date.",
