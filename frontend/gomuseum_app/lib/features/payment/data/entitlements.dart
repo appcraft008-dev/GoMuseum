@@ -92,8 +92,13 @@ class Entitlements {
       canPurchase: can['purchase'] == true,
       canRecognize: can['recognize'] as bool? ?? true,
       canAudioAny: can['audio_any'] as bool? ?? false,
-      expiresAt: expires == null ? null : DateTime.tryParse(expires),
-      activateBy: lapse == null ? null : DateTime.tryParse(lapse),
+      // `.toLocal()` 不能省:后端发的是 UTC(`...+00:00`),`DateTime.tryParse`
+      // 会原样返回一个 isUtc=true 的时刻,而 l10n 的日期/时间格式化**按它自己的
+      // 时区渲染** —— 于是巴黎用户看到的到期时间早 2 小时(CEST=UTC+2)。
+      // 转本地只改呈现不改时刻,比较逻辑不受影响(Dart 的 DateTime 比较用的是
+      // 绝对时刻,与 isUtc 无关)。
+      expiresAt: expires == null ? null : DateTime.tryParse(expires)?.toLocal(),
+      activateBy: lapse == null ? null : DateTime.tryParse(lapse)?.toLocal(),
       freeRecognitionsLeft: json['free_recognitions_left'] as int?,
       freeRecognitionsTotal: json['free_recognitions_total'] as int?,
       freeAudioQid: json['free_audio_qid'] as String?,
@@ -104,6 +109,15 @@ class Entitlements {
 /// 当前用户权益。user_id 由后端从令牌取(dioProvider 已挂 AuthInterceptor),
 /// **不传查询参数** —— 传 user_id 等于谁都能读别人权益、烧别人的票。
 final entitlementsProvider = FutureProvider<Entitlements>((ref) async {
+  // ⚠️ 必须依赖**用户身份**。这是 per-user 数据,而 [dioProvider] 跟登录态无关、
+  // 建一次就一直缓存 —— 只 watch 它的话换账号后这里永远不重算。
+  //
+  // prod 真机实测(2026-09-04):A 账号买了通票,退出后登录全新的 B 账号,
+  // 权益页照旧显示 A 的「生效中」。后端是干净的(B 在库里没有权益行),
+  // 纯粹是这里的缓存没失效。后果是**丢钱**:B 看到自己"已有通票",
+  // 购买入口被藏起来 —— 一个想付钱的人反而买不了;而音频闸在后端,
+  // 他也放不出声,两头堵死。
+  ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   final dio = ref.watch(dioProvider);
   try {
     final res = await dio.get('/api/v1/entitlements/me');

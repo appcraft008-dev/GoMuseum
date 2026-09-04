@@ -38,11 +38,22 @@ class PassRecord {
   bool get hasRunItsCourse =>
       isExpired && activatedAt != null && expiresAt != null;
 
+  /// **买了却从没激活,窗口过了作废。** 与 [hasRunItsCourse] 是同为"已到期"的
+  /// 两种不同经历,不能混着说:前者是 7 天用完了,后者一天都没用过 ——
+  /// 对后者说「7 天已经用完」是睁眼说瞎话。
+  ///
+  /// 曾经权益页只认 [hasRunItsCourse],这类票被整个过滤掉,页面退回未购态:
+  /// 用户付了钱、票被作废,界面却表现得像他从没买过。撞契约 I20
+  /// (没收已付款项必须先披露)—— 事前披露了,事后什么都不说。
+  bool get lapsedUnactivated => isExpired && activatedAt == null;
+
   /// 契约:可缺字段一律 `as T? ?? 回退`,不裸取。
   factory PassRecord.fromJson(Map<String, dynamic> json) {
+    // `.toLocal()`:后端发 UTC,不转的话 l10n 会按 UTC 渲染,票面时间比
+    // 用户的钟慢 2 小时(CEST)。同 Entitlements.fromJson。
     DateTime? at(String key) {
       final raw = json[key] as String?;
-      return raw == null ? null : DateTime.tryParse(raw);
+      return raw == null ? null : DateTime.tryParse(raw)?.toLocal();
     }
 
     return PassRecord(
@@ -58,6 +69,9 @@ class PassRecord {
 /// 新到旧。拿不到就是空列表 —— 历史读不到不该把权益页打死,
 /// 那几个信息块少显示就是了。
 final passHistoryProvider = FutureProvider<List<PassRecord>>((ref) async {
+  // 同 entitlementsProvider:per-user 数据必须依赖用户身份,否则换账号后
+  // 新用户会看到上一个账号的购买记录。
+  ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   final dio = ref.watch(dioProvider);
   try {
     final res = await dio.get('/api/v1/entitlements/history');

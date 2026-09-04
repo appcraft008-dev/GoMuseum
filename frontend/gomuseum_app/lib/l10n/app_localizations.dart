@@ -110,7 +110,7 @@ abstract class AppLocalizations {
     Locale('ko'),
     Locale('pl'),
     Locale('zh'),
-    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
+    Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
   /// No description provided for @home.
@@ -947,11 +947,11 @@ abstract class AppLocalizations {
   /// **'Create account'**
   String get authCreateAccount;
 
-  /// No description provided for @authOrLoginWith.
+  /// No description provided for @authOrWithEmail.
   ///
   /// In en, this message translates to:
-  /// **'Or log in with'**
-  String get authOrLoginWith;
+  /// **'Or with email'**
+  String get authOrWithEmail;
 
   /// No description provided for @authGoogleLogin.
   ///
@@ -1343,6 +1343,24 @@ abstract class AppLocalizations {
   /// **'Restore purchase'**
   String get paywallRestore;
 
+  /// No description provided for @restoreInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring…'**
+  String get restoreInProgress;
+
+  /// No description provided for @restoreNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No purchases to restore'**
+  String get restoreNothingFound;
+
+  /// No description provided for @restoreSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pass has been restored'**
+  String get restoreSucceeded;
+
   /// No description provided for @audioFreePreview.
   ///
   /// In en, this message translates to:
@@ -1691,6 +1709,24 @@ abstract class AppLocalizations {
   /// **'Ended'**
   String get benefitsEndedAt;
 
+  /// No description provided for @benefitsLapsedHead.
+  ///
+  /// In en, this message translates to:
+  /// **'This pass was never started'**
+  String get benefitsLapsedHead;
+
+  /// No description provided for @benefitsLapsedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It was not used within 30 days of purchase, so it has expired. Your free quota is back, and full text guides remain available.'**
+  String get benefitsLapsedBody;
+
+  /// No description provided for @benefitsBoughtOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased'**
+  String get benefitsBoughtOn;
+
   /// Benefits page: purchase record date.
   ///
   /// In en, this message translates to:
@@ -1811,6 +1847,12 @@ abstract class AppLocalizations {
   /// **'Paid'**
   String get ticketPaid;
 
+  /// No description provided for @ticketVoid.
+  ///
+  /// In en, this message translates to:
+  /// **'EXPIRED'**
+  String get ticketVoid;
+
   /// Toast after copying the support email on the receipt-conflict screen.
   ///
   /// In en, this message translates to:
@@ -1837,7 +1879,7 @@ class _AppLocalizationsDelegate
         'ja',
         'ko',
         'pl',
-        'zh'
+        'zh',
       ].contains(locale.languageCode);
 
   @override
@@ -1880,8 +1922,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

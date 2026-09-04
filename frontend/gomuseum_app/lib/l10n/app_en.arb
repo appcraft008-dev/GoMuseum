@@ -241,7 +241,7 @@
   "authNoAccount": "No account? Sign up",
   "authHaveAccount": "Have an account? Log in",
   "authCreateAccount": "Create account",
-  "authOrLoginWith": "Or log in with",
+  "authOrWithEmail": "Or with email",
   "authGoogleLogin": "Sign in with Google",
   "authAppleLogin": "Sign in with Apple",
   "authOr": "Or",
@@ -314,6 +314,9 @@
   "paywallFreeAlways": "Browsing, search and full written commentary are always free.",
   "paywallBuy": "Get the pass",
   "paywallRestore": "Restore purchase",
+  "restoreInProgress": "Restoring…",
+  "restoreNothingFound": "No purchases to restore",
+  "restoreSucceeded": "Your pass has been restored",
   "audioFreePreview": "Free preview",
   "audioLockedHint": "Audio commentary needs the pass — your free preview has been used.",
   "quotaExhausted": "You've used all your free recognitions.",
@@ -427,6 +430,9 @@
     }
   },
   "benefitsEndedAt": "Ended",
+  "benefitsLapsedHead": "This pass was never started",
+  "benefitsLapsedBody": "It was not used within 30 days of purchase, so it has expired. Your free quota is back, and full text guides remain available.",
+  "benefitsBoughtOn": "Purchased",
   "benefitsDateOnly": "{date}",
   "@benefitsDateOnly": {
     "description": "Benefits page: purchase record date.",
@@ -456,6 +462,7 @@
   "purchaseVerifyPending": "We couldn't confirm the purchase yet. Reopening the app will retry.",
   "purchaseFailed": "The purchase didn't go through. Please try again.",
   "ticketPaid": "Paid",
+  "ticketVoid": "EXPIRED",
   "edgeSupportCopied": "Support address copied: {email}",
   "@edgeSupportCopied": {
     "description": "Toast after copying the support email on the receipt-conflict screen.",

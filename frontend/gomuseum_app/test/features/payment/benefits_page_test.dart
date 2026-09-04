@@ -47,6 +47,13 @@ const _expired = Entitlements(
   freeRecognitionsTotal: 5,
 );
 
+/// 买了从没激活、30 天窗口过了作废 —— activated_at / expires_at 都是 null。
+final _lapsedPass = PassRecord(
+  productId: 'paris_pass_7d',
+  state: 'expired',
+  purchasedAt: DateTime(2026, 8, 4, 10, 25),
+);
+
 final _usedUpPass = PassRecord(
   productId: 'paris_pass_7d',
   state: 'expired',
@@ -137,6 +144,40 @@ void main() {
     expect(find.text(l10n.benefitsSecBuyAnother), findsOneWidget);
     expect(find.text(l10n.benefitsEndedAt), findsOneWidget);
     expect(find.text(l10n.paywallBuy), findsOneWidget, reason: '可以续购');
+  });
+
+  // 真机实测:作废票和下面在售的那张并排放着像双胞胎 —— 撕线和褪色在这套
+  // 暖纸配色里几乎产生不了对比(饱和度本来就只有个位数,没什么可减的)。
+  // 断的是"有没有一个正向标记",不是"有没有褪色":褪色测不出来,这正是问题所在。
+  testWidgets('已到期:票上必须有作废戳 —— 光靠褪色在这套配色里看不出来', (t) async {
+    await _pump(t, _wrap(_expired, history: [_usedUpPass]));
+    final l10n = await _l10n();
+    expect(find.text(l10n.ticketVoid), findsOneWidget);
+  });
+
+  testWidgets('在售的票不许盖作废戳', (t) async {
+    await _pump(t, _wrap(_free));
+    final l10n = await _l10n();
+    expect(find.text(l10n.ticketVoid), findsNothing);
+  });
+
+  // 真机实测(prod 数据造的):买了不激活满 30 天,权益页退回**未购态** ——
+  // 付了 €7.99、票被作废,界面表现得像他从没买过。撞契约 I20:
+  // 事前在售票上披露了「30 天失效」,事后什么都不说。
+  testWidgets('买了没激活就作废:必须留下痕迹,不能退回未购态', (t) async {
+    await _pump(t, _wrap(_expired, history: [_lapsedPass]));
+    final l10n = await _l10n();
+    expect(find.text(l10n.benefitsLapsedHead), findsOneWidget);
+    expect(find.text(l10n.ticketVoid), findsOneWidget, reason: '那张作废的票要在');
+    expect(find.text(l10n.paywallBuy), findsOneWidget, reason: '可以再买一张');
+  });
+
+  testWidgets('没激活过的票不许说「7 天已经用完」—— 他一天都没用过', (t) async {
+    await _pump(t, _wrap(_expired, history: [_lapsedPass]));
+    final l10n = await _l10n();
+    expect(find.text(l10n.benefitsExpiredBody), findsNothing);
+    expect(find.text(l10n.benefitsEndedAt), findsNothing,
+        reason: '这张票从来没有过到期日,存根位该写购买日');
   });
 
   testWidgets('已到期但历史读不到:退回未购态,不编一张票出来', (t) async {

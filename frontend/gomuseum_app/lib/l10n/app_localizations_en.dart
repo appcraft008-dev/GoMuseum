@@ -454,7 +454,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authCreateAccount => 'Create account';
 
   @override
-  String get authOrLoginWith => 'Or log in with';
+  String get authOrWithEmail => 'Or with email';
 
   @override
   String get authGoogleLogin => 'Sign in with Google';
@@ -664,6 +664,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paywallRestore => 'Restore purchase';
+
+  @override
+  String get restoreInProgress => 'Restoring…';
+
+  @override
+  String get restoreNothingFound => 'No purchases to restore';
+
+  @override
+  String get restoreSucceeded => 'Your pass has been restored';
 
   @override
   String get audioFreePreview => 'Free preview';
@@ -880,6 +889,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get benefitsEndedAt => 'Ended';
 
   @override
+  String get benefitsLapsedHead => 'This pass was never started';
+
+  @override
+  String get benefitsLapsedBody =>
+      'It was not used within 30 days of purchase, so it has expired. Your free quota is back, and full text guides remain available.';
+
+  @override
+  String get benefitsBoughtOn => 'Purchased';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
@@ -951,6 +970,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ticketPaid => 'Paid';
+
+  @override
+  String get ticketVoid => 'EXPIRED';
 
   @override
   String edgeSupportCopied(String email) {

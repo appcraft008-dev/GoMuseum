@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -94,10 +95,51 @@ class BenefitsService:
         )
 
         self.db.add(benefits)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError:
+            # 并发下别人先建好了同一行。App 一进首页就并行打好几个接口
+            # (首页额度 / 权益页 / 付费墙),全都走 get_or_create ——
+            # 「先查后插」之间没有互斥,于是新账号**第一次使用**时,
+            # 多个请求同时查不到、同时插入,一个成功、其余撞
+            # ix_user_benefits_user_id 唯一约束 → 500。
+            # prod 实证 2026-09-04:新注册账号 a94cc7f7… 首用即撞。
+            #
+            # 撞了不是错误,是"别人替我建好了" —— 回滚后把那一行取回来即可。
+            self.db.rollback()
+            benefits = self._find_existing(user_id, device_id)
+            if benefits is None:
+                # 唯一约束报冲突却又查不到 → 不是这个竞态,别吞
+                raise
+            logger.info(
+                f"Benefits row created concurrently, reusing it: "
+                f"user_id={user_id}, device_id={device_id}"
+            )
+            return benefits
+
         self.db.refresh(benefits)
 
         return benefits
+
+    def _find_existing(
+        self, user_id: Optional[str], device_id: Optional[str]
+    ) -> Optional[UserBenefits]:
+        """按与 get_or_create_benefits 查询段**完全相同**的口径回查。
+
+        口径必须一致:匿名侧只认 `user_id IS NULL` 的行(见那边的串号注释),
+        这里放宽会把别人的配额行认成自己的。
+        """
+        query = self.db.query(UserBenefits)
+        if user_id:
+            return query.filter(UserBenefits.user_id == user_id).first()
+        return (
+            query.filter(
+                UserBenefits.device_id == device_id,
+                UserBenefits.user_id.is_(None),
+            )
+            .order_by(UserBenefits.created_at)
+            .first()
+        )
 
     def check_access(
         self, user_id: Optional[str] = None, device_id: Optional[str] = None

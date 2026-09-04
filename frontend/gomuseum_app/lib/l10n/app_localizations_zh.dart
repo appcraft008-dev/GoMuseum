@@ -450,7 +450,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authCreateAccount => '创建账号';
 
   @override
-  String get authOrLoginWith => '或使用以下方式登录';
+  String get authOrWithEmail => '或使用邮箱';
 
   @override
   String get authGoogleLogin => '使用 Google 登录';
@@ -648,6 +648,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get paywallRestore => '恢复购买';
+
+  @override
+  String get restoreInProgress => '正在恢复…';
+
+  @override
+  String get restoreNothingFound => '没有可恢复的购买';
+
+  @override
+  String get restoreSucceeded => '已恢复你的通票';
 
   @override
   String get audioFreePreview => '免费试听';
@@ -852,6 +861,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsEndedAt => '结束于';
 
   @override
+  String get benefitsLapsedHead => '这张票没有开始使用';
+
+  @override
+  String get benefitsLapsedBody => '购买后 30 天内没有开始使用，已经失效。免费额度已恢复，文字讲解仍然完整。';
+
+  @override
+  String get benefitsBoughtOn => '购于';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
@@ -916,6 +934,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ticketPaid => '已付';
+
+  @override
+  String get ticketVoid => '已结束';
 
   @override
   String edgeSupportCopied(String email) {
@@ -1369,7 +1390,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authCreateAccount => '建立賬號';
 
   @override
-  String get authOrLoginWith => '或使用以下方式登入';
+  String get authOrWithEmail => '或使用電子郵件';
 
   @override
   String get authGoogleLogin => '使用 Google 登入';
@@ -1567,6 +1588,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get paywallRestore => '回復購買';
+
+  @override
+  String get restoreInProgress => '正在恢復…';
+
+  @override
+  String get restoreNothingFound => '沒有可恢復的購買';
+
+  @override
+  String get restoreSucceeded => '已恢復你的通票';
 
   @override
   String get audioFreePreview => '免費試聽';
@@ -1771,6 +1801,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get benefitsEndedAt => '結束於';
 
   @override
+  String get benefitsLapsedHead => '這張票沒有開始使用';
+
+  @override
+  String get benefitsLapsedBody => '購買後 30 天內沒有開始使用，已經失效。免費額度已恢復，文字講解仍然完整。';
+
+  @override
+  String get benefitsBoughtOn => '購於';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
@@ -1835,6 +1874,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get ticketPaid => '已付';
+
+  @override
+  String get ticketVoid => '已結束';
 
   @override
   String edgeSupportCopied(String email) {

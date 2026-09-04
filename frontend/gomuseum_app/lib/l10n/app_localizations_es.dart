@@ -456,7 +456,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authCreateAccount => 'Crear cuenta';
 
   @override
-  String get authOrLoginWith => 'O inicia sesión con';
+  String get authOrWithEmail => 'O con correo electrónico';
 
   @override
   String get authGoogleLogin => 'Iniciar sesión con Google';
@@ -675,6 +675,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paywallRestore => 'Restaurar compra';
 
   @override
+  String get restoreInProgress => 'Restaurando…';
+
+  @override
+  String get restoreNothingFound => 'No hay compras que restaurar';
+
+  @override
+  String get restoreSucceeded => 'Tu pase ha sido restaurado';
+
+  @override
   String get audioFreePreview => 'Muestra gratuita';
 
   @override
@@ -890,6 +899,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get benefitsEndedAt => 'Terminó el';
 
   @override
+  String get benefitsLapsedHead => 'Este pase nunca se activó';
+
+  @override
+  String get benefitsLapsedBody =>
+      'No se usó en los 30 días posteriores a la compra, por lo que ha caducado. Tu cuota gratuita se ha restablecido y las guías de texto siguen completas.';
+
+  @override
+  String get benefitsBoughtOn => 'Comprado el';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
@@ -960,6 +979,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get ticketPaid => 'Pagado';
+
+  @override
+  String get ticketVoid => 'CADUCADO';
 
   @override
   String edgeSupportCopied(String email) {

@@ -244,3 +244,100 @@ def test_upsert_section_clears_audio_key_on_body_change(session):
     persist_gated_sections(session, "Q1", "zh", _sec("改后的讲解"), "m")  # body 同
     session.refresh(row)
     assert row.audio_key is not None  # body 未变 → 音频保留
+
+
+def _seed_section(session, lang, code, body, status):
+    from app.models.content import ObjectContentSection
+    from app.models.museum_object import MuseumObject
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    session.add(
+        ObjectContentSection(
+            object_id=o.id, language=lang, section_code=code, body=body, status=status
+        )
+    )
+    session.commit()
+
+
+def _statuses(session, code):
+    from app.models.content import ObjectContentSection
+
+    return {
+        r.language: r.status
+        for r in session.query(ObjectContentSection).filter_by(section_code=code).all()
+    }
+
+
+# 契约「英语轴心」的不变量:译文的正当性来自英文源,英文源不再 published,译文必须跟着下架。
+# 2026-09-03 橘园 Q64309678 实例:重生成后英文 significance 被闸清空,9 条译文原地留存,
+# 正文已换塞尚、significance 还在讲梵高的医生加歇,且仍对用户下发。
+def test_en_section_demoted_takes_its_translations_down(session):
+    from app.services.content_repo import persist_gated_sections
+    from app.services.enrichment.quality import SectionQuality
+
+    for lang in ("fr", "zh"):
+        _seed_section(session, lang, "significance", f"旧译文 {lang}", "published")
+    _seed_section(session, "en", "significance", "old grounded text", "published")
+
+    persist_gated_sections(
+        session,
+        "Q1",
+        "en",
+        {
+            "significance": SectionQuality(
+                body=None,
+                status="needs_review",
+                grounding_ratio=0.0,
+                conflicts=[],
+                score=0.0,
+            )
+        },
+        model="m",
+    )
+    assert _statuses(session, "significance") == {
+        "en": "needs_review",
+        "fr": "needs_review",
+        "zh": "needs_review",
+    }
+
+
+def test_en_section_published_leaves_translations_alone(session):
+    """反向:英文段正常发布时不许碰译文 —— 否则这个守卫会变成随机下架机。"""
+    from app.services.content_repo import persist_generated_sections
+
+    for lang in ("fr", "zh"):
+        _seed_section(session, lang, "background", f"译文 {lang}", "published")
+    persist_generated_sections(
+        session, "Q1", "en", {"background": "new text"}, model="m"
+    )
+    assert _statuses(session, "background") == {
+        "en": "published",
+        "fr": "published",
+        "zh": "published",
+    }
+
+
+def test_demotion_scoped_to_the_same_section(session):
+    """只下架同一个 section_code 的译文,别株连隔壁段。"""
+    from app.services.content_repo import persist_gated_sections
+    from app.services.enrichment.quality import SectionQuality
+
+    _seed_section(session, "fr", "significance", "译文", "published")
+    _seed_section(session, "fr", "guide", "译文", "published")
+    persist_gated_sections(
+        session,
+        "Q1",
+        "en",
+        {
+            "significance": SectionQuality(
+                body=None,
+                status="needs_review",
+                grounding_ratio=0.0,
+                conflicts=[],
+                score=0.0,
+            )
+        },
+        model="m",
+    )
+    assert _statuses(session, "significance")["fr"] == "needs_review"
+    assert _statuses(session, "guide")["fr"] == "published"

@@ -451,7 +451,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authCreateAccount => '계정 만들기';
 
   @override
-  String get authOrLoginWith => '또는 다음으로 로그인';
+  String get authOrWithEmail => '또는 이메일로';
 
   @override
   String get authGoogleLogin => 'Google로 로그인';
@@ -650,6 +650,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get paywallRestore => '구매 복원';
+
+  @override
+  String get restoreInProgress => '복원 중…';
+
+  @override
+  String get restoreNothingFound => '복원할 구매 내역이 없습니다';
+
+  @override
+  String get restoreSucceeded => '패스를 복원했습니다';
 
   @override
   String get audioFreePreview => '무료 체험';
@@ -858,6 +867,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsEndedAt => '종료일';
 
   @override
+  String get benefitsLapsedHead => '이 패스는 사용이 시작되지 않았습니다';
+
+  @override
+  String get benefitsLapsedBody =>
+      '구매 후 30일 이내에 사용하지 않아 만료되었습니다. 무료 횟수는 복구되었고, 텍스트 해설은 그대로 이용할 수 있습니다.';
+
+  @override
+  String get benefitsBoughtOn => '구매일';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
@@ -925,6 +944,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ticketPaid => '결제 완료';
+
+  @override
+  String get ticketVoid => '종료됨';
 
   @override
   String edgeSupportCopied(String email) {

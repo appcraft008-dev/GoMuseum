@@ -455,7 +455,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get authCreateAccount => 'Utwórz konto';
 
   @override
-  String get authOrLoginWith => 'Lub zaloguj się przez';
+  String get authOrWithEmail => 'Lub przez e-mail';
 
   @override
   String get authGoogleLogin => 'Zaloguj się przez Google';
@@ -671,6 +671,15 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get paywallRestore => 'Przywróć zakup';
+
+  @override
+  String get restoreInProgress => 'Przywracanie…';
+
+  @override
+  String get restoreNothingFound => 'Brak zakupów do przywrócenia';
+
+  @override
+  String get restoreSucceeded => 'Twój bilet został przywrócony';
 
   @override
   String get audioFreePreview => 'Darmowy odsłuch';
@@ -890,6 +899,16 @@ class AppLocalizationsPl extends AppLocalizations {
   String get benefitsEndedAt => 'Zakończony';
 
   @override
+  String get benefitsLapsedHead => 'Ten bilet nigdy nie został rozpoczęty';
+
+  @override
+  String get benefitsLapsedBody =>
+      'Nie użyto go w ciągu 30 dni od zakupu, więc wygasł. Twój darmowy limit wrócił, a przewodniki tekstowe pozostają kompletne.';
+
+  @override
+  String get benefitsBoughtOn => 'Kupiono';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
@@ -960,6 +979,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get ticketPaid => 'Opłacone';
+
+  @override
+  String get ticketVoid => 'WYGASŁ';
 
   @override
   String edgeSupportCopied(String email) {
