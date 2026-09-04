@@ -384,7 +384,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get privacyBody => '照片默认不上传原图，识别数据仅作临时处理；你可以随时删除账户与数据。完整条款将在正式发布时提供。';
+  String get privacyBody => '照片默认不上传原图，识别数据仅作临时处理；你可以随时在「设置 → 删除账号」删除账号与数据。';
+
+  @override
+  String get privacyFullPolicy => '完整隐私政策';
+
+  @override
+  String get privacyCopyLink => '复制链接';
+
+  @override
+  String get privacyLinkCopied => '已复制链接';
 
   @override
   String get deleteAccountQ => '永久删除账号？';
@@ -1324,7 +1333,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get privacyBody => '照片預設不上傳原圖，識別資料僅作臨時處理；你可以隨時刪除賬戶與資料。完整條款將在正式釋出時提供。';
+  String get privacyBody => '照片預設不上傳原圖，識別資料僅作暫時處理；你可以隨時在「設置 → 刪除賬號」刪除賬號與資料。';
+
+  @override
+  String get privacyFullPolicy => '完整隱私政策';
+
+  @override
+  String get privacyCopyLink => '複製連結';
+
+  @override
+  String get privacyLinkCopied => '已複製連結';
 
   @override
   String get deleteAccountQ => '永久刪除賬號？';

@@ -385,7 +385,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      '元の写真はデフォルトでアップロードされません。認識データは一時的にのみ処理されます。アカウントとデータはいつでも削除できます。正式リリース時に完全な規約を提供します。';
+      '元の写真はデフォルトでアップロードされず、認識データは一時的にのみ処理されます。アカウントとデータは「設定 → アカウント削除」からいつでも削除できます。';
+
+  @override
+  String get privacyFullPolicy => 'プライバシーポリシー全文';
+
+  @override
+  String get privacyCopyLink => 'リンクをコピー';
+
+  @override
+  String get privacyLinkCopied => 'リンクをコピーしました';
 
   @override
   String get deleteAccountQ => 'アカウントを完全に削除しますか？';

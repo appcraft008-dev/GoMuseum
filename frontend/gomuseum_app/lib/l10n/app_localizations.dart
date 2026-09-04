@@ -818,8 +818,26 @@ abstract class AppLocalizations {
   /// No description provided for @privacyBody.
   ///
   /// In en, this message translates to:
-  /// **'Original photos are not uploaded by default; recognition data is processed temporarily only. You can delete your account and data anytime. Full terms will be provided at official release.'**
+  /// **'Original photos are not uploaded by default and recognition data is processed temporarily only. You can delete your account and data any time under Settings → Delete account.'**
   String get privacyBody;
+
+  /// No description provided for @privacyFullPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Full privacy policy'**
+  String get privacyFullPolicy;
+
+  /// No description provided for @privacyCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get privacyCopyLink;
+
+  /// No description provided for @privacyLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get privacyLinkCopied;
 
   /// No description provided for @deleteAccountQ.
   ///

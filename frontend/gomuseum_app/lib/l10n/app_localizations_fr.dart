@@ -390,7 +390,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Les photos originales ne sont pas téléchargées par défaut ; les données de reconnaissance sont traitées temporairement. Vous pouvez supprimer votre compte et vos données à tout moment. Les conditions complètes seront fournies lors de la sortie officielle.';
+      'Les photos originales ne sont pas envoyées par défaut et les données de reconnaissance sont traitées de manière temporaire uniquement. Vous pouvez supprimer votre compte et vos données à tout moment dans Paramètres → Supprimer le compte.';
+
+  @override
+  String get privacyFullPolicy => 'Politique de confidentialité complète';
+
+  @override
+  String get privacyCopyLink => 'Copier le lien';
+
+  @override
+  String get privacyLinkCopied => 'Lien copié';
 
   @override
   String get deleteAccountQ => 'Supprimer définitivement le compte ?';

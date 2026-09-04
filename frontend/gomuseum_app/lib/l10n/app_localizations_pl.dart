@@ -388,7 +388,16 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Oryginalne zdjęcia domyślnie nie są przesyłane; dane rozpoznawania są przetwarzane tylko tymczasowo. Możesz w każdej chwili usunąć konto i dane. Pełny regulamin zostanie udostępniony przy oficjalnej premierze.';
+      'Oryginalne zdjęcia nie są domyślnie przesyłane, a dane rozpoznawania są przetwarzane wyłącznie tymczasowo. Konto i dane możesz usunąć w każdej chwili w Ustawienia → Usuń konto.';
+
+  @override
+  String get privacyFullPolicy => 'Pełna polityka prywatności';
+
+  @override
+  String get privacyCopyLink => 'Kopiuj link';
+
+  @override
+  String get privacyLinkCopied => 'Skopiowano link';
 
   @override
   String get deleteAccountQ => 'Trwale usunąć konto?';

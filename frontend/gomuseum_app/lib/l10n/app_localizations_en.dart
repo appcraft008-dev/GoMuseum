@@ -387,7 +387,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyBody =>
-      'Original photos are not uploaded by default; recognition data is processed temporarily only. You can delete your account and data anytime. Full terms will be provided at official release.';
+      'Original photos are not uploaded by default and recognition data is processed temporarily only. You can delete your account and data any time under Settings → Delete account.';
+
+  @override
+  String get privacyFullPolicy => 'Full privacy policy';
+
+  @override
+  String get privacyCopyLink => 'Copy link';
+
+  @override
+  String get privacyLinkCopied => 'Link copied';
 
   @override
   String get deleteAccountQ => 'Permanently delete account?';
