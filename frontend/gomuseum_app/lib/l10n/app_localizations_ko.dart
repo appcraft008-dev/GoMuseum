@@ -649,13 +649,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get paywallBuy => '패스 구매';
 
   @override
-  String get paywallRestore => '구매 복원';
+  String get paywallRestore => '결제했는데 패스가 없나요?';
 
   @override
   String get restoreInProgress => '복원 중…';
 
   @override
-  String get restoreNothingFound => '복원할 구매 내역이 없습니다';
+  String get restoreNothingFound => '미완료 결제를 찾지 못했습니다';
 
   @override
   String get restoreSucceeded => '패스를 복원했습니다';
@@ -894,9 +894,6 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       '이미 구매하셨다면 온라인에 연결되는 즉시 자동으로 복구됩니다. 이중으로 청구되지 않습니다.';
-
-  @override
-  String get edgeSeeFree => '무료 콘텐츠 보기';
 
   @override
   String get edgeSignedOutHead => '패스는 계정에 연결됩니다';

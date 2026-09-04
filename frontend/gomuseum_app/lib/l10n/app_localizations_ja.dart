@@ -649,13 +649,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get paywallBuy => 'パスを購入';
 
   @override
-  String get paywallRestore => '購入を復元';
+  String get paywallRestore => '支払い済みなのにパスがない？';
 
   @override
   String get restoreInProgress => '復元中…';
 
   @override
-  String get restoreNothingFound => '復元できる購入はありません';
+  String get restoreNothingFound => '未完了の支払いは見つかりませんでした';
 
   @override
   String get restoreSucceeded => 'パスを復元しました';
@@ -892,9 +892,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       'すでに購入済みなら、オンラインに戻り次第自動で復元されます。二重に請求されることはありません。';
-
-  @override
-  String get edgeSeeFree => '無料コンテンツを見る';
 
   @override
   String get edgeSignedOutHead => 'パスはアカウントに紐づきます';

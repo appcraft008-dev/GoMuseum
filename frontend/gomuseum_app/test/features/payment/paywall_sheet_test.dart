@@ -191,6 +191,35 @@ void main() {
     expect(find.text(l10n.ticketStubUntorn), findsOneWidget);
   });
 
+  /// 提示条**必须自己走人**。Flutter 的 `SnackBar` 里
+  /// `persist = persist ?? action != null` —— 带 action 的提示条默认永不消失,
+  /// 写了 `duration` 也没用。2026-09-04 真机撞到:它一路飘到权益页还赖着。
+  /// 所以 `showPaywallHint` 必须显式 `persist: false`;把那行去掉这条测试就红。
+  ///
+  /// 正负两组:只断言"最后没了"是不够的 —— 一个压根不显示提示的实现也能过。
+  testWidgets('提示条:确实显示,而且连撞三次之后也会自己消失', (t) async {
+    late BuildContext ctx;
+    await t.pumpWidget(_wrap(Builder(builder: (c) {
+      ctx = c;
+      return const SizedBox();
+    })));
+    final l10n = AppLocalizations.of(ctx)!;
+
+    showPaywallHint(ctx, onLearnMore: () {});
+    await t.pump();
+    expect(find.text(l10n.audioLockedHint), findsOneWidget); // 正:真的会显示
+
+    // 同一帧内再撞两次 —— 不清队列的话这里就会留下一条永不消失的
+    showPaywallHint(ctx, onLearnMore: () {});
+    showPaywallHint(ctx, onLearnMore: () {});
+    await t.pumpAndSettle();
+    expect(find.text(l10n.audioLockedHint), findsOneWidget); // 没攒成三条
+
+    await t.pump(const Duration(seconds: 10));
+    await t.pumpAndSettle();
+    expect(find.text(l10n.audioLockedHint), findsNothing); // 负:不赖着不走
+  });
+
   testWidgets('十种语言都不缺键(缺了会抛,不是显示英文)', (t) async {
     final now = DateTime(2026, 9, 10, 14, 32);
     for (final locale in AppLocalizations.supportedLocales) {

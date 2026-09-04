@@ -669,13 +669,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get paywallBuy => 'Ottieni il pass';
 
   @override
-  String get paywallRestore => 'Ripristina acquisto';
+  String get paywallRestore => 'Pagato ma niente pass?';
 
   @override
   String get restoreInProgress => 'Ripristino…';
 
   @override
-  String get restoreNothingFound => 'Nessun acquisto da ripristinare';
+  String get restoreNothingFound => 'Nessun pagamento in sospeso';
 
   @override
   String get restoreSucceeded => 'Il tuo pass è stato ripristinato';
@@ -924,9 +924,6 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get edgeUnknownNote =>
       'Se ne hai già comprato uno, tornerà da solo appena sei online. Non ti verrà addebitato due volte.';
-
-  @override
-  String get edgeSeeFree => 'Vedi i contenuti gratuiti';
 
   @override
   String get edgeSignedOutHead => 'Il pass è legato a un account';

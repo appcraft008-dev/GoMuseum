@@ -1340,7 +1340,7 @@ abstract class AppLocalizations {
   /// No description provided for @paywallRestore.
   ///
   /// In en, this message translates to:
-  /// **'Restore purchase'**
+  /// **'Paid but no pass?'**
   String get paywallRestore;
 
   /// No description provided for @restoreInProgress.
@@ -1352,7 +1352,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreNothingFound.
   ///
   /// In en, this message translates to:
-  /// **'No purchases to restore'**
+  /// **'No incomplete payment found'**
   String get restoreNothingFound;
 
   /// No description provided for @restoreSucceeded.
@@ -1750,12 +1750,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'If you\'ve already bought one, it comes back automatically once you\'re online. You won\'t be charged twice.'**
   String get edgeUnknownNote;
-
-  /// No description provided for @edgeSeeFree.
-  ///
-  /// In en, this message translates to:
-  /// **'Browse the free content'**
-  String get edgeSeeFree;
 
   /// No description provided for @edgeSignedOutHead.
   ///
