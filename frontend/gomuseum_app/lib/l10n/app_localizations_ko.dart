@@ -394,6 +394,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteAccountBody => '계정 프로필과 남은 한도가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.';
 
   @override
+  String get deleteAccountBodyPass =>
+      '구매한 패스는 즉시 무효가 되며 복원할 수 없습니다. 다시 가입해도 돌아오지 않으므로 새로 구매해야 합니다.';
+
+  @override
   String get permanentDelete => '영구 삭제';
 
   @override

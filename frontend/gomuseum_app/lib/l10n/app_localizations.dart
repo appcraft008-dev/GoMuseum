@@ -833,6 +833,12 @@ abstract class AppLocalizations {
   /// **'This will delete your account profile and remaining quota. This action cannot be undone.'**
   String get deleteAccountBody;
 
+  /// No description provided for @deleteAccountBodyPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Any pass you bought is voided immediately and cannot be recovered — not even by signing up again. You would have to buy it anew.'**
+  String get deleteAccountBodyPass;
+
   /// No description provided for @permanentDelete.
   ///
   /// In en, this message translates to:

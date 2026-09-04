@@ -393,6 +393,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteAccountBody => '将删除你的账号资料与剩余额度，此操作不可恢复。';
 
   @override
+  String get deleteAccountBodyPass => '已购通票会立即作废，且无法找回 —— 重新注册也不行，只能重新购买。';
+
+  @override
   String get permanentDelete => '永久删除';
 
   @override
@@ -1328,6 +1331,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get deleteAccountBody => '將刪除你的賬號資料與剩餘額度，此操作不可恢復。';
+
+  @override
+  String get deleteAccountBodyPass => '已購通票會立即作廢，且無法找回 —— 重新註冊也不行，只能重新購買。';
 
   @override
   String get permanentDelete => '永久刪除';

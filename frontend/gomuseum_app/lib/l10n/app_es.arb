@@ -120,6 +120,7 @@
   "privacyBody": "Las fotos originales no se suben por defecto; los datos de reconocimiento se procesan solo temporalmente. Puedes eliminar tu cuenta y tus datos en cualquier momento. Los términos completos se ofrecerán en el lanzamiento oficial.",
   "deleteAccountQ": "¿Eliminar la cuenta permanentemente?",
   "deleteAccountBody": "Esto eliminará tu perfil de cuenta y la cuota restante. Esta acción no se puede deshacer.",
+  "deleteAccountBodyPass": "Cualquier pase comprado se anula de inmediato y no se puede recuperar, ni siquiera creando otra cuenta. Habría que volver a comprarlo.",
   "permanentDelete": "Eliminar permanentemente",
   "deleteFailed": "Error al eliminar, inténtalo más tarde",
   "confirmLogout": "Confirmar cierre de sesión",

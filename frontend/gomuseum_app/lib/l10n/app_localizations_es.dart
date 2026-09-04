@@ -398,6 +398,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Esto eliminará tu perfil de cuenta y la cuota restante. Esta acción no se puede deshacer.';
 
   @override
+  String get deleteAccountBodyPass =>
+      'Cualquier pase comprado se anula de inmediato y no se puede recuperar, ni siquiera creando otra cuenta. Habría que volver a comprarlo.';
+
+  @override
   String get permanentDelete => 'Eliminar permanentemente';
 
   @override

@@ -399,6 +399,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dies löscht Ihr Kontoprofil und das verbleibende Kontingent. Diese Aktion kann nicht rückgängig gemacht werden.';
 
   @override
+  String get deleteAccountBodyPass =>
+      'Ein gekaufter Pass verfällt sofort und lässt sich nicht wiederherstellen — auch nicht mit einem neuen Konto. Er müsste erneut gekauft werden.';
+
+  @override
   String get permanentDelete => 'Dauerhaft löschen';
 
   @override

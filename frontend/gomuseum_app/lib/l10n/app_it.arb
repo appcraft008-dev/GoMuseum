@@ -120,6 +120,7 @@
   "privacyBody": "Le foto originali non vengono caricate per impostazione predefinita; i dati di riconoscimento sono elaborati solo temporaneamente. Puoi eliminare il tuo account e i tuoi dati in qualsiasi momento. I termini completi saranno forniti al lancio ufficiale.",
   "deleteAccountQ": "Eliminare definitivamente l'account?",
   "deleteAccountBody": "Questa operazione eliminerà il profilo del tuo account e la quota rimanente. L'azione è irreversibile.",
+  "deleteAccountBodyPass": "Il pass acquistato viene annullato subito e non è recuperabile, nemmeno registrandosi di nuovo. Andrebbe riacquistato.",
   "permanentDelete": "Elimina definitivamente",
   "deleteFailed": "Eliminazione non riuscita, riprova più tardi",
   "confirmLogout": "Conferma disconnessione",

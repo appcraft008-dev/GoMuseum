@@ -222,6 +222,7 @@
   "privacyBody": "Original photos are not uploaded by default; recognition data is processed temporarily only. You can delete your account and data anytime. Full terms will be provided at official release.",
   "deleteAccountQ": "Permanently delete account?",
   "deleteAccountBody": "This will delete your account profile and remaining quota. This action cannot be undone.",
+  "deleteAccountBodyPass": "Any pass you bought is voided immediately and cannot be recovered — not even by signing up again. You would have to buy it anew.",
   "permanentDelete": "Delete permanently",
   "deleteFailed": "Delete failed, please try again later",
   "confirmLogout": "Confirm sign out",
