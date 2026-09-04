@@ -889,6 +889,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get benefitsEndedAt => 'Ended';
 
   @override
+  String get benefitsLapsedHead => 'This pass was never started';
+
+  @override
+  String get benefitsLapsedBody =>
+      'It was not used within 30 days of purchase, so it has expired. Your free quota is back, and full text guides remain available.';
+
+  @override
+  String get benefitsBoughtOn => 'Purchased';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);

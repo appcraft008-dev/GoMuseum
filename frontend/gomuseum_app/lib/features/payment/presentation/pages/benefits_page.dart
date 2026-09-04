@@ -289,12 +289,15 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     if (ent.isExpired) {
       // 用过的那张票要有完整起止才画得出存根;拿不到历史就退回未购态,
       // 不去编一张票出来。
-      final used = ref
-          .watch(passHistoryProvider)
-          .value
-          ?.where((r) => r.hasRunItsCourse)
-          .firstOrNull;
+      final history = ref.watch(passHistoryProvider).value;
+      final used = history?.where((r) => r.hasRunItsCourse).firstOrNull;
       if (used != null) return _freeAfterExpiry(gm, l10n, ent, used);
+      // **买了却从没激活、窗口过了作废** —— 与"7 天用完"是两种经历。
+      // 曾经只认前者,这类票被整个过滤掉、页面退回未购态:用户付了钱、
+      // 票被作废,界面却表现得像他从没买过(真机实测)。撞契约 I20 ——
+      // 事前在售票上披露了「30 天失效」,事后却什么都不说。
+      final lapsed = history?.where((r) => r.lapsedUnactivated).firstOrNull;
+      if (lapsed != null) return _lapsedState(gm, l10n, ent, lapsed);
     }
     return _freeState(gm, l10n, ent);
   }
@@ -416,6 +419,64 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   }
 
   // ── 态 4 · 已到期 ──
+  // ── 态 4b · 买了没激活,窗口过了作废 ──
+  //
+  // 与 4 的区别全在**措辞**:他一天都没用过,说「7 天已经用完」是睁眼说瞎话。
+  // 存根位也不能写"结束于" —— 这张票从来没有过到期日,写购买日才是真的。
+  List<Widget> _lapsedState(GmPalette gm, AppLocalizations l10n,
+      Entitlements ent, PassRecord lapsed) {
+    final total = ent.freeRecognitionsTotal;
+    final left = ent.freeRecognitionsLeft;
+    final bought = lapsed.purchasedAt;
+    return [
+      const SizedBox(height: 14),
+      GmTicket(
+        // 不撕:撕开的语义是"用过了"。这张没被用过,只是作废了 —— 戳说明一切。
+        faded: true,
+        voidStamp: l10n.ticketVoid,
+        stub: bought == null
+            ? null
+            : BenStubDate(
+                label: l10n.benefitsBoughtOn,
+                value: l10n.ticketDateTime(bought, bought),
+                muted: true,
+              ),
+        child: GmTicketFace(
+          title: l10n.paywallTitle,
+          pitch: l10n.paywallPitch,
+          paidLabel: l10n.ticketPaid,
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: Text(
+          l10n.benefitsLapsedHead,
+          style: GmText.serif(size: 17, weight: FontWeight.w700),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(l10n.benefitsLapsedBody,
+            style: GmText.sans(size: 12.5, color: gm.sub, height: 1.7)),
+      ),
+      BenSectionHead(l10n.benefitsSecCurrentQuota),
+      BenQuotaRow(
+        label: l10n.benefitsRecognition,
+        used: (total != null && left != null)
+            ? (total - left).clamp(0, total)
+            : null,
+        total: total,
+      ),
+      BenSectionHead(l10n.benefitsSecBuyAnother),
+      const SizedBox(height: 10),
+      _saleTicket(l10n),
+      const SizedBox(height: 18),
+      _buyCta(l10n, ent),
+      const SizedBox(height: 20),
+      BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
+    ];
+  }
+
   List<Widget> _freeAfterExpiry(
       GmPalette gm, AppLocalizations l10n, Entitlements ent, PassRecord used) {
     final total = ent.freeRecognitionsTotal;

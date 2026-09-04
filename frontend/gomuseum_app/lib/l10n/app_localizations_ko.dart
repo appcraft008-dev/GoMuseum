@@ -867,6 +867,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsEndedAt => '종료일';
 
   @override
+  String get benefitsLapsedHead => '이 패스는 사용이 시작되지 않았습니다';
+
+  @override
+  String get benefitsLapsedBody =>
+      '구매 후 30일 이내에 사용하지 않아 만료되었습니다. 무료 횟수는 복구되었고, 텍스트 해설은 그대로 이용할 수 있습니다.';
+
+  @override
+  String get benefitsBoughtOn => '구매일';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);

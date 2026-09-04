@@ -861,6 +861,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsEndedAt => '结束于';
 
   @override
+  String get benefitsLapsedHead => '这张票没有开始使用';
+
+  @override
+  String get benefitsLapsedBody => '购买后 30 天内没有开始使用，已经失效。免费额度已恢复，文字讲解仍然完整。';
+
+  @override
+  String get benefitsBoughtOn => '购于';
+
+  @override
   String benefitsDateOnly(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
@@ -1790,6 +1799,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get benefitsEndedAt => '結束於';
+
+  @override
+  String get benefitsLapsedHead => '這張票沒有開始使用';
+
+  @override
+  String get benefitsLapsedBody => '購買後 30 天內沒有開始使用，已經失效。免費額度已恢復，文字講解仍然完整。';
+
+  @override
+  String get benefitsBoughtOn => '購於';
 
   @override
   String benefitsDateOnly(DateTime date) {
