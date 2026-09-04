@@ -974,6 +974,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ticketPaid => 'Bezahlt';
 
   @override
+  String get ticketVoid => 'ABGELAUFEN';
+
+  @override
   String edgeSupportCopied(String email) {
     return 'Support-Adresse kopiert: $email';
   }

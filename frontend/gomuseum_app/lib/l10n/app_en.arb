@@ -459,6 +459,7 @@
   "purchaseVerifyPending": "We couldn't confirm the purchase yet. Reopening the app will retry.",
   "purchaseFailed": "The purchase didn't go through. Please try again.",
   "ticketPaid": "Paid",
+  "ticketVoid": "EXPIRED",
   "edgeSupportCopied": "Support address copied: {email}",
   "@edgeSupportCopied": {
     "description": "Toast after copying the support email on the receipt-conflict screen.",

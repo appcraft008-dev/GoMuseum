@@ -927,6 +927,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ticketPaid => '已付';
 
   @override
+  String get ticketVoid => '已结束';
+
+  @override
   String edgeSupportCopied(String email) {
     return '已复制支持邮箱：$email';
   }
@@ -1853,6 +1856,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get ticketPaid => '已付';
+
+  @override
+  String get ticketVoid => '已結束';
 
   @override
   String edgeSupportCopied(String email) {
