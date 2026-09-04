@@ -230,7 +230,7 @@ def main() -> int:
         if stats[k]:
             print(f"  {k:14s} {stats[k]}")
     if rejected:
-        print("\n未过质量闸(保留旧版本,不落库):")
+        print("\n未落库(未过质量闸,或未通过生成侧判定核验):")
         for name, reason in rejected[:20]:
             print(f"  {name:44s} {reason}")
         if len(rejected) > 20:
