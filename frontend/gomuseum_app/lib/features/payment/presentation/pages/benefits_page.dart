@@ -446,9 +446,9 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
                 value: l10n.ticketDateTime(bought, bought),
                 muted: true,
               ),
+        // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
           title: l10n.paywallTitle,
-          pitch: l10n.paywallPitch,
           paidLabel: l10n.ticketPaid,
         ),
       ),
@@ -499,9 +499,9 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           value: l10n.ticketDateTime(used.expiresAt!, used.expiresAt!),
           muted: true,
         ),
+        // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
           title: l10n.paywallTitle,
-          pitch: l10n.paywallPitch,
           paidLabel: l10n.ticketPaid,
         ),
       ),

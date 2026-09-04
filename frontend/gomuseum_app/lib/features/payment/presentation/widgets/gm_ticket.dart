@@ -264,14 +264,18 @@ class GmTicketFace extends StatelessWidget {
   const GmTicketFace({
     super.key,
     required this.title,
-    required this.pitch,
+    this.pitch,
     this.price,
     this.priceNote,
     this.paidLabel,
   });
 
   final String title;
-  final String pitch;
+
+  /// 卖点描述。**作废票不要传** —— 对一张已经结束的票,「不限次拍照识别…」
+  /// 既没有意义,又正好被作废戳压住;而同一屏下面「再来一张」的在售票上,
+  /// 一模一样的这句话还会再出现一次。
+  final String? pitch;
 
   /// Play 返回的**本地化**价格串。拿不到就整块不显示 —— 见 passPriceProvider,
   /// 宁可不显示价格,也不显示一个在当地是错的金额。
@@ -347,9 +351,18 @@ class GmTicketFace extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: 10),
-        Text(pitch,
-            style: GmText.sans(size: 12.5, color: gm.sub, height: 1.65)),
+        if (pitch != null) ...[
+          const SizedBox(height: 10),
+          Text(pitch!,
+              style: GmText.sans(size: 12.5, color: gm.sub, height: 1.65)),
+        ] else
+          // 戳盖在**整张票**上、垂直居中。没有正文时票会塌到只剩标题行,
+          // 戳就骑到标题上 —— 等于换了个字去压。这段空白把戳的落点
+          // 留在标题下方的空处。
+          //
+          // 40 不是随手写的:改到 30 时戳的包围盒会和标题擦上 1.1px,
+          // stamp_clearance_test 那条「戳不压票上任何一个字」立刻变红。
+          const SizedBox(height: 40),
       ],
     );
   }
