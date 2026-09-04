@@ -40,9 +40,11 @@ class PassRecord {
 
   /// 契约:可缺字段一律 `as T? ?? 回退`,不裸取。
   factory PassRecord.fromJson(Map<String, dynamic> json) {
+    // `.toLocal()`:后端发 UTC,不转的话 l10n 会按 UTC 渲染,票面时间比
+    // 用户的钟慢 2 小时(CEST)。同 Entitlements.fromJson。
     DateTime? at(String key) {
       final raw = json[key] as String?;
-      return raw == null ? null : DateTime.tryParse(raw);
+      return raw == null ? null : DateTime.tryParse(raw)?.toLocal();
     }
 
     return PassRecord(
@@ -58,6 +60,9 @@ class PassRecord {
 /// 新到旧。拿不到就是空列表 —— 历史读不到不该把权益页打死,
 /// 那几个信息块少显示就是了。
 final passHistoryProvider = FutureProvider<List<PassRecord>>((ref) async {
+  // 同 entitlementsProvider:per-user 数据必须依赖用户身份,否则换账号后
+  // 新用户会看到上一个账号的购买记录。
+  ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   final dio = ref.watch(dioProvider);
   try {
     final res = await dio.get('/api/v1/entitlements/history');

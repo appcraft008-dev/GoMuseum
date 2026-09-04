@@ -47,11 +47,7 @@ import 'package:gomuseum_app/ui/gm/gm_ticket_button.dart';
 const kSupportEmail = 'appcraft008@gmail.com';
 
 class BenefitsPage extends ConsumerStatefulWidget {
-  const BenefitsPage({super.key, this.autoRestore = false});
-
-  /// 从付费墙的「恢复购买」进来时为 true:IAP 就绪后自动跑一次恢复,
-  /// 免得已购用户落在购买页上以为要再买一次。
-  final bool autoRestore;
+  const BenefitsPage({super.key});
 
   @override
   ConsumerState<BenefitsPage> createState() => _BenefitsPageState();
@@ -60,6 +56,11 @@ class BenefitsPage extends ConsumerStatefulWidget {
 class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   late final IapService _iapService;
   bool _isPurchasing = false;
+  bool _isRestoring = false;
+
+  /// Play 回放过来的购买计数。用来回答"这次恢复到底捞到东西没有" ——
+  /// 光看 restorePurchases() 有没有抛异常是答不出来的,它不抛也可能一无所获。
+  int _restoredSeen = 0;
 
   /// 收据冲突:**不是可重试的失败**,所以它是一个状态而不是一条 SnackBar。
   /// 弹完就消失的提示会让用户反复点购买 —— 而这条路永远走不通。
@@ -88,7 +89,23 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       // 这一页的其余部分**不该跟着死** —— 用户还要在这里看自己的通票状态。
     }
     if (!mounted) return;
-    if (success && widget.autoRestore) await _restorePurchases();
+    if (success) await _autoRestoreIfNoPass();
+  }
+
+  /// **无票才自动跑一次恢复,且全程静默** —— 只有真捞到东西才出声。
+  ///
+  /// 「Play 说你买过 + 后端说你没有权益」是**机器自己认得出来**的状态,
+  /// 不该让用户先看懂「恢复购买」这个词、再自己判断该不该点。原来它是付费墙上
+  /// 主 CTA 正下方的一条链接,而对买成功过的人它恒定是空操作(消耗型商品验证
+  /// 成功即被消耗)—— 等于把异常路径摆在了主路径旁边。
+  ///
+  /// 已有票的人不跑:没有可恢复的东西,白白多一次 Play 查询。
+  /// 权益读不到(离线)也不跑:那时验证注定失败,只会白弹一条"稍后重试"。
+  Future<void> _autoRestoreIfNoPass() async {
+    final ent = await ref.read(entitlementsProvider.future);
+    if (!mounted) return;
+    if (!ent.known || ent.isActive || ent.isPurchasedNotActivated) return;
+    await _restorePurchases(silent: true);
   }
 
   /// 返回值决定 IapService 是否 completePurchase —— 未验证成功绝不 complete,
@@ -97,6 +114,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     var outcome = VerifyOutcome.failed;
     if (purchase.status == PurchaseStatus.purchased ||
         purchase.status == PurchaseStatus.restored) {
+      if (purchase.status == PurchaseStatus.restored) _restoredSeen++;
       outcome = await ref
           .read(benefitsStateProvider.notifier)
           .verifyAndUpdateBenefits(purchase);
@@ -107,7 +125,11 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         final l10n = AppLocalizations.of(context)!;
         switch (outcome) {
           case VerifyOutcome.ok:
-            _toast(l10n.purchaseSuccess);
+            // 恢复和刚付完钱要分开说:自动恢复后冒出「购买成功」,
+            // 用户会以为又被扣了一次钱。
+            _toast(purchase.status == PurchaseStatus.restored
+                ? l10n.restoreSucceeded
+                : l10n.purchaseSuccess);
           case VerifyOutcome.conflict:
             // 换成整屏说明:重试没有意义,得换账号
             setState(() => _conflict = true);
@@ -132,13 +154,39 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     }
   }
 
-  Future<void> _restorePurchases() async {
+  /// 恢复购买。**必须自己说话** —— 成功路径的反馈完全来自 Play 回放购买时的
+  /// [_handlePurchaseUpdate];而通票是消耗型商品,验证成功后就被 completePurchase
+  /// 消耗掉,**已消耗的购买不在 restorePurchases 列表里**。也就是说对一个买成功
+  /// 过的人,这里恒定什么都捞不到 —— 那是最常见的情况,却也正是原来完全静默的
+  /// 情况:不转圈、不提示,用户分不清"正在恢复""没有可恢复的""失败了"。
+  ///
+  /// 这个入口真正的用武之地只有一个:**付了钱但后端验证没成功**的窗口
+  /// (购买还挂在 Play 名下没被消耗)。2026-09-02 那次 androidpublisher API
+  /// 没启用就是这种局面。
+  Future<void> _restorePurchases({bool silent = false}) async {
+    if (_isRestoring) return;
+    final seenBefore = _restoredSeen;
+    setState(() => _isRestoring = true);
     try {
       await _iapService.restorePurchases();
+      // Play 是通过 purchaseStream 异步回放的,restorePurchases() 返回时
+      // 东西还没到。给它一个窗口再判断"什么都没来"。
+      await Future<void>.delayed(const Duration(seconds: 3));
+      if (!silent && mounted && _restoredSeen == seenBefore) {
+        _toast(AppLocalizations.of(context)!.restoreNothingFound);
+      }
     } catch (_) {
-      if (mounted) _toast(AppLocalizations.of(context)!.purchaseFailed);
+      if (!silent && mounted) {
+        _toast(AppLocalizations.of(context)!.purchaseFailed);
+      }
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
     }
   }
+
+  /// 恢复期间按钮的文案:哑着比说错强,但什么都不说最差。
+  String _restoreLabel(AppLocalizations l10n) =>
+      _isRestoring ? l10n.restoreInProgress : l10n.paywallRestore;
 
   Future<void> _activate() async {
     final ent = ref.read(entitlementsProvider).value;
@@ -210,11 +258,10 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
                     letterSpacing: context.gmLetterSpacing(0.5)),
               ),
             ),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _restorePurchases,
-              child: Text('↻', style: GmText.sans(size: 15, color: gm.faint)),
-            ),
+            // 这里曾有一个无标签的 ↻ 恢复购买:图标形态最难被读懂,
+            // 又和下拉刷新(RefreshIndicator)撞在一起。恢复已自动化,
+            // 手动兜底只在页面底部留一处。占位保持标题居中。
+            const SizedBox(width: 20),
           ],
         ),
       );
@@ -281,7 +328,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       const SizedBox(height: 18),
       _buyCta(l10n, ent),
       const SizedBox(height: 3),
-      BenSecondaryAction(label: l10n.paywallRestore, onTap: _restorePurchases),
+      BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
     ];
   }
 
@@ -408,7 +455,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       const SizedBox(height: 18),
       _buyCta(l10n, ent),
       const SizedBox(height: 3),
-      BenSecondaryAction(label: l10n.paywallRestore, onTap: _restorePurchases),
+      BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
     ];
   }
 

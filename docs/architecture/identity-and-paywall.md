@@ -302,6 +302,24 @@ GoMuseum 是**现场**使用的 AI 博物馆导览:用户站在作品前,拍照�
   —— 邮箱重复这种日常失败换来一个必须杀进程的死 App(v15 真机实测)。
   配套:守卫侧一律用 `valueOrNull`,读不到按未登录处理(最坏多登一次,而不是死一个 App)。
 
+- **I24 · per-user 数据的 provider 必须依赖用户身份。** 凡是打 `/me`、`/history`
+  这类"后端从令牌取 user_id"的端点,provider 里必须
+  `ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id))`。
+  **只 watch `dioProvider` 不算** —— 它跟登录态无关、建一次就一直缓存,
+  换账号后永远不重算。
+  v15 真机实测:A 买了通票,退出登录全新账号 B,权益页照旧显示 A 的「生效中」
+  (后端干净,B 库里没有权益行)。这是**丢钱**不是显示错:B 以为自己已有通票,
+  购买入口被藏起来,而音频闸在后端,他也放不出声,两头堵死。
+  ⚠️ 别靠"退出时手动 invalidate 一遍"—— 那是每加一个 provider 就要记得改一处的
+  清单,漏一个就复发;让 provider **自己声明依赖**才是一次到位。
+  (`AutoDispose` 的 provider 天然免疫:离开页面就销毁,如 `historyProvider`。)
+
+- **I25 · 后端发的时间是 UTC,交给 l10n 之前必须 `.toLocal()`。**
+  `DateTime.tryParse('...+00:00')` 返回 `isUtc=true` 的时刻,而日期/时间格式化
+  **按它自己的时区渲染** —— 巴黎用户看到的到期时间会早 2 小时(CEST)。
+  转换点放在**解析处**(`fromJson`),不要散在各个渲染点。
+  转本地只改呈现不改时刻,比较逻辑不受影响(Dart 的 `DateTime` 比较用绝对时刻)。
+
 ---
 
 ## 5. 端点闸门矩阵
@@ -442,6 +460,9 @@ store_transaction_id, ...)`,`Purchase` 表有 `platform` 列,`entitlement_servic
 
 ## 变更记录
 
+- 2026-09-04(v15 真机,同一轮验收):新增 **I24**(per-user provider 必须依赖用户
+  身份)与 **I25**(UTC 交给 l10n 前必须转本地)。两条都由同一次换账号测试暴露:
+  新账号看到上一个账号的通票(购买入口被藏 = 丢钱),以及到期时间早 2 小时。
 - 2026-09-03(v15 真机):新增 **I23**(一次登录尝试失败不许写进全局身份态)。
   用已注册的邮箱再注册 → 后端 400 → 旧代码把失败写成 `AsyncValue.error` →
   路由 provider 那句 `authState.value` 在 build 期 rethrow → 整屏灰、进程不重启

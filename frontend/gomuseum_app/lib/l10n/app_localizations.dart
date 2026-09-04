@@ -1343,6 +1343,24 @@ abstract class AppLocalizations {
   /// **'Restore purchase'**
   String get paywallRestore;
 
+  /// No description provided for @restoreInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring…'**
+  String get restoreInProgress;
+
+  /// No description provided for @restoreNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No purchases to restore'**
+  String get restoreNothingFound;
+
+  /// No description provided for @restoreSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pass has been restored'**
+  String get restoreSucceeded;
+
   /// No description provided for @audioFreePreview.
   ///
   /// In en, this message translates to:

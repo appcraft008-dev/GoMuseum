@@ -152,13 +152,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             MuseumPage(slug: state.pathParameters['slug'] ?? 'orsay'),
       ),
 
-      // 升级 / 权益页。`?restore=1` 来自付费墙的「恢复购买」出口。
+      // 升级 / 权益页。恢复购买已改为进页面时按"有没有票"自动静默执行,
+      // 不再由入口带参数决定(旧的 `?restore=1` 已无生产者)。
       GoRoute(
         path: '/benefits',
         name: 'benefits',
-        builder: (context, state) => BenefitsPage(
-          autoRestore: state.uri.queryParameters['restore'] == '1',
-        ),
+        builder: (context, state) => const BenefitsPage(),
       ),
     ],
 
