@@ -173,6 +173,7 @@ def recognize(
     embed_fn=None,
     vector_query_fn=None,
     embed_crops_fn=None,
+    user_id=None,
 ) -> dict | None:
     """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
     slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
@@ -207,6 +208,7 @@ def recognize(
                     top_score=ts,
                     language=language,
                     engine="cache",
+                    user_id=user_id,
                 )
                 return cached_out
         except Exception:
@@ -312,6 +314,7 @@ def recognize(
         top_score=ts,
         language=language,
         engine=engine,
+        user_id=user_id,
     )
 
     if redis is not None:
@@ -356,6 +359,7 @@ def recognize_billed(
         mode=mode,
         identify_fn=identify_fn,
         redis=redis,
+        user_id=user_id,  # 埋点顺带记足迹;device_id 不传(匿名就是匿名)
     )
     if out is not None and out.get("outcome") in ("match", "candidates"):
         cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
