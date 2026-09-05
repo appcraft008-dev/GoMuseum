@@ -14,8 +14,41 @@ import 'package:gomuseum_app/features/history/presentation/pages/history_page.da
 import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:gomuseum_app/features/auth/presentation/login_page.dart';
 import 'package:gomuseum_app/features/auth/presentation/register_page.dart';
+import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// 认证守卫的判断本身（纯函数，与 go_router / BuildContext 无关）。
+///
+/// 抽出来是为了能真测到它：整个 GoRouter 起来要拉起所有页面和它们的
+/// provider，那种测试很容易变成"跑通了就算过"，而这里要钉的恰恰是几条
+/// 具体的分支。见 `test/core/router/auth_guard_test.dart`。
+///
+/// 返回 null 表示不重定向。
+String? authRedirect({required User? user, required String path}) {
+  final isLoggedIn = user != null;
+  final isPublicRoute = path == '/login' || path == '/register';
+
+  // 未登录且访问受保护路由 → 跳转登录页
+  if (!isLoggedIn && !isPublicRoute) {
+    return '/login';
+  }
+
+  // 已登录且访问登录/注册页 → 跳转首页
+  //
+  // ⚠️ **游客不算**。游客在服务端是一行真的 User，`isLoggedIn` 对他为真；
+  // 但他点「登录后购买」正是要去转正 —— 把他弹回首页，游客就**永远买不了票**
+  // （通票挂账号，所以游客本来就不许直接买，按钮才写「登录后购买」）。
+  // 而且这条重定向发生在 `push('/login')` 期间，被重定向到 shell 路由 `/`
+  // 会渲染出一屏只剩底栏的黑屏，用户连"被弹回来了"都看不出来。
+  // 2026-09-05 真机发现，权益页与讲解页付费墙两个入口都中。
+  if (isLoggedIn && !user.isGuest && isPublicRoute) {
+    return '/';
+  }
+
+  // 无需重定向
+  return null;
+}
 
 /// 路由配置提供者 - 带认证守卫
 final goRouterProvider = Provider<GoRouter>((ref) {
@@ -30,23 +63,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // `valueOrNull` 而非 `value`:AsyncError 的 `.value` 会 rethrow,在
       // provider build 期抛出就是 release 下的整屏灰。这里读不到登录态时
       // 一律按"未登录"处理 —— 最坏是多登一次,而不是死一个 App。
-      final isLoggedIn = ref.read(currentUserProvider).valueOrNull != null;
-      final isLoginRoute = state.uri.path == '/login';
-      final isRegisterRoute = state.uri.path == '/register';
-      final isPublicRoute = isLoginRoute || isRegisterRoute;
-
-      // 未登录且访问受保护路由 → 跳转登录页
-      if (!isLoggedIn && !isPublicRoute) {
-        return '/login';
-      }
-
-      // 已登录且访问登录/注册页 → 跳转首页
-      if (isLoggedIn && isPublicRoute) {
-        return '/';
-      }
-
-      // 无需重定向
-      return null;
+      return authRedirect(
+        user: ref.read(currentUserProvider).valueOrNull,
+        path: state.uri.path,
+      );
     },
     refreshListenable: _GoRouterRefreshStream(ref),
     routes: [
