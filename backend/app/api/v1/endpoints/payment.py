@@ -6,7 +6,7 @@ Handles IAP verification and user benefits management
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import ServiceException
+from app.core.rate_limit import limiter
 from app.services.auth_service import AuthService
 from app.services.benefits_service import get_benefits_service
 from app.services.iap_verification_service import get_iap_verification_service
@@ -353,8 +354,48 @@ class RtdnEnvelope(BaseModel):
     subscription: Optional[str] = None
 
 
+def verify_rtdn_oidc(authorization: Optional[str]) -> bool:
+    """校验 Pub/Sub 随推送签发的 OIDC 令牌(`Authorization: Bearer <JWT>`)。
+
+    验三件事,缺一不可:
+      1. **签名**是 Google 的(`verify_oauth2_token` 拉 Google 公钥验签)
+      2. `aud` == 我们建订阅时填的 audience —— 否则**任何一个 Google 账号**签发的
+         合法 ID 令牌都能进来(签名是真的,但不是发给我们的)
+      3. `email` == 我们指定的那个服务账号 —— audience 只证明"发给我们",
+         这一条才证明"由我们授权的那个发信人发出"
+
+    两个配置项缺任何一个都返回 False:**宁可拒收也不能半验**。
+    """
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return False
+    audience = getattr(settings, "PLAY_RTDN_AUDIENCE", None)
+    sa_email = getattr(settings, "PLAY_RTDN_SERVICE_ACCOUNT_EMAIL", None)
+    if not audience or not sa_email:
+        return False
+
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token
+
+    try:
+        claims = id_token.verify_oauth2_token(
+            authorization.split(" ", 1)[1].strip(),
+            google_requests.Request(),
+            audience,
+        )
+    except Exception as e:
+        logger.warning("RTDN OIDC 校验失败: %s", e)
+        return False
+
+    if claims.get("email") != sa_email or not claims.get("email_verified"):
+        logger.warning("RTDN OIDC 签发者不符: %s", claims.get("email"))
+        return False
+    return True
+
+
 @router.post("/rtdn", status_code=204)
+@limiter.limit("120/minute")
 async def play_rtdn(
+    request: Request,
     payload: RtdnEnvelope,
     token: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -362,20 +403,43 @@ async def play_rtdn(
     """Google Play 实时开发者通知(退款/撤销)。
 
     ⚠️ **退款必须撤权益**:只标订单退款、留着 entitlement 生效 = 退了钱还能用满 7 天。
-    `revoke_for_purchase` 早就写好了,但此前**零调用方** —— 这里是它的入口。
 
-    鉴权:Pub/Sub 推送 URL 上带 `?token=<共享密钥>`(在 Cloud Console 配置推送时写死)。
-    这是 Google 官方推荐的最简方案;没配密钥则拒绝一切请求,不裸奔。
+    ## 鉴权
+
+    首选 **OIDC**:Pub/Sub 用指定服务账号给每条推送现签一个 JWT,放在
+    `Authorization: Bearer`。密钥不进 URL、每条现签、几分钟过期。
+
+    过渡期仍接受老的 `?token=<共享密钥>`,**仅当 PLAY_RTDN_TOKEN 还配着**。
+    那个方案的问题不是强度,是**位置**:URL 会原样写进 nginx/uvicorn 的 access log,
+    这把能伪造退款通知的钥匙就此明文躺在日志与日志备份里,而且永不轮换。
+    切换完成后清空该变量,这条路自动关闭(见 config.py 里的切换顺序)。
+
+    ⚠️ 限流是必需的,不是保守:本端点公开且未认证,而校验 OIDC 要向 Google 拉公钥
+    —— 没有闸的话,一串伪造 Bearer 就能把我们放大成对 googleapis 的请求源,
+    还会占满线程池。Pub/Sub 真实量远低于此;被限流的消息会重投,不会丢。
 
     幂等:revoke_for_purchase 找不到订单返 False,重复推送无副作用。
-    始终返 204 —— 返错误码会让 Pub/Sub 无限重投。
+    鉴权通过后始终返 204 —— 返错误码会让 Pub/Sub 无限重投。
     """
     import base64
     import json as _json
 
-    expected = getattr(settings, "PLAY_RTDN_TOKEN", None)
-    if not expected or token != expected:
-        raise HTTPException(status_code=403, detail={"reason": "bad_rtdn_token"})
+    from fastapi.concurrency import run_in_threadpool
+
+    # OIDC 校验是同步的、且会向 Google 发 HTTP。直接在协程里调 = 那段时间整个
+    # 事件循环停摆(googleapis 一卡,全 API 跟着卡)。丢进线程池。
+    authorized = await run_in_threadpool(
+        verify_rtdn_oidc, request.headers.get("authorization")
+    )
+    if not authorized:
+        expected = getattr(settings, "PLAY_RTDN_TOKEN", None)
+        if not expected or token != expected:
+            raise HTTPException(status_code=403, detail={"reason": "bad_rtdn_token"})
+        # 还在走老路 —— 每收一条就提醒一次,免得"迁移完了"变成一句没人核对的口号
+        logger.warning(
+            "RTDN 仍在用 URL 共享密钥(?token=)。改用 OIDC 后请清空 "
+            "PLAY_RTDN_TOKEN 并轮换旧密钥 —— 它已经明文进过 access log。"
+        )
 
     try:
         raw = payload.message.get("data") or ""
