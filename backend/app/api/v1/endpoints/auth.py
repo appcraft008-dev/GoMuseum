@@ -267,12 +267,28 @@ def request_password_reset(
     ⚠️ **邮箱不存在也返回 204。** 若返 404,这个端点就成了账号枚举器 ——
     谁都能拿一份邮箱列表来问"你们这儿有哪些用户"。
 
-    ⚠️ 但**发信真的失败要返 502**。这条路是用户此刻唯一的出口;
+    ⚠️ 但**发信真的失败要让用户看见**。这条路是他此刻唯一的出口;
     静默失败 = 他守着一封永远不来的邮件反复重试,而我们日志干净、监控全绿。
-    这不泄漏账号存在与否 —— 不存在的邮箱压根走不到发信那一步。
 
-    限流 5/hour:防的是拿这个端点给别人的收件箱轰炸。
+    ## 这两条会打架 —— 顺序是解法的一部分
+
+    "查无此邮箱 → 204" 与 "发不出去 → 5xx" 放在一起,就又成了枚举器:
+    **不存在的邮箱走不到发信那步,于是 204;存在的才可能 503。**
+    2026-09-05 在 staging 实测撞见 —— 单测全绿,因为它们只在"SMTP 已配好"
+    这一种配置下比较两者,而线上恰恰还没配。
+
+    所以**配置检查必须放在查库之前**:没配 SMTP 时对谁都是 503,与账号无关。
+
+    残留(明确接受):SMTP 配好了但那一刻发信失败(502)仍只可能发生在真实账号上。
+    这条要在攻击者恰好赶上一次投递故障时才成立,而把它也抹平就等于放弃
+    "让用户知道信没发出去" —— 后者对着急找回账号的人伤害更大。
     """
+    # ⚠️ 顺序有意义:先于任何按邮箱查库的动作。见上面 docstring。
+    if not mailer.is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"reason": "mail_not_configured"},
+        )
     try:
         account_recovery.request_password_reset(
             db,
@@ -281,6 +297,7 @@ def request_password_reset(
             language=payload.language or request.headers.get("accept-language"),
         )
     except mailer.MailNotConfigured:
+        # 兜底:走到这里说明配置在两次检查之间变了(或 send 自己判定未配置)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"reason": "mail_not_configured"},
