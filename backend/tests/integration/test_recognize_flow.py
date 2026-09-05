@@ -309,3 +309,55 @@ def test_billing_cache_hit_free(session):
     recognize_billed(session, "orsay", img, **kw)
     recognize_billed(session, "orsay", img, **kw)  # 第二次走缓存
     assert session.query(UB).one().recognition_quota == FREE - 1  # 只扣了一次
+
+
+def test_footprint_records_who_took_the_photo(session):
+    """识别事件要记下是谁拍的 —— 足迹页(/history/*)的唯一数据源。
+
+    ⚠️ `record_event` 吞掉一切异常(埋点不许打断识别),所以表不存在时它会
+    静默不写 —— 用例必须自己建表,否则"0 行"会被误读成"代码没接上"。
+    """
+    from app.models.recognition_event import RecognitionEvent
+    from app.services.recognition.service import recognize_billed
+
+    RecognitionEvent.__table__.create(bind=session.get_bind(), checkfirst=True)
+    _benefits_tables(session)
+
+    recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id="11111111-2222-3333-4444-555555555555",
+        device_id="dev-fp",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
+        ),
+    )
+
+    ev = session.query(RecognitionEvent).one()
+    assert ev.user_id == "11111111-2222-3333-4444-555555555555"
+
+
+def test_anonymous_recognition_leaves_no_footprint(session):
+    """只有 device_id 的请求是**真匿名**:不能靠 device_id 反查账号硬安一个主人。
+
+    那正是 2026-07 串号计费事故的形态(device_id 多行 .first() 撞上别人的行)。
+    """
+    from app.models.recognition_event import RecognitionEvent
+    from app.services.recognition.service import recognize_billed
+
+    RecognitionEvent.__table__.create(bind=session.get_bind(), checkfirst=True)
+    _benefits_tables(session)
+
+    recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id=None,
+        device_id="dev-anon",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
+        ),
+    )
+
+    assert session.query(RecognitionEvent).one().user_id is None

@@ -22,8 +22,12 @@ def record_event(
     top_score,
     language,
     engine,
+    user_id=None,
 ) -> None:
-    """记一次识别事件。独立小事务,失败回滚不影响主流程。"""
+    """记一次识别事件。独立小事务,失败回滚不影响主流程。
+
+    user_id 只在令牌解析成功时有值,它同时是足迹页的数据源(见 /history/*)。
+    仍然沿用"埋点失败不打断识别"的纪律 —— 足迹丢一条,好过识别 500。"""
     try:
         db.add(
             RecognitionEvent(
@@ -34,6 +38,7 @@ def record_event(
                 top_score=top_score,
                 language=language,
                 engine=engine,
+                user_id=user_id,
             )
         )
         db.commit()

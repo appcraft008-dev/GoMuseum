@@ -183,7 +183,11 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           children: [
-            const GmThumb(image: null, size: 46),
+            GmThumb(
+              image:
+                  item.thumbnail == null ? null : NetworkImage(item.thumbnail!),
+              size: 46,
+            ),
             const SizedBox(width: 13),
             Expanded(
               child: Column(
@@ -197,7 +201,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '$time · ${item.artist}',
+                    // 艺术家可能是空的（作者不详／富化没覆盖到），
+                    // 那就只显示时间，别留一个孤零零的分隔点
+                    item.artist.isEmpty ? time : '$time · ${item.artist}',
                     style: GmText.sans(size: 11.5, color: gm.sub),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -224,6 +230,21 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   void _openGuide(HistoryItem item) {
+    // `GuideArgs` 有两条路。slug+qid 走馆藏那条，能拿到完整讲解；
+    // 只给 result 走的是"刚拍完照"那条，而讲解正文并不在足迹数据里——
+    // 从足迹点进去看到一页空讲解，等于这个 tab 只是看着能点。
+    if (item.hasGuide) {
+      context.push(
+        '/guide',
+        extra: GuideArgs(
+          slug: item.museumSlug,
+          qid: item.qid,
+          imageUrl: item.thumbnail,
+        ),
+      );
+      return;
+    }
+    // 老后端不返回 slug/qid 时的兜底，保持原行为。
     context.push(
       '/guide',
       extra: GuideArgs(

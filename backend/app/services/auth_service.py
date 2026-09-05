@@ -561,10 +561,17 @@ class AuthService:
     @staticmethod
     def export_user_data(db: Session, user: User) -> dict:
         """GDPR 数据导出：返回账号关联的全部个人数据"""
+        from app.models.recognition_event import RecognitionEvent
         from app.models.user_benefits import UserBenefits
 
-        benefits = (
-            db.query(UserBenefits).filter(UserBenefits.user_id == str(user.id)).all()
+        uid = str(user.id)
+        benefits = db.query(UserBenefits).filter(UserBenefits.user_id == uid).all()
+        # 足迹:自 x1u0 起识别事件带 user_id,属于"账号关联的个人数据",必须能导出
+        footprints = (
+            db.query(RecognitionEvent)
+            .filter(RecognitionEvent.user_id == uid)
+            .order_by(RecognitionEvent.created_at.desc())
+            .all()
         )
         return {
             "user": {
@@ -586,6 +593,16 @@ class AuthService:
                 }
                 for b in benefits
             ],
+            "footprints": [
+                {
+                    "museum": f.museum_slug,
+                    "qid": f.confirmed_qid or f.top_qid,
+                    "outcome": f.outcome,
+                    "language": f.language,
+                    "created_at": f.created_at.isoformat() if f.created_at else None,
+                }
+                for f in footprints
+            ],
         }
 
     @staticmethod
@@ -602,10 +619,18 @@ class AuthService:
         这条与"换 device_id 刷额度"同源,靠 Play Integrity 才能根治,MVP 接受。
         """
         from app.models.purchase import Entitlement, Purchase
+        from app.models.recognition_event import RecognitionEvent
         from app.models.user_benefits import UserBenefits
 
         uid = str(user.id)
         tomb = f"deleted:{uid[:8]}"
+
+        # 识别事件**断链但不删**:同一行还兼着识别率 KPI 与展陈证据
+        # (coverage/display_state.py 按它判断某件是否在展),删了等于用删号
+        # 去改馆藏的在展判断。清掉 user_id 后这些行不再指向任何人。
+        db.query(RecognitionEvent).filter(RecognitionEvent.user_id == uid).update(
+            {"user_id": None}, synchronize_session=False
+        )
 
         for ent in db.query(Entitlement).filter(Entitlement.user_id == uid):
             ent.status = "revoked"
