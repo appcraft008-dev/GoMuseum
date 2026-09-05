@@ -155,3 +155,54 @@ def test_entitlements_tell_frontend_whether_purchase_is_allowed(client):
         "/api/v1/entitlements/me", headers={"Authorization": f"Bearer {new_token}"}
     ).json()["can"]
     assert can2["purchase"] is True, "转正后应可购买"
+
+
+def test_response_says_whether_this_is_a_guest(client):
+    """`is_guest` 必须出现在用户响应里 —— 客户端要靠它决定"还能不能去登录页"。
+
+    游客在服务端是一行**真的** User(有 token、能过鉴权),所以前端问"登录了吗"
+    得到的答案是"登录了"。此前响应里没有这个字段,路由守卫只好把游客当成
+    已登录用户、把他从登录页弹回首页 —— 而通票挂账号、游客不许直接买,
+    「登录后购买」是他买票的唯一入口。结果:**游客永远买不了票**
+    (2026-09-05 真机发现)。
+
+    ⛔ 不许改回用 `email is None` 反推游客:那是拿代理特征认人,真相源在
+    `User.is_guest`。
+    """
+    c, _ = client
+
+    guest = c.post("/api/v1/auth/guest", json={"device_id": "dev-guest"})
+    assert guest.status_code == 200, guest.text
+    assert guest.json()["user"]["is_guest"] is True
+
+    reg = c.post(
+        "/api/v1/auth/register",
+        json={"email": "real@test.com", "password": "Test1234!"},
+    )
+    assert reg.status_code == 201, reg.text
+    assert reg.json()["user"]["is_guest"] is False
+
+    # /me 也要一致 —— 前端拿的是它,不是注册那一次的响应
+    me = c.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {reg.json()['access_token']}"},
+    )
+    assert me.status_code == 200
+    assert me.json()["is_guest"] is False
+
+
+def test_upgraded_guest_is_no_longer_a_guest(client):
+    """就地转正之后 `is_guest` 必须翻成 false,否则守卫会一直放他回登录页。"""
+    c, _ = client
+    g = c.post("/api/v1/auth/guest", json={"device_id": "dev-up"})
+    tok = g.json()["access_token"]
+    assert g.json()["user"]["is_guest"] is True
+
+    up = c.post(
+        "/api/v1/auth/register",
+        json={"email": "upgraded@test.com", "password": "Test1234!"},
+        headers={"Authorization": f"Bearer {tok}"},
+    )
+    assert up.status_code == 201, up.text
+    assert up.json()["user"]["id"] == g.json()["user"]["id"], "必须就地转正"
+    assert up.json()["user"]["is_guest"] is False
