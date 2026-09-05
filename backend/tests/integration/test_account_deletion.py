@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.auth_token import AuthToken
 from app.models.purchase import Entitlement, Purchase
 from app.models.recognition_event import RecognitionEvent
 from app.models.user import User
@@ -36,6 +37,8 @@ def client():
             Purchase.__table__,
             Entitlement.__table__,
             RecognitionEvent.__table__,
+            # 删号要清掉一次性令牌 —— 收件箱里的重置链接不能比账号活得久
+            AuthToken.__table__,
         ],
     )
 
@@ -122,6 +125,8 @@ def client_db():
             Purchase.__table__,
             Entitlement.__table__,
             RecognitionEvent.__table__,
+            # 删号要清掉一次性令牌 —— 收件箱里的重置链接不能比账号活得久
+            AuthToken.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
