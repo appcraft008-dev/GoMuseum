@@ -14,6 +14,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base, get_db
 from app.main import app
 from app.models.purchase import Entitlement, Purchase
+from app.models.recognition_event import RecognitionEvent
 from app.models.user import User
 from app.models.user_benefits import UserBenefits
 
@@ -34,6 +35,7 @@ def client():
             UserBenefits.__table__,
             Purchase.__table__,
             Entitlement.__table__,
+            RecognitionEvent.__table__,
         ],
     )
 
@@ -119,6 +121,7 @@ def client_db():
             UserBenefits.__table__,
             Purchase.__table__,
             Entitlement.__table__,
+            RecognitionEvent.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -167,3 +170,68 @@ def test_delete_revokes_entitlement_and_anonymizes_purchase(client_db):
     p = db.query(Purchase).filter_by(store_transaction_id="txn-del").one()
     assert p.receipt_payload is None, "个人数据必须清除"
     assert p.user_id.startswith("deleted:"), "关联切断,财务记录保留"
+
+
+def test_delete_unlinks_footprints_but_keeps_the_evidence(client_db):
+    """自 x1u0 起识别事件带 user_id —— 删号必须把这层关联也断掉。
+
+    但**不能删行**:同一行还兼着识别率 KPI 与展陈证据
+    (coverage/display_state.py 按它判断某件是否在展),整行删掉等于用删号
+    这个动作去改馆藏的在展判断。清掉 user_id 后它不再指向任何人。
+    """
+    from app.services.auth_service import AuthService
+
+    client, db = client_db
+    tokens = _register(client, "footprint@test.com")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    uid = tokens["user"]["id"]
+
+    db.add(
+        RecognitionEvent(
+            museum_slug="louvre",
+            phash="p" * 16,
+            outcome="match",
+            top_qid="Q12418",
+            top_score=0.93,
+            engine="vector",
+            user_id=uid,
+        )
+    )
+    db.commit()
+
+    assert client.delete("/api/v1/auth/me", headers=headers).status_code == 204
+
+    db.expire_all()
+    rows = db.query(RecognitionEvent).all()
+    assert len(rows) == 1, "证据行不该被删掉"
+    assert rows[0].user_id is None, "与账号的关联必须断掉"
+    assert rows[0].top_qid == "Q12418", "展陈证据必须原样保留"
+    assert AuthService is not None  # 只为说明删号走的是同一条服务路径
+
+
+def test_export_includes_footprints(client_db):
+    """足迹是账号关联的个人数据,GDPR 导出必须含它(此前 export 只导账号+额度)。"""
+    client, db = client_db
+    tokens = _register(client, "export-fp@test.com")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    db.add(
+        RecognitionEvent(
+            museum_slug="orangerie",
+            phash="q" * 16,
+            outcome="match",
+            top_qid="Q3937645",
+            top_score=0.88,
+            language="fr",
+            engine="vector",
+            user_id=tokens["user"]["id"],
+        )
+    )
+    db.commit()
+
+    data = client.get("/api/v1/auth/me/export", headers=headers).json()
+    assert len(data["footprints"]) == 1
+    fp = data["footprints"][0]
+    assert fp["qid"] == "Q3937645"
+    assert fp["museum"] == "orangerie"
+    assert fp["language"] == "fr"
