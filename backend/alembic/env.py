@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.database import Base
 from app.models import recognition_result  # Import to register model
 from app.models import (  # noqa: F401  Step1 模型; noqa: F401  认证/用户模型
+    auth_token,
     content,
     museum,
     museum_object,

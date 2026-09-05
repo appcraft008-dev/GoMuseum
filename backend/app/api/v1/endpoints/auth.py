@@ -1,10 +1,14 @@
 """Authentication API endpoints"""
 
+import html as _html
+import logging
+from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -18,7 +22,12 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.schemas.user import UserResponse
+from app.services import account_recovery, mailer
 from app.services.auth_service import AuthService
+
+logger = logging.getLogger(__name__)
+# endpoints → v1 → api → app
+_TEMPLATES = Path(__file__).resolve().parents[3] / "templates"
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
@@ -33,6 +42,7 @@ _optional_bearer = HTTPBearer(auto_error=False)
 def register(
     request: Request,
     payload: RegisterRequest,
+    background: BackgroundTasks,
     credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
     db: Session = Depends(get_db),
 ):
@@ -45,7 +55,32 @@ def register(
 
     Returns access token, refresh token, and user profile
     """
-    return AuthService.register(db, payload, credentials)
+    resp = AuthService.register(db, payload, credentials)
+
+    # 顺手发一封邮箱验证信。**放后台、且吞掉一切异常** —— 发信是锦上添花,
+    # 注册是主线;SMTP 抽风绝不能让人注册不了。
+    #
+    # 为什么值得发:邮箱写错了(少个字母、填成同事的)在此刻毫无症状,
+    # 直到某天他忘了密码 —— 那时才发现唯一的找回通道从一开始就是断的。
+    user = db.query(User).filter(User.email == payload.email).one_or_none()
+    if user is not None:
+        background.add_task(
+            _send_verification_quietly,
+            db,
+            user,
+            str(request.base_url).rstrip("/"),
+            request.headers.get("accept-language"),
+        )
+    return resp
+
+
+def _send_verification_quietly(db, user, base_url, language) -> None:
+    try:
+        account_recovery.request_email_verification(
+            db, user, base_url=base_url, language=language
+        )
+    except Exception:
+        logger.exception("verification mail failed (registration unaffected)")
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -185,6 +220,175 @@ def export_my_data(
     token = credentials.credentials
     user = AuthService.get_current_user(db, token)
     return AuthService.export_user_data(db, user)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 找回密码 / 邮箱验证
+#
+# 在这之前**账号没有任何找回手段**:邮箱密码注册的人忘了密码就永久登不进去,
+# 而通票挂在账号上 —— 付了钱的人拿不回自己买的东西,只能人工改库救。
+#
+# ⭐ 重置页由**本 API 自己吐 HTML**(下面的 GET /reset),不是发在官网上:
+#   - 同源 → 不必为 gomuseum.app 开 CORS
+#   - 不必发网站、不必等 Play 审核 → **已经装着 v27 的用户今天就能用**
+#   （server-driven 优先:能改后端解决的,不靠发新 App 版本）
+# ══════════════════════════════════════════════════════════════════════════
+
+
+def _page(name: str, **subs: str) -> HTMLResponse:
+    """渲染一个模板。占位符全部经 HTML 转义 —— 这几个值里有用户可控的令牌。"""
+    text = (_TEMPLATES / name).read_text(encoding="utf-8")
+    for key, value in subs.items():
+        text = text.replace(f"__{key}__", _html.escape(value, quote=True))
+    return HTMLResponse(text)
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    # 邮件正文的语言(en/fr/zh,其余回落 en)。**加法字段**,老 App 不传即默认。
+    language: Optional[str] = None
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    # 8 位下限与注册一致;上限防 bcrypt 的 72 字节截断问题被人拿来做怪
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+@router.post("/password-reset/request", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/hour")
+def request_password_reset(
+    request: Request,
+    payload: PasswordResetRequest,
+    db: Session = Depends(get_db),
+):
+    """申请重置密码,把带一次性链接的邮件发到该邮箱。
+
+    ⚠️ **邮箱不存在也返回 204。** 若返 404,这个端点就成了账号枚举器 ——
+    谁都能拿一份邮箱列表来问"你们这儿有哪些用户"。
+
+    ⚠️ 但**发信真的失败要返 502**。这条路是用户此刻唯一的出口;
+    静默失败 = 他守着一封永远不来的邮件反复重试,而我们日志干净、监控全绿。
+    这不泄漏账号存在与否 —— 不存在的邮箱压根走不到发信那一步。
+
+    限流 5/hour:防的是拿这个端点给别人的收件箱轰炸。
+    """
+    try:
+        account_recovery.request_password_reset(
+            db,
+            payload.email,
+            base_url=str(request.base_url).rstrip("/"),
+            language=payload.language or request.headers.get("accept-language"),
+        )
+    except mailer.MailNotConfigured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"reason": "mail_not_configured"},
+        )
+    except mailer.MailSendFailed:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"reason": "mail_send_failed"},
+        )
+    return None
+
+
+@router.get("/reset", response_class=HTMLResponse, include_in_schema=False)
+def reset_password_page(token: str = "", db: Session = Depends(get_db)):
+    """邮件里那条链接落在这里 —— 一张设置新密码的网页。
+
+    这里**只看不消费**令牌:真正核销在下面的 confirm。
+    先消费的话,用户打开页面却没提交(手滑关掉、想换个密码再想想),
+    链接就已经废了,而他完全不知道为什么。
+    """
+    if (
+        not token
+        or account_recovery.peek(db, token, account_recovery.PURPOSE_PASSWORD_RESET)
+        is None
+    ):
+        return _page(
+            "notice.html",
+            TITLE="链接已失效",
+            BODY=(
+                "这个重置链接已经过期或用过了。\n"
+                "请回 App 重新申请一次。\n\n"
+                "This reset link has expired or was already used.\n"
+                "Please request a new one from the app."
+            ),
+        )
+    return _page("reset_password.html", TOKEN=token)
+
+
+@router.post("/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/hour")
+def confirm_password_reset(
+    request: Request,
+    payload: PasswordResetConfirm,
+    db: Session = Depends(get_db),
+):
+    """核销令牌并设置新密码。令牌无效/过期/已用过 → 400。
+
+    ⚠️ **已知缺口(有意不做,不是漏了)**:重置后**不会踢掉已有会话**。
+    要做需要给用户加一个令牌版本号并在校验热路径上检查它,而已经发出去的
+    令牌没有该字段 —— 一上线就是全体用户被登出。
+    这条债的触发场景是"忘了密码",不是"号被盗";会话失效属于后者,单独做。
+    """
+    if not account_recovery.confirm_password_reset(
+        db, payload.token, payload.new_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"reason": "invalid_or_expired_token"},
+        )
+    return None
+
+
+@router.post("/verify-email/request", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/hour")
+def request_email_verification(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """重发邮箱验证信(需登录)。已验证/无邮箱/未配置发信一律 204,不报错。"""
+    user = AuthService.get_current_user(db, credentials.credentials)
+    try:
+        account_recovery.request_email_verification(
+            db,
+            user,
+            base_url=str(request.base_url).rstrip("/"),
+            language=request.headers.get("accept-language"),
+        )
+    except mailer.MailNotConfigured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"reason": "mail_not_configured"},
+        )
+    return None
+
+
+@router.get("/verify-email", response_class=HTMLResponse, include_in_schema=False)
+def confirm_email_verification(token: str = "", db: Session = Depends(get_db)):
+    """验证信里那条链接落在这里。幂等:重复点开只会看到"链接已失效"。"""
+    if token and account_recovery.confirm_email_verification(db, token):
+        return _page(
+            "notice.html",
+            TITLE="邮箱已确认",
+            BODY=(
+                "可以关掉这个页面了。\n\n"
+                "Your email address is confirmed.\nYou can close this page."
+            ),
+        )
+    return _page(
+        "notice.html",
+        TITLE="链接已失效",
+        BODY=(
+            "这个确认链接已经过期或用过了。\n"
+            "可以在 App 的设置里重新发送。\n\n"
+            "This link has expired or was already used.\n"
+            "You can send a new one from the app's settings."
+        ),
+    )
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)

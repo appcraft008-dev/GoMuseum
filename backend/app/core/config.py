@@ -109,6 +109,27 @@ class Settings(BaseSettings):
     R2_BUCKET: str = "gomuseum-assets"
     R2_PUBLIC_BASE_URL: str = ""
 
+    # ── 发信(找回密码 / 邮箱验证)────────────────────────────────────────
+    # 用 SMTP 而不是某一家的 HTTP API:Resend / SendGrid / Mailgun / Postmark
+    # 全都提供 SMTP,换服务商只改这几个变量 —— 零代码改动、零新依赖(stdlib smtplib)。
+    #
+    # ⚠️ **不配置就没有找回密码**(端点返 503),绝不"假装发出去了" ——
+    # 那会让用户守着一封永远不来的邮件,而我们这侧一切正常。
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_STARTTLS: bool = True  # 587 用 STARTTLS;465 请设 False(隐式 TLS)
+    MAIL_FROM: str = "GoMuseum <noreply@gomuseum.app>"
+
+    # 邮件里那条链接指向哪。**必须外网可达**;重置页由 API 自己吐(同源、免 CORS、
+    # 免发网站,已装的老 App 也能用)。留空则回退到请求自身的 base_url。
+    PUBLIC_API_BASE_URL: Optional[str] = None
+
+    # 链接有效期。短到够用就行 —— 这封信是账号的**万能钥匙**。
+    PASSWORD_RESET_TTL_MINUTES: int = 30
+    EMAIL_VERIFY_TTL_MINUTES: int = 1440  # 24h,验证邮箱不急
+
     # AI Performance
     AI_STRATEGY_TIMEOUT: int = 30  # 增加到30秒，给AI足够时间响应
     AI_TOTAL_TIMEOUT: int = 60  # 总超时60秒

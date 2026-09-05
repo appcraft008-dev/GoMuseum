@@ -618,12 +618,19 @@ class AuthService:
         ⚠️ 已知取舍:删号重注册会拿到新的免费额度(新账号=新额度)。
         这条与"换 device_id 刷额度"同源,靠 Play Integrity 才能根治,MVP 接受。
         """
+        from app.models.auth_token import AuthToken
         from app.models.purchase import Entitlement, Purchase
         from app.models.recognition_event import RecognitionEvent
         from app.models.user_benefits import UserBenefits
 
         uid = str(user.id)
         tomb = f"deleted:{uid[:8]}"
+
+        # 一次性令牌**真删**。留着毫无用处却有害:它们是账号凭证,
+        # 而对应的账号已经不存在了。
+        db.query(AuthToken).filter(AuthToken.user_id == uid).delete(
+            synchronize_session=False
+        )
 
         # 识别事件**断链但不删**:同一行还兼着识别率 KPI 与展陈证据
         # (coverage/display_state.py 按它判断某件是否在展),删了等于用删号
