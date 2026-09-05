@@ -73,8 +73,24 @@ class Settings(BaseSettings):
     GOOGLE_PLAY_SERVICE_ACCOUNT: Optional[str] = None
     GOOGLE_PLAY_PACKAGE_NAME: str = "com.gomuseum.app"
 
-    # Pub/Sub 推送 RTDN 时 URL 上带的共享密钥(?token=...)。
-    # 不配置则 /payment/rtdn 拒绝一切请求,不裸奔。
+    # ── Play RTDN(退款通知)入口鉴权 ─────────────────────────────────────
+    # 首选 OIDC:Pub/Sub 用指定服务账号签一个 JWT 放进 `Authorization: Bearer`,
+    # 我们验签 + 核对 audience 与签发者邮箱。
+    # **这是唯一能让密钥离开 URL 的办法** —— Pub/Sub 推送发不了自定义 header,
+    # 能带的只有它自己签的 OIDC 令牌。
+    #
+    # ⚠️ 为什么必须离开 query string:URL 会原样写进 nginx / uvicorn 的 access log,
+    # 于是这把"能伪造退款通知的钥匙"以明文躺在日志、日志备份、以及任何看得到
+    # 日志的人眼前,而且永不轮换。OIDC 令牌则是**每条消息现签、几分钟就过期**。
+    PLAY_RTDN_AUDIENCE: Optional[str] = None  # 建推送订阅时填的 audience
+    PLAY_RTDN_SERVICE_ACCOUNT_EMAIL: Optional[str] = None  # 该订阅的签发服务账号
+
+    # 过渡期的老方案:URL 上的共享密钥(?token=...)。两者都没配则拒绝一切请求。
+    #
+    # ⚠️ 切换顺序**不能反**:先部署本次代码 → 再把 Pub/Sub 订阅改成 OIDC →
+    # 确认真的收得到通知 → 最后才清空这个变量并轮换旧密钥。
+    # 反过来(先清空再改订阅)= 这期间的退款通知全被 403 拒收,Pub/Sub 重试若干天
+    # 后丢弃 —— 退款不撤权益,又变回持续漏钱。
     PLAY_RTDN_TOKEN: Optional[str] = None
     APPLE_CLIENT_ID: Optional[str] = None
     APPLE_TEAM_ID: Optional[str] = None

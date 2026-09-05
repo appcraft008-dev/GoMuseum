@@ -140,6 +140,173 @@ def test_rtdn_ignores_unknown_notifications(client, monkeypatch):
     assert c.post("/api/v1/payment/rtdn?token=s3cret", json={}).status_code == 204
 
 
+# ── RTDN 鉴权改走 OIDC(密钥不再进 URL)─────────────────────────────────
+#
+# 老方案把共享密钥放在 `?token=`,而 URL 会原样写进 nginx/uvicorn 的 access log
+# —— 这把"能伪造退款通知的钥匙"就此明文躺在日志与日志备份里,且永不轮换。
+# Pub/Sub 推送发不了自定义 header,唯一能让密钥离开 URL 的办法是验它签的 OIDC 令牌。
+
+_AUD = "https://api.gomuseum.app/api/v1/payment/rtdn"
+_SA = "play-rtdn@gomuseum-499210.iam.gserviceaccount.com"
+
+
+@pytest.fixture()
+def oidc(monkeypatch):
+    """配好 OIDC 并**关掉**老的共享密钥 —— 这样绿了才说明是 OIDC 自己在放行。"""
+    monkeypatch.setattr(settings, "PLAY_RTDN_AUDIENCE", _AUD)
+    monkeypatch.setattr(settings, "PLAY_RTDN_SERVICE_ACCOUNT_EMAIL", _SA)
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", None)
+
+    def _claims(claims):
+        import google.oauth2.id_token as gid
+
+        monkeypatch.setattr(gid, "verify_oauth2_token", lambda *a, **k: claims)
+
+    return _claims
+
+
+def _good_claims(**over):
+    return {"email": _SA, "email_verified": True, "aud": _AUD, **over}
+
+
+def test_rtdn_oidc_accepts_and_revokes(client, oidc):
+    """密钥完全不出现在 URL 里,照样能撤权益。"""
+    c, db = client
+    oidc(_good_claims())
+    es.grant_from_purchase(
+        db,
+        user_id="u-oidc",
+        platform="android",
+        product_id=es.PARIS_PASS_7D,
+        store_transaction_id="GPA.OIDC",
+    )
+    es.activate(db, "u-oidc")
+
+    r = c.post(
+        "/api/v1/payment/rtdn",
+        json=_rtdn("GPA.OIDC"),
+        headers={"Authorization": "Bearer signed.by.google"},
+    )
+    assert r.status_code == 204, r.text
+    assert es.resolve_state(db, "u-oidc")[0] == es.NOT_PURCHASED
+
+
+def test_rtdn_oidc_rejects_bad_signature(client, oidc, monkeypatch):
+    c, _ = client
+    import google.oauth2.id_token as gid
+
+    def _boom(*a, **k):
+        raise ValueError("Token signature invalid")
+
+    monkeypatch.setattr(settings, "PLAY_RTDN_AUDIENCE", _AUD)
+    monkeypatch.setattr(settings, "PLAY_RTDN_SERVICE_ACCOUNT_EMAIL", _SA)
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", None)
+    monkeypatch.setattr(gid, "verify_oauth2_token", _boom)
+
+    r = c.post(
+        "/api/v1/payment/rtdn",
+        json=_rtdn("X"),
+        headers={"Authorization": "Bearer forged"},
+    )
+    assert r.status_code == 403
+
+
+def test_rtdn_oidc_rejects_other_signers(client, oidc):
+    """⭐ 验签+audience **还不够**。
+
+    audience 只证明"这条是发给我们的",不证明"是我们授权的那个发信人发的"。
+    少了签发者核对,任何能建 Pub/Sub 订阅指向我们的人都能伪造退款通知 ——
+    而伪造退款 = 免费把别人的通票撤掉。
+    """
+    c, _ = client
+    oidc(_good_claims(email="attacker@evil.example.com"))
+
+    r = c.post(
+        "/api/v1/payment/rtdn",
+        json=_rtdn("X"),
+        headers={"Authorization": "Bearer signed.but.wrong.sender"},
+    )
+    assert r.status_code == 403
+
+
+def test_rtdn_oidc_rejects_unverified_email(client, oidc):
+    c, _ = client
+    oidc(_good_claims(email_verified=False))
+    r = c.post(
+        "/api/v1/payment/rtdn",
+        json=_rtdn("X"),
+        headers={"Authorization": "Bearer x"},
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "aud,sa",
+    [
+        (_AUD, None),  # 配了 audience,忘了签发者
+        (None, _SA),  # 配了签发者,忘了 audience ← 只有那道闸拦得住
+    ],
+    ids=["missing_sa_email", "missing_audience"],
+)
+def test_rtdn_half_configured_oidc_rejects(client, monkeypatch, aud, sa):
+    """**半验必须当没验。** 两个配置项缺任一都拒收。
+
+    第二组才是这条测试的要害:少了 audience,`verify_oauth2_token(aud=None)`
+    **不再校验这条令牌是不是发给我们的**,而下游的签发者核对照样通过 ——
+    于是同一个服务账号签给**任何别的服务**的令牌都能被拿来重放,伪造退款。
+    (第一组会被签发者核对顺手拦下,单它一条证明不了这道闸有用 ——
+     第一版就只写了它,把闸拿掉测试照样绿。)
+    """
+    c, _ = client
+    import google.oauth2.id_token as gid
+
+    monkeypatch.setattr(settings, "PLAY_RTDN_AUDIENCE", aud)
+    monkeypatch.setattr(settings, "PLAY_RTDN_SERVICE_ACCOUNT_EMAIL", sa)
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", None)
+    monkeypatch.setattr(gid, "verify_oauth2_token", lambda *a, **k: _good_claims())
+
+    r = c.post(
+        "/api/v1/payment/rtdn",
+        json=_rtdn("X"),
+        headers={"Authorization": "Bearer x"},
+    )
+    assert r.status_code == 403
+
+
+def test_rtdn_nothing_configured_rejects_everything(client, monkeypatch):
+    """两套都没配 = 公网上一个谁都能撤别人票的端点。必须拒绝一切。"""
+    c, _ = client
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", None)
+    monkeypatch.setattr(settings, "PLAY_RTDN_AUDIENCE", None)
+    monkeypatch.setattr(settings, "PLAY_RTDN_SERVICE_ACCOUNT_EMAIL", None)
+
+    assert c.post("/api/v1/payment/rtdn", json=_rtdn("X")).status_code == 403
+    assert (
+        c.post(
+            "/api/v1/payment/rtdn",
+            json=_rtdn("X"),
+            headers={"Authorization": "Bearer whatever"},
+        ).status_code
+        == 403
+    )
+
+
+def test_rtdn_legacy_token_still_works_during_migration(client, monkeypatch):
+    """⚠️ 过渡期必须两条路都通。
+
+    切换顺序是「先部署代码 → 再改订阅 → 确认收得到 → 最后清空密钥」。
+    若本次改动直接切断老路,这中间的退款通知会全被 403 拒收、
+    Pub/Sub 重试若干天后丢弃 —— 又变回退款不撤权益的持续漏钱。
+    """
+    c, _ = client
+    monkeypatch.setattr(settings, "PLAY_RTDN_TOKEN", "s3cret")
+    monkeypatch.setattr(settings, "PLAY_RTDN_AUDIENCE", _AUD)
+    monkeypatch.setattr(settings, "PLAY_RTDN_SERVICE_ACCOUNT_EMAIL", _SA)
+
+    r = c.post("/api/v1/payment/rtdn?token=s3cret", json=_rtdn("nope"))
+    assert r.status_code == 204
+
+
 def test_log_event_never_rolls_back_business_data(client):
     """⭐ 埋点失败绝不能回滚调用方的业务数据。
 
