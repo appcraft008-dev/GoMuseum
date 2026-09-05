@@ -18,6 +18,7 @@
 /// 撕开只在后端确认成功后原地发生(见 [GmTicket] 的注释)。
 library;
 
+import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -214,7 +215,7 @@ class PaywallSheetContent extends ConsumerWidget {
             if (canBuy) {
               onBuy?.call();
             } else {
-              context.push('/login');
+              context.push(kLoginToUpgrade);
             }
           },
         ),

@@ -21,24 +21,53 @@ User _user({required bool isGuest}) => User(
     );
 
 void main() {
-  group('游客必须能到达登录页', () {
-    test('游客访问 /login → 放行（这是他转正、进而买票的唯一入口）', () {
-      expect(authRedirect(user: _user(isGuest: true), path: '/login'), isNull);
+  group('主动来换身份的人（?upgrade=1）必须能停在登录页', () {
+    test('游客带 upgrade 访问 /login → 放行（转正、进而买票的唯一入口）', () {
+      expect(
+        authRedirect(
+            user: _user(isGuest: true), path: '/login', upgrading: true),
+        isNull,
+      );
     });
 
-    test('游客访问 /register → 放行', () {
+    test('游客带 upgrade 访问 /register → 放行', () {
       expect(
-          authRedirect(user: _user(isGuest: true), path: '/register'), isNull);
+        authRedirect(
+            user: _user(isGuest: true), path: '/register', upgrading: true),
+        isNull,
+      );
+    });
+
+    test('正式账号带 upgrade 也放行 —— 收据冲突时要换个账号登录', () {
+      expect(
+        authRedirect(
+            user: _user(isGuest: false), path: '/login', upgrading: true),
+        isNull,
+      );
     });
   });
 
-  group('正式账号不该再被送去登录页', () {
-    test('已登录用户访问 /login → 回首页', () {
-      expect(authRedirect(user: _user(isGuest: false), path: '/login'), '/');
+  group('🔴 冷启动不能把人卡在登录页（2026-09-05 回归）', () {
+    // 时序：AuthNotifier 初始 loading → 守卫第一次跑时 user 还是 null →
+    // 弹到 /login；等登录态加载完，守卫重跑。这第二次**必须**把人送回首页。
+    // 曾经按「是不是游客」判 → 游客不再被送回去 → 每次开 App 都卡在登录页，
+    // 而登录页又刚好藏了游客按钮，等于锁在门外。
+    test('游客落在 /login 但没有 upgrade 意图 → 必须送回首页', () {
+      expect(authRedirect(user: _user(isGuest: true), path: '/login'), '/');
     });
 
-    test('已登录用户访问 /register → 回首页', () {
+    test('游客落在 /register 但没有 upgrade 意图 → 必须送回首页', () {
+      expect(authRedirect(user: _user(isGuest: true), path: '/register'), '/');
+    });
+
+    test('正式账号同理', () {
+      expect(authRedirect(user: _user(isGuest: false), path: '/login'), '/');
       expect(authRedirect(user: _user(isGuest: false), path: '/register'), '/');
+    });
+
+    test('未登录的人带不带 upgrade 都能停在登录页（否则自己重定向自己）', () {
+      expect(authRedirect(user: null, path: '/login'), isNull);
+      expect(authRedirect(user: null, path: '/login', upgrading: true), isNull);
     });
   });
 
