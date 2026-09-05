@@ -1,4 +1,5 @@
 /// 登录页 — 暖纸手册风格（设计稿外页面，按定稿风格补齐）
+import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -14,7 +15,19 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.upgrading = false});
+
+  /// 这次是不是**主动**来换身份的（游客转正 / 收据冲突换账号）。
+  ///
+  /// 由路由从 `?upgrade=1` 解析后传进来 —— 页面不自己去读
+  /// `GoRouterState.of(context)`：那会让 LoginPage 硬依赖 GoRouter 祖先，
+  /// 任何不在路由里渲染它的地方（包括几个既有测试）都会当场抛
+  /// `The parent route must be a page route`。解析 URL 是路由的活。
+  ///
+  /// ⚠️ 判据是**这次导航的意图**，不是当前用户的身份：守卫在冷启动时也会把人
+  /// 弹到这一页（登录态还没加载完），那次到达不是用户的意图。按身份判会让每个
+  /// 冷启动的游客都看不到游客按钮 —— 而他本来就该被直接送回首页。
+  final bool upgrading;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -39,10 +52,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    // 读不到登录态时按「不是游客」处理：宁可多显示一个入口，
-    // 也不要让真·未登录的用户面对一个没有游客选项的登录页。
-    final isGuest =
-        ref.watch(currentUserProvider).valueOrNull?.isGuest ?? false;
+    final upgrading = widget.upgrading;
     return Scaffold(
       backgroundColor: gm.bg,
       body: Center(
@@ -119,24 +129,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                 const SizedBox(height: 14),
                 GestureDetector(
-                  onTap: () => context.push('/register'),
+                  // 意图要跟着走：从「转正登录页」点进注册，如果不带 upgrade，
+                  // 守卫会把已登录的游客从注册页弹回首页 —— 转正这条路又断了。
+                  onTap: () => context.push(
+                      upgrading ? '/register?$kUpgradeParam=1' : '/register'),
                   child: Text(
                     l10n.authNoAccount,
                     textAlign: TextAlign.center,
                     style: GmText.sans(size: 12.5, color: gm.accent),
                   ),
                 ),
-                // 游客入口：**已经是游客的人不该再看到它**。
+                // 游客入口：**主动来换身份的人不该再看到它**。
                 //
-                // 游客到得了登录页只有一种情形——他点了「登录后购买」
-                // （通票挂账号，游客不许直接买）或收据冲突的「换个账号登录」。
-                // 这时再给他「以游客身份继续」，点了等于原地踏步：还是同一个
-                // 游客账号、还是买不了票，而他刚刚做的选择正是要离开这个状态。
+                // 他点的是「登录后购买」（通票挂账号，游客不许直接买）或收据冲突的
+                // 「换个账号登录」——再给他「以游客身份继续」，点了等于原地踏步：
+                // 还是同一个游客账号、还是买不了票，而他刚刚做的选择正是要离开
+                // 这个状态。
                 //
-                // 判据用「当前是不是游客」而不是「从哪个入口来的」：后者要给三个
-                // 调用点各传一个参数，而且会漏掉将来新增的入口；前者在任何入口下
-                // 都成立。未登录（user == null）时按钮照常留着——那才是它的用武之地。
-                if (!isGuest) ...[
+                // 判据是**这次导航的意图**而非用户身份，理由见 [LoginPage.upgrading]。
+                if (!upgrading) ...[
                   const SizedBox(height: 24),
                   _divider(l10n.authOr),
                   const SizedBox(height: 18),

@@ -18,6 +18,16 @@ import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// 「我是主动来换身份的」标记。带上它去 `/login` 或 `/register`，
+/// 守卫才不会把已登录的人（包括游客）弹回首页。
+///
+/// 用路由参数而不是用户身份来表达意图：冷启动时守卫会先把人弹到登录页
+/// （登录态还在加载），那次到达**不是**用户的意图；身份判据分不出这两者。
+const kUpgradeParam = 'upgrade';
+
+/// 带转正意图的登录页地址。三个购买链路入口都用它。
+const kLoginToUpgrade = '/login?$kUpgradeParam=1';
+
 /// 认证守卫的判断本身（纯函数，与 go_router / BuildContext 无关）。
 ///
 /// 抽出来是为了能真测到它：整个 GoRouter 起来要拉起所有页面和它们的
@@ -25,7 +35,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// 具体的分支。见 `test/core/router/auth_guard_test.dart`。
 ///
 /// 返回 null 表示不重定向。
-String? authRedirect({required User? user, required String path}) {
+String? authRedirect({
+  required User? user,
+  required String path,
+  bool upgrading = false,
+}) {
   final isLoggedIn = user != null;
   final isPublicRoute = path == '/login' || path == '/register';
 
@@ -34,15 +48,22 @@ String? authRedirect({required User? user, required String path}) {
     return '/login';
   }
 
-  // 已登录且访问登录/注册页 → 跳转首页
+  // 已登录还停在登录/注册页 → 回首页。
   //
-  // ⚠️ **游客不算**。游客在服务端是一行真的 User，`isLoggedIn` 对他为真；
-  // 但他点「登录后购买」正是要去转正 —— 把他弹回首页，游客就**永远买不了票**
-  // （通票挂账号，所以游客本来就不许直接买，按钮才写「登录后购买」）。
-  // 而且这条重定向发生在 `push('/login')` 期间，被重定向到 shell 路由 `/`
-  // 会渲染出一屏只剩底栏的黑屏，用户连"被弹回来了"都看不出来。
-  // 2026-09-05 真机发现，权益页与讲解页付费墙两个入口都中。
-  if (isLoggedIn && !user.isGuest && isPublicRoute) {
+  // **除非他是主动来换身份的**（[upgrading]，即 `?upgrade=1`）：
+  // 游客点「登录后购买」正是要去转正 —— 把他弹回首页，游客就**永远买不了票**
+  // （通票挂账号，所以游客不许直接买，按钮才写「登录后购买」）。
+  // 而这条重定向发生在 `push('/login')` 期间，被重定向到 shell 路由 `/`
+  // 会渲染成一屏只剩底栏的黑屏，用户连"被弹回来了"都看不出来。
+  //
+  // ⚠️ **判据必须是「这次导航想干什么」，不能是「这个用户是不是游客」。**
+  // 曾经按身份判（游客一律放行），结果冷启动就废了：`AuthNotifier` 初始是
+  // loading，守卫第一次跑时 user 还是 null → 弹到 /login；等登录态加载完，
+  // 按身份判就不再把游客送回首页 —— 游客**每次开 App 都卡在登录页**，
+  // 而登录页又刚好把游客按钮藏了，等于锁在门外。
+  // 冷启动那次弹过来根本不是用户的意图，身份判据分不出这两种到达方式。
+  // 2026-09-05 真机发现。
+  if (isLoggedIn && isPublicRoute && !upgrading) {
     return '/';
   }
 
@@ -66,6 +87,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       return authRedirect(
         user: ref.read(currentUserProvider).valueOrNull,
         path: state.uri.path,
+        // `?upgrade=1` = 用户**主动**来换身份（游客转正、或收据冲突时换账号）。
+        // 没有它就说明这次是守卫自己把人弹过来的，那就该弹回去。
+        upgrading: state.uri.queryParameters[kUpgradeParam] == '1',
       );
     },
     refreshListenable: _GoRouterRefreshStream(ref),
@@ -74,7 +98,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginPage(),
+        // 解析 URL 是路由的活，页面只收一个布尔值（见 LoginPage.upgrading）
+        builder: (context, state) => LoginPage(
+          upgrading: state.uri.queryParameters[kUpgradeParam] == '1',
+        ),
       ),
 
       // 注册页（全屏）

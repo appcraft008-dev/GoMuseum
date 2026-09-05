@@ -13,6 +13,7 @@
 /// 重做顺带补齐十语 —— App 支持十种语言,这一页却只有中文。
 library;
 
+import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -599,7 +600,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           label: l10n.edgeSwitchAccount,
           onTap: () {
             setState(() => _conflict = false);
-            context.push('/login');
+            context.push(kLoginToUpgrade);
           },
         ),
         const SizedBox(height: 3),
@@ -655,7 +656,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   Widget _buyCta(AppLocalizations l10n, Entitlements ent) => GmTicketButton(
         label: ent.canPurchase ? l10n.paywallBuy : l10n.paywallLoginToBuy,
         busy: _isPurchasing,
-        onTap: ent.canPurchase ? _buy : () => context.push('/login'),
+        onTap: ent.canPurchase ? _buy : () => context.push(kLoginToUpgrade),
       );
 
   List<Widget> _features(
