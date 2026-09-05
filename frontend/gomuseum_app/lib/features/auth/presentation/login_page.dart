@@ -39,6 +39,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+    // 读不到登录态时按「不是游客」处理：宁可多显示一个入口，
+    // 也不要让真·未登录的用户面对一个没有游客选项的登录页。
+    final isGuest =
+        ref.watch(currentUserProvider).valueOrNull?.isGuest ?? false;
     return Scaffold(
       backgroundColor: gm.bg,
       body: Center(
@@ -122,11 +126,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     style: GmText.sans(size: 12.5, color: gm.accent),
                   ),
                 ),
-                const SizedBox(height: 24),
-                _divider(l10n.authOr),
-                const SizedBox(height: 18),
-                _socialButton(gm, l10n.authGuestLogin, _handleGuestLogin,
-                    emphasized: true),
+                // 游客入口：**已经是游客的人不该再看到它**。
+                //
+                // 游客到得了登录页只有一种情形——他点了「登录后购买」
+                // （通票挂账号，游客不许直接买）或收据冲突的「换个账号登录」。
+                // 这时再给他「以游客身份继续」，点了等于原地踏步：还是同一个
+                // 游客账号、还是买不了票，而他刚刚做的选择正是要离开这个状态。
+                //
+                // 判据用「当前是不是游客」而不是「从哪个入口来的」：后者要给三个
+                // 调用点各传一个参数，而且会漏掉将来新增的入口；前者在任何入口下
+                // 都成立。未登录（user == null）时按钮照常留着——那才是它的用武之地。
+                if (!isGuest) ...[
+                  const SizedBox(height: 24),
+                  _divider(l10n.authOr),
+                  const SizedBox(height: 18),
+                  _socialButton(gm, l10n.authGuestLogin, _handleGuestLogin,
+                      emphasized: true),
+                ],
               ],
             ),
           ),
