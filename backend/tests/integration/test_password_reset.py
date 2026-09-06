@@ -181,6 +181,41 @@ def test_unknown_email_is_indistinguishable_from_a_real_one(client, outbox):
     assert len(outbox) == 1, "给不存在的邮箱也发了信"
 
 
+def test_no_enumeration_even_when_mail_is_unconfigured(client, monkeypatch):
+    """⭐ **枚举与"让失败可见"会打架,而第一版输了。**
+
+    上面那条只在"SMTP 已配好"这一种配置下比较两者,于是全绿;
+    而 staging/prod 上线之初恰恰**还没配 SMTP**,真实表现是:
+
+        不存在的邮箱          → 204(压根走不到发信那步)
+        真实存在的邮箱        → 503 mail_not_configured
+
+    响应因账号是否存在而不同 = 账号枚举器,正是上面那条声称堵住的洞。
+    2026-09-05 在 staging 实跑时撞见 —— 单测一条都没红。
+
+    解法是**顺序**:配置检查放在查库之前,没配时对谁都是 503。
+    """
+    c, _ = client
+    # 先在"配好"的状态下注册一个真实账号
+    monkeypatch.setattr(mailer, "is_configured", lambda: True)
+    monkeypatch.setattr(mailer, "send", lambda *a, **k: None)
+    _register(c, email="real@test.com")
+
+    # 再把发信通道拿掉 —— 这就是上线之初的真实状态
+    monkeypatch.setattr(mailer, "is_configured", lambda: False)
+
+    hit = c.post("/api/v1/auth/password-reset/request", json={"email": "real@test.com"})
+    miss = c.post(
+        "/api/v1/auth/password-reset/request", json={"email": "ghost@test.com"}
+    )
+    assert hit.status_code == miss.status_code, (
+        f"注册过的返 {hit.status_code}、没注册的返 {miss.status_code} "
+        "—— 这个差别就是账号枚举器"
+    )
+    assert hit.text == miss.text
+    assert hit.status_code == 503, "没配发信仍必须明确失败,不能假装发出去了"
+
+
 def test_oauth_only_account_gets_no_reset_mail(client, outbox):
     """⭐ 纯 Google 账号没有密码。
 
