@@ -463,6 +463,27 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authRegisterButton => 'S\'inscrire';
 
   @override
+  String get authForgotPassword => 'Mot de passe oublié ?';
+
+  @override
+  String get authResetTitle => 'Réinitialiser le mot de passe';
+
+  @override
+  String get authResetPrompt =>
+      'Saisissez l\'adresse e-mail utilisée à l\'inscription. Nous enverrons un lien pour définir un nouveau mot de passe.';
+
+  @override
+  String get authResetSend => 'Envoyer le lien';
+
+  @override
+  String get authResetSent =>
+      'Si cette adresse est enregistrée, le lien est en route. Pensez à vérifier vos spams.';
+
+  @override
+  String get authResetFailed =>
+      'L\'e-mail n\'a pas pu être envoyé. Réessayez dans un instant.';
+
+  @override
   String get authNoAccount => 'Pas de compte ? Inscrivez-vous';
 
   @override

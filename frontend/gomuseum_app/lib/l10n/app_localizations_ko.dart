@@ -455,6 +455,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authRegisterButton => '가입';
 
   @override
+  String get authForgotPassword => '비밀번호를 잊으셨나요?';
+
+  @override
+  String get authResetTitle => '비밀번호 재설정';
+
+  @override
+  String get authResetPrompt =>
+      '가입할 때 사용한 이메일을 입력하세요. 새 비밀번호를 설정할 수 있는 링크를 보내드립니다.';
+
+  @override
+  String get authResetSend => '링크 보내기';
+
+  @override
+  String get authResetSent => '해당 이메일이 등록되어 있다면 링크가 발송되었습니다. 스팸함도 확인해 보세요.';
+
+  @override
+  String get authResetFailed => '이메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.';
+
+  @override
   String get authNoAccount => '계정이 없나요? 가입';
 
   @override

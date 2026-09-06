@@ -453,6 +453,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authRegisterButton => '注 册';
 
   @override
+  String get authForgotPassword => '忘记密码？';
+
+  @override
+  String get authResetTitle => '重设密码';
+
+  @override
+  String get authResetPrompt => '输入注册时用的邮箱，我们会发一条设置新密码的链接过去。';
+
+  @override
+  String get authResetSend => '发送链接';
+
+  @override
+  String get authResetSent => '如果这个邮箱注册过，链接已经在路上了。记得看一下垃圾邮件。';
+
+  @override
+  String get authResetFailed => '邮件没能发出去，请稍后再试。';
+
+  @override
   String get authNoAccount => '还没有账号？注册';
 
   @override
@@ -1400,6 +1418,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authRegisterButton => '注 冊';
+
+  @override
+  String get authForgotPassword => '忘記密碼？';
+
+  @override
+  String get authResetTitle => '重設密碼';
+
+  @override
+  String get authResetPrompt => '輸入註冊時用的信箱，我們會寄一條設定新密碼的連結過去。';
+
+  @override
+  String get authResetSend => '寄送連結';
+
+  @override
+  String get authResetSent => '如果這個信箱註冊過，連結已經在路上了。記得看一下垃圾郵件。';
+
+  @override
+  String get authResetFailed => '郵件沒能寄出，請稍後再試。';
 
   @override
   String get authNoAccount => '還沒有賬號？註冊';
