@@ -5,9 +5,17 @@
 # 丢一条 = 用户退了钱通票照用满 7 天,而且**没有任何地方会报错**。
 # 推送做及时,这个脚本做兜底。详见 backend/scripts/reconcile_refunds.py。
 #
-# 安装(在 VPS 上,与 backup.sh 同一个 crontab):
-#   crontab -e
-#   17 4 * * * /opt/gomuseum/deployment/production/reconcile-refunds.sh >> /var/log/gomuseum-refunds.log 2>&1
+# ⚠️ 安装要**手工拷到 VPS**,CD 不会带它过去 —— deploy.yml 只 rsync `backend/`,
+# 仓库里的 deployment/ 目录在 VPS 上并不存在(2026-09-06 实测,当时我照着不存在的
+# 路径写了 crontab 说明)。放置位置沿用 backup.sh 的既有约定:/opt/gomuseum/。
+#
+#   scp -i ~/.ssh/deepmeeting_deploy deployment/production/reconcile-refunds.sh \
+#       root@<VPS>:/opt/gomuseum/reconcile-refunds.sh
+#   ssh ... 'chmod +x /opt/gomuseum/reconcile-refunds.sh'
+#   crontab -e   # 与 backup.sh 同一个 crontab
+#   17 4 * * * /opt/gomuseum/reconcile-refunds.sh >> /var/log/gomuseum-refunds.log 2>&1
+#
+# ⚠️ 改了这个文件之后要**重新 scp** —— 它不随部署更新。
 #
 # ⚠️ 非零退出**必须有人看见**。退出码:
 #   0 = 干净   1 = 有订单查不到(对账有盲区)   2 = 根本没跑起来(没凭证)   3 = 撤销闸拦下
