@@ -53,6 +53,23 @@ class AuthRepository {
     return _persist(response.data['user'] as Map<String, dynamic>);
   }
 
+  /// 申请重置密码:后端往这个邮箱发一封带一次性链接的信。
+  ///
+  /// ⚠️ **成功不代表这个邮箱注册过。** 后端对"查无此邮箱"也返 204,否则这个
+  /// 端点就成了账号枚举器。所以 UI 只能说「如果这个邮箱注册过,信已经发出去了」
+  /// —— 说成「已发送到你的邮箱」是在替后端撒一个它没做的保证。
+  ///
+  /// [language] 决定邮件正文语言(en/fr/zh,其余回落英文)。
+  Future<void> requestPasswordReset(String email, {String? language}) async {
+    await _dio.post(
+      '/api/v1/auth/password-reset/request',
+      data: {
+        'email': email,
+        if (language != null) 'language': language,
+      },
+    );
+  }
+
   /// 当前用户。**「连不上服务器」不等于「没登录」。**
   ///
   /// 曾经这里 `catch (e) { return null; }` 吞掉一切异常,于是断网时

@@ -1,4 +1,5 @@
 /// 登录页 — 暖纸手册风格（设计稿外页面，按定稿风格补齐）
+import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -14,7 +15,19 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.upgrading = false});
+
+  /// 这次是不是**主动**来换身份的（游客转正 / 收据冲突换账号）。
+  ///
+  /// 由路由从 `?upgrade=1` 解析后传进来 —— 页面不自己去读
+  /// `GoRouterState.of(context)`：那会让 LoginPage 硬依赖 GoRouter 祖先，
+  /// 任何不在路由里渲染它的地方（包括几个既有测试）都会当场抛
+  /// `The parent route must be a page route`。解析 URL 是路由的活。
+  ///
+  /// ⚠️ 判据是**这次导航的意图**，不是当前用户的身份：守卫在冷启动时也会把人
+  /// 弹到这一页（登录态还没加载完），那次到达不是用户的意图。按身份判会让每个
+  /// 冷启动的游客都看不到游客按钮 —— 而他本来就该被直接送回首页。
+  final bool upgrading;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -24,6 +37,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  // 「忘记密码」弹窗里那个输入框。**由页面持有,不在弹窗里就地 new**:
+  // 弹窗关闭后还有一段退场动画,那期间 TextField 仍在读这个 controller ——
+  // showDialog 一 return 就 dispose 会当场抛
+  // "A TextEditingController was used after being disposed"。
+  final _resetEmailController = TextEditingController();
   bool _isLoading = false;
 
   // Google Sign-In instance
@@ -39,6 +57,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+    final upgrading = widget.upgrading;
     return Scaffold(
       backgroundColor: gm.bg,
       body: Center(
@@ -66,10 +85,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub),
                 ),
                 const SizedBox(height: 40),
-                // 社交登录置顶。理由不是"它更常用",而是:**邮箱密码是唯一
-                // 没有找回路径的入口**(找回密码尚未实现,见 backlog),而
-                // Google/Apple 用户根本没有密码可忘。页面把谁放在最上面,
-                // 就决定了多少用户掉进那条没有退路的路。
+                // 社交登录置顶。原先的理由是"邮箱密码是唯一没有找回路径的
+                // 入口" —— **那条理由已经不成立**:找回密码在 2026-09-05 落地
+                // (见下方 authForgotPassword 与后端 /auth/password-reset/*)。
+                // 顺序保持不变:Google/Apple 用户根本没有密码可忘,一步登录仍是
+                // 更省事的那条路;但它现在只是"更省事",不再是"另一条是死路"。
                 //
                 // 游客按钮**故意不跟着上移**:它最省事,但游客不能购买,
                 // 提上来是拿收入换点击率。"最常用的放最显眼"在这里不成立 ——
@@ -114,19 +134,43 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         onTap: _handleLogin,
                       ),
                 const SizedBox(height: 14),
+                // 忘记密码。**紧挨着密码框那一侧**，而不是塞进页面最底下：
+                // 会点它的人此刻正卡在密码上，视线就在这一带。
                 GestureDetector(
-                  onTap: () => context.push('/register'),
+                  onTap: _showForgotPasswordSheet,
+                  child: Text(
+                    l10n.authForgotPassword,
+                    textAlign: TextAlign.center,
+                    style: GmText.sans(size: 12.5, color: gm.sub),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  // 意图要跟着走：从「转正登录页」点进注册，如果不带 upgrade，
+                  // 守卫会把已登录的游客从注册页弹回首页 —— 转正这条路又断了。
+                  onTap: () => context.push(
+                      upgrading ? '/register?$kUpgradeParam=1' : '/register'),
                   child: Text(
                     l10n.authNoAccount,
                     textAlign: TextAlign.center,
                     style: GmText.sans(size: 12.5, color: gm.accent),
                   ),
                 ),
-                const SizedBox(height: 24),
-                _divider(l10n.authOr),
-                const SizedBox(height: 18),
-                _socialButton(gm, l10n.authGuestLogin, _handleGuestLogin,
-                    emphasized: true),
+                // 游客入口：**主动来换身份的人不该再看到它**。
+                //
+                // 他点的是「登录后购买」（通票挂账号，游客不许直接买）或收据冲突的
+                // 「换个账号登录」——再给他「以游客身份继续」，点了等于原地踏步：
+                // 还是同一个游客账号、还是买不了票，而他刚刚做的选择正是要离开
+                // 这个状态。
+                //
+                // 判据是**这次导航的意图**而非用户身份，理由见 [LoginPage.upgrading]。
+                if (!upgrading) ...[
+                  const SizedBox(height: 24),
+                  _divider(l10n.authOr),
+                  const SizedBox(height: 18),
+                  _socialButton(gm, l10n.authGuestLogin, _handleGuestLogin,
+                      emphasized: true),
+                ],
               ],
             ),
           ),
@@ -211,6 +255,102 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
       ),
     );
+  }
+
+  /// 「忘记密码」：填邮箱 → 后端发一条一次性链接 → 用户在浏览器里改完，回来登录。
+  ///
+  /// ⚠️ **不需要 url_launcher。** 链接由邮件客户端自己打开；App 只负责发起申请。
+  /// 这个取舍是硬的：加原生插件会改动插件树，而 #434 那个致命缺陷就长在这条缝里
+  /// （CI 与出包解析出不同插件树），只有真机才照得出来。
+  ///
+  /// ⚠️ 提示语只能说「**如果**这个邮箱注册过」。后端对查无此邮箱也返 204
+  /// （否则端点就是账号枚举器），说成「已发送到你的邮箱」是替后端撒一个
+  /// 它没做的保证 —— 而收不到信的人会一直等下去。
+  Future<void> _showForgotPasswordSheet() async {
+    final l10n = AppLocalizations.of(context)!;
+    final gm = context.gm;
+    // 用户多半刚在上面那个框里打过邮箱，别让他再打一遍
+    final controller = _resetEmailController
+      ..text = _emailController.text.trim();
+    var sending = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setLocal) => AlertDialog(
+          backgroundColor: gm.surface,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          title: Text(l10n.authResetTitle, style: GmText.serif(size: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.authResetPrompt,
+                style: GmText.sans(size: 12.5, color: gm.sub),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: TextInputType.emailAddress,
+                style: GmText.sans(size: 13.5),
+                decoration: InputDecoration(
+                  hintText: l10n.authEmailHint,
+                  hintStyle: GmText.sans(size: 13.5, color: gm.faint),
+                  isDense: true,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed:
+                  sending ? null : () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel,
+                  style: GmText.sans(size: 13, color: gm.sub)),
+            ),
+            TextButton(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      final email = controller.text.trim();
+                      if (email.isEmpty) return;
+                      setLocal(() => sending = true);
+                      final ok = await _requestReset(email);
+                      if (!dialogContext.mounted) return;
+                      Navigator.of(dialogContext).pop();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            ok ? l10n.authResetSent : l10n.authResetFailed,
+                          ),
+                          duration: const Duration(seconds: 6),
+                        ),
+                      );
+                    },
+              child: Text(l10n.authResetSend,
+                  style: GmText.sans(size: 13, color: gm.accent)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 发申请。返回"信到底有没有发出去" —— 后端在没配发信/投递失败时会回
+  /// 503/502，那不能被吞成成功：用户会守着一封永远不来的邮件。
+  Future<bool> _requestReset(String email) async {
+    try {
+      await ref.read(authRepositoryProvider).requestPasswordReset(
+            email,
+            language: Localizations.localeOf(context).languageCode,
+          );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -445,6 +585,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _resetEmailController.dispose();
     super.dispose();
   }
 }

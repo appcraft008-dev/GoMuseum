@@ -455,6 +455,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authRegisterButton => '登録';
 
   @override
+  String get authForgotPassword => 'パスワードをお忘れですか？';
+
+  @override
+  String get authResetTitle => 'パスワードの再設定';
+
+  @override
+  String get authResetPrompt =>
+      '登録に使ったメールアドレスを入力してください。新しいパスワードを設定するリンクをお送りします。';
+
+  @override
+  String get authResetSend => 'リンクを送る';
+
+  @override
+  String get authResetSent => 'そのアドレスが登録済みであれば、リンクを送信しました。迷惑メールフォルダもご確認ください。';
+
+  @override
+  String get authResetFailed => 'メールを送信できませんでした。しばらくしてからもう一度お試しください。';
+
+  @override
   String get authNoAccount => 'アカウントがない？登録';
 
   @override

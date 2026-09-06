@@ -20,6 +20,7 @@ import requests
 import soundfile as sf
 from voxcpm import VoxCPM
 
+from batch_record import make_record
 from consistency import consistency, length_ratio
 
 LAB = Path(os.environ.get("TTS_LAB", Path(__file__).resolve().parent))
@@ -148,7 +149,7 @@ def main():
             statef.write_text(json.dumps(state, ensure_ascii=False, indent=1))
             continue
         seed = LAB / f"seeds_final/{SEED_OF[lang]}.wav"
-        best = None
+        tries = []
         for attempt in range(1, MAX_TRY + 1):
             t0 = time.time()
             wav = m.generate(text=text, reference_wav_path=str(seed),
@@ -174,11 +175,12 @@ def main():
                   f"长度比={lr:.2f} "
                   f"{len(w)/sr:.0f}s→{len(w)/sr/at:.0f}s(atempo {at:.2f}) "
                   f"{'✅' if ok else '重试'} {gen:.0f}s", flush=True)
-            if best is None or (ok and not best[0]) or (ok and sharp < best[1]):
-                best = (ok, sharp, ratio)
+            tries.append({"try": attempt, "ok": ok, "sharp": round(sharp, 1),
+                          "consist": round(ratio, 2), "lenratio": round(lr, 2),
+                          "atempo": round(at, 3)})
             if ok:
                 break
-        if not best[0]:
+        if not tries[-1]["ok"]:
             # 三次都没过闸 → 把产物移出灌入目录(不是删掉)。
             # 必须移走:灌入端的 check_audio 只判时长比例与替换偏差,**不看锐度/
             # 一致性**,留在原地会一路绿灯进 prod(实测已漏进去一条 Q3937645/ja/qa_0)。
@@ -194,13 +196,11 @@ def main():
 
         # md5 让灌入端能核验"传过去的就是判定过的那一份"(契约 音频节⑫)。
         # 不合格条目的文件已被移走,算不到 md5,记 None。
+        # 顶层分数为何取最后一次、tries 为何要留 —— 见 batch_record.make_record。
         final = outdir / name
-        state[name] = {"ok": bool(best[0]), "sharp": round(best[1], 1),
-                       "consist": round(best[2], 2), "lenratio": round(lr, 2),
-                       "seed": SEED_OF[lang],
-                       "atempo": round(at, 3),
-                       "md5": (hashlib.md5(final.read_bytes()).hexdigest()
-                               if final.exists() else None)}
+        state[name] = make_record(
+            tries, SEED_OF[lang],
+            hashlib.md5(final.read_bytes()).hexdigest() if final.exists() else None)
         statef.write_text(json.dumps(state, ensure_ascii=False, indent=1))
 
     done = sum(1 for v in state.values() if v.get("ok"))
