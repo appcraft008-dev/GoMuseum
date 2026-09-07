@@ -13,14 +13,36 @@ from app.services.enrichment.prompts import build_entailment_prompt
 GROUNDING_THRESHOLD = 0.6
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+# 缩写里的点不是句末。切错了会把半截短语单独送去过闸,而碎片("1, is a painting…")
+# 多半判无据被删 → 正文被截断。prod 实测损害 2 条(Q687182《惠斯勒的母亲》的
+# significance,en/es):「Arrangement in Grey and Black No.」后面的编号整个没了。
+# 绝大多数切点无害(两半都过闸,再用空格拼回去与原文逐字相同),所以这是低频缺陷,
+# 但修它是一行的事。宁可少切一刀:误合只是让判定单元长一点,误切会吃掉内容。
+_ABBR = (
+    r"(?:No|Nos|St|Ste|Mr|Mrs|Ms|Dr|Prof|Jr|Sr|vs|ca|cf|approx"
+    r"|Inv|Ave|Mt|Fig|vol|op|ed|c)"
+)
+_ENDS_ABBR = re.compile(r"(?:^|\s)" + _ABBR + r"\.$")
 
 
 def _split_sentences(text: str | None) -> list[str]:
-    """把正文切成句子列表（按 . ! ? 后接空白）。空/None → []。"""
+    """把正文切成句子列表（按 . ! ? 后接空白）。空/None → []。
+
+    在已知缩写（Dr. / St. / No. …）之后不断句——`re` 的后顾断言要求定长，
+    没法写进正则，所以切完再把跟在缩写后面的那截拼回去。
+    """
     if not text or not text.strip():
         return []
-    parts = _SENTENCE_SPLIT.split(text.strip())
-    return [p.strip() for p in parts if p.strip()]
+    out: list[str] = []
+    for part in _SENTENCE_SPLIT.split(text.strip()):
+        part = part.strip()
+        if not part:
+            continue
+        if out and _ENDS_ABBR.search(out[-1]):
+            out[-1] = f"{out[-1]} {part}"
+        else:
+            out.append(part)
+    return out
 
 
 def _split_paragraphs(text: str | None) -> list[str]:

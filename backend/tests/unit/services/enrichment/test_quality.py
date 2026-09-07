@@ -174,3 +174,75 @@ def test_check_section_drops_empty_paragraph_after_gate():
         _FakeComplete(verdicts=[True, True, False], conflicts=[])
     ).check_section("MAT", "F", body)
     assert r.body == "Kept one. Kept two."  # 第二段全删 → 无尾随 \n\n
+
+
+# --- 缩写点不是句末（prod 实测:Q687182《惠斯勒的母亲》被切在
+#     「Arrangement in Grey and Black No.」处,编号那一截过不了闸被删掉）---
+
+
+def test_does_not_split_on_title_number_abbreviation():
+    from app.services.enrichment.quality import _split_sentences
+
+    got = _split_sentences(
+        "Arrangement in Grey and Black No. 1 is her best-known work. It hangs in Paris."
+    )
+    assert got == [
+        "Arrangement in Grey and Black No. 1 is her best-known work.",
+        "It hangs in Paris.",
+    ]
+
+
+def test_does_not_split_on_personal_title_abbreviations():
+    from app.services.enrichment.quality import _split_sentences
+
+    for text, first in [
+        (
+            "He governed Fort St. George from 1701. Then he left.",
+            "He governed Fort St. George from 1701.",
+        ),
+        (
+            "You sense the calm of Mrs. Jeantaud. She looks away.",
+            "You sense the calm of Mrs. Jeantaud.",
+        ),
+        (
+            "Van Gogh showed it to Dr. Gachet in Auvers. He liked it.",
+            "Van Gogh showed it to Dr. Gachet in Auvers.",
+        ),
+    ]:
+        assert _split_sentences(text)[0] == first
+
+
+def test_closing_quote_after_period_does_not_split():
+    """既有行为,不在本次修复范围:`."` 后面不断句(后顾看到的是引号不是句点)。
+
+    无害——只是让判定单元长一点,不会像缩写误切那样吃掉内容;改它会动到存量
+    所有段的存活率,不值当。锁在这里免得以后有人以为是新引入的。
+    """
+    from app.services.enrichment.quality import _split_sentences
+
+    assert _split_sentences('Look at "Portrait of Dr. Gachet." Notice his gaze.') == [
+        'Look at "Portrait of Dr. Gachet." Notice his gaze.'
+    ]
+
+
+def test_still_splits_normal_sentences():
+    from app.services.enrichment.quality import _split_sentences
+
+    assert _split_sentences("One. Two! Three?") == ["One.", "Two!", "Three?"]
+
+
+def test_sentence_after_a_real_year_still_splits():
+    # "1890." 是真句末,下一句正好以 Dr. 开头 —— 不能因此合并
+    from app.services.enrichment.quality import _split_sentences
+
+    assert _split_sentences("He died in 1890. Dr. Gachet kept the portrait.") == [
+        "He died in 1890.",
+        "Dr. Gachet kept the portrait.",
+    ]
+
+
+def test_abbreviation_merge_survives_empty_and_whitespace():
+    from app.services.enrichment.quality import _split_sentences
+
+    assert _split_sentences("   ") == []
+    assert _split_sentences(None) == []
