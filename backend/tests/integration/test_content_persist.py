@@ -341,3 +341,40 @@ def test_demotion_scoped_to_the_same_section(session):
     )
     assert _statuses(session, "significance")["fr"] == "needs_review"
     assert _statuses(session, "guide")["fr"] == "published"
+
+
+def test_grounding_ratio_persisted_for_en_but_not_translations(session):
+    """存活率只在英语侧有意义,译文那侧 translator 填的 1.0/0.0 是 status 的复述。
+
+    存了复述值,"平均存活率"这类查询就会被 9 种语言的假 1.0 冲淡到失真 ——
+    这一列存在的全部理由就是回答"为什么挂起",掺假等于白加。
+    """
+    from app.models.content import ObjectContentSection
+    from app.services.content_repo import persist_gated_sections
+    from app.services.enrichment.quality import SectionQuality
+
+    gated = {
+        "overview": SectionQuality(
+            body="Grounded.", status="published", grounding_ratio=0.75, score=0.75
+        ),
+        "artist": SectionQuality(
+            body=None, status="needs_review", grounding_ratio=0.0, score=0.0
+        ),
+    }
+    persist_gated_sections(session, "Q1", "en", gated, model="m")
+    # 译文:translator 给的是 1.0/0.0 这种复述值
+    translated = {
+        "overview": SectionQuality(
+            body="接地。", status="published", grounding_ratio=1.0, score=1.0
+        )
+    }
+    persist_gated_sections(session, "Q1", "zh", translated, model="m")
+
+    en = {
+        r.section_code: r
+        for r in session.query(ObjectContentSection).filter_by(language="en")
+    }
+    assert en["overview"].grounding_ratio == 0.75
+    assert en["artist"].grounding_ratio == 0.0  # 0 ≠ NULL:整段被删是有信息的
+    zh = session.query(ObjectContentSection).filter_by(language="zh").one()
+    assert zh.grounding_ratio is None

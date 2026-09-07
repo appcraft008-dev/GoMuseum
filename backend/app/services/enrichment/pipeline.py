@@ -72,6 +72,12 @@ def _fill_i18n(existing, en_name, labels, langs, translator):
             out[lang] = tr(pivot, lang)
         except Exception:
             pass
+    if out.get("zh-hant"):
+        # 权威标签与机翻两条来源都会漏简体字(prod 实测标题 372/27132、
+        # 作者名 106/4183)。定点归一化而非判否 —— 理由见 backfill._clean_i18n。
+        from app.services.enrichment.lang_detect import to_traditional
+
+        out["zh-hant"] = to_traditional(out["zh-hant"])
     return out
 
 
