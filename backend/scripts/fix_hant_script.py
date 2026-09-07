@@ -8,8 +8,11 @@
 仍然念得对,不需要失效重跑** —— 这跟"改正文事实"那类改动不是一回事(纪律 28 补充②
 管的是后者)。
 
-⚠️ 标题/人名里还有一类**不是简繁问题**的脏值:繁体位塞着拉丁文(未翻译残留),
-本脚本不碰 —— 归一化改不了它,得靠重译。dry-run 会把这类单独报出来。
+⚠️ dry-run 另报一个「归一化救不了」的计数,别把它当脏值:抽查下来那 63 条
+标题基本都**合法** —— 卢浮宫埃及/近东部的藏品标题天然带馆藏编号与音译名
+(「Orthostat碎片-AO 10886」「鱷魚 Shebek Ra-E 16358」「Nakhti的內棺」),
+被既有的"拉丁占比 >40%"规则判成非中文。这是那条规则在短标题上的误报,
+与简繁无关,也不影响显示 —— 标题走归一化不走判否,不会被挡下来。
 
 默认 dry-run。`--apply` 才写。幂等可重跑。
 """
@@ -79,7 +82,7 @@ def scan(db, apply=False):
             if apply:
                 o.attributes = {**o.attributes, "title_i18n": {**ti, LANG: new}}
         elif not text_in_language(cur, LANG):
-            latin_left += 1  # 归一化救不了的(多半是拉丁残留)
+            latin_left += 1  # 归一化救不了的(多为带馆藏编号的合法标题,见模块 docstring)
     note("标题", len(rows), changed)
 
     # ④ 作者名 / ⑤ 作者简介
@@ -126,7 +129,7 @@ if __name__ == "__main__":
     print("=== 繁体位简体字正字", "(已写入)" if ns.apply else "(dry-run,未写)", "===")
     for k, v in stats.items():
         print(f"  {k}: 扫描 {v['扫描']} → 改动 {v['改动']}")
-    print(f"\n  归一化救不了的脏值(多半是拉丁残留,需重译): {latin_left}")
+    print(f"\n  归一化救不了的(多为带馆藏编号的合法标题,非缺陷): {latin_left}")
     print("\n抽样:")
     for kind, a, b in samples:
         print(f"  [{kind}] {a}\n       → {b}")
