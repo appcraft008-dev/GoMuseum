@@ -197,6 +197,10 @@ def apply(db, lines) -> dict:
             if not text:
                 raise ValueError("empty")
             etype, key, lang = cid.split("|", 2)
+            if lang == "zh-hant":
+                from app.services.enrichment.lang_detect import to_traditional
+
+                text = to_traditional(text)
             u = body.get("usage") or {}
             record_llm_usage(
                 "names",

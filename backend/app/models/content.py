@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy import (
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -59,6 +60,11 @@ class ObjectContentSection(Base):
     # tts-1 的",批量替换与覆盖率报表都无从下手。
     audio_engine = Column(String(32), nullable=True, index=True)
     status = Column(String(16), default="published")  # draft | published | needs_review
+    # 接地闸算出来的存活率(kept/total)。**不存它就回答不了"为什么挂起"** ——
+    # 段挂起时只知道 <0.6,不知道是 0.55 还是 0(整段脑补),而这两者的处置完全
+    # 不同:前者调阈值有意义,后者说明材料压根不支持这一段。想复查只能重跑一遍
+    # 闸(重新付 LLM 钱),而闸本身有随机性,重跑的分数还不是当初那个。
+    grounding_ratio = Column(Float, nullable=True)
     model = Column(String(64), nullable=True)
     source = Column(String(32), default="ai_generated")  # ai_generated | manual
     generated_at = Column(DateTime, nullable=True)

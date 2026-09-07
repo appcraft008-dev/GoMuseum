@@ -376,10 +376,16 @@ def _clean_i18n(i18n, artist_names=None) -> dict:
     (투우 (마네) / Koronczarka (obraz Vermeera) / 聖母の誕生 (ムリーリョ))。
     清洗作者名本身时不传,于是 Bruyn（長者）这种名字自带的括号不会被误剥。
     """
+    from app.services.enrichment.lang_detect import to_traditional
+
     out = {}
     for k, v in (i18n or {}).items():
         v = _strip_wrapping_quotes(v or "")
         v = strip_disambiguator(v, artist_names)
+        if k == "zh-hant":
+            # 显示名不走"判否"那条路:标题缺 zh-hant 时 _resolve_name 会回退到
+            # **英文标题**,比「蘇薩廢墟全景图」漏个简体字更伤。所以名字定点归一化。
+            v = to_traditional(v)
         native = _NATIVE_SCRIPT.get(k)
         if v and not (native and not native.search(v)):
             out[k] = v
