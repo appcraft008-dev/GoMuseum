@@ -1,4 +1,4 @@
-"""批量生产:读 jobs.json → 拉文本 → 单种子生成 → 三关质检 → 160k mp3。
+"""批量生产:读 jobs.json → 拉文本 → 单种子生成 → 语速/响度对齐 → 三关质检 → 160k mp3。
 特性:幂等(已存在合格文件跳过)、断点续传、失败重试≤3、进度落盘。
 
 用法: run_batch.py <jobs.json> <输出目录>
@@ -22,6 +22,7 @@ from voxcpm import VoxCPM
 
 from batch_record import make_record
 from consistency import consistency, length_ratio
+from loudness import TARGET_LUFS, gain_db, measure
 
 LAB = Path(os.environ.get("TTS_LAB", Path(__file__).resolve().parent))
 API = os.environ.get("GOMUSEUM_API", "https://api.gomuseum.app/api/v1")
@@ -162,8 +163,14 @@ def main():
             # atempo 只伸缩时间不改音高(实测 F0 190→188),且锐度/HNR 反而变好。
             at = min(max((len(w) / sr) / (len(text) / RATE[lang]),
                          ATEMPO_MIN), ATEMPO_MAX)
+            # 响度对齐:量一遍变速后的响度/峰值,算纯增益(见 loudness.py)。
+            # 与语速对齐同理 —— **必须在生成侧做完**:灌入端的 check_audio 只看
+            # 时长和替换偏差,三道质检门对音量完全免疫,下游没有任何东西能兜住。
+            lufs, peak = measure(raw, at)
+            g = gain_db(lufs, peak)
+            filt = f"atempo={at:.4f}" + (f",volume={g:.2f}dB" if abs(g) >= 0.05 else "")
             subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw),
-                            "-filter:a", f"atempo={at:.4f}",
+                            "-filter:a", filt,
                             "-codec:a", "libmp3lame", "-b:a", BITRATE, str(mp3)], check=True)
             raw.unlink(missing_ok=True)
             sharp, ratio, lr = qc(mp3, text, WLANG[lang])  # 对最终产物质检(atempo 之后)
@@ -174,10 +181,13 @@ def main():
             print(f"[{i}/{len(todo)}] {name} 第{attempt}次 锐度={sharp:.0f}% 一致={ratio:.2f} "
                   f"长度比={lr:.2f} "
                   f"{len(w)/sr:.0f}s→{len(w)/sr/at:.0f}s(atempo {at:.2f}) "
+                  f"响度{lufs if lufs is None else round(lufs, 1)}→{TARGET_LUFS}({g:+.1f}dB) "
                   f"{'✅' if ok else '重试'} {gen:.0f}s", flush=True)
             tries.append({"try": attempt, "ok": ok, "sharp": round(sharp, 1),
                           "consist": round(ratio, 2), "lenratio": round(lr, 2),
-                          "atempo": round(at, 3)})
+                          "atempo": round(at, 3),
+                          "lufs_in": None if lufs is None else round(lufs, 1),
+                          "gain": round(g, 2)})
             if ok:
                 break
         if not tries[-1]["ok"]:
