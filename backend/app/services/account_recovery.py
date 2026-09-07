@@ -93,6 +93,96 @@ _VERIFY_MAIL = {
 }
 
 
+# 落地页文案。**和邮件放同一个文件、共用同一套语言归一** ——
+# 信是中文的、点开却是英文页面,是最容易出现又最没道理的一种割裂
+# (2026-09-07 真机发现:邮件跟着语言走,页面永远是三语堆叠)。
+#
+# `html_lang` 进 <html lang>:屏幕阅读器和浏览器的翻译提示都看它。
+_PAGE_COPY = {
+    "en": {
+        "html_lang": "en",
+        "title": "Reset password · GoMuseum",
+        "h1": "Set a new password",
+        "sub": "Choose a new password for your GoMuseum account.",
+        "label_new": "New password",
+        "hint_min": "At least 8 characters",
+        "label_repeat": "Repeat password",
+        "button": "Confirm",
+        "msg_mismatch": "The two passwords don't match.",
+        "msg_short": "At least 8 characters.",
+        "msg_ok": "Password updated — sign in with it in the app.",
+        "msg_expired": "This link has expired or was already used. "
+        "Please request a new one from the app.",
+        "msg_error": "Something went wrong. Please try again.",
+        "msg_network": "Network error.",
+        "notice_expired_title": "Link no longer valid",
+        "notice_expired_body": "This reset link has expired or was already used.\n"
+        "Please request a new one from the app.",
+        "notice_verified_title": "Email confirmed",
+        "notice_verified_body": "Your email address is confirmed.\n"
+        "You can close this page.",
+        "notice_verify_expired_title": "Link no longer valid",
+        "notice_verify_expired_body": "This link has expired or was already used.\n"
+        "You can send a new one from the app's settings.",
+    },
+    "fr": {
+        "html_lang": "fr",
+        "title": "Réinitialiser le mot de passe · GoMuseum",
+        "h1": "Définir un nouveau mot de passe",
+        "sub": "Choisissez un nouveau mot de passe pour votre compte GoMuseum.",
+        "label_new": "Nouveau mot de passe",
+        "hint_min": "Au moins 8 caractères",
+        "label_repeat": "Répéter le mot de passe",
+        "button": "Confirmer",
+        "msg_mismatch": "Les deux mots de passe ne correspondent pas.",
+        "msg_short": "Au moins 8 caractères.",
+        "msg_ok": "Mot de passe mis à jour — connectez-vous dans l'application.",
+        "msg_expired": "Ce lien a expiré ou a déjà été utilisé. "
+        "Veuillez en demander un nouveau depuis l'application.",
+        "msg_error": "Un problème est survenu. Veuillez réessayer.",
+        "msg_network": "Erreur réseau.",
+        "notice_expired_title": "Lien non valide",
+        "notice_expired_body": "Ce lien de réinitialisation a expiré "
+        "ou a déjà été utilisé.\n"
+        "Veuillez en demander un nouveau depuis l'application.",
+        "notice_verified_title": "Adresse confirmée",
+        "notice_verified_body": "Votre adresse e-mail est confirmée.\n"
+        "Vous pouvez fermer cette page.",
+        "notice_verify_expired_title": "Lien non valide",
+        "notice_verify_expired_body": "Ce lien a expiré ou a déjà été utilisé.\n"
+        "Vous pouvez en renvoyer un depuis les réglages de l'application.",
+    },
+    "zh": {
+        "html_lang": "zh-CN",
+        "title": "重设密码 · GoMuseum",
+        "h1": "重设密码",
+        "sub": "为你的 GoMuseum 账号设置一个新密码。",
+        "label_new": "新密码",
+        "hint_min": "至少 8 个字符",
+        "label_repeat": "再输一次",
+        "button": "确认",
+        "msg_mismatch": "两次输入不一致。",
+        "msg_short": "至少 8 个字符。",
+        "msg_ok": "密码已更新，回 App 用新密码登录即可。",
+        "msg_expired": "链接已失效或已用过，请回 App 重新申请。",
+        "msg_error": "出了点问题，请稍后再试。",
+        "msg_network": "网络错误。",
+        "notice_expired_title": "链接已失效",
+        "notice_expired_body": "这个重置链接已经过期或用过了。\n请回 App 重新申请一次。",
+        "notice_verified_title": "邮箱已确认",
+        "notice_verified_body": "你的邮箱地址已确认。\n可以关掉这个页面了。",
+        "notice_verify_expired_title": "链接已失效",
+        "notice_verify_expired_body": "这个确认链接已经过期或用过了。\n"
+        "可以在 App 的设置里重新发送。",
+    },
+}
+
+
+def page_copy(code: Optional[str]) -> dict:
+    """按语言取落地页文案。认不出一律英文,和邮件同一条回落规则。"""
+    return _PAGE_COPY[resolve_lang(code)]
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -108,11 +198,16 @@ def _digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def _lang(code: Optional[str]) -> str:
-    """把 `zh-Hans` / `fr_FR` 这类归一到我们有文案的三种之一。"""
+def resolve_lang(code: Optional[str]) -> str:
+    """把 `zh-Hans` / `fr_FR` / `zh-CN,zh;q=0.9` 这类归一到我们有文案的三种之一。
+
+    也吃 `Accept-Language` 整个头(逗号分隔、带 q 值),取第一项即可 ——
+    没带 `lang` 的老链接就靠它兜底。
+    """
     if not code:
         return DEFAULT_LANG
-    base = code.replace("_", "-").split("-")[0].lower()
+    first = code.split(",")[0].split(";")[0].strip()
+    base = first.replace("_", "-").split("-")[0].lower()
     return base if base in SUPPORTED_LANGS else DEFAULT_LANG
 
 
@@ -167,11 +262,20 @@ def consume(db, token: str, purpose: str) -> Optional[AuthToken]:
     return row
 
 
-def _link(base_url: Optional[str], path: str, token: str) -> str:
+def _link(base_url: Optional[str], path: str, token: str, lang: str) -> str:
+    """链接**必须带上语言**。
+
+    落地页是服务端渲染的,它除了这条 URL 没有任何别的途径知道用户在用哪种语言:
+    邮件是在 App 里发起的(那时知道语言),点开链接却是在系统浏览器里,
+    既没有 App 的登录态也没有它的语言设置。
+    不带的话就只能猜浏览器的 `Accept-Language` —— 而那是**手机系统语言**,
+    未必等于用户在 App 里选的语言(这两者经常不一致,正是本项目做「跟随系统」
+    选项的原因)。
+    """
     base = (getattr(settings, "PUBLIC_API_BASE_URL", None) or base_url or "").rstrip(
         "/"
     )
-    return f"{base}{path}?token={quote(token)}"
+    return f"{base}{path}?token={quote(token)}&lang={lang}"
 
 
 # ────────────────────────────────────────────────────────────── 找回密码
@@ -195,11 +299,14 @@ def request_password_reset(db, email: str, *, base_url=None, language=None) -> N
 
     ttl = settings.PASSWORD_RESET_TTL_MINUTES
     token = issue(db, str(user.id), PURPOSE_PASSWORD_RESET, ttl)
-    subject, body = _RESET_MAIL[_lang(language)]
+    lang = resolve_lang(language)
+    subject, body = _RESET_MAIL[lang]
     mailer.send(
         user.email,
         subject,
-        body.format(link=_link(base_url, "/api/v1/auth/reset", token), minutes=ttl),
+        body.format(
+            link=_link(base_url, "/api/v1/auth/reset", token, lang), minutes=ttl
+        ),
     )
 
 
@@ -241,13 +348,15 @@ def request_email_verification(db, user: User, *, base_url=None, language=None) 
         return False
     ttl = settings.EMAIL_VERIFY_TTL_MINUTES
     token = issue(db, str(user.id), PURPOSE_EMAIL_VERIFY, ttl)
-    subject, body = _VERIFY_MAIL[_lang(language)]
+    lang = resolve_lang(language)
+    subject, body = _VERIFY_MAIL[lang]
     try:
         mailer.send(
             user.email,
             subject,
             body.format(
-                link=_link(base_url, "/api/v1/auth/verify-email", token), minutes=ttl
+                link=_link(base_url, "/api/v1/auth/verify-email", token, lang),
+                minutes=ttl,
             ),
         )
     except mailer.MailSendFailed:

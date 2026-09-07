@@ -310,14 +310,32 @@ def request_password_reset(
     return None
 
 
+def _page_lang(request: Request, lang: str) -> dict:
+    """落地页文案。`lang` 来自邮件链接;没有就退回浏览器的 Accept-Language。
+
+    ⚠️ 回落只是兜底,不是等价物:`Accept-Language` 是**手机系统语言**,
+    而用户在 App 里可能选了别的语言。链接带 lang 才是真相源。
+    (回落存在的意义是本次改动之前发出去的老链接。)
+    """
+    return account_recovery.page_copy(
+        lang or request.headers.get("accept-language") or ""
+    )
+
+
 @router.get("/reset", response_class=HTMLResponse, include_in_schema=False)
-def reset_password_page(token: str = "", db: Session = Depends(get_db)):
+def reset_password_page(
+    request: Request,
+    token: str = "",
+    lang: str = "",
+    db: Session = Depends(get_db),
+):
     """邮件里那条链接落在这里 —— 一张设置新密码的网页。
 
     这里**只看不消费**令牌:真正核销在下面的 confirm。
     先消费的话,用户打开页面却没提交(手滑关掉、想换个密码再想想),
     链接就已经废了,而他完全不知道为什么。
     """
+    t = _page_lang(request, lang)
     if (
         not token
         or account_recovery.peek(db, token, account_recovery.PURPOSE_PASSWORD_RESET)
@@ -325,15 +343,28 @@ def reset_password_page(token: str = "", db: Session = Depends(get_db)):
     ):
         return _page(
             "notice.html",
-            TITLE="链接已失效",
-            BODY=(
-                "这个重置链接已经过期或用过了。\n"
-                "请回 App 重新申请一次。\n\n"
-                "This reset link has expired or was already used.\n"
-                "Please request a new one from the app."
-            ),
+            HTMLLANG=t["html_lang"],
+            TITLE=t["notice_expired_title"],
+            BODY=t["notice_expired_body"],
         )
-    return _page("reset_password.html", TOKEN=token)
+    return _page(
+        "reset_password.html",
+        TOKEN=token,
+        HTMLLANG=t["html_lang"],
+        TITLE=t["title"],
+        H1=t["h1"],
+        SUB=t["sub"],
+        LABEL_NEW=t["label_new"],
+        HINT_MIN=t["hint_min"],
+        LABEL_REPEAT=t["label_repeat"],
+        BUTTON=t["button"],
+        MSG_MISMATCH=t["msg_mismatch"],
+        MSG_SHORT=t["msg_short"],
+        MSG_OK=t["msg_ok"],
+        MSG_EXPIRED=t["msg_expired"],
+        MSG_ERROR=t["msg_error"],
+        MSG_NETWORK=t["msg_network"],
+    )
 
 
 @router.post("/password-reset/confirm", status_code=status.HTTP_204_NO_CONTENT)
@@ -385,26 +416,26 @@ def request_email_verification(
 
 
 @router.get("/verify-email", response_class=HTMLResponse, include_in_schema=False)
-def confirm_email_verification(token: str = "", db: Session = Depends(get_db)):
+def confirm_email_verification(
+    request: Request,
+    token: str = "",
+    lang: str = "",
+    db: Session = Depends(get_db),
+):
     """验证信里那条链接落在这里。幂等:重复点开只会看到"链接已失效"。"""
+    t = _page_lang(request, lang)
     if token and account_recovery.confirm_email_verification(db, token):
         return _page(
             "notice.html",
-            TITLE="邮箱已确认",
-            BODY=(
-                "可以关掉这个页面了。\n\n"
-                "Your email address is confirmed.\nYou can close this page."
-            ),
+            HTMLLANG=t["html_lang"],
+            TITLE=t["notice_verified_title"],
+            BODY=t["notice_verified_body"],
         )
     return _page(
         "notice.html",
-        TITLE="链接已失效",
-        BODY=(
-            "这个确认链接已经过期或用过了。\n"
-            "可以在 App 的设置里重新发送。\n\n"
-            "This link has expired or was already used.\n"
-            "You can send a new one from the app's settings."
-        ),
+        HTMLLANG=t["html_lang"],
+        TITLE=t["notice_verify_expired_title"],
+        BODY=t["notice_verify_expired_body"],
     )
 
 
