@@ -143,7 +143,7 @@ def _demote_orphan_translations(db, obj, code):
         db.add(row)
 
 
-def _upsert_section(db, obj, language, code, body, status, model):
+def _upsert_section(db, obj, language, code, body, status, model, grounding=None):
     """查/建 (obj,lang,section) 行并赋值。供 persist_generated_sections / persist_gated_sections 复用。
 
     这里是**所有**段落写入(英文与译文)的唯一咽喉 —— 英文段的降级级联放在这一处,
@@ -158,6 +158,7 @@ def _upsert_section(db, obj, language, code, body, status, model):
         row.audio_key = None  # body 变更 → 旧音频失效,下次请求重生成
     row.body = body
     row.status = status
+    row.grounding_ratio = grounding
     row.source = "ai_generated"
     row.model = model
     row.generated_at = datetime.now(timezone.utc)
@@ -194,7 +195,19 @@ def persist_gated_sections(
         return (0, 0)
     pub = nr = 0
     for code, r in results.items():
-        _upsert_section(db, obj, language, code, r.body, r.status, model)
+        # 存活率只有英语这一侧有意义:英语走接地闸(逐句判,分数是真的连续值),
+        # 译文走的是忠实度闸(布尔),translator 把它填成 1.0/0.0 只是 status 的
+        # 复述。把复述值存进来会让"平均存活率"这类查询直接失真。
+        _upsert_section(
+            db,
+            obj,
+            language,
+            code,
+            r.body,
+            r.status,
+            model,
+            r.score if language == "en" else None,
+        )
         if r.status == "published":
             pub += 1
         else:
