@@ -76,12 +76,17 @@ def _register(c, email="a@test.com", password="OldPass123!"):
     return r.json()
 
 
-def _link_token(body: str) -> str:
-    """从邮件正文里把 token 抠出来 —— 用户拿到的就只有这封信。"""
+def _link(body: str) -> str:
+    """从邮件正文里把链接抠出来 —— 用户拿到的就只有这封信。"""
     for word in body.split():
         if "token=" in word:
-            return word.split("token=", 1)[1]
+            return word
     raise AssertionError(f"邮件里没有链接:\n{body}")
+
+
+def _link_token(body: str) -> str:
+    """只要 token。⚠️ 链接现在还带 `&lang=`,不能一路取到行尾。"""
+    return _link(body).split("token=", 1)[1].split("&", 1)[0]
 
 
 # ───────────────────────────────────────────────────── 主线:真的能找回
@@ -368,7 +373,7 @@ def test_expired_token_is_rejected(client, outbox, monkeypatch):
         ).status_code
         == 400
     )
-    page = c.get(f"/api/v1/auth/reset?token={token}")
+    page = c.get(f"/api/v1/auth/reset?token={token}&lang=zh")
     assert "失效" in page.text
 
 
@@ -478,7 +483,7 @@ def test_email_verification_link_marks_the_account_verified(client, outbox):
     _register(c, email="v@test.com")
     token = _link_token(outbox[0][2])
 
-    page = c.get(f"/api/v1/auth/verify-email?token={token}")
+    page = c.get(f"/api/v1/auth/verify-email?token={token}&lang=zh")
     assert page.status_code == 200
     assert "已确认" in page.text
 
@@ -492,8 +497,8 @@ def test_email_verification_link_is_single_use(client, outbox):
     _register(c, email="v@test.com")
     token = _link_token(outbox[0][2])
 
-    c.get(f"/api/v1/auth/verify-email?token={token}")
-    again = c.get(f"/api/v1/auth/verify-email?token={token}")
+    c.get(f"/api/v1/auth/verify-email?token={token}&lang=zh")
+    again = c.get(f"/api/v1/auth/verify-email?token={token}&lang=zh")
     assert "失效" in again.text
 
 
@@ -517,7 +522,9 @@ def test_reset_and_verify_tokens_are_not_interchangeable(client, outbox):
     outbox.clear()
     c.post("/api/v1/auth/password-reset/request", json={"email": "v@test.com"})
     reset_token = _link_token(outbox[0][2])
-    assert "失效" in c.get(f"/api/v1/auth/verify-email?token={reset_token}").text
+    assert (
+        "失效" in c.get(f"/api/v1/auth/verify-email?token={reset_token}&lang=zh").text
+    )
 
 
 def test_mail_language_follows_the_request(client, outbox):
@@ -561,3 +568,106 @@ def test_token_is_html_escaped_in_the_page(client, monkeypatch):
     page = c.get("/api/v1/auth/reset", params={"token": payload})
     assert "<script>alert(1)</script>" not in page.text
     assert "&lt;script&gt;" in page.text or "&quot;" in page.text
+
+
+# ─────────────────────────────────────────── 落地页的语言(2026-09-07 真机发现)
+
+
+def _reset_page(c, token: str, **kw):
+    return c.get(f"/api/v1/auth/reset?token={token}", **kw)
+
+
+def test_mail_link_carries_the_language(client, outbox):
+    """链接必须带 lang —— 落地页除了这条 URL 没有别的途径知道用户用哪种语言。
+
+    ⚠️ 这是整条修复的支点:邮件是在 App 里发起的(那时知道语言),
+    但链接是在系统浏览器里打开的,既没有 App 的登录态也没有它的语言设置。
+    """
+    c, _ = client
+    _register(c)
+    c.post(
+        "/api/v1/auth/password-reset/request",
+        json={"email": "a@test.com", "language": "zh"},
+    )
+    assert "&lang=zh" in _link(outbox[-1][2])
+
+
+def test_page_language_follows_the_language_the_mail_was_sent_in(client, outbox):
+    """信是哪种语言,页面就是哪种语言 —— 而且**不掺另外两种**。
+
+    修复前:邮件跟着语言走,页面永远是三语堆叠(重设密码 / Set a new password /
+    Définir un nouveau mot de passe)。用户真机报的就是这个。
+    """
+    c, _ = client
+    expected = {
+        "zh": ("重设密码", ["Set a new password", "Définir un nouveau"]),
+        "en": ("Set a new password", ["重设密码", "Définir un nouveau"]),
+        "fr": ("Définir un nouveau mot de passe", ["重设密码", "Set a new password"]),
+    }
+    for i, (lang, (want, must_not)) in enumerate(expected.items()):
+        email = f"u{i}@test.com"
+        _register(c, email=email)
+        c.post(
+            "/api/v1/auth/password-reset/request",
+            json={"email": email, "language": lang},
+        )
+        body = outbox[-1][2]
+        html = c.get(_link(body).replace("http://testserver", "")).text
+        assert want in html, f"{lang}:页面上没有该语言的标题"
+        for other in must_not:
+            assert other not in html, f"{lang}:页面上混进了别的语言「{other}」"
+        assert f'<html lang="{ "zh-CN" if lang == "zh" else lang }"' in html
+
+
+def test_expired_link_notice_follows_the_language_too(client, outbox):
+    """「链接已失效」是最常被看到的一页(重复点开就是它),不能漏。"""
+    c, _ = client
+    html = c.get("/api/v1/auth/reset?token=bogus&lang=fr").text
+    assert "Lien non valide" in html
+    assert "链接已失效" not in html
+
+
+def test_unknown_language_falls_back_to_english(client, outbox):
+    """认不出的语言回落英文 —— 和邮件同一条规则,不能两处不一致。"""
+    c, _ = client
+    html = c.get("/api/v1/auth/reset?token=bogus&lang=ja").text
+    assert "Link no longer valid" in html
+
+
+def test_old_links_without_lang_fall_back_to_the_browser(client, outbox):
+    """本次改动之前发出去的链接没有 lang —— 那时只能问浏览器,不能崩、不能空白。"""
+    c, _ = client
+    html = c.get(
+        "/api/v1/auth/reset?token=bogus", headers={"Accept-Language": "fr-FR,fr;q=0.9"}
+    ).text
+    assert "Lien non valide" in html
+
+
+def test_page_copy_never_gets_inlined_into_the_script(client, outbox):
+    """⭐ 文案必须走 data-* 属性,**不能拼进 <script> 字面量**。
+
+    模板替换会做 HTML 转义。转义后的 `&#x27;` 在属性值里会被浏览器还原成 `'`
+    (正确),拼进 <script> 里却会原样显示成 `&#x27;`(错误)。
+    法语文案里就有撇号(l'application),这不是假想的边角 —— 而它**只在法语下
+    现形**,英语中文都看不出来。
+    """
+    import html as _html
+    import re
+
+    c, _ = client
+    _register(c, email="fr@test.com")
+    c.post(
+        "/api/v1/auth/password-reset/request",
+        json={"email": "fr@test.com", "language": "fr"},
+    )
+    page = c.get(_link(outbox[-1][2]).replace("http://testserver", "")).text
+
+    script = page[page.rindex("<script>") : page.rindex("</script>")]
+    assert (
+        "l&#x27;application" not in script and "l'application" not in script
+    ), "法语文案被拼进了 <script>:转义后的实体会原样显示给用户"
+
+    attr = re.search(r'data-ok="([^"]*)"', page).group(1)
+    assert _html.unescape(attr) == (
+        "Mot de passe mis à jour — connectez-vous dans l'application."
+    )
