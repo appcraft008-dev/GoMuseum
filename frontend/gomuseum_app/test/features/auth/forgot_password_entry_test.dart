@@ -89,6 +89,21 @@ void main() {
         reason: '没有入口的话，后端那套找回流程用户根本够不着');
   });
 
+  testWidgets('⭐ 入口贴在密码框右下角，不在登录按钮下面', (t) async {
+    // 位置不是装饰：会点它的人此刻正卡在密码框上，视线和手指都在那儿。
+    // 挪到登录按钮下面看着也"有入口"，但要用户先扫一遍全页才找得到 ——
+    // 而这条测试是这个判断唯一的护栏（存在性那条测试挪到哪儿都绿）。
+    final l10n = await _pump(t, _FakeRepo());
+
+    final password = t.getRect(find.byType(TextFormField).at(1));
+    final link = t.getRect(find.text(l10n.authForgotPassword));
+    final loginButton = t.getRect(find.text(l10n.authLoginButton));
+
+    expect(link.top, greaterThan(password.bottom), reason: '要在密码框下方');
+    expect(link.bottom, lessThan(loginButton.top), reason: '要在登录按钮上方');
+    expect(link.right, closeTo(password.right, 1.0), reason: '右边缘与密码框对齐');
+  });
+
   testWidgets('点开后能填邮箱并发出申请', (t) async {
     final repo = _FakeRepo();
     final l10n = await _pump(t, repo);

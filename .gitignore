@@ -101,7 +101,10 @@ frontend/gomuseum_app/coverage/
 **/*.onnx
 
 # 依赖管理
-**/node_modules/
+# ⚠️ 不带尾斜杠:带斜杠只匹配**目录**,一个名叫 node_modules 的**符号链接**
+# 会从这条规则底下溜过去 —— #501 就这么把一条指向自己的死链提交进了仓库,
+# 之后 npx 每次解析都撞 ELOOP,husky 钩子在所有人机器上静默失效。
+**/node_modules
 # package-lock.json 必须提交以确保CI/CD依赖版本一致
 # **/package-lock.json
 **/yarn.lock
