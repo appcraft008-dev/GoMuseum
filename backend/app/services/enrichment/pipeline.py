@@ -332,6 +332,8 @@ def generate_object(
             pass
 
     sections = sections_for(o.category)
+    # 料探针:材料撑不起的 lane 直接不生成(见 ContentEnricher.sections_with_material)。
+    # 放在 guide 之前会拖慢 TTFC,所以夹在 guide 落库之后、canonical 之前。
 
     # 头条(默认讲解)先生成,作为模块去重锚:模块带着头条去重,避免与头条重复。
     guide_text = (
@@ -380,6 +382,8 @@ def generate_object(
     # --- 以下延后:用户已见首屏,后台继续补全(作者实体/深度段/其余语言/问答)---
     _enrich_artist_and_titles()
 
+    if hasattr(enricher, "sections_with_material"):
+        sections = enricher.sections_with_material(obj, sections)
     draft = enricher.generate_canonical(obj, sections, guide=guide_text)
     gated_en = gate.gate(material, facts, draft)
     pub_en, nr_en = persist_gated_sections(db, qid, "en", gated_en, model)

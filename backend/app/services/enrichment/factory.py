@@ -61,7 +61,10 @@ def build_generation_components(slug: str, langs_override=None) -> dict:
     ua = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
     session = PoliteSession(user_agent=ua, min_interval=1.0)
     return {
-        "enricher": ContentEnricher(_tagged("generate")),
+        # probe 走独立通路 + temperature=0:料探针是判定,不是生成(见 ContentEnricher)
+        "enricher": ContentEnricher(
+            _tagged("generate"), probe_complete=_tagged("probe", temperature=0)
+        ),
         "gate": gate,
         "translator": translator,
         "qa_suggester": QASuggester(_tagged("qa"), gate, translator),

@@ -275,19 +275,48 @@ SECTION_ROLES: dict[str, dict] = {
         "max_chars": 260,
     },
     "background": {
-        "role": "The work's HISTORY as concrete events: when, who commissioned it, where shown, the reception as events, provenance. NOT why-it-matters (that's significance), NOT how-to-look (that's analysis).",
+        "role": (
+            "The work's HISTORY as concrete events: when, who commissioned or bought it, "
+            "where it was shown, how it landed, where it travelled. TELL IT AS A STORY, not "
+            "a chronology — name the people, give them something they wanted, pick the ONE "
+            "event with the most at stake and land on it. Do NOT open with 'In <year>, "
+            "<artist> painted <title>' — start where something is already happening. "
+            "NOT why-it-matters (that's significance), NOT how-to-look (that's analysis)."
+        ),
         "max_chars": 380,
     },
     "analysis": {
-        "role": "HOW it's painted — the craft: brushwork, paint handling, light & colour, composition structure, scale. Explain technique and the choices behind the effect. Do NOT re-list the symbols/subjects the headline guide already pointed out; go beyond naming them to how the painting achieves its impact.",
+        "role": (
+            "HOW it was made — the craft. Put the visitor's eye on ONE technical choice and "
+            "make them SEE it: a stroke, an edge, where two colours meet, how the "
+            "composition steers the gaze. Ground it in the material's OWN technical detail "
+            "(medium, support, dimensions, weave, any account of the process or later "
+            "examination) — hunt for those in the material and use them; never generalise "
+            "about the style or the period instead. Speak to 'you': one thing to look at, "
+            "then what that choice does. Do NOT re-list the symbols the headline already "
+            "pointed out."
+        ),
         "max_chars": 380,
     },
     "significance": {
-        "role": "LEGACY & influence: what it changed, who it influenced, why it matters to art history. Do NOT re-tell the scandal events (that's background).",
+        "role": (
+            "LEGACY: the ONE specific, NAMED consequence this work had — a person it "
+            "changed, a work it caused, a fight it started, somewhere it ended up because "
+            "of what it did. Name names. If the material only supports 'it influenced many "
+            "artists' / 'it remains important' / 'it shaped art history', write NOTHING — "
+            "an empty string is the correct answer here more often than not, and a vague "
+            "legacy claim is worse than no section at all. NOT the scandal events "
+            "themselves (that's background)."
+        ),
         "max_chars": 240,
     },
     "facts": {
-        "role": "ONE surprising anecdote/curiosity not covered by other lanes.",
+        "role": (
+            "ONE surprising thing that actually HAPPENED, told with a turn in it — a theft, "
+            "a hiding place, a mistake, an argument, an odd request, a discovery. It must be "
+            "an EVENT present in the material, not another compliment about the work. If the "
+            "material holds no such event, return an empty string."
+        ),
         "max_chars": 200,
     },
     "photographer": {
@@ -311,6 +340,16 @@ SECTION_ROLES: dict[str, dict] = {
         "max_chars": 200,
     },
 }
+
+# 段 → 料探针里对应的料类型。**只闸这三个**:
+# guide 是地板(料再薄也要有主讲解);background 不闸——材料的本质就是事件年表,
+# 它的料一直是够的(prod 实测 98.7% 过闸)。
+MATERIAL_PROBE_LANES: dict[str, str] = {
+    "analysis": "technique",
+    "significance": "legacy",
+    "facts": "anecdote",
+}
+
 
 _DEFAULT_ROLE = {
     "role": "Engaging, grounded spoken narration for a museum visitor.",

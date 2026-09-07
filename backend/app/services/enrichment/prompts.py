@@ -16,6 +16,14 @@ _SYSTEM = (
     "What you MUST NOT do: invent any verifiable fact (names, dates, events, attributions, "
     "medium, what is depicted) that is not in the material. If the material is too thin for a "
     "section, return a SHORT honest text or an empty string — never pad with fabrication.\n"
+    "EVERY sentence must be about THIS work, THIS artist, THIS moment. A sentence whose real "
+    "subject is art in general — art history, artists, generations, movements, the viewer, "
+    "humanity — says nothing and is the single worst failure here: if you could paste it "
+    "under a different painting unchanged, delete it. Specifically banned as vacuous: "
+    "'a testament to', 'captures the essence of', 'stands as a', 'paved the way for', 'left "
+    "an indelible mark', 'solidifying its status', 'the enduring power of art', 'timeless', "
+    "'masterpiece', 'draws you in', 'evokes a sense of', 'a glimpse into'. Prefer one "
+    "concrete detail from the material over any amount of praise.\n"
     "Write in English. Return STRICT JSON mapping each requested section_code to its text "
     '(or "" if insufficient). No extra keys, no commentary.'
 )
@@ -65,6 +73,17 @@ _ENTAILMENT_SYSTEM = (
     "event, attribution, or what is depicted) → KEEP only if fully supported by the "
     "material; otherwise REMOVE. A claim true in the real world but absent from the material "
     "is still REMOVE.\n"
+    "  SUBJECT CHECK (do this for every factual claim). The material comes in labelled "
+    "blocks and each block is ABOUT a different subject: [FACTS] / [WIKIPEDIA EXTRACTS] / "
+    "[STRUCTURED FACTS] are about THIS artwork; [ABOUT THE ARTIST] is about the ARTIST'S "
+    "LIFE AND CAREER AS A WHOLE, and usually about OTHER works too. Ask: which passage "
+    "supports this sentence, and what is THAT passage talking about? If the sentence asserts "
+    "something about THIS artwork but the only support says it about the artist in general, "
+    "the artist's late/early work, a movement, a period, or a different work → REMOVE. "
+    "Example: material says 'Monet's late works were often exhibited posthumously'; the "
+    "sentence 'This painting was exhibited posthumously' → REMOVE (the support is about a "
+    "body of work, not this canvas). The same sentence written as biography — 'Monet's late "
+    "works were often shown only after his death' → KEEP. Being plausible is not support.\n"
     "- FRAMING / GUIDANCE (second-person direction like 'notice the corner', rhetorical "
     "questions, transitions, sensory pointers) → KEEP. These make no factual claim.\n"
     "- IMPRESSION (a gentle subjective reading like 'the brushwork feels restless') → KEEP, "
@@ -81,6 +100,38 @@ def build_entailment_prompt(material: str, sentences: list[str]):
     numbered = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(sentences))
     user = f"MATERIAL:\n{material}\n\nSENTENCES:\n{numbered}"
     return _ENTAILMENT_SYSTEM, user
+
+
+# 料探针:生成前先问"材料里到底有没有这个 lane 的料",没有就不写那一段。
+# 起因(2026-09-07 prod 实测 n=80):analysis 无料 40%、significance 无料 77.5%、
+# facts 无料 41% —— 无料的段只能复述头条或写通论,那正是重复(1.8处/件)与套话
+# (significance 套话密度 2 倍、一般性主语句 7 倍)的来源。
+# ⚠️ 判定器已标定:注入技法段的合成正样本 8/10 判 true,剥到只剩标签的负样本
+# 10/10 判三项全 false —— 略偏保守,即宁可多写一段也不误砍。**改这个 prompt 必须
+# 重跑标定**,否则阳性率能从 0% 飘到 100%(本轮已有两个检测器因未标定而饱和作废)。
+_MATERIAL_PROBE_SYSTEM = (
+    "You inspect SOURCE MATERIAL about ONE artwork and report, strictly, what the material "
+    "actually contains. Use NO outside knowledge. Be conservative: when unsure, answer false.\n"
+    "For each of three lanes answer true/false + a short verbatim quote from the material "
+    "as evidence "
+    "(empty string if false):\n"
+    "1. technique — does the material describe HOW this work was made or handled: brushwork, "
+    "paint handling, treatment of light/colour, composition structure, working process, "
+    "studies/underdrawing, restoration or technical examination, a deliberate choice of "
+    "format/scale? A bare catalogue tag ('oil paint', 'canvas', 'H. 0,460') is NOT "
+    "technique — answer false for those.\n"
+    "2. legacy — does the material state THIS work's influence, later reception, or what it "
+    "changed? Facts about the artist's career or the movement in general do NOT count.\n"
+    "3. anecdote — is there a specific surprising story about THIS work (theft, hiding, an "
+    "accident, an odd commission, a discovery, a dispute)? Wall-label facts (date, size, "
+    "inventory, current location) do NOT count.\n"
+    'Return STRICT JSON {"technique":bool,"technique_q":"","legacy":bool,"legacy_q":"",'
+    '"anecdote":bool,"anecdote_q":""}.'
+)
+
+
+def build_material_probe_prompt(material: str):
+    return _MATERIAL_PROBE_SYSTEM, f"MATERIAL:\n{material}"
 
 
 _FACT_CONSISTENCY_SYSTEM = (
