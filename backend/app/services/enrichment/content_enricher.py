@@ -11,7 +11,6 @@ from app.services.enrichment.prompts import (
     build_artist_bio_prompt,
     build_default_guide_prompt,
     build_generation_prompt,
-    build_material_probe_prompt,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,13 +82,8 @@ def _parse_json(text: str) -> dict:
 
 
 class ContentEnricher:
-    def __init__(self, complete, probe_complete=None):
+    def __init__(self, complete):
         self._complete = complete  # complete(system, user) -> str
-        # 料探针是**判定**不是创作 —— 必须走 temperature=0 的通道。
-        # 生成通道是 0.3,拿它判定会让同一份材料重跑给出不同的"有没有料"
-        # (实测 13.3% 不一致,见 default_complete 的 docstring)。
-        # 缺省回落到 _complete 只为兼容老调用方/单测,生产由 factory 注入判定通道。
-        self._probe_complete = probe_complete or complete
 
     def generate_canonical(
         self, obj: dict, sections: list[str], guide: str | None = None
@@ -110,41 +104,6 @@ class ContentEnricher:
             v = parsed.get(code)
             out[code] = v.strip() if isinstance(v, str) and v.strip() else None
         return out
-
-    def sections_with_material(self, obj: dict, sections: list[str]) -> list[str]:
-        """料探针：剔掉材料撑不起的段，剩下的才生成。
-
-        无料的段只有两条路——复述头条，或写"影响了无数艺术家"这类通论。
-        两者都不该发布，所以宁可不写（契约：宁缺毋滥）。prod 实测(n=80)无料率
-        analysis 40% / significance 77.5% / facts 41%。
-
-        成本是**负的**：一次短判定，换掉那些段的生成 + 逐句接地闸。
-
-        ⚠️ fail-open：探针出错就全量生成。判定挂了不该让内容凭空少一截。
-        """
-        from app.services.enrichment.category_config import MATERIAL_PROBE_LANES
-
-        gated = [c for c in sections if c in MATERIAL_PROBE_LANES]
-        if not gated:
-            return sections
-        try:
-            system, user = build_material_probe_prompt(build_material(obj))
-            probe = _parse_json(self._probe_complete(system, user))
-        except Exception:
-            logger.exception("material probe failed, generating all sections")
-            return sections
-        if not isinstance(probe, dict) or not probe:
-            return sections
-        kept = [
-            c
-            for c in sections
-            if c not in MATERIAL_PROBE_LANES
-            or probe.get(MATERIAL_PROBE_LANES[c]) is True
-        ]
-        dropped = [c for c in sections if c not in kept]
-        if dropped:
-            logger.info("material probe dropped sections: %s", ",".join(dropped))
-        return kept
 
     def generate_artist_bio(self, artist_obj: dict) -> str | None:
         parts = [
