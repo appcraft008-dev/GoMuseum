@@ -1,0 +1,3 @@
+# 种子 md5（用于校验，任何一位不同都不可用于生产）
+550f6a72045b0804540e1d9842dc12bc seeds/SEED_en.wav
+983f490e174f00f3a4be0aed61a75518 seeds/SEED_zh.wav
