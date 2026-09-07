@@ -119,7 +119,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   validator: (v) =>
                       v?.isEmpty == true ? l10n.authPasswordRequired : null,
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 8),
+                // 忘记密码。贴在密码框的右下角：会点它的人此刻正卡在密码上，
+                // 视线和手指都在这个位置，放到登录按钮下面等于让他先扫一遍全页。
+                // 右对齐是为了不跟下面居中的按钮/注册链接抢中轴。
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _showForgotPasswordSheet,
+                    // 文字本身只有 ~17px 高，光靠它做点击区太小。
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Text(
+                        l10n.authForgotPassword,
+                        style: GmText.sans(size: 12.5, color: gm.sub),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 _isLoading
                     ? const Center(
                         child: SizedBox(
@@ -134,17 +153,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         onTap: _handleLogin,
                       ),
                 const SizedBox(height: 14),
-                // 忘记密码。**紧挨着密码框那一侧**，而不是塞进页面最底下：
-                // 会点它的人此刻正卡在密码上，视线就在这一带。
-                GestureDetector(
-                  onTap: _showForgotPasswordSheet,
-                  child: Text(
-                    l10n.authForgotPassword,
-                    textAlign: TextAlign.center,
-                    style: GmText.sans(size: 12.5, color: gm.sub),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 GestureDetector(
                   // 意图要跟着走：从「转正登录页」点进注册，如果不带 upgrade，
                   // 守卫会把已登录的游客从注册页弹回首页 —— 转正这条路又断了。
