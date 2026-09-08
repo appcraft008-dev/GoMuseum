@@ -331,7 +331,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get secAccount => 'Compte';
 
   @override
-  String get secSupport => 'Aide & Mentions légales';
+  String get secSupport => 'Aide & Légal';
 
   @override
   String get encourageUs => 'Encouragez-nous';
