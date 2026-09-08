@@ -293,6 +293,18 @@ abstract class AppLocalizations {
   /// **'{count} free scans left · Upgrade for full access'**
   String homeFreeLeft(Object count);
 
+  /// No description provided for @homePassActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass active · full access unlocked'**
+  String get homePassActive;
+
+  /// No description provided for @homePassPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass purchased · tap to activate'**
+  String get homePassPending;
+
   /// No description provided for @homeNearby.
   ///
   /// In en, this message translates to:

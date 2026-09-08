@@ -29,7 +29,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    final quota = ref.watch(entitlementsProvider).value?.freeRecognitionsLeft;
+    final ent = ref.watch(entitlementsProvider).value;
 
     return SafeArea(
       bottom: false,
@@ -56,7 +56,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _quotaLine(gm, l10n, quota),
+                    _quotaLine(context, gm, l10n, ent),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(26, 24, 26, 0),
                       child: GmSectionHead(
@@ -132,10 +132,30 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _quotaLine(GmPalette gm, AppLocalizations l10n, int? quota) {
-    return Text(
-      l10n.homeFreeLeft(quota?.toString() ?? '—'),
-      style: GmText.sans(size: 12, color: gm.sub),
+  // 已购通票/待激活时这条提示不该再说"免费还剩几次"——那对已付费用户是错误信息
+  // （见 Entitlements.freeRecognitionsLeft 注释：通票生效期间该字段为 null）。
+  // 已到期则退回免费额度文案，与 benefits_page 的 _freeAfterExpiry/_lapsedState
+  // 是同一套"到期后当作免费用户看待"的口径，不再单独造一种措辞。
+  // 整行做成可点击入口，跳去权益页——这也是免费用户了解"升级"具体是什么的路径。
+  Widget _quotaLine(BuildContext context, GmPalette gm, AppLocalizations l10n,
+      Entitlements? ent) {
+    final String text;
+    if (ent != null && ent.known && ent.isActive) {
+      text = l10n.homePassActive;
+    } else if (ent != null && ent.known && ent.isPurchasedNotActivated) {
+      text = l10n.homePassPending;
+    } else {
+      text = l10n.homeFreeLeft(ent?.freeRecognitionsLeft?.toString() ?? '—');
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push('/benefits'),
+      // 各语言长度差异大（德语/波兰语明显长于中日韩），FittedBox 保证单行不换行，
+      // 与上方 _slogan 用同一手法。
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(text, style: GmText.sans(size: 12, color: gm.sub)),
+      ),
     );
   }
 

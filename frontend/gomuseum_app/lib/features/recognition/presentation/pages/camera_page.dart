@@ -399,7 +399,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
             ),
           // 轻微暗角
           const ColoredBox(color: Color(0x2E171310)),
-          // 顶部：关闭 / 标题「识别画作」/ 闪光（钉顶部，避免被 StackFit.expand 拉满居中）
+          // 顶部：关闭 / 标题「识别作品」/ 闪光（钉顶部，避免被 StackFit.expand 拉满居中）
           Positioned(
             top: 0,
             left: 0,
