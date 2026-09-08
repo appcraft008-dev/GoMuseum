@@ -1074,10 +1074,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get homePassActive => '通行證生效中 · 暢聽全館';
+  String get homePassActive => '通票生效中 · 暢聽全館';
 
   @override
-  String get homePassPending => '通行證已購 · 點擊啟用';
+  String get homePassPending => '通票已購 · 點擊啟用';
 
   @override
   String get homeNearby => '附近博物館';
