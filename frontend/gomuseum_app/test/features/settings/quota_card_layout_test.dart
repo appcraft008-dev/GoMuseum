@@ -113,4 +113,39 @@ void main() {
           reason: errors.map((e) => e.exceptionAsString()).join('\n---\n'));
     });
   }
+
+  // ⚠️ 上面那组只抓 RenderFlex overflow —— 而 GmSectionHead 加了
+  // `Flexible + TextOverflow.ellipsis` 之后**就再也不会溢出了**,它改成默默截断。
+  // 上面那组从此对这一类缺陷完全失明:2026-09-08 真机上法语「Aide & Mention…」
+  // 被截成读不懂,而这个文件当时全绿。
+  //
+  // 🔴 **为什么这里查的是字数而不是像素**:widget test 跑在 `--use-test-fonts` 下,
+  // 每个字形都是**正方形 em** —— 拉丁字母被量成真实宽度的约两倍,CJK 才接近真实。
+  // 而会出事的恰恰是拉丁语言,所以在 widget test 里量 `didExceedMaxLines`
+  // 会系统性冤枉法语/德语/西语(第一版就是这么写的,en 都判不过)。
+  // 渲染宽度这件事只有真机/真字体说了算,单测能守住的是**上游那个变量:译法长度**。
+  //
+  // 预算依据(实测,不是拍的):fr 23 字符在真机上被截断;缩短后最长是 it 17 字符,
+  // 真机复验正常。取 18 留一格余量。换机型/改字号后如果真机又出现截断,
+  // **该做的是把这个数字调小并记下新的实测依据**,不是删掉这条测试。
+  const budget = 18;
+  test('分区标题各语言译法长度不超预算(挡住"下次翻译又变长")', () {
+    final tooLong = <String>[];
+    for (final locale in AppLocalizations.supportedLocales) {
+      final l10n = lookupAppLocalizations(locale);
+      for (final entry in {
+        'secGeneral': l10n.secGeneral,
+        'secAccount': l10n.secAccount,
+        'secSupport': l10n.secSupport,
+      }.entries) {
+        if (entry.value.length > budget) {
+          tooLong.add('$locale/${entry.key} = "${entry.value}"'
+              ' (${entry.value.length} 字符)');
+        }
+      }
+    }
+    expect(tooLong, isEmpty,
+        reason: '这些分区标题会在窄屏被截成省略号,读不懂。'
+            '上限 $budget 字符:\n${tooLong.join('\n')}');
+  });
 }

@@ -329,7 +329,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get secAccount => 'Cuenta';
 
   @override
-  String get secSupport => 'Soporte y aspectos legales';
+  String get secSupport => 'Soporte y legal';
 
   @override
   String get encourageUs => 'Anímanos';

@@ -190,15 +190,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         // 占位、不参与压缩。法语/德语「查看权益」按钮文案更长时,Expanded 那侧被
         // 挤到极窄,到期日文本被迫逐字折行(真机/多语言实测发现)。按钮换到文字
         // 下方单独一行,不再与文字共享横向空间,不论语言多长都不会挤压彼此。
+        //
+        // 🔴 但那一版留下了**两条对齐轴**:文字左对齐、按钮右对齐,同一张小卡片里
+        // 各拉各的,语言一换宽度差异就把这个歪斜放大(2026-09-08 真机多语言反馈)。
+        // 现在统一成:**文字居中 + 按钮撑满整行**。
+        // - 居中呼应页面标题「设 置」那套居中+菱形的视觉语言,票据本来就是居中的;
+        // - 按钮撑满则**彻底消掉各语言的宽度差异**——这是根因,不是把它对齐到某一边
+        //   就没有了(中文「查看权益」4 个字,西语按钮长一倍多)。
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(label,
+                textAlign: TextAlign.center,
                 style:
                     GmText.sans(size: 11.5, letterSpacing: 1, color: gm.sub)),
             const SizedBox(height: 4),
             Text(
               value,
+              textAlign: TextAlign.center,
               style: GmText.serif(size: 17, weight: FontWeight.w700),
             ),
             // 进度条只在免费层有意义:通票不限次,画一根满格或空的槽
@@ -216,22 +225,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ],
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: GestureDetector(
-                onTap: () => context.push('/benefits'),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                  color: gm.ctaBg,
-                  child: Text(
-                    hasPass ? l10n.viewBenefits : l10n.upgrade,
-                    style: GmText.serif(
-                        size: 13,
-                        weight: FontWeight.w600,
-                        letterSpacing: 2,
-                        color: gm.ctaInk),
-                  ),
+            GestureDetector(
+              onTap: () => context.push('/benefits'),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                color: gm.ctaBg,
+                child: Text(
+                  hasPass ? l10n.viewBenefits : l10n.upgrade,
+                  textAlign: TextAlign.center,
+                  style: GmText.serif(
+                      size: 13,
+                      weight: FontWeight.w600,
+                      letterSpacing: 2,
+                      color: gm.ctaInk),
                 ),
               ),
             ),
