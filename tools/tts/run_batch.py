@@ -23,7 +23,7 @@ import soundfile as sf
 from voxcpm import VoxCPM
 
 from batch_record import make_record
-from consistency import consistency, length_ratio
+from consistency import consistency, length_ratio, tts_input
 from loudness import TARGET_LUFS, gain_db, measure
 
 LAB = Path(os.environ.get("TTS_LAB", Path(__file__).resolve().parent))
@@ -172,7 +172,10 @@ def main():
         tries = []
         for attempt in range(1, MAX_TRY + 1):
             t0 = time.time()
-            wav = m.generate(text=text, reference_wav_path=str(seed),
+            # zh-hant 喂**简体**给模型(见 tts_input:模型认不全繁体专用字形)。
+            # 质检、语速、长度比一律仍按原始正文 `text` 算 —— 用户读到的是它,
+            # 口径不能跟着输入走(normalize() 本来两侧都转简体,读数零影响)。
+            wav = m.generate(text=tts_input(text, lang), reference_wav_path=str(seed),
                              cfg_value=CFG, inference_timesteps=TIMESTEPS)
             w = np.asarray(wav, dtype=np.float32)
             raw = outdir / f"_tmp_{name}.wav"
