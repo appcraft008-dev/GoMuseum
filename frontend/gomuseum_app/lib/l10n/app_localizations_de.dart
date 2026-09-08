@@ -330,7 +330,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get secAccount => 'Konto';
 
   @override
-  String get secSupport => 'Support & Rechtliches';
+  String get secSupport => 'Support & Recht';
 
   @override
   String get encourageUs => 'Unterstützen Sie uns';

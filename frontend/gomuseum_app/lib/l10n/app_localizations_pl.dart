@@ -329,7 +329,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get secAccount => 'Konto';
 
   @override
-  String get secSupport => 'Pomoc i informacje prawne';
+  String get secSupport => 'Pomoc i prawo';
 
   @override
   String get encourageUs => 'Wesprzyj nas';
