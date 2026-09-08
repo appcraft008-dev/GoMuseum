@@ -30,6 +30,8 @@
   "homeSlogan": "一つの作品に近づいて、\nその物語を聴こう。",
   "homeCtaRecognize": "撮影して認識・再生",
   "homeFreeLeft": "無料スキャン残り{count}回 · アップグレードで全機能",
+  "homePassActive": "パス利用中 · 全機能が使えます",
+  "homePassPending": "パス購入済み · タップして開始",
   "homeNearby": "近くの美術館",
   "statusOpen": "開館中",
   "exploreTitle": "探す",

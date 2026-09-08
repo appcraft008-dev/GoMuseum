@@ -102,6 +102,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get homePassActive => 'Pass active · full access unlocked';
+
+  @override
+  String get homePassPending => 'Pass purchased · tap to activate';
+
+  @override
   String get homeNearby => 'Nearby Museums';
 
   @override

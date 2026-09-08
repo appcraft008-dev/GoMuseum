@@ -101,6 +101,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get homePassActive => '패스 이용 중 · 전체 이용 가능';
+
+  @override
+  String get homePassPending => '패스 구매 완료 · 탭하여 활성화';
+
+  @override
   String get homeNearby => '근처 미술관';
 
   @override

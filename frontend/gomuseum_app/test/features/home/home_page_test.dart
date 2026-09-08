@@ -82,6 +82,67 @@ void main() {
     expect(find.text('附近博物馆'), findsOneWidget);
   });
 
+  testWidgets('通票生效中：额度提示改说"通票生效中"而非"免费识别还剩"', (tester) async {
+    // 回归：freeRecognitionsLeft 在 active 态恒为 null（见 Entitlements 注释），
+    // 旧文案会显示成"免费识别还剩 — 次"——对已付费用户是错误信息。
+    const active = Entitlements(
+      state: 'active',
+      canPurchase: false,
+      canRecognize: true,
+      canAudioAny: true,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => active),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
+        ],
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('zh'),
+            home: Scaffold(body: HomePage())),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.textContaining('通票生效中'), findsOneWidget);
+    expect(find.textContaining('免费识别还剩'), findsNothing);
+  });
+
+  testWidgets('点击额度提示跳转到权益页', (tester) async {
+    final router = GoRouter(routes: [
+      GoRoute(path: '/', builder: (_, __) => const HomePage()),
+      GoRoute(path: '/benefits', builder: (_, __) => const Text('BENEFITS')),
+      GoRoute(path: '/camera', builder: (_, __) => const SizedBox()),
+      GoRoute(path: '/explore', builder: (_, __) => const SizedBox()),
+    ]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.textContaining('免费识别还剩'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('BENEFITS'), findsOneWidget);
+  });
+
   testWidgets('橘园卡片(无 topWorks,比奥赛矮)整个卡槽都可点击,不留死区', (tester) async {
     // 回归：橘园无 topWorks 行，卡片实际渲染高度比奥赛矮 ~60px，
     // 但卡槽固定 344px 高——此前只有卡片自身 GestureDetector 可点，

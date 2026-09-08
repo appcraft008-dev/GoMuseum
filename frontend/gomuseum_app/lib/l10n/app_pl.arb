@@ -30,6 +30,8 @@
   "homeSlogan": "Podejdź bliżej dzieła,\nposłuchaj jego historii.",
   "homeCtaRecognize": "Zrób zdjęcie, aby rozpoznać i słuchać",
   "homeFreeLeft": "{count} darmowych skanów · Ulepsz, aby uzyskać pełny dostęp",
+  "homePassActive": "Karnet aktywny · pełny dostęp odblokowany",
+  "homePassPending": "Karnet kupiony · dotknij, aby aktywować",
   "homeNearby": "Muzea w pobliżu",
   "statusOpen": "Otwarte",
   "exploreTitle": "Odkrywaj",

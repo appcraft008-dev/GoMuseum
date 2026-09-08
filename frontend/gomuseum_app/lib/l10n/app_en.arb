@@ -40,6 +40,8 @@
       }
     }
   },
+  "homePassActive": "Pass active · full access unlocked",
+  "homePassPending": "Pass purchased · tap to activate",
   "homeNearby": "Nearby Museums",
   "statusOpen": "Open",
   "exploreTitle": "Explore",

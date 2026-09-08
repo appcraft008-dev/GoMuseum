@@ -75,6 +75,24 @@ class AuthService:
         )
 
     @staticmethod
+    def _link_oauth_to_existing(user: User, field: str, provider_id: str) -> None:
+        """把 OAuth 身份挂到**同邮箱的已有账号**上。
+
+        ⚠️ 若那行**从没验证过邮箱**,它可能是抢注:注册不要求证明你拥有该邮箱,
+        所以任何人都能拿 victim@gmail.com 建号,等机主日后用 Google/Apple 登录
+        就认领到攻击者那行 —— 两人共用一个账号,攻击者知道密码,机主买的通票他也能用。
+
+        **不能靠"拒绝认领"来堵**:email 是 unique 列,拒绝等于把合法机主永远锁在门外。
+        真主人是刚刚证明了邮箱所有权的这一侧,所以作废那行没被证明过的密码凭据。
+        机主自己先注册再绑 OAuth 的情况(已点过验证信)不受影响,密码照常可用。
+        被清掉密码的人若真是本人,现在有找回密码可走(#509 起)——这个修法在那之前做不了。
+        """
+        if not user.is_verified:
+            user.password_hash = None
+        setattr(user, field, provider_id)
+        user.is_verified = True
+
+    @staticmethod
     def login(db: Session, request: LoginRequest) -> TokenResponse:
         """Login user with email and password"""
         # Find user by email
@@ -257,8 +275,7 @@ class AuthService:
                 # Check if email is already registered
                 user = db.query(User).filter(User.email == email).first()
                 if user:
-                    # Link Google account to existing user
-                    user.google_id = google_id
+                    AuthService._link_oauth_to_existing(user, "google_id", google_id)
                 else:
                     # 游客就地转正(保住已购通票与额度),否则才新建
                     user = AuthService._guest_to_upgrade(db, credentials)
@@ -373,8 +390,7 @@ class AuthService:
                     # Check if email is already registered
                     user = db.query(User).filter(User.email == email).first()
                     if user:
-                        # Link Apple account to existing user
-                        user.apple_id = apple_id
+                        AuthService._link_oauth_to_existing(user, "apple_id", apple_id)
                     else:
                         # Create new user with email
                         user = User(
@@ -561,11 +577,27 @@ class AuthService:
     @staticmethod
     def export_user_data(db: Session, user: User) -> dict:
         """GDPR 数据导出：返回账号关联的全部个人数据"""
+        from app.models.purchase import Entitlement, Purchase
         from app.models.recognition_event import RecognitionEvent
         from app.models.user_benefits import UserBenefits
 
         uid = str(user.id)
         benefits = db.query(UserBenefits).filter(UserBenefits.user_id == uid).all()
+        # 交易记录:隐私政策把「交易记录」明列为一类保留的个人数据,导出就必须给。
+        # ⚠️ 不导出 receipt_payload —— 那是 Google 签的原始收据,给用户没有意义,
+        # 却是一份能拿去重放的凭据。删号时也是清掉它、留下账目本身。
+        purchases = (
+            db.query(Purchase)
+            .filter(Purchase.user_id == uid)
+            .order_by(Purchase.created_at.desc())
+            .all()
+        )
+        entitlements = (
+            db.query(Entitlement)
+            .filter(Entitlement.user_id == uid)
+            .order_by(Entitlement.created_at.desc())
+            .all()
+        )
         # 足迹:自 x1u0 起识别事件带 user_id,属于"账号关联的个人数据",必须能导出
         footprints = (
             db.query(RecognitionEvent)
@@ -602,6 +634,35 @@ class AuthService:
                     "created_at": f.created_at.isoformat() if f.created_at else None,
                 }
                 for f in footprints
+            ],
+            "purchases": [
+                {
+                    "platform": p.platform,
+                    "product_id": p.product_id,
+                    "store_transaction_id": p.store_transaction_id,
+                    "amount": str(p.amount) if p.amount is not None else None,
+                    "currency": p.currency,
+                    "status": p.status,
+                    "purchased_at": (
+                        p.purchased_at.isoformat() if p.purchased_at else None
+                    ),
+                    "refunded_at": p.refunded_at.isoformat() if p.refunded_at else None,
+                }
+                for p in purchases
+            ],
+            "entitlements": [
+                {
+                    "type": e.entitlement_type,
+                    "scope": e.scope,
+                    "status": e.status,
+                    "granted_reason": e.granted_reason,
+                    "activated_at": (
+                        e.activated_at.isoformat() if e.activated_at else None
+                    ),
+                    "expires_at": e.expires_at.isoformat() if e.expires_at else None,
+                    "created_at": e.created_at.isoformat() if e.created_at else None,
+                }
+                for e in entitlements
             ],
         }
 

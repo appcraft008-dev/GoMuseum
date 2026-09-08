@@ -101,6 +101,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get homePassActive => '通票生效中 · 畅听全馆';
+
+  @override
+  String get homePassPending => '通票已购 · 点击激活';
+
+  @override
   String get homeNearby => '附近博物馆';
 
   @override
@@ -563,7 +569,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recViewfinderLabelHint => '对准标签文字，占满画面';
 
   @override
-  String get camRecognizeTitle => '识别画作';
+  String get camRecognizeTitle => '识别作品';
 
   @override
   String get camViewfinderHint => '将画作完整置于取景框内';
@@ -1068,6 +1074,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
+  String get homePassActive => '通票生效中 · 暢聽全館';
+
+  @override
+  String get homePassPending => '通票已購 · 點擊啟用';
+
+  @override
   String get homeNearby => '附近博物館';
 
   @override
@@ -1530,7 +1542,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get recViewfinderLabelHint => '對準標籤文字，佔滿畫面';
 
   @override
-  String get camRecognizeTitle => '識別畫作';
+  String get camRecognizeTitle => '識別作品';
 
   @override
   String get camViewfinderHint => '將畫作完整置於取景框內';

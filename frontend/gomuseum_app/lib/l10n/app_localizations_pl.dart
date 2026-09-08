@@ -101,6 +101,12 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get homePassActive => 'Karnet aktywny · pełny dostęp odblokowany';
+
+  @override
+  String get homePassPending => 'Karnet kupiony · dotknij, aby aktywować';
+
+  @override
   String get homeNearby => 'Muzea w pobliżu';
 
   @override

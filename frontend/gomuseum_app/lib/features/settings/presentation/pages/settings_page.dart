@@ -28,7 +28,7 @@ const kPrivacyPolicyUrl = 'https://gomuseum.app/privacy.html';
 /// 版本脚注。**不会自动跟着 pubspec 走** —— `package_info_plus` 同样是
 /// 原生插件(理由见 [kPrivacyPolicyUrl]),所以这里是手写的。
 /// 发版改 pubspec 时必须一起改;忘了会被 `settings_version_test` 拦下。
-const kVersionFootnote = 'GoMuseum 1.0.0 (28)';
+const kVersionFootnote = 'GoMuseum 1.0.0 (29)';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -186,51 +186,52 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           border: Border.all(color: gm.faint, width: 1),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
+        // 按钮曾和文字同一个 Row(Expanded(文字), 按钮)——按钮按自身文案的固有宽度
+        // 占位、不参与压缩。法语/德语「查看权益」按钮文案更长时,Expanded 那侧被
+        // 挤到极窄,到期日文本被迫逐字折行(真机/多语言实测发现)。按钮换到文字
+        // 下方单独一行,不再与文字共享横向空间,不论语言多长都不会挤压彼此。
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Text(label,
+                style:
+                    GmText.sans(size: 11.5, letterSpacing: 1, color: gm.sub)),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GmText.serif(size: 17, weight: FontWeight.w700),
+            ),
+            // 进度条只在免费层有意义:通票不限次,画一根满格或空的槽
+            // 都是在暗示一个并不存在的额度。
+            if (!hasPass) ...[
+              const SizedBox(height: 9),
+              Stack(
                 children: [
-                  Text(label,
-                      style: GmText.sans(
-                          size: 11.5, letterSpacing: 1, color: gm.sub)),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: GmText.serif(size: 17, weight: FontWeight.w700),
+                  Container(height: 3, color: gm.chipBg),
+                  FractionallySizedBox(
+                    widthFactor: progress,
+                    child: Container(height: 3, color: gm.accent),
                   ),
-                  // 进度条只在免费层有意义:通票不限次,画一根满格或空的槽
-                  // 都是在暗示一个并不存在的额度。
-                  if (!hasPass) ...[
-                    const SizedBox(height: 9),
-                    Stack(
-                      children: [
-                        Container(height: 3, color: gm.chipBg),
-                        FractionallySizedBox(
-                          widthFactor: progress,
-                          child: Container(height: 3, color: gm.accent),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
-            ),
-            const SizedBox(width: 14),
-            GestureDetector(
-              onTap: () => context.push('/benefits'),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                color: gm.ctaBg,
-                child: Text(
-                  hasPass ? l10n.viewBenefits : l10n.upgrade,
-                  style: GmText.serif(
-                      size: 13,
-                      weight: FontWeight.w600,
-                      letterSpacing: 2,
-                      color: gm.ctaInk),
+            ],
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: () => context.push('/benefits'),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                  color: gm.ctaBg,
+                  child: Text(
+                    hasPass ? l10n.viewBenefits : l10n.upgrade,
+                    style: GmText.serif(
+                        size: 13,
+                        weight: FontWeight.w600,
+                        letterSpacing: 2,
+                        color: gm.ctaInk),
+                  ),
                 ),
               ),
             ),
@@ -380,38 +381,53 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     ];
     final current = ref.watch(themeModeProvider);
 
-    return SizedBox(
-      height: 48,
-      child: Row(
+    // 曾是单行 Row(图标+标签, Spacer, 分段控件)——分段控件按内容固有宽度占位、
+    // 不参与压缩。德语「Erscheinungsbild」+ 波兰语「Systemowy」这类较长译法会让
+    // 标签和三段控件的固有宽度之和超过整行宽度(窄屏实测:溢出 135px)。
+    // 改成标签独占一行、分段控件另起一行且三段各 Expanded 平分宽度——分段控件
+    // 因此恒好等于卡片宽度,不论文案多长都不会溢出,各语言下结构也保持一致。
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GmIcon(GmIcons.sliders, size: 19, color: gm.sub),
-          const SizedBox(width: 13),
-          Text(l10n.appearance, style: GmText.sans(size: 14, color: gm.ink)),
-          const Spacer(),
+          Row(
+            children: [
+              GmIcon(GmIcons.sliders, size: 19, color: gm.sub),
+              const SizedBox(width: 13),
+              Text(l10n.appearance,
+                  style: GmText.sans(size: 14, color: gm.ink)),
+            ],
+          ),
+          const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
               border: Border.all(color: gm.line),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: segments.map((seg) {
                 final isActive = current == seg.mode;
-                return Material(
-                  type: MaterialType.transparency,
-                  child: InkWell(
-                    onTap: () =>
-                        ref.read(themeModeProvider.notifier).setMode(seg.mode),
-                    child: Container(
-                      height: 40,
-                      color: isActive ? gm.ctaBg : Colors.transparent,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      alignment: Alignment.center,
-                      child: Text(
-                        seg.label,
-                        style: GmText.serif(
-                          size: 12,
-                          weight: FontWeight.w600,
-                          color: isActive ? gm.ctaInk : gm.sub,
+                return Expanded(
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: InkWell(
+                      onTap: () => ref
+                          .read(themeModeProvider.notifier)
+                          .setMode(seg.mode),
+                      child: Container(
+                        height: 40,
+                        color: isActive ? gm.ctaBg : Colors.transparent,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        alignment: Alignment.center,
+                        child: Text(
+                          seg.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GmText.serif(
+                            size: 12,
+                            weight: FontWeight.w600,
+                            color: isActive ? gm.ctaInk : gm.sub,
+                          ),
                         ),
                       ),
                     ),
