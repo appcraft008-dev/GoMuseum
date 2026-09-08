@@ -17,15 +17,34 @@ import librosa
 import mlx_whisper
 import numpy as np
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import soundfile as sf
 from voxcpm import VoxCPM
 
 from batch_record import make_record
-from consistency import consistency, length_ratio
+from consistency import consistency, length_ratio, tts_input
 from loudness import TARGET_LUFS, gain_db, measure
 
 LAB = Path(os.environ.get("TTS_LAB", Path(__file__).resolve().parent))
 API = os.environ.get("GOMUSEUM_API", "https://api.gomuseum.app/api/v1")
+
+# 取文本的 HTTP 会话:对网关错误自动重试。prod 部署会 recreate 容器,窗口里
+# Nginx 返 502 —— 实测一次 502 就把跑了 4 小时的批次整个掐断(run_chunked.sh
+# 是 set -e,一个 python 非零退出就中止整轮)。用 urllib3 自带的重试策略,
+# 不自己写重试分支:它只重试 502/503/504 与连接错误,4xx(内容真的没有)照常上抛。
+_HTTP = requests.Session()
+_HTTP.mount(
+    "https://",
+    HTTPAdapter(
+        max_retries=Retry(
+            total=5,
+            backoff_factor=5,  # 退避 5→10→20→40s,足够跨过一次部署窗口
+            status_forcelist=(502, 503, 504),
+            allowed_methods=("GET",),
+        )
+    ),
+)
 
 # ===== 定稿参数 =====
 CFG, TIMESTEPS, BITRATE = 1.7, 10, "160k"
@@ -89,8 +108,8 @@ def fetch_text(job):
     """
     qid, lang, sec = job["qid"], job["language"], job["section"]
     via = job.get("via_qid", qid)
-    r = requests.get(f"{API}/museums/{job['museum']}/objects/{via}/content",
-                     params={"language": lang}, timeout=30)
+    r = _HTTP.get(f"{API}/museums/{job['museum']}/objects/{via}/content",
+                  params={"language": lang}, timeout=30)
     r.raise_for_status()
     d = r.json()
     if sec == "artist_bio":
@@ -153,7 +172,10 @@ def main():
         tries = []
         for attempt in range(1, MAX_TRY + 1):
             t0 = time.time()
-            wav = m.generate(text=text, reference_wav_path=str(seed),
+            # zh-hant 喂**简体**给模型(见 tts_input:模型认不全繁体专用字形)。
+            # 质检、语速、长度比一律仍按原始正文 `text` 算 —— 用户读到的是它,
+            # 口径不能跟着输入走(normalize() 本来两侧都转简体,读数零影响)。
+            wav = m.generate(text=tts_input(text, lang), reference_wav_path=str(seed),
                              cfg_value=CFG, inference_timesteps=TIMESTEPS)
             w = np.asarray(wav, dtype=np.float32)
             raw = outdir / f"_tmp_{name}.wav"
