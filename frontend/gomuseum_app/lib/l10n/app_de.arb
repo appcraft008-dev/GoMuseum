@@ -30,6 +30,8 @@
   "homeSlogan": "Treten Sie näher an ein Werk,\nhören Sie seine Geschichte.",
   "homeCtaRecognize": "Fotografieren, erkennen & hören",
   "homeFreeLeft": "{count} Gratis-Scans übrig · Upgrade für vollen Zugang",
+  "homePassActive": "Pass aktiv · voller Zugang freigeschaltet",
+  "homePassPending": "Pass gekauft · zum Aktivieren tippen",
   "homeNearby": "Museen in der Nähe",
   "statusOpen": "Geöffnet",
   "exploreTitle": "Entdecken",

@@ -101,6 +101,12 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get homePassActive => 'パス利用中 · 全機能が使えます';
+
+  @override
+  String get homePassPending => 'パス購入済み · タップして開始';
+
+  @override
   String get homeNearby => '近くの美術館';
 
   @override

@@ -77,12 +77,20 @@ class GmSectionHead extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Text(
-          label,
-          style: GmText.sans(
-              size: 12,
-              letterSpacing: context.gmLetterSpacing(3),
-              weight: FontWeight.w600),
+        // label 原来是不限宽的 Text——法语「Aide & Mentions légales」这类较长
+        // 译法在窄屏下会让 Row 整体溢出(实测 34px)。包一层 Flexible + 单行省略：
+        // 短文案渲染不受影响(仍按内容自身宽度显示，hairline 照常吃掉剩余空间)，
+        // 长文案则安全省略号收尾，不会撑爆整行。
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GmText.sans(
+                size: 12,
+                letterSpacing: context.gmLetterSpacing(3),
+                weight: FontWeight.w600),
+          ),
         ),
         const SizedBox(width: 12),
         const Expanded(child: GmHairline()),

@@ -101,6 +101,12 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get homePassActive => 'Przepustka aktywna · pełny dostęp odblokowany';
+
+  @override
+  String get homePassPending => 'Przepustka kupiona · dotknij, aby aktywować';
+
+  @override
   String get homeNearby => 'Muzea w pobliżu';
 
   @override
