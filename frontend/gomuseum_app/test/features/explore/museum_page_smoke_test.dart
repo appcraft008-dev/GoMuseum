@@ -127,7 +127,7 @@ Widget _wrap({bool withIntro = true}) => ProviderScope(
 // Tests
 // ---------------------------------------------------------------------------
 void main() {
-  testWidgets('MuseumPage：默认停在「封面」tab，切到「藏品」才见网格 + 「待完善」角标', (tester) async {
+  testWidgets('MuseumPage：默认停在「藏品」tab，切到「封面」才见介绍', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -135,32 +135,36 @@ void main() {
     // Museum name should appear in the top bar
     expect(find.text('奥赛博物馆'), findsOneWidget);
 
-    // 顶层 tab 栏：封面(默认选中) / 藏品
+    // 顶层 tab 栏：封面 / 藏品(默认选中)
     expect(find.text('封面'), findsOneWidget);
     expect(find.text('藏品'), findsOneWidget);
 
-    // 默认在「封面」tab：藏品网格/分类 tab 尚未出现（TabBarView 惰性构建其它页）
-    expect(find.text('在阿尔勒的卧室'), findsNothing);
-
-    // 切到「藏品」tab
-    await tester.tap(find.text('藏品'));
-    await tester.pumpAndSettle();
-
-    // Category tabs should show
+    // 默认在「藏品」tab：网格/分类 tab 直接可见，无需切换
     expect(find.text('全部'), findsWidgets);
-
-    // Cards should be rendered
     expect(find.text('在阿尔勒的卧室'), findsOneWidget);
     expect(find.text('自画像'), findsOneWidget);
 
     // stub badge should appear for the first card
     expect(find.text('待完善'), findsOneWidget);
+
+    // 「封面」tab 内容尚未出现（TabBarView 惰性构建其它页）
+    expect(find.textContaining('奥赛坐落在一座1900年的火车站里'), findsNothing);
+
+    // 切到「封面」tab
+    await tester.tap(find.text('封面'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('奥赛坐落在一座1900年的火车站里'), findsOneWidget);
   });
 
   testWidgets('MuseumPage：「封面」tab 显示完整介绍(不折叠) + 开放时间/官网', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
+
+    // 切到「封面」tab（默认在「藏品」tab）
+    await tester.tap(find.text('封面'));
+    await tester.pumpAndSettle();
 
     // 完整介绍全文可见（不再折叠/无 ▾ 展开交互——本身独占一屏）
     expect(find.textContaining('奥赛坐落在一座1900年的火车站里'), findsOneWidget);
@@ -179,6 +183,10 @@ void main() {
     await tester.pumpWidget(_wrap(withIntro: false));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
+
+    // 切到「封面」tab（默认在「藏品」tab）
+    await tester.tap(find.text('封面'));
+    await tester.pumpAndSettle();
 
     expect(find.text('馆方介绍生成中，敬请期待'), findsOneWidget);
     expect(find.text('开放时间'), findsNothing);
