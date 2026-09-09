@@ -1,9 +1,9 @@
 /// 馆详情页 — 暖纸手册 §8 CollectionListScreen（顶层二级 tab：封面 / 藏品）
 ///
 /// 顶栏：← + 馆名 + 藏品数 + 搜索图标（全局，不随 tab 变化）
-/// Tab①「封面」（默认）：hero 图 + 馆介绍(description) + 实用信息(开放时间/官网)。
+/// Tab①「封面」：hero 图 + 馆介绍(description) + 实用信息(开放时间/官网)。
 ///   两字段皆缺(老馆/未生成) → 显「介绍生成中」占位，不留空白页。
-/// Tab②「藏品」：分类 Tab 横滑(A2 categories) + 目录列表(A3 无限滚动)，与此前行为一致。
+/// Tab②「藏品」（默认，用户进馆直接看目录）：分类 Tab 横滑(A2 categories) + 目录列表(A3 无限滚动)，与此前行为一致。
 /// 顶层 tab 结构预留扩展位——以后加「地图」「特展」等新 tab 只需在 _MuseumTopTabBar
 /// 的 tabs 列表 + TabBarView children 各加一项。
 /// 目录列表行：序号 + 缩略图 + 标题/作者·年代 + content_status 角标；stub → 「待完善」角标
@@ -40,9 +40,9 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
   String _selectedCategory = 'all';
   final ScrollController _scrollController = ScrollController();
 
-  /// 顶层二级 tab：0=封面(默认，用户先看馆介绍) 1=藏品。
+  /// 顶层二级 tab：0=封面 1=藏品(默认，用户进馆直接看目录)。
   late final TabController _topTabController =
-      TabController(length: 2, vsync: this);
+      TabController(length: 2, vsync: this, initialIndex: 1);
 
   /// 馆内搜索：图标展开搜索框，即时（debounce 300ms）只搜当前馆。
   bool _searching = false;
