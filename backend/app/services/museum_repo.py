@@ -245,11 +245,73 @@ _MEDIUM_NORM = {
     "noyer": {"zh": "胡桃木", "en": "Walnut", "fr": "Noyer"},
     "bois": {"zh": "木", "en": "Wood", "fr": "Bois"},
     "toile": {"zh": "布面", "en": "Canvas", "fr": "Toile"},
+    # 以下补 **英文**(Wikidata P186,优先级高于 attributes 故更常出现在面板上)
+    # 与法语长尾。按 prod 全量 11449 条真值定(2026-09-12)。
+    # ⚠️ gelatin/albumen/salted 在上面、排在 silver 之前 —— 否则
+    # "gelatin silver print"(明胶银盐照片)会被判成「银」。
+    "serpentin": {"zh": "蛇纹石", "en": "Serpentinite", "fr": "Serpentinite"},
+    "limestone": {"zh": "石灰岩", "en": "Limestone", "fr": "Calcaire"},
+    "sandstone": {"zh": "砂岩", "en": "Sandstone", "fr": "Grès"},
+    "black chalk": {"zh": "黑石笔", "en": "Black chalk", "fr": "Pierre noire"},
+    "cast iron": {"zh": "铸铁", "en": "Cast iron", "fr": "Fonte"},
+    "marble": {"zh": "大理石", "en": "Marble", "fr": "Marbre"},
+    "alabaster": {"zh": "雪花石膏", "en": "Alabaster", "fr": "Albâtre"},
+    "basalt": {"zh": "玄武岩", "en": "Basalt", "fr": "Basalte"},
+    "granite": {"zh": "花岗岩", "en": "Granite", "fr": "Granit"},
+    "diorite": {"zh": "闪长岩", "en": "Diorite", "fr": "Diorite"},
+    "porphyry": {"zh": "斑岩", "en": "Porphyry", "fr": "Porphyre"},
+    "quartzite": {"zh": "石英岩", "en": "Quartzite", "fr": "Quartzite"},
+    "flint": {"zh": "燧石", "en": "Flint", "fr": "Silex"},
+    "terracotta": {"zh": "陶土", "en": "Terracotta", "fr": "Terre cuite"},
+    "plaster": {"zh": "石膏", "en": "Plaster", "fr": "Plâtre"},
+    "fresco": {"zh": "湿壁画", "en": "Fresco", "fr": "Fresque"},
+    "distemper": {"zh": "胶彩", "en": "Distemper", "fr": "Détrempe"},
+    "photogravure": {"zh": "照相凹版", "en": "Photogravure", "fr": "Photogravure"},
+    "parchment": {"zh": "羊皮纸", "en": "Parchment", "fr": "Parchemin"},
+    "ivory": {"zh": "象牙", "en": "Ivory", "fr": "Ivoire"},
+    "ormolu": {"zh": "鎏金铜", "en": "Ormolu", "fr": "Bronze doré"},
+    "brass": {"zh": "黄铜", "en": "Brass", "fr": "Laiton"},
+    "copper": {"zh": "铜", "en": "Copper", "fr": "Cuivre"},
+    "silver": {"zh": "银", "en": "Silver", "fr": "Argent"},
+    "gold": {"zh": "金", "en": "Gold", "fr": "Or"},
+    "lead": {"zh": "铅", "en": "Lead", "fr": "Plomb"},
+    "diamond": {"zh": "钻石", "en": "Diamond", "fr": "Diamant"},
+    "velvet": {"zh": "天鹅绒", "en": "Velvet", "fr": "Velours"},
+    "clay": {"zh": "黏土", "en": "Clay", "fr": "Argile"},
+    "ink": {"zh": "墨水", "en": "Ink", "fr": "Encre"},
+    # stone 放在 limestone/sandstone 之后是多余的保险:\b 本就不匹配词内的
+    # "…stone",但排在后面,以后有人删掉 \b 也不会立刻把石灰岩变成「石」。
+    "stone": {"zh": "石", "en": "Stone", "fr": "Pierre"},
+    "wood": {"zh": "木", "en": "Wood", "fr": "Bois"},
+    "paper": {"zh": "纸", "en": "Paper", "fr": "Papier"},
+    # 法语长尾:木材/石材/金属的具体名称
+    "chêne": {"zh": "橡木", "en": "Oak", "fr": "Chêne"},
+    "peuplier": {"zh": "杨木", "en": "Poplar", "fr": "Peuplier"},
+    "érable": {"zh": "枫木", "en": "Maple", "fr": "Érable"},
+    "séquoia": {"zh": "红杉木", "en": "Sequoia", "fr": "Séquoia"},
+    "orme": {"zh": "榆木", "en": "Elm", "fr": "Orme"},
+    "saule": {"zh": "柳木", "en": "Willow", "fr": "Saule"},
+    "grès": {"zh": "砂岩", "en": "Sandstone", "fr": "Grès"},
+    "cuivre": {"zh": "铜", "en": "Copper", "fr": "Cuivre"},
+    "plomb": {"zh": "铅", "en": "Lead", "fr": "Plomb"},
+    "alliage": {"zh": "合金", "en": "Alloy", "fr": "Alliage"},
+    "stuc": {"zh": "灰泥", "en": "Stucco", "fr": "Stuc"},
+    "enduit": {"zh": "灰泥底", "en": "Plaster ground", "fr": "Enduit"},
+    "mortier": {"zh": "灰浆", "en": "Mortar", "fr": "Mortier"},
+    "plastiline": {"zh": "塑泥", "en": "Plasticine", "fr": "Plastiline"},
+    "sanguine": {"zh": "红粉笔", "en": "Sanguine", "fr": "Sanguine"},
+    "lavis": {"zh": "淡彩", "en": "Wash", "fr": "Lavis"},
+    "plume": {"zh": "羽毛笔", "en": "Pen", "fr": "Plume"},
+    "parchemin": {"zh": "羊皮纸", "en": "Parchment", "fr": "Parchemin"},
+    "papier": {"zh": "纸", "en": "Paper", "fr": "Papier"},
 }
 # 有意不收的词:
-# - 技法而非材质(bas-relief/haut-relief/modelage/taille/fond d'or/grisaille):
-#   收了会把"浮雕"当材质写上展签。不收,串里靠后的真材质自然会命中。
+# - 技法而非材质(bas-relief/haut-relief/modelage/taille/fond d'or/grisaille/
+#   galvanoplastie/ronde bosse):收了会把"浮雕"当材质写上展签。
+#   不收,串里靠后的真材质自然会命中。
 # - "or"(金):上游 114 条命中里绝大多数是 "fond d'or"(金底),收了会把蛋彩画标成「金」。
+#   英文 "gold" 没有这个问题(P186 里就是纯金),所以只收英文那个。
+# - "paint":\bpaint 会连 "painting" 一起吃掉,而它只值 1 件。
 
 
 def _humanize_medium(raw, lang):
