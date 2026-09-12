@@ -11,4 +11,6 @@ requests
 librosa              # 谐波锐度(丝丝判据)
 mlx-whisper          # 转写,用于内容一致性
 opencc-python-reimplemented   # 繁→简归一化;后端也有同一个包
-pytest               # 跑 test_consistency.py
+pypinyin             # 读音级比对(zh):区分同音选字与真念错
+pykakasi             # 读音级比对(ja):汉字→假名
+pytest               # 跑 test_*.py

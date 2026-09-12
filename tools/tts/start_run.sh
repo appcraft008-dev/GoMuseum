@@ -18,8 +18,14 @@ LOG=${LOG:-$HOME/tts-lab/run_$(basename "${JOBS%.json}").log}
 
 [ -f "$JOBS" ] || { echo "❌ 任务文件不存在: $JOBS" >&2; exit 1; }
 
+# ⚠️ 追加(>>)不是覆盖(>)。长批中途重起是常态(换工作树/OOM/手误),
+# 用 > 每次都把历史日志清空:2026-09-10 那批重起两次,前 144 条的时长与 atempo
+# 永久丢失,事后做「锐度 vs 时长」分组只剩 445/589 条可用。
+# **凡是只存在于日志里的字段(成品时长、atempo、每次尝试的耗时)都会随重起蒸发** ——
+# `_state.json` 是累积的,日志不是。
+echo "=== 起跑 $(date '+%F %T')  commit $(git -C "$HERE" rev-parse --short HEAD 2>/dev/null || echo '非仓库')  jobs=$JOBS ===" >> "$LOG"
 PY=${PY:-$HOME/tts-lab/venv/bin/python} TTS_LAB=${TTS_LAB:-$HOME/tts-lab} \
-  nohup "$HERE/run_chunked.sh" "$JOBS" "$OUT" "$CHUNK" > "$LOG" 2>&1 &
+  nohup "$HERE/run_chunked.sh" "$JOBS" "$OUT" "$CHUNK" >> "$LOG" 2>&1 &
 
 # 模型加载要十几秒,给足时间再判活
 for _ in $(seq 1 12); do
