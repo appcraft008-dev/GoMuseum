@@ -1,44 +1,192 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GoMuseum · 随身博物馆导览手册</title>
-<meta name="description" content="拍照识别展品，聆听 AI 讲解。GoMuseum——你的随身博物馆导览手册。" />
+<title>GoMuseum — Instant Audio Guide for the Louvre &amp; Paris Museums</title>
+<meta name="description" content="Point your camera at any artwork in the Louvre, Musée d'Orsay, Musée de l'Orangerie or Petit Palais. GoMuseum recognizes it instantly and narrates a grounded, fact-checked audio guide — no rental, no queue." />
+<link rel="canonical" href="https://gomuseum.app/" />
+<link rel="alternate" hreflang="en" href="https://gomuseum.app/" />
+<link rel="alternate" hreflang="fr" href="https://gomuseum.app/fr/" />
+<link rel="alternate" hreflang="x-default" href="https://gomuseum.app/" />
 <style>
   :root { --bg:#F3EDDF; --surface:#FBF7EC; --ink:#2C2316; --sub:#8A7A5F; --faint:#B0A283; --line:#DCD2B8; --accent:#A14E28; --accent-deep:#7E3A1C; }
   * { box-sizing:border-box; margin:0; }
-  body { background:var(--bg); color:var(--ink); font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; }
-  .serif { font-family:'Noto Serif SC','Songti SC',serif; }
-  main { max-width:560px; padding:64px 28px 48px; text-align:center; }
+  body { background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+  .serif { font-family:Georgia,'Times New Roman',serif; }
+  a { color:inherit; }
+  header, main, footer { max-width:640px; margin:0 auto; padding-left:28px; padding-right:28px; }
+
+  header { display:flex; justify-content:center; align-items:center; padding-top:24px; }
+  .langswitch { font-size:12px; color:var(--sub); }
+  .langswitch a { text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px; }
+  .langswitch .current { color:var(--ink); font-weight:700; border-bottom-color:var(--ink); }
+  .langswitch span.sep { margin:0 8px; color:var(--faint); }
+
+  .hero { text-align:center; padding:40px 28px 48px; }
   .masthead { font-size:15px; letter-spacing:7px; font-weight:700; }
   .diamond { display:flex; align-items:center; gap:8px; width:150px; margin:12px auto; }
   .diamond::before,.diamond::after { content:''; flex:1; height:1px; background:var(--faint); }
   .diamond span { width:5px; height:5px; background:var(--accent); transform:rotate(45deg); }
   .tagline { font-size:11px; letter-spacing:3px; color:var(--sub); }
-  h1 { font-size:30px; line-height:1.55; font-weight:700; margin:36px 0 16px; }
-  .desc { font-size:14px; line-height:1.9; color:var(--sub); margin-bottom:36px; }
+  h1 { font-size:32px; line-height:1.4; font-weight:700; margin:32px 0 16px; }
+  .desc { font-size:15px; line-height:1.8; color:var(--sub); margin-bottom:32px; }
   .ticket { display:inline-block; background:var(--accent); color:var(--surface); border-radius:4px; padding:7px; text-decoration:none; }
-  .ticket span { display:flex; align-items:center; gap:10px; border:1px dashed rgba(251,247,236,.45); border-radius:2px; padding:13px 26px; font-family:'Noto Serif SC',serif; font-size:16px; letter-spacing:2px; font-weight:600; }
+  .ticket span { display:flex; align-items:center; gap:10px; border:1px dashed rgba(251,247,236,.45); border-radius:2px; padding:13px 26px; font-family:Georgia,serif; font-size:16px; letter-spacing:1px; font-weight:600; }
   .note { margin-top:14px; font-size:12px; color:var(--sub); }
-  footer { margin-top:auto; padding:24px; font-size:11.5px; color:var(--faint); display:flex; gap:18px; }
-  footer a { color:var(--sub); text-decoration:none; border-bottom:1px solid var(--line); }
+
+  section { padding:40px 0; border-top:1px solid var(--line); }
+  h2 { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent-deep); margin-bottom:24px; }
+
+  .steps { display:flex; flex-direction:column; gap:20px; }
+  .step { display:flex; gap:16px; }
+  .step-num { font-family:Georgia,serif; font-size:20px; color:var(--accent); flex:0 0 28px; }
+  .step-body h3 { font-size:15px; margin-bottom:4px; }
+  .step-body p { font-size:13.5px; color:var(--sub); line-height:1.7; }
+
+  .museums { display:flex; flex-direction:column; gap:18px; }
+  .museum h3 { font-family:Georgia,serif; font-size:16px; margin-bottom:4px; }
+  .museum p { font-size:13.5px; color:var(--sub); line-height:1.7; }
+
+  .why { display:flex; flex-direction:column; gap:20px; }
+  .why-item h3 { font-size:15px; margin-bottom:4px; }
+  .why-item p { font-size:13.5px; color:var(--sub); line-height:1.7; }
+
+  details { border-bottom:1px solid var(--line); padding:14px 0; }
+  details:first-of-type { border-top:1px solid var(--line); }
+  summary { font-size:14.5px; font-weight:600; cursor:pointer; list-style:none; }
+  summary::-webkit-details-marker { display:none; }
+  summary::before { content:'+'; color:var(--accent); margin-right:10px; font-weight:700; }
+  details[open] summary::before { content:'−'; }
+  details p { font-size:13.5px; color:var(--sub); line-height:1.7; margin-top:10px; padding-left:19px; }
+
+  .cta-repeat { text-align:center; padding:44px 0 8px; }
+
+  footer { padding:24px 28px; font-size:11.5px; color:var(--faint); display:flex; gap:18px; justify-content:center; }
+  footer a { text-decoration:none; border-bottom:1px solid var(--line); }
 </style>
 </head>
 <body>
+<header>
+  <div class="langswitch"><span class="current">English</span><span class="sep">·</span><a href="/fr/">Français</a></div>
+</header>
+
 <main>
-  <div class="serif masthead">GOMUSEUM</div>
-  <div class="diamond"><span></span></div>
-  <div class="tagline">随身博物馆导览手册</div>
-  <h1 class="serif">走近一件作品，<br/>听懂它的故事。</h1>
-  <p class="desc">拍照识别展品 · AI 讲解与问答 · 多语言语音导览<br/>从巴黎奥赛博物馆开始，把博物馆装进口袋。</p>
-  <a class="ticket" href="https://play.google.com/apps/internaltest/4701612575590307171"><span>🎟 加入 Android 内测</span></a>
-  <p class="note">iOS 版本即将到来</p>
+  <div class="hero">
+    <div class="serif masthead">GOMUSEUM</div>
+    <div class="diamond"><span></span></div>
+    <div class="tagline">YOUR POCKET MUSEUM GUIDE</div>
+    <h1 class="serif">Point at the art.<br/>Hear its story.</h1>
+    <p class="desc">Skip the audio-guide rental queue and the deposit. GoMuseum recognizes paintings and sculptures the moment you point your camera at them, then narrates a fact-checked audio guide — in the museum, at your own pace.</p>
+    <a class="ticket" href="https://play.google.com/store/apps/details?id=com.gomuseum.app"><span>🎟 Download on Google Play</span></a>
+    <p class="note">Free to start · No account needed</p>
+  </div>
+
+  <section>
+    <h2>How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num serif">1</div>
+        <div class="step-body"><h3>Point</h3><p>Aim your camera at any painting, sculpture or object.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num serif">2</div>
+        <div class="step-body"><h3>Recognize</h3><p>GoMuseum identifies it in seconds — no searching a museum map.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num serif">3</div>
+        <div class="step-body"><h3>Listen</h3><p>Hear a grounded audio guide, or read the full text at your own pace.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Museums Covered</h2>
+    <div class="museums">
+      <div class="museum"><h3 class="serif">Musée du Louvre</h3><p>From the Mona Lisa to the Winged Victory of Samothrace — thousands of works recognized on sight.</p></div>
+      <div class="museum"><h3 class="serif">Musée d'Orsay</h3><p>The world's largest Impressionist collection. Scan any canvas for its story.</p></div>
+      <div class="museum"><h3 class="serif">Musée de l'Orangerie</h3><p>Monet's Water Lilies and more, explained right where you're standing.</p></div>
+      <div class="museum"><h3 class="serif">Petit Palais</h3><p>Paris' free fine-arts museum — fully covered too.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why GoMuseum</h2>
+    <div class="why">
+      <div class="why-item"><h3>No rental, no deposit, no queue</h3><p>Traditional audio guides mean waiting in line and returning a device before you leave. GoMuseum lives on your phone.</p></div>
+      <div class="why-item"><h3>Grounded, never invented</h3><p>Every fact is sourced and fact-checked automatically. No generic trivia, nothing made up.</p></div>
+      <div class="why-item"><h3>Free to start</h3><p>Your first 5 scans and your first audio guide are free. No account needed.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>FAQ</h2>
+    <details>
+      <summary>Is GoMuseum free?</summary>
+      <p>Your first 5 artwork scans and your first audio guide are free, no account required. A City Pass unlocks unlimited scans and audio across all four museums for the length of your visit.</p>
+    </details>
+    <details>
+      <summary>Which languages does GoMuseum support?</summary>
+      <p>GoMuseum currently supports English, French, German, Spanish, Italian, Polish, Japanese, Korean, and both Simplified and Traditional Chinese.</p>
+    </details>
+    <details>
+      <summary>Do I need an account to use it?</summary>
+      <p>No. You can start scanning as a guest — no sign-up required.</p>
+    </details>
+    <details>
+      <summary>Does it recognize sculptures too?</summary>
+      <p>Yes. GoMuseum recognizes paintings, sculptures and other objects across all four museums.</p>
+    </details>
+    <details>
+      <summary>Will my photos be stored?</summary>
+      <p>No. Photos are used only to recognize the artwork in front of you — we never store or upload your original images.</p>
+    </details>
+  </section>
+
+  <div class="cta-repeat">
+    <a class="ticket" href="https://play.google.com/store/apps/details?id=com.gomuseum.app"><span>🎟 Download on Google Play</span></a>
+    <p class="note">iOS version coming soon</p>
+  </div>
 </main>
+
 <footer>
-  <a href="/privacy.html">隐私政策</a>
-  <a href="/terms.html">使用条款</a>
+  <a href="/privacy.html">Privacy Policy</a>
+  <a href="/terms.html">Terms of Use</a>
   <span>© 2026 GoMuseum</span>
 </footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is GoMuseum free?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Your first 5 artwork scans and your first audio guide are free, no account required. A City Pass unlocks unlimited scans and audio across all four museums for the length of your visit." }
+    },
+    {
+      "@type": "Question",
+      "name": "Which languages does GoMuseum support?",
+      "acceptedAnswer": { "@type": "Answer", "text": "GoMuseum currently supports English, French, German, Spanish, Italian, Polish, Japanese, Korean, and both Simplified and Traditional Chinese." }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need an account to use it?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. You can start scanning as a guest — no sign-up required." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it recognize sculptures too?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. GoMuseum recognizes paintings, sculptures and other objects across all four museums." }
+    },
+    {
+      "@type": "Question",
+      "name": "Will my photos be stored?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Photos are used only to recognize the artwork in front of you — we never store or upload your original images." }
+    }
+  ]
+}
+</script>
 </body>
 </html>

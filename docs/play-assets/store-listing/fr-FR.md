@@ -17,9 +17,9 @@ Photographiez un tableau, une sculpture ou un objet : GoMuseum le reconnaît en 
 
 SCANNEZ & ÉCOUTEZ
 • Reconnaissance instantanée des œuvres — une photo suffit
-• Guides audio générés par IA, fondés sur des faits vérifiés
+• Guides audio, fondés sur des faits vérifiés, jamais inventés
 • Guides texte complets pour des milliers d'œuvres dans les quatre musées
-• Disponible en 9 langues : français, anglais, allemand, espagnol, italien, polonais, japonais, coréen, chinois
+• Disponible en 10 langues : français, anglais, allemand, espagnol, italien, polonais, japonais, coréen, et le chinois simplifié comme traditionnel
 
 EXPLOREZ LIBREMENT
 • Recherchez une collection par nom d'œuvre ou d'artiste
