@@ -81,8 +81,15 @@ museums:
                  Q125191,
                  Q132137, Q18218093, Q11060274, Q18219090]
     country_lang: fr
-    # Joconde 现状不可用(API 返回 HTML);且本馆是**市立**馆,本就未必在其收录范围。
-    sources: [wikipedia]
+    # 2026-09-12 重开 joconde。原注释写的两条关闭理由今天都不成立:
+    #   ①「API 返回 HTML」= 2026-07-22 老 API 断供留下的疤,已换 tabular API 修好;
+    #   ②「市立馆未必在收录范围」= 实测证伪:Localisation
+    #     "Petit Palais, musée des Beaux-arts de la Ville de Paris" 上游有 29502 件
+    #     (注意写法与国立馆的 "城市 ; 馆名" 分号格式不同,按后者搜会得到 0 而误判"没收录")。
+    # ⚠️ 实际能吃到多少另说:发现只靠 Wikidata P347,本馆 3009 件里仅 7 件有。
+    #    馆藏号反查上游可把覆盖拉到 ~72%(top60 抽样命中 43/60、零多义、5/5 对已有
+    #    P347 的金标准一致),但那是 JocondeSource 的新发现路径,未做。
+    sources: [joconde, wikipedia]
     fetch_limit: 8000           # WDQS 实测约 3.7k 条目 × 多 P31 重复行余量
     sample_size: 20
     sample_qids: []
