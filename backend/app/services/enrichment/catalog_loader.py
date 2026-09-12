@@ -56,7 +56,16 @@ def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:
                     db, m.id, {"qid": s.qid, "inventory_number": s.inventory_number}
                 )
                 attrs = dict(existing.attributes or {}) if existing else {}
-                attrs["external_ids"] = s.external_ids or {}
+                # ⚠️ merge 而不是替换。模块头写的是"保留已有材料",但 external_ids
+                # 此前是整体覆盖 —— 于是**不来自本次 catalog 的把手会被抹掉**。
+                # 具体踩到的是 discover_joconde_refs.py:它按馆藏号反查补上 Wikidata
+                # 缺的 P347,而下一次 catalog 刷新会把这些 P347 连带清空,
+                # 症状是"富化材料莫名其妙又变薄了",且没有任何报错。
+                # 新值优先(上游改了把手要能覆盖),老键只在本次没给时保留。
+                attrs["external_ids"] = {
+                    **(attrs.get("external_ids") or {}),
+                    **(s.external_ids or {}),
+                }
                 attrs["wiki_titles"] = s.wiki_titles or {}
                 if s.raw.get("p276_qid"):
                     attrs["p276"] = s.raw["p276_qid"]
