@@ -372,6 +372,13 @@ BANNED_GUIDE_PHRASES = [
 # ⚠️ 已知残留:禁掉开头之后仍有 25-35% 的段用某句引导语(当前是
 #     "as you take in this")。继续加禁用词收益递减且会把文本写僵,故停手;
 #     指标已进仓库,可持续监控而不是又变回看不见。
+# ⚠️ **残留量与材料厚度反相关**(跨馆实测,同一个新 prompt):
+#     卢浮宫 extract_en 覆盖 86-96% → 二代套话残留 25%
+#     奥赛   extract_en 覆盖 54-59% → 残留 50%(开头多样性仍 90%,没退化)
+#   材料薄时模型没有足够具体事实可写,就回退到引导语填充。
+#   推论:小皇宫(extract 覆盖 2.2%、Joconde 只有展签级字段、无叙事字段)
+#   会比这两个都差 —— 看到小皇宫效果不好,别先怀疑这个 prompt,
+#   先用 text_quality_report 比同一批件的前后,再看它的材料有多少。
 _DEFAULT_GUIDE_SYSTEM = (
     "You are a museum audio-guide writer. Write ONE short spoken on-site guide for a visitor "
     "standing in front of the artwork, built around a SINGLE core point (one throughline) — "
