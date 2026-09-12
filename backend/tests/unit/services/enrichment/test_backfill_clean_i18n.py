@@ -237,3 +237,56 @@ def test_no_crash_when_language_absent_and_no_work_labels():
     data = {"nationality_i18n": {"zh": "法国"}}  # 无 notable_works_*
     fill_artist_i18n_facts(art, ["en", "zh", "it"], tr, data)
     assert art.nationality_i18n["zh"] == "法国"
+
+
+# ---- 上游标签里混进整条英文原名(2026-09-12,用户在繁体版卢浮宫列表上发现) ----
+#
+# Wikidata 的标签是人填的,偶尔有人把两种语言塞进同一个:
+# Q1231009 的 zh-tw = "The Coronation of Napoleon《拿破崙的加冕圖》"(zh 标签却是干净的)。
+#
+# ⚠️ 下面这组**负样本**是这条清洗的全部难点:prod 全量普查里,CJK 显示名含拉丁连词的
+# 共 37 条,**36 条完全合法**。按"含拉丁字母"剥会把它们全毁掉(同纪律 24 的教训),
+# 所以判据是"完整包含 title_en",而它们的拉丁片段都不等于各自的 title_en。
+
+
+def test_strips_english_title_embedded_in_cjk_label():
+    """正样本:用户报的那条。剥完英文,外层书名号由既有清洗接手。"""
+    got = _clean_i18n(
+        {"zh-hant": "The Coronation of Napoleon《拿破崙的加冕圖》"},
+        None,
+        "The Coronation of Napoleon",
+    )
+    assert got == {"zh-hant": "拿破崙的加冕圖"}
+
+
+def test_keeps_legitimate_latin_in_cjk_titles():
+    """负样本组:全部摘自 prod 真实数据,一条都不许被剥。"""
+    cases = [
+        # 馆藏编号
+        ("石碑碎片 Astitarhunza-AO 10829", "Fragment of a stele"),
+        ("鱷魚 Shebek Ra-E 16358", "Crocodile"),
+        # 人名 / 地名
+        ("Mlle Joly 半身像", "Bust of Mlle Joly"),
+        ("Étang-la-Ville的風景畫", "Landscape at Étang-la-Ville"),
+        # 作品上的拉丁铭文,是内容不是残留
+        ("手持第六誡拉丁文「NON OCCIDES」（不可殺人）的半身天使", "Bust of an angel"),
+        # 外文原题副标
+        ("沼澤地 (Le Marais)", "The Marsh"),
+    ]
+    for value, title_en in cases:
+        assert _clean_i18n({"zh-hant": value}, None, title_en) == {"zh-hant": value}
+
+
+def test_does_not_strip_when_nothing_would_be_left():
+    """整条就等于英文名 = "没翻译",不归这条清洗管 ——
+    剥了会得到空串,而空显示名比英文显示名糟得多。"""
+    v = {"zh-hant": "The Coronation of Napoleon"}
+    # 本族文字检查会把它当翻译失败丢弃,但绝不能是被剥成空串导致的
+    assert _clean_i18n(v, None, "The Coronation of Napoleon") == {}
+
+
+def test_artist_names_never_get_title_en_stripping():
+    """清洗作者名时不传 title_en —— 作者的英文名与显示名重合是常态,
+    传了会把「Jean-Baptiste 讓-巴蒂斯特」剥成半截。这里钉住默认不剥。"""
+    v = {"zh-hant": "Jean-Baptiste 讓-巴蒂斯特"}
+    assert _clean_i18n(v) == v
