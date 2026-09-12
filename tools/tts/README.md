@@ -20,8 +20,14 @@
 python backend/scripts/audio_queue_cli.py plan \
     --museum orangerie --langs zh,en,fr --engine voxcpm2 --json > jobs.json
 
-# ② 生成机产文件 —— 必须走 run_chunked.sh，不要直接调 run_batch.py
-./run_chunked.sh jobs.json out_dir 10
+# ②a 开跑前预检：正文都取得到吗？这批要跑多久？（契约 ⑪）
+python preflight.py jobs.json
+
+# ②b 生成机产文件 —— 用 start_run.sh（它会确认真的跑起来了、并记下起跑 commit）
+./start_run.sh jobs.json out_dir 8
+
+# ②c 跑批中看进度（只认 _state.json，别看日志滚动或通知流）
+python progress.py out_dir 589
 
 # ③ VPS 上灌入（后端；默认 dry-run，确认后加 --apply）
 python backend/scripts/audio_ingest_cli.py --jobs jobs.json --dir ./out_dir --engine voxcpm2
@@ -33,13 +39,31 @@ python backend/scripts/audio_ingest_cli.py --jobs jobs.json --dir ./out_dir --en
 
 ## 文件
 
-|                       |                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| `run_batch.py`        | 生成主体：拉文本 → 克隆 → 三关质检 → atempo 对齐 → 160k mp3。幂等、断点续传、失败重试 ≤3。  |
-| `run_chunked.sh`      | 分块入口。**日常用这个。**                                                                  |
-| `consistency.py`      | 内容一致性打分（纯文本，依赖只有 opencc）。三次静默故障都出在这里。                         |
-| `test_consistency.py` | 正负样本自检，CI 每次改动都跑。                                                             |
-| `fixtures/`           | **真实语料**：prod 讲解原文 + 我们自己音频的实际转写。合成样本测不出 autojunk（配方 §六）。 |
+|                    |                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `start_run.sh`     | 起批入口。**日常用这个** —— 它验证进程真的活着才返回，并把起跑 commit 记进日志（契约 ⑯）。  |
+| `run_chunked.sh`   | 分块执行（被 `start_run.sh` 调用）。分块是为了绕开 MPS 显存泄漏。                           |
+| `run_batch.py`     | 生成主体：拉文本 → 克隆 → 三关质检 → atempo 对齐 → 160k mp3。幂等、断点续传、失败重试 ≤3。  |
+| `preflight.py`     | 开跑前预检：每条任务的正文能不能真取到 + 估算成品时长。取不到就别开跑。                     |
+| `progress.py`      | 跑批进度快报（读 `_state.json`）：进度、一次过闸率、按语言分布、ETA。                       |
+| `fetch_text.py`    | 取正文的**唯一实现**（含 502 重试）。跑批与预检共用，不许再抄第二份。                       |
+| `consistency.py`   | 内容一致性打分（纯文本，依赖只有 opencc）。三次静默故障都出在这里。                         |
+| `reading_check.py` | **读音级**比对（拼音 / 假名）：区分「ASR 选错字」与「真念错」。分数分辨不了这两件事。       |
+| `test_*.py`        | 正负样本自检，CI 每次改动都跑（`reading_check` 的自检用的是已知同音对与已知真错对）。       |
+| `fixtures/`        | **真实语料**：prod 讲解原文 + 我们自己音频的实际转写。合成样本测不出 autojunk（配方 §六）。 |
+
+## 判效果用读音级比对，不要用一致性分数
+
+判「重灌 / 换种子 / 改预处理有没有效」时，一致性分数**做不到**：
+「盗」→「到」（同音，音频是对的）和「夕阳」→「的棋羊」（真念错）被一视同仁地扣分。
+
+```bash
+python reading_check.py jobs.json out_new [out_old]    # 给了旧目录就是 A/B
+```
+
+⚠️ 仪器有底噪：日语侧拿**已接受的 tts-1 基准**量过，真错率约 45/千字。
+低于底噪的差异说明不了任何事。
+⚠️ 挑样本别按分数挑 —— 2026-09-09 实测会得出**反向**结论（选择偏差）。
 
 ## 环境变量
 

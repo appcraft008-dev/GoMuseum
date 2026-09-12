@@ -16,35 +16,15 @@ warnings.filterwarnings("ignore")
 import librosa
 import mlx_whisper
 import numpy as np
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 import soundfile as sf
 from voxcpm import VoxCPM
 
 from batch_record import make_record
 from consistency import consistency, length_ratio, tts_input
+from fetch_text import fetch_text  # 取文本只此一份实现(含 502 重试)
 from loudness import TARGET_LUFS, gain_db, measure
 
 LAB = Path(os.environ.get("TTS_LAB", Path(__file__).resolve().parent))
-API = os.environ.get("GOMUSEUM_API", "https://api.gomuseum.app/api/v1")
-
-# 取文本的 HTTP 会话:对网关错误自动重试。prod 部署会 recreate 容器,窗口里
-# Nginx 返 502 —— 实测一次 502 就把跑了 4 小时的批次整个掐断(run_chunked.sh
-# 是 set -e,一个 python 非零退出就中止整轮)。用 urllib3 自带的重试策略,
-# 不自己写重试分支:它只重试 502/503/504 与连接错误,4xx(内容真的没有)照常上抛。
-_HTTP = requests.Session()
-_HTTP.mount(
-    "https://",
-    HTTPAdapter(
-        max_retries=Retry(
-            total=5,
-            backoff_factor=5,  # 退避 5→10→20→40s,足够跨过一次部署窗口
-            status_forcelist=(502, 503, 504),
-            allowed_methods=("GET",),
-        )
-    ),
-)
 
 # ===== 定稿参数 =====
 CFG, TIMESTEPS, BITRATE = 1.7, 10, "160k"
@@ -98,37 +78,6 @@ def model():
     if _model is None:
         _model = VoxCPM.from_pretrained("openbmb/VoxCPM2", load_denoiser=False)
     return _model
-
-
-def fetch_text(job):
-    """从 prod API 取文本(只读)。QA 按'问+答'拼接,与后端质量闸取文本方式一致。
-
-    ⚠️ artist_bio 的 job["qid"] 是**作者 qid**,而 bio 正文挂在作品的 content
-    响应上 —— 所以这类 job 必须额外带一个 job["via_qid"](该作者名下任一作品)。
-    """
-    qid, lang, sec = job["qid"], job["language"], job["section"]
-    via = job.get("via_qid", qid)
-    r = _HTTP.get(f"{API}/museums/{job['museum']}/objects/{via}/content",
-                  params={"language": lang}, timeout=30)
-    r.raise_for_status()
-    d = r.json()
-    if sec == "artist_bio":
-        return ((d.get("artist") or {}).get("bio")) or None
-    if sec.startswith("qa_"):
-        idx = int(sec.split("_", 1)[1])
-        for q in (d.get("suggested_questions") or []):
-            if q.get("sort") == idx:
-                return f"{q['question']}\n\n{q['answer']}"
-        return None
-    if sec == "guide":
-        return ((d.get("default_guide") or {}).get("body")) or None
-    for t in (d.get("tabs") or []):
-        # 🔴 字段名是 section_code,不是 code。第1批只做 guide(走 default_guide),
-        # 从没走到这一行 —— 于是 t.get("code") 恒为 None,深度段会**全部**被判
-        # "无文本,跳过",而且状态里写的是 no_text,看起来像内容缺失而不是 bug。
-        if t.get("section_code") == sec:
-            return t.get("body")
-    return None
 
 
 def qc(path, text, wl):

@@ -279,3 +279,32 @@ def test_coverage_reports_artist_bio_separately(db):
     cov = aq.coverage(s, ["zh"])
     assert cov["guide"]["zh"]["tts-1"] == 1
     assert cov["artist_bio"]["zh"]["tts-1"] == 1
+
+
+def test_head_ranking_prefers_content_volume_over_qid(db):
+    """头部名额按**已有内容量**发,不是按 qid 字典序。
+
+    🔴 实测踩过(2026-09-10 卢浮宫 TOP3-10):排序第二关键字漏写成 qid 字符串,
+    8 件人工指定的重点作品里 5 件掉出 head-2000 —— 只出了 guide 任务,
+    深度段与问答全被当长尾跳过。注释写的是"内容量",代码排的是字符串,
+    **两者不一致时没有任何测试会响**。
+    """
+    s, m = db
+    thin = _obj(s, m, "Q1")  # qid 小、内容少
+    _sec(s, thin, "guide")
+
+    rich = _obj(s, m, "Q9")  # qid 大、内容多
+    for code in ("guide", "background", "analysis", "facts"):
+        _sec(s, rich, code)
+
+    # 只有一个头部名额 → 必须给内容厚的那件
+    jobs = aq.build_queue(s, languages=["zh"], target_engine="voxcpm2", head_size=1)
+    assert {j.section for j in jobs if j.qid == "Q9"} == {
+        "guide",
+        "background",
+        "analysis",
+        "facts",
+    }, "内容厚的件应进头部、出全段任务"
+    assert {j.section for j in jobs if j.qid == "Q1"} == {
+        "guide"
+    }, "内容薄的件应被当长尾,只出 guide"
