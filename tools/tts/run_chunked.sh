@@ -25,6 +25,6 @@ json.dump(d, open(out,'w'), ensure_ascii=False)
 print(f'--- 块 {i}-{i+len(d)} / {len(json.load(open(jobs)))} ---')
 " "$JOBS" "$i" "$CHUNK" "$CHUNKFILE"
   # 用仓库里这一份 run_batch.py(与 $HERE 同目录),别再指回本机的旧副本
-  "$PY" "$HERE/run_batch.py" "$CHUNKFILE" "$OUT" 2>&1 | grep -E "^\[|完成|无文本|Error"
+  "$PY" "$HERE/run_batch.py" "$CHUNKFILE" "$OUT" 2>&1 | grep -E --line-buffered "^\[|完成|无文本|Error"
 done
 echo "ALLDONE"

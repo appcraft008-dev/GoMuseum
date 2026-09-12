@@ -130,10 +130,25 @@ def build_queue(
 
     hot = _played_qids(db) | _recognized_qids(db)
 
-    # 头部:热点优先,其次按已有内容量(有内容=被认真做过)
+    # 头部:热点优先,其次按已有内容量(有内容=被认真做过),最后按 qid 定序。
+    # ⚠️ 第二档曾**漏写**,直接拿 qid 当第二关键字 —— 注释说的是"内容量",
+    # 代码排的是字符串,于是头部名额按 qid 字典序发。实测后果(2026-09-10
+    # 卢浮宫 TOP3-10):8 件人工指定的重点作品里 5 件掉出 head-2000,只出了
+    # guide 任务,深度段与问答全被当成长尾跳过。
+    # 内容量跨语言统计:只数本批 languages 会在"馆里只有 en 内容、本批排 zh"时
+    # 全为 0,退化回字典序。
+    counts = dict(
+        db.query(ObjectContentSection.object_id, func.count(ObjectContentSection.id))
+        .filter(
+            ObjectContentSection.status == "published",
+            ObjectContentSection.body.isnot(None),
+            func.length(ObjectContentSection.body) > 0,
+        )
+        .group_by(ObjectContentSection.object_id)
+    )
     ranked = sorted(
         objs.items(),
-        key=lambda kv: (0 if kv[1][0] in hot else 1, kv[1][0]),
+        key=lambda kv: (0 if kv[1][0] in hot else 1, -counts.get(kv[0], 0), kv[1][0]),
     )
     head_ids = {oid for oid, _ in ranked[:head_size]}
 

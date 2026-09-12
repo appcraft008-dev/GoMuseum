@@ -219,7 +219,37 @@ _MEDIUM_NORM = {
     "encre": {"zh": "墨水", "en": "Ink", "fr": "Encre"},
     "crayon": {"zh": "铅笔", "en": "Pencil", "fr": "Crayon"},
     "terre cuite": {"zh": "陶土", "en": "Terracotta", "fr": "Terre cuite"},
+    # 以下为 2026-09 Joconde 回填带来的法语材质(上游 11273 条实测定的词与词序)。
+    # ⚠️ 顺序即语义:先命中先返回。改动前先读 _humanize_medium 的注释。
+    # "pierre noire" 必须在 "pierre" 之前 —— 它是素描用的黑石笔,不是石头。
+    "pierre noire": {"zh": "黑石笔", "en": "Black chalk", "fr": "Pierre noire"},
+    "mine de plomb": {"zh": "石墨铅笔", "en": "Graphite", "fr": "Mine de plomb"},
+    "terre crue": {"zh": "生土", "en": "Unfired clay", "fr": "Terre crue"},
+    "tempera": {"zh": "蛋彩", "en": "Tempera", "fr": "Tempera"},
+    "détremp": {"zh": "胶彩", "en": "Distemper", "fr": "Détrempe"},  # détrempe/détrempé
+    "fresque": {"zh": "湿壁画", "en": "Fresco", "fr": "Fresque"},
+    "lithographie": {"zh": "石版画", "en": "Lithograph", "fr": "Lithographie"},
+    "porcelaine": {"zh": "瓷", "en": "Porcelain", "fr": "Porcelaine"},
+    "émail": {"zh": "珐琅", "en": "Enamel", "fr": "Émail"},
+    "ivoire": {"zh": "象牙", "en": "Ivory", "fr": "Ivoire"},
+    "albâtre": {"zh": "雪花石膏", "en": "Alabaster", "fr": "Albâtre"},
+    "calcaire": {"zh": "石灰岩", "en": "Limestone", "fr": "Calcaire"},
+    "pierre": {"zh": "石", "en": "Stone", "fr": "Pierre"},
+    "argent": {"zh": "银", "en": "Silver", "fr": "Argent"},
+    "laiton": {"zh": "黄铜", "en": "Brass", "fr": "Laiton"},
+    "zinc": {"zh": "锌", "en": "Zinc", "fr": "Zinc"},
+    "verre": {"zh": "玻璃", "en": "Glass", "fr": "Verre"},
+    "vélin": {"zh": "犊皮纸", "en": "Vellum", "fr": "Vélin"},
+    # cire 在 bronze 之后:"fonte à la cire perdue;bronze"(失蜡铸铜)该归青铜而非蜡
+    "cire": {"zh": "蜡", "en": "Wax", "fr": "Cire"},
+    "noyer": {"zh": "胡桃木", "en": "Walnut", "fr": "Noyer"},
+    "bois": {"zh": "木", "en": "Wood", "fr": "Bois"},
+    "toile": {"zh": "布面", "en": "Canvas", "fr": "Toile"},
 }
+# 有意不收的词:
+# - 技法而非材质(bas-relief/haut-relief/modelage/taille/fond d'or/grisaille):
+#   收了会把"浮雕"当材质写上展签。不收,串里靠后的真材质自然会命中。
+# - "or"(金):上游 114 条命中里绝大多数是 "fond d'or"(金底),收了会把蛋彩画标成「金」。
 
 
 def _humanize_medium(raw, lang):
@@ -234,6 +264,13 @@ def _humanize_medium(raw, lang):
     return raw
 
 
+# 米制单位:全称 mètre(s)/metre(s) 与缩写 "en m 2.08"。\b 保证不吃 "en mm"。
+# ⚠️ 只认全称会漏掉绝大多数:上游 104.6 万行里缩写写法 132393 行、全称仅 277 行
+# —— 认得出的不到 0.2%。此前 dimensions 几乎全空没人看见,2026-09 回填一铺开
+# 就会让卢浮宫素描部门(惯用 "H. en m 0,126")整片显示成 "0.1 × 0.2 cm"。
+_METRIC_RE = re.compile(r"\ben\s+m(?:\b|ètres?\b|etres?\b)", re.IGNORECASE)
+
+
 def _humanize_dimensions(raw):
     """Joconde 尺寸串(如 'en mètres : L. 0,55 ; H. 0,46' / 'H. 208, l. 264.5')→ '宽 × 高 cm'。
     ponytail: 取前两个数 + 米→厘米;格式怪异则原样返回。"""
@@ -243,7 +280,7 @@ def _humanize_dimensions(raw):
     if len(nums) < 2:
         return raw
     vals = [float(n.replace(",", ".")) for n in nums[:2]]
-    if "mètre" in raw.lower() or "metre" in raw.lower():  # 米 → 厘米
+    if _METRIC_RE.search(raw):  # 米 → 厘米
         vals = [v * 100 for v in vals]
 
     def _fmt(x):

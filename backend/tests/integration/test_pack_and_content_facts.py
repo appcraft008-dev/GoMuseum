@@ -239,6 +239,52 @@ def test_humanize_medium_and_dimensions():
     assert _humanize_dimensions(None) is None
 
 
+def test_humanize_medium_joconde_terms_and_ambiguities():
+    """Joconde 法语材质。串全部摘自上游 11273 条真实取值。
+
+    这里钉的是**词序**,不是词表本身:_MEDIUM_NORM 先命中先返回,所以三处歧义
+    全靠"谁排在谁前面"解决。有人按字母序整理一下这个 dict,展签就会开始说谎。
+    """
+    from app.services.museum_repo import _humanize_medium
+
+    assert _humanize_medium("tempera;fond d'or;peuplier", "zh") == "蛋彩"
+    assert _humanize_medium("mine de plomb;papier calque", "zh") == "石墨铅笔"
+    assert (
+        _humanize_medium("bas-relief;calcaire", "zh") == "石灰岩"
+    )  # 技法在前,材质在后
+    assert _humanize_medium("porcelaine (peint)", "en") == "Porcelain"
+
+    # 歧义①:pierre noire 是素描的黑石笔,不是石头 —— 它必须排在 pierre 前
+    assert _humanize_medium("pierre noire;blanc (rehaut)", "zh") == "黑石笔"
+    assert _humanize_medium("taille avec mise aux points;pierre", "zh") == "石"
+
+    # 歧义②:失蜡铸造的青铜像材质是青铜不是蜡 —— cire 必须排在 bronze 后
+    assert _humanize_medium("fonte à la cire perdue;bronze;patine", "zh") == "青铜"
+    assert _humanize_medium("modelage;cire", "zh") == "蜡"
+
+    # 歧义③:"or" 有意不收 —— 上游 114 条含 or 的里绝大多数是 "fond d'or"(金底技法)
+    assert _humanize_medium("fond d'or;bois", "zh") == "木"
+
+    # 布面别抢走油画:huile 排在 toile 前
+    assert _humanize_medium("peinture à l'huile;toile", "zh") == "油画"
+    assert _humanize_medium("toile, marouflée", "zh") == "布面"
+
+
+def test_humanize_dimensions_metric_abbreviation():
+    """ "en m 0,126" 也是米 —— 上游 104.6 万行里缩写 132393 行、全称仅 277 行,
+    只认全称等于认不出 99.8% 的米制记录。漏了它,12.6cm 的素描会显示成 0.1cm。"""
+    from app.services.museum_repo import _humanize_dimensions
+
+    assert _humanize_dimensions("H. en m 0,126 ; L. en m 0,197") == "12.6 × 19.7 cm"
+    assert (
+        _humanize_dimensions("Longueur en m 2.08 ; Largeur en m 0.62") == "208 × 62 cm"
+    )
+    # 毫米别被当成米(\b 不能吃掉 "en mm");本函数不处理毫米,至少不该乘 100
+    assert _humanize_dimensions("H. en mm 29 ; L. en mm 19") == "29 × 19 cm"
+    # 无单位的厘米串不受影响
+    assert _humanize_dimensions("77 H ; 53 L") == "77 × 53 cm"
+
+
 def test_tabs_exclude_overview(session):
     from app.services.museum_repo import get_object_content
 

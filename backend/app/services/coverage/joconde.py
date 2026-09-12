@@ -1,11 +1,14 @@
-"""Joconde 区域适配器样板:按 Joconde 编号(external_ids["P347"])查 data.culture.gouv.fr
-的 base-joconde-extrait 开放数据,取 localisation(保管馆/城市级,非展厅粒度)写成展陈证据。覆盖全法博物馆
+"""Joconde 区域适配器样板:按 Joconde 编号(external_ids["P347"])查 base-joconde-extrait
+开放数据,取 Localisation(保管馆/城市级,非展厅粒度)写成展陈证据。覆盖全法博物馆
 ——同一适配器喂任意法国馆,故为"区域适配器"样板。
 
-调研实测(2026-07):
-- 平台 opendatasoft,数据集 `base-joconde-extrait`(721629 条)。
-- records 端点按 `reference` 过滤命中 1 条:reference == P347 值。
-- 位置字段 `localisation`(如 "Valence ; musée des beaux-arts");`exposition` 为临展信息。
+⚠️ 2026-09 随 `sources/joconde.py` 一起从 data.culture.gouv.fr(Opendatasoft,已下线)
+迁到 data.gouv.fr 表格 API。**两处走的是不同端点**(这边原本是 v2.1、那边是 v1),
+所以第一次排查只顺着 JocondeSource 找就漏掉了这个文件 —— 找上游消费者要 grep 域名。
+迁移原委见 sources/joconde.py 模块头。
+
+- 按 `Reference__exact` 过滤命中 1 条:Reference == P347 值。
+- 位置字段 `Localisation`(如 "Valence ; musée des beaux-arts");`Exposition` 为临展信息。
 消费 Task 4 的 display_state.add_evidence(source="joconde", type="location_claim")。"""
 
 from __future__ import annotations
@@ -17,14 +20,11 @@ from sqlalchemy.orm import Session
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
 from app.services.coverage.display_state import add_evidence
+from app.services.enrichment.sources.joconde import TABULAR_URL, resolve_resource_id
 
 _UA = "GoMuseumEnrichment/1.0 (appcraft008@gmail.com)"
-_RECORDS_URL = (
-    "https://data.culture.gouv.fr/api/explore/v2.1/catalog/datasets/"
-    "base-joconde-extrait/records"
-)
 # 摘录进 detail 的原始字段(接地,可溯源)
-_DETAIL_FIELDS = ("localisation", "exposition", "nom_officiel_musee")
+_DETAIL_FIELDS = ("Localisation", "Exposition", "Nom_officiel_musee")
 
 
 def _default_http_get(url, params=None, headers=None, timeout=None):
@@ -35,30 +35,37 @@ def _default_http_get(url, params=None, headers=None, timeout=None):
 
 
 def fetch_joconde_evidence(joconde_ref: str, *, http_get=None) -> dict | None:
-    """按 Joconde reference 查一条记录 → {"location": localisation|None, "detail": 字段摘录}。
+    """按 Joconde reference 查一条记录 → {"location": Localisation|None, "detail": 字段摘录}。
     未命中/HTTP 错/异常 → None(容错,不崩上游批处理)。"""
     http_get = http_get or _default_http_get
-    try:
-        resp = http_get(
-            _RECORDS_URL,
-            params={
-                "where": f'reference="{joconde_ref}"',
-                "select": ",".join(("reference",) + _DETAIL_FIELDS),
-                "limit": 1,
-            },
+
+    def _get_json(url, params=None):
+        r = http_get(
+            url,
+            params=params,
             headers={"User-Agent": _UA, "Accept": "application/json"},
             timeout=30,
         )
-        if getattr(resp, "status_code", 200) != 200:
-            return None
-        results = (resp.json() or {}).get("results") or []
+        if getattr(r, "status_code", 200) != 200:
+            raise RuntimeError(f"HTTP {r.status_code}")
+        return r.json() or {}
+
+    try:
+        rid = resolve_resource_id(_get_json)
+        rows = (
+            _get_json(
+                TABULAR_URL.format(rid=rid),
+                {"Reference__exact": joconde_ref, "page_size": 1},
+            ).get("data")
+            or []
+        )
     except Exception:
         return None
-    if not results:
+    if not rows:
         return None
-    rec = results[0]
+    rec = rows[0]
     detail = " | ".join(f"{k}={rec[k]}" for k in _DETAIL_FIELDS if rec.get(k))
-    return {"location": rec.get("localisation"), "detail": detail or None}
+    return {"location": rec.get("Localisation"), "detail": detail or None}
 
 
 def enrich_museum_display(
