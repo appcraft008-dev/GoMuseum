@@ -326,17 +326,88 @@ def build_artist_bio_prompt(material: str):
     return _ARTIST_BIO_SYSTEM, f"MATERIAL (about the artist):\n{material}"
 
 
+# guide 段的套话黑名单。**单一真相源**:prompt 用它生成禁令文本,
+# scripts/text_quality_report.py 用同一份统计命中率。
+# 分开写两份的下场今天刚见过一次(category_sections:生成侧有兜底、展示侧没有,
+# 980 段内容因此在 App 上隐身)。这里不重犯:加一条就两边同时生效。
+# 清单里每一条都来自**实测**(见下方注释的命中率),不是凭感觉禁的。
+BANNED_GUIDE_PHRASES = [
+    "take a moment to",
+    "these details matter because",
+    "as you stand here",
+    "this isn't just a",
+    "the composition is carefully structured",
+    "interplay of light and shadow",
+    # 第一轮 A/B 暴露的"二代套话":禁掉开头之后,模型把同样的引导语
+    # 挪到了正文中间(实测 "as you take in this" 20 件里命中 13 件)。
+    "as you take in",
+    "as you gaze",
+    "let your gaze",
+    "notice how",
+]
+
+# ⚠️ 这段 prompt 里**一个套话也没写**,模型却自己把 5 beats 的骨架每次填成
+# 同一套措辞。2026-09-13 实测 prod(英语 guide,284 件样本):
+#     "take a moment to really"        248 件 (87.3%)
+#     "as you stand here think about"  156 件 (54.9%)
+#     "these details matter because"    98 件 (34.5%)
+#   → 282 段只有 38 种开头(多样性 13%),而 background/significance/facts
+#     的开头多样性是 96-99%,所以这是 guide 这段**独有**的病。
+# 结构化指令 + 低温度会让措辞收敛:骨架越明确,模型越倾向用固定过渡语填它。
+# 而**接地闸对此结构性免疫** —— 闸的规则写着"引导句无可证伪事实 → keep=True",
+# 套话不陈述事实,所以永远过闸,过闸率一路绿灯,25635 段里没人发现。
+# 所以这里同时下三道:正面要求(开场必须携带本件独有的具体物)、
+# 负面清单(实测高频句)、元要求(别把一种套话换成另一种)。
+# 改动后用 scripts/text_quality_report.py 复测,别靠看几段样本拍脑袋。
+#
+# A/B 实测(卢浮宫 top20、同材料同模型 gpt-4o-mini/0.3、只换 system、跑三轮,
+# 并以**旧 prompt 现场重生成**为对照组 —— 没有对照就分不清"prompt 起作用"
+# 和"这次抽样刚好不同"):
+#              开头多样性      事实锚点率     最高频跨作品5-gram
+#     旧         35-45%        43-49%          80-90%
+#     新         90-95%        53-64%          25-35%
+# ⚠️ 关键护栏:把两组送同一道接地闸,过闸率都是 20/20,平均存活率
+#     0.932(旧) → 0.952(新) —— **锚点率上升不是靠编年份**,是让模型去材料里
+#     找本来就有的具体事实。没有这条护栏,"锚点率提升"可能恰恰是质量倒退。
+# ⚠️ 已知残留:禁掉开头之后仍有 25-35% 的段用某句引导语(当前是
+#     "as you take in this")。继续加禁用词收益递减且会把文本写僵,故停手;
+#     指标已进仓库,可持续监控而不是又变回看不见。
+# ⚠️ **残留量与材料厚度反相关**(跨馆实测,同一个新 prompt):
+#     卢浮宫 extract_en 覆盖 86-96% → 二代套话残留 25%
+#     奥赛   extract_en 覆盖 54-59% → 残留 50%(开头多样性仍 90%,没退化)
+#   材料薄时模型没有足够具体事实可写,就回退到引导语填充。
+#   推论:小皇宫(extract 覆盖 2.2%、Joconde 只有展签级字段、无叙事字段)
+#   会比这两个都差 —— 看到小皇宫效果不好,别先怀疑这个 prompt,
+#   先用 text_quality_report 比同一批件的前后,再看它的材料有多少。
 _DEFAULT_GUIDE_SYSTEM = (
     "You are a museum audio-guide writer. Write ONE short spoken on-site guide for a visitor "
     "standing in front of the artwork, built around a SINGLE core point (one throughline) — "
     "not a summary of everything. Structure (5 beats, flowing, not labeled): "
-    "(1) a hook that gets them looking; (2) guide them to NOTICE 1-2 concrete details; "
-    "(3) explain why those details matter; (4) add only the necessary background; "
-    "(5) end on a memory point or an open question. "
+    "(1) a hook that gets them looking; (2) POINT OUT 1-2 concrete details by describing "
+    "them directly — name what is there, do not preface it with a phrase that tells the "
+    "visitor to look; (3) explain why those details matter; (4) add only the necessary "
+    "background; (5) end on a memory point or an open question. "
+    "OPENING: the first sentence MUST carry something specific to THIS work — a named "
+    "person, a place, a year, a number, or one concrete thing visible in it — so that it "
+    "could not be pasted onto any other artwork. Do NOT open by inviting the visitor to "
+    "look or pause. "
+    "BANNED OPENINGS (overused to the point of being filler): 'Take a moment…', "
+    "'As you look at…', 'As you stand…', 'Stand before…', 'Picture this…', "
+    "'Imagine standing…', 'Let's take a closer look…'. "
+    "BANNED PHRASES anywhere in the text: "
+    + "; ".join(f"'{p}'" for p in BANNED_GUIDE_PHRASES)
+    + ". "
+    "The 5 beats are a SHAPE, not wording: do not use recurring connective formulas to "
+    "move between them, and do not swap one banned formula for a new fixed one — vary how "
+    "you enter and close from work to work. In particular, do NOT use ANY stock phrase "
+    "that directs attention ('observe…', 'look at how…', 'pay attention to…'): the visitor "
+    "is already in front of the work, so simply state what is there and what it means. "
     "Voice: colloquial, second-person, vivid storytelling that makes facts come alive "
     "(a great popular-history narrator). You MAY freely use framing/second-person guidance "
     "and gentle impressions clearly phrased as impression. You MUST NOT invent verifiable "
     "facts (names, dates, events, attributions, medium, what is depicted) not in the material. "
+    "If the material is too thin for a specific opening, open on the most concrete fact you "
+    "DO have (medium, dimensions, date, where it came from) — never pad with an invitation to look. "
     "This is the HEADLINE; deep modules cover the rest, so DON'T try to cover everything. "
     "Write in English, ONE continuous narration. Return ONLY the text, no commentary, no quotes."
 )
