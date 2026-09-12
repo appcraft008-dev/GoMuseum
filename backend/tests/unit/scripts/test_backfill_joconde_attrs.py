@@ -4,7 +4,21 @@
 破了前者会冲掉别的源有意的优先级,破了后者会清空 audio_key 让已发布内容变哑。
 """
 
-from scripts.backfill_joconde_attrs import fetch_batch, plan
+from scripts.backfill_joconde_attrs import fetch_batch, p347_filter, plan
+
+
+def test_p347_filter_compiles_to_postgres_jsonb_containment():
+    """这条过滤只在真 PG 上跑,单测的 SQLite 永远碰不到它 —— 所以退而求其次:
+    断言它能构造、且编译成 PG 方言时用的是 JSONB 存在操作符。
+
+    没有这条断言,`attributes["external_ids"].has_key(...)` 这种写法会一路绿灯
+    到部署后才炸(2026-09-12 实际踩过:AttributeError on BinaryExpression)。
+    """
+    from sqlalchemy.dialects import postgresql
+
+    sql = str(p347_filter().compile(dialect=postgresql.dialect()))
+    assert "JSONB" in sql.upper()
+    assert "?" in sql  # jsonb ? key
 
 
 class _Obj:

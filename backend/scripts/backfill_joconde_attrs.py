@@ -28,6 +28,7 @@ import time
 sys.path.insert(0, "/app")
 
 import requests  # noqa: E402
+from sqlalchemy.dialects.postgresql import JSONB  # noqa: E402
 
 from app.core.database import SessionLocal  # noqa: E402
 from app.models.museum import Museum  # noqa: E402
@@ -74,11 +75,18 @@ def plan(obj: MuseumObject, row: dict) -> dict:
     return out
 
 
+def p347_filter():
+    """attributes->'external_ids' ? 'P347' 的 SQLAlchemy 写法。
+
+    ⚠️ 必须 .cast(JSONB):`attributes["external_ids"]` 是 BinaryExpression,
+    直接 .has_key() 抛 AttributeError —— 而单测跑 SQLite,**这个错只在真 PG 上才暴露**。
+    """
+    return MuseumObject.attributes["external_ids"].cast(JSONB).has_key("P347")
+
+
 def main(apply: bool, museum: str | None, limit: int | None) -> None:
     db = SessionLocal()
-    q = db.query(MuseumObject).filter(
-        MuseumObject.attributes["external_ids"].has_key("P347")  # noqa: W601
-    )
+    q = db.query(MuseumObject).filter(p347_filter())
     if museum:
         m = db.query(Museum).filter_by(slug=museum).one_or_none()
         if m is None:
