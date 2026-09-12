@@ -18,9 +18,9 @@ Point your camera at any painting, sculpture or object — GoMuseum recognizes i
 
 SCAN & LISTEN
 • Instant artwork recognition — just take a photo
-• AI-narrated audio guides, grounded in real sources, never invented
+• Narrated audio guides, grounded in real sources, never invented
 • Full text guides for thousands of works across all four museums
-• Works in 9 languages: English, French, German, Spanish, Italian, Polish, Japanese, Korean, Chinese
+• Works in 10 languages: English, French, German, Spanish, Italian, Polish, Japanese, Korean, and both Simplified and Traditional Chinese
 
 EXPLORE FREELY
 • Search any museum's collection by name or artist
