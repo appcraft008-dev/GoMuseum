@@ -71,6 +71,45 @@ def test_load_stubs_preserves_ready_status_and_material():
     assert o2.attributes["external_ids"] == {"P347": "j1"}
 
 
+def test_load_stubs_keeps_external_ids_it_did_not_fetch():
+    """再列一次不能抹掉**不来自本次 catalog** 的把手。
+
+    踩到的是 discover_joconde_refs.py:它按馆藏号反查、补上 Wikidata 缺的 P347
+    (小皇宫 3009 件里 Wikidata 只给了 7 个)。此前 external_ids 是整体覆盖,
+    于是下一次 catalog 刷新会把这些 P347 连带清空 —— 症状是"富化材料莫名
+    又变薄了",而且没有任何报错。上面那条 ready/material 测试盯的是
+    **同一个键被保留**,盯不到**整个字典被换掉**。
+    """
+    s = _session()
+    load_stubs(s, _museum(), [_stub("Q1")])
+    o = s.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {
+        **o.attributes,
+        "external_ids": {**o.attributes["external_ids"], "P347": "反查补的"},
+    }
+    s.commit()
+
+    # 本次 catalog 不带 P347(Wikidata 上本来就没有),但带了别的把手
+    st = _stub("Q1")
+    st.external_ids = {"P214": "viaf1"}
+    load_stubs(s, _museum(), [st])
+
+    ext = s.query(MuseumObject).filter_by(qid="Q1").one().attributes["external_ids"]
+    assert ext["P347"] == "反查补的", "反查补的 P347 被 catalog 抹掉了"
+    assert ext["P214"] == "viaf1", "本次 catalog 的新把手没写进去"
+
+
+def test_load_stubs_lets_upstream_override_a_changed_handle():
+    """反过来:上游改了同一个把手的值,要以上游为准(加法优先,但不是只读不写)。"""
+    s = _session()
+    load_stubs(s, _museum(), [_stub("Q1")])  # P347=j1
+    st = _stub("Q1")
+    st.external_ids = {"P347": "j2"}
+    load_stubs(s, _museum(), [st])
+    o = s.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes["external_ids"]["P347"] == "j2"
+
+
 def test_load_stubs_puts_p276_into_attributes():
     s = _session()
     load_stubs(s, _museum(), [_stub("Q1", inv="RF 1", raw={"p276_qid": "Q123456"})])

@@ -87,9 +87,13 @@ museums:
     #     "Petit Palais, musée des Beaux-arts de la Ville de Paris" 上游有 29502 件
     #     (注意写法与国立馆的 "城市 ; 馆名" 分号格式不同,按后者搜会得到 0 而误判"没收录")。
     # ⚠️ 实际能吃到多少另说:发现只靠 Wikidata P347,本馆 3009 件里仅 7 件有。
-    #    馆藏号反查上游可把覆盖拉到 ~72%(top60 抽样命中 43/60、零多义、5/5 对已有
-    #    P347 的金标准一致),但那是 JocondeSource 的新发现路径,未做。
+    #    补钥匙靠 scripts/discover_joconde_refs.py(馆藏号反查,见下 joconde_locations)。
     sources: [joconde, wikipedia]
+    # 本馆在 Joconde `Localisation` 列的写法。**从已有权威 P347 的件实测取得**,
+    # 不是照国立馆的「城市 ; 馆名」格式推的 —— 那个格式搜本馆返回 0 条,
+    # 而模糊搜 "Petit Palais" 命中的 29960 条全是**阿维尼翁**的同名馆。
+    # 供 discover_joconde_refs.py 当跨馆误配的闸;漏寄存件是已知代价(宁缺毋滥)。
+    joconde_locations: ["Petit Palais, musée des Beaux-arts de la Ville de Paris"]
     fetch_limit: 8000           # WDQS 实测约 3.7k 条目 × 多 P31 重复行余量
     sample_size: 20
     sample_qids: []
