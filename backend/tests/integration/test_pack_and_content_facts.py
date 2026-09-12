@@ -270,6 +270,41 @@ def test_humanize_medium_joconde_terms_and_ambiguities():
     assert _humanize_medium("toile, marouflée", "zh") == "布面"
 
 
+def test_humanize_medium_english_terms_and_ambiguities():
+    """英文材质(Wikidata P186)。串摘自 prod 全量 11449 条真值。
+
+    英文侧比法语侧更要紧:P186 的优先级**高于** attributes,所以它才是面板上
+    最常出现的那一路。同样靠词序解决歧义,同样别按字母序整理这个 dict。
+    """
+    from app.services.museum_repo import _humanize_medium
+
+    assert _humanize_medium("Carrara marble", "zh") == "大理石"
+    assert _humanize_medium("elephant ivory", "en") == "Ivory"
+    assert _humanize_medium("poplar wood", "zh") == "木"
+    assert _humanize_medium("cast iron", "zh") == "铸铁"
+
+    # 歧义①:gelatin/albumen/salted 排在 silver 之前 ——
+    # 否则「明胶银盐照片」会被判成材质「银」
+    assert _humanize_medium("gelatin silver print", "zh") == "明胶银盐"
+    assert _humanize_medium("silver", "zh") == "银"
+
+    # 歧义②:limestone/sandstone 不是 stone。\b 本就挡得住(词内的 "stone" 不匹配),
+    # 词序是第二道保险
+    assert _humanize_medium("shelly limestone", "zh") == "石灰岩"
+    assert _humanize_medium("sandstone", "zh") == "砂岩"
+    assert _humanize_medium("stone", "zh") == "石"
+
+    # 歧义③:串里靠前的才是主材质 —— serpentin 必须排在 granite 前
+    assert _humanize_medium("serpentine;granite (rose)", "zh") == "蛇纹石"
+
+    # 歧义④:英文 "gold" 收(P186 里就是纯金),法语 "or" 不收(多是 fond d'or 金底技法)
+    assert _humanize_medium("gold", "zh") == "金"
+    assert _humanize_medium("fond d'or;peuplier", "zh") == "杨木"
+
+    # "paint" 有意不收:\bpaint 会连 painting 一起吃掉
+    assert _humanize_medium("paint", "zh") == "paint"
+
+
 def test_humanize_dimensions_metric_abbreviation():
     """ "en m 0,126" 也是米 —— 上游 104.6 万行里缩写 132393 行、全称仅 277 行,
     只认全称等于认不出 99.8% 的米制记录。漏了它,12.6cm 的素描会显示成 0.1cm。"""
