@@ -1,5 +1,9 @@
 #!/bin/bash
-# GoMuseum 外部富化源探活（每日），由 cron 调用。
+# GoMuseum 外部富化源探活（每 3 天），由 cron 调用。
+#
+# 为什么是 3 天而不是每天:要防的是"源死了两个月没人知道",不是"晚一天知道"。
+# 3 天把最坏发现延迟从 60 天压到 3 天,收益的 95% 已经拿到,
+# 而对上游的礼貌请求量只有每天的三分之一。
 #
 # 为什么需要:单源容错(纪律①)把源的死讯降级成一条 warning —— 对的设计,
 # 但代价是源死掉不会报错,只会让内容悄悄变薄。2026 年 Joconde 老 API 7-22 断供,
@@ -12,7 +16,11 @@
 #       root@<VPS>:/opt/gomuseum/probe-sources.sh
 #   ssh ... 'chmod +x /opt/gomuseum/probe-sources.sh'
 #   crontab -e   # 与 backup.sh / reconcile-refunds.sh 同一个 crontab
-#   41 5 * * * /opt/gomuseum/probe-sources.sh >> /var/log/gomuseum-probe.log 2>&1
+#   41 5 */3 * * /opt/gomuseum/probe-sources.sh >> /var/log/gomuseum-probe.log 2>&1
+#
+# ✅ 已于 2026-09-12 装上 prod(VPS 38.242.207.219),并用
+#    `env -i PATH=/usr/bin:/bin` 剥空环境实跑验证过 —— "手动能跑≠cron 能跑",
+#    典型死法是 docker 装在 /usr/local/bin 而 cron 的 PATH 够不着(本机在 /usr/bin,没踩到)。
 #
 # ⚠️ 改了这个文件之后要**重新 scp** —— 它不随部署更新。
 #
