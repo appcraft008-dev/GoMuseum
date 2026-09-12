@@ -54,15 +54,33 @@ def test_increment_happens_in_the_database_not_in_python(session):
 
     from app.services.llm_usage import usage_upsert
 
-    for dialect in (postgresql.dialect(), sqlite.dialect()):
+    # ⚠️ 构造用的方言必须与编译用的一致:两家的 OnConflictDoUpdate 是不同的类,
+    # 拿 SQLite 构造的语句去 compile 成 PG 会 AttributeError(2026-09-12 CI 实测)。
+    # 所以这里假造 bind 来驱动 _insert_for 的分支,顺带把"方言分支选对了"一起钉住。
+    for name, dialect in (
+        ("postgresql", postgresql.dialect()),
+        ("sqlite", sqlite.dialect()),
+    ):
         sql = str(
-            usage_upsert(session, "gate", "gpt-4o-mini", 7, 3).compile(dialect=dialect)
+            usage_upsert(_db_on(name), "gate", "gpt-4o-mini", 7, 3).compile(
+                dialect=dialect
+            )
         )
-        assert "ON CONFLICT" in sql.upper(), f"{dialect.name}: 不是 upsert"
+        assert "ON CONFLICT" in sql.upper(), f"{name}: 不是 upsert"
         # 计数由数据库自增
-        assert "llm_usage.calls + " in sql, f"{dialect.name}: 增量没发生在 DB 端"
+        assert "llm_usage.calls + " in sql, f"{name}: 增量没发生在 DB 端"
         # token 取本次传入值(excluded),不是把旧值再写一遍
-        assert "excluded" in sql.lower(), f"{dialect.name}: 没用 excluded"
+        assert "excluded" in sql.lower(), f"{name}: 没用 excluded"
+
+
+class _db_on:
+    """只够 _insert_for 取方言名的假 session。"""
+
+    def __init__(self, dialect_name):
+        self._bind = type("B", (), {"dialect": type("D", (), {"name": dialect_name})()})
+
+    def get_bind(self):
+        return self._bind
 
 
 def test_upsert_follows_the_session_dialect(session):
@@ -70,6 +88,7 @@ def test_upsert_follows_the_session_dialect(session):
     from app.services.llm_usage import _insert_for
 
     assert _insert_for(session).__module__.endswith("sqlite.dml")
+    assert _insert_for(_db_on("postgresql")).__module__.endswith("postgresql.dml")
 
 
 def test_report_aggregates(session):
