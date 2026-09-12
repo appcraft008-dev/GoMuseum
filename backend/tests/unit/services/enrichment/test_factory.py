@@ -13,6 +13,19 @@ def test_build_generation_components_from_museum_config():
         assert c[key] is not None
 
 
+def test_petit_palais_has_joconde():
+    """小皇宫必须装上 joconde —— 这条守的是一条**曾被错误关掉两个月**的源。
+
+    yaml 里原注释以「API 返回 HTML」+「市立馆未必在收录范围」为由关掉它。
+    前者是 2026-07-22 老 API 断供留下的疤(已修);后者实测是错的:上游按
+    Localisation "Petit Palais, musée des Beaux-arts de la Ville de Paris"
+    有 29502 件 —— 按国立馆的「城市 ; 馆名」分号格式去搜才会得到 0。
+    静默降级的代价不只是老馆数据变薄,还会让**新馆在配置阶段就把源排除掉**。
+    """
+    c = build_generation_components("petit_palais")
+    assert c["registry"].get("joconde") is not None
+
+
 def test_build_generation_components_langs_override():
     c = build_generation_components("orsay", langs_override=["en", "fr"])
     assert c["target_langs"] == ["en", "fr"]
