@@ -358,6 +358,30 @@ def _strip_wrapping_quotes(v: str) -> str:
     return v
 
 
+def _strip_embedded_title_en(v: str, title_en: str | None, native) -> str:
+    """非拉丁语言的显示名里混进了**整条英文原名** → 剥掉。
+
+    上游 Wikidata 的标签是人填的,偶尔有人把两种语言塞进同一个标签:
+    Q1231009 的 zh-tw = `The Coronation of Napoleon《拿破崙的加冕圖》`
+    (而它的 zh 标签是干净的「拿破仑加冕」)。我们"有权威标签就原样用",于是脏值进库。
+
+    ⚠️ **判据必须是「完整包含 title_en」,不能是「含拉丁字母」**。
+    prod 全量普查:CJK 显示名里含拉丁连词的有 37 条,**其中 36 条完全合法** ——
+    馆藏编号(`石碑碎片 Astitarhunza-AO 10829`)、人名(`Mlle Joly 半身像`)、
+    地名(`Étang-la-Ville的風景畫`)、作品上的拉丁铭文(`「NON OCCIDES」(不可殺人)`)、
+    外文原题副标(`沼澤地 (Le Marais)`)。按"含拉丁"剥会把这 36 条全毁掉(同纪律 24)。
+    本判据实测 **1/1 命中、0/36 误伤**。
+
+    剥完必须仍有本族文字,否则不剥 —— 宁可留个脏标题,也不能剥出个空壳。
+    """
+    if not title_en or not v or title_en not in v:
+        return v
+    stripped = v.replace(title_en, "").strip()
+    if not stripped or (native and not native.search(stripped)):
+        return v
+    return stripped
+
+
 # 各语言「本族文字」——该语言的显示名里一个本族字都没有 = 翻译失败残留,当缺失重解析
 _NATIVE_SCRIPT = {
     "zh": _CJK,
@@ -367,20 +391,25 @@ _NATIVE_SCRIPT = {
 }
 
 
-def _clean_i18n(i18n, artist_names=None) -> dict:
-    """清洗显示名:剥外层书名号/引号(旧翻译残留)+ 尾部消歧括号;
+def _clean_i18n(i18n, artist_names=None, title_en=None) -> dict:
+    """清洗显示名:剥混入的英文原名 + 外层书名号/引号(旧翻译残留)+ 尾部消歧括号;
     非拉丁语言位无本族文字 = 翻译失败残留(如《Vue de toits》)→ 当缺失重解析。
 
     [artist_names] 该作品作者的各语言规范名。给了才能认出「(马奈)」这类
     以作者名消歧的后缀 —— 全库实测标题里约 3500 个这类后缀
     (투우 (마네) / Koronczarka (obraz Vermeera) / 聖母の誕生 (ムリーリョ))。
     清洗作者名本身时不传,于是 Bruyn（長者）这种名字自带的括号不会被误剥。
+
+    [title_en] 该作品的英文标题。给了才能剥掉上游标签里混进的整条英文原名
+    (见 _strip_embedded_title_en)。清洗**作者名**时同样不传 ——
+    作者的英文名与显示名重合是常态,传了会把「Jean-Baptiste 讓-巴蒂斯特」剥成半截。
     """
     from app.services.enrichment.lang_detect import to_traditional
 
     out = {}
     for k, v in (i18n or {}).items():
-        v = _strip_wrapping_quotes(v or "")
+        v = _strip_embedded_title_en(v or "", title_en, _NATIVE_SCRIPT.get(k))
+        v = _strip_wrapping_quotes(v)
         v = strip_disambiguator(v, artist_names)
         if k == "zh-hant":
             # 显示名不走"判否"那条路:标题缺 zh-hant 时 _resolve_name 会回退到
@@ -523,7 +552,9 @@ def backfill_display_names(
         try:
             attrs = o.attributes or {}
             ti = _clean_i18n(
-                attrs.get("title_i18n"), _anames.get(attrs.get("artist_qid"))
+                attrs.get("title_i18n"),
+                _anames.get(attrs.get("artist_qid")),
+                o.title_en,
             )
             if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
                 attrs = {**attrs, "title_i18n": ti}

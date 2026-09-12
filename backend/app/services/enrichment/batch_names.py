@@ -75,7 +75,7 @@ def collect_missing(
     for i, o in enumerate(objs):
         attrs = dict(o.attributes or {})
         aq = attrs.get("artist_qid") or creators.get(o.qid)
-        ti = _clean_i18n(attrs.get("title_i18n"), _anames.get(aq))
+        ti = _clean_i18n(attrs.get("title_i18n"), _anames.get(aq), o.title_en)
         if aq:
             if attrs.get("artist_qid") != aq:
                 attrs = {**attrs, "artist_qid": aq}
