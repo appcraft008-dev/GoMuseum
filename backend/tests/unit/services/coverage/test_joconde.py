@@ -1,5 +1,5 @@
-"""Joconde 区域适配器:reference→localisation 展陈证据。fake http 注入,不打真网。
-canned JSON 摘自真实 data.culture.gouv.fr/base-joconde-extrait 响应。"""
+"""Joconde 区域适配器:Reference→Localisation 展陈证据。fake http 注入,不打真网。
+canned JSON 摘自真实 tabular-api.data.gouv.fr 响应(2026-09 迁移后)。"""
 
 import pytest
 from sqlalchemy import create_engine
@@ -13,21 +13,31 @@ from app.services.coverage.joconde import (
     enrich_museum_display,
     fetch_joconde_evidence,
 )
+from app.services.enrichment.sources import joconde as _src
 from app.services.object_importer import upsert_museum, upsert_object
 
-# 真实 opendatasoft v2.1 records 响应形状(reference 过滤,命中 1 条)
+CANNED_DATASET = {"resources": [{"id": "csv-rid", "format": "csv"}]}
+# 真实表格 API 响应形状(Reference__exact 过滤,命中 1 条)
 CANNED_HIT = {
-    "total_count": 1,
-    "results": [
+    "meta": {"page": 1, "page_size": 1, "total": 1},
+    "data": [
         {
-            "reference": "09880004556",
-            "localisation": "Valence ; musée des beaux-arts",
-            "exposition": None,
-            "nom_officiel_musee": "musée des beaux-arts",
+            "Reference": "09880004556",
+            "Localisation": "Valence ; musée des beaux-arts",
+            "Exposition": None,
+            "Nom_officiel_musee": "musée des beaux-arts",
         }
     ],
 }
-CANNED_EMPTY = {"total_count": 0, "results": []}
+CANNED_EMPTY = {"meta": {"total": 0}, "data": []}
+
+
+@pytest.fixture(autouse=True)
+def _reset_rid_cache():
+    """模块级 rid 缓存跨测试会串味。每例清一次。"""
+    _src._rid_cache = None
+    yield
+    _src._rid_cache = None
 
 
 class _Resp:
@@ -40,7 +50,12 @@ class _Resp:
 
 
 def _fake_get(data, status=200):
+    """dataset 元数据请求恒成功;status 只作用于数据请求 —— 否则"非200→None"
+    这条测试会在 rid 解析阶段就短路,测不到它本来要测的那段。"""
+
     def get(url, params=None, headers=None, timeout=None):
+        if url.startswith(_src.DATASET_API):
+            return _Resp(CANNED_DATASET)
         return _Resp(data, status)
 
     return get

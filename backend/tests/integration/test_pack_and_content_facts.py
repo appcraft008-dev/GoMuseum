@@ -239,6 +239,21 @@ def test_humanize_medium_and_dimensions():
     assert _humanize_dimensions(None) is None
 
 
+def test_humanize_dimensions_metric_abbreviation():
+    """ "en m 0,126" 也是米 —— 上游 104.6 万行里缩写 132393 行、全称仅 277 行,
+    只认全称等于认不出 99.8% 的米制记录。漏了它,12.6cm 的素描会显示成 0.1cm。"""
+    from app.services.museum_repo import _humanize_dimensions
+
+    assert _humanize_dimensions("H. en m 0,126 ; L. en m 0,197") == "12.6 × 19.7 cm"
+    assert (
+        _humanize_dimensions("Longueur en m 2.08 ; Largeur en m 0.62") == "208 × 62 cm"
+    )
+    # 毫米别被当成米(\b 不能吃掉 "en mm");本函数不处理毫米,至少不该乘 100
+    assert _humanize_dimensions("H. en mm 29 ; L. en mm 19") == "29 × 19 cm"
+    # 无单位的厘米串不受影响
+    assert _humanize_dimensions("77 H ; 53 L") == "77 × 53 cm"
+
+
 def test_tabs_exclude_overview(session):
     from app.services.museum_repo import get_object_content
 
