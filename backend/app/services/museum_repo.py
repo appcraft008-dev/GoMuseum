@@ -219,7 +219,37 @@ _MEDIUM_NORM = {
     "encre": {"zh": "墨水", "en": "Ink", "fr": "Encre"},
     "crayon": {"zh": "铅笔", "en": "Pencil", "fr": "Crayon"},
     "terre cuite": {"zh": "陶土", "en": "Terracotta", "fr": "Terre cuite"},
+    # 以下为 2026-09 Joconde 回填带来的法语材质(上游 11273 条实测定的词与词序)。
+    # ⚠️ 顺序即语义:先命中先返回。改动前先读 _humanize_medium 的注释。
+    # "pierre noire" 必须在 "pierre" 之前 —— 它是素描用的黑石笔,不是石头。
+    "pierre noire": {"zh": "黑石笔", "en": "Black chalk", "fr": "Pierre noire"},
+    "mine de plomb": {"zh": "石墨铅笔", "en": "Graphite", "fr": "Mine de plomb"},
+    "terre crue": {"zh": "生土", "en": "Unfired clay", "fr": "Terre crue"},
+    "tempera": {"zh": "蛋彩", "en": "Tempera", "fr": "Tempera"},
+    "détremp": {"zh": "胶彩", "en": "Distemper", "fr": "Détrempe"},  # détrempe/détrempé
+    "fresque": {"zh": "湿壁画", "en": "Fresco", "fr": "Fresque"},
+    "lithographie": {"zh": "石版画", "en": "Lithograph", "fr": "Lithographie"},
+    "porcelaine": {"zh": "瓷", "en": "Porcelain", "fr": "Porcelaine"},
+    "émail": {"zh": "珐琅", "en": "Enamel", "fr": "Émail"},
+    "ivoire": {"zh": "象牙", "en": "Ivory", "fr": "Ivoire"},
+    "albâtre": {"zh": "雪花石膏", "en": "Alabaster", "fr": "Albâtre"},
+    "calcaire": {"zh": "石灰岩", "en": "Limestone", "fr": "Calcaire"},
+    "pierre": {"zh": "石", "en": "Stone", "fr": "Pierre"},
+    "argent": {"zh": "银", "en": "Silver", "fr": "Argent"},
+    "laiton": {"zh": "黄铜", "en": "Brass", "fr": "Laiton"},
+    "zinc": {"zh": "锌", "en": "Zinc", "fr": "Zinc"},
+    "verre": {"zh": "玻璃", "en": "Glass", "fr": "Verre"},
+    "vélin": {"zh": "犊皮纸", "en": "Vellum", "fr": "Vélin"},
+    # cire 在 bronze 之后:"fonte à la cire perdue;bronze"(失蜡铸铜)该归青铜而非蜡
+    "cire": {"zh": "蜡", "en": "Wax", "fr": "Cire"},
+    "noyer": {"zh": "胡桃木", "en": "Walnut", "fr": "Noyer"},
+    "bois": {"zh": "木", "en": "Wood", "fr": "Bois"},
+    "toile": {"zh": "布面", "en": "Canvas", "fr": "Toile"},
 }
+# 有意不收的词:
+# - 技法而非材质(bas-relief/haut-relief/modelage/taille/fond d'or/grisaille):
+#   收了会把"浮雕"当材质写上展签。不收,串里靠后的真材质自然会命中。
+# - "or"(金):上游 114 条命中里绝大多数是 "fond d'or"(金底),收了会把蛋彩画标成「金」。
 
 
 def _humanize_medium(raw, lang):
