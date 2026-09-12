@@ -234,6 +234,13 @@ def _humanize_medium(raw, lang):
     return raw
 
 
+# 米制单位:全称 mètre(s)/metre(s) 与缩写 "en m 2.08"。\b 保证不吃 "en mm"。
+# ⚠️ 只认全称会漏掉绝大多数:上游 104.6 万行里缩写写法 132393 行、全称仅 277 行
+# —— 认得出的不到 0.2%。此前 dimensions 几乎全空没人看见,2026-09 回填一铺开
+# 就会让卢浮宫素描部门(惯用 "H. en m 0,126")整片显示成 "0.1 × 0.2 cm"。
+_METRIC_RE = re.compile(r"\ben\s+m(?:\b|ètres?\b|etres?\b)", re.IGNORECASE)
+
+
 def _humanize_dimensions(raw):
     """Joconde 尺寸串(如 'en mètres : L. 0,55 ; H. 0,46' / 'H. 208, l. 264.5')→ '宽 × 高 cm'。
     ponytail: 取前两个数 + 米→厘米;格式怪异则原样返回。"""
@@ -243,7 +250,7 @@ def _humanize_dimensions(raw):
     if len(nums) < 2:
         return raw
     vals = [float(n.replace(",", ".")) for n in nums[:2]]
-    if "mètre" in raw.lower() or "metre" in raw.lower():  # 米 → 厘米
+    if _METRIC_RE.search(raw):  # 米 → 厘米
         vals = [v * 100 for v in vals]
 
     def _fmt(x):
