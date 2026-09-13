@@ -119,28 +119,53 @@ def test_banned_phrase_rate_separates_the_two_groups():
     assert banned_phrase_rate(VARIED) == (0, 3)
 
 
-def test_every_banned_phrase_is_actually_written_into_the_prompt():
-    """清单与 prompt 必须同源 —— 往清单加一条而 prompt 拼接漏了,就会出现
-    "报告在统计一条模型从没被禁过的短语",两边都显示"通过"。
+def test_every_banned_phrase_reaches_both_prompts():
+    """清单与 prompt 必须同源,而且是**两个** prompt —— 往清单加一条而某个
+    prompt 的拼接漏了,就会出现"报告在统计一条模型从没被禁过的短语",两边
+    都显示"通过"。
 
-    这正是今天 category_sections 那个 bug 的形状(生成侧有兜底、展示侧没有),
-    所以这里用测试钉住,而不是靠记得。
+    为什么必须是两个:黑名单最初只接在头条(guide)上,深度段的 _SYSTEM 没接,
+    于是 analysis 段套话命中率 94% 完全没被管到。这正是 category_sections
+    那个 bug 的形状(一侧有、一侧没有),所以用测试钉住而不是靠记得。
     """
     from app.services.enrichment.prompts import (
         _DEFAULT_GUIDE_SYSTEM,
-        BANNED_GUIDE_PHRASES,
+        _SYSTEM,
+        BANNED_PHRASES,
     )
 
-    missing = [p for p in BANNED_GUIDE_PHRASES if p not in _DEFAULT_GUIDE_SYSTEM]
-    assert not missing, f"这些在清单里但没进 prompt: {missing}"
-    assert len(BANNED_GUIDE_PHRASES) >= 6
+    for name, prompt in (
+        ("深度段 _SYSTEM", _SYSTEM),
+        ("头条 guide", _DEFAULT_GUIDE_SYSTEM),
+    ):
+        missing = [p for p in BANNED_PHRASES if p not in prompt]
+        assert not missing, f"{name} 缺这些禁用句: {missing}"
+    assert len(BANNED_PHRASES) >= 6
+
+
+def test_prompts_do_not_hand_the_model_copyable_stock_phrases():
+    """prompt **自己举的措辞级例句会变成输出模板** —— 实测过一次:
+    深度段 _SYSTEM 曾举例 'notice the red in the corner' 和
+    'the brushwork feels restless',结果 analysis 477 段里 "notice how" 命中
+    363 段(76%)、"brushwork feels" 64 段(13%,6 段连 "feels restless" 都没改),
+    而不讲技法的 background/facts/significance **全为 0**。
+
+    所以"允许引导语"这条语义要保留(接地闸靠它区分事实句与引导句),
+    但只能讲类别,不能给可抄的措辞。
+    """
+    from app.services.enrichment.prompts import _DEFAULT_GUIDE_SYSTEM, _SYSTEM
+
+    for prompt in (_SYSTEM, _DEFAULT_GUIDE_SYSTEM):
+        low = prompt.lower()
+        for leaked in ("notice the red in the corner", "brushwork feels restless"):
+            assert leaked not in low, f"prompt 又把可抄的例句交给模型了: {leaked}"
 
 
 def test_banned_phrase_detection_uses_the_shared_list(monkeypatch):
     """报告查的就是 prompts 里那份清单,不是手抄的副本。"""
     import app.services.enrichment.prompts as P
 
-    monkeypatch.setattr(P, "BANNED_GUIDE_PHRASES", ["zzz unique marker"])
+    monkeypatch.setattr(P, "BANNED_PHRASES", ["zzz unique marker"])
     assert banned_phrase_rate(["a zzz unique marker b"]) == (1, 1)
     assert banned_phrase_rate(["take a moment to look"]) == (0, 1)
 
