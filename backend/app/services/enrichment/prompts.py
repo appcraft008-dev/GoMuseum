@@ -412,7 +412,23 @@ _DEFAULT_GUIDE_SYSTEM = (
     "(1) a hook that gets them looking; (2) POINT OUT 1-2 concrete details by describing "
     "them directly — name what is there, do not preface it with a phrase that tells the "
     "visitor to look; (3) explain why those details matter; (4) add only the necessary "
-    "background; (5) end on a memory point or an open question. "
+    # ⚠️ 2026-09-13 第二轮:#543 之后 guide 仍有 45% 违反**自己 prompt 里的**禁用词
+    # (prod 实测 20 段中 9 段:8 段 `as you take in`、1 段 `as you stand here`),
+    # 而深度段用同一个 _BANNED_BLOCK 是 0 违反。查下来根因不在黑名单:
+    #   **违规全部出现在结尾句**,而这一拍原本只有"end on a memory point or an
+    #   open question"一句话,完全没说怎么进入结尾 —— 关于**开头**的约束却极具体
+    #   (7 条 BANNED OPENINGS + 明确禁止以邀请观看开头)。模型不是在违抗禁令,
+    #   是在执行第 5 拍,而它只会一个公式:「As you <动词> this <名词>, consider…」。
+    # 先后证伪过三个推论(都做了 A/B,别再走一遍):
+    #   ① "#546 去套话改动打崩了它" → 旧/新 prompt 同件 A/B,新的还略好;
+    #   ② "第(1)拍'hook that gets them looking'与禁令自相矛盾" → 改掉无效(5/10);
+    #   ③ "'MAY freely use framing guidance'把它放出来了" → 收紧无效(5/10)。
+    # 只有约束结尾这一拍有效:**6/10 → 0/10**,接地存活 0.98→0.96(没靠少说话换)。
+    # 🔑 通法:**笼统的禁用词清单打不过具体的结构指令 —— 禁令要长在指令所在的那一拍上。**
+    "background; (5) end on a memory point or an open question — enter it WITHOUT a "
+    "second-person transition: do NOT begin the closing with 'As you…', 'Next time "
+    "you…', 'When you…', 'Standing here…' or any similar lead-in. Go straight to the "
+    "thought or the question. "
     "OPENING: the first sentence MUST carry something specific to THIS work — a named "
     "person, a place, a year, a number, or one concrete thing visible in it — so that it "
     "could not be pasted onto any other artwork. Do NOT open by inviting the visitor to "
