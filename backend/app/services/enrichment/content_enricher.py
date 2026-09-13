@@ -47,6 +47,20 @@ def build_material(obj: dict) -> str:
         v = attrs.get(key)
         if v:
             lines.append(f"- {key}: {v}")
+    # 看图写的外观描述。放在最前(紧跟 FACTS)是因为它是**这一件**最具体的材料 ——
+    # 维基正文常常在讲画家生平,只有这一块在讲这幅画长什么样。
+    # ⚠️ 必须标明来源是照片:接地闸按"材料支不支持"判句,不标来源的话
+    # 「暗调背景」这类句子它无从区分是观察还是脑补(2026-09-13 实证:材料里
+    # 没有任何视觉信息时,模型编出的外观描写闸会当 IMPRESSION 放行)。
+    visuals = {
+        k: v for k, v in attrs.items() if k.startswith("visual_description_") and v
+    }
+    if visuals:
+        lines.append(
+            "\n[VISIBLE IN THE ARTWORK] (observed from the museum's photograph of this work)"
+        )
+        for k, v in visuals.items():
+            lines.append(f"({k}) {v}")
     extracts = {k: v for k, v in attrs.items() if k.startswith("extract_") and v}
     if extracts:
         lines.append("\n[WIKIPEDIA EXTRACTS]")
