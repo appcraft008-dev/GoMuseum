@@ -124,8 +124,12 @@ class QualityGate:
         #   「His profile reveals a thoughtful demeanor…」—— His 是谁?
         #   「To the left, a bearded man stands…」—— 这是什么作品?
         #   「Sentier de la Mi-côte' is that it was painted on-site.」—— 引号被腰斩,语法不通。
-        # 2026-09-13 实测(prod 全库):删过句的 12 段 guide 里 4 段开头坏掉(33%),
-        # 没删句的 39 段 **0 段** —— 零重叠。
+        # 2026-09-13 实测(prod 全库 guide 段):删过句的 12 段里 3 段开头坏掉(25%),
+        # 没删句的 39 段 **0 段**、套话时代的 612 段也是 0 段 —— 零重叠。
+        # ⚠️ 统计这类断裂时别把 `It/Its/This` 开头算进去:「It was commissioned for
+        # the coronation…」「Its significance lies in…」指的是**作品本身**,而段落
+        # 就展示在作品页上,指代成立 —— 全库 46 段是这种,它们没问题。
+        # 真正断的是**指人**的代词(He/His/She/Her,段里没出现过那个人)和方位词开头。
         # 这是 #555 去套话的副作用:以前开头是「Take a moment to really look…」,
         # 套话不陈述事实所以永远过闸、首句删不掉;换成实质句后,过不了闸就被删。
         # ⚠️ 判据故意用「首句被删」而不是「剩余首句看着像不像悬空」:后者要维护一张
