@@ -2,6 +2,45 @@
 
 from __future__ import annotations
 
+# 套话黑名单。**单一真相源**:两个 prompt(深度段 _SYSTEM、头条 _DEFAULT_GUIDE_SYSTEM)
+# 都用它生成禁令文本,scripts/text_quality_report.py 用同一份统计命中率。
+# 分开写两份的下场见过一次(category_sections:生成侧有兜底、展示侧没有,
+# 980 段内容因此在 App 上隐身)。这里不重犯:加一条就三处同时生效。
+# 清单里每一条都来自**实测**(见下方各 prompt 注释里的命中率),不是凭感觉禁的。
+BANNED_PHRASES = [
+    "take a moment to",
+    "these details matter because",
+    "as you stand here",
+    "this isn't just a",
+    "the composition is carefully structured",
+    "interplay of light and shadow",
+    # guide 第一轮 A/B 暴露的"二代套话":禁掉开头之后,模型把同样的引导语
+    # 挪到了正文中间(实测 "as you take in this" 20 件里命中 13 件)。
+    "as you take in",
+    "as you gaze",
+    "let your gaze",
+    "notice how",
+]
+
+_BANNED_BLOCK = (
+    "BANNED PHRASES (overused to the point of being filler — do not use these or close "
+    "variants): " + "; ".join(f"'{p}'" for p in BANNED_PHRASES) + ". "
+)
+
+# ⚠️ 2026-09-13:这段 prompt **自己举的例句被模型当模板照抄**。原文在"允许写什么"
+# 里举了 'notice the red in the corner' 和 'the brushwork feels restless' 两个例子,
+# prod 实测(卢浮宫+奥赛,英语已发布):
+#     analysis           477 段: "notice how" 363 (76%)、"brushwork feels" 64 (13%,
+#                                其中 6 段连 "feels restless" 都一字未改)
+#     material-technique  76 段: "notice how" 35 (46%)
+#     background/facts/significance: **全为 0** —— 它们不讲技法,用不到这条例子
+# 套话命中率:analysis 94%、material-technique 74%,而 background/facts 0%。
+# 规律是「prompt 里要求(或示范)引导观看的段 → 套话;要求陈述事实的段 → 干净」。
+# 而**接地闸对此结构性免疫**:它的规则明写"FRAMING/GUIDANCE → KEEP",
+# 套话不作事实主张,所以永远过闸 —— 过闸率一路绿灯,没人发现。
+# 教训:**在 prompt 里举措辞级的例子,例子本身就会变成输出模板。**
+#   要保留"允许引导语"这条语义(接地闸靠它区分事实句与引导句),
+#   但改成讲**类别**而不给可抄的措辞,再配黑名单兜底。
 _SYSTEM = (
     "You are writing AUDIO-GUIDE narration for a museum visitor standing in front of the "
     "artwork — spoken, not an encyclopedia entry. Voice: vivid storytelling that makes dry "
@@ -10,9 +49,12 @@ _SYSTEM = (
     "humans with motives, use a hook and gentle suspense, vary the rhythm. Each section has "
     "a ROLE and a target length given below; pick the single most engaging angle the "
     "material supports rather than summarizing everything; give one thing worth remembering.\n"
-    "What you MAY write freely (these are NOT facts to be checked): framing and second-person "
-    "guidance ('notice the red in the corner'), rhetorical questions, transitions, and GENTLE "
-    "subjective impressions clearly phrased as impression ('the brushwork feels restless').\n"
+    "What you MAY write freely (these are NOT facts to be checked): framing and "
+    "second-person guidance, rhetorical questions, transitions, and GENTLE subjective "
+    "impressions clearly phrased as impression. Those are CATEGORIES of allowed writing, "
+    "NOT wording to reuse: name what is actually there in fresh words each time. Do NOT "
+    "reach for a stock attention-directing formula, and do NOT open a section by telling "
+    "the visitor to look or pause — state the thing itself. " + _BANNED_BLOCK + "\n"
     "What you MUST NOT do: invent any verifiable fact (names, dates, events, attributions, "
     "medium, what is depicted) that is not in the material. If the material is too thin for a "
     "section, return a SHORT honest text or an empty string — never pad with fabrication.\n"
@@ -326,17 +368,70 @@ def build_artist_bio_prompt(material: str):
     return _ARTIST_BIO_SYSTEM, f"MATERIAL (about the artist):\n{material}"
 
 
+# ⚠️ 这段 prompt 里**一个套话也没写**,模型却自己把 5 beats 的骨架每次填成
+# 同一套措辞。2026-09-13 实测 prod(英语 guide,284 件样本):
+#     "take a moment to really"        248 件 (87.3%)
+#     "as you stand here think about"  156 件 (54.9%)
+#     "these details matter because"    98 件 (34.5%)
+#   → 282 段只有 38 种开头(多样性 13%),而 background/significance/facts
+#     的开头多样性是 96-99%,所以这是 guide 这段**独有**的病。
+# 结构化指令 + 低温度会让措辞收敛:骨架越明确,模型越倾向用固定过渡语填它。
+# 而**接地闸对此结构性免疫** —— 闸的规则写着"引导句无可证伪事实 → keep=True",
+# 套话不陈述事实,所以永远过闸,过闸率一路绿灯,25635 段里没人发现。
+# 所以这里同时下三道:正面要求(开场必须携带本件独有的具体物)、
+# 负面清单(实测高频句)、元要求(别把一种套话换成另一种)。
+# 改动后用 scripts/text_quality_report.py 复测,别靠看几段样本拍脑袋。
+#
+# A/B 实测(三馆 top20、同材料同模型 gpt-4o-mini/0.3、只换 system,
+# 并以**旧 prompt 现场重生成**为对照组 —— 没有对照就分不清"prompt 起作用"
+# 和"这次抽样刚好不同";卢浮宫跑了三轮,对照组三轮都与线上现状逐项吻合):
+#                  开头多样性(旧→新)  锚点率(旧→新)  二代套话残留  接地存活率(旧→新)
+#     卢浮宫          40% → 95%        43% → 63%        25%       .932 → .952
+#     奥赛            30% → 90%        42% → 54%        50%       .990 → .963
+#     小皇宫(stub)    25% → 100%       47% → 58%        40%       .943 → .937
+# ⚠️ 关键护栏:三馆过闸率全是 20/20。**锚点率上升不是靠编年份**,是让模型
+#     去材料里找本来就有的具体事实。没有这条护栏,"锚点率提升"可能恰恰是
+#     质量倒退(为满足"开场要有年份"而编造)。
+# ⚠️ 已知残留:禁掉开头之后仍有 25-50% 的段用某句引导语(当前是
+#     "as you take in this")。继续加禁用词收益递减且会把文本写僵,故停手;
+#     指标已进仓库,可持续监控而不是又变回看不见。
+# ⚠️ **残留量与材料厚度没看出关系** —— 这条是撤回的一个错推论,留着免得有人
+#   再走一遍:先只有卢浮宫(残留 25%)和奥赛(50%)两个点时,曾以为"材料越薄
+#   残留越多",还据此预测小皇宫会最差。小皇宫实测 40%(介于两者之间)、
+#   开头多样性 100%(三馆最好),预测被推翻。两个错处:
+#     ① 拿 significance **挂起件**的 extract_en 覆盖率当"该馆材料厚度",
+#        分母错了。三馆 top20 实测材料中位 21166/18643/16748 字符、
+#        维基正文 20/20、20/20、4/4 —— 热门件材料都厚,没有"薄馆"。
+#     ② 两个点永远能连成一条线。
+#   顺带一个更强的结论:小皇宫那组材料包中位只有 3489 字符(stub 件,
+#   没建 evidence_pack),**材料最薄却效果最好** → prompt 的改善不依赖材料厚度。
 _DEFAULT_GUIDE_SYSTEM = (
     "You are a museum audio-guide writer. Write ONE short spoken on-site guide for a visitor "
     "standing in front of the artwork, built around a SINGLE core point (one throughline) — "
     "not a summary of everything. Structure (5 beats, flowing, not labeled): "
-    "(1) a hook that gets them looking; (2) guide them to NOTICE 1-2 concrete details; "
-    "(3) explain why those details matter; (4) add only the necessary background; "
-    "(5) end on a memory point or an open question. "
+    "(1) a hook that gets them looking; (2) POINT OUT 1-2 concrete details by describing "
+    "them directly — name what is there, do not preface it with a phrase that tells the "
+    "visitor to look; (3) explain why those details matter; (4) add only the necessary "
+    "background; (5) end on a memory point or an open question. "
+    "OPENING: the first sentence MUST carry something specific to THIS work — a named "
+    "person, a place, a year, a number, or one concrete thing visible in it — so that it "
+    "could not be pasted onto any other artwork. Do NOT open by inviting the visitor to "
+    "look or pause. "
+    "BANNED OPENINGS (overused to the point of being filler): 'Take a moment…', "
+    "'As you look at…', 'As you stand…', 'Stand before…', 'Picture this…', "
+    "'Imagine standing…', 'Let's take a closer look…'. "
+    + _BANNED_BLOCK
+    + "The 5 beats are a SHAPE, not wording: do not use recurring connective formulas to "
+    "move between them, and do not swap one banned formula for a new fixed one — vary how "
+    "you enter and close from work to work. In particular, do NOT use ANY stock phrase "
+    "that directs attention ('observe…', 'look at how…', 'pay attention to…'): the visitor "
+    "is already in front of the work, so simply state what is there and what it means. "
     "Voice: colloquial, second-person, vivid storytelling that makes facts come alive "
     "(a great popular-history narrator). You MAY freely use framing/second-person guidance "
     "and gentle impressions clearly phrased as impression. You MUST NOT invent verifiable "
     "facts (names, dates, events, attributions, medium, what is depicted) not in the material. "
+    "If the material is too thin for a specific opening, open on the most concrete fact you "
+    "DO have (medium, dimensions, date, where it came from) — never pad with an invitation to look. "
     "This is the HEADLINE; deep modules cover the rest, so DON'T try to cover everything. "
     "Write in English, ONE continuous narration. Return ONLY the text, no commentary, no quotes."
 )
