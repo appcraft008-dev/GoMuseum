@@ -2,6 +2,45 @@
 
 from __future__ import annotations
 
+# 套话黑名单。**单一真相源**:两个 prompt(深度段 _SYSTEM、头条 _DEFAULT_GUIDE_SYSTEM)
+# 都用它生成禁令文本,scripts/text_quality_report.py 用同一份统计命中率。
+# 分开写两份的下场见过一次(category_sections:生成侧有兜底、展示侧没有,
+# 980 段内容因此在 App 上隐身)。这里不重犯:加一条就三处同时生效。
+# 清单里每一条都来自**实测**(见下方各 prompt 注释里的命中率),不是凭感觉禁的。
+BANNED_PHRASES = [
+    "take a moment to",
+    "these details matter because",
+    "as you stand here",
+    "this isn't just a",
+    "the composition is carefully structured",
+    "interplay of light and shadow",
+    # guide 第一轮 A/B 暴露的"二代套话":禁掉开头之后,模型把同样的引导语
+    # 挪到了正文中间(实测 "as you take in this" 20 件里命中 13 件)。
+    "as you take in",
+    "as you gaze",
+    "let your gaze",
+    "notice how",
+]
+
+_BANNED_BLOCK = (
+    "BANNED PHRASES (overused to the point of being filler — do not use these or close "
+    "variants): " + "; ".join(f"'{p}'" for p in BANNED_PHRASES) + ". "
+)
+
+# ⚠️ 2026-09-13:这段 prompt **自己举的例句被模型当模板照抄**。原文在"允许写什么"
+# 里举了 'notice the red in the corner' 和 'the brushwork feels restless' 两个例子,
+# prod 实测(卢浮宫+奥赛,英语已发布):
+#     analysis           477 段: "notice how" 363 (76%)、"brushwork feels" 64 (13%,
+#                                其中 6 段连 "feels restless" 都一字未改)
+#     material-technique  76 段: "notice how" 35 (46%)
+#     background/facts/significance: **全为 0** —— 它们不讲技法,用不到这条例子
+# 套话命中率:analysis 94%、material-technique 74%,而 background/facts 0%。
+# 规律是「prompt 里要求(或示范)引导观看的段 → 套话;要求陈述事实的段 → 干净」。
+# 而**接地闸对此结构性免疫**:它的规则明写"FRAMING/GUIDANCE → KEEP",
+# 套话不作事实主张,所以永远过闸 —— 过闸率一路绿灯,没人发现。
+# 教训:**在 prompt 里举措辞级的例子,例子本身就会变成输出模板。**
+#   要保留"允许引导语"这条语义(接地闸靠它区分事实句与引导句),
+#   但改成讲**类别**而不给可抄的措辞,再配黑名单兜底。
 _SYSTEM = (
     "You are writing AUDIO-GUIDE narration for a museum visitor standing in front of the "
     "artwork — spoken, not an encyclopedia entry. Voice: vivid storytelling that makes dry "
@@ -10,9 +49,12 @@ _SYSTEM = (
     "humans with motives, use a hook and gentle suspense, vary the rhythm. Each section has "
     "a ROLE and a target length given below; pick the single most engaging angle the "
     "material supports rather than summarizing everything; give one thing worth remembering.\n"
-    "What you MAY write freely (these are NOT facts to be checked): framing and second-person "
-    "guidance ('notice the red in the corner'), rhetorical questions, transitions, and GENTLE "
-    "subjective impressions clearly phrased as impression ('the brushwork feels restless').\n"
+    "What you MAY write freely (these are NOT facts to be checked): framing and "
+    "second-person guidance, rhetorical questions, transitions, and GENTLE subjective "
+    "impressions clearly phrased as impression. Those are CATEGORIES of allowed writing, "
+    "NOT wording to reuse: name what is actually there in fresh words each time. Do NOT "
+    "reach for a stock attention-directing formula, and do NOT open a section by telling "
+    "the visitor to look or pause — state the thing itself. " + _BANNED_BLOCK + "\n"
     "What you MUST NOT do: invent any verifiable fact (names, dates, events, attributions, "
     "medium, what is depicted) that is not in the material. If the material is too thin for a "
     "section, return a SHORT honest text or an empty string — never pad with fabrication.\n"
@@ -326,26 +368,6 @@ def build_artist_bio_prompt(material: str):
     return _ARTIST_BIO_SYSTEM, f"MATERIAL (about the artist):\n{material}"
 
 
-# guide 段的套话黑名单。**单一真相源**:prompt 用它生成禁令文本,
-# scripts/text_quality_report.py 用同一份统计命中率。
-# 分开写两份的下场今天刚见过一次(category_sections:生成侧有兜底、展示侧没有,
-# 980 段内容因此在 App 上隐身)。这里不重犯:加一条就两边同时生效。
-# 清单里每一条都来自**实测**(见下方注释的命中率),不是凭感觉禁的。
-BANNED_GUIDE_PHRASES = [
-    "take a moment to",
-    "these details matter because",
-    "as you stand here",
-    "this isn't just a",
-    "the composition is carefully structured",
-    "interplay of light and shadow",
-    # 第一轮 A/B 暴露的"二代套话":禁掉开头之后,模型把同样的引导语
-    # 挪到了正文中间(实测 "as you take in this" 20 件里命中 13 件)。
-    "as you take in",
-    "as you gaze",
-    "let your gaze",
-    "notice how",
-]
-
 # ⚠️ 这段 prompt 里**一个套话也没写**,模型却自己把 5 beats 的骨架每次填成
 # 同一套措辞。2026-09-13 实测 prod(英语 guide,284 件样本):
 #     "take a moment to really"        248 件 (87.3%)
@@ -398,10 +420,8 @@ _DEFAULT_GUIDE_SYSTEM = (
     "BANNED OPENINGS (overused to the point of being filler): 'Take a moment…', "
     "'As you look at…', 'As you stand…', 'Stand before…', 'Picture this…', "
     "'Imagine standing…', 'Let's take a closer look…'. "
-    "BANNED PHRASES anywhere in the text: "
-    + "; ".join(f"'{p}'" for p in BANNED_GUIDE_PHRASES)
-    + ". "
-    "The 5 beats are a SHAPE, not wording: do not use recurring connective formulas to "
+    + _BANNED_BLOCK
+    + "The 5 beats are a SHAPE, not wording: do not use recurring connective formulas to "
     "move between them, and do not swap one banned formula for a new fixed one — vary how "
     "you enter and close from work to work. In particular, do NOT use ANY stock phrase "
     "that directs attention ('observe…', 'look at how…', 'pay attention to…'): the visitor "

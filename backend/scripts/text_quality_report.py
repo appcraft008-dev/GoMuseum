@@ -62,11 +62,9 @@ def banned_phrase_rate(bodies: list[str]) -> tuple[int, int]:
 
     手抄一份到这里就会漂移:prompt 禁了 A,报告查的是 B,两边都"通过"。
     """
-    from app.services.enrichment.prompts import BANNED_GUIDE_PHRASES
+    from app.services.enrichment.prompts import BANNED_PHRASES
 
-    hits = sum(
-        1 for b in bodies if b and any(p in b.lower() for p in BANNED_GUIDE_PHRASES)
-    )
+    hits = sum(1 for b in bodies if b and any(p in b.lower() for p in BANNED_PHRASES))
     return hits, len([b for b in bodies if b])
 
 
