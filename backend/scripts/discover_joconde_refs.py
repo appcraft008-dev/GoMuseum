@@ -54,6 +54,10 @@ _PAGE = 200  # 上游硬上限(超过直接 400 "Page size exceeds allowed maxim
 # 自检负样本:这个馆藏号在 Joconde 里不可能存在。反查返回非 None 就说明
 # 匹配逻辑太松(例如不小心用了 contains 而不是 exact),结果整体不可信。
 _IMPOSSIBLE_INV = "ZZ_NO_SUCH_INVENTORY_NUMBER_42"
+# 金标准取样上限。多查不会更准 —— 能检出系统性错配的样本量很小,
+# 而每件都要一次上游往返(卢浮宫有 7312 件权威 P347,全查要半小时,纯浪费)。
+# 按馆藏号排序取前 N 而不是随机:同一个库两次跑的自检样本一致,结果可复现。
+_SELF_TEST_MAX = 20
 
 
 def _get_json(url, params=None):
@@ -143,18 +147,31 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
     有一条真冲突就退出:错配的 P347 会把别人的作品资料灌进这件,
     而且灌进去之后没有任何地方会报错。
     """
-    gold = [
-        (o.inventory_number, (o.attributes or {}).get("external_ids", {}).get("P347"))
-        for o in objs
-        if o.inventory_number
-        and (o.attributes or {}).get("external_ids", {}).get("P347")
-    ]
+    gold = sorted(
+        (
+            (
+                o.inventory_number,
+                (o.attributes or {}).get("external_ids", {}).get("P347"),
+            )
+            for o in objs
+            if o.inventory_number
+            and (o.attributes or {}).get("external_ids", {}).get("P347")
+            # ⚠️ **排除本脚本自己写过的件**。金标准必须来自 Wikidata(P347 的权威源),
+            # 不能是上一轮反查的产物 —— 否则就是拿反查的结果去验证反查,必然一致,
+            # 自检形同虚设。2026-09-13 实跑踩到:中断后续跑时,金标准从 7 件
+            # 变成 1479 件(1441 件是自己刚写的),自检还"通过"了。
+            # `joconde_ref_via` 这个留痕字段本来是为"将来能整批撤回"留的,
+            # 这里发现它的第二个用途:把自己写的和权威的分开。
+            and not (o.attributes or {}).get("joconde_ref_via")
+        )
+    )[:_SELF_TEST_MAX]
     if not gold:
         raise SystemExit(
-            "自检无法进行:本馆没有任何「既有馆藏号又有权威 P347」的件,\n"
+            "自检无法进行:本馆没有任何「既有馆藏号 + **来自 Wikidata 的** P347」的件\n"
+            "(本脚本自己反查补的不算,它们不能给自己当金标准)。\n"
             "无从校准反查是否配对正确。要强行跑请显式加 --no-self-test。"
         )
-    print(f"自检:{len(gold)} 件金标准 + 1 个负样本", flush=True)
+    print(f"自检:{len(gold)} 件金标准(权威源) + 1 个负样本", flush=True)
     tally: dict = {}
     conflicts = []
     for inv, want in gold:

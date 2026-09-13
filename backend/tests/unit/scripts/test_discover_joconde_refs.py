@@ -89,9 +89,64 @@ def test_query_uses_exact_not_contains():
 
 
 class _Obj:
-    def __init__(self, inv, p347=None):
+    def __init__(self, inv, p347=None, via=None):
         self.inventory_number = inv
         self.attributes = {"external_ids": {"P347": p347} if p347 else {}}
+        if via:
+            self.attributes["joconde_ref_via"] = via
+
+
+def test_self_test_ignores_refs_this_script_wrote_itself(monkeypatch):
+    """金标准只认**来自 Wikidata** 的 P347,不认自己反查补的。
+
+    否则就是拿反查的结果去验证反查,必然一致,自检形同虚设。
+    2026-09-13 实跑踩到:中断后续跑时金标准从 7 件变成 1479 件
+    (1441 件是自己刚写的),自检照样"通过"。
+
+    这条用一个**只有自写件、没有权威件**的库来测:必须退出,而不是
+    拿那些自写件当金标准跑得通。
+    """
+    objs = [_Obj("PPP1", "M1", via="inventory_number") for _ in range(50)]
+    monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
+    with pytest.raises(SystemExit):
+        self_test(None, "rid", objs, [LOC])
+
+
+def test_self_test_uses_the_authoritative_ones_when_both_kinds_exist(monkeypatch):
+    """混合库:只拿权威那几件当金标准,自写的一件都不进样本。"""
+    objs = [_Obj("PPP_AUTH", "M_AUTH")] + [
+        _Obj(f"PPP{i}", f"M{i}", via="inventory_number") for i in range(30)
+    ]
+    seen = []
+
+    def fake_lookup(g, rid, inv, locs):
+        seen.append(inv)
+        return ("M_AUTH" if inv == "PPP_AUTH" else None), "采纳"
+
+    monkeypatch.setattr("scripts.discover_joconde_refs.lookup_ref", fake_lookup)
+    monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
+    self_test(None, "rid", objs, [LOC])
+    checked = [x for x in seen if x != "ZZ_NO_SUCH_INVENTORY_NUMBER_42"]
+    assert checked == ["PPP_AUTH"], f"自检查了不该查的件: {checked}"
+
+
+def test_self_test_sample_is_capped(monkeypatch):
+    """金标准取样有上限 —— 卢浮宫有 7312 件权威 P347,全查要半小时且不会更准。"""
+    from scripts.discover_joconde_refs import _SELF_TEST_MAX
+
+    objs = [_Obj("PPP%03d" % i, "M%d" % i) for i in range(200)]
+    seen = []
+
+    def fake_lookup(g, rid, inv, locs):
+        seen.append(inv)
+        return ({"PPP%03d" % i: "M%d" % i for i in range(200)}.get(inv), "采纳")
+
+    monkeypatch.setattr("scripts.discover_joconde_refs.lookup_ref", fake_lookup)
+    monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
+    self_test(None, "rid", objs, [LOC])
+    checked = [x for x in seen if x != "ZZ_NO_SUCH_INVENTORY_NUMBER_42"]
+    assert len(checked) == _SELF_TEST_MAX
+    assert checked == sorted(checked), "取样要确定性(排序后取前 N),否则两次跑不可复现"
 
 
 def test_self_test_passes_when_lookup_agrees_with_authoritative_p347(monkeypatch):
