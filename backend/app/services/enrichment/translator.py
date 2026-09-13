@@ -3,6 +3,8 @@ LLM 经注入式 complete，单测离线。spec §14 / §8A-5。"""
 
 from __future__ import annotations
 
+import re
+
 from app.services.enrichment.lang_config import strip_language_label
 from app.services.enrichment.prompts import (
     build_faithfulness_prompt,
@@ -25,10 +27,28 @@ def _parse():
     return _parse_json
 
 
+# 非拉丁字母的目标语言里,正文夹着的**小写**拉丁词就是漏译:
+# 「背景中华丽的 urn 和宏伟的柱子」「构图经过精心安排, reclining 的塞内卡位于中心」
+# (2026-09-13 第一批 10 件实测,2 处,都在同一件)。
+# 大写开头的放过 —— 那是人名/地名/作品原名,刻意保留的。引号与书名号内的内容
+# 整段挖掉再扫,同理:《Têtes d'enfants》这种保留的原名不该算漏译。
+# 两道闸都抓不到它:忠实度闸看事实(没漏事实),语言检测看整段语种(99% 是中文,判过)。
+_NON_LATIN_LANGS = {"zh", "zh-hant", "ja", "ko"}
+_QUOTED = re.compile(r"《[^》]*》|“[^”]*”|\"[^\"]*\"|'[^']*'|‘[^’]*’|「[^」]*」")
+_LOWER_LATIN_WORD = re.compile(r"(?<![A-Za-z])[a-z]{3,}(?![A-Za-z])")
+
+
+def untranslated_words(text: str, lang: str) -> list[str]:
+    """译文里漏翻的英文词。非拉丁语种才有意义,其余语言返回空。"""
+    if lang not in _NON_LATIN_LANGS:
+        return []
+    return _LOWER_LATIN_WORD.findall(_QUOTED.sub(" ", text or ""))
+
+
 def _lang_ok(text, lang):
     from app.services.enrichment.lang_detect import text_in_language
 
-    return text_in_language(text, lang)
+    return text_in_language(text, lang) and not untranslated_words(text, lang)
 
 
 class ContentTranslator:

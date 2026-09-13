@@ -110,6 +110,22 @@ def test_vision_prompt_asks_to_transcribe_text_on_the_work():
     assert "inscription" in sys_msg
 
 
+def test_hedging_rule_lives_inside_the_transcription_sentence():
+    """「读不清就说读不清」必须长在转写那一句上,不能只留在 prompt 末尾当通则。
+
+    2026-09-13 实测(Q104444757 梅尔松草图):末尾通则版把 4 条铭文里的 3 条
+    编了出来,而且编得合情合理(全是「体育协会」这类词) —— 下游当硬事实用,
+    最难发现。同图 A/B 各 2 次:旧 3 条/3 条 → 新 1 条/0 条。
+    这是 #555「禁令要长在它约束的那一拍上」的第二例,位置断言钉的就是这一点。
+    """
+    sys_msg = build_vision_messages("u")[0]["content"]
+    i_transcribe = sys_msg.index("Transcribe VERBATIM")
+    i_hedge = sys_msg.index("not\nclearly legible".replace("\n", " "))
+    i_next_beat = sys_msg.index("Do NOT identify people")
+    assert i_transcribe < i_hedge < i_next_beat, "约束必须在转写这一拍之内"
+    assert "INSTEAD OF" in sys_msg, "要明说『不许重建它大概写了什么』"
+
+
 def test_vision_prompt_asks_for_middle_distance():
     """只写显眼元素会漏掉主体。
 
