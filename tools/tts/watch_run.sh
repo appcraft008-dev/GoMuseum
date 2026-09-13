@@ -10,6 +10,7 @@
 # 事件: 每 15 条一次带指标的进度 / 未过闸 / 擦边 / 块头 / 崩溃 / 卡死 / 完成
 set -uo pipefail
 
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LOG=$1; DIR=$2; TOTAL=$3
 STALL=${STALL:-1800}          # 最新文件多久没更新算卡死
 
@@ -17,7 +18,8 @@ STALL=${STALL:-1800}          # 最新文件多久没更新算卡死
 (
   while true; do
     n=$(ls "$DIR"/*.mp3 2>/dev/null | wc -l | tr -d ' ')
-    if grep -q ALLDONE "$LOG" 2>/dev/null; then echo "✅ 生成完成 ${n}/${TOTAL}"; break; fi
+    # ⚠️ 不能直接 grep ALLDONE:日志是追加的,上一次跑的 ALLDONE 会当场误判完成。
+    if "$HERE/alldone_since_start.sh" "$LOG" 2>/dev/null; then echo "✅ 生成完成 ${n}/${TOTAL}"; break; fi
     # ⚠️ 模式必须能排除**看门狗自己** —— 本脚本的命令行里就写着这些进程名,
     # 用 `pgrep -f run_batch.py` 会匹配到自身,「进程消失」永远不触发
     # (2026-09-04 实测:这个检测装上去就是坏的,而坏法恰好是"永远安静")。

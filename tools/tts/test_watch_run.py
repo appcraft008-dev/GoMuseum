@@ -82,3 +82,35 @@ def test_failure_signatures_all_emit():
 def test_normal_lines_stay_quiet():
     noisy = [line for line in MUST_STAY_SILENT if run(line)]
     assert not noisy, "正常行不该产生事件(会淹掉真信号):\n" + "\n".join(noisy)
+
+
+# ---- 「本次起跑之后才算完成」 ----
+# 回归来源:2026-09-13,同一日志先跑 1 条 smoke 再起全批,存活检测读到 smoke
+# 留下的 ALLDONE,当场报「生成完成」并 break —— 卡死与进程消失检测随之一起失效。
+
+ALLDONE_SH = Path(__file__).parent / "alldone_since_start.sh"
+START = "=== 起跑 2026-09-13 06:12:00 commit abc1234 jobs=/x/j.json ==="
+
+
+def alldone(log_text: str, tmp_path) -> bool:
+    f = tmp_path / "run.log"
+    f.write_text(log_text)
+    return subprocess.run(["bash", str(ALLDONE_SH), str(f)]).returncode == 0
+
+
+def test_上一次跑的ALLDONE不算数(tmp_path):
+    assert not alldone(f"{START}\n完成 1/1 合格\nALLDONE\n{START}\n--- 块 0-8 / 73 ---\n", tmp_path)
+
+
+def test_本次跑的ALLDONE算数(tmp_path):
+    assert alldone(f"{START}\nALLDONE\n{START}\n块\nALLDONE\n", tmp_path)
+
+
+def test_没有起跑标记时照常识别(tmp_path):
+    # 手工直接调 run_chunked.sh 的老用法,日志里没有起跑标记。
+    assert alldone("--- 块 0-8 / 8 ---\nALLDONE\n", tmp_path)
+
+
+def test_日志不存在算未完成(tmp_path):
+    assert subprocess.run(["bash", str(ALLDONE_SH), str(tmp_path / "nope.log")],
+                          capture_output=True).returncode != 0
