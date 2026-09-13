@@ -152,6 +152,21 @@ def generate_object(
             o.attributes = {**attrs, **fetched}
             db.flush()
 
+    # 看图写外观描述 —— **必须在 build_material 之前**,否则材料包里没有它。
+    #
+    # 放在这里(而不是只靠 scripts/describe_artwork_images.py 批跑)是因为
+    # 懒生成走的也是这个函数:批跑只覆盖手动跑过的件,而用户点进去现生成的
+    # **长尾**恰恰是模型最不认识、编得最凶的那批。一处改动同时覆盖两条路。
+    #
+    # 代价:懒生成首次请求 +3.6s(实测 3.1/3.4/4.4),TTFC 16-18s → ~20s。
+    # 只有第一个看到这件作品的人要等,描述落库后永久复用(见 ensure_description)。
+    #
+    # 不限 content_status == "stub":存量已生成的件将来 --force 重跑时也该补上
+    # 描述,而它们的 status 早就是 ready 了。幂等由"已有描述就跳过"保证。
+    from app.services.enrichment.vision import ensure_description
+
+    ensure_description(db, o)
+
     if registry is not None:
         try:
             wlabels = _wikidata_labels(o.qid, target_langs)

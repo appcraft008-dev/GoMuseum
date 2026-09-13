@@ -29,33 +29,20 @@ from sqlalchemy.orm.attributes import flag_modified  # noqa: E402
 
 from app.core.database import SessionLocal  # noqa: E402
 from app.models.museum import Museum  # noqa: E402
-from app.models.museum_object import MuseumObject, ObjectImage  # noqa: E402
-from app.services.enrichment.vision import DETAIL, MODEL, describe_image  # noqa: E402
-from app.services.storage import get_object_storage  # noqa: E402
+from app.models.museum_object import MuseumObject  # noqa: E402
+from app.services.enrichment.vision import (  # noqa: E402
+    DETAIL,
+    KEY,
+    MODEL,
+    VIA_KEY,
+    describe_image,
+    primary_image_url,
+)
 
 _PAUSE = 0.2  # 礼貌限速
-# 描述写进哪个键。前缀 `visual_description_` 会被 build_material 收进
-# [VISIBLE IN THE ARTWORK] 块 —— 所以来源标记**不能**用同前缀,否则
-# 「gpt-4o/high」会被当成材料喂给模型(见 tests 里钉这条的用例)。
-_KEY = "visual_description_en"
-_VIA_KEY = "visual_via"
-
-
-def image_url_for(db, obj) -> str | None:
-    """取这件的主图公网 URL(large 档)。没有本地图返回 None。
-
-    按 sort 取第一张而不是挑 role=='primary':实测存量有 role 为 view 的
-    单图件,挑 primary 会把它们整批判成"无图"。
-    """
-    img = (
-        db.query(ObjectImage)
-        .filter(ObjectImage.object_id == obj.id, ObjectImage.image_key.isnot(None))
-        .order_by(ObjectImage.sort.asc().nullslast())
-        .first()
-    )
-    if not img:
-        return None
-    return get_object_storage().public_url(f"{img.image_key}_large.jpg")
+# 键名与取图逻辑都在 vision.py —— 生成管线(懒生成)用的是同一套,
+# 两边各写一份的话改一边漏一边,而且不会报错(见契约里"半个单一真相源")。
+_KEY, _VIA_KEY, image_url_for = KEY, VIA_KEY, primary_image_url
 
 
 def main(slug, qid, apply, limit, model, detail):
