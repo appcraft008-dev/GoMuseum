@@ -37,6 +37,63 @@ logger = logging.getLogger(__name__)
 MODEL = "gpt-4o"
 DETAIL = "high"
 
+# 描述写进哪个键。前缀 `visual_description_` 会被 build_material 收进
+# [VISIBLE IN THE ARTWORK] 块 —— 所以来源标记**不能**用同前缀,否则
+# 「gpt-4o/high」会被当成材料喂给模型(tests 里有用例钉住,且键名从这里取)。
+KEY = "visual_description_en"
+VIA_KEY = "visual_via"
+
+
+def primary_image_url(db, obj) -> str | None:
+    """取这件的主图公网 URL(large 档)。没有本地图返回 None。
+
+    按 sort 取第一张而不是挑 role=='primary':实测存量有 role 为 view 的
+    单图件,挑 primary 会把它们整批判成"无图"。
+    """
+    from app.models.museum_object import ObjectImage
+    from app.services.storage import get_object_storage
+
+    img = (
+        db.query(ObjectImage)
+        .filter(ObjectImage.object_id == obj.id, ObjectImage.image_key.isnot(None))
+        .order_by(ObjectImage.sort.asc().nullslast())
+        .first()
+    )
+    if not img:
+        return None
+    return get_object_storage().public_url(f"{img.image_key}_large.jpg")
+
+
+def ensure_description(db, obj) -> bool:
+    """这件还没有外观描述且有图 → 看一次图并落库。返回是否新写了描述。
+
+    **一次性**:描述落库后永久复用,重生成(--force)不会再看第二次图。
+    所以按件计的 $0.0044 只付一次,而正文会被重生成很多次。
+
+    ⚠️ 失败**不阻断生成**:视觉调用挂了就退回"没有视觉材料"的老行为,
+    用户照样能看到讲解。不写任何标记 —— 键仍然缺失,所以下次批跑/重生成
+    会自然重试,不会静默永久跳过。代价是这一版正文的外观描写可能是编的,
+    这比让用户对着空白页强。ERROR 级日志可 grep:VISION_FAILED。
+    """
+    attrs = obj.attributes or {}
+    if attrs.get(KEY):
+        return False
+    url = primary_image_url(db, obj)
+    if not url:
+        return False
+    try:
+        text = describe_image(url)
+    except Exception:
+        logger.exception("VISION_FAILED qid=%s url=%s", obj.qid, url)
+        return False
+    from sqlalchemy.orm.attributes import flag_modified
+
+    obj.attributes = {**attrs, KEY: text, VIA_KEY: f"{MODEL}/{DETAIL}"}
+    flag_modified(obj, "attributes")
+    db.flush()
+    return True
+
+
 # ⚠️ 这段 prompt 里**不出现作品标题、作者、年代** —— 调用方也不许传。
 # 理由:模型拿到标题就能顺着标题编("Danaé" → 金雨/宙斯/神话解读),
 # 那样产出的就不是观察而是联想,和我们要修的病一模一样。
