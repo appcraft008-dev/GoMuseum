@@ -45,7 +45,11 @@ Future<String> deviceId(DeviceIdRef ref) async {
   try {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       // per-vendor per-device;卸载本厂商全部 app 才重置。
-      final v = (await DeviceInfoPlugin().iosInfo).identifierForVendor;
+      // ⚠️ 原生插件调用偶发挂起不返回(不抛异常)：.timeout 保证这个 await
+      // 一定会 complete，否则上层识别流程会卡死在 loading 转圈出不来。
+      final v =
+          (await DeviceInfoPlugin().iosInfo.timeout(const Duration(seconds: 3)))
+              .identifierForVendor;
       if (v != null && v.isNotEmpty) return v;
     } else if (defaultTargetPlatform == TargetPlatform.android) {
       // Settings.Secure.ANDROID_ID:每设备 × 每签名密钥唯一,卸载重装不变。
@@ -53,7 +57,8 @@ Future<String> deviceId(DeviceIdRef ref) async {
       // TQ3A.230805.001),同一 ROM 版本的所有设备完全相同。用它当身份会让
       // 后端把成千上万个用户复用成同一个游客账号、共享一份免费额度:
       // 第一个人用完 5 次,之后所有同 ROM 的新用户打开就是 0 次。
-      final v = await const AndroidId().getId();
+      final v =
+          await const AndroidId().getId().timeout(const Duration(seconds: 3));
       if (v != null && v.isNotEmpty) return v;
     }
   } catch (e) {

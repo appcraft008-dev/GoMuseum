@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -104,6 +105,22 @@ void main() {
       expect(options.headers['Authorization'], 'Bearer fresh-access');
       verify(() => storage.write(key: 'access_token', value: 'fresh-access'))
           .called(1);
+      verify(() => handler.next(options)).called(1);
+    });
+
+    test('storage.read 挂起不返回也不会永久卡死请求(超时后放行)', () async {
+      // 模拟 Keychain/Keystore 原生调用挂起：Future 永不 complete。
+      when(() => storage.read(key: 'access_token'))
+          .thenAnswer((_) => Completer<String?>().future);
+      final options = RequestOptions(path: '/api/v1/history/recent');
+      final handler = MockRequestHandler();
+
+      await interceptor.onRequest(options, handler).timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail('onRequest 在挂起的 storage.read 上永久卡死'),
+          );
+
+      expect(options.headers.containsKey('Authorization'), isFalse);
       verify(() => handler.next(options)).called(1);
     });
 

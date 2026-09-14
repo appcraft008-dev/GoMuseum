@@ -47,27 +47,32 @@ void main() {
 
   testWidgets('提供 artist →「作者介绍」为首位 tab、默认选中、可切走', (t) async {
     await t.pumpWidget(ProviderScope(
+        overrides: [
+          // 作者卡/音频条会 watch entitlementsProvider；不 override 会打真实
+          // 网络（AuthInterceptor 读 FlutterSecureStorage 在测试环境会挂起）。
+          entitlementsProvider.overrideWith((ref) async => _noPass),
+        ],
         child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'),
-      theme: AppTheme.lightTheme(),
-      home: const Scaffold(
-        body: GuideDeepSheetContent(
-          tabs: [
-            ObjectTab(
-                sectionCode: 'analysis',
-                label: '分析',
-                body: '分析正文',
-                hasAudio: false),
-          ],
-          artist: Artist(name: '马奈', bio: '一段经历'),
-          slug: 'orsay',
-          qid: 'Q1',
-          language: 'zh',
-        ),
-      ),
-    )));
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          theme: AppTheme.lightTheme(),
+          home: const Scaffold(
+            body: GuideDeepSheetContent(
+              tabs: [
+                ObjectTab(
+                    sectionCode: 'analysis',
+                    label: '分析',
+                    body: '分析正文',
+                    hasAudio: false),
+              ],
+              artist: Artist(name: '马奈', bio: '一段经历'),
+              slug: 'orsay',
+              qid: 'Q1',
+              language: 'zh',
+            ),
+          ),
+        )));
     await t.pumpAndSettle();
     // 作者介绍 tab 存在且默认选中 → 显示作者信息（含音频条与 bio）
     expect(find.text('作者介绍'), findsOneWidget);
@@ -90,31 +95,36 @@ void main() {
   // 让它重建,这条会红,提醒去掉已成死码的 didUpdateWidget。
   testWidgets('切 tab：播放条 State 原地复用,section 换成新 tab 的', (t) async {
     await t.pumpWidget(ProviderScope(
+        overrides: [
+          // 作者卡/音频条会 watch entitlementsProvider；不 override 会打真实
+          // 网络（AuthInterceptor 读 FlutterSecureStorage 在测试环境会挂起）。
+          entitlementsProvider.overrideWith((ref) async => _noPass),
+        ],
         child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('zh'),
-      theme: AppTheme.lightTheme(),
-      home: const Scaffold(
-        body: GuideDeepSheetContent(
-          tabs: [
-            ObjectTab(
-                sectionCode: 'analysis',
-                label: '分析',
-                body: '分析正文',
-                hasAudio: true),
-            ObjectTab(
-                sectionCode: 'context',
-                label: '背景',
-                body: '背景正文',
-                hasAudio: true),
-          ],
-          slug: 'orangerie',
-          qid: 'Q21849357',
-          language: 'zh',
-        ),
-      ),
-    )));
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          theme: AppTheme.lightTheme(),
+          home: const Scaffold(
+            body: GuideDeepSheetContent(
+              tabs: [
+                ObjectTab(
+                    sectionCode: 'analysis',
+                    label: '分析',
+                    body: '分析正文',
+                    hasAudio: true),
+                ObjectTab(
+                    sectionCode: 'context',
+                    label: '背景',
+                    body: '背景正文',
+                    hasAudio: true),
+              ],
+              slug: 'orangerie',
+              qid: 'Q21849357',
+              language: 'zh',
+            ),
+          ),
+        )));
     await t.pumpAndSettle();
 
     final finder = find.byType(GuideAudioPlayer);

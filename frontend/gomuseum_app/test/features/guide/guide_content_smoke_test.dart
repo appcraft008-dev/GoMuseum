@@ -20,6 +20,7 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/theme/app_theme.dart';
 
 // ---------------------------------------------------------------------------
@@ -69,6 +70,10 @@ Widget _wrap() => ProviderScope(
         objectContentProvider.overrideWith(
           (ref, param) async => _fakeContent(),
         ),
+        // GuideAudioPlayer 内嵌在 GuidePage 里，build 期无条件 watch
+        // entitlementsProvider；不 override 会打真实网络（AuthInterceptor
+        // 读 FlutterSecureStorage，测试环境没有平台通道 mock，会真的挂起）。
+        entitlementsProvider.overrideWith((ref) async => Entitlements.unknown),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
