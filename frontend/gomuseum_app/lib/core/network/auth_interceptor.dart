@@ -3,6 +3,7 @@
 /// 基于 QueuedInterceptorsWrapper —— 并发 401 会排队，避免重复刷新。
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -27,13 +28,26 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
   static const _refreshTokenKey = 'refresh_token';
   static const _refreshPath = '/api/v1/auth/refresh';
 
+  /// Keychain/Keystore 原生调用偶发挂起不返回（不抛异常）：本拦截器是
+  /// QueuedInterceptorsWrapper，一次挂起会堵死这条 Dio 实例上后续所有请求
+  /// （识别/刷新全部一起卡死，取景框转圈出不来）。加超时兜底。
+  static const _storageTimeout = Duration(seconds: 3);
+
+  Future<String?> _readToken(String key) async {
+    try {
+      return await _storage.read(key: key).timeout(_storageTimeout);
+    } on TimeoutException {
+      return null;
+    }
+  }
+
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
     if (!options.headers.containsKey('Authorization')) {
-      var token = await _storage.read(key: _accessTokenKey);
+      var token = await _readToken(_accessTokenKey);
       // 令牌已过期 → 主动刷新再附带。关键:识别是 multipart(FormData 单次性),且
       // /recognize 令牌失效时后端不 401 而降级 device_id → onError 的反应式刷新永不触发;
       // 过期令牌会让识别悄悄计费到匿名/别账号(串号)。这里 pre-flight 刷新根除该路径。
@@ -70,7 +84,7 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
 
   /// 用 refresh token 换新 access token 并落库;失败返回 null(不抛,调用方回退旧值)。
   Future<String?> _refreshAccessToken() async {
-    final refreshToken = await _storage.read(key: _refreshTokenKey);
+    final refreshToken = await _readToken(_refreshTokenKey);
     if (refreshToken == null) return null;
     try {
       final resp = await _refreshDio.post<Map<String, dynamic>>(
@@ -80,10 +94,14 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
       final data = resp.data ?? const {};
       final newAccess = data['access_token'] as String?;
       if (newAccess == null) return null;
-      await _storage.write(key: _accessTokenKey, value: newAccess);
+      await _storage
+          .write(key: _accessTokenKey, value: newAccess)
+          .timeout(_storageTimeout);
       final newRefresh = data['refresh_token'] as String?;
       if (newRefresh != null) {
-        await _storage.write(key: _refreshTokenKey, value: newRefresh);
+        await _storage
+            .write(key: _refreshTokenKey, value: newRefresh)
+            .timeout(_storageTimeout);
       }
       return newAccess;
     } catch (_) {
@@ -102,7 +120,7 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
       return handler.next(err);
     }
 
-    final refreshToken = await _storage.read(key: _refreshTokenKey);
+    final refreshToken = await _readToken(_refreshTokenKey);
     if (refreshToken == null) {
       onAuthFailure?.call();
       return handler.next(err);
@@ -121,10 +139,14 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
           message: 'Refresh response missing access_token',
         );
       }
-      await _storage.write(key: _accessTokenKey, value: newAccess);
+      await _storage
+          .write(key: _accessTokenKey, value: newAccess)
+          .timeout(_storageTimeout);
       final newRefresh = data['refresh_token'] as String?;
       if (newRefresh != null) {
-        await _storage.write(key: _refreshTokenKey, value: newRefresh);
+        await _storage
+            .write(key: _refreshTokenKey, value: newRefresh)
+            .timeout(_storageTimeout);
       }
 
       final retryOptions = err.requestOptions
@@ -132,8 +154,12 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
       final retryResponse = await _refreshDio.fetch<dynamic>(retryOptions);
       return handler.resolve(retryResponse);
     } catch (_) {
-      await _storage.delete(key: _accessTokenKey);
-      await _storage.delete(key: _refreshTokenKey);
+      await _storage
+          .delete(key: _accessTokenKey)
+          .timeout(_storageTimeout, onTimeout: () {});
+      await _storage
+          .delete(key: _refreshTokenKey)
+          .timeout(_storageTimeout, onTimeout: () {});
       onAuthFailure?.call();
       return handler.next(err);
     }
