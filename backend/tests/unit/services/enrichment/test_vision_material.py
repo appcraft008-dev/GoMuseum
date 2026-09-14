@@ -126,6 +126,30 @@ def test_hedging_rule_lives_inside_the_transcription_sentence():
     assert "INSTEAD OF" in sys_msg, "要明说『不许重建它大概写了什么』"
 
 
+def test_signature_and_date_are_excluded_from_transcription():
+    """签名与日期**不转写** —— 它们是净损失。
+
+    2026-09-14 实测:上面那条「读不清就说读不清」对画面铭文有效,对签名**无效**,
+    因为模型自认读清了:
+      Daumier《下棋者》签的是「h. Daumier」→ 读成「L. Beaumier」;
+      Sérusier 签名下是两位数 → 扩写成「1890.」,而编目年代是 1920。
+    签名唯一能提供的是作者和年代,编目里已经有且更可靠 ——
+    读对是冗余,读错是往材料里注入假事实,还带着「画上亲笔签着」的说服力。
+
+    改后同两张图实测:签名在描述里完全消失,其余内容不变。
+    """
+    sys_msg = build_vision_messages("u")[0]["content"]
+    assert (
+        "signature" not in sys_msg.split("Do NOT transcribe")[0]
+    ), "签名不能再出现在转写目标里"
+    assert "Do NOT transcribe or mention the artist's signature" in sys_msg
+    # 排除令必须在转写那一拍之后、下一条指令之前 —— 同 #555 的位置纪律
+    i_transcribe = sys_msg.index("Transcribe VERBATIM")
+    i_exclude = sys_msg.index("Do NOT transcribe or mention")
+    i_next_beat = sys_msg.index("Account for the foreground")
+    assert i_transcribe < i_exclude < i_next_beat
+
+
 def test_vision_prompt_asks_for_middle_distance():
     """只写显眼元素会漏掉主体。
 
