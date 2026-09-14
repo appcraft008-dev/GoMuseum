@@ -165,7 +165,7 @@ def _upsert_section(db, obj, language, code, body, status, model, grounding=None
     row.model = model
     row.generated_at = datetime.now(timezone.utc)
     db.add(row)
-    # 英文段**改了内容**同样让译文失效,不只是被闸拦下时。
+    # 英文段**改了内容**同样让译文失效,不只是被闸拦下时(契约纪律 33)。
     # 旧音频和旧译文是同一类东西:都派生自这段英文正文,源一变就都过期了 ——
     # 上面那行清 audio_key,这里清译文,两件事必须并排做。
     # 2026-09-14 实测:重跑小皇宫 47 件(--langs en,zh)后,4 件的 112 段

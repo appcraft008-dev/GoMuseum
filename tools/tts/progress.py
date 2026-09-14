@@ -65,7 +65,7 @@ def main():
         statistics.median(d[l]) if d.get(l) else float("nan")
     )  # noqa: E731
     langs = sorted(by)
-    print("   锐度中位(门槛200): " + " ".join(f"{l}={med(sharp,l):.0f}" for l in langs))
+    print("   锐度中位: " + " ".join(f"{l}={med(sharp,l):.0f}" for l in langs))
     print(
         "   一致中位(门槛0.90): " + " ".join(f"{l}={med(consist,l):.2f}" for l in langs)
     )
