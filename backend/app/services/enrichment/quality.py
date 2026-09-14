@@ -52,6 +52,44 @@ def _split_paragraphs(text: str | None) -> list[str]:
     return [p.strip() for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
 
 
+# 段落在 App 里是**独立展示**的(标题/作者在段外),所以正文第一句里的指人代词
+# 一定没有先行词。接地闸逐句删,删掉开头那句之后剩下的就这样发出去了:
+#   「His profile reveals a thoughtful demeanor…」   —— His 是谁?
+#   「Their flowing garments and tender expressions…」—— Their 指谁?
+#   「Sentier de la Mi-côte' is that it was painted on-site.」—— 引号腰斩,语法不通。
+# 这是 #555 去套话的副作用:以前开头是「Take a moment to really look…」,
+# **套话不陈述事实所以永远过闸**、首句删不掉;换成实质句后,过不了闸就被删。
+#
+# ⚠️ 判据只看**剩余首句长什么样**,不看「首句是不是被删了」——
+# 2026-09-13 (#557) 上线的就是后者,prod 47 件重跑实测:
+#   首句被删 → 拦 23 段,其中 **17 段完全自洽**(「The artist's brushwork is
+#   meticulous…」这类技法描述段根本不需要总起),真断裂只有 6 段。
+#   换成这里的词表:拦 3 段真断裂,误杀 0 段。
+# 漏掉的断法(代词在句中、This+抽象名词)是已知代价,比误杀 17 段好内容划算。
+# 🔑 教训:我当时拿「剩余首句看着悬空」的统计(3 段)去论证「首句被删」这个
+# 判据(23 段),两者差一个数量级 —— **代理指标测的不是你要实施的那件事**。
+#
+# ⚠️ 别把 It/Its/This 加进来:「It was commissioned for the coronation…」
+# 「Its significance lies in…」指的是**作品本身**,段落就展示在作品页上,
+# 指代成立 —— prod 全库 46 段是这种,加进来就是又一轮误杀。
+# ⚠️ 已知漏掉的三种(实测各 1-2 段,**故意不补**):代词在句中而非句首
+# (「The rich texture of his brown suit…」)、This + 抽象名词(「This choice
+# allowed Courbet…」)、句中引号被切开(「Sentier de la Mi-côte' is that…」)。
+# 每补一种都要往正则里加分支,而每个分支都带着误杀好开头的风险 ——
+# 上一版正是因为想「一网打尽」才误杀了 17 段。漏 3 段 > 误杀 17 段。
+_ORPHANED_OPENING = re.compile(
+    r"^(?:He|His|Him|She|Her|Hers|They|Them|Their)\b"  # 指人的代词,无先行词
+    r"|^[a-z]"  # 小写开头 = 句子被腰斩
+)
+
+
+def _opening_is_orphaned(body: str | None) -> bool:
+    """正文开头是不是悬空的(指代无着落/语法残缺)。"""
+    if not body:
+        return False
+    return bool(_ORPHANED_OPENING.match(body.strip()))
+
+
 @dataclass
 class SectionQuality:
     body: str | None
@@ -119,24 +157,7 @@ class QualityGate:
         kept_body = "\n\n".join(kept_paras) if kept_paras else None
 
         published = kept_body is not None and grounding_ratio >= GROUNDING_THRESHOLD
-        # 首句被删 → 正文从半截开始。段落在 App 里是独立展示的,开头那句一旦没了,
-        # 没有任何别的地方能把上下文补回来:
-        #   「His profile reveals a thoughtful demeanor…」—— His 是谁?
-        #   「To the left, a bearded man stands…」—— 这是什么作品?
-        #   「Sentier de la Mi-côte' is that it was painted on-site.」—— 引号被腰斩,语法不通。
-        # 2026-09-13 实测(prod 全库 guide 段):删过句的 12 段里 3 段开头坏掉(25%),
-        # 没删句的 39 段 **0 段**、套话时代的 612 段也是 0 段 —— 零重叠。
-        # ⚠️ 统计这类断裂时别把 `It/Its/This` 开头算进去:「It was commissioned for
-        # the coronation…」「Its significance lies in…」指的是**作品本身**,而段落
-        # 就展示在作品页上,指代成立 —— 全库 46 段是这种,它们没问题。
-        # 真正断的是**指人**的代词(He/His/She/Her,段里没出现过那个人)和方位词开头。
-        # 这是 #555 去套话的副作用:以前开头是「Take a moment to really look…」,
-        # 套话不陈述事实所以永远过闸、首句删不掉;换成实质句后,过不了闸就被删。
-        # ⚠️ 判据故意用「首句被删」而不是「剩余首句看着像不像悬空」:后者要维护一张
-        # 代词/方位词表,而表外的断法(引号腰斩、列举句被切半)照样漏,且那张表
-        # 会随语言/段落类型无限膨胀。代价是首句被删、第二句恰好自洽的段也会挂起 ——
-        # 宁缺毋滥,而且挂起可逆:材料补足后重生成会把它救回来。
-        if published and not keep[0]:
+        if published and _opening_is_orphaned(kept_body):
             published = False
         if published:
             from app.services.enrichment.lang_detect import text_in_language
