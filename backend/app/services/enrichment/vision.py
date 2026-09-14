@@ -114,11 +114,23 @@ _SYSTEM = (
     # 合情合理的词,下游当硬事实用,最难发现。
     # 同图 A/B(各 2 次):旧 3 条/3 条 → 新 1 条/0 条,并主动写出 partially legible。
     # 这是 #555「禁令要长在它约束的那一拍上」的第二例。
+    #
+    # ⚠️ **签名与日期明确排除在外**(2026-09-14 实测逼出来的)。
+    # 上面那条「读不清就说读不清」对铭文有效,对签名**无效** —— 模型自认读清了:
+    #   Daumier《下棋者》签的是「h. Daumier」,读成「L. Beaumier」;
+    #   Sérusier《织粉袜的少女》签名下是两位数,模型扩写成「1890.」,
+    #   而编目年代是 1920 —— 它把推断当成了转写。
+    # 关键在于:签名唯一能提供的就是**作者和年代**,而这两样编目里已经有了
+    # (Wikidata/Joconde,比从图上读可靠得多)。读对了是冗余,读错了是往材料里
+    # 注入假事实,还带着「画上亲笔签着」这种极具说服力的口吻。**净损失,去掉。**
     "Transcribe VERBATIM, in quotes, any text that is part of the artwork itself "
-    "(an inscription, a banner, a book, a signature). Transcribe ONLY letters you "
+    "(an inscription, a banner, a book, a scroll). Transcribe ONLY letters you "
     "can actually read; where lettering is small, faded, reversed or otherwise not "
     "clearly legible, write that an inscription is present but illegible INSTEAD OF "
     "reconstructing what it probably says. "
+    "Do NOT transcribe or mention the artist's signature or the date they signed — "
+    "the catalogue already records who made this and when, and a misread signature "
+    "would contradict it. "
     # ② 中景/远景要交代。实测只写显眼元素会漏掉主体:河景里停泊的一排驳船
     # 在中景,第一版描述只写了树和房子,船一条没提 —— 而船正是这幅画的主题。
     "Account for the foreground, the middle distance and the background separately; "
