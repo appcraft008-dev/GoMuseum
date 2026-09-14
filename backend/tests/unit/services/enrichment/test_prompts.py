@@ -437,3 +437,37 @@ def test_strip_language_label_handles_english_and_native_names():
     assert strip("Notes: 这是合法正文") == "Notes: 这是合法正文"
     assert strip("正常正文，没有前缀") == "正常正文，没有前缀"
     assert strip("") == ""
+
+
+def test_injected_canonical_names_carry_no_quote_template():
+    """注入规范名的符号不能是引号 —— 那是格式示范,模型会照抄进译文。
+
+    2026-09-14 实证:三处注入原先写成 「{name}」,直角引号被当成"引用作品名的
+    写法"学走,给法/西/意/德/波的正文套上中日式标点 —— prod 存量 3603 段 +
+    1118 条问答中招(韩语 67.7%、西语 44.8%、法语 33.0%)。两道闸都看不见它:
+    忠实度闸判事实、lang_detect 判整段语种,标点两边都不管。
+
+    这是本文件里**第二次**踩"格式示范比指令强"(第一次是 `English:\n{body}` 让
+    模型回贴语言名前缀,见 build_translation_prompt 末尾注释),同一教训的第三次
+    见契约纪律 35。所以这里钉的是**不变量而不是当前写法**:值的紧邻字符不许是
+    任何一种引号 —— 换成 "X" 或 «X» 同样会变成模板(«» 对德语波兰语就是错的)。
+    """
+    import re
+
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    quotes = "\"'«»「」『』《》“”‘’„‟”"
+    for lang in ("fr", "es", "it", "de", "pl", "ko", "zh", "ja"):
+        system, _ = build_translation_prompt(
+            "x", lang, title="TITLE", artist="ARTIST", museum="MUSEUM"
+        )
+        # 整条 prompt 不许出现中日式括号(否则又给了一个可抄的样子)
+        assert not re.search(r"[「」『』《》]", system), lang
+        for value in ("TITLE", "ARTIST", "MUSEUM"):
+            for m in re.finditer(re.escape(value), system):
+                before = system[m.start() - 1] if m.start() else " "
+                after = system[m.end()] if m.end() < len(system) else " "
+                assert before not in quotes, f"{lang}/{value} 左邻是引号 {before!r}"
+                assert after not in quotes, f"{lang}/{value} 右邻是引号 {after!r}"
+        # 注入本身还在(别把测试写成"删掉注入就绿")
+        assert "TITLE" in system and "ARTIST" in system and "MUSEUM" in system

@@ -15,6 +15,9 @@ from app.services.enrichment.quality import SectionQuality
 
 _NAME_QUOTES = "《》\"'“”‘’«»"
 
+# 规范名注入用的 XML 标签(prompts.build_translation_prompt),偶尔被模型抄进译文。
+_CANONICAL_TAG = re.compile(r"</?canonical_(?:title|artist|museum)>")
+
 
 def strip_name(text: str) -> str:
     """剥模型套上的书名号/引号(translate_name 与 batch 回填共用)。"""
@@ -82,7 +85,11 @@ class ContentTranslator:
         # 剥掉模型回贴的语言标签 —— 根因已在 prompt 侧修掉(不再用「语言名: 内容」
         # 的格式示范),这里是兜底:形式缺陷两道闸都抓不到(忠实度看事实、
         # 语言检测看语种),漏出去就是 1088 段那样的存量。
-        return strip_language_label((fn(system, user) or "").strip()).strip()
+        # 同理再剥 <canonical_*> 标签:规范名改用标签注入后(见 prompts.py 注释),
+        # A/B 5×6 里韩语有 1 次把标签原样抄进了译文。发生率低,但漏出去是正文里
+        # 明晃晃的 XML —— 比一个错引号糟得多,而两道闸同样看不见。
+        out = strip_language_label((fn(system, user) or "").strip())
+        return _CANONICAL_TAG.sub("", out).strip()
 
     def translate_name(self, name: str, target_lang: str) -> str:
         """显示名(标题/人名)专用翻译:只返名字;剥模型仍套上的书名号/引号。
