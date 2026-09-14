@@ -113,3 +113,24 @@ def test_translate_qa_items_threads_names_into_faithfulness_check():
     )
     assert seen, "问答的忠实度检查没被调用"
     assert "西蒙·沃埃" in seen[0] and "圣殿献耶稣" in seen[0]
+
+
+def test_translate_section_strips_leaked_canonical_tags():
+    """规范名改用 <canonical_*> 标签注入后,模型偶尔把标签原样抄进译文。
+
+    A/B 5 段 × 6 语实测:韩语 1 次泄漏。发生率低但后果重 —— 正文里出现裸 XML,
+    而忠实度闸(判事实)和 lang_detect(判语种)都看不见形式缺陷,和当年 1088 段
+    "Polish:" 前缀是同一类。prompt 侧已写"never copy the tags",这里是兜底。
+    """
+
+    def fake_complete(system, user):
+        return (
+            "<canonical_title>사슬에 묶인 행동</canonical_title>은 "
+            "<canonical_artist>아리스티드 마욜</canonical_artist>의 작품이다."
+        )
+
+    t = ContentTranslator(fake_complete)
+    out = t.translate_section("x", "ko", title="사슬에 묶인 행동")
+    assert "<canonical" not in out and "</canonical" not in out
+    # 只剥标签,名字本身必须留下(别剥成空)
+    assert "사슬에 묶인 행동" in out and "아리스티드 마욜" in out
