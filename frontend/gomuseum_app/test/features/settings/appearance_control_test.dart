@@ -11,6 +11,7 @@ import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/auth/data/auth_repository.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/payment/domain/entities/user_benefits.dart';
 
@@ -27,6 +28,10 @@ void main() {
         ),
         // Stub benefits: no network calls.
         benefitsStateProvider.overrideWith(() => _StubBenefitsState()),
+        // Stub entitlements: SettingsPage 会 watch 它，不 override 会打真实网络
+        // （AuthInterceptor 读 FlutterSecureStorage，测试环境没有平台通道 mock，
+        // 会真的挂起，直到 auth_interceptor.dart 的超时兜底触发才结束）。
+        entitlementsProvider.overrideWith((ref) async => Entitlements.unknown),
       ],
     );
     addTearDown(container.dispose);
