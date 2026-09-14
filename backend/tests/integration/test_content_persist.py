@@ -302,13 +302,63 @@ def test_en_section_demoted_takes_its_translations_down(session):
 
 
 def test_en_section_published_leaves_translations_alone(session):
-    """反向:英文段正常发布时不许碰译文 —— 否则这个守卫会变成随机下架机。"""
+    """反向:英文段**首次**发布时不许碰译文 —— 否则这个守卫会变成随机下架机。
+
+    注意这里没有 seed 英文段:走的是"新建"路径,没有旧 body 可比。
+    英文段已存在、内容被改写的情况见下面两条。
+    """
     from app.services.content_repo import persist_generated_sections
 
     for lang in ("fr", "zh"):
         _seed_section(session, lang, "background", f"译文 {lang}", "published")
     persist_generated_sections(
         session, "Q1", "en", {"background": "new text"}, model="m"
+    )
+    assert _statuses(session, "background") == {
+        "en": "published",
+        "fr": "published",
+        "zh": "published",
+    }
+
+
+def test_rewriting_the_en_body_takes_its_translations_down(session):
+    """英文正文**改了内容**(仍 published)→ 译文同样过期,必须下架。
+
+    旧译文和旧音频是同一类东西:都派生自这段英文正文。清 audio_key 的那行
+    早就在了,译文这半边一直漏着 —— 2026-09-14 重跑小皇宫 47 件时暴露:
+    4 件的 112 段 fr/de/es/… 停在 12 天前、status 还是 published,
+    英文正文已经换了一版,用户切法语看到的就是对不上的内容。
+    """
+    from app.services.content_repo import persist_generated_sections
+
+    _seed_section(session, "en", "background", "old english body", "published")
+    for lang in ("fr", "zh"):
+        _seed_section(session, lang, "background", f"旧译文 {lang}", "published")
+
+    persist_generated_sections(
+        session, "Q1", "en", {"background": "a different english body"}, model="m"
+    )
+    assert _statuses(session, "background") == {
+        "en": "published",
+        "fr": "needs_review",
+        "zh": "needs_review",
+    }
+
+
+def test_regenerating_identical_en_body_keeps_translations(session):
+    """**对照组**:重跑生成出一字不差的正文 → 译文原样保留。
+
+    没有这条,把判据写成"只要重写过英文段就下架译文"也能让上面那条变绿,
+    而那样每次幂等重跑都会白白挂掉一批好译文、逼着重翻一遍。
+    """
+    from app.services.content_repo import persist_generated_sections
+
+    _seed_section(session, "en", "background", "same english body", "published")
+    for lang in ("fr", "zh"):
+        _seed_section(session, lang, "background", f"译文 {lang}", "published")
+
+    persist_generated_sections(
+        session, "Q1", "en", {"background": "same english body"}, model="m"
     )
     assert _statuses(session, "background") == {
         "en": "published",

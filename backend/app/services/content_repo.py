@@ -117,7 +117,8 @@ def get_section_audio_key(
 
 
 def _demote_orphan_translations(db, obj, code):
-    """英文段不再 published → 同段的译文一并下架(契约「英语轴心」的不变量)。
+    """英文段不再 published、**或内容变了** → 同段的译文一并下架
+    (契约「英语轴心」的不变量)。
 
     译文的正当性来自英文源:接地闸只在英语判一遍,其它语言靠忠实翻译继承。英文段被
     闸拦下时,`translate_object_language` 只翻**已发布**的英文段 → 译文既不会被重写、
@@ -154,7 +155,8 @@ def _upsert_section(db, obj, language, code, body, status, model, grounding=None
         .filter_by(object_id=obj.id, language=language, section_code=code)
         .one_or_none()
     ) or ObjectContentSection(object_id=obj.id, language=language, section_code=code)
-    if row.body is not None and row.body != body:
+    body_changed = row.body is not None and row.body != body
+    if body_changed:
         row.audio_key = None  # body 变更 → 旧音频失效,下次请求重生成
     row.body = body
     row.status = status
@@ -163,7 +165,14 @@ def _upsert_section(db, obj, language, code, body, status, model, grounding=None
     row.model = model
     row.generated_at = datetime.now(timezone.utc)
     db.add(row)
-    if language == "en" and status != "published":
+    # 英文段**改了内容**同样让译文失效,不只是被闸拦下时。
+    # 旧音频和旧译文是同一类东西:都派生自这段英文正文,源一变就都过期了 ——
+    # 上面那行清 audio_key,这里清译文,两件事必须并排做。
+    # 2026-09-14 实测:重跑小皇宫 47 件(--langs en,zh)后,4 件的 112 段
+    # fr/de/es/it/ja/ko/pl/zh-hant 译文停在 12 天前、status 仍是 published,
+    # 英文正文已经换了一版 —— 用户切到法语看到的就是对不上的内容。
+    # 不修的话,每次重跑都得靠人记得把该件已有的语言全带上,迟早漏。
+    if language == "en" and (status != "published" or body_changed):
         _demote_orphan_translations(db, obj, code)
 
 
