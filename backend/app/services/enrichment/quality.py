@@ -119,6 +119,25 @@ class QualityGate:
         kept_body = "\n\n".join(kept_paras) if kept_paras else None
 
         published = kept_body is not None and grounding_ratio >= GROUNDING_THRESHOLD
+        # 首句被删 → 正文从半截开始。段落在 App 里是独立展示的,开头那句一旦没了,
+        # 没有任何别的地方能把上下文补回来:
+        #   「His profile reveals a thoughtful demeanor…」—— His 是谁?
+        #   「To the left, a bearded man stands…」—— 这是什么作品?
+        #   「Sentier de la Mi-côte' is that it was painted on-site.」—— 引号被腰斩,语法不通。
+        # 2026-09-13 实测(prod 全库 guide 段):删过句的 12 段里 3 段开头坏掉(25%),
+        # 没删句的 39 段 **0 段**、套话时代的 612 段也是 0 段 —— 零重叠。
+        # ⚠️ 统计这类断裂时别把 `It/Its/This` 开头算进去:「It was commissioned for
+        # the coronation…」「Its significance lies in…」指的是**作品本身**,而段落
+        # 就展示在作品页上,指代成立 —— 全库 46 段是这种,它们没问题。
+        # 真正断的是**指人**的代词(He/His/She/Her,段里没出现过那个人)和方位词开头。
+        # 这是 #555 去套话的副作用:以前开头是「Take a moment to really look…」,
+        # 套话不陈述事实所以永远过闸、首句删不掉;换成实质句后,过不了闸就被删。
+        # ⚠️ 判据故意用「首句被删」而不是「剩余首句看着像不像悬空」:后者要维护一张
+        # 代词/方位词表,而表外的断法(引号腰斩、列举句被切半)照样漏,且那张表
+        # 会随语言/段落类型无限膨胀。代价是首句被删、第二句恰好自洽的段也会挂起 ——
+        # 宁缺毋滥,而且挂起可逆:材料补足后重生成会把它救回来。
+        if published and not keep[0]:
+            published = False
         if published:
             from app.services.enrichment.lang_detect import text_in_language
 

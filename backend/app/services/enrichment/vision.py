@@ -106,8 +106,19 @@ _SYSTEM = (
     # ① 作品**上**的文字要逐字转写。实测漏它会连带看错东西:《Credo》主体举着
     # 一条写着 CREDO 的横幅,不转写文字时被读成「一把大弯刀,双手横持」。
     # 注意与下一条不冲突:转写的是画/雕塑本身的铭文,不是墙签。
+    # ⚠️ 「读不清就说读不清」必须长在转写这一句上,不能只留在末尾当通则(那条还在,
+    # 见下面的 "If something is unclear")。2026-09-13 实测(Q104444757 梅尔松草图,
+    # 四条铭文):末尾通则版把 4 条里的 3 条编了出来 —— LES SOCIÉTÉS DE TIR /
+    # DE NATATION / EXERCICES PHYSIQUES,真实是 LA DISTRIBUTION DES PRIX /
+    # LES EXCURSIONNISTES / LES BAINS DE MER。编出来的全是「体育协会」这类
+    # 合情合理的词,下游当硬事实用,最难发现。
+    # 同图 A/B(各 2 次):旧 3 条/3 条 → 新 1 条/0 条,并主动写出 partially legible。
+    # 这是 #555「禁令要长在它约束的那一拍上」的第二例。
     "Transcribe VERBATIM, in quotes, any text that is part of the artwork itself "
-    "(an inscription, a banner, a book, a signature). "
+    "(an inscription, a banner, a book, a signature). Transcribe ONLY letters you "
+    "can actually read; where lettering is small, faded, reversed or otherwise not "
+    "clearly legible, write that an inscription is present but illegible INSTEAD OF "
+    "reconstructing what it probably says. "
     # ② 中景/远景要交代。实测只写显眼元素会漏掉主体:河景里停泊的一排驳船
     # 在中景,第一版描述只写了树和房子,船一条没提 —— 而船正是这幅画的主题。
     "Account for the foreground, the middle distance and the background separately; "
