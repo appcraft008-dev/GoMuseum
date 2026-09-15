@@ -4,8 +4,10 @@
 生成完调质量闸,过闸才落库。分工清楚,两边不打架。
 
 用法:
-  # 看覆盖率(迁移进度不该靠猜)
+  # 看覆盖率账目表:缺音频的(以后补)、还在用旧引擎的(以后换)——不给 --museum
+  # 就按馆逐一列(每个馆一张表),最后再给全馆合计
   python scripts/audio_queue_cli.py coverage --langs zh,en,fr
+  python scripts/audio_queue_cli.py coverage --langs zh,en,fr --museum louvre
 
   # 出队列:先只做 zh、先做一个馆(保证一次参观内部音色一致)
   python scripts/audio_queue_cli.py plan --langs zh --engine voxcpm2 \\
@@ -23,6 +25,7 @@ from collections import Counter
 sys.path.insert(0, "/app")
 
 from app.core.database import SessionLocal  # noqa: E402
+from app.models.museum import Museum  # noqa: E402
 from app.services.enrichment.audio_queue import (  # noqa: E402
     build_queue,
     coverage,
@@ -35,6 +38,7 @@ def main() -> None:
 
     c = sub.add_parser("coverage")
     c.add_argument("--langs", default="zh")
+    c.add_argument("--museum", default=None, help="只看一个馆;不给则按馆逐一列+合计")
 
     p = sub.add_parser("plan")
     p.add_argument("--langs", default="zh")
@@ -50,21 +54,34 @@ def main() -> None:
     db = SessionLocal()
     try:
         if ns.cmd == "coverage":
-            cov = coverage(db, langs)
             titles = {
                 "guide": "主讲解段(guide)",
+                "qa": "问答(qa)",
                 "artist_bio": "作者介绍(按作者共享,一条影响该作者所有作品)",
             }
-            for kind in ("guide", "artist_bio"):
-                by_lang = cov.get(kind)
-                if not by_lang:
-                    continue
-                print(f"{titles.get(kind, kind)}音频覆盖率 —— 按语言 × 引擎")
-                for lang, d in sorted(by_lang.items()):
-                    total = sum(d.values())
-                    parts = "  ".join(f"{k}={v}" for k, v in sorted(d.items()))
-                    print(f"  {lang:8s} 共 {total:6d}   {parts}")
-                print()
+
+            def _print_cov(cov: dict) -> None:
+                for kind, by_lang in sorted(cov.items()):
+                    if not by_lang:
+                        continue
+                    print(
+                        f"{titles.get(kind, f'深度段({kind})')}音频覆盖率 —— 按语言 × 引擎"
+                    )
+                    for lang, d in sorted(by_lang.items()):
+                        total = sum(d.values())
+                        parts = "  ".join(f"{k}={v}" for k, v in sorted(d.items()))
+                        print(f"  {lang:8s} 共 {total:6d}   {parts}")
+                    print()
+
+            if ns.museum:
+                _print_cov(coverage(db, langs, museum_slug=ns.museum))
+                return
+
+            for (slug,) in db.query(Museum.slug).order_by(Museum.slug):
+                print(f"========== {slug} ==========")
+                _print_cov(coverage(db, langs, museum_slug=slug))
+            print("========== 全馆合计 ==========")
+            _print_cov(coverage(db, langs))
             return
 
         jobs = build_queue(

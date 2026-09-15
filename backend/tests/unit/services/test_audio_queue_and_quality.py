@@ -281,6 +281,49 @@ def test_coverage_reports_artist_bio_separately(db):
     assert cov["artist_bio"]["zh"]["tts-1"] == 1
 
 
+def test_coverage_includes_qa(db):
+    """qa 是第三处存音频 key 的表,此前 coverage() 完全没统计过 —— 同一类盲区
+    `verify_audio_md5.py` 踩过一次(只查 section 表,对 qa/artist_bio 完全失明,
+    报告却照样全绿)。这里补的是报表侧的同一个坑。"""
+    s, m = db
+    o = _obj(s, m, "Q1")
+    s.add(
+        ObjectSuggestedQuestion(
+            object_id=o.id,
+            language="zh",
+            sort=0,
+            question="q",
+            answer="a",
+            audio_key="k",
+            audio_engine="tts-1",
+        )
+    )
+    s.commit()
+
+    cov = aq.coverage(s, ["zh"])
+    assert cov["qa"]["zh"]["tts-1"] == 1
+
+
+def test_coverage_filters_by_museum(db):
+    """账目表要能按馆拆开看,否则"哪个馆缺音频/哪个馆还在用旧引擎"只能靠猜。"""
+    s, m = db
+    m2 = Museum(slug="orsay", name_en="Orsay", city_en="Paris")
+    s.add(m2)
+    s.commit()
+
+    o1 = _obj(s, m, "Q1")
+    _sec(s, o1, "guide")  # louvre:缺音频
+
+    o2 = _obj(s, m2, "Q2")
+    _sec(s, o2, "guide", key="k", engine="tts-1")  # orsay:待换引擎
+
+    cov_louvre = aq.coverage(s, ["zh"], museum_slug="louvre")
+    assert cov_louvre["guide"]["zh"] == {"(无音频)": 1}
+
+    cov_orsay = aq.coverage(s, ["zh"], museum_slug="orsay")
+    assert cov_orsay["guide"]["zh"] == {"tts-1": 1}
+
+
 def test_head_ranking_prefers_content_volume_over_qid(db):
     """头部名额按**已有内容量**发,不是按 qid 字典序。
 
