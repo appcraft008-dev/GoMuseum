@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cross_file/cross_file.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/recognition/data/datasources/recognition_remote_datasource.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -61,6 +62,41 @@ void main() {
         queryParameters: captureAny(named: 'queryParameters'),
         options: any(named: 'options'))).captured.single as Map;
     expect(captured.containsKey('device_id'), isFalse);
+  });
+
+  // 402 与 500 必须成对测:只测 402 的话,一个"什么都当付费墙"的实现照样全绿。
+  test('recognize maps 402 to QuotaExceededException (not a failure)',
+      () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'),
+            queryParameters: any(named: 'queryParameters'),
+            options: any(named: 'options')))
+        .thenThrow(DioException(
+            requestOptions: RequestOptions(path: '/api/v1/recognize'),
+            type: DioExceptionType.badResponse,
+            response: Response(
+                requestOptions: RequestOptions(path: '/api/v1/recognize'),
+                statusCode: 402,
+                data: {'reason': 'quota_exceeded'})));
+
+    await expectLater(ds.recognize(slug: null, image: image(), language: 'en'),
+        throwsA(isA<QuotaExceededException>()));
+  });
+
+  test('recognize maps 500 to ServerException (still a failure)', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'),
+            queryParameters: any(named: 'queryParameters'),
+            options: any(named: 'options')))
+        .thenThrow(DioException(
+            requestOptions: RequestOptions(path: '/api/v1/recognize'),
+            type: DioExceptionType.badResponse,
+            response: Response(
+                requestOptions: RequestOptions(path: '/api/v1/recognize'),
+                statusCode: 500)));
+
+    await expectLater(ds.recognize(slug: null, image: image(), language: 'en'),
+        throwsA(isA<ServerException>()));
   });
 
   test('confirm posts phash+qid to /api/v1/recognize/confirm', () async {

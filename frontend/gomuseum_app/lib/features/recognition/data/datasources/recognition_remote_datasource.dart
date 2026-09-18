@@ -140,6 +140,9 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
       } else if (e.type == DioExceptionType.connectionError) {
         throw const NetworkException('Network connection failed');
       }
+      // 402 = 免费额度用尽(后端是付费墙唯一执行点);别落进 ServerException
+      // 被当成"识别失败",那样用户只会以为 App 坏了。
+      if (e.response?.statusCode == 402) throw const QuotaExceededException();
       throw ServerException('Server error: ${e.message}');
     } catch (e) {
       if (e is ServerException || e is TimeoutException) rethrow;
