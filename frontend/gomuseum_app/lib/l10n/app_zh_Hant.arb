@@ -95,6 +95,7 @@
   "guideLanguage": "講解語言",
   "offlinePacks": "離線館包",
   "autoSavePhoto": "自動儲存照片",
+  "autoSavePhotoNeedsAccess": "需要相簿權限才能儲存照片",
   "ttsVoice": "TTS 音色",
   "ttsVoiceValue": "沉穩 · 女聲",
   "ttsVoiceSelect": "音色選擇",

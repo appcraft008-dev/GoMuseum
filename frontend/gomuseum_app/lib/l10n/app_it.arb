@@ -95,6 +95,7 @@
   "guideLanguage": "Lingua della guida",
   "offlinePacks": "Pacchetti museo offline",
   "autoSavePhoto": "Salva foto automaticamente",
+  "autoSavePhotoNeedsAccess": "Serve l'accesso alla libreria foto per salvare le foto",
   "ttsVoice": "Voce TTS",
   "ttsVoiceValue": "Pacata · Femminile",
   "ttsVoiceSelect": "Scegli voce",

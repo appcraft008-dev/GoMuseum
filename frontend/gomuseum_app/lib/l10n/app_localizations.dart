@@ -683,6 +683,12 @@ abstract class AppLocalizations {
   /// **'Auto-save photos'**
   String get autoSavePhoto;
 
+  /// No description provided for @autoSavePhotoNeedsAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo library access is needed to save photos'**
+  String get autoSavePhotoNeedsAccess;
+
   /// No description provided for @ttsVoice.
   ///
   /// In en, this message translates to:

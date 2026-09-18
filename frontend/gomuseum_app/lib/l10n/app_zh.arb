@@ -95,6 +95,7 @@
   "guideLanguage": "讲解语言",
   "offlinePacks": "离线馆包",
   "autoSavePhoto": "自动保存照片",
+  "autoSavePhotoNeedsAccess": "需要相册权限才能保存照片",
   "ttsVoice": "TTS 音色",
   "ttsVoiceValue": "沉稳 · 女声",
   "ttsVoiceSelect": "音色选择",

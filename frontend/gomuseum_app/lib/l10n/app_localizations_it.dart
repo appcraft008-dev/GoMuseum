@@ -317,6 +317,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get autoSavePhoto => 'Salva foto automaticamente';
 
   @override
+  String get autoSavePhotoNeedsAccess =>
+      'Serve l\'accesso alla libreria foto per salvare le foto';
+
+  @override
   String get ttsVoice => 'Voce TTS';
 
   @override

@@ -314,6 +314,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoSavePhoto => '自动保存照片';
 
   @override
+  String get autoSavePhotoNeedsAccess => '需要相册权限才能保存照片';
+
+  @override
   String get ttsVoice => 'TTS 音色';
 
   @override
@@ -1285,6 +1288,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get autoSavePhoto => '自動儲存照片';
+
+  @override
+  String get autoSavePhotoNeedsAccess => '需要相簿權限才能儲存照片';
 
   @override
   String get ttsVoice => 'TTS 音色';

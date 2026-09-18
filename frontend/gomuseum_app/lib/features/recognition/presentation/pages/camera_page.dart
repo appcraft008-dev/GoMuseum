@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
@@ -21,6 +22,7 @@ import 'package:gomuseum_app/features/recognition/data/models/recognize_response
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
 import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -228,7 +230,33 @@ class _CameraPageState extends ConsumerState<CameraPage>
       return;
     }
     final shot = await controller.takePicture();
+    _saveShotToGallery(shot); // 不 await：见方法注释
     await _recognizeImage(shot);
+  }
+
+  /// 「自动保存照片」开着时，把这张快门照片写进系统相册。
+  ///
+  /// **绝不 await**：识别延迟是这个产品的核心，写相册几百毫秒不能挂在它前面。
+  /// 异常整体吞掉——存相册失败是次要功能失败，不该打断识别，也不该弹错。
+  /// 只作用于快门：图库选图与最近缩略图本来就在相册里，重复写只会刷屏。
+  ///
+  /// 偏好直接读 SharedPreferences 而非 `autoSavePhotoProvider`：后者的值是异步
+  /// 载入的，冷启动后头一次 `ref.read` 拿到的还是默认的 false —— 开着开关的人
+  /// 刚进 App 拍的第一张会静默丢掉。
+  void _saveShotToGallery(XFile shot) {
+    unawaited(() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getBool(kAutoSavePhotoKey) != true) return;
+        await PhotoManager.editor.saveImageWithPath(
+          shot.path,
+          title: 'gomuseum_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          relativePath: kAutoSaveRelativePath,
+        );
+      } catch (_) {
+        // 权限被撤、磁盘满、机型不兼容……识别照常。
+      }
+    }());
   }
 
   /// 从图库选图上传识别（无相机拍摄，走同一识别路由）。
