@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.v1 import api_router
 from app.core.config import settings
@@ -43,6 +44,30 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# 信任 nginx 转发的 X-Forwarded-For，让 slowapi 拿到真实访客 IP。
+#
+# 没有这段时，按 IP 限流**全站共享一个桶**：nginx 在宿主机 proxy_pass 到
+# 127.0.0.1:8100，流量经 docker-proxy 进容器，uvicorn 看到的对端是网桥网关
+# （prod 实测 172.22.0.1），不在它默认的 forwarded-allow-ips（仅 127.0.0.1）里，
+# 于是 X-Forwarded-For 被丢弃。2026-09-18 实测 prod access log 全量 19997 条，
+# 客户端 IP 只有 127.0.0.1（容器内健康检查）和 172.22.0.1（全部外部流量），
+# 零个真实访客 IP —— guest_login 的 5/hour 等于「全站每小时 5 个新游客」。
+# 零真实用户所以一直没炸，会正好在放量时显现。
+#
+# ⛔ **绝不能用 `"*"`**。uvicorn 0.37 的 _TrustedHosts：
+#     if self.always_trust: return x_forwarded_for_hosts[0]   # 取最左端
+# 而 nginx 用的是 `$proxy_add_x_forwarded_for`（追加语义）——攻击者发
+# `X-Forwarded-For: 1.2.3.4`，nginx 转成 `1.2.3.4, <真实IP>`，取 [0] 就是伪造值，
+# 每个请求换个假 IP 即可无限刷 register/guest_login。比现在的「全站一个桶」更糟。
+# 指定网段才会走 `for host in reversed(...)` 那条分支：从右往左取第一个不可信的
+# host = nginx 记下的真实 IP，左边伪造的那段被忽略。
+TRUSTED_PROXY_HOSTS = ["127.0.0.1", "172.16.0.0/12"]
+"""可信代理来源。`172.16.0.0/12` 覆盖 docker 全部网桥网段（默认 bridge 172.17/16、
+compose 项目网络 172.18–172.31），网络重建换了网关 IP 也不用改。
+配错的失效方向是安全的：回落到现状（全站一个桶），不会变成可伪造。"""
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXY_HOSTS)
 
 # CORS：开发放开，生产白名单
 _origins = (
