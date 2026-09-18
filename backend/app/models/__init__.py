@@ -2,6 +2,7 @@
 
 from app.models.ai_service_log import AIServiceLog
 from app.models.content import CategorySection, ObjectContentSection, SectionType
+from app.models.feedback import Feedback
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.models.recognition_result import RecognitionResult
@@ -24,3 +25,4 @@ __all__ += [
     "CategorySection",
     "ObjectContentSection",
 ]
+__all__ += ["Feedback"]
