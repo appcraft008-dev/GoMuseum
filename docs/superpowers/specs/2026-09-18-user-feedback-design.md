@@ -101,14 +101,15 @@ APP_KINDS    = ("app_crash", "recognition_bad", "feature_request", "other")
   # ponytail: 只按 IP 限流。按 device_id 的日配额是升级路径，等真被刷了再加。
   ```
 
-  🔴 **但按 IP 限流在 prod 当前根本没有按真实用户生效**（2026-09-18 实测确认，
-  见下方「前置依赖」）。本端点的限流值在那个缺陷修好之前是**装饰性的**。
+  ⚠️ 按 IP 限流曾经**根本没有按真实用户生效**（全站共享一个桶）——写这个 spec 时
+  顺带挖出来的，已由 PR #577 修好（详见下方「前置依赖」）。本端点的限流值建立在
+  那个修复之上才有意义。
 - `text` ≤ 1000 字符（Pydantic `max_length`），`kind` 白名单校验，
   `scope="object"` 时 `qid`/`museum_slug`/`language` 必填 → 否则 422。
   一条不知道指向哪件藏品的"内容反馈"是垃圾数据，宁可拒收。
 - 匿名可写（无需登录）。
 
-## 🔴 前置依赖：IP 限流在 prod 从未按真实用户生效
+## ✅ 前置依赖：IP 限流在 prod 从未按真实用户生效（已修，#577）
 
 复核这个 spec 的限流值时挖出来的，**不属于本功能，但本功能的护栏依赖它**。
 已实测确认，不是推测：
@@ -143,12 +144,41 @@ nginx（宿主机） --proxy_pass--> 127.0.0.1:8100 --docker-proxy--> 容器:800
 [[monetization-plan]] 里那批"只有真机真购买能发现"的缺陷同类：测试环境
 （`TestClient` 进程内直连、不经 nginx）行为完全正常。
 
-**修法**（一行）：compose 的 uvicorn 命令加 `--forwarded-allow-ips="*"`。
-容器只绑 `127.0.0.1:8100`，外部无法直连，唯一入口是宿主机上的 nginx，
-所以 `*` 在这个部署形态下是安全的；写死网桥网关 IP 反而会在 docker 网络重建时失效。
+**✅ 已修复：PR #577（`hotfix/trust-proxy-headers`），已合入 staging。**
 
-⚠️ **这是独立缺陷，应该单独一个 fix 先走**，不要混进反馈功能的 PR——
-它影响的是已上线的登录链路，值得单独的 review 和验证。
+⛔ **本节最初写的修法是错的，留在这里当反面教材**：我本来写的是
+「compose 的 uvicorn 命令加 `--forwarded-allow-ips="*"`，容器只绑 127.0.0.1
+所以 `*` 安全」。**那会制造一个比缺陷本身更糟的洞。**实现时去读 uvicorn 0.37
+源码才发现：
+
+```python
+# uvicorn/middleware/proxy_headers.py::_TrustedHosts.get_trusted_client_host
+if self.always_trust:
+    return x_forwarded_for_hosts[0]     # ← "*" 取最左端
+```
+
+而 nginx 用的是 `$proxy_add_x_forwarded_for`（**追加**语义）：访客自带的 XFF 会被
+保留，nginx 把真实 `remote_addr` 追加在**右边**。攻击者发 `X-Forwarded-For: 1.2.3.4`，
+后端收到 `1.2.3.4, <真实IP>`，`"*"` 取 `[0]` 就是伪造值 → 每个请求换个假 IP
+即可无限刷 `register`/`guest_login`。原来的「全站一个桶」至少还挡得住暴力刷，
+改成 `*` 反而全开。
+
+**正确修法**：指定可信网段，走 `for host in reversed(...)` 那条分支——从右往左取
+第一个不可信的 host = nginx 记下的真实 IP，左边伪造的那段被忽略。
+
+```python
+# app/main.py
+TRUSTED_PROXY_HOSTS = ["127.0.0.1", "172.16.0.0/12"]
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXY_HOSTS)
+```
+
+**改在 `app/main.py` 而不是 compose**：`deploy.yml` 只 rsync `backend/`，
+compose 文件在 VPS 的 `/opt/gomuseum/{deploy,staging}` 里、**不由 CI 更新**
+（实测两处都是旧命令）。改仓库里那份 compose 不会生效。
+
+> 🔑 教训：**「容器不对外，所以信任谁都安全」这个推理漏了一层**——不对外只保证
+> 请求都经过 nginx，不保证请求**内容**可信；XFF 的左段本来就是访客自己写的。
+> 安全判断不能停在"谁能连上我"，还要看"这个字段是谁填的"。
 
 ## 数据模型
 
