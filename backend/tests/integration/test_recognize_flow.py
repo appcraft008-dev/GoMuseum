@@ -11,6 +11,7 @@ from app.core.database import Base
 from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.models.purchase import Entitlement
 from app.models.recognition_demand import RecognitionDemand
 from app.services.object_importer import upsert_museum, upsert_object
 from app.services.recognition import matcher
@@ -43,6 +44,9 @@ def session():
             ObjectImage.__table__,
             Artist.__table__,
             RecognitionDemand.__table__,
+            # 识别的闸要问通票(recognize_billed._pass_active):真实环境里这张表
+            # 由迁移建好,fixture 不建就会 no such table。
+            Entitlement.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -276,6 +280,78 @@ def test_billing_quota_exhausted_raises_before_gpt(session):
             "orsay",
             _jpeg(),
             user_id=None,
+            device_id="dev1",
+            identify_fn=must_not_call,
+        )
+
+
+def _pass(session, user_id, *, expires_in_days):
+    """给账号发一张票。到期与否由 expires_at 实时判(见 resolve_state)。"""
+    from datetime import datetime, timedelta, timezone
+
+    from app.services import entitlement_service as es
+
+    session.add(
+        Entitlement(
+            user_id=user_id,
+            entitlement_type="paris_pass_7d",
+            status=es.ACTIVE,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days),
+        )
+    )
+    session.commit()
+
+
+def test_billing_active_pass_ignores_free_quota(session):
+    """通票生效期内识别不受免费额度限制 —— 这是卖给用户的权益。
+    prod 2026-09-18 实证:此前只问免费额度,付费账号额度归零后被永久 402。"""
+    from app.services.benefits_service import BenefitsService
+    from app.services.recognition.service import recognize_billed
+
+    UB = _benefits_tables(session)
+    b = BenefitsService(session).get_or_create_benefits("acct-paid", "dev1")
+    b.recognition_quota = 0  # 免费额度早已用尽
+    session.commit()
+    _pass(session, "acct-paid", expires_in_days=3)
+
+    out = recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id="acct-paid",
+        device_id="dev1",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
+        ),
+    )
+    assert out["outcome"] == "candidates"  # 放行,不是 QuotaExceededError
+    row = session.query(UB).filter_by(user_id="acct-paid").one()
+    assert row.recognition_quota == 0  # 票期内不动免费额度(到期后剩几次还是几次)
+
+
+def test_billing_expired_pass_still_blocked(session):
+    """反向:过期票不得放行。没有这一条,"只要有票行就放行"的写法也会绿。"""
+    import pytest as _pytest
+
+    from app.services.benefits_service import BenefitsService
+    from app.services.recognition.service import QuotaExceededError, recognize_billed
+
+    _benefits_tables(session)
+
+    def must_not_call(*a, **kw):
+        raise AssertionError("超额时不应调 GPT")
+
+    b = BenefitsService(session).get_or_create_benefits("acct-expired", "dev1")
+    b.recognition_quota = 0
+    session.commit()
+    _pass(session, "acct-expired", expires_in_days=-1)
+
+    with _pytest.raises(QuotaExceededError):
+        recognize_billed(
+            session,
+            "orsay",
+            _jpeg(),
+            user_id="acct-expired",
             device_id="dev1",
             identify_fn=must_not_call,
         )

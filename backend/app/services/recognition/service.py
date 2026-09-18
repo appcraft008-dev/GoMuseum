@@ -330,6 +330,17 @@ class QuotaExceededError(Exception):
     """识别配额用尽(端点映射 402;缓存命中也拦——付费墙语义)。"""
 
 
+def _pass_active(db, user_id) -> bool:
+    """通票是否生效。权益真相源只有 entitlements 一处(见 entitlement_service)。
+    无 user_id(游客/令牌失效)一律 False —— 票挂账号,设备身份上不可能有票。
+    不吞异常:resolve_state 炸了该报 500,悄悄回退成"无票"会把付费用户打回 402。"""
+    if not user_id:
+        return False
+    from app.services import entitlement_service as es
+
+    return es.resolve_state(db, str(user_id))[0] == es.ACTIVE
+
+
 def recognize_billed(
     db,
     slug: str | None,
@@ -344,12 +355,21 @@ def recognize_billed(
 ) -> dict | None:
     """带配额的识别(计费规则,用户 2026-07-04 批准):
     match/candidates 扣 1;unrecognized 不扣(不为失败付费);缓存命中不扣(不重复扣);
-    配额用尽 → QuotaExceededError(先于 GPT 调用,不烧钱)。"""
+    配额用尽 → QuotaExceededError(先于 GPT 调用,不烧钱)。
+
+    ⚠️ **通票生效期内不受免费额度限制** —— 不限次识别是卖给用户的权益。
+    此前这道闸只问 BenefitsService(免费层额度),从不问 entitlements,于是
+    付费用户免费额度一归零就被永久 402;而 entitlement_service.summary 的
+    `can.recognize = active or left > 0` 按 active 放行 → 前端让按快门、
+    后端拦下(prod 实证 2026-09-18:通票 active 的账号连撞 402)。
+    权益真相源只有 entitlements 一处,这里跟它对齐。"""
     from app.services.benefits_service import BenefitsService
 
     benefits = BenefitsService(db)
+    # 票生效期内:放行,且不动免费额度(票到期后剩余的免费次数还在)。
+    pass_active = _pass_active(db, user_id)
     access = benefits.check_access(user_id, device_id)
-    if not access.get("has_access"):
+    if not pass_active and not access.get("has_access"):
         raise QuotaExceededError()
     out = recognize(
         db,
@@ -363,7 +383,7 @@ def recognize_billed(
     )
     if out is not None and out.get("outcome") in ("match", "candidates"):
         cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
-        if not cached:
+        if not cached and not pass_active:
             try:
                 benefits.consume_recognition(user_id, device_id)
             except Exception:
