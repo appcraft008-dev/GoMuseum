@@ -49,6 +49,18 @@ double computeZoomLevel({
 }) =>
     (startZoom * scale).clamp(min, max);
 
+/// 回前台是否要重建相机。
+///
+/// **判断只能看 `state`，不能被"当前有没有 controller"提前拦掉**：切走时
+/// (`inactive`) 相机被释放、字段置 null，正是没有 controller 的时候才最需要
+/// 重建。曾经在生命周期回调开头写 `if (_controller == null) return;`，把
+/// `resumed` 一起吞了——开过图库/授权弹窗回来后相机永不重启，取景器停在转圈、
+/// 快门也按不动。
+@visibleForTesting
+bool shouldRestartCamera(AppLifecycleState state,
+        {required bool hasController}) =>
+    state == AppLifecycleState.resumed && !hasController;
+
 class _CameraPageState extends ConsumerState<CameraPage>
     with WidgetsBindingObserver {
   CameraController? _controller;
@@ -110,7 +122,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
     await _recognizeImage(XFile(file.path));
   }
 
+  /// 初始化进行中：首帧的 initState 初始化还没完，权限弹窗就把 App 切走再回来，
+  /// `resumed` 会看到 `_controller` 仍是 null 而重复开相机——多出来的那个没人
+  /// dispose，占着相机锁。
+  bool _initializing = false;
+
   Future<void> _initCamera() async {
+    if (_initializing) return;
+    _initializing = true;
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
@@ -153,17 +172,21 @@ class _CameraPageState extends ConsumerState<CameraPage>
     } on CameraException catch (e) {
       setState(() => _cameraError =
           e.description ?? AppLocalizations.of(context)!.camInitFailed);
+    } finally {
+      _initializing = false;
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
-      controller.dispose();
+      if (controller == null) return;
+      // 先置 null 再 dispose：build 里会读它，不能让重建期撞上已释放的 controller。
       _controller = null;
-    } else if (state == AppLifecycleState.resumed) {
+      if (mounted) setState(() {}); // 不重建的话 CameraPreview 还挂着死纹理
+      controller.dispose();
+    } else if (shouldRestartCamera(state, hasController: controller != null)) {
       _initCamera();
     }
   }
