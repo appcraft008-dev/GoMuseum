@@ -95,6 +95,7 @@
   "guideLanguage": "Język przewodnika",
   "offlinePacks": "Pakiety muzeów offline",
   "autoSavePhoto": "Automatycznie zapisuj zdjęcia",
+  "autoSavePhotoNeedsAccess": "Zapisywanie zdjęć wymaga dostępu do galerii",
   "ttsVoice": "Głos TTS",
   "ttsVoiceValue": "Spokojny · Kobiecy",
   "ttsVoiceSelect": "Wybierz głos",

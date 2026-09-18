@@ -314,6 +314,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoSavePhoto => '写真を自動保存';
 
   @override
+  String get autoSavePhotoNeedsAccess => '写真を保存するには写真ライブラリへのアクセスが必要です';
+
+  @override
   String get ttsVoice => 'TTS音声';
 
   @override

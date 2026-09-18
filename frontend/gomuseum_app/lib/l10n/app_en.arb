@@ -180,6 +180,7 @@
   "guideLanguage": "Guide language",
   "offlinePacks": "Offline museum packs",
   "autoSavePhoto": "Auto-save photos",
+  "autoSavePhotoNeedsAccess": "Photo library access is needed to save photos",
   "ttsVoice": "TTS voice",
   "ttsVoiceValue": "Calm · Female",
   "ttsVoiceSelect": "Choose voice",

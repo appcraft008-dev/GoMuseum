@@ -53,6 +53,10 @@
 	<string>This app needs camera access to recognize artworks</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs photo library access to select artwork images</string>
+	<!-- 「自动保存照片」只要 add-only 权限。这个 key 与上面那个是两回事:
+	     缺它而发起 addOnly 请求，iOS 会直接终止进程。 -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app saves the artwork photos you take to your photo library</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

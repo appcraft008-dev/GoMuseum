@@ -317,6 +317,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoSavePhoto => 'Automatycznie zapisuj zdjęcia';
 
   @override
+  String get autoSavePhotoNeedsAccess =>
+      'Zapisywanie zdjęć wymaga dostępu do galerii';
+
+  @override
   String get ttsVoice => 'Głos TTS';
 
   @override

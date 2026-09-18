@@ -7,7 +7,7 @@ part of 'recognition_provider.dart';
 // **************************************************************************
 
 String _$recognitionNotifierHash() =>
-    r'7c51cc870a1db73a385f80bd435b4398ed76afa3';
+    r'9bf3129ad6eba215e203d02a58c7c02d03848a00';
 
 /// 识别状态管理 Provider。
 ///

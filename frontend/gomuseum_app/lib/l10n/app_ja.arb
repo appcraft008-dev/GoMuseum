@@ -95,6 +95,7 @@
   "guideLanguage": "ガイドの言語",
   "offlinePacks": "オフライン美術館パック",
   "autoSavePhoto": "写真を自動保存",
+  "autoSavePhotoNeedsAccess": "写真を保存するには写真ライブラリへのアクセスが必要です",
   "ttsVoice": "TTS音声",
   "ttsVoiceValue": "落ち着いた · 女性",
   "ttsVoiceSelect": "音声を選択",

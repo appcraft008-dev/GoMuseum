@@ -95,6 +95,7 @@
   "guideLanguage": "Langue du guide",
   "offlinePacks": "Packs de musée hors ligne",
   "autoSavePhoto": "Enregistrer les photos automatiquement",
+  "autoSavePhotoNeedsAccess": "L'accès à la photothèque est requis pour enregistrer les photos",
   "ttsVoice": "Voix TTS",
   "ttsVoiceValue": "Posée · Femme",
   "ttsVoiceSelect": "Choisir la voix",

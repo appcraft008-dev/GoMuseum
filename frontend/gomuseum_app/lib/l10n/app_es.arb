@@ -95,6 +95,7 @@
   "guideLanguage": "Idioma de la guía",
   "offlinePacks": "Paquetes de museo sin conexión",
   "autoSavePhoto": "Guardar fotos automáticamente",
+  "autoSavePhotoNeedsAccess": "Se necesita acceso a la fototeca para guardar las fotos",
   "ttsVoice": "Voz TTS",
   "ttsVoiceValue": "Serena · Femenina",
   "ttsVoiceSelect": "Elegir voz",

@@ -95,6 +95,7 @@
   "guideLanguage": "Führungssprache",
   "offlinePacks": "Offline-Museumspakete",
   "autoSavePhoto": "Fotos automatisch speichern",
+  "autoSavePhotoNeedsAccess": "Für das Speichern von Fotos wird Zugriff auf die Fotomediathek benötigt",
   "ttsVoice": "TTS-Stimme",
   "ttsVoiceValue": "Ruhig · Weiblich",
   "ttsVoiceSelect": "Stimme wählen",

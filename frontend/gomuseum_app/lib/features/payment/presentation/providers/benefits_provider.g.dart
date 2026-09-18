@@ -6,7 +6,7 @@ part of 'benefits_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$deviceIdHash() => r'e104b7a5c5a8fbf1e3afb0807fe7e27ab8f2d9dc';
+String _$deviceIdHash() => r'3aa6469de39a0272091e9e80eb04bf94fe43013b';
 
 /// 设备ID Provider —— 后端据此复用游客账号(见 auth_service.guest_login)。
 /// 要求:**同设备稳定、跨设备唯一**,且尽量扛卸载重装(否则免费额度可被反复刷)。
@@ -25,7 +25,7 @@ final deviceIdProvider = AutoDisposeFutureProvider<String>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DeviceIdRef = AutoDisposeFutureProviderRef<String>;
-String _$benefitsStateHash() => r'a04ca9248c78a837a02b7cec0cf1b8dccabdc3d8';
+String _$benefitsStateHash() => r'21674c760986351cf198ea5d55338b03d3b0730e';
 
 /// 用户权益状态Provider
 ///

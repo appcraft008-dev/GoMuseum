@@ -95,6 +95,7 @@
   "guideLanguage": "가이드 언어",
   "offlinePacks": "오프라인 미술관 팩",
   "autoSavePhoto": "사진 자동 저장",
+  "autoSavePhotoNeedsAccess": "사진을 저장하려면 사진 보관함 접근 권한이 필요합니다",
   "ttsVoice": "TTS 음성",
   "ttsVoiceValue": "차분함 · 여성",
   "ttsVoiceSelect": "음성 선택",
