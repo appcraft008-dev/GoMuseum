@@ -1,5 +1,6 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
@@ -42,6 +43,11 @@ class RecognitionUnrecognized extends RecognitionState {
   final String? labelText;
   final String? reason;
   final String? slug;
+}
+
+/// 免费额度用尽(后端 402)：不是失败，是该弹付费墙。
+class RecognitionQuotaExceeded extends RecognitionState {
+  const RecognitionQuotaExceeded();
 }
 
 class RecognitionError extends RecognitionState {
@@ -88,6 +94,8 @@ class RecognitionNotifier extends _$RecognitionNotifier {
               phash: resp.phash),
         _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug),
       };
+    } on QuotaExceededException {
+      state = const RecognitionQuotaExceeded();
     } catch (_) {
       state = const RecognitionError('recognize_failed');
     }

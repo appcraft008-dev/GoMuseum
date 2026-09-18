@@ -238,6 +238,17 @@ class _CameraPageState extends ConsumerState<CameraPage>
         .recognize(slug: null, image: shot, language: lang, mode: mode);
     if (!mounted) return;
     final st = ref.read(recognitionNotifierProvider);
+    // 后端才是付费墙的执行点:客户端闸放行了但后端拒了(权益缓存过期/还没加载完)。
+    // 退回取景器再弹付费墙 —— 停在"识别失败"会让用户以为 App 坏了。
+    if (st is RecognitionQuotaExceeded) {
+      _retake();
+      // 顺序要紧:先用当前权益判"已购未激活",再 invalidate ——
+      // 反过来会把 `.value` 清成 null,那个分支永远命不中。
+      if (await _passActivatedIfPurchased()) return;
+      ref.invalidate(entitlementsProvider); // 客户端闸与后端不一致,重拉一次
+      if (mounted) _showQuotaExhaustedSheet();
+      return;
+    }
     // 得到有用结果（命中/候选）才扣额度；未收录/错误不扣，不惩罚"没帮上忙"。
     if (st is RecognitionMatched || st is RecognitionCandidates) {
       await benefits.consumeQuota();
