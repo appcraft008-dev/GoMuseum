@@ -76,7 +76,7 @@ POST /api/v1/feedback  →  204 No Content
   "language": "zh-hant",           // scope=object 必填；API 语言参数
   "kind": "content_wrong",         // 白名单
   "text": "……",                    // 选填，≤1000
-  "app_version": "1.0.0 (31)",
+  "app_version": "GoMuseum 1.0.0 (31)",   // kVersionFootnote 整串,带前缀
   "platform": "android" | "ios"
 }
 ```
@@ -92,17 +92,63 @@ APP_KINDS    = ("app_crash", "recognition_bad", "feature_request", "other")
 
 **护栏**（`/history/*` 那个零鉴权洞的教训——匿名可写的端点必须有护栏）：
 
-- `@limiter.limit("30/hour")`——复用 `app/core/rate_limit.py` 现成的 slowapi，零新代码。
+- `@limiter.limit("60/hour")`——复用 `app/core/rate_limit.py` 现成的 slowapi，零新代码。
   ⚠️ 不用 `5/hour`（guest_login 那个值）：**博物馆共享 WiFi 是真实场景**
   （见 `app_event.py` 里 guest_created 的注释），同一出口 IP 下多人反馈完全正常，
-  收太紧会误伤真实用户。
+  收太紧会误伤真实用户。这个端点写坏了最坏后果是垃圾行（SQL 能批量清），
+  不是账号/资金风险，与 `guest_login` 那类资源型端点的风险画像不同，可以更松。
   ```
   # ponytail: 只按 IP 限流。按 device_id 的日配额是升级路径，等真被刷了再加。
   ```
+
+  🔴 **但按 IP 限流在 prod 当前根本没有按真实用户生效**（2026-09-18 实测确认，
+  见下方「前置依赖」）。本端点的限流值在那个缺陷修好之前是**装饰性的**。
 - `text` ≤ 1000 字符（Pydantic `max_length`），`kind` 白名单校验，
   `scope="object"` 时 `qid`/`museum_slug`/`language` 必填 → 否则 422。
   一条不知道指向哪件藏品的"内容反馈"是垃圾数据，宁可拒收。
 - 匿名可写（无需登录）。
+
+## 🔴 前置依赖：IP 限流在 prod 从未按真实用户生效
+
+复核这个 spec 的限流值时挖出来的，**不属于本功能，但本功能的护栏依赖它**。
+已实测确认，不是推测：
+
+```
+nginx（宿主机） --proxy_pass--> 127.0.0.1:8100 --docker-proxy--> 容器:8000
+```
+
+- `deployment/production/docker-compose.yml:54` 映射 `127.0.0.1:8100:8000`，
+  `:57` 的 uvicorn 命令**没有** `--forwarded-allow-ips`。
+- uvicorn 的 `--proxy-headers` 默认开，但 `--forwarded-allow-ips` 默认只信 `127.0.0.1`。
+  容器看到的对端是 docker 网桥网关，**不在白名单** → `X-Forwarded-For` 被丢弃。
+- nginx 那边 `proxy_set_header X-Real-IP / X-Forwarded-For` 都设了
+  （`nginx-api.gomuseum.app.conf:13-14`），**转发头一直在发，只是没人信**。
+
+**实测**（prod 容器 access log 全量，19997 条请求）：出现过的客户端 IP 只有两个
+——`127.0.0.1`（容器内健康检查）和 `172.22.0.1`（**全部**外部流量）。
+零个真实访客 IP。`get_remote_address()` 对所有用户返回同一个值。
+
+**后果：所有按 IP 限流的端点，全站共享一个桶。**
+
+| 端点 | 限流值 | 全站共享后的实际含义 |
+|---|---|---|
+| `guest_login` | 5/hour | **全站每小时只有 5 个新游客能进 App** |
+| `register` | 5/min | 全站每分钟 5 次注册 |
+| `login` | 10/min | 全站每分钟 10 次登录 |
+| 密码重置申请 / verify-email | 5/hour | 全站每小时 5 次 |
+
+`guest_login` 那条是发版阻塞级的：新用户装完 App 第一件事就是游客登录。
+
+**为什么至今没炸**：零真实用户。这个缺陷会**正好在 Play 放量时显现**——与
+[[monetization-plan]] 里那批"只有真机真购买能发现"的缺陷同类：测试环境
+（`TestClient` 进程内直连、不经 nginx）行为完全正常。
+
+**修法**（一行）：compose 的 uvicorn 命令加 `--forwarded-allow-ips="*"`。
+容器只绑 `127.0.0.1:8100`，外部无法直连，唯一入口是宿主机上的 nginx，
+所以 `*` 在这个部署形态下是安全的；写死网桥网关 IP 反而会在 docker 网络重建时失效。
+
+⚠️ **这是独立缺陷，应该单独一个 fix 先走**，不要混进反馈功能的 PR——
+它影响的是已上线的登录链路，值得单独的 review 和验证。
 
 ## 数据模型
 
@@ -145,12 +191,24 @@ class Feedback(Base):
 `setState`，没有持久化、没有后端、没有任何地方读它。用户点了以为收藏了，
 退出页面就没了——**这比没有更糟**。
 
-与刚修的「自动保存照片」（#576）是同一个模式：页面局部 bool 假装成功能。
-两周内第二例。
+与刚修的「自动保存照片」（#576）是同一个模式：页面局部状态假装成功能。
 
-删除范围：`_starred` 字段、`onToggleStar` 回调、`_A5HeroSliverAppBar.starred`
-与 `.onToggleStar` 两个参数、A5 顶栏和 legacy 顶栏（`:434`）两处 star icon。
+**而且不止这一处——这是第三例。** 复核时挖出 `history_page.dart:28` 还有一份
+**完全独立**的同款：`final Set<String> _starred = {}`，足迹列表里逐条的星标
+（`:176` 读、`:217` 切换），同样只有 `setState`、无持久化、无后端。
+这一份比顶栏那个更糟：列表里逐条打星，用户会当"标记我喜欢的作品"用，
+攒了一路退出就全没了。
+
+删除范围（两个文件）：
+
+- `guide_page.dart`：`_starred` 字段（`:110`）、A5 路径传参与回调（`:327`/`:332`）、
+  legacy 顶栏两处（`:434`/`:437`）、`_A5HeroSliverAppBar` 的 `starred`
+  与 `onToggleStar` 两个构造参数（`:782`/`:784`/`:796`/`:820`/`:825`）
+- `history_page.dart`：`_starred` 字段（`:28`）、`:176` 的读、`:210-224` 整个
+  星标 `GestureDetector`
+
 `GmIcons.star` 枚举保留（图标集是设计稿移植，不动）。
+**现有测试零引用**（`test/` 全文搜 `star` 无命中），删除不会让任何测试变红。
 
 收藏是独立功能，且「足迹」tab 已经在回答"我看过什么"。真要做该单独规划。
 
@@ -221,6 +279,15 @@ _A5HeroSliverAppBar.actions: [ ⚑ 内容反馈 ]     ← 本次新增，替掉 
 
 提交后 sheet 关闭 + 一句 toast「已收到，谢谢」。失败给可重试的提示（**不静默吞**）。
 
+**提交态不是 try/catch 能应付的**，要有 idle / submitting / failed 三态：
+`submitting` 时按钮禁用（防双击产生重复行，见下）、`failed` 时 sheet **不关闭**
+且保留用户已填的文本。照 `paywall_sheet.dart` 的 `PaywallSheetContent` 抄这套模式。
+
+**草稿状态用 `StatefulWidget` 局部持有，不要用共享 Riverpod provider**——
+两个入口（藏品页 / 设置页）共用同一个 provider 而忘了按场景重置的话，
+在藏品页写一半关掉、再从设置页打开，上次的 kind/text 会漏进来。
+sheet 关闭即销毁局部状态，这个坑从根上不存在。
+
 **不需要新出设计稿。**所需原子全部已在代码库，照现有范式套：
 
 | 要素 | 现成的在哪 |
@@ -239,9 +306,20 @@ _A5HeroSliverAppBar.actions: [ ⚑ 内容反馈 ]     ← 本次新增，替掉 
 **l10n**：10 语 × 14 key = 面板标题 ×2（内容反馈 / 意见反馈）、chips ×8、
 提交按钮、提交成功、提交失败、文本框占位符。
 
+**发请求的那一层**：项目里有两套范式——完整 Clean Architecture
+（datasource 接口 + Impl + repository 返 `Either`，见 `features/payment/data/`）
+和轻量版（单个类里直接 `_dio.post`，见 `auth_repository.dart`）。
+反馈只有一个 POST、没有 domain 逻辑、不需要 usecase，**照轻量版写**：
+一个 `FeedbackRepository`（`_dio.post` + 把 `DioException` 翻成 bool/异常），
+sheet 里调它。不建 datasource/entity/usecase 三层——那是为复杂领域准备的。
+
 > `app_version` 复用 `kVersionFootnote`（`settings_page.dart:34`）。它是**手工维护的
 > 硬编码常量**（`package_info_plus` 同样被禁），但**不会静默过期**——发版时忘了改
 > 会被现有的 `settings_version_test` 拦下。所以反馈复用它不引入新的失效点。
+>
+> ⚠️ 它的实际值是 `'GoMuseum 1.0.0 (31)'`，**带 `GoMuseum ` 前缀**。上面契约示例里的
+> `"1.0.0 (31)"` 是错的——直接整串送出，契约示例改成 `"GoMuseum 1.0.0 (31)"`，
+> 零字符串处理。`feedback_report.py` 只拿它当字符串分组，前缀无害。
 
 ## 测试
 
@@ -260,16 +338,41 @@ _A5HeroSliverAppBar.actions: [ ⚑ 内容反馈 ]     ← 本次新增，替掉 
 - 🔴 **`zh-hant` 不被降级成 `zh`**——这是本设计最容易错、且错了最难发现的一点
 - `scope=app` 提交的 payload 不含 `qid`
 - 未选 chip 时提交按钮禁用
-- 提交失败时 sheet 不关闭、给出可重试提示
+- **提交中按钮禁用**（防双击造重复行，见下方「已知错法 1」）
+- 提交失败时 sheet 不关闭、**且保留已填文本**
+- **两个入口先后打开互不干扰**：藏品页填一半关掉 → 设置页打开是干净的
+  （局部状态实现下这条恒真，但要有测试钉住，防后人改成共享 provider）
 
 **双向破坏验证**（[[petit-palais-batch-generation]] 的教训：测试只能钉住你已想到的
 错法）：把实现改坏必须变红（漏传 language → 红），**同时**把实现改成过严
 （scope=app 也强制要 qid → 对照组必须红）。两个方向都验，否则"判对了"和
 "拆松了"无法区分。
 
+⚠️ 全库搜 `model_validator` / `root_validator` **零命中**——"按 scope 做条件必填校验"
+在这个代码库里没有现成模式可抄，是本次新引入的写法。上面那组正负样本因此格外要认真，
+不能想当然套用别处代码。
+
+## 已知错法（复核挖出来的，测试清单已据此扩充）
+
+**1. 双击提交 / 超时重试 → 重复行污染「按命中数排序」。**
+这个机制是本设计的核心（第三个人报同一件事就浮上来），而重复提交会直接喂给它假热度。
+前端「提交中禁用」挡得住双击，但挡不住"请求其实已到达、客户端超时、用户点重试"。
+**修法放在读侧而不是写侧**：`feedback_report.py` 聚合时数 **不同 `device_id` 的个数**，
+不是数行数。比加幂等键省，而且更正确——排序要的本来就是"多少人报过"。
+
+**2. `language` 坐标对 facts 面板字段不是可信定位。**
+用户在 `zh-hant` 页面看到作者名显示成英文，那是 `museum_repo.py:600-621` `_resolve_name`
+的正常回退（缺 zh-hant 时回退英文）。他点「内容有误」，`language=zh-hant` 会被忠实记下，
+但真正缺的是 `artist.name_i18n` 的 zh-hant 支，**不在 `object_content_sections` 那一行里**。
+坐标"对得上语言"不等于"对得上出错的表"。
+不在 UI 上解决（让用户区分是哪张表 = 又回到"让用户懂技术分层"）。
+写进 `feedback_report.py` 的注释：`content_wrong` 类反馈要先看一眼是不是名字回退，
+别直接去改 section 正文。
+
 ## 读反馈（不建后台）
 
-`scripts/feedback_report.py`——按 `(qid, language, kind)` 聚合计数排序，
+`scripts/feedback_report.py`——按 `(qid, language, kind)` 聚合，
+**计数数的是不同 `device_id` 的个数，不是行数**（见「已知错法 1」）；
 `scope=app` 的按 `(kind, app_version)` 聚合。第三个人报同一件事时它自己浮上来。
 
 并进 `ops_report.py` 还是独立脚本，实施时看哪个改动小。
