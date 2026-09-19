@@ -449,19 +449,33 @@ def audio_access(
         db, user_id, qid, benefits, language=language, section=section, city=city
     ):
         return "allowed"
-    if benefits is None:
-        return "denied"
     # 只有主讲解段可认领:深度段/问答/作者介绍属付费内容
     if section != FREE_AUDIO_SECTION:
         return "denied"
+    # ⚠️ benefits 行是**懒建**的(首次 /payment/benefits 或首次识别时才建),
+    # 所以"没有行"= 一次都还没用过 = 免费试听**还在**,不是"没有权限"。
+    # 这里曾直接 denied —— 于是刚注册的用户在 App 把行建出来之前点听讲解,
+    # 迎面就是付费墙(2026-09-19 staging 实证:注册后直接 GET /audio 得 402,
+    # 先调一次 /payment/benefits 再调同一个端点就是 200)。
+    # 判 claimable 不会白送:名额在 claim_audio_now 里才落库,而它会把行建出来。
+    if benefits is None:
+        return "claimable"
     return "claimable" if not getattr(benefits, "free_audio_qid", None) else "denied"
 
 
 def claim_audio_now(db, user_id: str, qid: str, language: str = "zh") -> bool:
-    """音频**确实送达后**才认领首件。与 audio_access 的 claimable 配对使用。"""
-    from app.models.user_benefits import UserBenefits
+    """音频**确实送达后**才认领首件。与 audio_access 的 claimable 配对使用。
 
-    benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
-    if benefits is None:
-        return False
+    行不存在就建一行再认领 —— 认领是**写**路径,建行天经地义;
+    判定那侧仍然一个字节都不写(见 audio_access 的副作用约束)。
+    没有这一步,上面放行的 claimable 就会认领失败,变成"每一件都免费"。
+
+    ⚠️ 这里拿不到 `device_id`(音频端点的身份一律取自令牌,不收设备参数),
+    所以建行时**不做匿名行归并**——那件事归 `/payment/benefits` 管,它带 device_id。
+    实际顺序上 App 一启动就会调那个端点,轮不到这里建行;真轮到了(裸调 API),
+    代价是该设备的匿名额度没被归并,不会产生同一 user 的第二行(按 user_id 查在先)。
+    """
+    from app.services.benefits_service import BenefitsService
+
+    benefits = BenefitsService(db).get_or_create_benefits(user_id=user_id)
     return claim_free_audio(db, benefits, qid, language)

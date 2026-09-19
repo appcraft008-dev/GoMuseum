@@ -7,10 +7,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 
 /// 与 GuideAudioPlayer._maybeAutoPlay 的准入条件一致。
+///
+/// ⚠️ 免费名额的规则**只调 `canPlayAudio`,不在这里手抄一份**。
+/// 这里曾抄成 `isActive || freeAudioQid == null || == qid` —— 抄得比
+/// canPlayAudio 宽,于是本文件全绿(自动播准入判"可以播"),
+/// audio_paywall_gate_test 也全绿(拦截判"弹墙"),**合起来却是坏的**:
+/// 自动播放行后立刻撞上拦截,"保证送达的首体验"一次都没发生过。
 bool willAutoPlay(Entitlements? ent, String qid) {
   if (ent == null) return false;
   if (ent.isPurchasedNotActivated) return false;
-  return ent.isActive || ent.freeAudioQid == null || ent.freeAudioQid == qid;
+  return ent.canPlayAudio(qid);
 }
 
 Entitlements _free({String? claimed}) => Entitlements(
