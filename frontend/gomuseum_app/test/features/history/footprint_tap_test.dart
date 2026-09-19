@@ -12,6 +12,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/error/failures.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/history/domain/entities/history_item.dart';
 import 'package:gomuseum_app/features/history/domain/repositories/history_repository.dart';
@@ -88,6 +90,10 @@ Future<GuideArgs? Function()> _pump(
     ProviderScope(
       overrides: [
         historyRepositoryProvider.overrideWithValue(_FakeRepo(items)),
+        // 足迹页现在要查馆名(按「一次参观」分组,见 footprint_visit.dart)。
+        // 不覆写就是一次真 dio 请求,测试结束后超时 Timer 还挂着直接判失败。
+        // 本组只关心点进去带了什么参数,给空列表即可(小节标题回落 slug)。
+        museumsListProvider.overrideWith((ref) async => <MuseumSummary>[]),
       ],
       child: MaterialApp.router(
         routerConfig: router,

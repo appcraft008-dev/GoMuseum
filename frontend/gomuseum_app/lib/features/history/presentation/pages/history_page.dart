@@ -1,14 +1,20 @@
 /// GoMuseum 足迹页 — 暖纸手册定稿（FinalFootprints）
 ///
-/// 刊头标题 + 统计行 + 目录编号分组（后端足迹无博物馆字段，按日期分组）
-/// + 条目（缩略图 / 名称 / 时间 / 标星）。
+/// 刊头标题 + 统计行 + **按「一次参观」（同一天 × 同一个馆）分组** + 条目
+/// （缩略图 / 名称 / 时间 / 艺术家）。分组规则见 `footprint_visit.dart`。
+///
+/// 馆名与城市**不在足迹响应里** —— 足迹只给 `museum_slug`，名字从
+/// `museumsListProvider` 就地查。这是纯呈现，不动契约。
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/history/domain/entities/history_item.dart';
+import 'package:gomuseum_app/features/history/presentation/footprint_visit.dart';
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -128,36 +134,72 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       ];
     }
 
-    final groups = _groupByDay(history.items);
+    // 馆列表拿不到就先用 slug 兜底：足迹本身已经能显示了，不该被另一个请求卡住。
+    // 足迹要跑一圈 hydrate，几乎总比这个扁平列表慢 —— 兜底是个短暂瞬态。
+    final museums = <String, MuseumSummary>{
+      for (final m in ref.watch(museumsListProvider).valueOrNull ??
+          const <MuseumSummary>[])
+        m.slug: m,
+    };
+    final lang = Localizations.localeOf(context).languageCode;
+
+    final visits = groupFootprintsByVisit(history.items);
+    final showCity = footprintsSpanCities(
+      visits.map((v) => museums[v.museumSlug]?.localizedCity(lang) ?? ''),
+    );
+
     final widgets = <Widget>[];
+    String? lastCity;
     var index = 0;
-    for (final entry in groups.entries) {
+    for (final visit in visits) {
+      final museum = museums[visit.museumSlug];
+      if (showCity) {
+        final city = museum?.localizedCity(lang) ?? '';
+        // 城市未知时不发标题、也不动 lastCity：把"巴黎 → 未知 → 巴黎"
+        // 断成两段巴黎，是在用缺数据制造一次不存在的行程。
+        if (city.isNotEmpty && city != lastCity) {
+          widgets.add(_cityHead(gm, city));
+          lastCity = city;
+        }
+      }
       index++;
       widgets.add(Padding(
         padding: const EdgeInsets.only(top: 20),
         child: GmSectionHead(
           number: index.toString().padLeft(2, '0'),
-          label: entry.key,
-          note: l10n.itemsCount(entry.value.length),
+          label: museum?.localizedName(lang) ??
+              visit.museumSlug ??
+              l10n.footprintNoMuseum,
+          note:
+              '${_dayLabel(visit.day)} · ${l10n.itemsCount(visit.items.length)}',
         ),
       ));
-      for (final item in entry.value) {
+      for (final item in visit.items) {
         widgets.add(_itemRow(gm, item));
       }
     }
     return widgets;
   }
 
-  Map<String, List<HistoryItem>> _groupByDay(List<HistoryItem> items) {
-    final sorted = [...items]
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    final groups = <String, List<HistoryItem>>{};
-    for (final item in sorted) {
-      groups.putIfAbsent(_dayLabel(item.timestamp), () => []).add(item);
-    }
-    return groups;
-  }
+  Widget _cityHead(GmPalette gm, String city) => Padding(
+        padding: const EdgeInsets.only(top: 26),
+        child: Row(
+          children: [
+            GmIcon(GmIcons.pin, size: 13, color: gm.accent),
+            const SizedBox(width: 7),
+            Text(
+              city,
+              style: GmText.serif(
+                size: 14,
+                weight: FontWeight.w700,
+                letterSpacing: context.gmLetterSpacing(2),
+              ),
+            ),
+          ],
+        ),
+      );
 
+  /// 只负责**显示**，不参与分组 —— 分组键是真实日期（见 `footprint_visit.dart`）。
   String _dayLabel(DateTime t) {
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
@@ -166,6 +208,12 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     final diff = today.difference(day).inDays;
     if (diff == 0) return l10n.today;
     if (diff == 1) return l10n.yesterday;
+    // 跨年才带年份：「过了很长时间后回头看」时，不写年份的 9月18日 谁也认不出是哪年。
+    // ⚠️ 参数顺序是 **(day, month, year)**，不是模板里 `{month}/{day}/{year}` 的顺序
+    // —— gen-l10n 对三个占位符重排过，而生成的形参全是 `Object`，写反了照样编译，
+    // 只在屏幕上变成「9年18月2026日」。`footprint_test.dart` 钉着这条。
+    if (t.year != now.year)
+      return l10n.dateYearMonthDay(t.day, t.month, t.year);
     return l10n.dateMonthDay(t.month, t.day);
   }
 

@@ -593,6 +593,12 @@ abstract class AppLocalizations {
   /// **'Footprints'**
   String get footprintTitle;
 
+  /// No description provided for @footprintNoMuseum.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown venue'**
+  String get footprintNoMuseum;
+
   /// No description provided for @noFootprints.
   ///
   /// In en, this message translates to:
@@ -646,6 +652,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{month}/{day}'**
   String dateMonthDay(Object month, Object day);
+
+  /// No description provided for @dateYearMonthDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}/{day}/{year}'**
+  String dateYearMonthDay(Object day, Object month, Object year);
 
   /// No description provided for @deleteFootprintQ.
   ///
