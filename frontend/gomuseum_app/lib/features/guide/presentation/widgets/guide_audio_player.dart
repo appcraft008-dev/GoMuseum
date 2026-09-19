@@ -130,10 +130,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     final ent = ref.read(entitlementsProvider).value;
     if (ent == null) return false;
 
-    // ⚠️ 这一段**必须排在 canPlayAudio 之前**。免费试听那一件的 qid 会让
+    // ⚠️ 这一段**必须排在 canPlayAudio 之前**。已解锁作品的 qid 会让
     // canPlayAudio 返回 true,于是已付费用户在那一件上被当成免费用户直接放行,
     // 激活入口彻底消失 —— 他点多少次都等不到"开始你的 7 天通票?",
-    // 只会撞后端 402(免费试听只放行主讲解段,问答/作者介绍段不在内),
+    // 只会撞后端 402(免费只放行主讲解段,问答/作者介绍段不在内),
     // 最后以为没买成功而**重复购买**。2026-09-02 真机实测撞到,买了两次。
     if (ent.isPurchasedNotActivated) {
       if (await ensurePassActivated(context, ref, ent)) return false; // 已生效,继续播
@@ -172,7 +172,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
 
   bool _autoPlayed = false;
 
-  /// 自动播的准入:通票内、或这就是免费用户的首件(未认领 / 已认领同一件)。
+  /// 自动播的准入:通票内、或这是识别解锁过的作品。
   /// 拿不到权益时不自动播 —— 宁可不响,也不要一进页面就撞墙。
   void _maybeAutoPlay() {
     if (!widget.autoPlay || _autoPlayed || _ui != _Ui.idle) return;
@@ -181,8 +181,8 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     // 已购未激活:绝不自动播——那会在进页面的瞬间弹出激活确认,等于替用户
     // 决定何时开始烧那 7×24 小时。等他主动点播放键再问(见 _blockedByPaywall)。
     if (ent.isPurchasedNotActivated) return;
-    // 判据只留一份:免费名额的规则写在 canPlayAudio 里(含"还没认领=还能听"
-    // 和"只覆盖主讲解段")。这里曾手抄一份、且和拦截那处抄得不一样。
+    // 判据只留一份:免费语音的规则写在 canPlayAudio 里(识别解锁清单 +
+    // 只覆盖主讲解段)。这里曾手抄一份、且和拦截那处抄得不一样。
     if (!ent.canPlayAudio(widget.qid, section: widget.section)) return;
     _autoPlayed = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -269,7 +269,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     return true;
   }
 
-  /// 这一件是不是用掉了(或将要用掉)免费名额——通票用户不显示此标。
+  /// 这一件是不是免费听的(识别解锁过)——通票用户不显示此标。
   ///
   /// ⚠️ `purchased_not_activated` 也是通票用户(已付款,只是没开始计时),
   /// 只判 isActive 会让刚买完的人继续看到「免费试听」——他刚付了钱,
@@ -410,8 +410,8 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             ),
           ),
           const SizedBox(width: 10),
-          // 「免费试听」必须明说 —— 否则用户随手在一件小作品上用掉名额,
-          // 走到蒙娜丽莎前发现锁了会觉得被坑(见 memory monetization-plan)。
+          // 明说「免费」:免费层的语音只覆盖**识别过的作品的主讲解段**,
+          // 不标的话用户会以为所有语音都免费,点到深度段撞墙才发现。
           if (_isFreePreview()) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

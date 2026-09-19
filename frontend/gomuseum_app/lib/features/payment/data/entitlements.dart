@@ -11,9 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 
-/// 免费试听覆盖的段。与后端 `entitlement_service.FREE_AUDIO_SECTION` 一一对应 ——
+/// 免费语音覆盖的段。与后端 `entitlement_service.FREE_AUDIO_SECTION` 一一对应 ——
 /// 一件作品有讲解/背景/分析/问答/作者介绍多段,每段独立 TTS,
-/// 不限段的话"免费一件"实际是几十次生成(再乘 10 种语言)。
+/// 不限段的话"识别过就能听"实际是每件几十次生成。
 const String kFreeAudioSection = 'guide';
 
 /// 权益状态。与后端 entitlement_service 的常量一一对应。
@@ -27,7 +27,7 @@ class Entitlements {
     this.activateBy,
     this.freeRecognitionsLeft,
     this.freeRecognitionsTotal,
-    this.freeAudioQid,
+    this.freeAudioQids = const [],
     this.known = true,
   });
 
@@ -60,8 +60,11 @@ class Entitlements {
   /// 进度环的分母,由后端给 —— 别在前端写死(曾写死 10,后端调 5 后显示 "5/10")。
   final int? freeRecognitionsTotal;
 
-  /// 已认领的首件免费语音 qid。该件可无限重播,其余需通票。
-  final String? freeAudioQid;
+  /// **识别出来的作品**:这些件的主讲解段可免费无限重播,其余需通票。
+  ///
+  /// 上限天然等于免费识别次数,所以前端没有第二个数字要维护。
+  /// 老后端不认识这个字段 → 空表 → 本地闸一律拦;所以**必须先上后端再发包**。
+  final List<String> freeAudioQids;
 
   /// 通票是否生效中。
   bool get isActive => state == 'active';
@@ -73,21 +76,20 @@ class Entitlements {
   /// 这类用户见过通票的样子,权益页该给他看用过的那张票,不是一个空商店。
   bool get isExpired => state == 'expired';
 
-  /// 某件的语音能不能放:通票内全放;免费用户放**已认领的那一件**,
-  /// 还没认领过的话**任意一件都可以**(听成了就认领它,见后端 claim_audio_now)。
+  /// 某件的语音能不能放:通票内全放;免费用户放**识别出来的那些件**的主讲解段。
   ///
-  /// ⚠️ `freeAudioQid == null` 的意思是「免费试听**还没用掉**」,不是「没有权限」。
-  /// 这里曾漏掉这一支 —— 于是每个新用户点听讲解都被客户端自己弹墙,
-  /// 请求根本发不出去,后端那边准备好的 claimable 永远等不到人
-  /// (2026-09-19 真机实测:新账号全程零 `/audio` 请求)。
+  /// ⚠️ 这只是省一次往返的**前置**闸,真闸永远在后端(`audio_access`)。
+  /// 判据必须与那边同一套 —— 两边各写一份的下场见 2026-09-19:
+  /// 自动播那侧判"可以播"、拦截那侧判"弹墙",两个文件各自全绿,
+  /// 合起来是"识别完自动播、然后立刻弹墙",免费试听一次都没发生过。
   ///
-  /// [section] 不能省:免费名额只覆盖主讲解段(后端 `FREE_AUDIO_SECTION`),
+  /// [section] 不能省:免费只覆盖主讲解段(后端 `FREE_AUDIO_SECTION`),
   /// 深度段/问答/作者介绍属付费内容。不判它的话,免费用户点深度段会被这里
   /// 放行、到后端再吃一个 402 —— 白跑一趟,还得靠 `_showPaywallAnyway` 兜。
   bool canPlayAudio(String qid, {String section = kFreeAudioSection}) {
     if (canAudioAny) return true;
     if (section != kFreeAudioSection) return false;
-    return freeAudioQid == null || freeAudioQid == qid;
+    return freeAudioQids.contains(qid);
   }
 
   /// 拿不到权益时的保守回退:按免费层算,次数未知。
@@ -119,7 +121,11 @@ class Entitlements {
       activateBy: lapse == null ? null : DateTime.tryParse(lapse)?.toLocal(),
       freeRecognitionsLeft: json['free_recognitions_left'] as int?,
       freeRecognitionsTotal: json['free_recognitions_total'] as int?,
-      freeAudioQid: json['free_audio_qid'] as String?,
+      // 契约:可缺字段一律带回退。老后端没有这个键 → 空表(本地闸拦,
+      // 但真闸在后端;所以上线顺序是**后端先行**)。
+      freeAudioQids:
+          (json['free_audio_qids'] as List?)?.whereType<String>().toList() ??
+              const [],
     );
   }
 }
