@@ -1460,7 +1460,7 @@ abstract class AppLocalizations {
   /// No description provided for @audioLockedHint.
   ///
   /// In en, this message translates to:
-  /// **'Audio commentary needs the pass — your free preview has been used.'**
+  /// **'Audio commentary needs the pass — artworks you\'ve scanned are free to listen to.'**
   String get audioLockedHint;
 
   /// No description provided for @quotaExhausted.
@@ -1712,7 +1712,7 @@ abstract class AppLocalizations {
   /// No description provided for @benefitsFreeAudioNote.
   ///
   /// In en, this message translates to:
-  /// **'You can preview the main audio commentary on one artwork for free.'**
+  /// **'For every artwork you scan, the main audio commentary is free. Any other artwork can be unlocked with one free credit.'**
   String get benefitsFreeAudioNote;
 
   /// No description provided for @benefitsFeatBrowse.
@@ -2026,6 +2026,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try again'**
   String get fbRetry;
+
+  /// No description provided for @unlockAudioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use one free credit?'**
+  String get unlockAudioTitle;
+
+  /// No description provided for @unlockAudioBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks the audio commentary for this artwork. {left} will be left.'**
+  String unlockAudioBody(int left);
+
+  /// No description provided for @unlockAudioCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock and play'**
+  String get unlockAudioCta;
 }
 
 class _AppLocalizationsDelegate

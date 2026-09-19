@@ -224,7 +224,7 @@
   "restoreNothingFound": "没有找到未完成的付款",
   "restoreSucceeded": "已恢复你的通票",
   "audioFreePreview": "免费试听",
-  "audioLockedHint": "语音讲解需要通票——免费试听名额已用在另一件作品上。",
+  "audioLockedHint": "语音讲解需要通票——拍照识别出来的作品可以免费听。",
   "quotaExhausted": "免费识别次数已用完。",
   "activateLater": "稍后再说",
   "paywallLoginToBuy": "登录后购买",
@@ -274,7 +274,7 @@
   "benefitsSecCurrentQuota": "现在的额度",
   "benefitsSecBuyAnother": "再来一张",
   "benefitsRecognition": "拍照识别",
-  "benefitsFreeAudioNote": "语音讲解可免费试听 1 件作品的主讲解段。",
+  "benefitsFreeAudioNote": "拍照识别出来的作品,主讲解段都可以免费听。其他作品可用 1 次免费额度解锁。",
   "benefitsFeatBrowse": "浏览、搜索、完整文字讲解",
   "benefitsFeatPresetQa": "预设问题解答",
   "benefitsFeatRecognition": "不限次拍照识别",
@@ -326,5 +326,15 @@
   "fbSubmit": "提交",
   "fbThanks": "已收到，谢谢",
   "fbFailed": "没能发送，请检查网络",
-  "fbRetry": "重试"
+  "fbRetry": "重试",
+  "unlockAudioTitle": "用掉 1 次免费额度？",
+  "unlockAudioBody": "解锁这件作品的语音讲解。用掉后还剩 {left} 次。",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "解锁并播放"
 }

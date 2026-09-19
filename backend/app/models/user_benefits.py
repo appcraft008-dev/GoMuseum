@@ -6,7 +6,7 @@ SQLAlchemy model for user subscription and recognition benefits
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, func
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.core.database import Base
@@ -63,11 +63,20 @@ class UserBenefits(Base):
 
     # Referral rewards
     referral_bonus_quota = Column(Integer, nullable=False, default=0)
-    # 首件免费语音:按**作品**认领(非 section、非"一次待花的券")。
-    # 认领时机=首次识别成功后自动播放,保证每个免费用户都体验过语音。
+    # 免费语音解锁清单:**你识别出来的作品,主讲解段都能听**(2026-09-19 定)。
+    # 天然以免费识别次数为上限,所以这里不再有第二个数字要维护。
+    #
+    # 为什么不直接查 recognition_events(那张表已经有 user_id + qid):
+    # 删足迹 = 把 recognition_events.user_id 清成 NULL(见该模型的说明)。
+    # 判据挂在那张表上,用户一删足迹就连带没收了已解锁的语音 ——
+    # 隐私操作不该收走已经付出过额度换来的权益,两件事必须各存各的。
+    free_audio_qids = Column(JSON, nullable=True)
+
+    # ↓ 旧的"首件认领"三列。免费语音改成跟着识别走之后**不再读写**,
+    #   留列不删是因为删列不可回滚(契约纪律:加法优先)。
+    #   ⚠️ `summary()` 里的 `free_audio_qid` 字段已恒为 None ——
+    #   老 App 读到 null 会把本地闸放开,由服务端 402 兜底,退化方向是对的。
     free_audio_qid = Column(String(64), nullable=True)
-    # 免费试听收敛到 (作品, 语言, 主讲解段):一件作品有多段、每段独立 TTS,
-    # 再乘 10 种语言 —— 只记 qid 的话"免费一件"实际是几十次生成。
     free_audio_lang = Column(String(16), nullable=True)
     free_audio_claimed_at = Column(DateTime, nullable=True)
 

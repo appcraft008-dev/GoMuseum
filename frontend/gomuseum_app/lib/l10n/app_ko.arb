@@ -224,7 +224,7 @@
   "restoreNothingFound": "미완료 결제를 찾지 못했습니다",
   "restoreSucceeded": "패스를 복원했습니다",
   "audioFreePreview": "무료 체험",
-  "audioLockedHint": "음성 해설에는 패스가 필요합니다. 무료 체험은 다른 작품에 이미 사용되었습니다.",
+  "audioLockedHint": "음성 해설에는 패스가 필요합니다. 촬영해서 인식한 작품은 무료로 들을 수 있습니다.",
   "quotaExhausted": "무료 인식 횟수를 모두 사용했습니다.",
   "activateLater": "나중에",
   "paywallLoginToBuy": "로그인 후 구매",
@@ -274,7 +274,7 @@
   "benefitsSecCurrentQuota": "현재 이용량",
   "benefitsSecBuyAnother": "한 장 더",
   "benefitsRecognition": "사진 인식",
-  "benefitsFreeAudioNote": "작품 한 점의 주요 음성 해설을 무료로 들어볼 수 있습니다.",
+  "benefitsFreeAudioNote": "촬영해서 인식한 작품은 주요 음성 해설을 무료로 들을 수 있습니다. 그 밖의 작품도 무료 횟수 1회로 잠금 해제할 수 있습니다.",
   "benefitsFeatBrowse": "둘러보기, 검색, 텍스트 해설 전문",
   "benefitsFeatPresetQa": "추천 질문에 대한 답변",
   "benefitsFeatRecognition": "무제한 사진 인식",
@@ -326,5 +326,15 @@
   "fbSubmit": "보내기",
   "fbThanks": "접수되었습니다. 감사합니다",
   "fbFailed": "보내지 못했습니다. 연결을 확인해 주세요",
-  "fbRetry": "다시 시도"
+  "fbRetry": "다시 시도",
+  "unlockAudioTitle": "무료 횟수를 1회 사용할까요?",
+  "unlockAudioBody": "이 작품의 음성 해설을 잠금 해제합니다. {left}회 남게 됩니다.",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "잠금 해제하고 재생"
 }

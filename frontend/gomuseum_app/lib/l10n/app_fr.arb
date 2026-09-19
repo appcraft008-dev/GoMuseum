@@ -224,7 +224,7 @@
   "restoreNothingFound": "Aucun paiement en attente",
   "restoreSucceeded": "Votre pass a été restauré",
   "audioFreePreview": "Écoute gratuite",
-  "audioLockedHint": "Le commentaire audio nécessite le pass — votre écoute gratuite a déjà été utilisée.",
+  "audioLockedHint": "Le commentaire audio nécessite le pass — les œuvres que vous avez scannées s'écoutent gratuitement.",
   "quotaExhausted": "Vous avez utilisé toutes vos reconnaissances gratuites.",
   "activateLater": "Plus tard",
   "paywallLoginToBuy": "Se connecter pour acheter",
@@ -274,7 +274,7 @@
   "benefitsSecCurrentQuota": "Votre quota actuel",
   "benefitsSecBuyAnother": "Un autre pass",
   "benefitsRecognition": "Reconnaissance photo",
-  "benefitsFreeAudioNote": "Vous pouvez écouter gratuitement le commentaire audio principal d'une œuvre.",
+  "benefitsFreeAudioNote": "Pour chaque œuvre que vous scannez, le commentaire audio principal est gratuit. Toute autre œuvre peut être débloquée avec un crédit gratuit.",
   "benefitsFeatBrowse": "Navigation, recherche, commentaire écrit intégral",
   "benefitsFeatPresetQa": "Réponses aux questions suggérées",
   "benefitsFeatRecognition": "Reconnaissance photo illimitée",
@@ -326,5 +326,15 @@
   "fbSubmit": "Envoyer",
   "fbThanks": "Bien reçu, merci",
   "fbFailed": "Envoi impossible. Vérifiez votre connexion.",
-  "fbRetry": "Réessayer"
+  "fbRetry": "Réessayer",
+  "unlockAudioTitle": "Utiliser un crédit gratuit ?",
+  "unlockAudioBody": "Débloque le commentaire audio de cette œuvre. Il vous en restera {left}.",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "Débloquer et écouter"
 }

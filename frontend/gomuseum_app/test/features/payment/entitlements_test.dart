@@ -33,48 +33,56 @@ void main() {
     expect(e.expiresAt, isNotNull);
   });
 
-  test('免费用户:只有已认领的首件能放语音,可重播;第二件锁', () {
+  test('免费用户:识别过的作品能放语音、可重播;没识别过的锁', () {
     final e = Entitlements.fromJson({
       'state': 'not_purchased',
       'free_recognitions_left': 3,
       'free_recognitions_total': 5,
-      'free_audio_qid': 'Q12418',
+      'free_audio_qids': ['Q12418', 'Q151952'],
       'can': {'recognize': true, 'audio_any': false},
     });
     expect(e.canPlayAudio('Q12418'), isTrue);
-    expect(e.canPlayAudio('Q12418'), isTrue, reason: '首件可无限重播');
-    expect(e.canPlayAudio('Q151952'), isFalse);
+    expect(e.canPlayAudio('Q12418'), isTrue, reason: '可无限重播');
+    expect(e.canPlayAudio('Q151952'), isTrue, reason: '识别过的都算,不只第一件');
+    expect(e.canPlayAudio('Q4'), isFalse, reason: '没识别过的要票');
   });
 
-  test('免费用户**还没认领**:任意一件的主讲解段都能听(听成了才认领它)', () {
-    // 🔴 这是 2026-09-19 真机撞到的坑:`free_audio_qid` 为空的含义是
-    // 「免费试听还没用掉」,曾被判成「没有权限」—— 于是**每个新用户**点听讲解
-    // 都被客户端自己弹付费墙,`/audio` 请求根本发不出去(prod 日志零请求)。
-    // 后端那侧对同一状态判的是 claimable(放行并在送达后认领)。
+  test('一次都还没识别 → 语音全锁(后端也是 denied,两边同一套判据)', () {
+    // 2026-09-19 前这里是反的:免费名额是"一张待花的券",`free_audio_qid`
+    // 为空被读成「还没用掉,哪件都能听」。规则改成跟着识别走之后,
+    // 空清单的含义变成「还没识别过任何作品」—— 同一个 JSON,判断相反。
     final e = Entitlements.fromJson({
       'state': 'not_purchased',
       'free_recognitions_left': 5,
       'free_recognitions_total': 5,
-      'free_audio_qid': null, // 一次都还没听过
+      'free_audio_qids': <String>[],
+      'can': {'recognize': true, 'audio_any': false},
+    });
+    expect(e.canPlayAudio('Q12418'), isFalse);
+    expect(e.canPlayAudio('Q151952'), isFalse);
+  });
+
+  test('老后端没有这个字段 → 空表,不炸(上线顺序必须后端先行)', () {
+    final e = Entitlements.fromJson({
+      'state': 'not_purchased',
+      'can': {'recognize': true, 'audio_any': false},
+    });
+    expect(e.freeAudioQids, isEmpty);
+    expect(e.canPlayAudio('Q12418'), isFalse);
+  });
+
+  test('已解锁的那一件:深度段仍要票 —— 别让"识别过"变成整件解锁', () {
+    final e = Entitlements.fromJson({
+      'state': 'not_purchased',
+      'free_audio_qids': ['Q12418'],
       'can': {'recognize': true, 'audio_any': false},
     });
     expect(e.canPlayAudio('Q12418'), isTrue);
-    expect(e.canPlayAudio('Q151952'), isTrue, reason: '还没认领,哪一件都行');
-    // 但名额只覆盖主讲解段:深度段/问答/作者介绍是付费内容,
+    // 深度段/问答/作者介绍各自独立 TTS,属付费内容。
     // 不判 section 的话前端放行、后端 402,白跑一趟。
     expect(e.canPlayAudio('Q12418', section: 'analysis'), isFalse);
     expect(e.canPlayAudio('Q12418', section: 'qa'), isFalse);
     expect(e.canPlayAudio('Q12418', section: 'artist_bio'), isFalse);
-  });
-
-  test('已认领的那一件:深度段仍要票 —— 别让"首件"变成整件解锁', () {
-    final e = Entitlements.fromJson({
-      'state': 'not_purchased',
-      'free_audio_qid': 'Q12418',
-      'can': {'recognize': true, 'audio_any': false},
-    });
-    expect(e.canPlayAudio('Q12418'), isTrue);
-    expect(e.canPlayAudio('Q12418', section: 'analysis'), isFalse);
   });
 
   test('通票生效:深度段也全放行', () {

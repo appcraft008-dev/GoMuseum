@@ -713,7 +713,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get audioFreePreview => '無料試聴';
 
   @override
-  String get audioLockedHint => '音声解説にはパスが必要です。無料試聴は別の作品で使用済みです。';
+  String get audioLockedHint => '音声解説にはパスが必要です。撮影して認識した作品は無料で聴けます。';
 
   @override
   String get quotaExhausted => '無料の認識回数を使い切りました。';
@@ -861,7 +861,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get benefitsRecognition => '写真認識';
 
   @override
-  String get benefitsFreeAudioNote => '作品 1 点の音声ガイド本編を無料で試聴できます。';
+  String get benefitsFreeAudioNote =>
+      '撮影して認識した作品は、音声ガイド本編を無料で聴けます。それ以外の作品も無料枠 1 回で解放できます。';
 
   @override
   String get benefitsFeatBrowse => '閲覧・検索・テキスト解説の全文';
@@ -1038,4 +1039,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get fbRetry => '再試行';
+
+  @override
+  String get unlockAudioTitle => '無料枠を 1 回使いますか？';
+
+  @override
+  String unlockAudioBody(int left) {
+    return 'この作品の音声ガイドを解放します。残りは $left 回になります。';
+  }
+
+  @override
+  String get unlockAudioCta => '解放して再生';
 }

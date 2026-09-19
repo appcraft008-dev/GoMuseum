@@ -32,12 +32,9 @@ _bearer = HTTPBearer(auto_error=False)
 
 def _require_tts_access(
     db, credentials, *, qid: str | None, language: str = "zh", section: str = "guide"
-) -> tuple[str, str]:
-    """TTS 的权益闸。qid 给了就与 /audio 同规则(通票/已认领首件/可认领);
-    没有 qid(ad-hoc 任意文本)则必须通票生效。拒绝一律 402,前端据此弹付费页。
-
-    返回 (user_id, kind)。⚠️ kind == "claimable" 必须在音频**送达后**认领 ——
-    否则永远认领不掉,每件都判 claimable = 免费用户无限听,闸等于没有。"""
+) -> str:
+    """TTS 的权益闸。qid 给了就与 /audio 同规则(通票,或识别解锁过的主讲解段);
+    没有 qid(ad-hoc 任意文本)则必须通票生效。拒绝一律 402,前端据此弹付费页。"""
     from app.services import entitlement_service as es
     from app.services.auth_service import AuthService
 
@@ -47,21 +44,13 @@ def _require_tts_access(
     if qid is None:
         if es.resolve_state(db, user_id)[0] != es.ACTIVE:
             raise HTTPException(status_code=402, detail={"reason": "pass_required"})
-        return user_id, "allowed"
-    kind = es.audio_access(db, user_id, qid, language=language, section=section)
-    if kind == "denied":
+        return user_id
+    if (
+        es.audio_access(db, user_id, qid, language=language, section=section)
+        == "denied"
+    ):
         raise HTTPException(status_code=402, detail={"reason": "pass_required"})
-    return user_id, kind
-
-
-def _claim_tts_after_success(
-    db, gate: tuple[str, str], qid: str, language: str = "zh"
-) -> None:
-    from app.services import entitlement_service as es
-
-    user_id, kind = gate
-    if kind == "claimable":
-        es.claim_audio_now(db, user_id, qid, language)
+    return user_id
 
 
 # Request/Response Models
@@ -246,7 +235,7 @@ async def generate_tts_audio(
     if request.qid and request.section_code:
         db = SessionLocal()
         try:
-            gate = _require_tts_access(
+            _require_tts_access(
                 db,
                 credentials,
                 qid=request.qid,
@@ -258,7 +247,6 @@ async def generate_tts_audio(
                 db, request.qid, request.language, request.section_code
             )
             if existing:
-                _claim_tts_after_success(db, gate, request.qid, request.language)
                 return AudioUrlResponse(
                     audio_url=storage.public_url(existing), cached=True
                 )
@@ -280,12 +268,11 @@ async def generate_tts_audio(
                     status_code=404,
                     detail={"error": "ObjectNotFound", "qid": request.qid},
                 )
-            _claim_tts_after_success(db, gate, request.qid, request.language)
             return AudioUrlResponse(audio_url=storage.public_url(key), cached=False)
         finally:
             db.close()
 
-    # ad-hoc(任意文本)：没有 qid 可挂靠首件免费,按付费功能处理
+    # ad-hoc(任意文本)：没有 qid 可挂靠识别解锁,按付费功能处理
     _db = SessionLocal()
     try:
         _require_tts_access(_db, credentials, qid=None)

@@ -224,7 +224,7 @@
   "restoreNothingFound": "未完了の支払いは見つかりませんでした",
   "restoreSucceeded": "パスを復元しました",
   "audioFreePreview": "無料試聴",
-  "audioLockedHint": "音声解説にはパスが必要です。無料試聴は別の作品で使用済みです。",
+  "audioLockedHint": "音声解説にはパスが必要です。撮影して認識した作品は無料で聴けます。",
   "quotaExhausted": "無料の認識回数を使い切りました。",
   "activateLater": "あとで",
   "paywallLoginToBuy": "ログインして購入",
@@ -274,7 +274,7 @@
   "benefitsSecCurrentQuota": "現在の枠",
   "benefitsSecBuyAnother": "もう一枚",
   "benefitsRecognition": "写真認識",
-  "benefitsFreeAudioNote": "作品 1 点の音声ガイド本編を無料で試聴できます。",
+  "benefitsFreeAudioNote": "撮影して認識した作品は、音声ガイド本編を無料で聴けます。それ以外の作品も無料枠 1 回で解放できます。",
   "benefitsFeatBrowse": "閲覧・検索・テキスト解説の全文",
   "benefitsFeatPresetQa": "おすすめの質問への回答",
   "benefitsFeatRecognition": "写真認識が無制限",
@@ -326,5 +326,15 @@
   "fbSubmit": "送信",
   "fbThanks": "受け取りました。ありがとうございます",
   "fbFailed": "送信できません。通信環境をご確認ください",
-  "fbRetry": "再試行"
+  "fbRetry": "再試行",
+  "unlockAudioTitle": "無料枠を 1 回使いますか？",
+  "unlockAudioBody": "この作品の音声ガイドを解放します。残りは {left} 回になります。",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "解放して再生"
 }

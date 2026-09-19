@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 
@@ -40,19 +41,24 @@ class BenSectionHead extends StatelessWidget {
   }
 }
 
-/// 额度账。[used]/[total] 任一为 null 就显示「—」并留空进度条 ——
+/// 额度账。[left]/[total] 任一为 null 就显示「—」并留空进度条 ——
 /// 权益读不到时**不假装 0**(那会让用户以为额度用光了)。
 class BenQuotaRow extends StatelessWidget {
   const BenQuotaRow({
     super.key,
     required this.label,
-    this.used,
+    this.left,
     this.total,
     this.unlimitedLabel,
   });
 
   final String label;
-  final int? used;
+
+  /// **剩余**次数(不是已用)。与设置页的额度卡同一口径 ——
+  /// 两页曾一个显示剩余、一个显示已用,同一时刻一个写「剩余 2/5」、
+  /// 另一个写「3/5」,用户当场问哪个是对的(2026-09-19 真机截图)。
+  /// 进度条也跟着走**递减**:满 → 空 = 额度在被用掉,空了就是用完。
+  final int? left;
   final int? total;
 
   /// 非 null = 通票内不限次:显示这个词,并且**不画进度条**(画了就像还有上限)。
@@ -61,7 +67,7 @@ class BenQuotaRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
-    final known = used != null && total != null && total! > 0;
+    final known = left != null && total != null && total! > 0;
     final unlimited = unlimitedLabel != null;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -78,7 +84,12 @@ class BenQuotaRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                unlimited ? unlimitedLabel! : (known ? '$used / $total' : '—'),
+                unlimited
+                    ? unlimitedLabel!
+                    : (known
+                        ? AppLocalizations.of(context)!
+                            .quotaValue('$left', total!)
+                        : '—'),
                 style: GmText.serif(size: 14, weight: FontWeight.w700),
               ),
             ],
@@ -92,7 +103,9 @@ class BenQuotaRow extends StatelessWidget {
                   Positioned.fill(child: ColoredBox(color: gm.line)),
                   if (known)
                     FractionallySizedBox(
-                      widthFactor: (used! / total!).clamp(0.0, 1.0),
+                      // 递减:剩余占比。别写成 used/total ——
+                      // 那是"用得越多条越满",读起来像进度在前进。
+                      widthFactor: (left! / total!).clamp(0.0, 1.0),
                       child: ColoredBox(color: gm.accent),
                     ),
                 ],
