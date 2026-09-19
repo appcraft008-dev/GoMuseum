@@ -342,11 +342,14 @@ def _pass_active(db, user_id) -> bool:
 
 
 def _unlock_audio(db, user_id, out: dict) -> None:
-    """识别成功 → 这些作品的主讲解段以后可免费听(2026-09-19 规则)。
+    """识别成功 → 这件作品的主讲解段以后可免费听(2026-09-19 规则)。
 
     在**扣费的同一处**解锁:免费识别次数是唯一的那个数字,语音跟着它走,
     不再有第二个额度要对齐(旧规则「免费试听一件」与「免费识别 5 次」互不对齐,
     用户识别第二件点播放被弹墙,观感是那 5 次识别是假的)。
+
+    只解 match:候选态这里既不扣费也不解锁,两件事一起挪到了用户点选某个候选
+    之后(`/recognize/confirm`)—— 理由见 [recognize_billed]。
 
     匿名请求(只有 device_id)跳过:音频端点一律要令牌,解锁给谁都无处可用。
     解锁失败绝不能影响识别结果 —— 识别已经扣过费了。
@@ -357,9 +360,8 @@ def _unlock_audio(db, user_id, out: dict) -> None:
     match = out.get("match") or {}
     if match.get("qid"):
         qids.append(match["qid"])
-    # 候选卡整组解锁:识别没把握时,用户正需要挨个听着分辨哪件是对的,
-    # 而这一次识别的额度已经扣了。上限仍由免费识别次数兜住。
-    qids += [c["qid"] for c in (out.get("candidates") or []) if c.get("qid")]
+    if not qids:
+        return
     try:
         from app.services.entitlement_service import unlock_free_audio
 
@@ -379,10 +381,20 @@ def recognize_billed(
     mode: str = "artwork",
     identify_fn=None,
     redis=None,
+    embed_fn=None,
+    vector_query_fn=None,
 ) -> dict | None:
-    """带配额的识别(计费规则,用户 2026-07-04 批准):
-    match/candidates 扣 1;unrecognized 不扣(不为失败付费);缓存命中不扣(不重复扣);
+    """带配额的识别(计费规则,用户 2026-07-04 批准 / 2026-09-20 修订):
+    match 扣 1;unrecognized 不扣(不为失败付费);缓存命中不扣(不重复扣);
     配额用尽 → QuotaExceededError(先于 GPT 调用,不烧钱)。
+
+    ⚠️ **candidates 在这里不扣** —— 扣费点挪到用户点选某个候选之后
+    (`POST /recognize/confirm`,幂等靠 `confirmed_qid`)。原先返回候选的当场就扣,
+    而候选正是"识别器没把握"的那一档:用户点「都不是」时已经为一个错答案付过钱了,
+    与本函数自己写的"不为失败付费"相矛盾(用户 2026-09-20 提出)。
+    取舍:从不确认的候选请求不计费,因此存在"反复拍到候选就能不限次识别"的窗口
+    —— 与删号刷额度同源(设备身份可刷,见 auth_service.delete_user_account),
+    根治同样要靠 Play Integrity,MVP 接受。
 
     ⚠️ **通票生效期内不受免费额度限制** —— 不限次识别是卖给用户的权益。
     此前这道闸只问 BenefitsService(免费层额度),从不问 entitlements,于是
@@ -406,9 +418,13 @@ def recognize_billed(
         mode=mode,
         identify_fn=identify_fn,
         redis=redis,
+        # 生产调用方不传(走默认 DINOv2);透传是为了让计费测试能造出真的 match ——
+        # 不透传就只能 monkeypatch 掉 recognize 本身,那等于把被测的分流逻辑也蒙掉。
+        embed_fn=embed_fn,
+        vector_query_fn=vector_query_fn,
         user_id=user_id,  # 埋点顺带记足迹;device_id 不传(匿名就是匿名)
     )
-    if out is not None and out.get("outcome") in ("match", "candidates"):
+    if out is not None and out.get("outcome") == "match":
         cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
         if not cached and not pass_active:
             try:
