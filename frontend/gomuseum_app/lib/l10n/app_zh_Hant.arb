@@ -322,7 +322,7 @@
   "fbRecognitionBad": "辨識不準",
   "fbFeatureRequest": "功能建議",
   "fbOther": "其他",
-  "fbTextHint": "還想補充什麼？（選填）",
+  "fbTextHint": "還想補充什麼？（選填，請勿填寫個人資訊）",
   "fbSubmit": "送出",
   "fbThanks": "已收到，謝謝",
   "fbFailed": "無法傳送，請檢查網路",

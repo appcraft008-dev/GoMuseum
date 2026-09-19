@@ -1015,7 +1015,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fbOther => '其他';
 
   @override
-  String get fbTextHint => '还想补充什么？（选填）';
+  String get fbTextHint => '还想补充什么？（选填，请勿填写个人信息）';
 
   @override
   String get fbSubmit => '提交';
@@ -2041,7 +2041,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get fbOther => '其他';
 
   @override
-  String get fbTextHint => '還想補充什麼？（選填）';
+  String get fbTextHint => '還想補充什麼？（選填，請勿填寫個人資訊）';
 
   @override
   String get fbSubmit => '送出';

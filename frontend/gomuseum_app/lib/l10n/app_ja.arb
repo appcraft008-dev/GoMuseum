@@ -322,7 +322,7 @@
   "fbRecognitionBad": "認識が不正確",
   "fbFeatureRequest": "機能の要望",
   "fbOther": "その他",
-  "fbTextHint": "他にありますか？（任意）",
+  "fbTextHint": "他にありますか？（任意・個人情報は入力しないでください）",
   "fbSubmit": "送信",
   "fbThanks": "受け取りました。ありがとうございます",
   "fbFailed": "送信できません。通信環境をご確認ください",

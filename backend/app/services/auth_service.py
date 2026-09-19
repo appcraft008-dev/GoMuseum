@@ -577,6 +577,7 @@ class AuthService:
     @staticmethod
     def export_user_data(db: Session, user: User) -> dict:
         """GDPR 数据导出：返回账号关联的全部个人数据"""
+        from app.models.feedback import Feedback
         from app.models.purchase import Entitlement, Purchase
         from app.models.recognition_event import RecognitionEvent
         from app.models.user_benefits import UserBenefits
@@ -603,6 +604,14 @@ class AuthService:
             db.query(RecognitionEvent)
             .filter(RecognitionEvent.user_id == uid)
             .order_by(RecognitionEvent.created_at.desc())
+            .all()
+        )
+        # 反馈:`text` 是用户**自己手写的自由文本**,是本库里最直白的一类个人数据,
+        # 漏掉它比漏掉足迹更说不过去。
+        feedback = (
+            db.query(Feedback)
+            .filter(Feedback.user_id == uid)
+            .order_by(Feedback.created_at.desc())
             .all()
         )
         return {
@@ -634,6 +643,19 @@ class AuthService:
                     "created_at": f.created_at.isoformat() if f.created_at else None,
                 }
                 for f in footprints
+            ],
+            "feedback": [
+                {
+                    "scope": f.scope,
+                    "kind": f.kind,
+                    "museum": f.museum_slug,
+                    "qid": f.qid,
+                    "language": f.language,
+                    "text": f.text,
+                    "status": f.status,
+                    "created_at": f.created_at.isoformat() if f.created_at else None,
+                }
+                for f in feedback
             ],
             "purchases": [
                 {
@@ -680,6 +702,7 @@ class AuthService:
         这条与"换 device_id 刷额度"同源,靠 Play Integrity 才能根治,MVP 接受。
         """
         from app.models.auth_token import AuthToken
+        from app.models.feedback import Feedback
         from app.models.purchase import Entitlement, Purchase
         from app.models.recognition_event import RecognitionEvent
         from app.models.user_benefits import UserBenefits
@@ -698,6 +721,16 @@ class AuthService:
         # 去改馆藏的在展判断。清掉 user_id 后这些行不再指向任何人。
         db.query(RecognitionEvent).filter(RecognitionEvent.user_id == uid).update(
             {"user_id": None}, synchronize_session=False
+        )
+
+        # 反馈断链不删,但**自由文本要真删**。与识别事件的区别就在这里:
+        # (qid, language, kind) 是"哪件藏品的哪个语种有什么问题"的缺陷坐标,
+        # 去除关联后它不指向任何人,留着才能把内容修好;而 `text` 是用户**自己写的字**,
+        # 可能包含他在别处没留过的个人信息 —— 行权删除时最该消失的就是它。
+        # device_id 一起清:只清 user_id 的话行还指着一台设备,不算去标识化。
+        db.query(Feedback).filter(Feedback.user_id == uid).update(
+            {"user_id": None, "device_id": None, "text": None},
+            synchronize_session=False,
         )
 
         for ent in db.query(Entitlement).filter(Entitlement.user_id == uid):

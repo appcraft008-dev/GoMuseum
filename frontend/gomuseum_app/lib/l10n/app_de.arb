@@ -322,7 +322,7 @@
   "fbRecognitionBad": "Ungenaue Erkennung",
   "fbFeatureRequest": "Funktionswunsch",
   "fbOther": "Sonstiges",
-  "fbTextHint": "Noch etwas? (optional)",
+  "fbTextHint": "Noch etwas? (optional – bitte keine personenbezogenen Daten angeben)",
   "fbSubmit": "Senden",
   "fbThanks": "Danke, angekommen",
   "fbFailed": "Senden fehlgeschlagen. Verbindung prüfen.",

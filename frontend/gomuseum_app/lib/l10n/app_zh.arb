@@ -322,7 +322,7 @@
   "fbRecognitionBad": "识别不准",
   "fbFeatureRequest": "功能建议",
   "fbOther": "其他",
-  "fbTextHint": "还想补充什么？（选填）",
+  "fbTextHint": "还想补充什么？（选填，请勿填写个人信息）",
   "fbSubmit": "提交",
   "fbThanks": "已收到，谢谢",
   "fbFailed": "没能发送，请检查网络",

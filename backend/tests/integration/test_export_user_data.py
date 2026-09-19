@@ -14,10 +14,9 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.models.purchase import Entitlement, Purchase
-from app.models.recognition_event import RecognitionEvent
 from app.models.user import User
-from app.models.user_benefits import UserBenefits
 from app.services.auth_service import AuthService
+from tests.conftest import account_tables
 
 
 @pytest.fixture()
@@ -25,16 +24,7 @@ def db():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    Base.metadata.create_all(
-        bind=engine,
-        tables=[
-            User.__table__,
-            UserBenefits.__table__,
-            RecognitionEvent.__table__,
-            Purchase.__table__,
-            Entitlement.__table__,
-        ],
-    )
+    Base.metadata.create_all(bind=engine, tables=account_tables())
     session = sessionmaker(bind=engine)()
     yield session
     session.close()
