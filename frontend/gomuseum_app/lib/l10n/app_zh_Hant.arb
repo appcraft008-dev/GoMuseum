@@ -310,5 +310,19 @@
   "purchaseFailed": "購買失敗，請重試",
   "ticketPaid": "已付",
   "ticketVoid": "已結束",
-  "edgeSupportCopied": "已複製支援信箱：{email}"
+  "edgeSupportCopied": "已複製支援信箱：{email}",
+  "fbTitleObject": "內容回報",
+  "fbTitleApp": "意見回饋",
+  "fbContentWrong": "內容有誤",
+  "fbAudioBad": "讀音奇怪",
+  "fbAudioMissing": "沒有語音",
+  "fbAppCrash": "閃退卡頓",
+  "fbRecognitionBad": "辨識不準",
+  "fbFeatureRequest": "功能建議",
+  "fbOther": "其他",
+  "fbTextHint": "還想補充什麼？（選填）",
+  "fbSubmit": "送出",
+  "fbThanks": "已收到，謝謝",
+  "fbFailed": "無法傳送，請檢查網路",
+  "fbRetry": "重試"
 }

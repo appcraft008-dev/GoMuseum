@@ -310,5 +310,19 @@
   "purchaseFailed": "구매가 완료되지 않았습니다. 다시 시도해 주세요.",
   "ticketPaid": "결제 완료",
   "ticketVoid": "종료됨",
-  "edgeSupportCopied": "지원 이메일을 복사했습니다: {email}"
+  "edgeSupportCopied": "지원 이메일을 복사했습니다: {email}",
+  "fbTitleObject": "내용 신고",
+  "fbTitleApp": "의견 보내기",
+  "fbContentWrong": "내용 오류",
+  "fbAudioBad": "발음이 이상함",
+  "fbAudioMissing": "음성 없음",
+  "fbAppCrash": "앱 튕김·버벅임",
+  "fbRecognitionBad": "인식 부정확",
+  "fbFeatureRequest": "기능 제안",
+  "fbOther": "기타",
+  "fbTextHint": "더 알려주실 내용이 있나요? (선택)",
+  "fbSubmit": "보내기",
+  "fbThanks": "접수되었습니다. 감사합니다",
+  "fbFailed": "보내지 못했습니다. 연결을 확인해 주세요",
+  "fbRetry": "다시 시도"
 }

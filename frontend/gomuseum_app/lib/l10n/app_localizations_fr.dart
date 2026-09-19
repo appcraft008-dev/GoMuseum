@@ -1033,4 +1033,46 @@ class AppLocalizationsFr extends AppLocalizations {
   String edgeSupportCopied(String email) {
     return 'Adresse d\'assistance copiée : $email';
   }
+
+  @override
+  String get fbTitleObject => 'Signaler un problème';
+
+  @override
+  String get fbTitleApp => 'Commentaires';
+
+  @override
+  String get fbContentWrong => 'Contenu erroné';
+
+  @override
+  String get fbAudioBad => 'Prononciation étrange';
+
+  @override
+  String get fbAudioMissing => 'Pas d\'audio';
+
+  @override
+  String get fbAppCrash => 'Plantages ou lenteurs';
+
+  @override
+  String get fbRecognitionBad => 'Reconnaissance imprécise';
+
+  @override
+  String get fbFeatureRequest => 'Suggestion';
+
+  @override
+  String get fbOther => 'Autre';
+
+  @override
+  String get fbTextHint => 'Autre chose ? (facultatif)';
+
+  @override
+  String get fbSubmit => 'Envoyer';
+
+  @override
+  String get fbThanks => 'Bien reçu, merci';
+
+  @override
+  String get fbFailed => 'Envoi impossible. Vérifiez votre connexion.';
+
+  @override
+  String get fbRetry => 'Réessayer';
 }

@@ -310,5 +310,19 @@
   "purchaseFailed": "購入できませんでした。もう一度お試しください。",
   "ticketPaid": "支払い済み",
   "ticketVoid": "終了",
-  "edgeSupportCopied": "サポート用アドレスをコピーしました：{email}"
+  "edgeSupportCopied": "サポート用アドレスをコピーしました：{email}",
+  "fbTitleObject": "内容を報告",
+  "fbTitleApp": "ご意見",
+  "fbContentWrong": "内容に誤り",
+  "fbAudioBad": "読み方が変",
+  "fbAudioMissing": "音声がない",
+  "fbAppCrash": "クラッシュ・動作が重い",
+  "fbRecognitionBad": "認識が不正確",
+  "fbFeatureRequest": "機能の要望",
+  "fbOther": "その他",
+  "fbTextHint": "他にありますか？（任意）",
+  "fbSubmit": "送信",
+  "fbThanks": "受け取りました。ありがとうございます",
+  "fbFailed": "送信できません。通信環境をご確認ください",
+  "fbRetry": "再試行"
 }

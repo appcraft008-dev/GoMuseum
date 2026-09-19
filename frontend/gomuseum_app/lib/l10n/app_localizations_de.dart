@@ -1031,4 +1031,46 @@ class AppLocalizationsDe extends AppLocalizations {
   String edgeSupportCopied(String email) {
     return 'Support-Adresse kopiert: $email';
   }
+
+  @override
+  String get fbTitleObject => 'Problem melden';
+
+  @override
+  String get fbTitleApp => 'Feedback';
+
+  @override
+  String get fbContentWrong => 'Falscher Inhalt';
+
+  @override
+  String get fbAudioBad => 'Seltsame Aussprache';
+
+  @override
+  String get fbAudioMissing => 'Kein Audio';
+
+  @override
+  String get fbAppCrash => 'Abstürze oder Ruckeln';
+
+  @override
+  String get fbRecognitionBad => 'Ungenaue Erkennung';
+
+  @override
+  String get fbFeatureRequest => 'Funktionswunsch';
+
+  @override
+  String get fbOther => 'Sonstiges';
+
+  @override
+  String get fbTextHint => 'Noch etwas? (optional)';
+
+  @override
+  String get fbSubmit => 'Senden';
+
+  @override
+  String get fbThanks => 'Danke, angekommen';
+
+  @override
+  String get fbFailed => 'Senden fehlgeschlagen. Verbindung prüfen.';
+
+  @override
+  String get fbRetry => 'Erneut versuchen';
 }
