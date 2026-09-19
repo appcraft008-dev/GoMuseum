@@ -107,7 +107,7 @@ def test_missing_benefits_row_still_gets_the_free_preview(session):
 
     ⚠️ 这条原本叫 `test_unknown_user_denied`、断言 `denied` —— 它把"行还没建"
     当成了"伪造的 user_id",而**真实的新注册用户正是没有行的那一类**:
-    2026-09-19 prod 78 个用户里 33 个没有 benefits 行,他们点听讲解一律撞墙。
+    2026-09-19 prod 78 个用户里 35 个没有 benefits 行,他们点听讲解一律撞墙。
     (user_id 取自签名令牌,伪造不了;真要白拿,注册一个新账号同样只有一件。)
 
     白拿的那一头由后两句守住:认领会把行建出来,第二件立刻拒。
