@@ -105,6 +105,13 @@ def unlock_audio(
     if qid in es.free_audio_qids(benefits):
         return es.summary(db, user_id, benefits, is_guest=is_guest)
 
+    # qid 必须真实存在。不校验的话,客户端一个笔误就让用户白掉一次额度 ——
+    # 这是他花钱换来的东西,而且 404 比"扣了钱什么也没解锁"好排查得多。
+    from app.models.museum_object import MuseumObject
+
+    if not db.query(MuseumObject.id).filter_by(qid=qid).first():
+        raise HTTPException(status_code=404, detail={"reason": "object_not_found"})
+
     from app.services.benefits_service import BenefitsService
 
     # ⚠️ 顺序:**先扣费再解锁**。反过来的话扣费失败(额度已空)时权益已经发出去,

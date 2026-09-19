@@ -1,7 +1,7 @@
 """钱路径端到端验收(跑**真实部署**,不是内存 sqlite)。
 
 为什么必须跑真环境:本轮几个缺陷在 1000+ 单元测试里全绿,只有真跑才暴露 ——
-- 免费名额被一件**没有音频**的作品烧掉(生成 404,但认领已发生)
+- 免费额度被撞墙/无音频的作品白白烧掉(闸门本该只读)
 - 内容接口无鉴权下发音频直链(单测里没人会去 curl 内容端点)
 - staging 库里 audio_key 指向已迁移改名的文件(数据层面的坑,代码测不出来)
 
@@ -32,10 +32,12 @@ class Checks:
             self.failed.append(invariant)
 
 
-def _pick_samples(http, api: str, slug: str, scan: int = 12):
-    """自动挑样本:两件有正文的 + 一件无正文的。
+def _pick_samples(http, api: str, slug: str, scan: int = 20):
+    """自动挑样本:若干件有正文的 + 一件无正文的。
 
     写死 qid 的检查会随数据变化假红,然后被人绕过 —— 自己挑才活得久。
+    前两件用于主流程,其余用来**烧额度**验证上限(解锁按 qid 幂等,
+    同一件解锁两次只扣一次,所以烧额度必须换不同的件)。
     """
     with_text, without = [], None
     try:
@@ -47,7 +49,7 @@ def _pick_samples(http, api: str, slug: str, scan: int = 12):
         qid = o.get("qid")
         if not qid:
             continue
-        if len(with_text) >= 2 and without:
+        if len(with_text) >= 8 and without:
             break
         try:
             d = http.get(
@@ -56,7 +58,7 @@ def _pick_samples(http, api: str, slug: str, scan: int = 12):
         except Exception:
             continue
         body = ((d.get("default_guide") or {}).get("body") or "").strip()
-        if body and len(with_text) < 2:
+        if body and len(with_text) < 8:
             with_text.append(qid)
         elif not body and not without:
             without = qid
@@ -83,10 +85,13 @@ def main() -> int:
         with_text, without = _pick_samples(http, api, ns.slug)
         ns.free_qid = ns.free_qid or (with_text[0] if len(with_text) > 0 else None)
         ns.second_qid = ns.second_qid or (with_text[1] if len(with_text) > 1 else None)
+        burnable = with_text[2:]
         ns.no_audio_qid = ns.no_audio_qid or without
         print(
             f"自动挑样本:免费={ns.free_qid} 第二件={ns.second_qid} 无正文={ns.no_audio_qid}"
         )
+    else:
+        burnable = []
     if not (ns.free_qid and ns.second_qid):
         print(f"{BAD} 该馆找不到两件有正文的藏品,无法验收")
         return 1
@@ -143,47 +148,88 @@ def main() -> int:
     )
     c.expect("ai_ask" not in can, "I13 契约不含已停用能力")
 
-    if ns.no_audio_qid:
-        print("\n[I6] 生成失败不得烧掉免费名额")
-        r = http.get(
-            f"{api}/museums/{ns.slug}/objects/{ns.no_audio_qid}/audio?language=zh",
-            headers=h,
-        )
-        after = http.get(f"{api}/entitlements/me", headers=h).json()
-        c.expect(
-            after.get("free_audio_qid") is None,
-            "I6 未交付则不认领",
-            f"端点 {r.status_code},free_audio_qid={after.get('free_audio_qid')}",
-        )
+    # ⚠️ 规则换过一次(2026-09-19):免费语音从"首件自动认领"改成
+    # **跟着免费额度走** —— 解锁过的作品才能听,解锁要么来自识别成功,
+    # 要么来自用户在藏品页显式花 1 次额度。认领机制已整个删除。
+    # 下面这几条是把旧不变量翻译到新规则,**防线一条都没少**:
+    # 免费的东西必须有上限、上限必须真的在扣、闸门不得有副作用。
 
-    print("\n[免费层] 首件试听")
+    print("\n[闸门] 未解锁的作品必须 402,且**不得**扣额度")
+    before = http.get(f"{api}/entitlements/me", headers=h).json()
     r = http.get(
         f"{api}/museums/{ns.slug}/objects/{ns.free_qid}/audio?language=zh", headers=h
     )
-    c.expect(r.status_code == 200, "首件应放行", f"→ {r.status_code}")
+    c.expect(r.status_code == 402, "未解锁 → 402", f"→ {r.status_code}")
+    c.expect(
+        r.json().get("detail", {}).get("reason") == "pass_required",
+        "402 须带明确原因",
+    )
+    after = http.get(f"{api}/entitlements/me", headers=h).json()
+    # I6 的精神:闸门跑在 TTS 之前,它**只读**。撞一次墙就掉一次额度的话,
+    # 用户点几下没权限的作品,免费额度就被清空了。
+    c.expect(
+        after.get("free_recognitions_left") == before.get("free_recognitions_left"),
+        "I6 撞墙不得消耗额度",
+        f"{before.get('free_recognitions_left')} → {after.get('free_recognitions_left')}",
+    )
+
+    print("\n[免费层] 花 1 次额度解锁 → 可听、可无限重播")
+    left0 = before.get("free_recognitions_left")
+    r = http.post(f"{api}/entitlements/audio/unlock?qid={ns.free_qid}", headers=h)
+    c.expect(r.status_code == 200, "解锁端点应放行", f"→ {r.status_code}")
+    ent = r.json() if r.status_code == 200 else {}
+    # ⭐ 白拿防线:解锁**必须真的扣额度**。不扣的话免费语音就没有上限,
+    # 在列表里逐件点开就能把整馆听完。
+    c.expect(
+        isinstance(left0, int) and ent.get("free_recognitions_left") == left0 - 1,
+        "解锁必须扣 1 次额度",
+        f"{left0} → {ent.get('free_recognitions_left')}",
+    )
+    c.expect(
+        ns.free_qid in (ent.get("free_audio_qids") or []),
+        "解锁后该件进清单",
+        f"{ent.get('free_audio_qids')}",
+    )
+
+    r = http.get(
+        f"{api}/museums/{ns.slug}/objects/{ns.free_qid}/audio?language=zh", headers=h
+    )
+    c.expect(r.status_code == 200, "已解锁应放行", f"→ {r.status_code}")
     url = r.json().get("audio_url", "") if r.status_code == 200 else ""
     if url:
         a = http.get(url)
         c.expect(
             a.status_code == 200
             and a.headers.get("content-type", "").startswith("audio"),
-            "首件直链可播(数据层未失效)",
+            "直链可播(数据层未失效)",
             f"{a.status_code} {a.headers.get('content-type')}",
         )
-    ent = http.get(f"{api}/entitlements/me", headers=h).json()
-    c.expect(ent.get("free_audio_qid") == ns.free_qid, "I7 交付后必须认领")
 
     time.sleep(0.3)
     r = http.get(
         f"{api}/museums/{ns.slug}/objects/{ns.free_qid}/audio?language=zh", headers=h
     )
-    c.expect(r.status_code == 200, "首件可无限重播")
+    c.expect(r.status_code == 200, "已解锁可无限重播")
 
-    print("\n[6.4] 免费范围 = 一件 × 一语言 × 主讲解段")
+    # 重复点"解锁"不该花两次额度(用户手抖、或 App 重试)
+    r = http.post(f"{api}/entitlements/audio/unlock?qid={ns.free_qid}", headers=h)
+    c.expect(
+        r.status_code == 200 and r.json().get("free_recognitions_left") == left0 - 1,
+        "重复解锁幂等,不得二次扣费",
+        f"→ {r.status_code} left={r.json().get('free_recognitions_left')}",
+    )
+
+    print("\n[免费范围] 解锁覆盖到**段**,不覆盖别的作品")
+    # ⚠️ 语言维度是**故意放宽**的(2026-09-19):旧规则绑死 (作品,语言,段),
+    # 中文识别完、事后把 App 切成法语的人会撞 402,而他什么都没多拿。
     r = http.get(
         f"{api}/museums/{ns.slug}/objects/{ns.free_qid}/audio?language=fr", headers=h
     )
-    c.expect(r.status_code == 402, "换语言不在免费范围", f"→ {r.status_code}")
+    c.expect(
+        r.status_code in (200, 404),
+        "同一件换语言仍放行(404=该语言没正文,也不是被闸拦)",
+        f"→ {r.status_code}",
+    )
     r = http.get(
         f"{api}/museums/{ns.slug}/objects/{ns.free_qid}/audio"
         f"?language=zh&section=analysis",
@@ -191,15 +237,52 @@ def main() -> int:
     )
     c.expect(r.status_code in (402, 404), "深度段不在免费范围", f"→ {r.status_code}")
 
-    print("\n[付费墙] 第二件撞墙")
+    print("\n[付费墙] 没解锁的另一件仍撞墙")
     r = http.get(
         f"{api}/museums/{ns.slug}/objects/{ns.second_qid}/audio?language=zh", headers=h
     )
-    c.expect(r.status_code == 402, "第二件必须 402", f"→ {r.status_code}")
+    c.expect(r.status_code == 402, "未解锁的第二件必须 402", f"→ {r.status_code}")
+
+    def _left() -> object:
+        return (
+            http.get(f"{api}/entitlements/me", headers=h)
+            .json()
+            .get("free_recognitions_left")
+        )
+
+    print("\n[防笔误] 不存在的 qid 不得扣费")
+    # 客户端一个笔误就让用户白掉一次额度 —— 那是他花钱换来的东西。
+    before_typo = _left()
+    r = http.post(f"{api}/entitlements/audio/unlock?qid=Q-does-not-exist", headers=h)
+    c.expect(r.status_code == 404, "未知 qid → 404", f"→ {r.status_code}")
     c.expect(
-        r.json().get("detail", {}).get("reason") == "pass_required",
-        "402 须带明确原因",
+        _left() == before_typo,
+        "未知 qid 不得扣额度",
+        f"{before_typo} → {_left()}",
     )
+
+    print("\n[上限] 额度耗尽后解锁必须 402")
+    # ⚠️ 解锁按 qid **幂等**,同一件烧不出第二次 —— 必须换不同的件,
+    # 而且得是**真实存在**的件(端点校验 qid)。用自动挑出来的其余样本。
+    for q in burnable:
+        left = _left()
+        if not isinstance(left, int) or left <= 0:
+            break
+        rr = http.post(f"{api}/entitlements/audio/unlock?qid={q}", headers=h)
+        if rr.status_code != 200:
+            break
+    left = _left()
+    if left == 0:
+        r = http.post(f"{api}/entitlements/audio/unlock?qid={ns.second_qid}", headers=h)
+        c.expect(r.status_code == 402, "额度耗尽 → 解锁 402", f"→ {r.status_code}")
+        r = http.get(
+            f"{api}/museums/{ns.slug}/objects/{ns.second_qid}/audio?language=zh",
+            headers=h,
+        )
+        c.expect(r.status_code == 402, "额度耗尽后仍不得白拿音频", f"→ {r.status_code}")
+    else:
+        # 样本不够烧干净就**诚实跳过**,别把"没验到"写成"验过了"。
+        print(f"  ⏭  可烧样本不足(剩余额度 {left}),跳过上限验收")
 
     print("\n[I8/I9] 伪造收据不得发放权益")
     r = http.post(
