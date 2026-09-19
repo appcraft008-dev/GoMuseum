@@ -19,14 +19,22 @@ enum Gate {
 
   /// 弹付费墙(轻提示条或完整购买页)
   paywall,
+
+  /// 问「用掉 1 次免费额度解锁这件?」—— 他额度还没用完,只是这件没识别过
+  unlockOffer,
 }
 
 /// 与 GuideAudioPlayer._blockedByPaywall 的判断顺序一致。
-Gate gateFor(Entitlements? ent, String qid) {
+Gate gateFor(Entitlements? ent, String qid,
+    {String section = kFreeAudioSection}) {
   if (ent == null) return Gate.play; // 权益没加载完不拦,后端才是真闸
   // ⭐ 必须排在 canPlayAudio 之前
   if (ent.isPurchasedNotActivated) return Gate.activate;
-  if (ent.canPlayAudio(qid)) return Gate.play;
+  if (ent.canPlayAudio(qid, section: section)) return Gate.play;
+  // 免费额度还有 → 先问愿不愿意花一次,别直接推销
+  if (section == kFreeAudioSection && (ent.freeRecognitionsLeft ?? 0) > 0) {
+    return Gate.unlockOffer;
+  }
   return Gate.paywall;
 }
 
@@ -38,6 +46,7 @@ Entitlements _pending({List<String> unlocked = const []}) => Entitlements(
       canRecognize: true,
       canAudioAny: false,
       freeAudioQids: unlocked,
+      freeRecognitionsLeft: 3, // 他还有免费额度,但已经付过钱了
     );
 
 void main() {
@@ -57,15 +66,23 @@ void main() {
     test('一件都还没解锁时也一样', () {
       expect(gateFor(_pending(), 'Q12418'), Gate.activate);
     });
+
+    test('⭐ 即使他免费额度还有,也不该让已付费的人去花免费额度', () {
+      // 顺序若反过来:买了票的人点播放,App 问他"用掉 1 次免费额度?" ——
+      // 他已经付过钱了,这是最荒谬的一种打扰,而且激活入口又一次被遮住。
+      expect(gateFor(_pending(), 'Q151952'), Gate.activate);
+    });
   });
 
   group('没买过的人 → 分档不变', () {
-    Entitlements free({List<String> unlocked = const []}) => Entitlements(
+    Entitlements free({List<String> unlocked = const [], int left = 0}) =>
+        Entitlements(
           state: 'not_purchased',
           canPurchase: true,
           canRecognize: true,
           canAudioAny: false,
           freeAudioQids: unlocked,
+          freeRecognitionsLeft: left,
         );
 
     // 🔴 这条断言在 2026-09-19 一天之内翻过**两次**,两次都是真机推翻的,
@@ -91,12 +108,25 @@ void main() {
           gateFor(free(unlocked: ['Q12418', 'Q151952']), 'Q151952'), Gate.play);
     });
 
-    test('没识别过的 → 付费墙', () {
+    test('没识别过 + 额度用完 → 付费墙', () {
       expect(gateFor(free(unlocked: ['Q12418']), 'Q151952'), Gate.paywall);
     });
 
-    test('一件都没识别过 → 付费墙', () {
-      expect(gateFor(free(), 'Q12418'), Gate.paywall);
+    // 免费额度是**一个池子**:拍照识别扣它,在藏品页主动解锁也扣它。
+    // 没有这一支的话,从列表/搜索进来的人一次语音都听不到 —— 他手里明明还有
+    // 额度,只是这件没拍过(玻璃反光、人多、或者压根没有图没法识别)。
+    test('⭐ 没识别过但额度还有 → 先问愿不愿意花一次,不直接推销', () {
+      expect(gateFor(free(left: 3), 'Q151952'), Gate.unlockOffer);
+    });
+
+    test('额度还有,但深度段 → 仍是付费墙(花额度也换不到深度段)', () {
+      expect(
+          gateFor(free(left: 3), 'Q151952', section: 'analysis'), Gate.paywall);
+      expect(gateFor(free(left: 3), 'Q151952', section: 'qa'), Gate.paywall);
+    });
+
+    test('识别过的那件 → 直接播,不该再问他要额度', () {
+      expect(gateFor(free(unlocked: ['Q12418'], left: 3), 'Q12418'), Gate.play);
     });
   });
 

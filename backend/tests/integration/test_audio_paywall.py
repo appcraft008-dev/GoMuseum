@@ -292,3 +292,84 @@ def test_wildcard_scope_covers_every_city(session):
     """多国票:scope='*' 覆盖全部城市。"""
     assert es.covers_museum("*", "Madrid") is True
     assert es.covers_museum("*", None) is True
+
+
+# HTTPBearer(auto_error=True):没有这个头,依赖注入阶段就 403,替身根本轮不到。
+_AUTH = {"Authorization": "Bearer test-token"}
+
+
+def _client_with_user(session, uid="u1"):
+    """把端点的 DB 与鉴权都换成替身:这里考的是**额度与解锁的关系**,
+    不是登录链路(那另有专测)。"""
+    from fastapi.testclient import TestClient
+
+    from app.api.v1.endpoints import entitlements as ep
+    from app.core.database import get_db
+    from app.main import app
+
+    class _U:
+        id = uid
+        is_guest = False
+
+    app.dependency_overrides[get_db] = lambda: session
+    original = ep.AuthService.get_current_user
+    ep.AuthService.get_current_user = staticmethod(lambda db, token: _U())
+    client = TestClient(app)
+    yield_client = (
+        client,
+        lambda: setattr(ep.AuthService, "get_current_user", original),
+    )
+    return yield_client
+
+
+def test_unlock_endpoint_spends_one_quota_and_unlocks(session):
+    """⭐ 免费额度是**一个池子**:拍照识别扣它,主动解锁也扣它。
+
+    这条钉住的是"解锁真的要花额度" —— 不花的话免费语音就没有上限,
+    用户在列表里逐件点开就能把 24000 件全听完。
+    """
+    from app.models.app_event import AppEvent
+
+    Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
+    b = _ben(session)  # recognition_quota=5
+    client, restore = _client_with_user(session)
+    try:
+        r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
+        assert r.status_code == 200
+        assert r.json()["free_recognitions_left"] == 4, "解锁要花掉 1 次"
+        assert r.json()["free_audio_qids"] == ["Q12418"]
+        assert es.audio_access(session, "u1", "Q12418") == "allowed"
+
+        # 幂等:再点一次不该再扣
+        r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
+        assert r.status_code == 200
+        assert r.json()["free_recognitions_left"] == 4, "重复解锁不该二次扣费"
+    finally:
+        restore()
+        from app.main import app as _app
+
+        _app.dependency_overrides.clear()
+    session.refresh(b)
+    assert b.recognition_quota == 4
+
+
+def test_unlock_endpoint_denies_when_quota_is_gone(session):
+    """额度空了 → 402,前端据此弹付费墙。**绝不能先解锁再扣费** ——
+    那样额度为 0 时权益已经发出去,白送的正是我们要卖的东西。"""
+    from app.models.app_event import AppEvent
+
+    Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
+    b = _ben(session)
+    b.recognition_quota = 0
+    session.commit()
+    client, restore = _client_with_user(session)
+    try:
+        r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
+        assert r.status_code == 402
+        assert r.json()["detail"]["reason"] == "pass_required"
+    finally:
+        restore()
+        from app.main import app as _app
+
+        _app.dependency_overrides.clear()
+    assert es.audio_access(session, "u1", "Q12418") == "denied", "402 了就不该解锁"

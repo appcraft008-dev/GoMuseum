@@ -143,6 +143,22 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
 
     if (ent.canPlayAudio(widget.qid, section: widget.section)) return false;
 
+    // 还没解锁,但**免费额度还有** → 问他愿不愿意花一次(2026-09-19)。
+    //
+    // 免费额度是一个池子:拍照识别扣它,在这里主动解锁也扣它。没有这一支的话,
+    // 从藏品列表/搜索进来的人一次语音都听不到 —— 他手里明明还有 4 次额度,
+    // 只是这件没拍过(玻璃反光、人多、或者压根没有图没法识别)。
+    //
+    // ⚠️ **必须显式确认**,不能静默扣。用户在一件无所谓的作品上花掉名额、
+    // 走到真正想听的那件前才发现,是差评来源(同 ensurePassActivated 的理由)。
+    // 只对主讲解段开放:深度段/问答/作者介绍是付费内容,花额度也换不到。
+    if (widget.section == kFreeAudioSection &&
+        (ent.freeRecognitionsLeft ?? 0) > 0) {
+      if (await _confirmUnlock(ent.freeRecognitionsLeft!)) return false;
+      if (mounted) setState(() => _ui = _Ui.idle);
+      return true; // 用户选了不花
+    }
+
     if (_hintedQids.add(widget.qid)) {
       showPaywallHint(context, onLearnMore: _showPaywall);
     } else {
@@ -150,6 +166,42 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
     if (mounted) setState(() => _ui = _Ui.idle);
     return true;
+  }
+
+  /// 花 1 次免费额度解锁这一件的语音。返回 true = 已解锁,可以继续播。
+  ///
+  /// 扣费与解锁都在服务端一处完成(`POST /entitlements/audio/unlock`):
+  /// 先扣再解,扣不动就 402 —— 反过来写的话额度为 0 时权益已经发出去了。
+  Future<bool> _confirmUnlock(int left) async {
+    final l10n = AppLocalizations.of(context)!;
+    final gm = context.gm;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        backgroundColor: gm.surface,
+        title: Text(l10n.unlockAudioTitle,
+            style: GmText.serif(size: 16, weight: FontWeight.w700)),
+        content: Text(l10n.unlockAudioBody(left - 1),
+            style: GmText.sans(size: 13, height: 1.6)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(d, false),
+            child:
+                Text(l10n.cancel, style: GmText.sans(size: 13, color: gm.sub)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(d, true),
+            child: Text(l10n.unlockAudioCta,
+                style: GmText.sans(size: 13, color: gm.accent)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return false;
+    final unlocked = await unlockFreeAudio(ref, widget.qid);
+    // 解锁改了额度,权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
+    ref.invalidate(entitlementsProvider);
+    return unlocked;
   }
 
   /// 付费墙的「获取通票」出口。

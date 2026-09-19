@@ -741,7 +741,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get audioLockedHint =>
-      'Für Audiokommentare wird der Pass benötigt — deine kostenlose Probe ist bereits aufgebraucht.';
+      'Für Audiokommentare wird der Pass benötigt — kostenlos hörbar sind die Werke, die du fotografiert und erkannt hast.';
 
   @override
   String get quotaExhausted =>
@@ -897,7 +897,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get benefitsFreeAudioNote =>
-      'Den Haupt-Audiokommentar zu einem Werk können Sie kostenlos anhören.';
+      'Bei jedem per Foto erkannten Werk ist der Haupt-Audiokommentar gratis. Jedes andere Werk lässt sich mit einem Gratis-Guthaben freischalten.';
 
   @override
   String get benefitsFeatBrowse =>
@@ -1082,4 +1082,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get fbRetry => 'Erneut versuchen';
+
+  @override
+  String get unlockAudioTitle => 'Ein Gratis-Guthaben einlösen?';
+
+  @override
+  String unlockAudioBody(int left) {
+    return 'Schaltet den Audiokommentar zu diesem Werk frei. Danach bleiben $left.';
+  }
+
+  @override
+  String get unlockAudioCta => 'Freischalten und abspielen';
 }

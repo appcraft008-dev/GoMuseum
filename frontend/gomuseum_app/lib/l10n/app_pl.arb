@@ -274,7 +274,7 @@
   "benefitsSecCurrentQuota": "Twoja pula teraz",
   "benefitsSecBuyAnother": "Kolejny bilet",
   "benefitsRecognition": "Rozpoznawanie ze zdjęcia",
-  "benefitsFreeAudioNote": "Przy każdym zeskanowanym dziele główny komentarz audio jest darmowy.",
+  "benefitsFreeAudioNote": "Przy każdym zeskanowanym dziele główny komentarz audio jest darmowy. Każde inne dzieło odblokujesz jednym darmowym użyciem.",
   "benefitsFeatBrowse": "Przeglądanie, wyszukiwanie, pełny komentarz tekstowy",
   "benefitsFeatPresetQa": "Odpowiedzi na proponowane pytania",
   "benefitsFeatRecognition": "Nieograniczone rozpoznawanie ze zdjęcia",
@@ -326,5 +326,15 @@
   "fbSubmit": "Wyślij",
   "fbThanks": "Odebrano, dziękujemy",
   "fbFailed": "Nie udało się wysłać. Sprawdź połączenie.",
-  "fbRetry": "Spróbuj ponownie"
+  "fbRetry": "Spróbuj ponownie",
+  "unlockAudioTitle": "Wykorzystać jedno darmowe użycie?",
+  "unlockAudioBody": "Odblokowuje komentarz audio do tego dzieła. Zostanie {left}.",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "Odblokuj i odtwórz"
 }

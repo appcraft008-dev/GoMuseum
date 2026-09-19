@@ -167,3 +167,23 @@ Future<Entitlements?> activatePass(WidgetRef ref) async {
     return null;
   }
 }
+
+/// 花 1 次免费额度,解锁这件作品的语音(主讲解段)。返回是否解锁成功。
+///
+/// **必须由用户显式确认后才调** —— 静默扣额度,用户在一件无所谓的作品上花掉、
+/// 走到真正想听的那件前才发现,是差评来源(同 [activatePass] 的理由)。
+///
+/// 扣费与解锁都在服务端一处完成:**先扣再解**,扣不动就 402。
+/// 反过来写的话额度为 0 时权益已经发出去,白送的正是我们要卖的东西。
+/// 幂等:同一件重复解锁不会二次扣费。
+Future<bool> unlockFreeAudio(WidgetRef ref, String qid) async {
+  final dio = ref.read(dioProvider);
+  try {
+    await dio.post('/api/v1/entitlements/audio/unlock',
+        queryParameters: {'qid': qid});
+    return true;
+  } on DioException {
+    // 402(额度用完)/网络抖动都走这里:不解锁,调用方会照常弹付费墙。
+    return false;
+  }
+}

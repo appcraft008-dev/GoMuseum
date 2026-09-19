@@ -709,7 +709,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get audioFreePreview => '免费试听';
 
   @override
-  String get audioLockedHint => '语音讲解需要通票——免费试听名额已用在另一件作品上。';
+  String get audioLockedHint => '语音讲解需要通票——拍照识别出来的作品可以免费听。';
 
   @override
   String get quotaExhausted => '免费识别次数已用完。';
@@ -856,7 +856,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsRecognition => '拍照识别';
 
   @override
-  String get benefitsFreeAudioNote => '语音讲解可免费试听 1 件作品的主讲解段。';
+  String get benefitsFreeAudioNote => '拍照识别出来的作品,主讲解段都可以免费听。其他作品可用 1 次免费额度解锁。';
 
   @override
   String get benefitsFeatBrowse => '浏览、搜索、完整文字讲解';
@@ -1028,6 +1028,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get fbRetry => '重试';
+
+  @override
+  String get unlockAudioTitle => '用掉 1 次免费额度？';
+
+  @override
+  String unlockAudioBody(int left) {
+    return '解锁这件作品的语音讲解。用掉后还剩 $left 次。';
+  }
+
+  @override
+  String get unlockAudioCta => '解锁并播放';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1735,7 +1746,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get audioFreePreview => '免費試聽';
 
   @override
-  String get audioLockedHint => '語音導覽需要通票——免費試聽名額已用在另一件作品上。';
+  String get audioLockedHint => '語音導覽需要通票——拍照辨識出來的作品可以免費聽。';
 
   @override
   String get quotaExhausted => '免費辨識次數已用完。';
@@ -1882,7 +1893,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get benefitsRecognition => '拍照辨識';
 
   @override
-  String get benefitsFreeAudioNote => '語音導覽可免費試聽 1 件作品的主導覽段。';
+  String get benefitsFreeAudioNote => '拍照辨識出來的作品,主導覽段都可以免費聽。其他作品可用 1 次免費額度解鎖。';
 
   @override
   String get benefitsFeatBrowse => '瀏覽、搜尋、完整文字導覽';
@@ -2054,4 +2065,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fbRetry => '重試';
+
+  @override
+  String get unlockAudioTitle => '用掉 1 次免費額度？';
+
+  @override
+  String unlockAudioBody(int left) {
+    return '解鎖這件作品的語音導覽。用掉後還剩 $left 次。';
+  }
+
+  @override
+  String get unlockAudioCta => '解鎖並播放';
 }

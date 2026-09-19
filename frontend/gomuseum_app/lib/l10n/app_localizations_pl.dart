@@ -738,7 +738,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get audioLockedHint =>
-      'Komentarz audio wymaga karnetu — darmowy odsłuch został już wykorzystany.';
+      'Komentarz audio wymaga karnetu — dzieła, które zeskanowałeś, odsłuchasz za darmo.';
 
   @override
   String get quotaExhausted => 'Wykorzystano wszystkie darmowe rozpoznania.';
@@ -893,7 +893,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get benefitsFreeAudioNote =>
-      'Główny komentarz audio do jednego dzieła możesz odsłuchać za darmo.';
+      'Przy każdym zeskanowanym dziele główny komentarz audio jest darmowy. Każde inne dzieło odblokujesz jednym darmowym użyciem.';
 
   @override
   String get benefitsFeatBrowse =>
@@ -1079,4 +1079,15 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get fbRetry => 'Spróbuj ponownie';
+
+  @override
+  String get unlockAudioTitle => 'Wykorzystać jedno darmowe użycie?';
+
+  @override
+  String unlockAudioBody(int left) {
+    return 'Odblokowuje komentarz audio do tego dzieła. Zostanie $left.';
+  }
+
+  @override
+  String get unlockAudioCta => 'Odblokuj i odtwórz';
 }

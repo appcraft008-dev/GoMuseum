@@ -274,7 +274,7 @@
   "benefitsSecCurrentQuota": "目前的額度",
   "benefitsSecBuyAnother": "再來一張",
   "benefitsRecognition": "拍照辨識",
-  "benefitsFreeAudioNote": "拍照辨識出來的作品,主導覽段都可以免費聽。",
+  "benefitsFreeAudioNote": "拍照辨識出來的作品,主導覽段都可以免費聽。其他作品可用 1 次免費額度解鎖。",
   "benefitsFeatBrowse": "瀏覽、搜尋、完整文字導覽",
   "benefitsFeatPresetQa": "預設問題解答",
   "benefitsFeatRecognition": "不限次拍照辨識",
@@ -326,5 +326,15 @@
   "fbSubmit": "送出",
   "fbThanks": "已收到，謝謝",
   "fbFailed": "無法傳送，請檢查網路",
-  "fbRetry": "重試"
+  "fbRetry": "重試",
+  "unlockAudioTitle": "用掉 1 次免費額度？",
+  "unlockAudioBody": "解鎖這件作品的語音導覽。用掉後還剩 {left} 次。",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "解鎖並播放"
 }

@@ -417,7 +417,7 @@
   "benefitsSecCurrentQuota": "Your allowance now",
   "benefitsSecBuyAnother": "Another pass",
   "benefitsRecognition": "Photo recognition",
-  "benefitsFreeAudioNote": "For every artwork you scan, the main audio commentary is free.",
+  "benefitsFreeAudioNote": "For every artwork you scan, the main audio commentary is free. Any other artwork can be unlocked with one free credit.",
   "benefitsFeatBrowse": "Browsing, search, full written commentary",
   "benefitsFeatPresetQa": "Suggested questions answered",
   "benefitsFeatRecognition": "Unlimited photo recognition",
@@ -499,5 +499,15 @@
   "fbSubmit": "Submit",
   "fbThanks": "Thanks — we got it",
   "fbFailed": "Couldn't send. Check your connection.",
-  "fbRetry": "Try again"
+  "fbRetry": "Try again",
+  "unlockAudioTitle": "Use one free credit?",
+  "unlockAudioBody": "Unlocks the audio commentary for this artwork. {left} will be left.",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "Unlock and play"
 }

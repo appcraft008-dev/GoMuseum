@@ -317,10 +317,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       BenSectionHead(l10n.benefitsSecFreeQuota),
       BenQuotaRow(
         label: l10n.benefitsRecognition,
-        // 后端给的是**剩余**,进度条要的是已用 —— 这里换算,别把剩余画成已用
-        used: (total != null && left != null)
-            ? (total - left).clamp(0, total)
-            : null,
+        left: left,
         total: total,
       ),
       Padding(
@@ -468,9 +465,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       BenSectionHead(l10n.benefitsSecCurrentQuota),
       BenQuotaRow(
         label: l10n.benefitsRecognition,
-        used: (total != null && left != null)
-            ? (total - left).clamp(0, total)
-            : null,
+        left: left,
         total: total,
       ),
       BenSectionHead(l10n.benefitsSecBuyAnother),
@@ -514,9 +509,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       BenSectionHead(l10n.benefitsSecCurrentQuota),
       BenQuotaRow(
         label: l10n.benefitsRecognition,
-        used: (total != null && left != null)
-            ? (total - left).clamp(0, total)
-            : null,
+        left: left,
         total: total,
       ),
       BenSectionHead(l10n.benefitsSecBuyAnother),

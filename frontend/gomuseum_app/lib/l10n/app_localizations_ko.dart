@@ -713,7 +713,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get audioFreePreview => '무료 체험';
 
   @override
-  String get audioLockedHint => '음성 해설에는 패스가 필요합니다. 무료 체험은 다른 작품에 이미 사용되었습니다.';
+  String get audioLockedHint =>
+      '음성 해설에는 패스가 필요합니다. 촬영해서 인식한 작품은 무료로 들을 수 있습니다.';
 
   @override
   String get quotaExhausted => '무료 인식 횟수를 모두 사용했습니다.';
@@ -862,7 +863,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsRecognition => '사진 인식';
 
   @override
-  String get benefitsFreeAudioNote => '작품 한 점의 주요 음성 해설을 무료로 들어볼 수 있습니다.';
+  String get benefitsFreeAudioNote =>
+      '촬영해서 인식한 작품은 주요 음성 해설을 무료로 들을 수 있습니다. 그 밖의 작품도 무료 횟수 1회로 잠금 해제할 수 있습니다.';
 
   @override
   String get benefitsFeatBrowse => '둘러보기, 검색, 텍스트 해설 전문';
@@ -1040,4 +1042,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get fbRetry => '다시 시도';
+
+  @override
+  String get unlockAudioTitle => '무료 횟수를 1회 사용할까요?';
+
+  @override
+  String unlockAudioBody(int left) {
+    return '이 작품의 음성 해설을 잠금 해제합니다. $left회 남게 됩니다.';
+  }
+
+  @override
+  String get unlockAudioCta => '잠금 해제하고 재생';
 }

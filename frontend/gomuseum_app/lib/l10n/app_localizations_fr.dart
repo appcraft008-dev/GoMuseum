@@ -744,7 +744,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get audioLockedHint =>
-      'Le commentaire audio nécessite le pass — votre écoute gratuite a déjà été utilisée.';
+      'Le commentaire audio nécessite le pass — les œuvres que vous avez scannées s\'écoutent gratuitement.';
 
   @override
   String get quotaExhausted =>
@@ -900,7 +900,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get benefitsFreeAudioNote =>
-      'Vous pouvez écouter gratuitement le commentaire audio principal d\'une œuvre.';
+      'Pour chaque œuvre que vous scannez, le commentaire audio principal est gratuit. Toute autre œuvre peut être débloquée avec un crédit gratuit.';
 
   @override
   String get benefitsFeatBrowse =>
@@ -1084,4 +1084,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get fbRetry => 'Réessayer';
+
+  @override
+  String get unlockAudioTitle => 'Utiliser un crédit gratuit ?';
+
+  @override
+  String unlockAudioBody(int left) {
+    return 'Débloque le commentaire audio de cette œuvre. Il vous en restera $left.';
+  }
+
+  @override
+  String get unlockAudioCta => 'Débloquer et écouter';
 }
