@@ -263,6 +263,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get footprintTitle => '발자취';
 
   @override
+  String get footprintNoMuseum => '장소 미상';
+
+  @override
   String get noFootprints => '발자취가 없습니다';
 
   @override
@@ -293,6 +296,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String dateMonthDay(Object month, Object day) {
     return '$month/$day';
+  }
+
+  @override
+  String dateYearMonthDay(Object day, Object month, Object year) {
+    return '$year/$month/$day';
   }
 
   @override

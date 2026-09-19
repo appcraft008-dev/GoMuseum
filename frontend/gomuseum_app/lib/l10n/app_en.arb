@@ -138,6 +138,7 @@
   "factArtist": "Artist",
   "factNone": "No detailed information",
   "footprintTitle": "Footprints",
+  "footprintNoMuseum": "Unknown venue",
   "noFootprints": "No footprints yet",
   "footprintStat": "{count} works · {days} days",
   "@footprintStat": {
@@ -164,6 +165,7 @@
   "today": "Today",
   "yesterday": "Yesterday",
   "dateMonthDay": "{month}/{day}",
+  "dateYearMonthDay": "{month}/{day}/{year}",
   "@dateMonthDay": {
     "placeholders": {
       "month": {

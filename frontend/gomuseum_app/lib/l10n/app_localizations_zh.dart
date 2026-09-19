@@ -263,6 +263,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get footprintTitle => '足 迹';
 
   @override
+  String get footprintNoMuseum => '未记录场馆';
+
+  @override
   String get noFootprints => '还没有足迹';
 
   @override
@@ -293,6 +296,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String dateMonthDay(Object month, Object day) {
     return '$month月$day日';
+  }
+
+  @override
+  String dateYearMonthDay(Object day, Object month, Object year) {
+    return '$year年$month月$day日';
   }
 
   @override
@@ -1281,6 +1289,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get footprintTitle => '足 跡';
 
   @override
+  String get footprintNoMuseum => '未記錄場館';
+
+  @override
   String get noFootprints => '還沒有足跡';
 
   @override
@@ -1311,6 +1322,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String dateMonthDay(Object month, Object day) {
     return '$month月$day日';
+  }
+
+  @override
+  String dateYearMonthDay(Object day, Object month, Object year) {
+    return '$year年$month月$day日';
   }
 
   @override

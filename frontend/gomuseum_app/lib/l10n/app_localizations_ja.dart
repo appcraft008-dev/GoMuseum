@@ -263,6 +263,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get footprintTitle => '足跡';
 
   @override
+  String get footprintNoMuseum => '施設不明';
+
+  @override
   String get noFootprints => '足跡がありません';
 
   @override
@@ -293,6 +296,11 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String dateMonthDay(Object month, Object day) {
     return '$month/$day';
+  }
+
+  @override
+  String dateYearMonthDay(Object day, Object month, Object year) {
+    return '$year/$month/$day';
   }
 
   @override
