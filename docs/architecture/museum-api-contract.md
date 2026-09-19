@@ -1256,7 +1256,7 @@ _state.json 里 ok=true 的条数  ==  灌入目录里的文件数        ← �
 - `POST /museums/{slug}/recognize`(保留,行为不变):馆域内匹配。**⚠️ 馆域调用不做全局回退**(2026-07-11 裁决:老 App 不读 `museum` 字段,跨馆命中会拿他馆 qid 撞详情 404 死胡同——前向兼容;将来带馆提示要"馆内优先+全局回退"时加显式参数再开)。
 
 响应:`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence,museum}, candidates:[{…,score,museum}], label_text, reason, phash}`
-——**`phash`(2026-07-13 加法字段)**=该次识别的感知哈希,配套 **`POST /api/v1/recognize/confirm`**(`{"phash","qid"}`,永远204,fire-and-forget):确认卡点选时上报,回填 recognition_events.confirmed_qid——**确认卡=标注飞轮**从此有服务端落点(KPI 的 hits=match+确认候选;match 直跳不上报,confirmed 语义=用户确认)。识别每次调用落 `recognition_events`(只存 phash 不存照片;engine 记 vector/vector_crops/text/cache)——**KPI 与展陈证据一表两吃**。museum pack 加法字段 `catalog_count`/`archive_count`(馆页双数字"在线图录N·档案M",数据源=museums.stats,coverage-report 回写)。
+——**`phash`(2026-07-13 加法字段)**=该次识别的感知哈希,配套 **`POST /api/v1/recognize/confirm`**(`{"phash","qid"}`,可选 Bearer,永远204,fire-and-forget):确认卡点选时上报,回填 recognition_events.confirmed_qid——**确认卡=标注飞轮**从此有服务端落点(KPI 的 hits=match+确认候选;match 直跳不上报,confirmed 语义=用户确认)。识别每次调用落 `recognition_events`(只存 phash 不存照片;engine 记 vector/vector_crops/text/cache)——**KPI 与展陈证据一表两吃**。museum pack 加法字段 `catalog_count`/`archive_count`(馆页双数字"在线图录N·档案M",数据源=museums.stats,coverage-report 回写)。
 ——**`museum`=归属馆 slug(2026-07-11 加法字段)**,前端跳详情用它(老 App 不读不炸;新前端解析 `as String?` + 回退)。`outcome/reason` 机器码不译;`title/artist` 按 language 走显示名规则;thumbnail=thumb 档。命中跳详情 → 懒生成/懒翻译/懒补图自动接管。同图重复识别走 Redis 缓存(命中 30 天/未收录 1 天;键空间 `recog3`)。**阈值 server-driven**:向量档 `RECOG_HIGH=0.85`/`RECOG_LOW=0.72`(环境变量,由 benchmark 校准,库外零误接受);文字兜底档沿用 HIGH=0.85/LOW=0.5。
 
 **低分自动多裁剪重查(2026-07-11)**:全图向量分 < LOW 时(即原本注定失败的照片)自动裁 中心60%/35%+四象限+左右半幅 批量重查取最大分,再不中才进 GPT 兜底。**正常近拍照片走快路径零延迟影响**;触发裁剪的照片 +~2s,仍快于其下一站 GPT(2-5s)。已知代价(bench 实测):库外照片经多裁剪误出候选卡比例升高(48%→81%)——确认卡"都不是"出口兜底,可接受。
@@ -1418,6 +1418,23 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 
 ## 变更记录
 
+- 2026-09-20:**候选态不再当场扣费,扣费点挪到用户确认之后**。
+  `POST /recognize/confirm` 从纯埋点端点变成**候选态唯一的扣费点**(可选 Bearer,
+  首次确认扣 1 次并解锁该件语音;仍恒 204)。起因是用户问「选『都不是』为什么也扣次」——
+  `candidates` 正是"识别器没把握"那一档,返回的瞬间就扣,与计费规则自己写的
+  **"不为失败付费"直接矛盾**:用户为一个他当场否掉的答案付了钱。现在
+  match 当场扣、candidates 等确认、「都不是」一次不花。
+  三条配套约束(都由测试钉住):
+  ①**幂等看"该 phash 24h 内有没有任何一行已确认"**,不是"最新那行确认没有" ——
+  重拍同一张图会命中识别缓存并再落一行事件,只看最新行就会重复扣。
+  ②**只在首次确认时解锁**:事件行只存 `top_qid`,服务端无从知道那次识别给了哪几个候选,
+  重复确认还放行的话 qid 可以任填 = 一次额度解锁全馆。改选的那件走详情页手动解锁。
+  ③候选态**扣费与解锁必须一起挪走**:只挪扣费、照旧解锁 = 反复拍到候选就白拿语音。
+  已知取舍:从不确认的候选请求不计费,因此"反复拍到候选"能绕开计数 ——
+  与删号重注册刷额度同源(设备身份可刷),根治要靠 Play Integrity,MVP 接受。
+  同批修**闪光灯从来没被关过**:`CameraController` 没调过 `setFlashMode`,
+  插件默认 `FlashMode.auto` → 暗展厅每拍一张都闪,而取景框里并没有开关可关它
+  (很多博物馆禁闪)。初始化后显式 `FlashMode.off`。
 - 2026-09-19:**免费额度合成一个池子 + 额度 UI 两页口径统一**(接着下一条)。
   真机截图:同一秒钟设置页写「剩余 2/5 次」、权益页写「3/5」(已用) —— 用户当场问
   哪个对。两页现在共用 `quotaValue` 这一条串,进度条也统一成**递减**(满→空)。
@@ -1518,7 +1535,9 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 - 2026-07-11:**低分自动多裁剪重查**(全景式拍法对症,真实用户实证 0.51→0.84;近拍快路径零影响)+ 批处理纪律第 5 条**空响应≠到底**(WDQS 深 OFFSET 静默截断实证,catalog 漏收 500+ 长尾件;上新馆必核 loaded 数量级)。
 - 2026-07-11:**GPT 兜底文字链一律不直判**(命中只出确认卡,不产 `outcome=match`;同名撞车 E2E 实证:自画像/The Bathers 精确同名撞他馆无关件)——直开讲解页只来自向量高置信像素证据;label 模式亦然(多一次确认点)。
 - 2026-07-11:**识别主引擎换 DINOv2 向量检索**(R4 兑现:benchmark 裁决 DINOv2 胜 CLIP,非名作 Top-1 95.8%/库外零误接受;GPT+OCR 降为兜底,不可用绝不 500)。**新增全局端点 `POST /api/v1/recognize`**(museum 可选,拍前不选馆)+ 响应加法字段 `museum`(归属馆 slug);裁决**馆域调用不做全局回退**(老 App 前向兼容,跨馆命中=详情 404 死胡同)。参照库=物化即嵌入+backfill;雕塑多视角 view 图(P373 深挖落地);墙签行加馆藏号精确匹配;阈值 server-driven(RECOG_HIGH/LOW 环境变量)。
-- 2026-07-04:识别端点**服务端计费**落地(match/candidates 扣1,unrecognized/缓存不扣,超额402;身份=令牌或device_id)——堵住新端点绕过配额的洞,弃用前端自觉调 /payment/consume 的客户端计费。
+- 2026-07-04:识别端点**服务端计费**落地(match/candidates 扣1 ——
+  ⚠️ candidates 那一半已于 2026-09-20 改成「确认后才扣」,见顶部;
+  unrecognized/缓存不扣,超额402;身份=令牌或device_id)——堵住新端点绕过配额的洞,弃用前端自觉调 /payment/consume 的客户端计费。
 - 2026-07-04:作者卡 `nationality`/`notable_works` 多语本地化落地(前端交接③;v1 局限解除)。交接①分类标签已由 #142 先行修复;交接②"老件补语种"因 prod 内容清空+六语生成而失效(translate 命令备用)。
 - 2026-07-03:**识别 P1 落地**+§识别入契约(R1-R6:接地第一/墙签增强非依赖/三档呈现/引擎可替换/需求自适应/足迹vs归属)。新端点 `/museums/{slug}/recognize`;老 `/recognition` deprecated;P2=CLIP/需求聚合/足迹。
 - 2026-07-03:定**批处理纪律**四条(单件容错/分批落盘/外部查询分批+重试/幂等可重跑)——prod names 三次崩溃(ReadTimeout 炸全局、进度全丢、414、502)的血泪成文,全部上馆命令适用(#158/#160 落地)。

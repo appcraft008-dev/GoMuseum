@@ -50,31 +50,43 @@ def record_event(
             pass
 
 
-def confirm_event(db, phash: str, qid: str) -> None:
+def confirm_event(db, phash: str, qid: str) -> bool:
     """回填最近 24h 内该 phash 最新一条事件的 confirmed_qid。
-    qid 须存在于目录否则忽略;无匹配事件也静默返回(fire-and-forget)。"""
+    qid 须存在于目录否则忽略;无匹配事件也静默返回(fire-and-forget)。
+
+    返回 **这次识别此前从未被确认过** —— 候选态的计费幂等就靠它
+    (见 recognize_confirm):一次拍照只扣一次,用户点完候选 A 回去再点 B
+    不该再扣一次(候选恰恰是"没把握"的那一档,点错很常见)。
+
+    判据取"24h 内该 phash 有没有任何一行已确认",不是"最新那行确认没有":
+    同一张照片重拍会命中识别缓存、再落一行新事件,只看最新行会把它当首次确认,
+    于是同一张图反复拍就能反复扣 —— 而缓存命中本来就是不扣的。
+    任何异常一律 False(不扣):扣不到好过错扣。"""
     try:
         from app.models.museum_object import MuseumObject
 
         if not db.query(MuseumObject).filter_by(qid=qid).first():
-            return
+            return False
         cutoff = datetime.utcnow() - timedelta(hours=24)
-        row = (
+        rows = (
             db.query(RecognitionEvent)
             .filter(
                 RecognitionEvent.phash == phash,
                 RecognitionEvent.created_at >= cutoff,
             )
             .order_by(RecognitionEvent.created_at.desc())
-            .first()
+            .all()
         )
-        if row is None:
-            return
-        row.confirmed_qid = qid
+        if not rows:
+            return False
+        first_time = not any(r.confirmed_qid for r in rows)
+        rows[0].confirmed_qid = qid
         db.commit()
+        return first_time
     except Exception:
         logger.exception("confirm_event failed")
         try:
             db.rollback()
         except Exception:
             pass
+        return False

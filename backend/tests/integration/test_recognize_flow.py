@@ -224,8 +224,40 @@ def _benefits_tables(session):
     return UserBenefits
 
 
+class _FakeVQ:
+    """向量检索桩:返回固定 [(qid, score)],用来造出真的 match 档。"""
+
+    def __init__(self, ranked):
+        self.ranked = ranked
+
+    def __call__(self, db, vec, museum_id):
+        return self.ranked
+
+
+def _match_kw(qid="Q334138"):
+    """走向量高分档 → outcome=match(文字链一律只出 candidates,造不出 match)。"""
+    return dict(embed_fn=lambda b: "V", vector_query_fn=_FakeVQ([(qid, 0.95)]))
+
+
 def test_billing_match_consumes_one(session):
-    # 计费规则(用户批准):match/candidates 扣1;unrecognized 不扣;缓存命中不扣;超额 402
+    # 计费规则(用户批准 / 2026-09-19 修订):match 扣1;candidates 要等用户确认;
+    # unrecognized 不扣;缓存命中不扣;超额 402
+    from app.services.recognition.service import recognize_billed
+
+    UB = _benefits_tables(session)
+    out = recognize_billed(
+        session, "orsay", _jpeg(), user_id=None, device_id="dev1", **_match_kw()
+    )
+    assert out["outcome"] == "match"
+    assert session.query(UB).one().recognition_quota == FREE - 1
+
+
+def test_billing_candidates_not_charged_until_confirmed(session):
+    """⭐ 候选态当场**不扣** —— 点「都不是」的人不该为一个错答案付钱。
+
+    这正是旧规则的毛病:识别器没把握时甩三个候选,而返回的那一刻就扣了 1 次,
+    与"不为失败付费"自相矛盾(用户 2026-09-19 提出)。扣费挪到 /recognize/confirm。
+    """
     from app.services.recognition.service import recognize_billed
 
     UB = _benefits_tables(session)
@@ -239,9 +271,8 @@ def test_billing_match_consumes_one(session):
             [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
         ),
     )
-    assert out["outcome"] == "candidates"  # 文字链→确认卡,仍计费
-    b = session.query(UB).one()
-    assert b.recognition_quota == FREE - 1  # candidates 也扣
+    assert out["outcome"] == "candidates"  # 文字链→确认卡
+    assert session.query(UB).one().recognition_quota == FREE  # 一次都没扣
 
 
 def test_recognition_unlocks_free_audio(session):
@@ -249,7 +280,29 @@ def test_recognition_unlocks_free_audio(session):
 
     整个"免费语音跟着识别走"就挂在这一根线上 —— 断了的话付费墙看起来一切正常
     (闸门测试照常绿),用户却是识别完点播放依然撞墙,与改动前毫无区别。
-    候选卡整组解锁:这次识别的额度已经扣了,用户正需要挨个听着分辨哪件是对的。
+    """
+    from app.services import entitlement_service as es
+    from app.services.recognition.service import recognize_billed
+
+    _benefits_tables(session)
+    out = recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id="u-listener",
+        device_id="dev1",
+        **_match_kw(),
+    )
+    assert out["outcome"] == "match"
+    assert es.audio_access(session, "u-listener", out["match"]["qid"]) == "allowed"
+    # 没识别到的作品不受影响
+    assert es.audio_access(session, "u-listener", "Q-从没拍过") == "denied"
+
+
+def test_candidates_unlock_nothing_until_confirmed(session):
+    """候选态既不扣费也不解锁 —— 两件事必须一起挪走。
+
+    只挪扣费、照旧解锁的话,反复拍到候选就能白拿所有语音:送出去的正是要卖的东西。
     """
     from app.services import entitlement_service as es
     from app.services.recognition.service import recognize_billed
@@ -265,14 +318,9 @@ def test_recognition_unlocks_free_audio(session):
             [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
         ),
     )
-    expected = [c["qid"] for c in (out.get("candidates") or [])] or [
-        out["match"]["qid"]
-    ]
-    assert expected, "这条测试要求识别真的出结果"
-    for qid in expected:
-        assert es.audio_access(session, "u-listener", qid) == "allowed"
-    # 没识别到的作品不受影响
-    assert es.audio_access(session, "u-listener", "Q-从没拍过") == "denied"
+    assert out["outcome"] == "candidates"
+    for c in out["candidates"]:
+        assert es.audio_access(session, "u-listener", c["qid"]) == "denied"
 
 
 def test_unrecognized_unlocks_nothing(session):
@@ -422,14 +470,8 @@ def test_billing_cache_hit_free(session):
 
     r = _FakeRedis()
     img = _jpeg()
-    kw = dict(
-        user_id=None,
-        device_id="dev1",
-        identify_fn=_vision(
-            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
-        ),
-        redis=r,
-    )
+    # 必须用 match 档:candidates 本来就不在这里扣,拿它测"缓存不重复扣"会恒绿。
+    kw = dict(user_id=None, device_id="dev1", redis=r, **_match_kw())
     recognize_billed(session, "orsay", img, **kw)
     recognize_billed(session, "orsay", img, **kw)  # 第二次走缓存
     assert session.query(UB).one().recognition_quota == FREE - 1  # 只扣了一次
