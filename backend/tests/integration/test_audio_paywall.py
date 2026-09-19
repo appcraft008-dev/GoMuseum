@@ -298,6 +298,18 @@ def test_wildcard_scope_covers_every_city(session):
 _AUTH = {"Authorization": "Bearer test-token"}
 
 
+def _known_object(session, qid="Q12418"):
+    """解锁端点要校验 qid 真实存在 —— 测试库里得真有这一行,
+    否则测的是 404 分支而不是扣费分支。"""
+    import uuid as _uuid
+
+    from app.models.museum_object import MuseumObject
+
+    MuseumObject.__table__.create(bind=session.get_bind(), checkfirst=True)
+    session.add(MuseumObject(id=_uuid.uuid4(), qid=qid, museum_id=_uuid.uuid4()))
+    session.commit()
+
+
 def _client_with_user(session, uid="u1"):
     """把端点的 DB 与鉴权都换成替身:这里考的是**额度与解锁的关系**,
     不是登录链路(那另有专测)。"""
@@ -332,6 +344,7 @@ def test_unlock_endpoint_spends_one_quota_and_unlocks(session):
 
     Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
     b = _ben(session)  # recognition_quota=5
+    _known_object(session)
     client, restore = _client_with_user(session)
     try:
         r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
@@ -362,6 +375,7 @@ def test_unlock_endpoint_denies_when_quota_is_gone(session):
     b = _ben(session)
     b.recognition_quota = 0
     session.commit()
+    _known_object(session)
     client, restore = _client_with_user(session)
     try:
         r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
@@ -373,3 +387,31 @@ def test_unlock_endpoint_denies_when_quota_is_gone(session):
 
         _app.dependency_overrides.clear()
     assert es.audio_access(session, "u1", "Q12418") == "denied", "402 了就不该解锁"
+
+
+def test_unlock_unknown_qid_returns_404_and_costs_nothing(session):
+    """⭐ 客户端一个笔误不该让用户白掉一次额度 —— 那是他花钱换来的东西。
+
+    2026-09-19 staging 实测抓到:未校验前,`qid=Q-does-not-exist` 返回 200
+    并扣掉一次额度(4 → 3),用户什么也没得到。404 也比"扣了钱什么都没解锁"
+    好排查得多。
+    """
+    from app.models.app_event import AppEvent
+
+    Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
+    b = _ben(session)
+    _known_object(session)  # 只建了 Q12418,下面故意问别的
+    client, restore = _client_with_user(session)
+    try:
+        r = client.post(
+            "/api/v1/entitlements/audio/unlock?qid=Q-does-not-exist", headers=_AUTH
+        )
+        assert r.status_code == 404
+        assert r.json()["detail"]["reason"] == "object_not_found"
+    finally:
+        restore()
+        from app.main import app as _app
+
+        _app.dependency_overrides.clear()
+    session.refresh(b)
+    assert b.recognition_quota == 5, "未知 qid 绝不能扣额度"
