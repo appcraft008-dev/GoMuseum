@@ -141,7 +141,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
       return true; // 用户选了"再等等"
     }
 
-    if (ent.canPlayAudio(widget.qid)) return false;
+    if (ent.canPlayAudio(widget.qid, section: widget.section)) return false;
 
     if (_hintedQids.add(widget.qid)) {
       showPaywallHint(context, onLearnMore: _showPaywall);
@@ -181,10 +181,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     // 已购未激活:绝不自动播——那会在进页面的瞬间弹出激活确认,等于替用户
     // 决定何时开始烧那 7×24 小时。等他主动点播放键再问(见 _blockedByPaywall)。
     if (ent.isPurchasedNotActivated) return;
-    final willSucceed = ent.isActive ||
-        ent.freeAudioQid == null ||
-        ent.freeAudioQid == widget.qid;
-    if (!willSucceed) return;
+    // 判据只留一份:免费名额的规则写在 canPlayAudio 里(含"还没认领=还能听"
+    // 和"只覆盖主讲解段")。这里曾手抄一份、且和拦截那处抄得不一样。
+    if (!ent.canPlayAudio(widget.qid, section: widget.section)) return;
     _autoPlayed = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _onTap();
@@ -279,7 +278,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     final ent = ref.watch(entitlementsProvider).value;
     if (ent == null || ent.isActive || ent.isPurchasedNotActivated)
       return false;
-    return ent.freeAudioQid == null || ent.freeAudioQid == widget.qid;
+    return ent.canPlayAudio(widget.qid, section: widget.section);
   }
 
   Future<Map<String, String>> _authHeaders() async {

@@ -102,9 +102,25 @@ def test_expired_pass_falls_back_to_free_rules(session):
     assert es.audio_access(session, "u1", "Q12418") == "allowed"  # 首件仍可重播
 
 
-def test_unknown_user_denied(session):
-    """没有 benefits 行(伪造 user_id)不该白拿。"""
-    assert es.audio_access(session, "查无此人", "Q12418") == "denied"
+def test_missing_benefits_row_still_gets_the_free_preview(session):
+    """benefits 行是**懒建**的,"还没建行"= 一次都没用过,不是"没有权限"。
+
+    ⚠️ 这条原本叫 `test_unknown_user_denied`、断言 `denied` —— 它把"行还没建"
+    当成了"伪造的 user_id",而**真实的新注册用户正是没有行的那一类**:
+    2026-09-19 prod 78 个用户里 35 个没有 benefits 行,他们点听讲解一律撞墙。
+    (user_id 取自签名令牌,伪造不了;真要白拿,注册一个新账号同样只有一件。)
+
+    白拿的那一头由后两句守住:认领会把行建出来,第二件立刻拒。
+    """
+    assert es.audio_access(session, "全新用户", "Q12418") == "claimable"
+    # 深度段不因"没有行"而放宽:名额只认主讲解段
+    assert (
+        es.audio_access(session, "全新用户", "Q12418", section="analysis") == "denied"
+    )
+
+    assert es.claim_audio_now(session, "全新用户", "Q12418") is True
+    assert es.audio_access(session, "全新用户", "Q12418") == "allowed"  # 可重播
+    assert es.audio_access(session, "全新用户", "Q151952") == "denied"  # 第二件要票
 
 
 def test_endpoint_actually_wires_the_gate():

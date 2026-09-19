@@ -795,49 +795,64 @@ class _A5HeroSliverAppBar extends StatelessWidget {
   /// 分享以后加在它右边。
   final VoidCallback onFeedback;
 
+  /// hero 完全展开时的高度；顶栏标题的淡入时机由它推出来。
+  static const double _expandedHeight = 286;
+
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
     final hasImage = content.images.isNotEmpty;
 
-    return SliverAppBar(
-      expandedHeight: 286,
-      pinned: true,
-      backgroundColor: gm.bg,
-      leading: GestureDetector(
-        onTap: onBack,
-        behavior: HitTestBehavior.opaque,
-        child: Center(child: GmIcon(GmIcons.back, size: 20, color: gm.ink)),
-      ),
-      title: Text(
-        content.title,
-        style: GmText.serif(size: 14.5, weight: FontWeight.w700),
-        overflow: TextOverflow.ellipsis,
-      ),
-      centerTitle: true,
-      actions: [
-        GestureDetector(
-          onTap: onFeedback,
+    return SliverLayoutBuilder(builder: (context, constraints) {
+      // 顶栏标题是 hero **收起后**的那一份，不是第二个标题。pinned 让它从展开
+      // 就在，于是图上压着的大标题和它同框 = 同一个作品名出现两次。
+      // maxExtent-minExtent 正好是 expandedHeight-kToolbarHeight（状态栏高度
+      // 在两端都算，相减抵消），滚过这段大标题就已经看不见了，此时才该接班。
+      final collapsed =
+          constraints.scrollOffset >= _expandedHeight - kToolbarHeight;
+      return SliverAppBar(
+        expandedHeight: _expandedHeight,
+        pinned: true,
+        backgroundColor: gm.bg,
+        leading: GestureDetector(
+          onTap: onBack,
           behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: GmIcon(GmIcons.flag, size: 20, color: gm.sub),
+          child: Center(child: GmIcon(GmIcons.back, size: 20, color: gm.ink)),
+        ),
+        title: AnimatedOpacity(
+          opacity: collapsed ? 1 : 0,
+          duration: const Duration(milliseconds: 180),
+          child: Text(
+            content.title,
+            style: GmText.serif(size: 14.5, weight: FontWeight.w700),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.parallax,
-        background: hasImage
-            ? _HeroImages(images: content.images, title: content.title)
-            : (fallbackImagePath != null || fallbackImageUrl != null)
-                ? _HeroFallbackImage(
-                    imagePath: fallbackImagePath,
-                    imageUrl: fallbackImageUrl,
-                    title: content.title,
-                  )
-                : _HeroPlaceholder(title: content.title),
-      ),
-    );
+        centerTitle: true,
+        actions: [
+          GestureDetector(
+            onTap: onFeedback,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: GmIcon(GmIcons.flag, size: 20, color: gm.sub),
+            ),
+          ),
+        ],
+        flexibleSpace: FlexibleSpaceBar(
+          collapseMode: CollapseMode.parallax,
+          background: hasImage
+              ? _HeroImages(images: content.images, title: content.title)
+              : (fallbackImagePath != null || fallbackImageUrl != null)
+                  ? _HeroFallbackImage(
+                      imagePath: fallbackImagePath,
+                      imageUrl: fallbackImageUrl,
+                      title: content.title,
+                    )
+                  : _HeroPlaceholder(title: content.title),
+        ),
+      );
+    });
   }
 }
 

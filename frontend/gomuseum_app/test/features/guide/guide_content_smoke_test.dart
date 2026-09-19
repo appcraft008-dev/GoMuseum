@@ -130,6 +130,27 @@ void main() {
     expect(find.text('在阿尔勒的卧室'), findsWidgets);
   });
 
+  testWidgets('guide_page A5: 顶栏标题只在 hero 收起后出现，不与图上大标题同框', (tester) async {
+    await tester.pumpWidget(_wrap());
+    await tester.pumpAndSettle();
+
+    // 顶栏标题外面那层 AnimatedOpacity —— 它是唯一包着标题文字的一层。
+    double appBarTitleOpacity() => tester
+        .widget<AnimatedOpacity>(find.ancestor(
+          of: find.text('在阿尔勒的卧室'),
+          matching: find.byType(AnimatedOpacity),
+        ))
+        .opacity;
+
+    // 展开态：图上已经有大标题了，顶栏那份必须是透明的。
+    expect(appBarTitleOpacity(), 0);
+
+    // 滚过 hero：大标题看不见了，顶栏接班。
+    await tester.drag(find.byType(NestedScrollView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(appBarTitleOpacity(), 1);
+  });
+
   testWidgets('guide_page A5: 生成中无讲解 → 完整页架子(标题+墙签)+「正在撰写」,非光秃转圈',
       (tester) async {
     // 生成中 stub：无 tabs/讲解，但 title/facts 已就绪（后端行为如此）。

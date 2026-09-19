@@ -300,9 +300,17 @@ class _CameraPageState extends ConsumerState<CameraPage>
       if (mounted) _showQuotaExhaustedSheet();
       return;
     }
-    // 得到有用结果（命中/候选）才扣额度；未收录/错误不扣，不惩罚"没帮上忙"。
+    // 额度**由后端在 /recognize 里扣**(recognition/service.py:388，同样是命中/
+    // 候选才扣，未收录/错误不扣)。这里只把扣完的结果拉回来给 UI 显示。
+    //
+    // 🔴 这里曾再调一次 `/payment/consume` —— **一次识别扣两次**:
+    // 5 次免费额度实际只有 2.5 次,第 3 次的第二扣拿不到额度(prod 日志里那条
+    // `No quota available` + consume 返 403),第 4 次直接 402。
+    // 2026-09-19 真机实测抓到,新账号一次识别后 DB 就是 quota=3/used=2。
+    // 扣费只能有一个执行点,那个点在后端(前端算额度=改客户端就能白嫖)。
     if (st is RecognitionMatched || st is RecognitionCandidates) {
-      await benefits.consumeQuota();
+      ref.invalidate(entitlementsProvider);
+      unawaited(benefits.refresh());
     }
     if (st is RecognitionMatched && mounted) {
       _goGuide(st.match.museum ?? 'orsay', st.match.qid);
