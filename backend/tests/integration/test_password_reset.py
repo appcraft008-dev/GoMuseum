@@ -21,11 +21,9 @@ from app.core.database import Base, get_db
 from app.core.security import verify_password
 from app.main import app
 from app.models.auth_token import PURPOSE_PASSWORD_RESET, AuthToken
-from app.models.purchase import Entitlement, Purchase
-from app.models.recognition_event import RecognitionEvent
 from app.models.user import User
-from app.models.user_benefits import UserBenefits
 from app.services import account_recovery, mailer
+from tests.conftest import account_tables
 
 
 class Outbox(list):
@@ -49,17 +47,7 @@ def client():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    Base.metadata.create_all(
-        bind=engine,
-        tables=[
-            User.__table__,
-            UserBenefits.__table__,
-            AuthToken.__table__,
-            Purchase.__table__,
-            Entitlement.__table__,
-            RecognitionEvent.__table__,
-        ],
-    )
+    Base.metadata.create_all(bind=engine, tables=account_tables())
     s = sessionmaker(bind=engine, autoflush=False, autocommit=False)()
     app.dependency_overrides[get_db] = lambda: s
     yield TestClient(app), s

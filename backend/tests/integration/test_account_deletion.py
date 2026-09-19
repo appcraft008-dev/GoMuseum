@@ -13,12 +13,12 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
-from app.models.auth_token import AuthToken
 from app.models.feedback import Feedback
 from app.models.purchase import Entitlement, Purchase
 from app.models.recognition_event import RecognitionEvent
 from app.models.user import User
 from app.models.user_benefits import UserBenefits
+from tests.conftest import account_tables
 
 
 @pytest.fixture()
@@ -29,20 +29,7 @@ def client():
         poolclass=StaticPool,
     )
     TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-    # 只建本用例涉及的表（个别无关模型的 server_default NOW() 不兼容 SQLite）
-    Base.metadata.create_all(
-        bind=engine,
-        tables=[
-            User.__table__,
-            UserBenefits.__table__,
-            Purchase.__table__,
-            Entitlement.__table__,
-            RecognitionEvent.__table__,
-            # 删号要清掉一次性令牌 —— 收件箱里的重置链接不能比账号活得久
-            AuthToken.__table__,
-            Feedback.__table__,
-        ],
-    )
+    Base.metadata.create_all(bind=engine, tables=account_tables())
 
     def override_get_db():
         db = TestingSession()
@@ -119,19 +106,7 @@ def client_db():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    Base.metadata.create_all(
-        bind=engine,
-        tables=[
-            User.__table__,
-            UserBenefits.__table__,
-            Purchase.__table__,
-            Entitlement.__table__,
-            RecognitionEvent.__table__,
-            # 删号要清掉一次性令牌 —— 收件箱里的重置链接不能比账号活得久
-            AuthToken.__table__,
-            Feedback.__table__,
-        ],
-    )
+    Base.metadata.create_all(bind=engine, tables=account_tables())
     s = sessionmaker(bind=engine)()
     app.dependency_overrides[get_db] = lambda: s
     yield TestClient(app), s
