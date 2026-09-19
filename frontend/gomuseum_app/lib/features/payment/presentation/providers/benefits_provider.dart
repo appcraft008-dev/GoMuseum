@@ -150,50 +150,13 @@ class BenefitsState extends _$BenefitsState {
     }
   }
 
-  /// 消耗识别配额
-  Future<bool> consumeQuota() async {
-    try {
-      final deviceIdValue = await ref.read(deviceIdProvider.future);
-      final consumeRecognitionUseCase =
-          ref.read(consumeRecognitionUseCaseProvider);
-
-      final result = await consumeRecognitionUseCase(
-        deviceId: deviceIdValue,
-        // 身份以**令牌**为准(dio 已挂 AuthInterceptor,游客也有令牌)。
-        // 这里传 null 是刻意的:后端不再采信请求体里的 user_id——曾因回落到
-        // device_id,把权益的 user_id 存成设备号,导致用户付了钱却查不到通票。
-        userId: null,
-      );
-
-      return result.fold(
-        (failure) {
-          debugPrint('Failed to consume quota: ${failure.message}');
-          return false;
-        },
-        (consumptionResult) async {
-          if (consumptionResult.success) {
-            // 消耗成功，更新本地状态
-            final currentBenefits = state.value;
-            if (currentBenefits != null) {
-              // 后端 remaining_quota 即总剩余额度，UI 展示读 totalQuota
-              state = AsyncValue.data(
-                currentBenefits.copyWith(
-                  recognitionQuota: consumptionResult.remainingQuota,
-                  totalQuota: consumptionResult.remainingQuota,
-                  totalUsed: currentBenefits.totalUsed + 1,
-                ),
-              );
-            }
-            return true;
-          }
-          return false;
-        },
-      );
-    } catch (e) {
-      debugPrint('Error consuming quota: $e');
-      return false;
-    }
-  }
+  // ⚠️ 这里曾有 `consumeQuota()`,唯一调用方是相机页"识别命中后扣一次额度"。
+  // 而后端 `/recognize` **在同一次请求里已经扣过了**(recognition/service.py)
+  // —— 一次识别扣两次,5 次免费额度实际只有 2.5 次(2026-09-19 真机实测)。
+  // 删掉方法本身而不只是删调用:扣费只该有一个执行点(后端),
+  // 前端留着这个能扣额度的入口,迟早有人在别处再调一次。
+  // (`/payment/consume` 端点与其下的 use case/repository 链路保留 —— 那是
+  //  端点的客户端实现,不是本次改动造成的孤儿。)
 
   // ⚠️ 这里曾有 `hasRecognitionAccess`,用 `quota > 0 || dayPassActive ||
   // isPremium` **自行组合**权益 —— 契约明令禁止(前端只看服务端下发的 `can`,

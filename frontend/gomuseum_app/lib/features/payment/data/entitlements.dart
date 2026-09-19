@@ -11,6 +11,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 
+/// 免费试听覆盖的段。与后端 `entitlement_service.FREE_AUDIO_SECTION` 一一对应 ——
+/// 一件作品有讲解/背景/分析/问答/作者介绍多段,每段独立 TTS,
+/// 不限段的话"免费一件"实际是几十次生成(再乘 10 种语言)。
+const String kFreeAudioSection = 'guide';
+
 /// 权益状态。与后端 entitlement_service 的常量一一对应。
 class Entitlements {
   const Entitlements({
@@ -68,9 +73,22 @@ class Entitlements {
   /// 这类用户见过通票的样子,权益页该给他看用过的那张票,不是一个空商店。
   bool get isExpired => state == 'expired';
 
-  /// 某件的语音能不能放:通票内全放,免费用户只放已认领的首件。
-  bool canPlayAudio(String qid) =>
-      canAudioAny || (freeAudioQid != null && freeAudioQid == qid);
+  /// 某件的语音能不能放:通票内全放;免费用户放**已认领的那一件**,
+  /// 还没认领过的话**任意一件都可以**(听成了就认领它,见后端 claim_audio_now)。
+  ///
+  /// ⚠️ `freeAudioQid == null` 的意思是「免费试听**还没用掉**」,不是「没有权限」。
+  /// 这里曾漏掉这一支 —— 于是每个新用户点听讲解都被客户端自己弹墙,
+  /// 请求根本发不出去,后端那边准备好的 claimable 永远等不到人
+  /// (2026-09-19 真机实测:新账号全程零 `/audio` 请求)。
+  ///
+  /// [section] 不能省:免费名额只覆盖主讲解段(后端 `FREE_AUDIO_SECTION`),
+  /// 深度段/问答/作者介绍属付费内容。不判它的话,免费用户点深度段会被这里
+  /// 放行、到后端再吃一个 402 —— 白跑一趟,还得靠 `_showPaywallAnyway` 兜。
+  bool canPlayAudio(String qid, {String section = kFreeAudioSection}) {
+    if (canAudioAny) return true;
+    if (section != kFreeAudioSection) return false;
+    return freeAudioQid == null || freeAudioQid == qid;
+  }
 
   /// 拿不到权益时的保守回退:按免费层算,次数未知。
   /// 不假装有通票(失败时放行付费功能=白送),也不假装 0 次(会误弹付费墙)。

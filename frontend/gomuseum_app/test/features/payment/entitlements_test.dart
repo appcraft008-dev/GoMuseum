@@ -46,6 +46,45 @@ void main() {
     expect(e.canPlayAudio('Q151952'), isFalse);
   });
 
+  test('免费用户**还没认领**:任意一件的主讲解段都能听(听成了才认领它)', () {
+    // 🔴 这是 2026-09-19 真机撞到的坑:`free_audio_qid` 为空的含义是
+    // 「免费试听还没用掉」,曾被判成「没有权限」—— 于是**每个新用户**点听讲解
+    // 都被客户端自己弹付费墙,`/audio` 请求根本发不出去(prod 日志零请求)。
+    // 后端那侧对同一状态判的是 claimable(放行并在送达后认领)。
+    final e = Entitlements.fromJson({
+      'state': 'not_purchased',
+      'free_recognitions_left': 5,
+      'free_recognitions_total': 5,
+      'free_audio_qid': null, // 一次都还没听过
+      'can': {'recognize': true, 'audio_any': false},
+    });
+    expect(e.canPlayAudio('Q12418'), isTrue);
+    expect(e.canPlayAudio('Q151952'), isTrue, reason: '还没认领,哪一件都行');
+    // 但名额只覆盖主讲解段:深度段/问答/作者介绍是付费内容,
+    // 不判 section 的话前端放行、后端 402,白跑一趟。
+    expect(e.canPlayAudio('Q12418', section: 'analysis'), isFalse);
+    expect(e.canPlayAudio('Q12418', section: 'qa'), isFalse);
+    expect(e.canPlayAudio('Q12418', section: 'artist_bio'), isFalse);
+  });
+
+  test('已认领的那一件:深度段仍要票 —— 别让"首件"变成整件解锁', () {
+    final e = Entitlements.fromJson({
+      'state': 'not_purchased',
+      'free_audio_qid': 'Q12418',
+      'can': {'recognize': true, 'audio_any': false},
+    });
+    expect(e.canPlayAudio('Q12418'), isTrue);
+    expect(e.canPlayAudio('Q12418', section: 'analysis'), isFalse);
+  });
+
+  test('通票生效:深度段也全放行', () {
+    final e = Entitlements.fromJson({
+      'state': 'active',
+      'can': {'recognize': true, 'audio_any': true},
+    });
+    expect(e.canPlayAudio('随便哪件', section: 'analysis'), isTrue);
+  });
+
   test('已购未激活 ≠ 生效中 —— 用户常提前几天买,误判会白烧有效期', () {
     final e = Entitlements.fromJson({
       'state': 'purchased_not_activated',
