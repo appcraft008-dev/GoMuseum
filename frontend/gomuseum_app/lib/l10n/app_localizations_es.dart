@@ -1065,7 +1065,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fbOther => 'Otro';
 
   @override
-  String get fbTextHint => '¿Algo más? (opcional)';
+  String get fbTextHint =>
+      '¿Algo más? (opcional: no incluyas información personal)';
 
   @override
   String get fbSubmit => 'Enviar';

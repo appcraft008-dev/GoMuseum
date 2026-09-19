@@ -322,7 +322,7 @@
   "fbRecognitionBad": "Reconnaissance imprécise",
   "fbFeatureRequest": "Suggestion",
   "fbOther": "Autre",
-  "fbTextHint": "Autre chose ? (facultatif)",
+  "fbTextHint": "Autre chose ? (facultatif — merci de ne pas inclure d'informations personnelles)",
   "fbSubmit": "Envoyer",
   "fbThanks": "Bien reçu, merci",
   "fbFailed": "Envoi impossible. Vérifiez votre connexion.",

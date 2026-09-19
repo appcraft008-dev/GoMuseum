@@ -1025,7 +1025,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fbOther => 'その他';
 
   @override
-  String get fbTextHint => '他にありますか？（任意）';
+  String get fbTextHint => '他にありますか？（任意・個人情報は入力しないでください）';
 
   @override
   String get fbSubmit => '送信';

@@ -1063,7 +1063,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get fbOther => 'Altro';
 
   @override
-  String get fbTextHint => 'Altro da aggiungere? (facoltativo)';
+  String get fbTextHint =>
+      'Altro da aggiungere? (facoltativo: non inserire dati personali)';
 
   @override
   String get fbSubmit => 'Invia';

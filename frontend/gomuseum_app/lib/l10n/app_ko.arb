@@ -322,7 +322,7 @@
   "fbRecognitionBad": "인식 부정확",
   "fbFeatureRequest": "기능 제안",
   "fbOther": "기타",
-  "fbTextHint": "더 알려주실 내용이 있나요? (선택)",
+  "fbTextHint": "더 알려주실 내용이 있나요? (선택 · 개인정보는 입력하지 마세요)",
   "fbSubmit": "보내기",
   "fbThanks": "접수되었습니다. 감사합니다",
   "fbFailed": "보내지 못했습니다. 연결을 확인해 주세요",

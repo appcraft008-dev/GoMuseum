@@ -13,11 +13,12 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
-from app.models.auth_token import AuthToken
+from app.models.feedback import Feedback
 from app.models.purchase import Entitlement, Purchase
 from app.models.recognition_event import RecognitionEvent
 from app.models.user import User
 from app.models.user_benefits import UserBenefits
+from tests.conftest import account_tables
 
 
 @pytest.fixture()
@@ -28,19 +29,7 @@ def client():
         poolclass=StaticPool,
     )
     TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-    # 只建本用例涉及的表（个别无关模型的 server_default NOW() 不兼容 SQLite）
-    Base.metadata.create_all(
-        bind=engine,
-        tables=[
-            User.__table__,
-            UserBenefits.__table__,
-            Purchase.__table__,
-            Entitlement.__table__,
-            RecognitionEvent.__table__,
-            # 删号要清掉一次性令牌 —— 收件箱里的重置链接不能比账号活得久
-            AuthToken.__table__,
-        ],
-    )
+    Base.metadata.create_all(bind=engine, tables=account_tables())
 
     def override_get_db():
         db = TestingSession()
@@ -117,18 +106,7 @@ def client_db():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    Base.metadata.create_all(
-        bind=engine,
-        tables=[
-            User.__table__,
-            UserBenefits.__table__,
-            Purchase.__table__,
-            Entitlement.__table__,
-            RecognitionEvent.__table__,
-            # 删号要清掉一次性令牌 —— 收件箱里的重置链接不能比账号活得久
-            AuthToken.__table__,
-        ],
-    )
+    Base.metadata.create_all(bind=engine, tables=account_tables())
     s = sessionmaker(bind=engine)()
     app.dependency_overrides[get_db] = lambda: s
     yield TestClient(app), s
@@ -212,6 +190,85 @@ def test_delete_unlinks_footprints_but_keeps_the_evidence(client_db):
     assert rows[0].user_id is None, "与账号的关联必须断掉"
     assert rows[0].top_qid == "Q12418", "展陈证据必须原样保留"
     assert AuthService is not None  # 只为说明删号走的是同一条服务路径
+
+
+def _leave_feedback(db, uid, text="繁体那段念错了", device="dev-abc"):
+    fb = Feedback(
+        user_id=uid,
+        device_id=device,
+        scope="object",
+        museum_slug="petit_palais",
+        qid="Q3937645",
+        language="zh-hant",
+        kind="audio_bad",
+        text=text,
+        status="new",
+    )
+    db.add(fb)
+    db.commit()
+    return fb
+
+
+def test_删号清掉反馈里的自由文本但留下缺陷坐标(client_db):
+    """反馈与识别事件在删号时的处置**不一样**,差别就在那段自由文本上。
+
+    坐标 (qid, language, kind) = "哪件藏品的哪个语种有什么问题",断链后不指向任何人,
+    留着才能把内容修好;`text` 是用户自己敲的字,可能含他在别处没留过的个人信息,
+    行权删除时最该消失的就是它。device_id 一并清 —— 只清 user_id 的话,
+    行还指着一台设备,不算去标识化。
+    """
+    client, db = client_db
+    tokens = _register(client, "fb-del@test.com")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    _leave_feedback(db, tokens["user"]["id"])
+
+    assert client.delete("/api/v1/auth/me", headers=headers).status_code == 204
+
+    db.expire_all()
+    rows = db.query(Feedback).all()
+    assert len(rows) == 1, "缺陷报告不该被删掉 —— 内容还没修"
+    assert rows[0].text is None, "🔴 用户手写的文字必须真删"
+    assert rows[0].user_id is None, "与账号的关联必须断掉"
+    assert rows[0].device_id is None, "还指着一台设备就不算去标识化"
+    assert rows[0].qid == "Q3937645", "缺陷坐标要留着"
+    assert rows[0].language == "zh-hant", "语种是坐标的一部分,10 语是 10 份独立内容"
+    assert rows[0].kind == "audio_bad"
+
+
+def test_删号不碰别人的反馈(client_db):
+    """对照组:少了这条,一个"把 feedbacks 整表清空"的实现也能让上面那条全绿。"""
+    client, db = client_db
+    mine = _register(client, "mine@test.com")
+    _leave_feedback(db, mine["user"]["id"])
+    _leave_feedback(db, str(uuid.uuid4()), text="别人的反馈", device="dev-other")
+
+    assert (
+        client.delete(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {mine['access_token']}"},
+        ).status_code
+        == 204
+    )
+
+    db.expire_all()
+    others = db.query(Feedback).filter(Feedback.text.isnot(None)).all()
+    assert len(others) == 1 and others[0].text == "别人的反馈"
+
+
+def test_export_includes_feedback(client_db):
+    """自由文本是本库里最直白的一类个人数据,导出漏了它比漏足迹更说不过去。"""
+    client, db = client_db
+    tokens = _register(client, "fb-export@test.com")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    _leave_feedback(db, tokens["user"]["id"], text="这段读得很怪")
+
+    data = client.get("/api/v1/auth/me/export", headers=headers).json()
+    assert len(data["feedback"]) == 1
+    fb = data["feedback"][0]
+    assert fb["text"] == "这段读得很怪"
+    assert fb["qid"] == "Q3937645"
+    assert fb["language"] == "zh-hant"
+    assert fb["kind"] == "audio_bad"
 
 
 def test_export_includes_footprints(client_db):
