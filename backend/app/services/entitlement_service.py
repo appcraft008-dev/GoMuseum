@@ -190,7 +190,7 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
     免费层边界(付费墙建在**现场体验**不在内容):
     - 浏览/搜索/完整文字讲解/接地预设问答 → 永远免费,不在 `can` 里体现
     - 识别 → 免费 5 次,用完需通票
-    - 语音 → 首件自动试听(见 free_audio_qid),第二件起需通票
+    - 语音 → **识别出来的作品**主讲解段免费(见 free_audio_qids),其余需通票
 
     `can.purchase`:**买票前必须登录**(2026-07-28 定)。通票挂 user_id,而游客
     身份是设备绑定的 —— 游客买了票,换手机/清数据就永久拿不回(收据已消耗,
@@ -205,7 +205,7 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
     quota = getattr(benefits, "recognition_quota", settings.FREE_RECOGNITION_QUOTA)
     bonus = getattr(benefits, "referral_bonus_quota", 0) or 0
     left = max(0, (quota or 0) + bonus)
-    free_audio_qid = getattr(benefits, "free_audio_qid", None)
+    unlocked = free_audio_qids(benefits)
     # 未激活票的最后激活时刻,给前端显示「X 月 X 日前激活」。
     # **加法字段**:老 App 不认识就忽略,契约前向兼容。
     activate_by = None
@@ -222,11 +222,17 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
         "free_recognitions_total": (
             None if active else settings.FREE_RECOGNITION_QUOTA + bonus
         ),
-        "free_audio_qid": free_audio_qid,
+        "free_audio_qids": unlocked,
+        # ⚠️ **恒为 None**。老字段的语义是"你认领的那一件",而"认领"这件事
+        # 已经不存在了(2026-09-19 免费语音改为跟着识别走)。
+        # 不删键、恒给 null 是**故意的**:老 App 读到 null 会把本地闸放开、
+        # 把判断交回服务端 402 —— 退化方向正确。若在这里回填清单里的第一件,
+        # 老 App 反而会把其余已解锁的作品在本地拦掉。
+        "free_audio_qid": None,
         "can": {
             "purchase": not is_guest,
             "recognize": active or left > 0,
-            # 语音:通票内全放行;免费用户只放行已认领的那一件那种语言的主讲解段
+            # 语音:通票内全放行;免费用户只放行识别解锁过的作品的主讲解段
             # (`ai_ask` 已移除:自由问答停用中 /chat/ask 返 503,
             #  契约不该承诺一个不存在的能力)
             "audio_any": active,
@@ -280,6 +286,11 @@ def history(db, user_id: str, limit: int = 20) -> list[dict]:
     ]
 
 
+def free_audio_qids(benefits) -> list[str]:
+    """该用户已解锁的免费语音作品。行不存在/列为空都返回 []。"""
+    return list(getattr(benefits, "free_audio_qids", None) or [])
+
+
 def can_play_audio(
     db,
     user_id: str,
@@ -292,33 +303,47 @@ def can_play_audio(
 ) -> bool:
     """某件的语音能不能放。
 
-    免费用户只有**已认领的那一件、那种语言、主讲解段**可放(可无限重播)。
-    收敛到三元组是因为:一件作品多段 × 10 语言 = 几十次 TTS,
-    只按 qid 判等于免费送几十次生成。
+    免费用户:**识别出来的作品**的主讲解段可放(可无限重播),其余要票。
+
+    [language] 不再参与判断(2026-09-19)。此前免费试听绑死 (作品,语言,段),
+    于是用中文识别、事后把 App 换成法语的人会撞 402 —— 他没多拿任何东西,
+    只是换了个语言,却被当成第二件。换语言要多一次 TTS 是真的,但上限是
+    5 件 × 语言数、且生成一次永久落库(后来的用户白拿缓存),这点钱买不到
+    「同一件作品换个语言就要买票」的困惑。参数留着是为了不动调用方签名。
     """
     state, _ = resolve_state(db, user_id, city)
     if state == ACTIVE:
         return True
     if section != FREE_AUDIO_SECTION:
         return False
-    claimed = getattr(benefits, "free_audio_qid", None)
-    claimed_lang = getattr(benefits, "free_audio_lang", None)
-    return bool(claimed) and claimed == qid and claimed_lang == language
+    return qid in free_audio_qids(benefits)
 
 
-def claim_free_audio(db, benefits, qid: str, language: str = "zh") -> bool:
-    """认领首件免费语音。已认领过则不改(不给第二件)。返回是否本次认领。
+def unlock_free_audio(db, user_id: str, qids: list[str]) -> list[str]:
+    """识别成功后解锁这些作品的免费语音。返回本次新解锁的 qid。
 
-    ⚠️ 认领时机=**首次识别成功后自动播放**,不是"给一张待花的券"——
-    券式设计的隐患:很多用户到最后都没用过、压根不知道有语音,付费墙就白建了。
+    调用点是**识别扣费那一处**(recognition/service.py):额度在那里花掉,
+    解锁就在那里记账,两件事不分家。
+
+    ⚠️ 与旧的"认领"不同,这里不需要等音频送达 —— 解锁不是一张会被烧掉的券,
+    而是"这件你识别过"的事实记录。用户点了一件没音频的作品也不损失什么。
+
+    候选卡的几个候选**全部解锁**:识别没把握时用户更需要听着分辨哪件是对的,
+    而这一次识别的额度已经扣了。上限仍由免费识别次数兜住。
     """
-    if getattr(benefits, "free_audio_qid", None):
-        return False
-    benefits.free_audio_qid = qid
-    benefits.free_audio_lang = language
-    benefits.free_audio_claimed_at = _now()
+    if not qids:
+        return []
+    from app.services.benefits_service import BenefitsService
+
+    benefits = BenefitsService(db).get_or_create_benefits(user_id=user_id)
+    current = free_audio_qids(benefits)
+    added = [q for q in dict.fromkeys(qids) if q and q not in current]
+    if not added:
+        return []
+    # 整列重新赋值:JSON 列原地 append 不会被 SQLAlchemy 标记为脏,静默丢更新。
+    benefits.free_audio_qids = current + added
     db.commit()
-    return True
+    return added
 
 
 class PurchaseOwnershipConflict(Exception):
@@ -430,52 +455,24 @@ def audio_access(
 ) -> str:
     """语音闸门:**付费墙真正生效的地方**(前端 UI 只是它的表达)。
 
-    返回 "allowed" / "claimable" / "denied",**本身不产生副作用**:
-      allowed   通票生效,或这就是已认领的首件(可无限重播)
-      claimable 还没认领过任何一件 → 可以放行,但**认领要等音频真的送达**
+    返回 "allowed" / "denied",**本身不产生副作用**(一个字节都不写):
+      allowed   通票生效,或这件是识别解锁过的主讲解段(可无限重播)
       denied    其余 → 端点返 402
 
     ⚠️ 必须在触发 TTS **之前**调用 —— 否则钱已经花掉了,拦也白拦。
 
-    ⚠️ 认领为什么不在这里做(2026-07-28 staging 实测踩到):
-    闸门跑在生成之前,而生成可能 404(该语言没正文)/409(生成中)/503。
-    在这里认领的话,用户点一件没音频的作品——什么都没听到,免费试听却没了。
-    所以认领挪到端点的成功路径上,见 _claim_after_success。
+    ⚠️ 曾有第三档 "claimable"(放行 + 音频送达后认领首件),随"免费语音跟着
+    识别走"一并删除(2026-09-19)。解锁现在发生在识别扣费那一处,
+    闸门不再承担任何写职责 —— 于是"闸门跑在生成之前,而生成可能 404/409/503,
+    在闸门里认领会让用户什么都没听到名额却没了"这个历史陷阱从结构上消失了。
     """
     from app.models.user_benefits import UserBenefits
 
     benefits = db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
-    if can_play_audio(
+    # ⚠️ benefits 行是**懒建**的,`benefits is None` = 一次都还没用过。
+    # 它交给 can_play_audio 判:没有行 → 解锁清单为空 → 免费用户一件都听不了,
+    # 而这是对的 —— 一次识别都没做过的人本来就还没解锁任何作品。
+    allowed = can_play_audio(
         db, user_id, qid, benefits, language=language, section=section, city=city
-    ):
-        return "allowed"
-    # 只有主讲解段可认领:深度段/问答/作者介绍属付费内容
-    if section != FREE_AUDIO_SECTION:
-        return "denied"
-    # ⚠️ benefits 行是**懒建**的(首次 /payment/benefits 或首次识别时才建),
-    # 所以"没有行"= 一次都还没用过 = 免费试听**还在**,不是"没有权限"。
-    # 这里曾直接 denied —— 于是刚注册的用户在 App 把行建出来之前点听讲解,
-    # 迎面就是付费墙(2026-09-19 staging 实证:注册后直接 GET /audio 得 402,
-    # 先调一次 /payment/benefits 再调同一个端点就是 200)。
-    # 判 claimable 不会白送:名额在 claim_audio_now 里才落库,而它会把行建出来。
-    if benefits is None:
-        return "claimable"
-    return "claimable" if not getattr(benefits, "free_audio_qid", None) else "denied"
-
-
-def claim_audio_now(db, user_id: str, qid: str, language: str = "zh") -> bool:
-    """音频**确实送达后**才认领首件。与 audio_access 的 claimable 配对使用。
-
-    行不存在就建一行再认领 —— 认领是**写**路径,建行天经地义;
-    判定那侧仍然一个字节都不写(见 audio_access 的副作用约束)。
-    没有这一步,上面放行的 claimable 就会认领失败,变成"每一件都免费"。
-
-    ⚠️ 这里拿不到 `device_id`(音频端点的身份一律取自令牌,不收设备参数),
-    所以建行时**不做匿名行归并**——那件事归 `/payment/benefits` 管,它带 device_id。
-    实际顺序上 App 一启动就会调那个端点,轮不到这里建行;真轮到了(裸调 API),
-    代价是该设备的匿名额度没被归并,不会产生同一 user 的第二行(按 user_id 查在先)。
-    """
-    from app.services.benefits_service import BenefitsService
-
-    benefits = BenefitsService(db).get_or_create_benefits(user_id=user_id)
-    return claim_free_audio(db, benefits, qid, language)
+    )
+    return "allowed" if allowed else "denied"

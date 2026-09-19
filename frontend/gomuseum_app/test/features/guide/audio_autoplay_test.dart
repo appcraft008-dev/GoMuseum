@@ -8,7 +8,7 @@ import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 
 /// 与 GuideAudioPlayer._maybeAutoPlay 的准入条件一致。
 ///
-/// ⚠️ 免费名额的规则**只调 `canPlayAudio`,不在这里手抄一份**。
+/// ⚠️ 免费语音的规则**只调 `canPlayAudio`,不在这里手抄一份**。
 /// 这里曾抄成 `isActive || freeAudioQid == null || == qid` —— 抄得比
 /// canPlayAudio 宽,于是本文件全绿(自动播准入判"可以播"),
 /// audio_paywall_gate_test 也全绿(拦截判"弹墙"),**合起来却是坏的**:
@@ -19,25 +19,27 @@ bool willAutoPlay(Entitlements? ent, String qid) {
   return ent.canPlayAudio(qid);
 }
 
-Entitlements _free({String? claimed}) => Entitlements(
+Entitlements _free({List<String> unlocked = const []}) => Entitlements(
       state: 'not_purchased',
       canPurchase: false,
       canRecognize: true,
       canAudioAny: false,
-      freeAudioQid: claimed,
+      freeAudioQids: unlocked,
     );
 
 void main() {
-  test('免费用户尚未认领 → 自动播(这就是"保证送达的首体验")', () {
-    expect(willAutoPlay(_free(), 'Q12418'), isTrue);
+  test('识别完落到作品页 → 自动播(这就是"保证送达的首体验")', () {
+    // 自动播只在识别路径开启(camera_page 传 autoPlayAudio: true),
+    // 而识别成功当场就把这件写进解锁清单 —— 两件事对得上,才响得出来。
+    expect(willAutoPlay(_free(unlocked: ['Q12418']), 'Q12418'), isTrue);
   });
 
-  test('免费用户重看已认领的那一件 → 仍自动播(可无限重播)', () {
-    expect(willAutoPlay(_free(claimed: 'Q12418'), 'Q12418'), isTrue);
+  test('重看识别过的作品 → 仍自动播(可无限重播)', () {
+    expect(willAutoPlay(_free(unlocked: ['Q12418']), 'Q12418'), isTrue);
   });
 
-  test('⭐ 免费用户的第二件 → 不自动播(否则一进页面就撞墙)', () {
-    expect(willAutoPlay(_free(claimed: 'Q12418'), 'Q151952'), isFalse);
+  test('⭐ 浏览进来、没识别过的作品 → 不自动播(否则一进页面就撞墙)', () {
+    expect(willAutoPlay(_free(unlocked: ['Q12418']), 'Q151952'), isFalse);
   });
 
   test('通票生效 → 每件都自动播(现场"边看边听"的产品形态)', () {
@@ -63,7 +65,7 @@ void main() {
     );
     // ⚠️ 这里以前只断言了两个布尔量,而没断言 willAutoPlay ——
     // 于是"不自动播"这个标题其实从未被验证:未激活时 isActive=false、
-    // freeAudioQid=null,旧条件会返回 true,一进页面就弹激活确认。
+    // 解锁清单为空,旧条件会返回 true,一进页面就弹激活确认。
     expect(pending.isPurchasedNotActivated, isTrue);
     expect(willAutoPlay(pending, 'Q12418'), isFalse);
   });
