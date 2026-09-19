@@ -20,6 +20,18 @@ router = APIRouter()
 _bearer = HTTPBearer(auto_error=False)
 
 
+def _user_id(db: Session, credentials: HTTPAuthorizationCredentials | None):
+    """令牌 → user_id。坏/过期令牌按匿名处理(识别可退 device_id)。"""
+    if not credentials:
+        return None
+    try:
+        from app.services.auth_service import AuthService
+
+        return str(AuthService.get_current_user(db, credentials.credentials).id)
+    except Exception:
+        return None
+
+
 def run_recognition(
     db: Session,
     slug: str | None,
@@ -39,15 +51,7 @@ def run_recognition(
         recognize_billed,
     )
 
-    user_id = None
-    if credentials:
-        try:
-            from app.services.auth_service import AuthService
-
-            user = AuthService.get_current_user(db, credentials.credentials)
-            user_id = str(user.id)
-        except Exception:
-            user_id = None  # 坏/过期令牌按匿名处理,可退 device_id
+    user_id = _user_id(db, credentials)
     if not user_id and not device_id:
         raise HTTPException(status_code=401, detail={"reason": "identity_required"})
     data = image.file.read()
@@ -107,11 +111,36 @@ class ConfirmRequest(BaseModel):
 @router.post("/recognize/confirm", status_code=204)
 def recognize_confirm(
     body: ConfirmRequest,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> Response:
-    """用户确认命中:回填最近 24h 该 phash 最新事件的 confirmed_qid(展陈证据)。
-    fire-and-forget:无匹配/qid 不在目录/异常一律静默,恒 204;无鉴权(匿名统计)。"""
+    """用户从候选卡点选「就是这件」:回填 confirmed_qid(展陈证据)**并在此计费**。
+
+    这里是候选态唯一的扣费点(2026-09-20 改,见 recognize_billed):返回候选时
+    不扣,用户点「都不是」就什么也没花 —— 不为失败付费。点选=确认识别成功,
+    扣 1 次并解锁这件的主讲解语音,与 match 那条路完全同价。
+
+    仍是 fire-and-forget(恒 204):扣不动额度也不报错,用户进详情页点播放时
+    会照常弹付费墙 —— 那里才是付费墙该出现的地方。
+
+    ⚠️ **只在首次确认时解锁**。重复确认(点错了回去改选另一件)不扣费,但也不
+    再解锁:事件行只存 top_qid,这里无从知道那次识别到底给了哪几个候选,放行的话
+    qid 可以任填 —— 确认过一次就能用一次额度解锁全馆。改选那件要听,走详情页
+    的手动解锁确认(`/entitlements/audio/unlock`,那里明写"将用掉 1 次")。"""
     from app.services.recognition.events import confirm_event
 
-    confirm_event(db, body.phash, body.qid)
+    first_time = confirm_event(db, body.phash, body.qid)
+    user_id = _user_id(db, credentials)
+    # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。
+    if first_time and user_id:
+        from app.services import entitlement_service as es
+        from app.services.benefits_service import BenefitsService
+
+        # 通票生效期内不动免费额度(不限次识别是卖给他的权益)。
+        if es.resolve_state(db, user_id)[0] != es.ACTIVE:
+            # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
+            # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
+            if not BenefitsService(db).consume_recognition(user_id=user_id):
+                return Response(status_code=204)
+        es.unlock_free_audio(db, user_id, [body.qid])
     return Response(status_code=204)

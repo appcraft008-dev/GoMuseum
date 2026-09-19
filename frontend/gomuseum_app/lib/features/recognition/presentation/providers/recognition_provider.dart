@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 
 part 'recognition_provider.g.dart';
@@ -101,16 +102,23 @@ class RecognitionNotifier extends _$RecognitionNotifier {
     }
   }
 
-  /// 确认卡点选「这一件」→ 把「照片→qid」人工确认标注回传后端（喂 CLIP 校准）。
-  /// 仅候选态（人真的点了才算确认；match 自动跳转不是人工确认，不上报）。
+  /// 确认卡点选「这一件」→ 把「照片→qid」人工确认标注回传后端（喂 CLIP 校准），
+  /// **并由后端在那一刻扣 1 次额度**（候选态的唯一扣费点，2026-09-20 改）。
+  /// 仅候选态（人真的点了才算确认；match 自动跳转不是人工确认，不上报也不在这扣）。
   /// fire-and-forget：无 phash（老后端）静默跳过；异常在 datasource 内吞掉，绝不打扰跳转。
-  void confirmRecognition(String qid) {
+  ///
+  /// ⚠️ 刷新权益放在 notifier 里而不是调用方：调用方（相机页）确认完立刻
+  /// pushReplacement 走人，await 回来时它的 ref 已经 dispose 了。
+  Future<void> confirmRecognition(String qid) async {
     final s = state;
     final phash = s is RecognitionCandidates ? s.phash : null;
     if (phash == null) return;
-    ref
+    await ref
         .read(recognitionRemoteDataSourceProvider)
         .confirm(phash: phash, qid: qid);
+    // 确认扣掉了 1 次额度，权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
+    ref.invalidate(entitlementsProvider);
+    await ref.read(benefitsStateProvider.notifier).refresh();
   }
 
   /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字）。

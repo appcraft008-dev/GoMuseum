@@ -149,6 +149,15 @@ class _CameraPageState extends ConsumerState<CameraPage>
         enableAudio: false,
       );
       await controller.initialize();
+      // 闪光灯恒关：很多博物馆禁闪光（对画作有害，也会被劝阻）。
+      // camera 插件默认是 FlashMode.auto —— 不显式关掉的话，暗展厅里
+      // 每拍一张都会闪，而取景框里根本没有开关可以让用户关掉它。
+      // 关不掉不算错误（少数机型无闪光灯），吞掉继续拍。
+      try {
+        await controller.setFlashMode(FlashMode.off);
+      } on CameraException {
+        // 机型不支持设置闪光模式：不影响拍摄。
+      }
       if (!mounted) {
         await controller.dispose();
         return;
@@ -300,15 +309,17 @@ class _CameraPageState extends ConsumerState<CameraPage>
       if (mounted) _showQuotaExhaustedSheet();
       return;
     }
-    // 额度**由后端在 /recognize 里扣**(recognition/service.py:388，同样是命中/
-    // 候选才扣，未收录/错误不扣)。这里只把扣完的结果拉回来给 UI 显示。
+    // 额度**由后端扣**，前端只把扣完的结果拉回来给 UI 显示。
+    // 命中当场扣(recognize_billed)；**候选不在这里扣** —— 候选是"识别器没把握"
+    // 那一档，扣费挪到了用户点选某个候选之后(_goGuide → confirmRecognition)，
+    // 点「都不是」就一次都不花。
     //
     // 🔴 这里曾再调一次 `/payment/consume` —— **一次识别扣两次**:
     // 5 次免费额度实际只有 2.5 次,第 3 次的第二扣拿不到额度(prod 日志里那条
     // `No quota available` + consume 返 403),第 4 次直接 402。
     // 2026-09-19 真机实测抓到,新账号一次识别后 DB 就是 quota=3/used=2。
     // 扣费只能有一个执行点,那个点在后端(前端算额度=改客户端就能白嫖)。
-    if (st is RecognitionMatched || st is RecognitionCandidates) {
+    if (st is RecognitionMatched) {
       ref.invalidate(entitlementsProvider);
       unawaited(benefits.refresh());
     }
@@ -335,8 +346,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   void _goGuide(String slug, String qid) {
-    // 确认卡点选/命中 → 回传「照片→qid」标注（fire-and-forget，无 phash 时静默跳过）。
-    ref.read(recognitionNotifierProvider.notifier).confirmRecognition(qid);
+    // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
+    // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
+    unawaited(
+        ref.read(recognitionNotifierProvider.notifier).confirmRecognition(qid));
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     context.pushReplacement(
       '/guide',
