@@ -310,5 +310,19 @@
   "purchaseFailed": "Der Kauf hat nicht geklappt. Bitte erneut versuchen.",
   "ticketPaid": "Bezahlt",
   "ticketVoid": "ABGELAUFEN",
-  "edgeSupportCopied": "Support-Adresse kopiert: {email}"
+  "edgeSupportCopied": "Support-Adresse kopiert: {email}",
+  "fbTitleObject": "Problem melden",
+  "fbTitleApp": "Feedback",
+  "fbContentWrong": "Falscher Inhalt",
+  "fbAudioBad": "Seltsame Aussprache",
+  "fbAudioMissing": "Kein Audio",
+  "fbAppCrash": "Abstürze oder Ruckeln",
+  "fbRecognitionBad": "Ungenaue Erkennung",
+  "fbFeatureRequest": "Funktionswunsch",
+  "fbOther": "Sonstiges",
+  "fbTextHint": "Noch etwas? (optional)",
+  "fbSubmit": "Senden",
+  "fbThanks": "Danke, angekommen",
+  "fbFailed": "Senden fehlgeschlagen. Verbindung prüfen.",
+  "fbRetry": "Erneut versuchen"
 }

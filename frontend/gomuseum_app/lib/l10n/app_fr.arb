@@ -310,5 +310,19 @@
   "purchaseFailed": "L'achat n'a pas abouti. Veuillez réessayer.",
   "ticketPaid": "Payé",
   "ticketVoid": "EXPIRÉ",
-  "edgeSupportCopied": "Adresse d'assistance copiée : {email}"
+  "edgeSupportCopied": "Adresse d'assistance copiée : {email}",
+  "fbTitleObject": "Signaler un problème",
+  "fbTitleApp": "Commentaires",
+  "fbContentWrong": "Contenu erroné",
+  "fbAudioBad": "Prononciation étrange",
+  "fbAudioMissing": "Pas d'audio",
+  "fbAppCrash": "Plantages ou lenteurs",
+  "fbRecognitionBad": "Reconnaissance imprécise",
+  "fbFeatureRequest": "Suggestion",
+  "fbOther": "Autre",
+  "fbTextHint": "Autre chose ? (facultatif)",
+  "fbSubmit": "Envoyer",
+  "fbThanks": "Bien reçu, merci",
+  "fbFailed": "Envoi impossible. Vérifiez votre connexion.",
+  "fbRetry": "Réessayer"
 }

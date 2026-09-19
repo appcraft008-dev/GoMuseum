@@ -483,5 +483,19 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fbTitleObject": "Report an issue",
+  "fbTitleApp": "Feedback",
+  "fbContentWrong": "Wrong content",
+  "fbAudioBad": "Odd pronunciation",
+  "fbAudioMissing": "No audio",
+  "fbAppCrash": "Crashes or lag",
+  "fbRecognitionBad": "Poor recognition",
+  "fbFeatureRequest": "Feature request",
+  "fbOther": "Something else",
+  "fbTextHint": "Anything else? (optional)",
+  "fbSubmit": "Submit",
+  "fbThanks": "Thanks — we got it",
+  "fbFailed": "Couldn't send. Check your connection.",
+  "fbRetry": "Try again"
 }

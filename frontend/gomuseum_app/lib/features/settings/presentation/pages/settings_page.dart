@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
+import 'package:gomuseum_app/features/feedback/presentation/widgets/feedback_sheet.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
@@ -113,11 +114,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const SizedBox(height: 12),
             GmSectionHead(number: '03', label: l10n.secSupport),
             const SizedBox(height: 4),
+            // 「鼓励我们」原本要跳应用商店评价,而那条路在 App 内走不通
+            // (url_launcher / in_app_review 都是原生插件,见 kPrivacyPolicyUrl 的禁令),
+            // 一直挂着 coming soon。换成站内反馈:条目数不变,一条死的变活的。
+            // 等以后真能跳商店了,「鼓励我们」再加回来——那时它才有东西可跳。
             _row(
               gm: gm,
-              icon: GmIcons.heart,
-              label: l10n.encourageUs,
-              onTap: () => _comingSoon(l10n.appStoreRating),
+              icon: GmIcons.flag,
+              label: l10n.fbTitleApp,
+              onTap: () => showFeedbackSheet(context, scope: FeedbackScope.app),
             ),
             _row(
               gm: gm,

@@ -978,6 +978,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String edgeSupportCopied(String email) {
     return '已复制支持邮箱：$email';
   }
+
+  @override
+  String get fbTitleObject => '内容反馈';
+
+  @override
+  String get fbTitleApp => '意见反馈';
+
+  @override
+  String get fbContentWrong => '内容有误';
+
+  @override
+  String get fbAudioBad => '读音奇怪';
+
+  @override
+  String get fbAudioMissing => '没有语音';
+
+  @override
+  String get fbAppCrash => '闪退卡顿';
+
+  @override
+  String get fbRecognitionBad => '识别不准';
+
+  @override
+  String get fbFeatureRequest => '功能建议';
+
+  @override
+  String get fbOther => '其他';
+
+  @override
+  String get fbTextHint => '还想补充什么？（选填）';
+
+  @override
+  String get fbSubmit => '提交';
+
+  @override
+  String get fbThanks => '已收到，谢谢';
+
+  @override
+  String get fbFailed => '没能发送，请检查网络';
+
+  @override
+  String get fbRetry => '重试';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1954,4 +1996,46 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String edgeSupportCopied(String email) {
     return '已複製支援信箱：$email';
   }
+
+  @override
+  String get fbTitleObject => '內容回報';
+
+  @override
+  String get fbTitleApp => '意見回饋';
+
+  @override
+  String get fbContentWrong => '內容有誤';
+
+  @override
+  String get fbAudioBad => '讀音奇怪';
+
+  @override
+  String get fbAudioMissing => '沒有語音';
+
+  @override
+  String get fbAppCrash => '閃退卡頓';
+
+  @override
+  String get fbRecognitionBad => '辨識不準';
+
+  @override
+  String get fbFeatureRequest => '功能建議';
+
+  @override
+  String get fbOther => '其他';
+
+  @override
+  String get fbTextHint => '還想補充什麼？（選填）';
+
+  @override
+  String get fbSubmit => '送出';
+
+  @override
+  String get fbThanks => '已收到，謝謝';
+
+  @override
+  String get fbFailed => '無法傳送，請檢查網路';
+
+  @override
+  String get fbRetry => '重試';
 }

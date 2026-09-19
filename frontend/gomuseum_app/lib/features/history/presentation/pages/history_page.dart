@@ -24,9 +24,6 @@ class HistoryPage extends ConsumerStatefulWidget {
 }
 
 class _HistoryPageState extends ConsumerState<HistoryPage> {
-  /// 本地标星（足迹收藏接口接入前仅会话内有效）
-  final Set<String> _starred = {};
-
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
@@ -173,7 +170,6 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 
   Widget _itemRow(GmPalette gm, HistoryItem item) {
-    final starred = _starred.contains(item.id);
     final time =
         '${item.timestamp.hour.toString().padLeft(2, '0')}:${item.timestamp.minute.toString().padLeft(2, '0')}';
     return InkWell(
@@ -209,18 +205,6 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              ),
-            ),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() {
-                starred ? _starred.remove(item.id) : _starred.add(item.id);
-              }),
-              child: GmIcon(
-                GmIcons.star,
-                size: 18,
-                color: starred ? gm.accent : gm.line,
-                fill: starred,
               ),
             ),
           ],

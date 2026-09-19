@@ -310,5 +310,19 @@
   "purchaseFailed": "La compra no se completó. Inténtalo de nuevo.",
   "ticketPaid": "Pagado",
   "ticketVoid": "CADUCADO",
-  "edgeSupportCopied": "Dirección de soporte copiada: {email}"
+  "edgeSupportCopied": "Dirección de soporte copiada: {email}",
+  "fbTitleObject": "Informar de un problema",
+  "fbTitleApp": "Comentarios",
+  "fbContentWrong": "Contenido incorrecto",
+  "fbAudioBad": "Pronunciación extraña",
+  "fbAudioMissing": "Sin audio",
+  "fbAppCrash": "Fallos o lentitud",
+  "fbRecognitionBad": "Reconocimiento impreciso",
+  "fbFeatureRequest": "Sugerencia",
+  "fbOther": "Otro",
+  "fbTextHint": "¿Algo más? (opcional)",
+  "fbSubmit": "Enviar",
+  "fbThanks": "Recibido, gracias",
+  "fbFailed": "No se pudo enviar. Revisa tu conexión.",
+  "fbRetry": "Reintentar"
 }
