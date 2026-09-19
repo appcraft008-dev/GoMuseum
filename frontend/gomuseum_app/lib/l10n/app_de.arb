@@ -224,7 +224,7 @@
   "restoreNothingFound": "Keine offene Zahlung gefunden",
   "restoreSucceeded": "Dein Pass wurde wiederhergestellt",
   "audioFreePreview": "Kostenprobe",
-  "audioLockedHint": "Für Audiokommentare wird der Pass benötigt — deine kostenlose Probe ist bereits aufgebraucht.",
+  "audioLockedHint": "Für Audiokommentare wird der Pass benötigt — kostenlos hörbar sind die Werke, die du fotografiert und erkannt hast.",
   "quotaExhausted": "Du hast alle kostenlosen Erkennungen aufgebraucht.",
   "activateLater": "Später",
   "paywallLoginToBuy": "Zum Kauf anmelden",
@@ -274,7 +274,7 @@
   "benefitsSecCurrentQuota": "Ihr aktuelles Kontingent",
   "benefitsSecBuyAnother": "Noch ein Pass",
   "benefitsRecognition": "Fotoerkennung",
-  "benefitsFreeAudioNote": "Den Haupt-Audiokommentar zu einem Werk können Sie kostenlos anhören.",
+  "benefitsFreeAudioNote": "Bei jedem per Foto erkannten Werk ist der Haupt-Audiokommentar gratis. Jedes andere Werk lässt sich mit einem Gratis-Guthaben freischalten.",
   "benefitsFeatBrowse": "Stöbern, Suche, vollständiger Textkommentar",
   "benefitsFeatPresetQa": "Antworten auf vorgeschlagene Fragen",
   "benefitsFeatRecognition": "Unbegrenzte Fotoerkennung",
@@ -326,5 +326,15 @@
   "fbSubmit": "Senden",
   "fbThanks": "Danke, angekommen",
   "fbFailed": "Senden fehlgeschlagen. Verbindung prüfen.",
-  "fbRetry": "Erneut versuchen"
+  "fbRetry": "Erneut versuchen",
+  "unlockAudioTitle": "Ein Gratis-Guthaben einlösen?",
+  "unlockAudioBody": "Schaltet den Audiokommentar zu diesem Werk frei. Danach bleiben {left}.",
+  "@unlockAudioBody": {
+    "placeholders": {
+      "left": {
+        "type": "int"
+      }
+    }
+  },
+  "unlockAudioCta": "Freischalten und abspielen"
 }

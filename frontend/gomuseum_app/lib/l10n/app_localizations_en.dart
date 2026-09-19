@@ -731,7 +731,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get audioLockedHint =>
-      'Audio commentary needs the pass — your free preview has been used.';
+      'Audio commentary needs the pass — artworks you\'ve scanned are free to listen to.';
 
   @override
   String get quotaExhausted => 'You\'ve used all your free recognitions.';
@@ -886,7 +886,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get benefitsFreeAudioNote =>
-      'You can preview the main audio commentary on one artwork for free.';
+      'For every artwork you scan, the main audio commentary is free. Any other artwork can be unlocked with one free credit.';
 
   @override
   String get benefitsFeatBrowse => 'Browsing, search, full written commentary';
@@ -1070,4 +1070,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fbRetry => 'Try again';
+
+  @override
+  String get unlockAudioTitle => 'Use one free credit?';
+
+  @override
+  String unlockAudioBody(int left) {
+    return 'Unlocks the audio commentary for this artwork. $left will be left.';
+  }
+
+  @override
+  String get unlockAudioCta => 'Unlock and play';
 }

@@ -244,6 +244,54 @@ def test_billing_match_consumes_one(session):
     assert b.recognition_quota == FREE - 1  # candidates 也扣
 
 
+def test_recognition_unlocks_free_audio(session):
+    """⭐ 接线测试:识别成功**真的**把作品解锁给免费语音(2026-09-19 规则)。
+
+    整个"免费语音跟着识别走"就挂在这一根线上 —— 断了的话付费墙看起来一切正常
+    (闸门测试照常绿),用户却是识别完点播放依然撞墙,与改动前毫无区别。
+    候选卡整组解锁:这次识别的额度已经扣了,用户正需要挨个听着分辨哪件是对的。
+    """
+    from app.services import entitlement_service as es
+    from app.services.recognition.service import recognize_billed
+
+    _benefits_tables(session)
+    out = recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id="u-listener",
+        device_id="dev1",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}]
+        ),
+    )
+    expected = [c["qid"] for c in (out.get("candidates") or [])] or [
+        out["match"]["qid"]
+    ]
+    assert expected, "这条测试要求识别真的出结果"
+    for qid in expected:
+        assert es.audio_access(session, "u-listener", qid) == "allowed"
+    # 没识别到的作品不受影响
+    assert es.audio_access(session, "u-listener", "Q-从没拍过") == "denied"
+
+
+def test_unrecognized_unlocks_nothing(session):
+    """没识别出来 → 不扣费,也不解锁。两件事必须同时成立。"""
+    from app.services import entitlement_service as es
+    from app.services.recognition.service import recognize_billed
+
+    _benefits_tables(session)
+    recognize_billed(
+        session,
+        "orsay",
+        _jpeg(),
+        user_id="u-listener",
+        device_id="dev1",
+        identify_fn=_vision([]),
+    )
+    assert es.audio_access(session, "u-listener", "Q1") == "denied"
+
+
 def test_billing_unrecognized_free(session):
     from app.services.recognition.service import recognize_billed
 

@@ -74,3 +74,51 @@ def activate_pass(
     es.activate(db, user_id)
     log_event(db, "pass_activated", user_id=user_id)
     return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)
+
+
+@router.post("/audio/unlock")
+def unlock_audio(
+    qid: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> dict:
+    """用 1 次免费额度解锁这件作品的语音(主讲解段)。
+
+    免费额度是**一个池子**:拍照识别扣它,在藏品页主动解锁也扣它。
+    这样"免费能体验多少"就只有一个数字,不必再维护第二个(2026-09-19 定)。
+
+    ⚠️ **必须由用户显式确认后才调**(同 /activate 的理由):静默扣掉一次额度,
+    用户在一件无所谓的作品上花掉名额、走到真正想听的那件前才发现,是差评来源。
+    确认文案要写明"将用掉 1 次"。
+
+    幂等:已解锁(或通票生效)直接返回,**不重复扣**。额度为 0 → 402,前端弹付费墙。
+    """
+    from fastapi import HTTPException
+
+    user_id, is_guest = _me(db, credentials)
+    benefits = _benefits(db, user_id)
+
+    # 通票内本来就全放行,解锁无意义 —— 但也别报错,幂等返回当前权益即可。
+    if es.resolve_state(db, user_id)[0] == es.ACTIVE:
+        return es.summary(db, user_id, benefits, is_guest=is_guest)
+    # 已解锁过:直接返回,绝不二次扣费(重复点"解锁"不该花两次额度)
+    if qid in es.free_audio_qids(benefits):
+        return es.summary(db, user_id, benefits, is_guest=is_guest)
+
+    # qid 必须真实存在。不校验的话,客户端一个笔误就让用户白掉一次额度 ——
+    # 这是他花钱换来的东西,而且 404 比"扣了钱什么也没解锁"好排查得多。
+    from app.models.museum_object import MuseumObject
+
+    if not db.query(MuseumObject.id).filter_by(qid=qid).first():
+        raise HTTPException(status_code=404, detail={"reason": "object_not_found"})
+
+    from app.services.benefits_service import BenefitsService
+
+    # ⚠️ 顺序:**先扣费再解锁**。反过来的话扣费失败(额度已空)时权益已经发出去,
+    # 等于白送 —— 而这条路径正是免费用户撞墙后走的,白送的就是我们要卖的东西。
+    if not BenefitsService(db).consume_recognition(user_id=user_id):
+        log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
+        raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+    es.unlock_free_audio(db, user_id, [qid])
+    log_event(db, "free_audio_unlocked", user_id=user_id, qid=qid)
+    return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)

@@ -341,6 +341,33 @@ def _pass_active(db, user_id) -> bool:
     return es.resolve_state(db, str(user_id))[0] == es.ACTIVE
 
 
+def _unlock_audio(db, user_id, out: dict) -> None:
+    """识别成功 → 这些作品的主讲解段以后可免费听(2026-09-19 规则)。
+
+    在**扣费的同一处**解锁:免费识别次数是唯一的那个数字,语音跟着它走,
+    不再有第二个额度要对齐(旧规则「免费试听一件」与「免费识别 5 次」互不对齐,
+    用户识别第二件点播放被弹墙,观感是那 5 次识别是假的)。
+
+    匿名请求(只有 device_id)跳过:音频端点一律要令牌,解锁给谁都无处可用。
+    解锁失败绝不能影响识别结果 —— 识别已经扣过费了。
+    """
+    if not user_id:
+        return
+    qids = []
+    match = out.get("match") or {}
+    if match.get("qid"):
+        qids.append(match["qid"])
+    # 候选卡整组解锁:识别没把握时,用户正需要挨个听着分辨哪件是对的,
+    # 而这一次识别的额度已经扣了。上限仍由免费识别次数兜住。
+    qids += [c["qid"] for c in (out.get("candidates") or []) if c.get("qid")]
+    try:
+        from app.services.entitlement_service import unlock_free_audio
+
+        unlock_free_audio(db, str(user_id), qids)
+    except Exception:
+        logger.exception("unlock_free_audio failed")
+
+
 def recognize_billed(
     db,
     slug: str | None,
@@ -388,6 +415,7 @@ def recognize_billed(
                 benefits.consume_recognition(user_id, device_id)
             except Exception:
                 logger.exception("consume_recognition failed")
+        _unlock_audio(db, user_id, out)
     else:
         if out is not None:
             out.pop("_billed", None)

@@ -98,12 +98,26 @@ Future<void> _pump(WidgetTester t, Widget app) async {
 }
 
 void main() {
-  testWidgets('未购:显示购买按钮,额度按「已用/总数」算', (t) async {
+  testWidgets('⭐ 未购:额度与设置页**同一口径**(剩余),不是已用', (t) async {
     await _pump(t, _wrap(_free));
     final l10n = await _l10n();
     expect(find.text(l10n.paywallBuy), findsOneWidget);
-    // 后端给的是**剩余** 2/5 → 已用是 3,不能把剩余画成已用
-    expect(find.text('3 / 5'), findsOneWidget);
+    // 🔴 这条原本断言 '3 / 5'(已用)。设置页同一时刻显示「剩余 2/5 次」——
+    // 同一个账号、同一秒,两页一个说 2 一个说 3,用户当场问哪个对
+    // (2026-09-19 真机截图)。两页现在共用 `quotaValue` 这一条串,
+    // 口径不一致就再也写不出来了。
+    expect(find.text(l10n.quotaValue('2', 5)), findsOneWidget);
+    expect(find.text('3 / 5'), findsNothing, reason: '已用口径不该再出现');
+  });
+
+  testWidgets('⭐ 额度条**递减**:满 → 空表示快用完了', (t) async {
+    await _pump(t, _wrap(_free));
+    // 剩余 2/5 → 条填 40%。画成已用的话是 60%,方向正好反过来:
+    // 越用越满,读起来像进度在前进,而它表示的是"还剩多少"。
+    final bar = t.widget<FractionallySizedBox>(
+      find.byType(FractionallySizedBox).first,
+    );
+    expect(bar.widthFactor, closeTo(0.4, 0.001));
   });
 
   testWidgets('⭐ 已购未激活:绝不再出现购买按钮 —— 这是重复购买事故的根因', (t) async {

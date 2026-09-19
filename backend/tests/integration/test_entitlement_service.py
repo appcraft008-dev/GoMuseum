@@ -41,12 +41,12 @@ def _ent(s, uid, status, expires=None, created=None):
     return e
 
 
-def _ben(s, uid, used=0, quota=5, free_audio=None):
+def _ben(s, uid, used=0, quota=5, unlocked=None):
     b = UserBenefits(
         user_id=uid,
         recognition_quota=quota,
         total_recognitions_used=used,
-        free_audio_qid=free_audio,
+        free_audio_qids=list(unlocked or []),
     )
     s.add(b)
     s.commit()
@@ -226,20 +226,26 @@ def test_active_pass_ignores_quota(session):
     assert out["free_recognitions_left"] is None  # 通票内不显示剩余次数
 
 
-def test_free_audio_claimed_per_artwork_and_replayable(session):
-    """首件按**作品**认领:该件可无限重播,第二件锁。"""
+def test_free_audio_follows_recognition_and_replays(session):
+    """识别过的作品可无限重播,没识别过的锁。"""
     b = _ben(session, "u1")
-    assert es.claim_free_audio(session, b, "Q12418") is True
+    assert es.unlock_free_audio(session, "u1", ["Q12418"]) == ["Q12418"]
+    session.refresh(b)
     assert es.can_play_audio(session, "u1", "Q12418", b) is True  # 可重播
     assert es.can_play_audio(session, "u1", "Q12418", b) is True
-    assert es.can_play_audio(session, "u1", "Q151952", b) is False  # 第二件锁
+    assert es.can_play_audio(session, "u1", "Q151952", b) is False  # 没识别过的锁
 
 
-def test_free_audio_cannot_be_claimed_twice(session):
-    b = _ben(session, "u1")
-    es.claim_free_audio(session, b, "Q1")
-    assert es.claim_free_audio(session, b, "Q2") is False
-    assert b.free_audio_qid == "Q1"
+def test_summary_carries_the_unlock_list(session):
+    """前端的本地闸靠这个清单判,必须在 summary 里给出来。
+
+    同时锁住老字段 `free_audio_qid` **恒为 None**:它的语义("你认领的那一件")
+    已经不存在,在这里回填清单第一件反而会让老 App 把其余已解锁的作品拦掉。
+    """
+    b = _ben(session, "u1", unlocked=["Q1", "Q2"])
+    out = es.summary(session, "u1", b)
+    assert out["free_audio_qids"] == ["Q1", "Q2"]
+    assert out["free_audio_qid"] is None
 
 
 def test_referral_bonus_adds_to_quota(session):

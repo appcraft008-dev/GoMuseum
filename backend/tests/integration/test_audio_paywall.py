@@ -29,50 +29,43 @@ def session():
     yield sessionmaker(bind=engine)()
 
 
-def _ben(s, uid="u1", free_audio=None, lang="zh"):
+def _ben(s, uid="u1", unlocked=None):
     b = UserBenefits(
         user_id=uid,
         recognition_quota=5,
-        free_audio_qid=free_audio,
-        free_audio_lang=lang if free_audio else None,
+        free_audio_qids=list(unlocked or []),
     )
     s.add(b)
     s.commit()
     return b
 
 
-def test_first_artwork_is_claimable_but_not_yet_claimed(session):
-    """⚠️ 判定本身**不能有副作用**(2026-07-28 staging 实测踩到):
-    闸门跑在生成之前,而生成可能 404(该语言没正文)/409/503。
-    若在判定时就认领,用户点一件没音频的作品——什么都没听到,名额却没了。"""
+def test_gate_has_no_side_effects(session):
+    """⚠️ 判定本身**不能有副作用**(2026-07-28 staging 实测踩到)。
+
+    当年的形态是"判定时就认领"→ 用户点一件没音频的作品,什么都没听到、名额却
+    没了。认领已经随规则改动整个删除(解锁发生在识别扣费那一处),但"闸门只读"
+    这条约束留着:它挡的是**下一次**有人想在闸里顺手写点什么。
+    """
     b = _ben(session)
-    assert es.audio_access(session, "u1", "Q12418") == "claimable"
+    assert es.audio_access(session, "u1", "Q12418") == "denied"
     session.refresh(b)
-    assert b.free_audio_qid is None, "判定阶段绝不能认领"
+    assert not b.free_audio_qids, "判定阶段绝不能写解锁清单"
 
 
-def test_claim_happens_only_after_delivery(session):
-    b = _ben(session)
-    assert es.audio_access(session, "u1", "Q12418") == "claimable"
-    assert es.claim_audio_now(session, "u1", "Q12418") is True  # 音频送达了
-    session.refresh(b)
-    assert b.free_audio_qid == "Q12418"
-    assert es.audio_access(session, "u1", "Q12418") == "allowed"  # 之后可重播
-
-
-def test_claimed_artwork_replays_forever(session):
-    _ben(session, free_audio="Q12418")
+def test_recognized_artwork_replays_forever(session):
+    _ben(session, unlocked=["Q12418"])
     for _ in range(3):
         assert es.audio_access(session, "u1", "Q12418") == "allowed"
 
 
-def test_second_artwork_is_denied(session):
-    _ben(session, free_audio="Q12418")
+def test_artwork_never_recognized_is_denied(session):
+    _ben(session, unlocked=["Q12418"])
     assert es.audio_access(session, "u1", "Q151952") == "denied"
 
 
 def test_active_pass_opens_everything(session):
-    _ben(session, free_audio="Q12418")
+    _ben(session, unlocked=["Q12418"])
     session.add(
         Entitlement(
             user_id="u1",
@@ -88,7 +81,7 @@ def test_active_pass_opens_everything(session):
 
 def test_expired_pass_falls_back_to_free_rules(session):
     """到期在读取时实时判定 —— 靠定时任务刷状态,漏跑就白送权限。"""
-    _ben(session, free_audio="Q12418")
+    _ben(session, unlocked=["Q12418"])
     session.add(
         Entitlement(
             user_id="u1",
@@ -99,28 +92,30 @@ def test_expired_pass_falls_back_to_free_rules(session):
     )
     session.commit()
     assert es.audio_access(session, "u1", "Q151952") == "denied"
-    assert es.audio_access(session, "u1", "Q12418") == "allowed"  # 首件仍可重播
+    assert es.audio_access(session, "u1", "Q12418") == "allowed"  # 识别过的仍可重播
 
 
-def test_missing_benefits_row_still_gets_the_free_preview(session):
-    """benefits 行是**懒建**的,"还没建行"= 一次都没用过,不是"没有权限"。
+def test_missing_benefits_row_is_denied_because_nothing_recognized_yet(session):
+    """benefits 行是**懒建**的。行不存在 = 一次都没识别过 = 还没解锁任何作品。
 
-    ⚠️ 这条原本叫 `test_unknown_user_denied`、断言 `denied` —— 它把"行还没建"
-    当成了"伪造的 user_id",而**真实的新注册用户正是没有行的那一类**:
-    2026-09-19 prod 78 个用户里 35 个没有 benefits 行,他们点听讲解一律撞墙。
-    (user_id 取自签名令牌,伪造不了;真要白拿,注册一个新账号同样只有一件。)
+    ⚠️ 这条的历史值得留着:它原本叫 `test_unknown_user_denied`,把"行还没建"
+    当成"伪造的 user_id";而真实的新注册用户正是没有行的那一类
+    (2026-09-19 prod 78 个用户里 35 个没有行),于是**每个新用户**点听讲解都
+    撞墙。当时的修法是判 claimable 放行。
 
-    白拿的那一头由后两句守住:认领会把行建出来,第二件立刻拒。
+    改成"跟着识别走"之后,同一个状态反过来该判 denied —— 而这**不再是那个坑**:
+    解锁写在识别扣费的同一处,而那里 get_or_create_benefits 一定会把行建出来。
+    换句话说"有解锁清单"与"有行"从此同生共死,不会再出现"有权限但行还没建"。
     """
-    assert es.audio_access(session, "全新用户", "Q12418") == "claimable"
-    # 深度段不因"没有行"而放宽:名额只认主讲解段
+    assert es.audio_access(session, "全新用户", "Q12418") == "denied"
+
+    es.unlock_free_audio(session, "全新用户", ["Q12418"])  # 识别成功
+    assert es.audio_access(session, "全新用户", "Q12418") == "allowed"  # 可重播
+    assert es.audio_access(session, "全新用户", "Q151952") == "denied"  # 没识别过的要票
+    # 深度段不因已解锁而放宽:解锁只认主讲解段
     assert (
         es.audio_access(session, "全新用户", "Q12418", section="analysis") == "denied"
     )
-
-    assert es.claim_audio_now(session, "全新用户", "Q12418") is True
-    assert es.audio_access(session, "全新用户", "Q12418") == "allowed"  # 可重播
-    assert es.audio_access(session, "全新用户", "Q151952") == "denied"  # 第二件要票
 
 
 def test_endpoint_actually_wires_the_gate():
@@ -146,7 +141,7 @@ def test_paywall_hit_is_recorded(session):
     from app.services.event_log import log_event
 
     Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
-    _ben(session, free_audio="Q12418")
+    _ben(session, unlocked=["Q12418"])
     assert es.audio_access(session, "u1", "Q151952") == "denied"
     log_event(session, "paywall_viewed_from_audio", user_id="u1", qid="Q151952")
 
@@ -183,38 +178,61 @@ def test_tts_generate_requires_auth():
     assert r.json()["detail"]["reason"] == "auth_required"
 
 
-def test_free_preview_is_one_artwork_one_language_one_section(session):
-    """免费试听收敛到 (作品, 语言, 主讲解段)。
+def test_free_audio_covers_the_guide_section_only(session):
+    """解锁只覆盖**主讲解段**,不覆盖深度段/问答/作者介绍。
 
-    一件作品还有背景/分析/问答/作者介绍等段落,每段独立 TTS,再乘 10 种语言——
-    只按 qid 判的话"免费一件"实际是几十次生成,免费层成本失控。
+    一件作品还有背景/分析/问答/作者介绍等段落,每段独立 TTS ——
+    不限段的话"识别过就能听"实际是每件几十次生成。
     """
-    _ben(session, free_audio="Q12418", lang="zh")
-    # 同件同语言主讲解:可无限重播
+    _ben(session, unlocked=["Q12418"])
     assert es.audio_access(session, "u1", "Q12418") == "allowed"
-    # 同件但换语言 → 另一次 TTS,不在免费范围
-    assert es.audio_access(session, "u1", "Q12418", language="fr") == "denied"
-    # 同件同语言但深度段/问答/作者介绍 → 各自独立 TTS,属付费内容
     for sec in ("background", "analysis", "qa", "artist_bio"):
         assert (
             es.audio_access(session, "u1", "Q12418", section=sec) == "denied"
         ), f"{sec} 不该免费"
 
 
-def test_claim_records_the_language(session):
-    b = _ben(session)
-    assert es.audio_access(session, "u1", "Q1", language="fr") == "claimable"
-    es.claim_audio_now(session, "u1", "Q1", "fr")
-    session.refresh(b)
-    assert (b.free_audio_qid, b.free_audio_lang) == ("Q1", "fr")
-    assert es.audio_access(session, "u1", "Q1", language="fr") == "allowed"
-    assert es.audio_access(session, "u1", "Q1", language="zh") == "denied"
+def test_language_no_longer_narrows_the_unlock(session):
+    """⚠️ 这条断言的是一个**故意放宽**的规则(2026-09-19),不是漏判。
+
+    旧规则把免费试听绑死在 (作品, 语言, 段):中文识别完、事后把 App 切成法语
+    的人会撞 402 —— 他没多拿任何东西,只是换了个界面语言,却被当成第二件。
+    换语言确实要多一次 TTS,但上限是「解锁件数 × 语言数」且生成一次永久落库,
+    这点钱买不到"同一件作品换个语言就要买票"的困惑。
+    """
+    _ben(session, unlocked=["Q12418"])
+    for lang in ("zh", "fr", "en"):
+        assert es.audio_access(session, "u1", "Q12418", language=lang) == "allowed"
 
 
-def test_deep_section_is_never_claimable(session):
-    """深度段不能成为"首件" —— 否则用户在深度段用掉名额,主讲解反而听不了。"""
+def test_deep_section_alone_unlocks_nothing(session):
+    """没识别过的作品,深度段自然也是拒。"""
     _ben(session)
     assert es.audio_access(session, "u1", "Q1", section="analysis") == "denied"
+
+
+def test_unlock_appends_and_is_idempotent(session):
+    """多次识别累积;同一件重复识别不产生重复项。
+
+    ⚠️ JSON 列**原地 append 不会被标脏**,更新会被 SQLAlchemy 静默丢掉 ——
+    unlock_free_audio 因此整列重新赋值。这条就是那个坑的看门狗:
+    第二次解锁若丢了,`Q2` 会查不到。
+    """
+    b = _ben(session)
+    assert es.unlock_free_audio(session, "u1", ["Q1"]) == ["Q1"]
+    assert es.unlock_free_audio(session, "u1", ["Q2"]) == ["Q2"]
+    assert es.unlock_free_audio(session, "u1", ["Q1"]) == [], "重复识别不该再记一次"
+    session.refresh(b)
+    assert b.free_audio_qids == ["Q1", "Q2"]
+    for q in ("Q1", "Q2"):
+        assert es.audio_access(session, "u1", q) == "allowed"
+
+
+def test_unlock_creates_the_row_when_missing(session):
+    """行懒建:第一次识别时把行建出来,否则解锁写进空气里。"""
+    assert es.unlock_free_audio(session, "新用户", ["Q1"]) == ["Q1"]
+    row = session.query(UserBenefits).filter_by(user_id="新用户").one()
+    assert row.free_audio_qids == ["Q1"]
 
 
 def test_pass_scope_is_actually_enforced(session):
@@ -242,7 +260,7 @@ def test_pass_scope_is_actually_enforced(session):
     assert es.resolve_state(session, "u1", "paris")[0] == es.ACTIVE
     # 音频闸跟着走:巴黎放行,马德里回落免费规则
     assert es.audio_access(session, "u1", "Q9", city="Paris") == "allowed"
-    assert es.audio_access(session, "u1", "Q9", city="Madrid") == "claimable"
+    assert es.audio_access(session, "u1", "Q9", city="Madrid") == "denied"
 
 
 def test_product_catalog_drives_duration_and_scope(session):
@@ -274,3 +292,126 @@ def test_wildcard_scope_covers_every_city(session):
     """多国票:scope='*' 覆盖全部城市。"""
     assert es.covers_museum("*", "Madrid") is True
     assert es.covers_museum("*", None) is True
+
+
+# HTTPBearer(auto_error=True):没有这个头,依赖注入阶段就 403,替身根本轮不到。
+_AUTH = {"Authorization": "Bearer test-token"}
+
+
+def _known_object(session, qid="Q12418"):
+    """解锁端点要校验 qid 真实存在 —— 测试库里得真有这一行,
+    否则测的是 404 分支而不是扣费分支。"""
+    import uuid as _uuid
+
+    from app.models.museum_object import MuseumObject
+
+    MuseumObject.__table__.create(bind=session.get_bind(), checkfirst=True)
+    session.add(MuseumObject(id=_uuid.uuid4(), qid=qid, museum_id=_uuid.uuid4()))
+    session.commit()
+
+
+def _client_with_user(session, uid="u1"):
+    """把端点的 DB 与鉴权都换成替身:这里考的是**额度与解锁的关系**,
+    不是登录链路(那另有专测)。"""
+    from fastapi.testclient import TestClient
+
+    from app.api.v1.endpoints import entitlements as ep
+    from app.core.database import get_db
+    from app.main import app
+
+    class _U:
+        id = uid
+        is_guest = False
+
+    app.dependency_overrides[get_db] = lambda: session
+    original = ep.AuthService.get_current_user
+    ep.AuthService.get_current_user = staticmethod(lambda db, token: _U())
+    client = TestClient(app)
+    yield_client = (
+        client,
+        lambda: setattr(ep.AuthService, "get_current_user", original),
+    )
+    return yield_client
+
+
+def test_unlock_endpoint_spends_one_quota_and_unlocks(session):
+    """⭐ 免费额度是**一个池子**:拍照识别扣它,主动解锁也扣它。
+
+    这条钉住的是"解锁真的要花额度" —— 不花的话免费语音就没有上限,
+    用户在列表里逐件点开就能把 24000 件全听完。
+    """
+    from app.models.app_event import AppEvent
+
+    Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
+    b = _ben(session)  # recognition_quota=5
+    _known_object(session)
+    client, restore = _client_with_user(session)
+    try:
+        r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
+        assert r.status_code == 200
+        assert r.json()["free_recognitions_left"] == 4, "解锁要花掉 1 次"
+        assert r.json()["free_audio_qids"] == ["Q12418"]
+        assert es.audio_access(session, "u1", "Q12418") == "allowed"
+
+        # 幂等:再点一次不该再扣
+        r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
+        assert r.status_code == 200
+        assert r.json()["free_recognitions_left"] == 4, "重复解锁不该二次扣费"
+    finally:
+        restore()
+        from app.main import app as _app
+
+        _app.dependency_overrides.clear()
+    session.refresh(b)
+    assert b.recognition_quota == 4
+
+
+def test_unlock_endpoint_denies_when_quota_is_gone(session):
+    """额度空了 → 402,前端据此弹付费墙。**绝不能先解锁再扣费** ——
+    那样额度为 0 时权益已经发出去,白送的正是我们要卖的东西。"""
+    from app.models.app_event import AppEvent
+
+    Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
+    b = _ben(session)
+    b.recognition_quota = 0
+    session.commit()
+    _known_object(session)
+    client, restore = _client_with_user(session)
+    try:
+        r = client.post("/api/v1/entitlements/audio/unlock?qid=Q12418", headers=_AUTH)
+        assert r.status_code == 402
+        assert r.json()["detail"]["reason"] == "pass_required"
+    finally:
+        restore()
+        from app.main import app as _app
+
+        _app.dependency_overrides.clear()
+    assert es.audio_access(session, "u1", "Q12418") == "denied", "402 了就不该解锁"
+
+
+def test_unlock_unknown_qid_returns_404_and_costs_nothing(session):
+    """⭐ 客户端一个笔误不该让用户白掉一次额度 —— 那是他花钱换来的东西。
+
+    2026-09-19 staging 实测抓到:未校验前,`qid=Q-does-not-exist` 返回 200
+    并扣掉一次额度(4 → 3),用户什么也没得到。404 也比"扣了钱什么都没解锁"
+    好排查得多。
+    """
+    from app.models.app_event import AppEvent
+
+    Base.metadata.create_all(bind=session.get_bind(), tables=[AppEvent.__table__])
+    b = _ben(session)
+    _known_object(session)  # 只建了 Q12418,下面故意问别的
+    client, restore = _client_with_user(session)
+    try:
+        r = client.post(
+            "/api/v1/entitlements/audio/unlock?qid=Q-does-not-exist", headers=_AUTH
+        )
+        assert r.status_code == 404
+        assert r.json()["detail"]["reason"] == "object_not_found"
+    finally:
+        restore()
+        from app.main import app as _app
+
+        _app.dependency_overrides.clear()
+    session.refresh(b)
+    assert b.recognition_quota == 5, "未知 qid 绝不能扣额度"
