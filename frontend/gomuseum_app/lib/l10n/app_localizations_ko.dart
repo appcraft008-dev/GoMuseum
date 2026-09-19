@@ -1027,7 +1027,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get fbOther => '기타';
 
   @override
-  String get fbTextHint => '더 알려주실 내용이 있나요? (선택)';
+  String get fbTextHint => '더 알려주실 내용이 있나요? (선택 · 개인정보는 입력하지 마세요)';
 
   @override
   String get fbSubmit => '보내기';

@@ -322,7 +322,7 @@
   "fbRecognitionBad": "Niedokładne rozpoznawanie",
   "fbFeatureRequest": "Propozycja funkcji",
   "fbOther": "Inne",
-  "fbTextHint": "Coś jeszcze? (opcjonalnie)",
+  "fbTextHint": "Coś jeszcze? (opcjonalnie – nie podawaj danych osobowych)",
   "fbSubmit": "Wyślij",
   "fbThanks": "Odebrano, dziękujemy",
   "fbFailed": "Nie udało się wysłać. Sprawdź połączenie.",

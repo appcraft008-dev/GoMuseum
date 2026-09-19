@@ -2000,7 +2000,7 @@ abstract class AppLocalizations {
   /// No description provided for @fbTextHint.
   ///
   /// In en, this message translates to:
-  /// **'Anything else? (optional)'**
+  /// **'Anything else? (optional — please don\'t include personal information)'**
   String get fbTextHint;
 
   /// No description provided for @fbSubmit.

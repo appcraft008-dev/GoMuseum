@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.feedback import Feedback
 from app.models.purchase import Entitlement, Purchase
 from app.models.recognition_event import RecognitionEvent
 from app.models.user import User
@@ -33,6 +34,7 @@ def db():
             RecognitionEvent.__table__,
             Purchase.__table__,
             Entitlement.__table__,
+            Feedback.__table__,
         ],
     )
     session = sessionmaker(bind=engine)()
