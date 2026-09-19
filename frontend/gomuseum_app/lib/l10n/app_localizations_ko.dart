@@ -263,6 +263,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get footprintTitle => '발자취';
 
   @override
+  String get footprintNoMuseum => '장소 미상';
+
+  @override
   String get noFootprints => '발자취가 없습니다';
 
   @override
@@ -296,6 +299,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String dateYearMonthDay(Object day, Object month, Object year) {
+    return '$year/$month/$day';
+  }
+
+  @override
   String get deleteFootprintQ => '이 발자취를 삭제할까요?';
 
   @override
@@ -312,6 +320,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autoSavePhoto => '사진 자동 저장';
+
+  @override
+  String get autoSavePhotoNeedsAccess => '사진을 저장하려면 사진 보관함 접근 권한이 필요합니다';
 
   @override
   String get ttsVoice => 'TTS 음성';
@@ -987,4 +998,46 @@ class AppLocalizationsKo extends AppLocalizations {
   String edgeSupportCopied(String email) {
     return '지원 이메일을 복사했습니다: $email';
   }
+
+  @override
+  String get fbTitleObject => '내용 신고';
+
+  @override
+  String get fbTitleApp => '의견 보내기';
+
+  @override
+  String get fbContentWrong => '내용 오류';
+
+  @override
+  String get fbAudioBad => '발음이 이상함';
+
+  @override
+  String get fbAudioMissing => '음성 없음';
+
+  @override
+  String get fbAppCrash => '앱 튕김·버벅임';
+
+  @override
+  String get fbRecognitionBad => '인식 부정확';
+
+  @override
+  String get fbFeatureRequest => '기능 제안';
+
+  @override
+  String get fbOther => '기타';
+
+  @override
+  String get fbTextHint => '더 알려주실 내용이 있나요? (선택)';
+
+  @override
+  String get fbSubmit => '보내기';
+
+  @override
+  String get fbThanks => '접수되었습니다. 감사합니다';
+
+  @override
+  String get fbFailed => '보내지 못했습니다. 연결을 확인해 주세요';
+
+  @override
+  String get fbRetry => '다시 시도';
 }

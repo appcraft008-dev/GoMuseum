@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     chat,
     content,
     entitlements,
+    feedback,
     history,
     museums,
     payment,
@@ -45,6 +46,9 @@ api_router.include_router(museums.router, prefix="/museums", tags=["museums"])
 
 # Include global recognition endpoint (POST /recognize, museum 可选跨馆识别)
 api_router.include_router(recognize_global.router, tags=["recognition"])
+
+# Include feedback endpoint (用户反馈:内容质量的兜底环;加法契约)
+api_router.include_router(feedback.router, tags=["feedback"])
 
 # Include search endpoints (全局 /search + 馆域 /museums/{slug}/search;加法契约)
 api_router.include_router(search.router, tags=["search"])

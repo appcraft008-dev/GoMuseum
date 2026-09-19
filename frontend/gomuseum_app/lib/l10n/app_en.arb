@@ -138,6 +138,7 @@
   "factArtist": "Artist",
   "factNone": "No detailed information",
   "footprintTitle": "Footprints",
+  "footprintNoMuseum": "Unknown venue",
   "noFootprints": "No footprints yet",
   "footprintStat": "{count} works · {days} days",
   "@footprintStat": {
@@ -164,6 +165,7 @@
   "today": "Today",
   "yesterday": "Yesterday",
   "dateMonthDay": "{month}/{day}",
+  "dateYearMonthDay": "{month}/{day}/{year}",
   "@dateMonthDay": {
     "placeholders": {
       "month": {
@@ -180,6 +182,7 @@
   "guideLanguage": "Guide language",
   "offlinePacks": "Offline museum packs",
   "autoSavePhoto": "Auto-save photos",
+  "autoSavePhotoNeedsAccess": "Photo library access is needed to save photos",
   "ttsVoice": "TTS voice",
   "ttsVoiceValue": "Calm · Female",
   "ttsVoiceSelect": "Choose voice",
@@ -482,5 +485,19 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fbTitleObject": "Report an issue",
+  "fbTitleApp": "Feedback",
+  "fbContentWrong": "Wrong content",
+  "fbAudioBad": "Odd pronunciation",
+  "fbAudioMissing": "No audio",
+  "fbAppCrash": "Crashes or lag",
+  "fbRecognitionBad": "Poor recognition",
+  "fbFeatureRequest": "Feature request",
+  "fbOther": "Something else",
+  "fbTextHint": "Anything else? (optional)",
+  "fbSubmit": "Submit",
+  "fbThanks": "Thanks — we got it",
+  "fbFailed": "Couldn't send. Check your connection.",
+  "fbRetry": "Try again"
 }

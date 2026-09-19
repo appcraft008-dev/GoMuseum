@@ -10,9 +10,13 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
+import 'package:gomuseum_app/features/feedback/presentation/widgets/feedback_sheet.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
+// photo_manager 已在取景页的插件树里（最近照片条），这里不引入新原生插件。
+import 'package:photo_manager/photo_manager.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
@@ -28,7 +32,7 @@ const kPrivacyPolicyUrl = 'https://gomuseum.app/privacy.html';
 /// 版本脚注。**不会自动跟着 pubspec 走** —— `package_info_plus` 同样是
 /// 原生插件(理由见 [kPrivacyPolicyUrl]),所以这里是手写的。
 /// 发版改 pubspec 时必须一起改;忘了会被 `settings_version_test` 拦下。
-const kVersionFootnote = 'GoMuseum 1.0.0 (30)';
+const kVersionFootnote = 'GoMuseum 1.0.0 (31)';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -38,9 +42,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  /// 自动保存照片（偏好持久化接入前仅会话内有效）
-  bool _autoSavePhoto = false;
-
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
@@ -95,8 +96,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               gm: gm,
               icon: GmIcons.photo,
               label: l10n.autoSavePhoto,
-              value: _autoSavePhoto,
-              onChanged: (v) => setState(() => _autoSavePhoto = v),
+              value: ref.watch(autoSavePhotoProvider),
+              onChanged: _setAutoSavePhoto,
             ),
             _row(
               gm: gm,
@@ -113,11 +114,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const SizedBox(height: 12),
             GmSectionHead(number: '03', label: l10n.secSupport),
             const SizedBox(height: 4),
+            // 「鼓励我们」原本要跳应用商店评价,而那条路在 App 内走不通
+            // (url_launcher / in_app_review 都是原生插件,见 kPrivacyPolicyUrl 的禁令),
+            // 一直挂着 coming soon。换成站内反馈:条目数不变,一条死的变活的。
+            // 等以后真能跳商店了,「鼓励我们」再加回来——那时它才有东西可跳。
             _row(
               gm: gm,
-              icon: GmIcons.heart,
-              label: l10n.encourageUs,
-              onTap: () => _comingSoon(l10n.appStoreRating),
+              icon: GmIcons.flag,
+              label: l10n.fbTitleApp,
+              onTap: () => showFeedbackSheet(context, scope: FeedbackScope.app),
             ),
             _row(
               gm: gm,
@@ -501,6 +506,38 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     await ref
         .read(languageProvider.notifier)
         .setLanguage(picked == _kFollowSystem ? null : picked);
+  }
+
+  /// 打开「自动保存照片」前先要到相册写权限：没权限就写不进去，而开关开着、
+  /// 照片一张没存的话用户无从知道为什么。要不到就**不写偏好、开关保持关**。
+  /// 关闭时不请求权限（不需要）。
+  // ponytail: 权限判断不分平台。Android 10+ 走 MediaStore 其实无需任何权限，
+  // 此处一刀切会把「拒了相册读权限但保存本可成功」的机型也挡住 —— 但那批用户
+  // 取景页的最近照片条同样是空的，提示他去开权限并不冤；换成分平台判断要引
+  // device_info_plus 查 SDK 版本，不值当。
+  Future<void> _setAutoSavePhoto(bool enabled) async {
+    final notifier = ref.read(autoSavePhotoProvider.notifier);
+    if (!enabled) {
+      await notifier.setEnabled(false);
+      return;
+    }
+    final ps = await PhotoManager.requestPermissionExtend(
+      requestOption: const PermissionRequestOption(
+        androidPermission:
+            AndroidPermission(type: RequestType.image, mediaLocation: false),
+        // iOS 只要「加入」权限，不必读整个相册；Info.plist 需有
+        // NSPhotoLibraryAddUsageDescription，缺了会崩。
+        iosAccessLevel: IosAccessLevel.addOnly,
+      ),
+    );
+    if (!ps.hasAccess) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.autoSavePhotoNeedsAccess)));
+      return;
+    }
+    await notifier.setEnabled(true);
   }
 
   void _comingSoon(String feature) {

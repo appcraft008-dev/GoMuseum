@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
@@ -21,6 +22,7 @@ import 'package:gomuseum_app/features/recognition/data/models/recognize_response
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
 import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -48,6 +50,18 @@ double computeZoomLevel({
   required double max,
 }) =>
     (startZoom * scale).clamp(min, max);
+
+/// 回前台是否要重建相机。
+///
+/// **判断只能看 `state`，不能被"当前有没有 controller"提前拦掉**：切走时
+/// (`inactive`) 相机被释放、字段置 null，正是没有 controller 的时候才最需要
+/// 重建。曾经在生命周期回调开头写 `if (_controller == null) return;`，把
+/// `resumed` 一起吞了——开过图库/授权弹窗回来后相机永不重启，取景器停在转圈、
+/// 快门也按不动。
+@visibleForTesting
+bool shouldRestartCamera(AppLifecycleState state,
+        {required bool hasController}) =>
+    state == AppLifecycleState.resumed && !hasController;
 
 class _CameraPageState extends ConsumerState<CameraPage>
     with WidgetsBindingObserver {
@@ -110,7 +124,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
     await _recognizeImage(XFile(file.path));
   }
 
+  /// 初始化进行中：首帧的 initState 初始化还没完，权限弹窗就把 App 切走再回来，
+  /// `resumed` 会看到 `_controller` 仍是 null 而重复开相机——多出来的那个没人
+  /// dispose，占着相机锁。
+  bool _initializing = false;
+
   Future<void> _initCamera() async {
+    if (_initializing) return;
+    _initializing = true;
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
@@ -153,17 +174,21 @@ class _CameraPageState extends ConsumerState<CameraPage>
     } on CameraException catch (e) {
       setState(() => _cameraError =
           e.description ?? AppLocalizations.of(context)!.camInitFailed);
+    } finally {
+      _initializing = false;
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
-      controller.dispose();
+      if (controller == null) return;
+      // 先置 null 再 dispose：build 里会读它，不能让重建期撞上已释放的 controller。
       _controller = null;
-    } else if (state == AppLifecycleState.resumed) {
+      if (mounted) setState(() {}); // 不重建的话 CameraPreview 还挂着死纹理
+      controller.dispose();
+    } else if (shouldRestartCamera(state, hasController: controller != null)) {
       _initCamera();
     }
   }
@@ -205,7 +230,33 @@ class _CameraPageState extends ConsumerState<CameraPage>
       return;
     }
     final shot = await controller.takePicture();
+    _saveShotToGallery(shot); // 不 await：见方法注释
     await _recognizeImage(shot);
+  }
+
+  /// 「自动保存照片」开着时，把这张快门照片写进系统相册。
+  ///
+  /// **绝不 await**：识别延迟是这个产品的核心，写相册几百毫秒不能挂在它前面。
+  /// 异常整体吞掉——存相册失败是次要功能失败，不该打断识别，也不该弹错。
+  /// 只作用于快门：图库选图与最近缩略图本来就在相册里，重复写只会刷屏。
+  ///
+  /// 偏好直接读 SharedPreferences 而非 `autoSavePhotoProvider`：后者的值是异步
+  /// 载入的，冷启动后头一次 `ref.read` 拿到的还是默认的 false —— 开着开关的人
+  /// 刚进 App 拍的第一张会静默丢掉。
+  void _saveShotToGallery(XFile shot) {
+    unawaited(() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getBool(kAutoSavePhotoKey) != true) return;
+        await PhotoManager.editor.saveImageWithPath(
+          shot.path,
+          title: 'gomuseum_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          relativePath: kAutoSaveRelativePath,
+        );
+      } catch (_) {
+        // 权限被撤、磁盘满、机型不兼容……识别照常。
+      }
+    }());
   }
 
   /// 从图库选图上传识别（无相机拍摄，走同一识别路由）。
@@ -238,6 +289,17 @@ class _CameraPageState extends ConsumerState<CameraPage>
         .recognize(slug: null, image: shot, language: lang, mode: mode);
     if (!mounted) return;
     final st = ref.read(recognitionNotifierProvider);
+    // 后端才是付费墙的执行点:客户端闸放行了但后端拒了(权益缓存过期/还没加载完)。
+    // 退回取景器再弹付费墙 —— 停在"识别失败"会让用户以为 App 坏了。
+    if (st is RecognitionQuotaExceeded) {
+      _retake();
+      // 顺序要紧:先用当前权益判"已购未激活",再 invalidate ——
+      // 反过来会把 `.value` 清成 null,那个分支永远命不中。
+      if (await _passActivatedIfPurchased()) return;
+      ref.invalidate(entitlementsProvider); // 客户端闸与后端不一致,重拉一次
+      if (mounted) _showQuotaExhaustedSheet();
+      return;
+    }
     // 得到有用结果（命中/候选）才扣额度；未收录/错误不扣，不惩罚"没帮上忙"。
     if (st is RecognitionMatched || st is RecognitionCandidates) {
       await benefits.consumeQuota();

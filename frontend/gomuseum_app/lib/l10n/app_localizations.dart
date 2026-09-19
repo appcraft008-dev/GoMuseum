@@ -593,6 +593,12 @@ abstract class AppLocalizations {
   /// **'Footprints'**
   String get footprintTitle;
 
+  /// No description provided for @footprintNoMuseum.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown venue'**
+  String get footprintNoMuseum;
+
   /// No description provided for @noFootprints.
   ///
   /// In en, this message translates to:
@@ -647,6 +653,12 @@ abstract class AppLocalizations {
   /// **'{month}/{day}'**
   String dateMonthDay(Object month, Object day);
 
+  /// No description provided for @dateYearMonthDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}/{day}/{year}'**
+  String dateYearMonthDay(Object day, Object month, Object year);
+
   /// No description provided for @deleteFootprintQ.
   ///
   /// In en, this message translates to:
@@ -682,6 +694,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Auto-save photos'**
   String get autoSavePhoto;
+
+  /// No description provided for @autoSavePhotoNeedsAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo library access is needed to save photos'**
+  String get autoSavePhotoNeedsAccess;
 
   /// No description provided for @ttsVoice.
   ///
@@ -1924,6 +1942,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Support address copied: {email}'**
   String edgeSupportCopied(String email);
+
+  /// No description provided for @fbTitleObject.
+  ///
+  /// In en, this message translates to:
+  /// **'Report an issue'**
+  String get fbTitleObject;
+
+  /// No description provided for @fbTitleApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get fbTitleApp;
+
+  /// No description provided for @fbContentWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong content'**
+  String get fbContentWrong;
+
+  /// No description provided for @fbAudioBad.
+  ///
+  /// In en, this message translates to:
+  /// **'Odd pronunciation'**
+  String get fbAudioBad;
+
+  /// No description provided for @fbAudioMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'No audio'**
+  String get fbAudioMissing;
+
+  /// No description provided for @fbAppCrash.
+  ///
+  /// In en, this message translates to:
+  /// **'Crashes or lag'**
+  String get fbAppCrash;
+
+  /// No description provided for @fbRecognitionBad.
+  ///
+  /// In en, this message translates to:
+  /// **'Poor recognition'**
+  String get fbRecognitionBad;
+
+  /// No description provided for @fbFeatureRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature request'**
+  String get fbFeatureRequest;
+
+  /// No description provided for @fbOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Something else'**
+  String get fbOther;
+
+  /// No description provided for @fbTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything else? (optional)'**
+  String get fbTextHint;
+
+  /// No description provided for @fbSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get fbSubmit;
+
+  /// No description provided for @fbThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks — we got it'**
+  String get fbThanks;
+
+  /// No description provided for @fbFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send. Check your connection.'**
+  String get fbFailed;
+
+  /// No description provided for @fbRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get fbRetry;
 }
 
 class _AppLocalizationsDelegate

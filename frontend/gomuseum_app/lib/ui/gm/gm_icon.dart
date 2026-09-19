@@ -41,6 +41,10 @@ enum GmIcons {
   lock,
   filter,
   qr,
+
+  /// 旗标 = 「报告问题」。图标集里没有现成的反馈语义：`mail` 会被读成
+  /// 「联系客服」，`doc` 读成文档。旗标是这件事的通用语义。
+  flag,
 }
 
 const Map<GmIcons, List<String>> _iconPaths = {
@@ -132,6 +136,8 @@ const Map<GmIcons, List<String>> _iconPaths = {
     'M4.5 4.5h5v5h-5Z M14.5 4.5h5v5h-5Z M4.5 14.5h5v5h-5Z',
     'M14.5 14.5h2v2h-2Z M17.5 17.5h2v2h-2Z',
   ],
+  // 旗杆到底 + 旗面；与本图标集一致的 24×24 viewBox、1.6pt 圆头描边。
+  GmIcons.flag: ['M6 20.5V4', 'M6 5h12l-2.4 3.8L18 12.5H6Z'],
 };
 
 /// 线性描边图标（对应设计稿 GMIcon）

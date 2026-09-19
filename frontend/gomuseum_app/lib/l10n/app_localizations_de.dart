@@ -266,6 +266,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get footprintTitle => 'Spuren';
 
   @override
+  String get footprintNoMuseum => 'Unbekannter Ort';
+
+  @override
   String get noFootprints => 'Noch keine Spuren';
 
   @override
@@ -300,6 +303,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String dateYearMonthDay(Object day, Object month, Object year) {
+    return '$day.$month.$year';
+  }
+
+  @override
   String get deleteFootprintQ => 'Diese Spur löschen?';
 
   @override
@@ -316,6 +324,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoSavePhoto => 'Fotos automatisch speichern';
+
+  @override
+  String get autoSavePhotoNeedsAccess =>
+      'Für das Speichern von Fotos wird Zugriff auf die Fotomediathek benötigt';
 
   @override
   String get ttsVoice => 'TTS-Stimme';
@@ -1027,4 +1039,46 @@ class AppLocalizationsDe extends AppLocalizations {
   String edgeSupportCopied(String email) {
     return 'Support-Adresse kopiert: $email';
   }
+
+  @override
+  String get fbTitleObject => 'Problem melden';
+
+  @override
+  String get fbTitleApp => 'Feedback';
+
+  @override
+  String get fbContentWrong => 'Falscher Inhalt';
+
+  @override
+  String get fbAudioBad => 'Seltsame Aussprache';
+
+  @override
+  String get fbAudioMissing => 'Kein Audio';
+
+  @override
+  String get fbAppCrash => 'Abstürze oder Ruckeln';
+
+  @override
+  String get fbRecognitionBad => 'Ungenaue Erkennung';
+
+  @override
+  String get fbFeatureRequest => 'Funktionswunsch';
+
+  @override
+  String get fbOther => 'Sonstiges';
+
+  @override
+  String get fbTextHint => 'Noch etwas? (optional)';
+
+  @override
+  String get fbSubmit => 'Senden';
+
+  @override
+  String get fbThanks => 'Danke, angekommen';
+
+  @override
+  String get fbFailed => 'Senden fehlgeschlagen. Verbindung prüfen.';
+
+  @override
+  String get fbRetry => 'Erneut versuchen';
 }

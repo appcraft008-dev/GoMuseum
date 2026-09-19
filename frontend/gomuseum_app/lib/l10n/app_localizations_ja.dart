@@ -263,6 +263,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get footprintTitle => '足跡';
 
   @override
+  String get footprintNoMuseum => '施設不明';
+
+  @override
   String get noFootprints => '足跡がありません';
 
   @override
@@ -296,6 +299,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String dateYearMonthDay(Object day, Object month, Object year) {
+    return '$year/$month/$day';
+  }
+
+  @override
   String get deleteFootprintQ => 'この足跡を削除しますか？';
 
   @override
@@ -312,6 +320,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoSavePhoto => '写真を自動保存';
+
+  @override
+  String get autoSavePhotoNeedsAccess => '写真を保存するには写真ライブラリへのアクセスが必要です';
 
   @override
   String get ttsVoice => 'TTS音声';
@@ -985,4 +996,46 @@ class AppLocalizationsJa extends AppLocalizations {
   String edgeSupportCopied(String email) {
     return 'サポート用アドレスをコピーしました：$email';
   }
+
+  @override
+  String get fbTitleObject => '内容を報告';
+
+  @override
+  String get fbTitleApp => 'ご意見';
+
+  @override
+  String get fbContentWrong => '内容に誤り';
+
+  @override
+  String get fbAudioBad => '読み方が変';
+
+  @override
+  String get fbAudioMissing => '音声がない';
+
+  @override
+  String get fbAppCrash => 'クラッシュ・動作が重い';
+
+  @override
+  String get fbRecognitionBad => '認識が不正確';
+
+  @override
+  String get fbFeatureRequest => '機能の要望';
+
+  @override
+  String get fbOther => 'その他';
+
+  @override
+  String get fbTextHint => '他にありますか？（任意）';
+
+  @override
+  String get fbSubmit => '送信';
+
+  @override
+  String get fbThanks => '受け取りました。ありがとうございます';
+
+  @override
+  String get fbFailed => '送信できません。通信環境をご確認ください';
+
+  @override
+  String get fbRetry => '再試行';
 }

@@ -31,7 +31,7 @@ _VOICE = "゙゚"
 _KANA_VOICED = re.compile("[぀-ヿ][゙゚]")
 
 
-def normalize(s: str) -> str:
+def normalize(s: str, t2s: bool = True) -> str:
     """比对前归一化。三步各自对应一类实测误判,缺一不可 —— 但第②步对日语要让路。
 
     ① 繁→简:Whisper 常把繁体音频转写成简体字,码位全不同 → 实测 0.50 被误判,
@@ -50,8 +50,16 @@ def normalize(s: str) -> str:
     ⚠️ 修法只能**定点**把假名的浊点合回去,**不能用全局 NFKC** —— 那会把谚文
     Jamo 也合成音节(한→한,长度 3→1),ko 的一致性和长度比全部漂移。
     控制组实测:全局 NFKC 时 ja 变 13 条、**ko 跟着变了 12 条**;定点重组后只有 ja 变。
+
+    ⚠️ `t2s=False` 只给**读音级诊断**用,不要拿去改闸。①对日语其实是误伤:
+    日语汉字大量与繁体同形,t2s 把它们改写成简体(实测日语正文 5.84% 的字、
+    231 种汉字:術→术、聖→圣、見→见…),而 pykakasi 读不了简体 → 每一处含此类
+    字的差异都被 `classify` 判成「真错」。**但对一致性分数无影响**(两侧同样被改,
+    100 条实测平均变化 −0.0001、跨 0.90 门槛 0 条),所以生产路径保持默认 True:
+    没有证据支持的改动不进闸,哪怕它「看起来更对」。
     """
-    s = _CC.convert(s)
+    if t2s:
+        s = _CC.convert(s)
     s = unicodedata.normalize("NFKD", s)
     s = "".join(c for c in s if not unicodedata.combining(c) or c in _VOICE)
     s = _KANA_VOICED.sub(lambda m: unicodedata.normalize("NFC", m.group(0)), s)

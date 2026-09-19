@@ -22,6 +22,19 @@ class PurchaseConflictException implements Exception {
   String toString() => 'PurchaseConflictException: $message';
 }
 
+/// 识别额度用尽(后端 402 `quota_exceeded`)。
+///
+/// **必须与普通失败分开**:混进 ServerException 就显示成「识别失败」,
+/// 用户以为 App 坏了而不是该买票——既误导人也漏钱。
+/// 后端才是付费墙的唯一执行点,客户端闸(`can.recognize`)只是表达。
+class QuotaExceededException implements Exception {
+  final String message;
+  const QuotaExceededException([this.message = 'Recognition quota exceeded']);
+
+  @override
+  String toString() => 'QuotaExceededException: $message';
+}
+
 /// 缓存异常
 class CacheException implements Exception {
   final String message;

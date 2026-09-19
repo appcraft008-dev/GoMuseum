@@ -2,6 +2,9 @@
 ///
 /// 稳定契约 + 可替换引擎：前端只认契约字段，后端引擎（进程内→Meilisearch）可换、前端不动。
 /// 契约容错：museum/thumbnail 用 as String?，has_image 用 as bool? ?? false（禁裸强转）。
+///
+/// `limit` 必须显式传，理由见 [searchProvider] —— 用后端默认值会让「关键词在
+/// 标题中间」的命中整层被截掉。
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,7 +92,16 @@ final searchProvider =
   final path = key.slug == null
       ? '/api/v1/search'
       : '/api/v1/museums/${key.slug}/search';
-  final resp =
-      await dio.get(path, queryParameters: {'q': q, 'language': key.lang});
+  final resp = await dio.get(
+    path,
+    // 必须显式传 limit：后端默认 20，而 rank() 是**先按档一刀切排序再截断**
+    // （标题前缀 0.8 整层排在标题子串 0.6 前面）。命中超过 20 条时被砍掉的
+    // 正好是「关键词在标题中间」那一层 —— 实测 prod `portrait` 共 43 条命中，
+    // 前 20 全是 `Portrait de …`，13 个 `Autoportrait` 一个都露不出来，
+    // 看起来就像"中间词搜不到"。60 覆盖到实测最大的常见词（43）。
+    //
+    // 泛词（`de` 416 条、`la` 306 条）仍会截，那类查询本来也不是"找某件作品"。
+    queryParameters: {'q': q, 'language': key.lang, 'limit': 60},
+  );
   return SearchResults.fromJson(resp.data as Map<String, dynamic>);
 });

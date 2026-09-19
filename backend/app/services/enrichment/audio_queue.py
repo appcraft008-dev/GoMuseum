@@ -267,39 +267,80 @@ def build_queue(
     return jobs[:limit]
 
 
-def coverage(db: Session, languages: list[str]) -> dict:
-    """覆盖率报表:迁移进度不该靠猜。
+def coverage(db: Session, languages: list[str], museum_slug: str | None = None) -> dict:
+    """覆盖率报表(=缺音频/待换引擎的账目表):迁移与补漏进度不该靠猜。
 
-    返回 {"guide": {lang: {engine: n}}, "artist_bio": {lang: {engine: n}}} ——
-    **分内容类型**。此前只报 guide,于是作者介绍(第三处存音频 key 的地方)
-    看着永远是 100%,实际一条都没迁。
+    返回 {section_code: {lang: {engine: n}}, ...} 外加 "qa" / "artist_bio" 两个
+    合成键——**按内容类型分**,不再只报 guide。此前只统计 guide 一个 section_code
+    时,深度段(facts/background/analysis/significance)看着永远是空白;而
+    qa(第三处存音频 key 的表之一)此前完全没统计过——`verify_audio_md5.py`
+    踩过同一类盲区(只查 section 表,对 qa/artist_bio 完全失明而报告照样全绿),
+    这里补的是同一个坑的报表侧。
+    `(无音频)` = 缺失待补;非 `(无音频)`/目标引擎的值 = 待替换的旧引擎(如 tts-1)。
+    传 museum_slug 按馆过滤,得到的就是"这个馆的账目表"。
     """
     out: dict[str, dict] = {}
-    rows = (
-        db.query(
-            ObjectContentSection.language,
-            ObjectContentSection.audio_engine,
-            func.count(),
-        )
-        .filter(
-            ObjectContentSection.body.isnot(None),
-            ObjectContentSection.language.in_(languages),
-            ObjectContentSection.section_code == HERO_SECTION,
-        )
-        .group_by(ObjectContentSection.language, ObjectContentSection.audio_engine)
+    q = db.query(
+        ObjectContentSection.section_code,
+        ObjectContentSection.language,
+        ObjectContentSection.audio_engine,
+        func.count(),
+    ).filter(
+        ObjectContentSection.body.isnot(None),
+        ObjectContentSection.language.in_(languages),
     )
-    guide_stat: dict[str, dict[str, int]] = {}
-    for lang, engine, n in rows:
-        d = guide_stat.setdefault(lang, {})
+    if museum_slug:
+        q = q.join(
+            MuseumObject, ObjectContentSection.object_id == MuseumObject.id
+        ).join(Museum, MuseumObject.museum_id == Museum.id)
+        q = q.filter(Museum.slug == museum_slug)
+    q = q.group_by(
+        ObjectContentSection.section_code,
+        ObjectContentSection.language,
+        ObjectContentSection.audio_engine,
+    )
+    for code, lang, engine, n in q:
+        d = out.setdefault(code, {}).setdefault(lang, {})
         d[engine or "(无音频)"] = n
-    out["guide"] = guide_stat
 
-    # 作者介绍单列一行:它是第三处存音频 key 的地方,不报的话迁移进度看着
-    # 100% 完成、实际漏了一整类(而且是按作者共享、影响面乘以作品数的那类)。
+    qa_q = db.query(
+        ObjectSuggestedQuestion.language,
+        ObjectSuggestedQuestion.audio_engine,
+        func.count(),
+    ).filter(ObjectSuggestedQuestion.language.in_(languages))
+    if museum_slug:
+        qa_q = qa_q.join(
+            MuseumObject, ObjectSuggestedQuestion.object_id == MuseumObject.id
+        ).join(Museum, MuseumObject.museum_id == Museum.id)
+        qa_q = qa_q.filter(Museum.slug == museum_slug)
+    qa_q = qa_q.group_by(
+        ObjectSuggestedQuestion.language, ObjectSuggestedQuestion.audio_engine
+    )
+    qa_stat: dict[str, dict[str, int]] = {}
+    for lang, engine, n in qa_q:
+        d = qa_stat.setdefault(lang, {})
+        d[engine or "(无音频)"] = n
+    if qa_stat:
+        out["qa"] = qa_stat
+
+    # 作者介绍单列一行:它是第三处存音频 key 的地方,按作者共享、不属于单一馆
+    # (同一作者可能跨馆有作品)。按馆过滤时,圈定"该馆作品的作者"这个集合。
     from app.models.artist import Artist
+
+    aqids: set | None = None
+    if museum_slug:
+        aqids = {
+            (o.attributes or {}).get("artist_qid")
+            for o in db.query(MuseumObject)
+            .join(Museum, MuseumObject.museum_id == Museum.id)
+            .filter(Museum.slug == museum_slug)
+            .all()
+        } - {None}
 
     bio_stat: dict[str, dict[str, int]] = {}
     for art in db.query(Artist).filter(Artist.bio.isnot(None)).all():
+        if aqids is not None and art.qid not in aqids:
+            continue
         bio = art.bio or {}
         keys = art.bio_audio or {}
         engines = art.bio_audio_engine or {}

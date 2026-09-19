@@ -172,29 +172,43 @@ def build_translation_prompt(
 ):
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _TRANSLATION_SYSTEM.format(lang=lang)
+    # ⚠️ 下面三处注入的规范名**必须用 XML 标签包,不能用任何一种引号**。
+    # 原先写成 「{title}」 —— 直角引号只是随手打的分隔符,却被当成"引用作品名
+    # 该怎么写"学走,给法/西/意/德/波的正文套上中日式标点。2026-09-14 实测 prod
+    # 存量 3603 段 + 1118 条问答中招(韩语 67.7%、西语 44.8%、法语 33.0%),
+    # 已按各语规范批量替换(fr « » / es·it «» / de „“ / pl „”)。
+    # 同件 A/B(5 段 × 6 语):中日式标点 20 → **0**,本地引号 es 2→10、fr 10→12。
+    # 这是本文件里**第二次**踩同一个坑(第一次见下面 `English:\n` 那条注释),
+    # 同一教训的第三次见契约纪律 35。🔑 prompt 里凡"包着一个值"的符号都是示范。
+    # (build_faithfulness_prompt 里的 「」 故意不动:那是判定 prompt,只出 JSON
+    #  裁决、不出用户可见正文,而且那段措辞是逐字调稳的,改它是纯风险。)
     if title:
         # 标题真相唯一化:正文引用标题一律用显示名(消除内容翻译自选译名的分叉)
         system += (
-            f" IMPORTANT: this artwork's canonical {lang} title is 「{title}」 — "
-            f"whenever the text refers to the work by name, use EXACTLY this title, "
-            f"do not invent an alternative rendering."
+            f" IMPORTANT: this artwork's canonical {lang} title is "
+            f"<canonical_title>{title}</canonical_title> — whenever the text refers "
+            f"to the work by name, use EXACTLY this title, do not invent an "
+            f"alternative rendering. Punctuate it with {lang}'s own quotation "
+            f"conventions; never copy the tags themselves."
         )
     if artist:
         # 作者译名一致性(标题真相唯一化的姊妹):正文称呼作者一律用作者卡规范名
         # (消除音译分叉,如 Seurat 修拉/秀拉——正文与 artists.name_i18n 统一)
         system += (
-            f" IMPORTANT: the artist's canonical {lang} name is 「{artist}」 — "
-            f"whenever the text refers to the artist by name, use EXACTLY this "
-            f"rendering, do not use any alternative transliteration."
+            f" IMPORTANT: the artist's canonical {lang} name is "
+            f"<canonical_artist>{artist}</canonical_artist> — whenever the text "
+            f"refers to the artist by name, use EXACTLY this rendering, do not use "
+            f"any alternative transliteration. Never copy the tags themselves."
         )
     if museum:
         # 馆名真相唯一化(标题/作者之外的第三类名字):正文提到本馆一律用配置的
         # 权威译名。可字面直译的馆名(Petit Palais)模型会自选直译("小宫殿"),
         # 与馆列表显示的 name_zh("小皇宫美术馆")分叉。
         system += (
-            f" IMPORTANT: this museum's canonical {lang} name is 「{museum}」 — "
-            f"whenever the text refers to the museum by name, use EXACTLY this "
-            f"name, do not translate it literally or invent an alternative."
+            f" IMPORTANT: this museum's canonical {lang} name is "
+            f"<canonical_museum>{museum}</canonical_museum> — whenever the text "
+            f"refers to the museum by name, use EXACTLY this name, do not translate "
+            f"it literally or invent an alternative. Never copy the tags themselves."
         )
     # ⚠️ 别写成 `English:\n{en_body}` —— 那是「语言名: 内容」的格式示范,
     # 模型会照猫画虎在译文前回贴目标语言名(实测 prod 存量 1088 段带

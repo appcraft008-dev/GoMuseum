@@ -23,6 +23,7 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_explanati
 import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
+import 'package:gomuseum_app/features/feedback/presentation/widgets/feedback_sheet.dart';
 import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
@@ -107,8 +108,6 @@ class GuidePage extends ConsumerStatefulWidget {
 class _GuidePageState extends ConsumerState<GuidePage>
     with TickerProviderStateMixin {
   // ── shared
-  bool _starred = false;
-
   // ── A5 path: facts accordion
   bool _factsExpanded = false;
 
@@ -324,12 +323,16 @@ class _GuidePageState extends ConsumerState<GuidePage>
               headerSliverBuilder: (context, _) => [
                 _A5HeroSliverAppBar(
                   content: content,
-                  starred: _starred,
                   // 识别路径用户照片/列表缩略图：content 无图时兜底当 hero。
                   fallbackImagePath: widget.args.imagePath,
                   fallbackImageUrl: widget.args.imageUrl,
                   onBack: () => _goBack(context),
-                  onToggleStar: () => setState(() => _starred = !_starred),
+                  onFeedback: () => showFeedbackSheet(
+                    context,
+                    slug: slug,
+                    qid: content.qid,
+                    language: _language,
+                  ),
                 ),
               ],
               body: _A5Body(
@@ -430,12 +433,8 @@ class _GuidePageState extends ConsumerState<GuidePage>
                 textAlign: TextAlign.center,
                 style: GmText.sans(size: 11, letterSpacing: 3, color: gm.sub)),
           ),
-          GestureDetector(
-            onTap: () => setState(() => _starred = !_starred),
-            behavior: HitTestBehavior.opaque,
-            child: GmIcon(GmIcons.star,
-                size: 20, color: gm.accent, fill: _starred),
-          ),
+          // 这条路径(args 不全)没有 slug/qid，没有坐标可上报 → 不放反馈入口。
+          const SizedBox(width: 20),
         ],
       ),
     );
@@ -779,21 +778,22 @@ class _SimpleTopBar extends StatelessWidget {
 class _A5HeroSliverAppBar extends StatelessWidget {
   const _A5HeroSliverAppBar({
     required this.content,
-    required this.starred,
     required this.onBack,
-    required this.onToggleStar,
+    required this.onFeedback,
     this.fallbackImagePath,
     this.fallbackImageUrl,
   });
 
   final ObjectContent content;
-  final bool starred;
 
   /// content 无图时的 hero 兜底：识别路径的用户照片(本地) / 列表缩略图(网络)。
   final String? fallbackImagePath;
   final String? fallbackImageUrl;
   final VoidCallback onBack;
-  final VoidCallback onToggleStar;
+
+  /// 「内容反馈」——错漏靠用户反馈兜底(CLAUDE.md「AI 内容质量原则」)。
+  /// 分享以后加在它右边。
+  final VoidCallback onFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -817,12 +817,11 @@ class _A5HeroSliverAppBar extends StatelessWidget {
       centerTitle: true,
       actions: [
         GestureDetector(
-          onTap: onToggleStar,
+          onTap: onFeedback,
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.only(right: 16),
-            child:
-                GmIcon(GmIcons.star, size: 20, color: gm.accent, fill: starred),
+            child: GmIcon(GmIcons.flag, size: 20, color: gm.sub),
           ),
         ),
       ],
