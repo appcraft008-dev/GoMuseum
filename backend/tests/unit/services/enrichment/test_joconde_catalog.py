@@ -103,6 +103,36 @@ def test_filters_by_museum_name():
     assert [o.inventory_number for o in out] == ["RF 0", "RF 2"]
 
 
+def test_museum_match_tolerates_case_and_spacing():
+    """馆名变体不许漏件 —— 漏得很安静(看起来像"这馆藏品就这么多")。
+
+    ⚠️ 全量 1.2GB 扫一遍会超时,所以"CSV 里到底有没有变体写法"没有实证;
+    与其赌它没有,不如让匹配本身容得下。仍是精确相等,不是子串 ——
+    子串会把 "musée d'Orsay - annexe" 这类另一个馆误收。
+    """
+    rows = [
+        {
+            "Reference": str(i),
+            "Numero_inventaire": f"RF {i}",
+            "Titre": "T",
+            "Domaine": "peinture",
+            "Nom_officiel_musee": name,
+        }
+        for i, name in enumerate(
+            [
+                "musée d'Orsay",
+                "Musée d'Orsay",  # 大小写变体
+                "musée  d'Orsay",  # 多空格
+                " musée d'Orsay ",  # 首尾空格
+                "musée d'Orsay - annexe",  # ← 另一个馆,不许收
+                "musée du Louvre",
+            ]
+        )
+    ]
+    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    assert [o.inventory_number for o in out] == ["RF 0", "RF 1", "RF 2", "RF 3"]
+
+
 def test_domaine_is_semicolon_string_not_list():
     """⚠️ 换通道最容易静默踩的一脚。
 

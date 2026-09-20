@@ -81,6 +81,19 @@ def _clean_title(raw: str | None) -> str | None:
     return t or None
 
 
+def _norm_museum(raw: str | None) -> str:
+    """馆名比对用的归一化:折叠空白 + casefold。
+
+    整包 CSV 是全法国的馆,没有服务端筛选了,**过滤漏一点就少一批件**,
+    而且少得很安静(看起来像"这馆藏品就这么多")。编目里同一个馆出现
+    大小写/多空格变体是常事,所以不做字面相等。
+
+    仍是**精确相等**不是子串匹配 —— 子串会把"musée d'Orsay - annexe"
+    这类另一个馆误收进来。
+    """
+    return " ".join((raw or "").split()).casefold()
+
+
 def _clean_year(raw: str | None) -> str | None:
     """`Millesime_de_creation` → 语言中立年代。表外形态原样返回。
 
@@ -175,9 +188,10 @@ class JocondeCatalog(CatalogSource):
                 f"查当前资源地址。"
             )
 
+        want = _norm_museum(museum)
         for rec in rows:
             # 按馆名过滤:整包是全法国的馆,没有服务端筛选了。
-            if (rec.get(_MUSEUM_COL) or "").strip() != museum:
+            if _norm_museum(rec.get(_MUSEUM_COL)) != want:
                 continue
             s = _to_stub(rec, cfg.slug)
             if s:
