@@ -1,8 +1,43 @@
-"""Pytest 全局配置：测试环境关闭速率限制"""
+"""Pytest 全局配置：测试环境关闭速率限制 + 禁止测试访问外网"""
 
 import os
+import socket
+
+import pytest
 
 os.environ.setdefault("RATE_LIMIT_ENABLED", "0")
+
+_real_connect = socket.socket.connect
+# CI 的 DATABASE_URL/REDIS_URL 都是本机服务容器，这两个必须放行。
+_LOCAL = {"127.0.0.1", "::1", "localhost", "0.0.0.0"}
+
+
+class NetworkUseInTest(RuntimeError):
+    """测试摸到了外网。注入那个 fetch_*，别让用例去问 Wikidata。"""
+
+
+@pytest.fixture(autouse=True)
+def _no_outbound_network(monkeypatch):
+    """测试期间禁止连外网。
+
+    起因：`backfill_display_names` 的 `fetch_artist_facts_i18n` 参数没被注入时
+    会回落到真的 Wikidata SPARQL 查询，而 `test_backfill_names.py` 只注入了
+    `fetch_labels`/`fetch_creators`。文件开头写着"离线可测"，实际每建一个
+    Artist 行就打一次 query.wikidata.org —— 单个用例 60 秒，整份后端用例
+    在 2 分 40 秒和 10 分钟之间随 Wikidata 的心情漂移，2026-09-20 直接把
+    backend-tests 的 `timeout-minutes: 10` 撑爆（#606，跑到 99% 被 cancel）。
+
+    这里堵在**一个**地方而不是逐个用例补注入：漏注入的下一个用例照样会静默触网。
+    触网现在是秒级的响亮失败，而不是十分钟后的一次 cancel。
+    """
+
+    def guard(self, address, *a, **kw):
+        # 非 tuple = AF_UNIX 的路径,本机通信,放行。
+        if isinstance(address, tuple) and address[0] not in _LOCAL:
+            raise NetworkUseInTest(f"测试连了外网 {address}；把对应的 fetch_* 注入掉")
+        return _real_connect(self, address, *a, **kw)
+
+    monkeypatch.setattr(socket.socket, "connect", guard)
 
 
 def account_tables():
