@@ -87,6 +87,7 @@
   "footprintEmptyHint": "Erkannte Werke werden hier automatisch gespeichert",
   "footprintGoRecognize": "Erkennen Sie Ihr erstes Werk",
   "itemsCount": "{count} Werke",
+  "ticketDurationDays": "{days} TAGE",
   "yearBce": "{year} v. Chr.",
   "today": "Heute",
   "yesterday": "Gestern",

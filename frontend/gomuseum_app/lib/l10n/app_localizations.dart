@@ -635,6 +635,12 @@ abstract class AppLocalizations {
   /// **'{count} works'**
   String itemsCount(Object count);
 
+  /// No description provided for @ticketDurationDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} DAYS'**
+  String ticketDurationDays(String days);
+
   /// No description provided for @yearBce.
   ///
   /// In en, this message translates to:

@@ -291,6 +291,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String ticketDurationDays(String days) {
+    return '$days DNI';
+  }
+
+  @override
   String yearBce(String year) {
     return '$year p.n.e.';
   }

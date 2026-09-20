@@ -288,6 +288,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String ticketDurationDays(String days) {
+    return '$days일';
+  }
+
+  @override
   String yearBce(String year) {
     return '기원전 $year년';
   }

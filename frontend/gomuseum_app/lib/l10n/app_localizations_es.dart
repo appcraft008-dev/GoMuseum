@@ -291,6 +291,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String ticketDurationDays(String days) {
+    return '$days DÍAS';
+  }
+
+  @override
   String yearBce(String year) {
     return '$year a. C.';
   }
