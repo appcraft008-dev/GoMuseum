@@ -87,6 +87,12 @@ def _to_stub(rec: dict, slug: str) -> StubRecord | None:
         qid=f"joconde-{ref}",
         title=_clean_title(rec.get("titre")),
         artist=_clean_artist(rec.get("auteur")),
+        # ⚠️ 这个字段是**脏的**,原样透传:Joconde 把创作年和法语精度词
+        # 反序拼在一起 —— `1853 vers`(约1853)、`1865 entre,1908 et`、
+        # `1911 vers,1912 ou,1914 et`。prod 上 713 件是这个形态。
+        # 已核对官方 CSV:源数据本身就长这样,换通道不会变干净。
+        # 目前靠前端 `year_format.dart` 兜底显示(覆盖 84%);
+        # 真正的治本是在这里解析成结构化年代 —— 重写本源时一并做。
         year=rec.get("millesime_de_creation"),
         category=_category(rec.get("domaine")),
         image_url=None,  # © RMN 版权图,无免费图 → 文字层
@@ -130,7 +136,23 @@ class JocondeCatalog(CatalogSource):
             )
             if getattr(resp, "status_code", 200) != 200:
                 break
-            results = (resp.json() or {}).get("results") or []
+            # ⚠️ 这里不能只看 status_code:data.culture.gouv.fr 已**整站 301**
+            # 到 culture.data.gouv.fr,而且重定向**把路径也丢了** —— 任何 API
+            # 路径最终都落到那个站的首页,返回 HTML 且 status **200**。
+            # 于是 status 判断放行、resp.json() 抛 JSONDecodeError,
+            # 报错完全看不出真实原因。非 JSON 一律当作"源不可用"明确报出来。
+            try:
+                payload = resp.json() or {}
+            except ValueError as e:
+                raise RuntimeError(
+                    "Joconde 目录源返回的不是 JSON。该 opendatasoft 查询 API "
+                    "(data.culture.gouv.fr) 已下线;数据集现在是 data.gouv.fr 上的"
+                    "整包 CSV(ministere-culture.s3.sbg.io.cloud.ovh.net/POP/"
+                    "joconde.csv,约 1.2GB,`|` 分隔)。**通道形态变了**:原来的"
+                    "按馆名分页查询没有对应物,要改成下载整包后本地按 "
+                    "Nom_officiel_musee 过滤。上新法国馆前必须先做这件事。"
+                ) from e
+            results = payload.get("results") or []
             if not results:
                 break
             for rec in results:

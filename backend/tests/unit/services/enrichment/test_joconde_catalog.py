@@ -204,3 +204,25 @@ def test_filter_new_stubs_skips_existing_inv_and_p347(db):
     ]
     out = filter_new_stubs(db, m.id, stubs)
     assert [s.inventory_number for s in out] == ["RF 300"]
+
+
+def test_non_json_response_raises_with_cause():
+    """源返回 HTML(而非 JSON)时必须明确报错。
+
+    真实故障形态:data.culture.gouv.fr 整站 301 到 culture.data.gouv.fr 且
+    丢弃路径 → 落到首页拿到 HTML,**status 仍是 200**。只看 status_code 放行,
+    然后崩在 resp.json() 上 —— 报错读不出真实原因。
+    """
+
+    class _Html:
+        status_code = 200  # ← 关键:坏掉的源照样给 200
+
+        def json(self):
+            raise ValueError("Expecting value: line 1 column 1 (char 0)")
+
+    def _get(url, params=None, headers=None, timeout=None):
+        return _Html()
+
+    with pytest.raises(RuntimeError) as e:
+        list(JocondeCatalog(http_get=_get).list(_ORSAY))
+    assert "joconde.csv" in str(e.value)  # 指向新通道,不是干巴巴一句失败
