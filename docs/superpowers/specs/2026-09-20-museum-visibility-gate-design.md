@@ -1,5 +1,12 @@
 # 上新馆可见性闸（准备期隐身 · 一次放出 · 正式包预览）
 
+> **状态：❄️ 已冻结待命（2026-09-20）。设计完成、未实现。**
+> **解冻条件 = 下一家馆开始灌之前**（不是发版前——见下方"为什么不阻塞发版"）。
+>
+> 为什么不阻塞发版：现有四馆全部已上线，本闸不改变它们的任何行为；
+> 它唯一的用武之地是"有一家馆正在灌"。而下一家馆开灌前不上这个闸，
+> 等于让真实用户直接看见半成品——那才是它的真实截止日。
+>
 > 2026-09-20 brainstorm 定稿，同日独立 review 发现已折入（见 §八）——
 > **review 把暴露面从 4 个改到 11 个，并推翻了缓存失效的处理方式**。
 > 与 [[enrichment-pipeline-v1]]、[[collection-coverage-strategy]] 配套——
@@ -105,7 +112,7 @@ UPDATE museums SET published_at = now() WHERE slug = '...';
 | 8 | **馆内搜索** | `search.py:31` `museum_search` | **无 auth**，仅凭 slug 定位 | 直达 |
 | 9 | **按馆识别** | `museums.py:196` `recognize_artwork` | 有 `credentials` 但不查可见性 | 直达 |
 | 10 | 音频解锁 | `entitlements.py:79` `/audio/unlock` | 裸 `qid`，无馆级检查 | qid 泄漏后可达 |
-| 11 | TTS 生成 | `content.py:198` `/tts/generate` | 裸 `qid`，**可触发真实花费** | qid 泄漏后可达 |
+| 11 | TTS 生成 | `content.py:198` `/tts/generate` | 裸 `qid`，无馆级检查（**已有 `_require_tts_access`，不是敞开的付费端点**） | qid 泄漏后可达 |
 
 （第 12 个在路上：[[product-backlog]] 里冻结待命的公开网页层
 `gomuseum.app/a/{slug}/{qid}`，实现时必须一并带上本闸。）
@@ -212,8 +219,12 @@ def museum_of_qid(db, qid, viewer) -> Museum        # 供 10/11 两个裸 qid �
 额外两条：
 
 - **裸 qid 端点（10/11）的负例**：拿一个未发布馆的 qid 去打 `/audio/unlock`
-  和 `/tts/generate`，必须 404。11 会**真花钱**，这条不测等于留一个可被点燃的
-  付费端点（同型风险见 [[product-backlog]] 对公开网页层的告警）。
+  和 `/tts/generate`，必须 404。
+- **凡涉及花钱的格子，断言"花钱那一步没被调用"，而不是断言 404。**
+  断言 404 只证明"响应码对"，证明不了闸在花钱**之前**：一个先调 LLM/TTS
+  再返回 404 的实现照样全绿，而钱已经付了。把 `generate_audio` /
+  `run_lazy_generation` 打桩并断言 `not called`，才证明闸站在花费上游。
+  （测试本身因此**零成本**；#607 的 conftest 外网禁连闸是最后一道兜底。）
 - **404 而非 403**（§2.2）：断言响应体与"slug 不存在"不可区分。
 
 ## 八、review 结论（2026-09-20，已折入）
@@ -226,7 +237,7 @@ def museum_of_qid(db, qid, viewer) -> Museum        # 供 10/11 两个裸 qid �
 |---|---|---|
 | 🔴 致命 | 只堵了发现入口，5 个直达端点（pack/objects/content/馆内搜索/按馆识别）无 auth 无过滤，slug 可猜 → **需求①不成立** | §二 重写，4 → 11 个暴露面 |
 | 🟠 高 | 2 个 worker × 3 份 TTL 600s 进程内缓存，只有 `vector_index` 有 `invalidate()`；SQL 放出碰不到进程内存 | §五 改为查询时过滤，整类问题消失 |
-| 🟡 中 | `/audio/unlock`、`/tts/generate` 裸 qid 无馆级检查，后者可触发真实花费 | 列为 §二 #10/#11 |
+| 🔵 低 | `/audio/unlock`、`/tts/generate` 裸 qid 无馆级检查 | 列为 §二 #10/#11 |
 | 🔵 低 | 回收语义未定义 | §六 明确：只进不出，足迹不查可见性 |
 
 **一处不采纳**：review 建议用 `settings.PREVIEW_EMAILS` 环境变量替代
