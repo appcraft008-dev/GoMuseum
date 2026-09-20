@@ -102,11 +102,21 @@ class BenQuotaRow extends StatelessWidget {
                 children: [
                   Positioned.fill(child: ColoredBox(color: gm.line)),
                   if (known)
-                    FractionallySizedBox(
-                      // 递减:剩余占比。别写成 used/total ——
-                      // 那是"用得越多条越满",读起来像进度在前进。
-                      widthFactor: (left! / total!).clamp(0.0, 1.0),
-                      child: ColoredBox(color: gm.accent),
+                    // 🔴 必须 Positioned.fill 包一层:Stack 的**非定位**子节点
+                    // 拿到的是松约束(高 0..3),而 ColoredBox 没有固有尺寸,
+                    // 无 child 的 RenderProxyBox 取 constraints.smallest
+                    // → 高 0,整根条在真机上是空的(2026-09-20 用户截图)。
+                    // 定位后约束变紧,FractionallySizedBox 才会把 3 传下去。
+                    Positioned.fill(
+                      child: FractionallySizedBox(
+                        // 撑满之后实色块靠哪边就得自己说 —— 默认 center,
+                        // 会变成一截浮在中间。
+                        alignment: AlignmentDirectional.centerStart,
+                        // 递减:剩余占比。别写成 used/total ——
+                        // 那是"用得越多条越满",读起来像进度在前进。
+                        widthFactor: (left! / total!).clamp(0.0, 1.0),
+                        child: ColoredBox(color: gm.accent),
+                      ),
                     ),
                 ],
               ),
