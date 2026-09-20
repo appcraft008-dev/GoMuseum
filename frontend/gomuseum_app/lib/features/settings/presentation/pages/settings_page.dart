@@ -32,7 +32,7 @@ const kPrivacyPolicyUrl = 'https://gomuseum.app/privacy.html';
 /// 版本脚注。**不会自动跟着 pubspec 走** —— `package_info_plus` 同样是
 /// 原生插件(理由见 [kPrivacyPolicyUrl]),所以这里是手写的。
 /// 发版改 pubspec 时必须一起改;忘了会被 `settings_version_test` 拦下。
-const kVersionFootnote = 'GoMuseum 1.0.0 (35)';
+const kVersionFootnote = 'GoMuseum 1.0.0 (36)';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
