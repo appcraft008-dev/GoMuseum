@@ -25,7 +25,7 @@ final deviceIdProvider = AutoDisposeFutureProvider<String>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DeviceIdRef = AutoDisposeFutureProviderRef<String>;
-String _$benefitsStateHash() => r'21674c760986351cf198ea5d55338b03d3b0730e';
+String _$benefitsStateHash() => r'400afb5a49c221637de9378f6a9670d839108544';
 
 /// 用户权益状态Provider
 ///

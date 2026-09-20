@@ -16,12 +16,14 @@ class HistoryRepositoryImpl implements HistoryRepository {
     int limit = 20,
     int offset = 0,
     int? days,
+    String? language,
   }) async {
     try {
       final models = await remoteDataSource.getRecentHistory(
         limit: limit,
         offset: offset,
         days: days,
+        language: language,
       );
 
       final entities = models.map((model) => model.toEntity()).toList();
@@ -40,11 +42,13 @@ class HistoryRepositoryImpl implements HistoryRepository {
   Future<Either<Failure, List<HistoryItem>>> searchHistory({
     required String query,
     int limit = 20,
+    String? language,
   }) async {
     try {
       final models = await remoteDataSource.searchHistory(
         query: query,
         limit: limit,
+        language: language,
       );
 
       final entities = models.map((model) => model.toEntity()).toList();

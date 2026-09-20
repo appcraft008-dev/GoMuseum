@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:dio/dio.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import '../../data/datasources/history_remote_datasource.dart';
 import '../../data/repositories/history_repository_impl.dart';
 import '../../domain/repositories/history_repository.dart';
@@ -83,8 +84,22 @@ class HistoryState {
 /// History provider
 @riverpod
 class History extends _$History {
+  /// 发给后端的界面语言。
+  ///
+  /// **在 `build()` 里 watch,不在方法里 read** —— 两个理由缺一不可:
+  /// ① `ref.watch` 只允许在 build 期间调用,方法里调会抛;
+  /// ② watch 才能让切语言时这个 Notifier 重建 → 微任务重新拉一遍列表。
+  /// 只改后端的话页面不会动:2026-09-20 报告的缺陷有两层,后端拿 `ev.language`
+  /// 当显示语言是一层,前端切了语言不重载是另一层。
+  ///
+  /// 用 `resolvedLocaleProvider` 而不是 `languageProvider`:后者"跟随系统"时是
+  /// null,而这里要的是**实际生效**的那个语言。取值一律走 `apiLanguage()`
+  /// (繁体要映射成 `zh-hant`)。
+  late String _lang;
+
   @override
   HistoryState build() {
+    _lang = apiLanguage(ref.watch(resolvedLocaleProvider));
     // build 返回前 state 未初始化，必须推迟到微任务再加载
     Future.microtask(loadHistory);
     return const HistoryState(isLoading: true);
@@ -98,7 +113,12 @@ class History extends _$History {
     state = state.copyWith(isLoading: true, error: null);
 
     final useCase = ref.read(getRecentHistoryUseCaseProvider);
-    final result = await useCase(limit: limit, offset: offset, days: days);
+    final result = await useCase(
+      limit: limit,
+      offset: offset,
+      days: days,
+      language: _lang,
+    );
 
     result.fold(
       (failure) {
@@ -126,7 +146,7 @@ class History extends _$History {
     state = state.copyWith(isLoading: true, error: null);
 
     final useCase = ref.read(searchHistoryUseCaseProvider);
-    final result = await useCase(query: query);
+    final result = await useCase(query: query, language: _lang);
 
     result.fold(
       (failure) {

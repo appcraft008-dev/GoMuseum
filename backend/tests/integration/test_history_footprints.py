@@ -182,8 +182,13 @@ def test_additive_fields_for_new_app(client, db):
     assert item["qid"] == "Q12418"
 
 
-def test_language_follows_the_event(client, db):
-    """用哪种语言拍的,足迹就用哪种语言显示。"""
+def test_language_falls_back_to_the_event_when_not_given(client, db):
+    """不传 `language` → 回退各条事件自己的语言。
+
+    ⚠️ **这条钉的是前向兼容,不是期望行为**:老 App(v35 及更早)不传这个参数,
+    回退后它们看到的与修复前逐字节一致。别因为"跟事件语言走是错的"就删掉它 ——
+    删了就等于让所有已装的包行为突变。
+    """
     _obj(db, "Q12418", title_zh="蒙娜丽莎", title_en="Mona Lisa")
     a = _register(client, "a@test.com")
     _event(db, _uid(db, "a@test.com"), "Q12418", language="en")
@@ -192,6 +197,43 @@ def test_language_follows_the_event(client, db):
         client.get("/api/v1/history/recent", headers=a).json()[0]["artwork_name"]
         == "Mona Lisa"
     )
+
+
+def test_language_follows_the_ui_not_the_event(client, db):
+    """传了 `language` → 整份列表都跟界面语言走,不管每条是用什么语言拍的。
+
+    这是 2026-09-20 用户截图报告的缺陷:英文界面下,中文界面识别的那几件
+    仍显示中文标题,同一屏里中英混排,切语言也不变。
+    根因是 `_render` 读 `ev.language`(识别那一刻的语言)当显示语言。
+
+    🔑 **两条事件的语言必须不同**,否则"跟界面走"和"跟事件走"给出同样的结果,
+    测了等于没测 —— 原来那条测试就是只有一条 en 事件,所以一直绿着。
+    """
+    _obj(db, "Q12418", title_zh="蒙娜丽莎", title_en="Mona Lisa")
+    _obj(db, "Q3181", title_zh="草地上的午餐", title_en="The Luncheon on the Grass")
+    a = _register(client, "a@test.com")
+    uid = _uid(db, "a@test.com")
+    _event(db, uid, "Q12418", language="en", minutes=1)
+    _event(db, uid, "Q3181", language="zh", minutes=2)
+
+    en = client.get("/api/v1/history/recent?language=en", headers=a).json()
+    assert [r["artwork_name"] for r in en] == [
+        "Mona Lisa",
+        "The Luncheon on the Grass",
+    ]
+
+    zh = client.get("/api/v1/history/recent?language=zh", headers=a).json()
+    assert [r["artwork_name"] for r in zh] == ["蒙娜丽莎", "草地上的午餐"]
+
+
+def test_search_language_follows_the_ui_too(client, db):
+    """搜索也要跟界面语言走 —— 用户搜的是他**现在看到的**那个名字。"""
+    _obj(db, "Q12418", title_zh="蒙娜丽莎", title_en="Mona Lisa")
+    a = _register(client, "a@test.com")
+    _event(db, _uid(db, "a@test.com"), "Q12418", language="zh")
+
+    hits = client.get("/api/v1/history/search?query=Mona&language=en", headers=a).json()
+    assert [r["artwork_name"] for r in hits] == ["Mona Lisa"]
 
 
 # ---------------------------------------------------------------- 什么算足迹
