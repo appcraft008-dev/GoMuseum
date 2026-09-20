@@ -814,10 +814,10 @@ class _A5HeroSliverAppBar extends StatelessWidget {
         expandedHeight: _expandedHeight,
         pinned: true,
         backgroundColor: gm.bg,
-        leading: GestureDetector(
+        leading: _HeroAction(
+          icon: GmIcons.back,
           onTap: onBack,
-          behavior: HitTestBehavior.opaque,
-          child: Center(child: GmIcon(GmIcons.back, size: 20, color: gm.ink)),
+          label: MaterialLocalizations.of(context).backButtonTooltip,
         ),
         title: AnimatedOpacity(
           opacity: collapsed ? 1 : 0,
@@ -830,12 +830,12 @@ class _A5HeroSliverAppBar extends StatelessWidget {
         ),
         centerTitle: true,
         actions: [
-          GestureDetector(
-            onTap: onFeedback,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: GmIcon(GmIcons.flag, size: 20, color: gm.sub),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _HeroAction(
+              icon: GmIcons.flag,
+              onTap: onFeedback,
+              label: AppLocalizations.of(context)!.fbTitleObject,
             ),
           ),
         ],
@@ -853,6 +853,53 @@ class _A5HeroSliverAppBar extends StatelessWidget {
         ),
       );
     });
+  }
+}
+
+/// 顶栏动作键（返回 / 内容反馈）。
+///
+/// 为什么带底：hero 展开时顶栏**直接压在作品照片上**，而渐变遮罩只铺底部
+/// 那 160px（那是给标题用的），顶部什么都没有。裸着的 1.6pt 线性图标压在
+/// 油画上会糊掉——深浅都糊，所以光换颜色解决不了，得让它自带一块底。
+///
+/// 两个键同款处理：同一个顶栏里一个有底一个裸着，看着更像 bug。
+class _HeroAction extends StatelessWidget {
+  const _HeroAction({
+    required this.icon,
+    required this.onTap,
+    required this.label,
+  });
+
+  final GmIcons icon;
+  final VoidCallback onTap;
+
+  /// 读屏用。线性图标没有文字，不给标签的话读屏只会念出一个"按钮"。
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        // 点击区撑满整个槽位（56×kToolbarHeight），不只是那枚 34px 的圆
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: gm.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: gm.line),
+            ),
+            child: Center(child: GmIcon(icon, size: 18, color: gm.ink)),
+          ),
+        ),
+      ),
+    );
   }
 }
 
