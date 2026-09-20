@@ -32,15 +32,21 @@ _EXPLANATION_BODY = {
 
 
 def test_explanation_is_retired_and_never_calls_the_llm(client, monkeypatch):
+    """绊线打在 **OpenAI 客户端工厂**上，不是某个具体的生成函数。
+
+    工厂是所有 LLM 路径的共同咽喉（`enrichment/vision`、`content_enricher`、
+    `recognition/vision` 全走它），所以这条断言不会因为将来有人换了生成函数的
+    名字或实现而悄悄失效 —— 只要这个端点碰了任何 LLM，它就会响。
+    """
     import app.services.content_generation_service as cgs
 
     calls = []
 
     def _tripwire(*a, **k):
         calls.append(a)
-        raise AssertionError("退役端点仍然调用了 LLM —— 闸站错位置了")
+        raise AssertionError("退役端点仍然摸到了 OpenAI 客户端 —— 闸站错位置了")
 
-    monkeypatch.setattr(cgs.ContentGenerationService, "generate_explanation", _tripwire)
+    monkeypatch.setattr(cgs, "_get_openai_client", _tripwire)
 
     r = client.post("/api/v1/content/explanation", json=_EXPLANATION_BODY)
     assert r.status_code == 410
