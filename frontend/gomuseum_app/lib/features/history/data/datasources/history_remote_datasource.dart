@@ -7,11 +7,13 @@ abstract class HistoryRemoteDataSource {
     int limit = 20,
     int offset = 0,
     int? days,
+    String? language,
   });
 
   Future<List<HistoryItemModel>> searchHistory({
     required String query,
     int limit = 20,
+    String? language,
   });
 
   Future<Map<String, dynamic>> getHistoryStats({int days = 30});
@@ -34,11 +36,14 @@ class HistoryRemoteDataSourceImpl implements HistoryRemoteDataSource {
     int limit = 20,
     int offset = 0,
     int? days,
+    String? language,
   }) async {
     final queryParams = {
       'limit': limit,
       'offset': offset,
       if (days != null) 'days': days,
+      // 界面语言。后端不传时回退「识别那一刻的语言」,会让列表中英混排。
+      if (language != null) 'language': language,
     };
 
     final response = await dio.get(
@@ -62,12 +67,14 @@ class HistoryRemoteDataSourceImpl implements HistoryRemoteDataSource {
   Future<List<HistoryItemModel>> searchHistory({
     required String query,
     int limit = 20,
+    String? language,
   }) async {
     final response = await dio.get(
       '$baseUrl/history/search',
       queryParameters: {
         'query': query,
         'limit': limit,
+        if (language != null) 'language': language,
       },
     );
 

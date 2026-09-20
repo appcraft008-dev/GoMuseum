@@ -86,11 +86,28 @@ def _mine(db: Session, user_id: str, *, since=None) -> List[RecognitionEvent]:
     return q.order_by(RecognitionEvent.created_at.desc()).all()
 
 
-def _render(db, storage, ev: RecognitionEvent, obj: MuseumObject) -> dict:
-    """一条足迹 → 响应体。四个字符串字段的回退在这里兜死(见模块 docstring 纪律 2)。"""
+def _render(
+    db,
+    storage,
+    ev: RecognitionEvent,
+    obj: MuseumObject,
+    language: Optional[str] = None,
+) -> dict:
+    """一条足迹 → 响应体。四个字符串字段的回退在这里兜死(见模块 docstring 纪律 2)。
+
+    **`language` = 现在界面是什么语言,`ev.language` = 识别那一刻是什么语言。**
+    显示名必须跟前者走:足迹是"我看过哪些作品"的列表,同一份列表在中文界面下
+    就该整份是中文。跟着 `ev.language` 走会让一份列表里中英混排 ——
+    用户中文界面识别的显示中文、英文界面识别的显示英文,切语言也不变
+    (2026-09-20 用户截图报告)。
+
+    `language` 为 None 时回退 `ev.language`,**这是前向兼容的关键**:
+    老 App(含 v35 及更早)不传这个参数,回退后行为与修复前逐字节一致。
+    `ev.language` 这一列本身保留 —— 它是识别当时的事实记录。
+    """
     from app.services.recognition.service import _summary
 
-    lang = ev.language or "zh"
+    lang = language or ev.language or "zh"
     s = _summary(db, storage, obj, lang)
     period = (obj.period_zh if lang.startswith("zh") else obj.period_en) or (
         obj.period_en or obj.period_zh
@@ -114,7 +131,9 @@ def _render(db, storage, ev: RecognitionEvent, obj: MuseumObject) -> dict:
     }
 
 
-def _hydrate(db: Session, events: List[RecognitionEvent]) -> List[dict]:
+def _hydrate(
+    db: Session, events: List[RecognitionEvent], language: Optional[str] = None
+) -> List[dict]:
     """批量把事件渲染成足迹,顺带丢掉目录里已查无此物的 qid。
 
     ponytail: qid→object 一次查回来(避免 N+1);`_summary` 内部每件仍会各查
@@ -131,7 +150,11 @@ def _hydrate(db: Session, events: List[RecognitionEvent]) -> List[dict]:
         for o in db.query(MuseumObject).filter(MuseumObject.qid.in_(qids)).all()
     }
     storage = get_object_storage()
-    return [_render(db, storage, ev, objs[q]) for ev, q in pairs if q and q in objs]
+    return [
+        _render(db, storage, ev, objs[q], language)
+        for ev, q in pairs
+        if q and q in objs
+    ]
 
 
 @router.get("/recent")
@@ -139,6 +162,9 @@ def get_recent_history(
     limit: int = Query(default=20, le=100, description="Maximum number of results"),
     offset: int = Query(default=0, ge=0, description="Number of results to skip"),
     days: Optional[int] = Query(default=None, description="Filter by last N days"),
+    language: Optional[str] = Query(
+        default=None, description="界面语言;不传则回退各条事件自己的语言(老 App 行为)"
+    ),
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> List[dict]:
@@ -152,7 +178,7 @@ def get_recent_history(
     # 先渲染再切片:够不够格算足迹、藏品还在不在目录,都是 SQL 里判不了的,
     # 在 SQL 层分页会让每页少几条(甚至整页空)。足迹是几十到几百条量级,
     # ponytail: 上千条了再谈游标分页。
-    items = _hydrate(db, _mine(db, user_id, since=since))
+    items = _hydrate(db, _mine(db, user_id, since=since), language)
     return items[offset : offset + limit]
 
 
@@ -160,6 +186,9 @@ def get_recent_history(
 def search_history(
     query: str = Query(..., min_length=2, description="Search query"),
     limit: int = Query(default=20, le=100),
+    language: Optional[str] = Query(
+        default=None, description="界面语言;不传则回退各条事件自己的语言(老 App 行为)"
+    ),
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> List[dict]:
@@ -168,12 +197,14 @@ def search_history(
     ponytail: 在渲染结果上过滤,而不是拼 SQL —— 标题是多语言回退出来的
     (`title_i18n` → title_zh → title_en → qid),SQL 里根本没有"用户看到的那个名字"
     这一列可比。足迹是几十到几百条量级,先取回再筛完全够;上千条了再谈索引。
+
+    搜索目标随 `language` 一起变是对的:用户搜的是**他现在看到的那个名字**。
     """
     user_id = _me(db, credentials)
     needle = query.lower()
     hits = [
         r
-        for r in _hydrate(db, _mine(db, user_id))
+        for r in _hydrate(db, _mine(db, user_id), language)
         if needle in r["artwork_name"].lower() or needle in r["artist"].lower()
     ]
     return hits[:limit]

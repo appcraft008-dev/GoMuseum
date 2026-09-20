@@ -12,6 +12,7 @@ class SearchHistory {
   Future<Either<Failure, List<HistoryItem>>> call({
     required String query,
     int limit = 20,
+    String? language,
   }) async {
     if (query.trim().length < 2) {
       return Left(
@@ -21,6 +22,7 @@ class SearchHistory {
     return await repository.searchHistory(
       query: query,
       limit: limit,
+      language: language,
     );
   }
 }

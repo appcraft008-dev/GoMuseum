@@ -13,11 +13,13 @@ class GetRecentHistory {
     int limit = 20,
     int offset = 0,
     int? days,
+    String? language,
   }) async {
     return await repository.getRecentHistory(
       limit: limit,
       offset: offset,
       days: days,
+      language: language,
     );
   }
 }
