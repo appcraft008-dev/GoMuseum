@@ -13,13 +13,6 @@ from pydantic import BaseModel, Field
 
 from app.core.database import SessionLocal
 from app.core.exceptions import AIServiceException
-from app.services.content_generation_service import get_content_generation_service
-from app.services.content_repo import (
-    get_section_audio_key,
-    persist_explanation,
-    persist_section_audio,
-)
-from app.services.storage import get_object_storage
 from app.services.tts_service import get_tts_service
 
 logger = logging.getLogger(__name__)
@@ -108,91 +101,36 @@ class TTSInfoResponse(BaseModel):
     size_bytes: int
 
 
-class AudioUrlResponse(BaseModel):
-    """section 模式 TTS 响应：音频已落库，返回 R2 URL"""
-
-    audio_url: str
-    cached: bool
-
-
 @router.post("/explanation", response_model=ExplanationResponse)
-async def generate_explanation(
-    request: ExplanationRequest, content_service=Depends(get_content_generation_service)
-) -> ExplanationResponse:
+async def generate_explanation(request: ExplanationRequest) -> ExplanationResponse:
+    """⛔ 已退役(2026-09-20 安全审计)。两个洞叠在一起,任何一个都足以下线它:
+
+    ① **成本洞** —— 完全不鉴权的 LLM 端点。`description` 是请求体里调用方
+       完全控制的自由文本、无长度校验,直接拼进 prompt;nginx 放行 15MB 请求体,
+       单次请求可撑到模型上下文上限(约 $0.019,正常一次 $0.001)。无限流。
+    ② **数据污染洞(更重)** —— 带 `qid` 时会 `persist_explanation` 把结果写进
+       `object_content_sections` 并置 `status="published"`,**命中已有行就覆盖**。
+       它不走富化管线,于是绕过接地闸/忠实度闸/语言检测闸的**全部**。
+       更糟的是 body 一变 `audio_key` 就被置 None(`content_repo.py:39`)——
+       **已灌好的音频静默变哑**。合起来:匿名任何人可定点毁掉一件藏品某个语言的
+       讲解与音频。
+
+    它也没有现役用途:产品形态已被「`/recognize` 返 qid →
+    `/museums/{slug}/objects/{qid}/content`」整条取代,后者带全套质量闸。
+    App 唯一的引用在 `history_page.dart` 一条"老后端不返回 slug/qid"的兜底路径上
+    (prod 后端从 #483 起一直返回),且那条路**从不传 qid** —— 上面 ② 整条分支
+    只有攻击者会走。
+
+    保留路由只为给可能还在调它的老客户端一个明确信号,不是静默 404
+    —— 与 `/recognition/recognize` 的退役同款处理。
     """
-    Generate detailed AI explanation for an artwork
-
-    Args:
-        request: Explanation generation request with artwork details
-        content_service: Content generation service (injected)
-
-    Returns:
-        Detailed explanation with historical context, analysis, and facts
-
-    Example:
-        ```bash
-        curl -X POST "http://localhost:8000/api/v1/content/explanation" \\
-             -H "Content-Type: application/json" \\
-             -d '{
-                   "artwork_name": "Starry Night",
-                   "artist": "Vincent van Gogh",
-                   "period": "Post-Impressionism",
-                   "language": "en"
-                 }'
-        ```
-    """
-    logger.info(
-        f"Generating explanation for '{request.artwork_name}' in {request.language}"
+    raise HTTPException(
+        status_code=410,
+        detail={
+            "reason": "endpoint_retired",
+            "use": "GET /api/v1/museums/{slug}/objects/{qid}/content",
+        },
     )
-
-    try:
-        result = await content_service.generate_explanation(
-            artwork_name=request.artwork_name,
-            artist=request.artist,
-            period=request.period,
-            language=request.language,
-            description=request.description,
-        )
-
-        logger.info(f"Explanation generated successfully for '{request.artwork_name}'")
-
-        # 讲解永久落库（best-effort）：提供了 qid 且非兜底结果时写入 DB；
-        # 失败仅告警，绝不影响已成功生成的用户响应。
-        if request.qid and not result.get("fallback"):
-            db = SessionLocal()
-            try:
-                persist_explanation(
-                    db, request.qid, request.language, result, model="gpt-4o-mini"
-                )
-            except Exception as persist_err:  # noqa: BLE001
-                logger.warning(
-                    f"persist_explanation failed for qid={request.qid}: {persist_err}"
-                )
-            finally:
-                db.close()
-
-        return ExplanationResponse(
-            title=result["title"],
-            summary=result["summary"],
-            historical_context=result["historical_context"],
-            artistic_analysis=result["artistic_analysis"],
-            cultural_significance=result["cultural_significance"],
-            interesting_facts=result["interesting_facts"],
-            language=result["language"],
-            fallback=result.get("fallback", False),
-        )
-
-    except AIServiceException as e:
-        logger.error(f"Content generation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "ContentGenerationError", "detail": str(e)},
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
-        )
 
 
 @router.post("/tts/generate")
@@ -231,46 +169,32 @@ async def generate_tts_audio(
              --output audio.mp3
         ```
     """
-    # section 模式：qid + section_code 同时存在 → 落库 R2 + 返回 audio_url（懒写复用）
+    # ⛔ section 模式已退役(2026-09-20 安全审计)。它把 `request.text` —— 调用方
+    # 提交的**自由文本**,与 DB 里 `object_content_sections.body` 没有任何关系 ——
+    # 合成后经 `persist_section_audio` 写成该件藏品**该语言该段落的官方音频**,
+    # 发给所有后续用户。而 `_require_tts_access` 回答的是"你能不能**听**这一段",
+    # 不是"你能不能**写**这一段":通票生效(`can_play_audio` 的 `state == ACTIVE`
+    # 直接 return True)即可写**全库任意 (qid, language, section)**,
+    # 免费用户也能写自己识别过那件的 guide 段。
+    #
+    # 而且**写入即锁死**:下面原本的 `existing` 分支会直接返回缓存,
+    # 于是被污染的音频再也不会被覆盖、也不会被任何正常流程发现。
+    #
+    # App 从不使用它:`GenerateTtsAudioParams` 只有 text/language/voice/speed,
+    # 没有 qid 和 sectionCode —— datasource 里那个 section 分支没有调用方能满足。
+    # 正确的音频路径一直是 `/museums/{slug}/objects/{qid}/audio`,那里
+    # **不接受客户端 text**,正文由服务端从已发布 section 取。
+    #
+    # 显式 410 而不是静默落到下面的 ad-hoc 分支:后者返回的是 mp3 流而非 JSON,
+    # 悄悄换语义会让万一存在的调用方拿到完全不同形状的响应。
     if request.qid and request.section_code:
-        db = SessionLocal()
-        try:
-            _require_tts_access(
-                db,
-                credentials,
-                qid=request.qid,
-                language=request.language,
-                section=request.section_code,
-            )
-            storage = get_object_storage()
-            existing = get_section_audio_key(
-                db, request.qid, request.language, request.section_code
-            )
-            if existing:
-                return AudioUrlResponse(
-                    audio_url=storage.public_url(existing), cached=True
-                )
-            # section 模式刻意只生成规范版（默认 voice + speed 1.0），忽略 voice/speed：
-            # audio_key 不编码 voice/speed，否则同一 section 会产生多份音频、缓存键冲突。
-            result = await tts_service.generate_audio(
-                text=request.text, language=request.language
-            )
-            key = persist_section_audio(
-                db,
-                request.qid,
-                request.language,
-                request.section_code,
-                result["audio_data"],
-                storage,
-            )
-            if key is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail={"error": "ObjectNotFound", "qid": request.qid},
-                )
-            return AudioUrlResponse(audio_url=storage.public_url(key), cached=False)
-        finally:
-            db.close()
+        raise HTTPException(
+            status_code=410,
+            detail={
+                "reason": "endpoint_retired",
+                "use": "GET /api/v1/museums/{slug}/objects/{qid}/audio",
+            },
+        )
 
     # ad-hoc(任意文本)：没有 qid 可挂靠识别解锁,按付费功能处理
     _db = SessionLocal()
