@@ -1,7 +1,7 @@
 # 上新馆可见性闸（准备期隐身 · 一次放出 · 正式包预览）
 
-> 2026-09-20 brainstorm 定稿。⏳ **待并入**：同日跑的独立 review 尚未回来，
-> 其发现回来后折进本文再实施（见 §七）。
+> 2026-09-20 brainstorm 定稿，同日独立 review 发现已折入（见 §八）——
+> **review 把暴露面从 4 个改到 11 个，并推翻了缓存失效的处理方式**。
 > 与 [[enrichment-pipeline-v1]]、[[collection-coverage-strategy]] 配套——
 > 那些管"怎么把一家馆灌出来"，这个管"灌到一半时用户不该看见它"。
 
@@ -86,28 +86,62 @@ UPDATE museums SET published_at = now() WHERE slug = '...';
 
 ## 二、暴露面清单（改动点）
 
-一家馆 `INSERT` 后当前立即可见的四个口子：
+> 🔴 **本节是 review 推翻我初稿的地方，原文只列了下表的前 4 行。**
+> 那 4 个是**发现**入口；真正要命的是**直达**入口——它们全部无 auth、无过滤，
+> 而 **slug 不是秘密**（`onboard.py` 把 slug 当 CLI 参数，取值就是馆名直译：
+> `louvre`、`petit-palais`）。只堵发现不堵直达 = 任何人猜中 slug 就能拿到完整
+> 馆藏并拍照识别，**需求①直接不成立**。教训与 [[verify-tools-before-trusting-them]]
+> 同型：我枚举的是"我想得到的入口"，不是"全部入口"。
 
-| # | 口子 | 位置 | 现状 |
-|---|---|---|---|
-| 1 | 探索页馆列表 | `museum_repo.py:354` `list_museums` | 查全表，**零过滤**；端点无 auth |
-| 2 | 拍照识别 | `matcher.py:48` `build_index(museum_id=None)` | 全局索引 |
-| 3 | 搜索藏品 | `inprocess.py:140` `build_search_index` | 自述「单一全局索引」 |
-| 4 | 搜索馆 | `inprocess.py:189` `_search_museums` | 馆本身也在全局搜索里 |
+| # | 口子 | 位置 | 现状 | 类型 |
+|---|---|---|---|---|
+| 1 | 探索页馆列表 | `museum_repo.py:354` `list_museums` | 查全表零过滤，端点无 auth | 发现 |
+| 2 | 拍照识别索引 | `matcher.py:48` `build_index(museum_id=None)` | 全局索引 | 发现 |
+| 3 | 搜索藏品 | `inprocess.py:140` `build_search_index` | 自述「单一全局索引」 | 发现 |
+| 4 | 搜索馆 | `inprocess.py:189` `_search_museums` | `query(Museum).all()` 无过滤 | 发现 |
+| 5 | **完整馆包** | `museums.py:224` `get_museum_pack` | **无 auth 参数**，整馆藏品/图/分类全返 | 直达 |
+| 6 | **分页藏品** | `museums.py:171` `list_objects` | **无 auth** | 直达 |
+| 7 | **藏品讲解** | `museums.py:72` `object_content` | **无 auth**，且调 `maybe_trigger` → 可触发**付费** LLM 懒生成 | 直达 |
+| 8 | **馆内搜索** | `search.py:31` `museum_search` | **无 auth**，仅凭 slug 定位 | 直达 |
+| 9 | **按馆识别** | `museums.py:196` `recognize_artwork` | 有 `credentials` 但不查可见性 | 直达 |
+| 10 | 音频解锁 | `entitlements.py:79` `/audio/unlock` | 裸 `qid`，无馆级检查 | qid 泄漏后可达 |
+| 11 | TTS 生成 | `content.py:198` `/tts/generate` | 裸 `qid`，**可触发真实花费** | qid 泄漏后可达 |
 
-（第五个在路上：[[product-backlog]] 里冻结待命的公开网页层
+（第 12 个在路上：[[product-backlog]] 里冻结待命的公开网页层
 `gomuseum.app/a/{slug}/{qid}`，实现时必须一并带上本闸。）
 
-⏳ **本清单待 review 补全**——"我能想到的入口"不等于"全部入口"，
-`get_museum_pack` / content / 分页 objects / 足迹 / KPI 等仍需逐个核。
+### 2.1 堵在一个地方，不是十一个地方
 
-过滤条件统一成：
+十一处各写一遍 `published_at IS NOT NULL OR viewer.can_preview`，**下一个新加的
+端点必然会忘**。同型教训这个项目已经吃过两次：`sections_for` 只在生成侧有兜底、
+seed 侧遍历 dict 没有，结果 980 段看不见（[[product-backlog]]）；测试触网也是
+堵在 conftest **一个**点而不是逐个用例补注入（#607）。
 
+**单一真相源**：
+
+```python
+def visible_museum_ids(db, viewer) -> set | None:   # None = 全可见(预览者)
+def resolve_museum(db, slug, viewer) -> Museum      # 不可见 → 404
+def museum_of_qid(db, qid, viewer) -> Museum        # 供 10/11 两个裸 qid 端点
 ```
-published_at IS NOT NULL  OR  调用者.can_preview
-```
 
-`list_museums` 目前完全没有 auth，需加 optional bearer 才能知道调用者是谁。
+所有解析馆/藏品的路径一律走这三个函数，端点里不写谓词。
+
+### 2.2 不可见返回 404，不返回 403
+
+403 等于确认"这个 slug 存在但你不能看"——对一家还没官宣的合作馆，这本身就是泄漏。
+404 与"slug 不存在"不可区分，才是隐身。
+
+### 2.3 五个端点需要新增 caller identity
+
+5/6/7/8 目前连 `credentials` 参数都没有，要加 optional bearer。
+沿用代码库已有的两处同款写法（`recognize_global.py:23` `_user_id`、
+`feedback.py:94`）：**令牌无效/过期一律当匿名，绝不 401**——否则老 App 拿着
+过期 token 打探索页会直接崩。
+
+> ✅ review 查证：API 前面**没有 CDN/反代缓存**
+> （`nginx-api.gomuseum.app.conf` 无 `proxy_cache`/`expires`），
+> 所以"带 auth 的响应被缓存串给别人"这个经典坑在这里不存在。
 
 ## 三、已知缺口：游客态无法预览
 
@@ -126,14 +160,41 @@ published_at IS NOT NULL  OR  调用者.can_preview
 预览特权的爆炸半径：**只放大"能看见几家馆"这一件事的读可见性**。
 不给写权限、碰不到他人数据、不发任何权益。忘了关，后果仅是该账号多看见几家未上线的馆。
 
-## 五、前向兼容
+## 五、索引缓存：不加 invalidate，改成查询时过滤
+
+⚠️ review 查证的现状：prod 跑 `--workers 2`（`deployment/production/docker-compose.yml:57`），
+三份 TTL 600s 的**进程内**缓存各自独立（`matcher.py:20`、`inprocess.py:31`、
+`vector_index.py:19`），其中**只有 `vector_index.py:22` 有 `invalidate()`**。
+而放出动作是直连 Postgres 的一条 SQL，**碰不到任何 app 进程的内存**。
+
+照初稿实施的后果：翻开关后每个 worker 各自最长 10 分钟继续用旧索引，
+两个 worker 失效时刻还不一致；而 `list_museums` 无缓存会**立刻**生效——
+于是出现"探索页已经有这家馆了，但搜不到也拍不到"的割裂态，持续数分钟。
+
+**不采纳"给两个缓存补 invalidate()"**：单进程的 invalidate 救不了另一个 worker，
+将来加 worker 或上多机只会更糟，这是在给一个不该存在的耦合打补丁。
+
+**改法——索引里不携带可见性**：索引照旧对全部藏品构建（零改动、不必重建、
+不必失效），可见性在**查询时**用一份新鲜的 `visible_museum_ids(db, viewer)` 过滤。
+两个索引本来就支持按 museum_id 事后过滤（`inprocess.py:157` 就是一句列表推导）。
+
+代价是每次搜索/识别多一条 `SELECT`，而可见馆总共个位数行——相对这两个端点
+本身要做的 DINOv2 嵌入和 LLM 调用，可以忽略。**收益是整类缓存陈旧 bug 消失。**
+
+## 六、前向兼容与"放出后回收"
 
 后端单侧改动，契约**形状零变化**，老 App 只是收到更短的馆列表。
-⏳ 待 review 确认的反向风险：某馆**曾可见后又不可见**时（回收、或预览账号取消特权），
-足迹里已有该馆记录、已缓存的 slug、深链接会不会崩。
-同类事故有先例（`title_zh` 变 null 崩整页），不能想当然。
+未上线的馆从没对老 App 出现过，所以不存在"馆突然消失"的崩溃风险。
 
-## 六、自检
+**关于回收（un-publish）——本设计明确定义：`published_at` 只进不出。**
+放出后回收不是支持的操作；真要下架属于事故处置，个案处理。
+
+理由与随之而来的一条硬规则：**足迹/历史的渲染不查 `published_at`**。
+足迹是用户自己的记录，不该因为馆的状态变化而消失或报错
+（`history.py:89-157` 的 `_render`/`_hydrate` 现在就不查，保持原样）。
+可见性闸只管**发现与进入**，不管**已经发生过的事**。
+
+## 七、自检
 
 按 [[test-across-config-dimension]]：行为依赖"某项配置在不在"时，测试必须在配置
 **两侧**做同一组比较。只测"预览者看得到"等于只测一半，而且它会绿。
@@ -145,19 +206,38 @@ published_at IS NOT NULL  OR  调用者.can_preview
 | **普通调用者** | 看得到 | **看不到** |
 | **预览调用者** | 看得到 | 看得到 |
 
-四个暴露面各跑一遍这张表。
+**§二 的十一个暴露面各跑一遍这张表**——不是四个。少测一个就是留一个洞，
+而洞在没测的那格里永远是绿的。
 
-## 七、待并入 review 发现
+额外两条：
 
-同日已启动独立 review（换模型，只给原始材料不给结论，按 CLAUDE.md 规则 6）。
-写 prompt 过程中自查出的两条，已列入待核：
+- **裸 qid 端点（10/11）的负例**：拿一个未发布馆的 qid 去打 `/audio/unlock`
+  和 `/tts/generate`，必须 404。11 会**真花钱**，这条不测等于留一个可被点燃的
+  付费端点（同型风险见 [[product-backlog]] 对公开网页层的告警）。
+- **404 而非 403**（§2.2）：断言响应体与"slug 不存在"不可区分。
 
-1. **进程内索引缓存的窗口**。`matcher.py:20` `_index_cache` 与搜索索引均为
-   TTL 600s 的**进程内**缓存。翻开关后最长 10 分钟搜不到/拍不到；多 worker
-   各有一份，失效时间还不一致。需要明确处理，不能靠等。
-2. **老 App 遇到"馆突然消失"**（见 §五）。
+## 八、review 结论（2026-09-20，已折入）
 
-review 结论回来后折进本文，**再动代码**。
+按 CLAUDE.md 规则 6 跑的独立 review（换模型，**只给原始材料不给结论**）。
+
+**我初稿的 6 条事实陈述全部成立**（逐条有 file:line 复核）。但**范围错了**：
+
+| 严重度 | 发现 | 处置 |
+|---|---|---|
+| 🔴 致命 | 只堵了发现入口，5 个直达端点（pack/objects/content/馆内搜索/按馆识别）无 auth 无过滤，slug 可猜 → **需求①不成立** | §二 重写，4 → 11 个暴露面 |
+| 🟠 高 | 2 个 worker × 3 份 TTL 600s 进程内缓存，只有 `vector_index` 有 `invalidate()`；SQL 放出碰不到进程内存 | §五 改为查询时过滤，整类问题消失 |
+| 🟡 中 | `/audio/unlock`、`/tts/generate` 裸 qid 无馆级检查，后者可触发真实花费 | 列为 §二 #10/#11 |
+| 🔵 低 | 回收语义未定义 | §六 明确：只进不出，足迹不查可见性 |
+
+**一处不采纳**：review 建议用 `settings.PREVIEW_EMAILS` 环境变量替代
+`User.can_preview` 列以省掉迁移（它自己也标注为 judgment call）。
+**维持用列**——理由在 §原则 3：B 号是消耗品，免费识别 5 次按账号算，
+验一次就得换新号。用环境变量意味着**每换一个测试账号要改环境变量 + 重新部署**
+（还会触发 CD）；用列是一条 SQL。迁移只付一次，换号要付很多次。
+
+> 🔑 复盘：这次 review 值钱**恰恰因为没给它我的结论**。它花在"逐个端点去查
+> 有没有 auth"上的力气，如果我把方案丢过去问"你看行吗"，会全部变成对方案措辞的
+> 评价。——[[investigate-before-writing-conclusions]] 的又一例。
 
 ## 验收口径（上新馆配方补充）
 
