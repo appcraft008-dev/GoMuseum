@@ -19,6 +19,18 @@ FIELD_MAP = {
 def persist_explanation(
     db: Session, qid: str, language: str, payload: dict, model: str | None = None
 ) -> bool:
+    """⚠️ **别再把这个函数接到任何端点上。** 它现在只剩测试在用。
+
+    它唯一的历史调用方是 `POST /content/explanation`，而那个端点在 2026-09-20
+    安全审计里被退役 —— 因为这个组合构成了一个匿名可达的数据破坏面：
+    本函数把内容直接写成 `status="published"`，**绕过接地闸/忠实度闸/语言检测闸的
+    全部**（那些闸挂在 `enrichment/` 的管线里，这条路不经过），命中已有行就覆盖，
+    且 body 一变就把 `audio_key` 置 None（下面那行）让已发布音频静默变哑。
+
+    正文的正确写入路径是富化管线的 `_upsert_section`。函数本身留着（清空 audio_key
+    的逻辑是对的，也有自己的测试），但它没有闸 —— 谁把它重新接到入口上，
+    就把同一个洞原样搬回来了。
+    """
     obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if not obj:
         return False

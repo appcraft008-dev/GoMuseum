@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.exceptions import (
-    NotFoundException,
     ServiceException,
     TimeoutException,
     ValidationException,
@@ -27,7 +26,7 @@ from app.services.ai_service import get_ai_service
 from app.services.cache_service import CacheService
 from app.services.image_service import ImageService
 from app.services.recognition_service import RecognitionService
-from app.utils.performance_monitor import get_performance_monitor, monitor_performance
+from app.utils.performance_monitor import monitor_performance
 
 logger = logging.getLogger(__name__)
 
@@ -168,124 +167,11 @@ async def _retired_recognize_artwork(
         )
 
 
-@router.get("/recognize/{recognition_id}", response_model=RecognitionResponse)
-async def get_recognition_result(
-    recognition_id: str,
-    service: RecognitionService = Depends(get_recognition_service_dependency),
-) -> RecognitionResponse:
-    """
-    Retrieve recognition result by ID
-
-    Args:
-        recognition_id: UUID of the recognition result
-        service: Recognition service (injected)
-
-    Returns:
-        RecognitionResponse with artwork details
-
-    Raises:
-        HTTPException: 404 if not found, 500 for other errors
-
-    Example:
-        ```bash
-        curl -X GET "http://localhost:8000/api/v1/recognition/recognize/
-        550e8400-e29b-41d4-a716-446655440000"
-        ```
-    """
-    logger.info(f"Retrieving recognition result: {recognition_id}")
-
-    try:
-        result = service.get_recognition_by_id(recognition_id)
-        logger.info(f"Found recognition result: {result.artwork_name}")
-        return result
-
-    except NotFoundException as e:
-        logger.warning(f"Recognition result not found: {recognition_id}")
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "NotFound", "detail": e.detail or e.message},
-        )
-
-    except ServiceException as e:
-        logger.error(f"Service error: {e.message}")
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "ServiceError", "detail": e.detail or e.message},
-        )
-
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
-        )
-
-
-@router.get("/stats")
-async def get_recognition_stats(
-    service: RecognitionService = Depends(get_recognition_service_dependency),
-) -> dict:
-    """
-    Get recognition and performance statistics
-
-    Args:
-        service: Recognition service (injected)
-
-    Returns:
-        Dictionary with statistics
-
-    Example:
-        ```bash
-        curl -X GET "http://localhost:8000/api/v1/recognition/stats"
-        ```
-    """
-    logger.info("Retrieving recognition statistics")
-
-    try:
-        # Get recognition statistics
-        recognition_stats = service.get_statistics()
-
-        # Get performance statistics
-        perf_monitor = get_performance_monitor()
-        performance_stats = perf_monitor.get_stats()
-
-        return {"recognition": recognition_stats, "performance": performance_stats}
-
-    except Exception as e:
-        logger.error(f"Error retrieving stats: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
-        )
-
-
-@router.get("/recent")
-async def get_recent_recognitions(
-    limit: int = 10,
-    service: RecognitionService = Depends(get_recognition_service_dependency),
-) -> list[RecognitionResponse]:
-    """
-    Get recent recognition results
-
-    Args:
-        limit: Maximum number of results to return (default: 10)
-        service: Recognition service (injected)
-
-    Returns:
-        List of recent RecognitionResponse objects
-
-    Example:
-        ```bash
-        curl -X GET "http://localhost:8000/api/v1/recognition/recent?limit=5"
-        ```
-    """
-    logger.info(f"Retrieving {limit} recent recognitions")
-
-    try:
-        results = service.get_recent_recognitions(limit=limit)
-        logger.info(f"Retrieved {len(results)} recent recognitions")
-        return results
-
-    except Exception as e:
-        logger.error(f"Error retrieving recent recognitions: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail={"error": "InternalServerError", "detail": str(e)}
-        )
+# ⛔ 以下三个端点已删除(2026-09-20 安全审计):
+#   GET /recognition/recent?limit=N   —— 无鉴权返回**他人**识别结果,limit 无上限
+#   GET /recognition/stats            —— 无鉴权泄漏内部统计与性能指标
+#   GET /recognition/recognize/{id}   —— 无鉴权,id 可枚举
+# 三个都读 `recognition_results` 表,而该表唯一的写入者是上面这条已经 410 的老路径
+# (`recognition_service.py:121`)—— prod 实测 0 行,所以它们今天返回空、不泄漏任何东西。
+# 删掉是因为它们是**雷不是洞**:表里一有行就立刻变成泄漏,而不会有人记得这三个还开着。
+# 同型的洞修过一次 —— `/history/*` 的"匿名可读可删"。

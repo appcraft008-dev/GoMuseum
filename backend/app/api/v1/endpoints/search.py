@@ -10,6 +10,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.config import MAX_PAGE_LIMIT
 from app.core.database import get_db
 from app.models.museum import Museum
 from app.services.search.inprocess import search as run_search
@@ -23,7 +24,12 @@ def global_search(
     q: str = "", language: str = "zh", limit: int = 20, db: Session = Depends(get_db)
 ) -> dict:
     museums, objects = run_search(
-        db, get_object_storage(), q, museum_id=None, language=language, limit=limit
+        db,
+        get_object_storage(),
+        q,
+        museum_id=None,
+        language=language,
+        limit=min(limit, MAX_PAGE_LIMIT),
     )
     return {"query": q, "museums": museums, "objects": objects}
 
@@ -40,6 +46,11 @@ def museum_search(
     if not m:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     _, objects = run_search(
-        db, get_object_storage(), q, museum_id=m.id, language=language, limit=limit
+        db,
+        get_object_storage(),
+        q,
+        museum_id=m.id,
+        language=language,
+        limit=min(limit, MAX_PAGE_LIMIT),
     )
     return {"query": q, "objects": objects}

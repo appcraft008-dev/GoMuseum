@@ -13,10 +13,7 @@ from fastapi import UploadFile
 from fastapi.testclient import TestClient
 
 from app.api.v1.endpoints.recognition import (
-    get_recent_recognitions,
-    get_recognition_result,
     get_recognition_service_dependency,
-    get_recognition_stats,
     recognize_artwork,
     router,
 )
@@ -78,6 +75,11 @@ class TestRecognizeArtworkEndpointRetired:
 
     原先这里有 16 条用例测它的成功/异常/日志行为,随端点一并移除——
     留着会让"这个端点还该工作"这件事看起来仍然成立。
+
+    ⚠️ 2026-09-20 安全审计又删了同一个 router 里另外三个**无鉴权**端点
+    (`/recent`、`/stats`、`/recognize/{id}`,都读那张 prod 实测 0 行的
+    `recognition_results` 表)。它们的"已删除"断言在
+    `tests/unit/api/test_retired_cost_holes.py`,与其余退役端点放在一起。
     """
 
     def test_retired_endpoint_returns_410_with_pointer(self):
