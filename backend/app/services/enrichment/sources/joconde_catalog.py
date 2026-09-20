@@ -87,6 +87,12 @@ def _to_stub(rec: dict, slug: str) -> StubRecord | None:
         qid=f"joconde-{ref}",
         title=_clean_title(rec.get("titre")),
         artist=_clean_artist(rec.get("auteur")),
+        # ⚠️ 这个字段是**脏的**,原样透传:Joconde 把创作年和法语精度词
+        # 反序拼在一起 —— `1853 vers`(约1853)、`1865 entre,1908 et`、
+        # `1911 vers,1912 ou,1914 et`。prod 上 713 件是这个形态。
+        # 已核对官方 CSV:源数据本身就长这样,换通道不会变干净。
+        # 目前靠前端 `year_format.dart` 兜底显示(覆盖 84%);
+        # 真正的治本是在这里解析成结构化年代 —— 重写本源时一并做。
         year=rec.get("millesime_de_creation"),
         category=_category(rec.get("domaine")),
         image_url=None,  # © RMN 版权图,无免费图 → 文字层

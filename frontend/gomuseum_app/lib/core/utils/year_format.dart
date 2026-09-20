@@ -28,9 +28,10 @@ final _joconde = <RegExp, String Function(RegExpMatch)>{
 ///    归一化成语言中立的记法(`c. 1853` / `1896–1911`),覆盖其中 84%;
 ///    `avant`/`après`/`ou`/`(?)` 这些没有通用中立记号,**原样留着**。
 ///
-/// 这批脏串是**存量**:它们来自已经下线的 opendatasoft 数据集,
-/// 现在官方 CSV 里 `Millesime_de_creation` 是干净的(`1802`/`1150-1170`),
-/// 所以 Joconde importer 换到新通道之后不会再产生这种串。
+/// ⚠️ 这批脏串**不是存量,会持续产生**:官方 Joconde CSV 里
+/// `Millesime_de_creation` 本身就是这个格式(已核对三条具体记录,
+/// 与库里完全一致),不是某个中间平台加工出来的。所以 importer 无论换到
+/// 哪条通道都照样写进来 —— 真正的治本是**入库时解析**,这里是兜底。
 String formatYear(String raw, AppLocalizations l10n) {
   final t = raw.trim();
 
