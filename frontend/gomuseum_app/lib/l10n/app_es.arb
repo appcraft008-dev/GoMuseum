@@ -88,6 +88,8 @@
   "footprintGoRecognize": "Reconoce tu primera obra",
   "itemsCount": "{count} obras",
   "ticketDurationDays": "{days} DÍAS",
+  "yearBefore": "antes de {year}",
+  "yearAfter": "después de {year}",
   "yearBce": "{year} a. C.",
   "today": "Hoy",
   "yesterday": "Ayer",

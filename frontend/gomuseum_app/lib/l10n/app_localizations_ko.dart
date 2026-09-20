@@ -293,6 +293,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String yearBefore(String year) {
+    return '$year년 이전';
+  }
+
+  @override
+  String yearAfter(String year) {
+    return '$year년 이후';
+  }
+
+  @override
   String yearBce(String year) {
     return '기원전 $year년';
   }

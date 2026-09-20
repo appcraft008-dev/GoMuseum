@@ -20,26 +20,40 @@ from app.services.enrichment.sources.joconde_catalog import (
     _clean_artist,
     _clean_inv,
     _clean_title,
+    _clean_year,
 )
 from app.services.object_importer import upsert_museum, upsert_object
 
+_COLS = (
+    "Reference",
+    "Numero_inventaire",
+    "Titre",
+    "Auteur",
+    "Domaine",
+    "Millesime_de_creation",
+    "Nom_officiel_musee",
+)
 
-class _Resp:
+
+class _Csv:
+    """整包 CSV 的最小替身:`|` 分隔、逐行流式(源就是这么发的)。"""
+
     status_code = 200
 
-    def __init__(self, results):
-        self._r = {"results": results}
+    def __init__(self, rows, cols=_COLS):
+        self._lines = ["|".join(cols)]
+        for r in rows:
+            self._lines.append("|".join((r.get(c) or "") for c in cols))
 
-    def json(self):
-        return self._r
+    def iter_lines(self, decode_unicode=False):
+        return iter(self._lines)
 
 
-def _fake_http(pages):
-    """按 offset//limit 分页发 canned 结果。"""
-
-    def get(url, params=None, headers=None, timeout=None):
-        i = params["offset"] // params["limit"]
-        return _Resp(pages[i] if i < len(pages) else [])
+def _fake_http(rows, cols=_COLS, status=200):
+    def get(url, headers=None, timeout=None):
+        resp = _Csv(rows, cols)
+        resp.status_code = status
+        return resp
 
     return get
 
@@ -49,14 +63,15 @@ _ORSAY = SimpleNamespace(slug="orsay", joconde_museum="musée d'Orsay")
 
 def test_list_maps_record_fields():
     rec = {
-        "reference": "50350115122",
-        "numero_inventaire": "RF 2051, recto",
-        "titre": "MERE ET ENFANT SUR FOND VERT OU MATERNITE",
-        "auteur": "Cassatt Mary (1844-1926)",
-        "domaine": ["beaux-arts", "dessin"],
-        "millesime_de_creation": "1897",
+        "Reference": "50350115122",
+        "Numero_inventaire": "RF 2051, recto",
+        "Titre": "MERE ET ENFANT SUR FOND VERT OU MATERNITE",
+        "Auteur": "Cassatt Mary (1844-1926)",
+        "Domaine": "beaux-arts;dessin",
+        "Millesime_de_creation": "1897",
+        "Nom_officiel_musee": "musée d'Orsay",
     }
-    out = list(JocondeCatalog(http_get=_fake_http([[rec], []])).list(_ORSAY))
+    out = list(JocondeCatalog(http_get=_fake_http([rec])).list(_ORSAY))
     assert len(out) == 1
     s = out[0]
     assert s.inventory_number == "RF 2051"
@@ -70,26 +85,105 @@ def test_list_maps_record_fields():
     assert s.image_url is None and s.source == "joconde"
 
 
-def test_list_paginates_until_short_page():
-    full = [
+def test_filters_by_museum_name():
+    """整包是**全法国**的馆,没有服务端筛选了 —— 过滤错了会把别馆的件灌进来。"""
+    rows = [
         {
-            "reference": str(i),
-            "numero_inventaire": f"RF {i}",
-            "titre": f"T{i}",
-            "domaine": ["peinture"],
+            "Reference": str(i),
+            "Numero_inventaire": f"RF {i}",
+            "Titre": f"T{i}",
+            "Domaine": "peinture",
+            "Nom_officiel_musee": name,
         }
-        for i in range(100)
+        for i, name in enumerate(
+            ["musée d'Orsay", "musée du Louvre", "musée d'Orsay", "musée de Cluny"]
+        )
     ]
-    tail = [
+    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    assert [o.inventory_number for o in out] == ["RF 0", "RF 2"]
+
+
+def test_museum_match_tolerates_case_and_spacing():
+    """馆名变体不许漏件 —— 漏得很安静(看起来像"这馆藏品就这么多")。
+
+    ⚠️ 全量 1.2GB 扫一遍会超时,所以"CSV 里到底有没有变体写法"没有实证;
+    与其赌它没有,不如让匹配本身容得下。仍是精确相等,不是子串 ——
+    子串会把 "musée d'Orsay - annexe" 这类另一个馆误收。
+    """
+    rows = [
         {
-            "reference": "x",
-            "numero_inventaire": "RF X",
-            "titre": "TX",
-            "domaine": ["sculpture"],
+            "Reference": str(i),
+            "Numero_inventaire": f"RF {i}",
+            "Titre": "T",
+            "Domaine": "peinture",
+            "Nom_officiel_musee": name,
+        }
+        for i, name in enumerate(
+            [
+                "musée d'Orsay",
+                "Musée d'Orsay",  # 大小写变体
+                "musée  d'Orsay",  # 多空格
+                " musée d'Orsay ",  # 首尾空格
+                "musée d'Orsay - annexe",  # ← 另一个馆,不许收
+                "musée du Louvre",
+            ]
+        )
+    ]
+    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    assert [o.inventory_number for o in out] == ["RF 0", "RF 1", "RF 2", "RF 3"]
+
+
+def test_domaine_is_semicolon_string_not_list():
+    """⚠️ 换通道最容易静默踩的一脚。
+
+    旧 API 的 `domaine` 是 list,CSV 的 `Domaine` 是 `;` 分隔**字符串**。
+    直接丢进原来那个 `for d in domaine` 会**逐字符**遍历 —— 一个字符都匹配不上
+    `_DOMAINE_CAT`,于是全部落到 "unknown",**而且不报任何错**。
+    """
+    rows = [
+        {
+            "Reference": "r1",
+            "Numero_inventaire": "RF 1",
+            "Titre": "T",
+            "Domaine": "beaux-arts;sculpture",
+            "Nom_officiel_musee": "musée d'Orsay",
         }
     ]
-    out = list(JocondeCatalog(http_get=_fake_http([full, tail, []])).list(_ORSAY))
-    assert len(out) == 101
+    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    assert out[0].category == "sculpture"  # 不是 "unknown"
+
+
+def test_year_is_normalized_at_import():
+    """脏年代串不许进库 —— 它会被 pipeline 当 "Creation year" 喂给 LLM。"""
+    rows = [
+        {
+            "Reference": f"r{i}",
+            "Numero_inventaire": f"RF {i}",
+            "Titre": "T",
+            "Domaine": "peinture",
+            "Millesime_de_creation": raw,
+            "Nom_officiel_musee": "musée d'Orsay",
+        }
+        for i, raw in enumerate(
+            [
+                "1853 vers",
+                "1865 entre,1908 et",
+                "1860 vers,1928 tirage",
+                "1854-1856",
+                "1897",
+                "1867 vers,1868 ou",  # 语义模糊 → 原样,不许猜
+            ]
+        )
+    ]
+    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    assert [o.year for o in out] == [
+        "c. 1853",
+        "1865–1908",
+        "c. 1860",
+        "1854–1856",
+        "1897",
+        "1867 vers,1868 ou",
+    ]
 
 
 def test_no_joconde_museum_yields_nothing():
@@ -99,18 +193,20 @@ def test_no_joconde_museum_yields_nothing():
 
 def test_skip_record_without_inventory_or_reference():
     no_inv = {
-        "reference": "r",
-        "numero_inventaire": None,
-        "titre": "T",
-        "domaine": ["dessin"],
+        "Reference": "r",
+        "Numero_inventaire": "",
+        "Titre": "T",
+        "Domaine": "dessin",
+        "Nom_officiel_musee": "musée d'Orsay",
     }
     no_ref = {
-        "reference": None,
-        "numero_inventaire": "RF 1",
-        "titre": "T",
-        "domaine": ["dessin"],
+        "Reference": "",
+        "Numero_inventaire": "RF 1",
+        "Titre": "T",
+        "Domaine": "dessin",
+        "Nom_officiel_musee": "musée d'Orsay",
     }
-    got = list(JocondeCatalog(http_get=_fake_http([[no_inv, no_ref], []])).list(_ORSAY))
+    got = list(JocondeCatalog(http_get=_fake_http([no_inv, no_ref])).list(_ORSAY))
     assert got == []  # 无号或无 ref(合成不出把手)都跳过
 
 
@@ -144,6 +240,10 @@ def test_cleaners():
     assert _category(["peinture"]) == "painting"
     assert _category(["sculpture"]) == "sculpture"
     assert _category(["beaux-arts"]) == "unknown"
+    # CSV 形态:`;` 分隔字符串(不拆的话会逐字符遍历 → 全 unknown)
+    assert _category("beaux-arts;dessin") == "works_on_paper"
+    assert _category("peinture") == "painting"
+    assert _category("") == "unknown"
 
 
 # --- filter_new_stubs 去重 ---
@@ -206,23 +306,34 @@ def test_filter_new_stubs_skips_existing_inv_and_p347(db):
     assert [s.inventory_number for s in out] == ["RF 300"]
 
 
-def test_non_json_response_raises_with_cause():
-    """源返回 HTML(而非 JSON)时必须明确报错。
+def test_wrong_payload_raises_instead_of_yielding_nothing():
+    """拿到的不是那份 CSV 时必须**报错**,不能安静地一条不匹配。
 
     真实故障形态:data.culture.gouv.fr 整站 301 到 culture.data.gouv.fr 且
-    丢弃路径 → 落到首页拿到 HTML,**status 仍是 200**。只看 status_code 放行,
-    然后崩在 resp.json() 上 —— 报错读不出真实原因。
+    丢弃路径 → 落到门户首页拿到 HTML,**status 仍是 200**。
+    只看 status_code 放行的话,下面的过滤循环会一条都不匹配 ——
+    看起来跟"这个馆在 Joconde 里没有藏品"一模一样,是最难查的那种失败。
     """
-
-    class _Html:
-        status_code = 200  # ← 关键:坏掉的源照样给 200
-
-        def json(self):
-            raise ValueError("Expecting value: line 1 column 1 (char 0)")
-
-    def _get(url, params=None, headers=None, timeout=None):
-        return _Html()
-
+    html = _fake_http([], cols=("<!doctype html><html lang=fr>",))
     with pytest.raises(RuntimeError) as e:
-        list(JocondeCatalog(http_get=_get).list(_ORSAY))
-    assert "joconde.csv" in str(e.value)  # 指向新通道,不是干巴巴一句失败
+        list(JocondeCatalog(http_get=html).list(_ORSAY))
+    assert "Nom_officiel_musee" in str(e.value)
+    assert "data.gouv.fr" in str(e.value)  # 指出去哪儿找新地址
+
+
+def test_non_200_raises():
+    with pytest.raises(RuntimeError) as e:
+        list(JocondeCatalog(http_get=_fake_http([], status=503)).list(_ORSAY))
+    assert "503" in str(e.value)
+
+
+def test_clean_year_table_and_passthrough():
+    assert _clean_year("1853 vers") == "c. 1853"
+    assert _clean_year("1865 entre,1908 et") == "1865–1908"
+    assert _clean_year("1865 entre,1881 et,1931 tirage") == "1865–1881"
+    assert _clean_year("1854-1856") == "1854–1856"
+    assert _clean_year("1897") == "1897"
+    assert _clean_year(None) is None
+    # 语义模糊的原样:「约1867**或**1868」压成区间是改写原意
+    assert _clean_year("1867 vers,1868 ou") == "1867 vers,1868 ou"
+    assert _clean_year("1859 avant") == "1859 avant"  # 留给前端做 l10n

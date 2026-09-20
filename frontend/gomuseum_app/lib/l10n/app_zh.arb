@@ -88,6 +88,8 @@
   "footprintGoRecognize": "去识别第一件作品",
   "itemsCount": "{count} 件",
   "ticketDurationDays": "{days} 天",
+  "yearBefore": "{year}年前",
+  "yearAfter": "{year}年后",
   "yearBce": "公元前{year}年",
   "today": "今天",
   "yesterday": "昨天",
