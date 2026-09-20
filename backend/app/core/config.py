@@ -175,3 +175,11 @@ def get_settings() -> Settings:
 
 # Global settings instance
 settings = get_settings()
+
+# 分页/搜索 `limit` 的服务端硬上限（2026-09-20 安全审计）。
+#
+# ⚠️ 实现方式必须是**服务端截断**（`min(limit, MAX_PAGE_LIMIT)`），不是
+# `Query(le=...)` 校验。`le=` 会让任何传了更大值的**已装老 App 收到 422**，
+# 那是破坏性契约变更；截断是加法，老 App 只是拿到更短的一页。
+# （`history.py` 用的是 `le=100`，那是 2026-09 新写的端点，没有老客户端包袱。）
+MAX_PAGE_LIMIT = 200

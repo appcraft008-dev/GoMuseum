@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import MAX_PAGE_LIMIT
 from app.core.database import get_db
 from app.services.museum_repo import get_museum_pack as repo_pack
 from app.services.museum_repo import (
@@ -63,6 +64,24 @@ def _require_audio_access(
     return user_id
 
 
+def _caller_id(
+    db: Session, credentials: HTTPAuthorizationCredentials | None
+) -> str | None:
+    """令牌 → user_id，**坏/过期令牌一律当匿名，绝不 401**。
+
+    与 `recognize_global._user_id` 同款。401 在这里是不能出的:老 App 拿着过期
+    token 打探索页/详情页,一旦 401 整页就崩了 —— 而这两个端点本来就允许匿名读。
+    """
+    if not credentials:
+        return None
+    try:
+        from app.services.auth_service import AuthService
+
+        return str(AuthService.get_current_user(db, credentials.credentials).id)
+    except Exception:
+        return None
+
+
 @router.get("")
 def list_museums(db: Session = Depends(get_db)) -> list[dict]:
     """已收录馆包列表（不含完整馆藏，供探索页索引）"""
@@ -75,14 +94,26 @@ def object_content(
     qid: str,
     background_tasks: BackgroundTasks,
     language: str = "zh",
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     """展品讲解（按 tab 分节返回）。stub 首次访问触发懒生成（后台,契约§路线图3c）。
     ⚠️ 顺序:先 maybe_trigger 上锁、再读内容——否则首次触发的那次请求会返回
-    generating=false（锁尚未落库）,前端渲染"待完善"完整页且不轮询,永不刷新。"""
+    generating=false（锁尚未落库）,前端渲染"待完善"完整页且不轮询,永不刷新。
+
+    ⚠️ **读内容公开，但点燃付费生成要身份**（2026-09-20 安全审计）。
+    `maybe_trigger` 下游是真金白银的 LLM 调用,而本端点无鉴权、无限流,
+    qid 又能从同样匿名的 `/objects` 列表枚举 —— prod 有 26,556 件 stub,
+    等于一条任何人都能打开的水龙头,烧的还不只是钱:按接地闸的外观描写盲区,
+    规模化生成冷门件会把大量脑补内容**永久**写进库。
+
+    匿名照常拿到已有内容(探索页不带令牌是正常形态,游客也持 `/auth/guest` 发的
+    令牌),只是不点火。副产品:将来的公开网页层 `/a/{slug}/{qid}` 天然不点火。
+    """
     from app.services.enrichment.lazy import maybe_trigger
 
-    maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
+    if _caller_id(db, credentials):
+        maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
     data = get_object_content(db, slug, qid, language)
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
@@ -185,7 +216,7 @@ def list_objects(
         language=language,
         category=category,
         sort=sort,
-        limit=limit,
+        limit=min(limit, MAX_PAGE_LIMIT),
         offset=offset,
     )
     if page is None:

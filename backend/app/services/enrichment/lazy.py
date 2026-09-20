@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
 # ponytail: 进程级并发上限2,保护 API 响应与 LLM 限速;多 worker/量大再上队列
 _SEM = threading.Semaphore(2)
+# 全局日上限(2026-09-20 安全审计):当天已生成段数达此值就不再点火。
+# 300 段 ≈ 170 件 ≈ $1-3/天;近 40 天真实业务量是 838 段/40 天,远低于它。
+# ponytail: 一条 count 查询,不建表不加字段。见 daily_budget_exhausted。
+_LAZY_DAILY_SECTION_CAP = 300
 
 
 def lock_active(obj: MuseumObject) -> bool:
@@ -230,6 +234,31 @@ def _has_any_section(db, object_id, lang) -> bool:
     )
 
 
+def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
+    """今天已生成的段数是否已达上限。**这是钱包止损，不是权限检查。**
+
+    身份闸（端点侧：匿名不点火）把"任何人无限刷"变成"注册一个号就能刷"——
+    可追溯、可封号，但**不会自动停**。按 `_SEM(2)` × 2 worker × 每次 30-60s 估，
+    一个脚本化账号约 5 天能跑完全库。这道闸钉住的是**最坏一天能花多少钱**，
+    与调用者是谁无关 —— 正是身份闸覆盖不到的那一半。
+
+    ⚠️ 计数**不区分来源**：批量上新馆写的段也算进来。这是刻意的 ——
+    它管的是当天总花费。代价是上新馆那天懒生成会暂停，所以挡住时要打日志，
+    否则是静默行为。
+    """
+    from app.models.content import ObjectContentSection
+
+    start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return (
+        db.query(ObjectContentSection)
+        .filter(ObjectContentSection.generated_at >= start)
+        .count()
+        >= cap
+    )
+
+
 def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) -> None:
     """content 端点接线(拿到锁才调度,其余静默):
     - stub → 懒生成(完整生成,请求语言优先);
@@ -247,16 +276,29 @@ def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) ->
         return
     if _has_missing_images(db, o.id):  # 懒补漏:缺图顺手补(独立于内容动作)
         schedule(run_lazy_images, qid)
-    if o.content_status == "stub":
-        if try_acquire_lock(db, o):
-            schedule(run_lazy_generation, qid, language)
-        return
-    if (
+    wants_generation = o.content_status == "stub"
+    wants_translation = (
         o.content_status == "ready"
         and language
         and language != "en"
         and not _has_any_section(db, o.id, language)
         and _has_published(db, o.id, "en")
-    ):
-        if try_acquire_lock(db, o, require_status=("ready",)):
-            schedule(run_lazy_translation, qid, language)
+    )
+    if not (wants_generation or wants_translation):
+        return
+    # 预算检查放在这里而不是函数开头:它是一条 COUNT,而绝大多数请求打的是
+    # 已 ready 的件、上面就返回了。放开头等于给每次详情页浏览加一次全表扫描。
+    if daily_budget_exhausted(db):
+        logger.warning(
+            "lazy: 当日生成预算已用尽(cap=%s),跳过 qid=%s language=%s",
+            _LAZY_DAILY_SECTION_CAP,
+            qid,
+            language,
+        )
+        return
+    if wants_generation:
+        if try_acquire_lock(db, o):
+            schedule(run_lazy_generation, qid, language)
+        return
+    if try_acquire_lock(db, o, require_status=("ready",)):
+        schedule(run_lazy_translation, qid, language)
