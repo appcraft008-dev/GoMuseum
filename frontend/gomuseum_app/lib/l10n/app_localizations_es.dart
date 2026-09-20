@@ -291,6 +291,26 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String ticketDurationDays(String days) {
+    return '$days DÍAS';
+  }
+
+  @override
+  String yearBefore(String year) {
+    return 'antes de $year';
+  }
+
+  @override
+  String yearAfter(String year) {
+    return 'después de $year';
+  }
+
+  @override
+  String yearBce(String year) {
+    return '$year a. C.';
+  }
+
+  @override
   String get today => 'Hoy';
 
   @override

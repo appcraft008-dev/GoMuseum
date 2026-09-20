@@ -1,7 +1,7 @@
 /// 票据外壳:付费→激活整条链路共用的那张「票」。
 ///
 /// 设计来源 Claude Design `paywall-flow.jsx`(票据版全链路)。三段结构:
-///   票头(GOMUSEUM · PARIS / 7 JOURS) ┊ 主体(标题+价格+卖点) ┊ 撕线 ┊ 存根位
+///   票头(GOMUSEUM · PARIS / 有效期) ┊ 主体(标题+价格+卖点) ┊ 撕线 ┊ 存根位
 ///
 /// 两条设计约束,改的时候别丢:
 /// - **价格在主体、不在存根位**。存根是被撕走的那半,价格放上去等于承诺
@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
@@ -146,8 +147,11 @@ class GmTicket extends StatelessWidget {
     0, 0, 0, 1, 0, //
   ];
 
-  /// 票头。GOMUSEUM · PARIS / 7 JOURS 是票面刻印,**不翻译** ——
-  /// 它是品牌标记不是文案(纸质门票上的印刷也不会随读者语言变)。
+  /// 票头。`GOMUSEUM · PARIS` 是票面刻印,**不翻译** —— 品牌标记加地名,
+  /// 纸质门票上的印刷也不会随读者语言变。
+  ///
+  /// 右侧的有效期**要翻**:它携带的是产品规格(这张票管几天),不是刻印。
+  /// 原先写死 `7 JOURS`,中文/日文用户读不懂一串法语。
   Widget _header(BuildContext context, GmPalette gm) => Container(
         padding: const EdgeInsets.fromLTRB(16, 9, 16, 8),
         decoration: BoxDecoration(
@@ -165,10 +169,21 @@ class GmTicket extends StatelessWidget {
                   color: gm.sub,
                   weight: FontWeight.w600),
             ),
-            const Spacer(),
-            Text('7 JOURS',
-                style:
-                    GmText.sans(size: 9.5, letterSpacing: 1, color: gm.faint)),
+            // Spacer 换成「弹簧 + FittedBox」:十种语言里意大利语 `7 GIORNI`
+            // 最长,360 宽(最窄主流安卓)上比法语原文多 5.3px 就会撑破票头。
+            // 缩的是次要信息那半,品牌刻印保持原大小。
+            const SizedBox(width: 8),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  AppLocalizations.of(context)!.ticketDurationDays('7'),
+                  style:
+                      GmText.sans(size: 9.5, letterSpacing: 1, color: gm.faint),
+                ),
+              ),
+            ),
           ],
         ),
       );

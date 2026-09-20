@@ -288,6 +288,26 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String ticketDurationDays(String days) {
+    return '$days 天';
+  }
+
+  @override
+  String yearBefore(String year) {
+    return '$year年前';
+  }
+
+  @override
+  String yearAfter(String year) {
+    return '$year年后';
+  }
+
+  @override
+  String yearBce(String year) {
+    return '公元前$year年';
+  }
+
+  @override
   String get today => '今天';
 
   @override
@@ -1322,6 +1342,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String itemsCount(Object count) {
     return '$count 件';
+  }
+
+  @override
+  String ticketDurationDays(String days) {
+    return '$days 天';
+  }
+
+  @override
+  String yearBefore(String year) {
+    return '$year年前';
+  }
+
+  @override
+  String yearAfter(String year) {
+    return '$year年後';
+  }
+
+  @override
+  String yearBce(String year) {
+    return '西元前$year年';
   }
 
   @override
