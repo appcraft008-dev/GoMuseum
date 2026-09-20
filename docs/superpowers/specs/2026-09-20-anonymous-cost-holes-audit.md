@@ -19,11 +19,101 @@
 单走任何一步都会漏。只看路由会漏掉 `maybe_trigger` 这种**三层之下**才花钱的；
 只看付费点会漏掉 `/recognition/recent` 这种不花钱但泄漏数据的。
 
+### 0.1 🔑 这三步还是漏了一个，独立 review 抓到了
+
+我把 `/content/tts/generate` 放进了"查过是好的"清单，理由是"它有 `_require_tts_access`"。
+**闸是真的，但它判的不是这个动作。**
+
+`_require_tts_access` 回答的是「**你能不能听**这个 (qid, section) 的音频」；
+而这个端点的危险动作是「**写入**这个 (qid, section) 的音频」。闸存在，
+却站在另一个问题前面 —— 见 §一。
+
+**所以第 2 步要改写**：不是"这个路由有没有鉴权参数"，而是
+**"这个路由做的每一个副作用，各自有没有对应的闸"**。
+一个端点可以同时做读和写，闸只盖住了读。
+
+同型教训：[[verify-tools-before-trusting-them]]（工具在、但它判的不是你以为的那件事）、
+[[proxy-metric-is-not-the-thing-you-ship]]（测的判据和实施的判据差一个数量级）。
+这次的形态是**"闸的存在"被当成了"闸的正确"**。
+
 ---
 
-## 一、🔴 P0-1：`POST /api/v1/content/explanation` —— 无鉴权的 LLM + 可覆盖已发布内容
+## 一、🔴 P0-1：`POST /content/tts/generate` 的 section 模式 —— 任意文本可被永久写成某件藏品的官方音频
 
-`content.py:118`。**本次审计最严重的发现**，严重度高于最初怀疑的 `object_content`。
+`content.py:235-271`。**独立 review 发现，我漏了**（原因见 §0.1）。
+
+```python
+if request.qid and request.section_code:
+    _require_tts_access(db, credentials, qid=..., language=..., section=...)
+    existing = get_section_audio_key(db, request.qid, request.language, request.section_code)
+    if existing:
+        return AudioUrlResponse(..., cached=True)          # 已有 → 直接返回，不覆盖
+    result = await tts_service.generate_audio(
+        text=request.text, ...                              # ← 客户端自由文本
+    )
+    key = persist_section_audio(db, request.qid, request.language, request.section_code,
+                                result["audio_data"], storage)   # ← 写成该段的正式音频
+```
+
+**`request.text` 与 DB 里 `object_content_sections.body` 没有任何关系。**
+服务端既不查正文、也不比对。攻击者提交什么，就合成什么，然后写进 `audio_key` ——
+**从此作为这件作品该语言该段落的官方音频，发给所有后续用户**。
+
+### 1.1 谁能触发
+
+`entitlement_service.py:314-316`：
+
+```python
+state, _ = resolve_state(db, user_id, city)
+if state == ACTIVE:
+    return True                    # ← 通票生效 = 任意 qid、任意 section、任意 language
+if section != FREE_AUDIO_SECTION:
+    return False
+return qid in free_audio_qids(benefits)
+```
+
+| 身份 | 能写哪些槽位 |
+|---|---|
+| 买了一张通票（€9.49） | **全库任意 (qid, language, section)** |
+| 免费注册 + 识别过一件 | 那件的 `guide` 段，10 个语言各一个槽位 |
+
+而 `persist_section_audio`（`content_repo.py:80-88`）在没有该行时会**新建行**，
+所以 `section_code` 还可以是编造的任意字符串。
+
+### 1.2 为什么比"覆盖文字"更糟
+
+- **音频是用户真正消费的东西**。文字有人扫一眼就发现不对，音频要听完。
+- **写入即锁死**：`existing` 非空就走 `cached=True` 分支直接返回。一旦被写进去，
+  **后续任何正常流程都不会覆盖它，也不会发现它** —— 除非有人正好听了那一段。
+- **暴露面几乎是全库**：prod 只有约 1,464 条音频行，而 665 件 ready × 10 语 × 约 5 段
+  ≈ 33,000 个槽位。**95% 以上的槽位处于"首次可写"状态**，stub 的 26,556 件更是全空。
+- **完全在质量闸之外**。项目那套接地闸/忠实度闸挂在 `enrichment/` 里，这条路径不经过。
+
+### 1.3 对照：`/audio` 端点是对的
+
+`museums.py:92-168` 的 `/audio` 和 `/audio/stream` **不接受客户端 `text`** ——
+音频正文由服务端从已发布 section 取（`get_or_make_audio_url`）。
+同一个仓库里两条路径，一条对一条错，错的那条是历史遗留。
+
+### 1.4 处置：删掉 section 模式
+
+**App 从不使用它。** `GenerateTtsAudioParams`（`generate_tts_audio.dart:52-63`）
+只有 `text / language / voice / speed` **四个字段，没有 qid，也没有 sectionCode`**。
+datasource 里那段 `if (qid != null && sectionCode != null)` 分支（`content_remote_datasource.dart:96`）
+**没有任何调用方能满足条件**。App 的真实音频一直走 `/museums/.../audio`。
+
+所以最小且彻底的修法是**删掉 section 模式整个分支**，不是"改成服务端取正文"——
+后者是在给一条没有用户的路径写新功能。ad-hoc 模式（需通票 ACTIVE）保留不动。
+
+> 备选（若将来真需要这个端点）：section 模式忽略 `request.text`，
+> 改为服务端按 `(qid, language, section_code)` 查正文，与 `/audio` 完全一致。
+> 现在不做 —— 没有调用方。
+
+---
+
+## 二、🔴 P0-2：`POST /api/v1/content/explanation` —— 无鉴权的 LLM + 可覆盖已发布内容
+
+`content.py:118`。严重度高于最初怀疑的 `object_content`：它同时命中"花钱"和"污染数据"。
 
 ```python
 @router.post("/explanation", response_model=ExplanationResponse)
@@ -34,7 +124,7 @@ async def generate_explanation(
 
 **没有 `credentials` 参数。没有限流。**
 
-### 1.1 花钱：单次请求可放大 ~20 倍
+### 2.1 花钱：单次请求可放大 ~20 倍
 
 `content_generation_service.py:191,253-260` → gpt-4o-mini，`max_tokens=1500`。
 正常一次约 $0.001。但：
@@ -50,7 +140,7 @@ if description:
 
 配合下面 P1 的"全局零限流"，这是个可以持续跑满的水龙头。
 
-### 1.2 写库：绕过全部质量闸，覆盖已发布内容，并让音频静默变哑
+### 2.2 写库：绕过全部质量闸，覆盖已发布内容，并让音频静默变哑
 
 ```python
 if request.qid and not result.get("fallback"):
@@ -77,7 +167,7 @@ if existing is not None and existing.body != body:
 这不是成本问题，是数据完整性问题。
 ③ 这个机制本身是对的（正文改了旧音频就该失效），坏在**点火开关对全世界敞开**。
 
-### 1.3 前端还在引用它吗？——在，但那条路实际走不到
+### 2.3 前端还在引用它吗？——在，但那条路实际走不到
 
 `content_remote_datasource.dart:52` 确实打这个端点。往上 trace：
 
@@ -92,7 +182,7 @@ guide_page.dart:88   bool get useA5 => slug != null && qid != null;
 而且 App 这条路**从不传 `qid`**（`GenerateExplanationParams` 里就没这个字段）——
 1.2 那整条写库分支**只有攻击者会走**。
 
-### 1.4 处置：410 退役，保留路由当信号
+### 2.4 处置：410 退役，保留路由当信号
 
 与代码库已有的先例完全同款 —— `recognition.py:62` 的 `/recognition/recognize`
 当初就是这么处理的，它的退役理由读起来像是在描述本次发现：
@@ -115,7 +205,7 @@ guide_page.dart:88   bool get useA5 => slug != null && qid != null;
 
 ---
 
-## 二、🔴 P0-2：`GET /museums/{slug}/objects/{qid}/content` —— 无鉴权点燃懒生成
+## 三、🔴 P0-3：`GET /museums/{slug}/objects/{qid}/content` —— 无鉴权点燃懒生成
 
 `museums.py:72`。这就是分享页那条警告的本体，**它不是未来的风险，是现在就开着的**。
 
@@ -133,7 +223,7 @@ def object_content(slug, qid, background_tasks, language="zh", db=Depends(get_db
 顺序是刻意的（注释解释了：先上锁否则前端不轮询），但副作用是
 "这个 qid 根本不属于这个 slug"也会先走一遍触发逻辑。
 
-### 2.1 成本估算（公式 + 每个变量的来源，可独立重算）
+### 3.1 成本估算（公式 + 每个变量的来源，可独立重算）
 
 | 变量 | 值 | 来源 |
 |---|---|---|
@@ -144,21 +234,67 @@ def object_content(slug, qid, background_tasks, language="zh", db=Depends(get_db
 | 近 40 天实际生成件数 | **473 件 / 838 段** | `object_content_sections.generated_at` |
 | 单价 | 4o-mini $0.15/$0.60 per 1M；4o $2.50/$10.00 | OpenAI |
 
-→ generate $0.403 ÷ 473 = **$0.00085/件**；gate $0.893 ÷ 473 = **$0.0019/件**；
-vision **$0.0043/件**；请求语言翻译 ≈ **$0.0035/件**
-→ **≈ $0.01/件 × 26,556 ≈ $265**（一次性：每件只生成一次，之后转 ready/empty）
+| 近 40 天 `translate` 通道 | 4o: 29,305 calls / 5.07M in / 0.337M out；4o-mini: 29,740 / 14.20M / 1.79M | 同上 |
 
-⚠️ **最弱的变量是"一件几次调用"** —— 用 40 天总量摊算，若那批混了重跑则单件成本被高估。
-量级可信（百美元级，不是万美元级也不是十美元级），精度不可信。
+#### 三个可靠通道
 
-### 2.2 钱不是最大的损失
+| 通道 | 40 天成本 | ÷ 473 件 |
+|---|---|---|
+| generate | 1.902825×0.15 + 0.195806×0.60 = **$0.4029** | $0.000852 |
+| gate | 5.874057×0.15 + 0.019951×0.60 = **$0.8931** | $0.001888 |
+| vision | 0.079280×2.50 + 0.008676×10.00 = **$0.2850** | $0.000603 |
+
+#### 🔴 translate：我第一版算错了，独立 review 的质疑成立
+
+我原本写 "翻译 ≈ $0.0035/件"，做法是 59,045 次调用 ÷ 473 件。
+review 质疑这批调用可能是**一次性存量回填**而非随生成触发的翻译。**按天拆开一查，是的**：
+
+| 日期 | translate calls | generate calls |
+|---|---|---|
+| 2026-08-31 | 6,261 | **0** |
+| 2026-09-01 | 29,543 | **0** |
+| 2026-09-02 | 20,557 | **0** |
+| 其余 15 天合计 | 2,684 | 563 |
+
+**56,361 / 59,045 = 95.5% 的翻译调用发生在 3 天里，而那 3 天 `generate` 全是 0。**
+那是六语开放的存量回填（[[six-languages-rollout]]），与"点燃一件新藏品"毫无关系。
+把它摊进单件成本 = 教科书式的 [[proxy-metric-is-not-the-thing-you-ship]]。
+
+按桶重算，只取"生成活跃日"那一桶（2,684 calls）：
+4o: 0.011523×2.50 + 0.004447×10.00 = $0.073；
+4o-mini: 1.413814×0.15 + 0.215573×0.60 = $0.341
+→ **$0.4147 ÷ 473 = $0.00088/件**（比我原来的估算低 4 倍）
+
+#### 结果：给区间，不给点估计
+
+| | 单件 | × 26,556 |
+|---|---|---|
+| **下界**（历史比率照搬：vision 14% 触发、观察到的语言组合） | $0.00422 | **≈ $112** |
+| **上界**（vision 100% 触发、十语全扫） | $0.0151 | **≈ $400** |
+
+⚠️ **两个变量的不确定性，方向相反地被我各错了一次**：
+- **vision 触发率**：我原先按 $0.2850/66 = **每次调用**成本乘到每一件，等于假设 100% 触发；
+  历史实测只有 66/473 = **14%**。但 review 指出剩下 26,556 件恰恰是**材料最薄的冷门件**
+  （小皇宫 84% 无英文标题），视觉兜底触发率必然高于历史值。所以下界偏低、上界偏高，真值在中间。
+- **translate**：我高估了 4 倍（见上）。
+
+两处误差方向相反、大致抵消，我原来那个 $265 恰好落在区间里 —— **但那是运气，不是计算**。
+
+⚠️ **不在这个估算里的成本**：TTS（已迁自托管 VoxCPM2，不走 OpenAI 计费，但有 GPU 成本）、
+R2 存储与出网（美分级）。
+
+✅ **确认不存在的风险**：`pipeline.py:401-402` 保证 `generate_object` 结束后状态必然收敛到
+`ready` 或 `empty`，**从不停留在 `stub`** —— 所以同一件不会被反复重新点燃。
+这是这条路径上唯一真实有效的"总量"保护。
+
+### 3.2 钱不是最大的损失
 
 按 [[grounding-gate-visual-description-blindspot]]：**无维基条目的件不能规模化生成**——
 外观描写是编的，而接地闸判 `IMPRESSION` 会放行（小皇宫 97.8% 是这种件）。
 被爬虫点燃 26,556 件 = 一大批脑补内容进库，且按「生成一次、永久落库」原则**是永久的**。
-$265 能再赚回来，污染的库要一条条查出来删。
+百来美元能再赚回来，污染的库要一条条查出来删。
 
-### 2.3 处置：两道，都是加法
+### 3.3 处置：两道，都是加法
 
 **① 匿名不点火**（根因）。读内容保持公开（探索页不带令牌是正常形态），
 但**点燃付费生成需要一个可追溯的身份**：
@@ -192,7 +328,7 @@ _LAZY_DAILY_CAP = 300          # ≈ $3/天;正常业务量(近 40 天 473 件)�
 
 ---
 
-## 三、🟠 P1：全局零限流
+## 四、🟠 P1：全局零限流
 
 - **应用层**：`core/rate_limit.py` 的 slowapi limiter **只挂在** `feedback.py:78`（60/hour）、
   `payment.py:396`（120/minute）、`auth.py` 六处。上面 P0 的两个端点、搜索、馆包**全裸奔**。
@@ -218,7 +354,7 @@ limit_req_status 429;
 
 ---
 
-## 四、🟠 P1：`GET /museums/{slug}` 全量馆包（可用性，非成本）
+## 五、🟠 P1：`GET /museums/{slug}` 全量馆包（可用性，非成本）
 
 `museums.py:224`，无鉴权，`artworks` **缺省 true**。
 docstring 自己记了实测数字：**卢浮宫全量 5.0MB / 5.7s**。
@@ -226,13 +362,19 @@ docstring 自己记了实测数字：**卢浮宫全量 5.0MB / 5.7s**。
 prod 跑 `--workers 2`，十几个并发请求就能把两个 worker 连同 DB 一起压死。
 不花 LLM 的钱，但花可用性。
 
-**处置：本次不改代码**。缺省值是老 App 契约不能动（改了老 App 收不到藏品列表），
-而加上限等于改语义。§三 的 nginx 限流已经覆盖这个场景 —— 它就是为"无上限"而加的。
-在此记一笔，免得下次审计重新推一遍。
+同一类的还有 `list_objects`（`museums.py:176` `limit: int = 50`）和
+`search.py:23,35`（`limit: int = 20`）——**都没有上限**，`limit=999999` 可以一次拉全库。
+
+**处置**：
+- `get_museum_pack` 的 `artworks` 缺省值**不动**（老 App 契约：改了老 App 收不到藏品列表）。
+- `list_objects` / `search` 的 `limit` 加**服务端截断** `min(limit, 200)`。
+  ⚠️ 不用 `Query(le=...)` —— 那会让传了更大值的老 App 收到 422，是破坏性变更。
+  截断是加法。（`history.py:162` 用的是 `le=100`，那是 2026-09 新写的端点，没有老客户端包袱。）
+- 速率那一半交给 §四 的 nginx 限流。
 
 ---
 
-## 五、🟡 P2：`recognition.py` 的三个遗留端点
+## 六、🟡 P2：`recognition.py` 的三个遗留端点
 
 `/recognition/recognize` 已经 410 退役，但同一个 router 里还留着三个**无鉴权**的：
 
@@ -254,7 +396,7 @@ prod 跑 `--workers 2`，十几个并发请求就能把两个 worker 连同 DB �
 
 ---
 
-## 六、✅ 查过是好的（写下来，免得下次重审）
+## 七、✅ 查过是好的（写下来，免得下次重审）
 
 审计的价值有一半在这里 —— 否则下次又要把这些全部重新 trace 一遍。
 
@@ -262,22 +404,22 @@ prod 跑 `--workers 2`，十几个并发请求就能把两个 worker 连同 DB �
 |---|---|
 | `POST /chat/ask` | `chat.py:84` 无条件 `raise 503`，后面的 OpenAI 调用是死代码 |
 | `POST /recognition/recognize` | `recognition.py:73` 无条件 `raise 410` |
-| `POST /content/tts/generate` | `_require_tts_access`（`content.py:33`）：无 qid 要通票 ACTIVE，有 qid 同 `/audio` 规则 |
-| `GET /museums/.../audio`、`/audio/stream` | `_require_audio_access`（`museums.py:28`）—— **付费墙唯一执行点**，且在触发 TTS 之前 |
-| `POST /recognize`、`POST /museums/{slug}/recognize` | 配额闸 `recognize_billed`（`service.py:411`）在 GPT 调用**之前**抛 `QuotaExceededError` |
+| `POST /content/tts/generate` **ad-hoc 模式**（无 qid） | `_require_tts_access(qid=None)` 要求通票 ACTIVE；只返回 mp3 流，**不落库**。⚠️ 同端点的 **section 模式不安全，见 §一** |
+| `GET /museums/.../audio`、`/audio/stream` | `_require_audio_access`（`museums.py:28`）—— **付费墙唯一执行点**，在触发 TTS 之前，且**不接受客户端 `text`** |
+| `POST /recognize`、`POST /museums/{slug}/recognize` | 配额闸 `recognize_billed`（`service.py:411`）在 GPT 调用**之前**抛 `QuotaExceededError`。⚠️ 但配额本身绕得过，见 §八 |
 | `POST /recognize/confirm` | `confirm_event` 要求 24h 内存在匹配 `phash` 的事件行，否则静默 no-op |
 | `POST /feedback` | 60/hour 限流 |
 | `/auth/*` | 六处限流齐全 |
 | `POST /payment/rtdn` | OIDC 验签（[[staging-pending-prod-release]] 债②） |
 | `GET /content/tts/info`、`/tts/voices/{lang}` | 无鉴权但不调 TTS，只做 hash 和词数估算 |
 
-**TTS 侧全部三个调用点都在闸后**（`content.py:255,287` 经 `_require_tts_access`；
-`lazy_audio.py:22`、`streaming_audio.py:145` 只由 `museums.py:125,153` 调用，
-两处都先过 `_require_audio_access`）。TTS 这条线是干净的。
+`lazy_audio.py:22`、`streaming_audio.py:145` 两个 TTS 调用点只由 `museums.py:125,153` 触达，
+两处都先过 `_require_audio_access`，且正文由服务端取。**这两条是干净的**
+—— 但 `content.py:255` 那条不是（§一）。
 
 ---
 
-## 七、已知且已接受，不在本次范围
+## 八、已知且已接受，不在本次范围
 
 **device_id 可刷 → 免费识别额度可绕**。`recognize_billed` 的 docstring
 （`service.py:395-397`）自己写明了：
@@ -285,29 +427,53 @@ prod 跑 `--workers 2`，十几个并发请求就能把两个 worker 连同 DB �
 > 存在"反复拍到候选就能不限次识别"的窗口 —— 与删号刷额度同源
 > (设备身份可刷,见 `auth_service.delete_user_account`),根治同样要靠 Play Integrity,MVP 接受。
 
-这是**已记录的决策**，不是新发现。每次识别的边际成本被 DINOv2 主引擎吃掉大半
-（GPT 只在兜底档），且它绕的是"免费额度"不是"总成本"。不在本次范围，
-但要知道 §三 的 nginx 限流会顺带把它的速率压下来。
+这是**已记录的决策**，不是新发现。
+
+**但独立 review 把它说得更准，这部分是新的**：不只是"反复拍到候选"这个窗口，而是
+**GPT 视觉链按构造永远产不出 `match`**：
+
+- `service.py:250` 向量命中才可能是 `match`；向量未命中 → `service.py:256` 调 GPT 视觉
+- GPT 链的结果只可能是 `candidates` 或 `unrecognized`
+  （`service.py:274` 的注释写明「直判只属于向量像素证据」）
+- `service.py:427` 只在 `outcome == "match"` 时扣费
+
+**⇒ 每一次 GPT 视觉调用，在结构上都不会扣费。** 配额永远是满的，
+`service.py:411` 那道闸对这条路径形同虚设。图片按 sha256 缓存，改一个字节即绕过。
+原 docstring 只提到 `candidates`，没提 `unrecognized` 也走 GPT —— 覆盖了一半。
+
+**本次不改计费逻辑**（"不为失败付费"是用户 2026-09-20 做的产品决定，不该由一次安全审计推翻），
+但这条使 §四 的 nginx 限流从"锦上添花"变成**必需项** —— 它是这条路径上唯一的量的上限。
 
 ---
 
-## 八、改动清单（按提交顺序）
+## 九、改动清单（按提交顺序）
 
-| # | 改动 | 文件 | 性质 |
-|---|---|---|---|
-| 1 | `/content/explanation` → 410 退役 | `content.py` | 删除 |
-| 2 | 删 `/recognition/{recent,stats,recognize/{id}}` | `recognition.py` | 删除 |
-| 3 | `object_content` 加 optional bearer，匿名不 `maybe_trigger` | `museums.py` | 加法 |
-| 4 | `maybe_trigger` 加全局日上限 | `lazy.py` | 加法 |
-| 5 | nginx `limit_req` | `deployment/production/nginx-api.gomuseum.app.conf` | 配置（手动 reload） |
+| # | 改动 | 文件 | 性质 | 对应 |
+|---|---|---|---|---|
+| 1 | 删 `/content/tts/generate` 的 section 模式分支（ad-hoc 模式保留） | `content.py` | 删除 | §一 |
+| 2 | `/content/explanation` → 410 退役 | `content.py` | 删除 | §二 |
+| 3 | 删 `/recognition/{recent,stats,recognize/{id}}` | `recognition.py` | 删除 | §六 |
+| 4 | `object_content` 加 optional bearer，匿名不 `maybe_trigger` | `museums.py` | 加法 | §三 |
+| 5 | `maybe_trigger` 加全局日上限 | `lazy.py` | 加法 | §三 |
+| 6 | `list_objects` / `search` 的 `limit` 服务端截断（**不是 422**，见 §十一） | `museums.py`、`search.py` | 加法 | §五 |
+| 7 | nginx `limit_req` | `deployment/production/nginx-api.gomuseum.app.conf` | 配置（手动 reload） | §四、§八 |
 
-**契约前向兼容**：1 和 2 是退役，形状上是"老端点返 410" —— 按契约本该走版本化，
-但这里的判据是 §1.3/§5 已查证**没有现役调用方**（1 的唯一引用在一条走不到的兜底路径上，
-2 的表 0 行）。3 和 4 是纯加法，响应形状零变化。**不需要发 App 包。**
+三条是**删除**，三条是**加法**，一条配置，零条"新功能"。
+
+**契约前向兼容**：1/2/3 是退役 —— 按契约本该走版本化端点，
+但这里的判据是已查证**没有现役调用方**：
+1 → `GenerateTtsAudioParams` 没有 qid/sectionCode 字段（§1.4）；
+2 → 唯一引用在一条走不到的兜底路径上，且 App 从不传 qid（§2.3）；
+3 → prod 表 0 行（§六）。
+4/5 是纯加法，响应形状零变化。**全部不需要发 App 包。**
+
+**顺带不做的**：`ExplanationRequest` / `TTSRequest` 各字段补 `max_length`。
+端点 1/2 删掉之后，剩下的 ad-hoc TTS 已经要求通票 ACTIVE，
+长度放大的实际意义不大；nginx 限流兜住速率。YAGNI。
 
 ---
 
-## 九、自检
+## 十、自检
 
 按 [[test-across-config-dimension]]，配置/身份两侧都要测。
 按本次新增纪律：**凡涉及花钱的格子，断言"花钱那一步没被调用"，不是断言状态码。**
@@ -317,16 +483,25 @@ prod 跑 `--workers 2`，十几个并发请求就能把两个 worker 连同 DB �
 
 | # | 用例 | 断言 |
 |---|---|---|
-| 1 | `POST /content/explanation` 任意 body | 410，且 `content_service.generate_explanation` **未被调用** |
-| 2 | 同上带 `qid=<已发布件>` | 410，且该件的 `body` / `audio_key` **一字未变**（回归测试：这是 §1.2 的破坏力） |
-| 3 | `GET .../content` **匿名** + stub 件 | 200 且返回内容，但 `run_lazy_generation` **未被调用** |
-| 4 | `GET .../content` **持令牌** + stub 件 | 200，且 `run_lazy_generation` **被调用**（反向：闸不能一刀切死） |
-| 5 | 同 4 但当日计数已超 `_LAZY_DAILY_CAP` | 200，且 `run_lazy_generation` **未被调用** |
-| 6 | `GET .../content` 持**过期/损坏**令牌 | **不 401**（老 App 不能崩），按匿名处理 |
-| 7 | `GET /recognition/recent` | 404（路由已删） |
+| 1 | `POST /content/tts/generate` 带 `qid` + `section_code` + 任意 `text`，**持有效通票** | `tts_service.generate_audio` **未被调用**，且 `persist_section_audio` **未被调用** |
+| 2 | 同 1，且该 (qid, language, section) **原本没有音频** | 事后该行 `audio_key` 仍为 `None`（回归：这是 §1.2 的破坏力，**别只断言状态码**） |
+| 3 | `POST /content/tts/generate` **ad-hoc**（无 qid）+ 有效通票 | 仍正常出 mp3（反向：删 section 模式不能把 ad-hoc 一起弄坏） |
+| 4 | `POST /content/explanation` 任意 body | 410，且 `content_service.generate_explanation` **未被调用** |
+| 5 | 同 4 带 `qid=<已发布件>` | 410，且该件的 `body` / `audio_key` **一字未变**（§2.2 的破坏力） |
+| 6 | `GET .../content` **匿名** + stub 件 | 200 且返回已有内容，但 `run_lazy_generation` **未被调用** |
+| 7 | `GET .../content` **持令牌** + stub 件 | 200，且 `run_lazy_generation` **被调用**（反向：闸不能一刀切死） |
+| 8 | 同 7 但当日计数已超 `_LAZY_DAILY_CAP` | 200，且 `run_lazy_generation` **未被调用** |
+| 9 | `GET .../content` 持**过期/损坏**令牌 | **不 401**（老 App 不能崩），按匿名处理 |
+| 10 | `GET /recognition/recent` | 404（路由已删） |
 
-3 和 4 是同一张 2×2 的两格，**必须成对**：只写 3 的话，一个把 `maybe_trigger`
-整个删掉的实现也会绿；只写 4 的话，原样不改也会绿。
+**成对的格子，缺一半就等于没测**：
+
+- **6 和 7** 是同一张 2×2 的两格。只写 6 的话，一个把 `maybe_trigger` 整个删掉的
+  实现也会绿；只写 7 的话，原样不改也会绿。
+- **1 和 3** 同理。只写 1 的话，把整个端点删掉也会绿 —— 而 ad-hoc 模式是要留的。
+
+这两组正是 [[petit-palais-batch-generation]] 记下的**双向破坏验证**：
+既要验"过严的实现会红"，也要验"过松的实现会红"。
 
 `_LAZY_DAILY_CAP` 的判定函数要留一个可跑的自检（[[verify-tools-before-trusting-them]]：
 判定类逻辑先用已知正/负样本验证它的判断力，再信它）。
@@ -337,7 +512,36 @@ prod 跑 `--workers 2`，十几个并发请求就能把两个 worker 连同 DB �
 
 ---
 
-## 十、与可见性闸的关系
+## 十一、独立 review 结论（2026-09-20，已折入）
+
+按 CLAUDE.md 规则 6 跑的独立审计（换模型，**只给原始任务和原始数据，不给我的结论**）。
+
+| 严重度 | 发现 | 处置 |
+|---|---|---|
+| 🔴 致命 | `/content/tts/generate` section 模式：`request.text` 与 DB 正文无关，可被永久写成某件藏品的官方音频 | **采纳**，提为 §一，改动清单加第 1 条 |
+| 🔴 | `translate` 通道的成本不能按"总调用 ÷ 件数"外推，可能是一次性回填 | **采纳且已用数据证实**（95.5% 在 3 天里，那 3 天 generate=0）；§3.1 重算，我原估高 4 倍 |
+| 🟠 | GPT 视觉链按构造永不产出 `match` ⇒ 每次视觉调用都不扣费，配额闸对它形同虚设 | **采纳**，写入 §八；使 nginx 限流从可选变必需 |
+| 🟡 | `list_objects` / `search` 的 `limit` 无上限，可一次拉全库 | **采纳但改了做法**，见下 |
+| 🔵 | 各请求字段无 `max_length` | **不采纳**，理由见 §九"顺带不做的" |
+
+**一处改了做法**：review 建议照 `history.py:162` 的 `Query(default=20, le=100)` 给
+`limit` 加校验。**改成服务端 `min(limit, 200)` 静默截断，不返回 422** ——
+`le=` 会让任何传了更大值的**已装老 App 直接收到 422**，而契约硬约束是
+「后端升级必须前向兼容已部署的老 App」。截断是加法，拒绝是破坏性变更。
+
+**一处指出 review 的交叉校验无效**：review 用"卢浮宫 17,283 件 $40.06 = $0.00232/件"
+交叉校验我的单件成本，并以量级一致作为可信证据。**这两个数不是一回事** ——
+prod 全库只有 **665 件**有内容，$40.06 不可能是 17,283 件的内容生成费用，
+那是**目录接入 + 向量嵌入**的成本。量级偶然接近，不构成校验。
+
+> 🔑 复盘：这次 review 抓到的 §一，我在自己的审计里**明确看过那个端点并判定为安全**。
+> 判错的原因不是漏读代码，是**把"闸的存在"当成了"闸的正确"**（§0.1）。
+> 这也再次印证规则 6 的那句：给它原始材料而不是我的结论 ——
+> 如果我把"这些端点我查过是安全的"一起交过去，它多半会跳过这一个。
+
+---
+
+## 十二、与可见性闸的关系
 
 两件事**独立**，不要合并：
 
@@ -347,6 +551,6 @@ prod 跑 `--workers 2`，十几个并发请求就能把两个 worker 连同 DB �
 | 现状 | **洞现在就开着** | 现有四馆全已上线，零影响 |
 | 截止日 | **现在** | 下一家馆开灌之前 |
 
-可见性闸的 §二 暴露面清单里有 5 个直达端点与本文档重叠（`object_content` 等）。
+可见性闸的 §二 暴露面清单里有几个直达端点与本文档重叠（`object_content` 等）。
 **它们加的是不同维度的检查** —— 本文档加"你是谁"，可见性闸加"这家馆放出了没有"，
 两者都堵在解析层，不冲突。先做本文档的，可见性闸落地时在同样的位置加第二个谓词。
