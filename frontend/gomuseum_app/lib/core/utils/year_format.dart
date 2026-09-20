@@ -2,13 +2,45 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 
 final _bce = RegExp(r'^-(\d+)$');
 
-/// 年代显示。后端 `year` 是 Wikidata `BIND(YEAR(?date))` 的原样透传，
-/// 公元前日期在那里是**负整数**（prod 上 2933 件，-602750 ~ -1），
-/// 直接显示成 "-140" 看着像数据错误 → 这里按界面语言补公元前标注。
+/// Joconde 存量脏串的归一化规则。**只收能确定语义的形态**,
+/// 表外的一律原样返回 —— 猜出来的年代比读着别扭的年代糟糕得多。
 ///
-/// 只认「纯负整数」；其余（"1503"、"1853 vers" 这类法语脏串）一律原样返回。
+/// 尾部的 `N tirage` 是**印制年**不是创作年,丢掉是归位不是丢信息
+/// (`year` 这一列装的就是创作年代)。
+final _joconde = <RegExp, String Function(RegExpMatch)>{
+  // 1853 vers → c. 1853(约)。circa 是艺术史通行记法,保住了"约"这层
+  // 不确定性 —— 直接写成 1853 等于把估计说成确定。
+  RegExp(r'^(\d+) vers$'): (m) => 'c. ${m[1]}',
+  RegExp(r'^(\d+) vers,\d+ tirage$'): (m) => 'c. ${m[1]}',
+  // 1896 entre,1911 et → 1896–1911(区间,en dash)
+  RegExp(r'^(\d+) entre,(\d+) et$'): (m) => '${m[1]}–${m[2]}',
+  RegExp(r'^(\d+) entre,(\d+) et,\d+ tirage$'): (m) => '${m[1]}–${m[2]}',
+  // 1855-1856 → 1855–1856(连字符换排版用的 en dash)
+  RegExp(r'^(\d+)-(\d+)$'): (m) => '${m[1]}–${m[2]}',
+};
+
+/// 年代显示。`year` 是各目录源的原样透传,两种形态读着像数据错误:
+///
+/// 1. **负整数**(2933 件):Wikidata `BIND(YEAR(?date))` 对公元前日期就返回
+///    负数,`-140` 看着像坏数据 → 按界面语言补公元前标注。
+/// 2. **法语编目串**(713 件,全部来自 Joconde):`1853 vers`、
+///    `1896 entre,1911 et,1931 tirage` —— 限定词被反序拼在年份后面。
+///    归一化成语言中立的记法(`c. 1853` / `1896–1911`),覆盖其中 84%;
+///    `avant`/`après`/`ou`/`(?)` 这些没有通用中立记号,**原样留着**。
+///
+/// 这批脏串是**存量**:它们来自已经下线的 opendatasoft 数据集,
+/// 现在官方 CSV 里 `Millesime_de_creation` 是干净的(`1802`/`1150-1170`),
+/// 所以 Joconde importer 换到新通道之后不会再产生这种串。
 String formatYear(String raw, AppLocalizations l10n) {
   final t = raw.trim();
-  final m = _bce.firstMatch(t);
-  return m == null ? t : l10n.yearBce(m.group(1)!);
+
+  final bce = _bce.firstMatch(t);
+  if (bce != null) return l10n.yearBce(bce.group(1)!);
+
+  for (final e in _joconde.entries) {
+    final m = e.key.firstMatch(t);
+    if (m != null) return e.value(m);
+  }
+
+  return t;
 }

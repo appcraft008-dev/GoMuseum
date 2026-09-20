@@ -130,7 +130,23 @@ class JocondeCatalog(CatalogSource):
             )
             if getattr(resp, "status_code", 200) != 200:
                 break
-            results = (resp.json() or {}).get("results") or []
+            # ⚠️ 这里不能只看 status_code:data.culture.gouv.fr 已**整站 301**
+            # 到 culture.data.gouv.fr,而且重定向**把路径也丢了** —— 任何 API
+            # 路径最终都落到那个站的首页,返回 HTML 且 status **200**。
+            # 于是 status 判断放行、resp.json() 抛 JSONDecodeError,
+            # 报错完全看不出真实原因。非 JSON 一律当作"源不可用"明确报出来。
+            try:
+                payload = resp.json() or {}
+            except ValueError as e:
+                raise RuntimeError(
+                    "Joconde 目录源返回的不是 JSON。该 opendatasoft 查询 API "
+                    "(data.culture.gouv.fr) 已下线;数据集现在是 data.gouv.fr 上的"
+                    "整包 CSV(ministere-culture.s3.sbg.io.cloud.ovh.net/POP/"
+                    "joconde.csv,约 1.2GB,`|` 分隔)。**通道形态变了**:原来的"
+                    "按馆名分页查询没有对应物,要改成下载整包后本地按 "
+                    "Nom_officiel_musee 过滤。上新法国馆前必须先做这件事。"
+                ) from e
+            results = payload.get("results") or []
             if not results:
                 break
             for rec in results:
