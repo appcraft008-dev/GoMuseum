@@ -32,6 +32,7 @@ class _FakeRepo implements HistoryRepository {
     int limit = 20,
     int offset = 0,
     int? days,
+    String? language,
   }) async =>
       Right(items);
 
@@ -39,6 +40,7 @@ class _FakeRepo implements HistoryRepository {
   Future<Either<Failure, List<HistoryItem>>> searchHistory({
     required String query,
     int limit = 20,
+    String? language,
   }) async =>
       Right(items);
 
