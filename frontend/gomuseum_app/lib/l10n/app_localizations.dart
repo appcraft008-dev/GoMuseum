@@ -635,6 +635,12 @@ abstract class AppLocalizations {
   /// **'{count} works'**
   String itemsCount(Object count);
 
+  /// No description provided for @yearBce.
+  ///
+  /// In en, this message translates to:
+  /// **'{year} BC'**
+  String yearBce(String year);
+
   /// No description provided for @today.
   ///
   /// In en, this message translates to:

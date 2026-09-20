@@ -288,6 +288,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String yearBce(String year) {
+    return '紀元前$year年';
+  }
+
+  @override
   String get today => '今日';
 
   @override

@@ -162,6 +162,14 @@
       }
     }
   },
+  "yearBce": "{year} BC",
+  "@yearBce": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "today": "Today",
   "yesterday": "Yesterday",
   "dateMonthDay": "{month}/{day}",

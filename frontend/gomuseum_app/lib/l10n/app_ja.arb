@@ -87,6 +87,7 @@
   "footprintEmptyHint": "認識した作品はここに自動で記録されます",
   "footprintGoRecognize": "最初の作品を認識",
   "itemsCount": "{count}点",
+  "yearBce": "紀元前{year}年",
   "today": "今日",
   "yesterday": "昨日",
   "dateMonthDay": "{month}/{day}",

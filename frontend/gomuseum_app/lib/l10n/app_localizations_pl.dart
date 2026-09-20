@@ -291,6 +291,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String yearBce(String year) {
+    return '$year p.n.e.';
+  }
+
+  @override
   String get today => 'Dziś';
 
   @override

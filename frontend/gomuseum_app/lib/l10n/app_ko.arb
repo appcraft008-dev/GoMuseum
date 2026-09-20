@@ -87,6 +87,7 @@
   "footprintEmptyHint": "인식한 작품은 여기에 자동으로 기록됩니다",
   "footprintGoRecognize": "첫 작품을 인식하세요",
   "itemsCount": "작품 {count}점",
+  "yearBce": "기원전 {year}년",
   "today": "오늘",
   "yesterday": "어제",
   "dateMonthDay": "{month}/{day}",
