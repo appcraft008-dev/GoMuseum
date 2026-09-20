@@ -15,6 +15,7 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.catalog_loader import filter_new_stubs
 from app.services.enrichment.catalog_source import StubRecord
 from app.services.enrichment.sources.joconde_catalog import (
+    _MUSEUM_COL,
     JocondeCatalog,
     _category,
     _clean_artist,
@@ -24,41 +25,41 @@ from app.services.enrichment.sources.joconde_catalog import (
 )
 from app.services.object_importer import upsert_museum, upsert_object
 
-_COLS = (
-    "Reference",
-    "Numero_inventaire",
-    "Titre",
-    "Auteur",
-    "Domaine",
-    "Millesime_de_creation",
-    "Nom_officiel_musee",
-)
+_RID = "7e3307c2-f2ff-455c-bbca-bb6f11aec7bb"
+_DATASET = {"resources": [{"id": _RID, "format": "csv"}]}
 
 
-class _Csv:
-    """整包 CSV 的最小替身:`|` 分隔、逐行流式(源就是这么发的)。"""
+def _fake_get_json(rows, page_size=200, errors_on_page=None):
+    """表格 API 的最小替身：dataset 解析 + 按馆名筛 + 分页。"""
 
-    status_code = 200
+    def get_json(url, params=None):
+        if params is None:  # resolve_resource_id 那一跳
+            return _DATASET
+        want = params[f"{_MUSEUM_COL}__exact"]
+        page = params["page"]
+        if errors_on_page == page:
+            return {"errors": [{"title": "Invalid query string"}]}
+        hit = [r for r in rows if r.get(_MUSEUM_COL) == want]
+        lo = (page - 1) * page_size
+        return {
+            "data": hit[lo : lo + page_size],
+            "meta": {"page": page, "page_size": page_size, "total": len(hit)},
+        }
 
-    def __init__(self, rows, cols=_COLS):
-        self._lines = ["|".join(cols)]
-        for r in rows:
-            self._lines.append("|".join((r.get(c) or "") for c in cols))
-
-    def iter_lines(self, decode_unicode=False):
-        return iter(self._lines)
-
-
-def _fake_http(rows, cols=_COLS, status=200):
-    def get(url, headers=None, timeout=None):
-        resp = _Csv(rows, cols)
-        resp.status_code = status
-        return resp
-
-    return get
+    return get_json
 
 
 _ORSAY = SimpleNamespace(slug="orsay", joconde_museum="musée d'Orsay")
+
+
+@pytest.fixture(autouse=True)
+def _clear_rid_cache():
+    """resolve_resource_id 有进程内缓存 —— 不清会让用例互相串味。"""
+    import app.services.enrichment.sources.joconde as _j
+
+    _j._rid_cache = None
+    yield
+    _j._rid_cache = None
 
 
 def test_list_maps_record_fields():
@@ -71,7 +72,7 @@ def test_list_maps_record_fields():
         "Millesime_de_creation": "1897",
         "Nom_officiel_musee": "musée d'Orsay",
     }
-    out = list(JocondeCatalog(http_get=_fake_http([rec])).list(_ORSAY))
+    out = list(JocondeCatalog(get_json=_fake_get_json([rec])).list(_ORSAY))
     assert len(out) == 1
     s = out[0]
     assert s.inventory_number == "RF 2051"
@@ -99,16 +100,35 @@ def test_filters_by_museum_name():
             ["musée d'Orsay", "musée du Louvre", "musée d'Orsay", "musée de Cluny"]
         )
     ]
-    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    out = list(JocondeCatalog(get_json=_fake_get_json(rows)).list(_ORSAY))
     assert [o.inventory_number for o in out] == ["RF 0", "RF 2"]
 
 
-def test_museum_match_tolerates_case_and_spacing():
-    """馆名变体不许漏件 —— 漏得很安静(看起来像"这馆藏品就这么多")。
+def test_museum_name_passed_through_verbatim():
+    """馆名**原样**发给服务端的 `__exact`,我们不改写它。
 
-    ⚠️ 全量 1.2GB 扫一遍会超时,所以"CSV 里到底有没有变体写法"没有实证;
-    与其赌它没有,不如让匹配本身容得下。仍是精确相等,不是子串 ——
-    子串会把 "musée d'Orsay - annexe" 这类另一个馆误收。
+    筛选在服务端做,大小写/空格由它说了算 —— 所以配置里必须填 POP 精确官方名
+    (契约里那条"先 search(nom_officiel_musee) 探查"就是为这个)。
+    实测全量 CSV 里这两个馆各只有一种写法,不存在变体。
+    """
+    seen = {}
+
+    def spy(url, params=None):
+        if params is None:
+            return _DATASET
+        seen.update(params)
+        return {"data": [], "meta": {"total": 0}}
+
+    list(JocondeCatalog(get_json=spy).list(_ORSAY))
+    assert seen[f"{_MUSEUM_COL}__exact"] == "musée d'Orsay"
+    assert seen["page_size"] == 200  # 表格 API 的上限,超过直接 400
+
+
+def test_page_size_clamped_by_server_still_paginates():
+    """服务端把 page_size 钳小时**不能**当成末页。
+
+    用 `len(rows) < 我们请求的 page_size` 判终止,会在第一页就停 ——
+    静默少一批件。所以终止以 meta.total 为准。
     """
     rows = [
         {
@@ -116,21 +136,13 @@ def test_museum_match_tolerates_case_and_spacing():
             "Numero_inventaire": f"RF {i}",
             "Titre": "T",
             "Domaine": "peinture",
-            "Nom_officiel_musee": name,
+            _MUSEUM_COL: "musée d'Orsay",
         }
-        for i, name in enumerate(
-            [
-                "musée d'Orsay",
-                "Musée d'Orsay",  # 大小写变体
-                "musée  d'Orsay",  # 多空格
-                " musée d'Orsay ",  # 首尾空格
-                "musée d'Orsay - annexe",  # ← 另一个馆,不许收
-                "musée du Louvre",
-            ]
-        )
+        for i in range(7)
     ]
-    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
-    assert [o.inventory_number for o in out] == ["RF 0", "RF 1", "RF 2", "RF 3"]
+    # fake 只给 3 条一页,而代码请求的是 200
+    out = list(JocondeCatalog(get_json=_fake_get_json(rows, page_size=3)).list(_ORSAY))
+    assert len(out) == 7
 
 
 def test_domaine_is_semicolon_string_not_list():
@@ -149,7 +161,7 @@ def test_domaine_is_semicolon_string_not_list():
             "Nom_officiel_musee": "musée d'Orsay",
         }
     ]
-    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    out = list(JocondeCatalog(get_json=_fake_get_json(rows)).list(_ORSAY))
     assert out[0].category == "sculpture"  # 不是 "unknown"
 
 
@@ -175,7 +187,7 @@ def test_year_is_normalized_at_import():
             ]
         )
     ]
-    out = list(JocondeCatalog(http_get=_fake_http(rows)).list(_ORSAY))
+    out = list(JocondeCatalog(get_json=_fake_get_json(rows)).list(_ORSAY))
     assert [o.year for o in out] == [
         "c. 1853",
         "1865–1908",
@@ -188,7 +200,7 @@ def test_year_is_normalized_at_import():
 
 def test_no_joconde_museum_yields_nothing():
     cfg = SimpleNamespace(slug="x", joconde_museum=None)
-    assert list(JocondeCatalog(http_get=_fake_http([])).list(cfg)) == []
+    assert list(JocondeCatalog(get_json=_fake_get_json([])).list(cfg)) == []
 
 
 def test_skip_record_without_inventory_or_reference():
@@ -206,7 +218,7 @@ def test_skip_record_without_inventory_or_reference():
         "Domaine": "dessin",
         "Nom_officiel_musee": "musée d'Orsay",
     }
-    got = list(JocondeCatalog(http_get=_fake_http([no_inv, no_ref])).list(_ORSAY))
+    got = list(JocondeCatalog(get_json=_fake_get_json([no_inv, no_ref])).list(_ORSAY))
     assert got == []  # 无号或无 ref(合成不出把手)都跳过
 
 
@@ -306,25 +318,54 @@ def test_filter_new_stubs_skips_existing_inv_and_p347(db):
     assert [s.inventory_number for s in out] == ["RF 300"]
 
 
-def test_wrong_payload_raises_instead_of_yielding_nothing():
-    """拿到的不是那份 CSV 时必须**报错**,不能安静地一条不匹配。
+def test_api_error_raises_instead_of_yielding_nothing():
+    """表格 API 出错时返回的是 {"errors": [...]},**没有 data 键**。
 
-    真实故障形态:data.culture.gouv.fr 整站 301 到 culture.data.gouv.fr 且
-    丢弃路径 → 落到门户首页拿到 HTML,**status 仍是 200**。
-    只看 status_code 放行的话,下面的过滤循环会一条都不匹配 ——
-    看起来跟"这个馆在 Joconde 里没有藏品"一模一样,是最难查的那种失败。
+    不认它的话 `data.get("data") or []` 会把报错读成"这个馆没有藏品" ——
+    静默少一批件,看起来跟真的没藏品一模一样,是这条链路最难查的失败(纪律 31)。
     """
-    html = _fake_http([], cols=("<!doctype html><html lang=fr>",))
+    rows = [
+        {
+            "Reference": str(i),
+            "Numero_inventaire": f"RF {i}",
+            "Titre": "T",
+            "Domaine": "peinture",
+            _MUSEUM_COL: "musée d'Orsay",
+        }
+        for i in range(3)
+    ]
+    bad = _fake_get_json(rows, errors_on_page=1)
     with pytest.raises(RuntimeError) as e:
-        list(JocondeCatalog(http_get=html).list(_ORSAY))
-    assert "Nom_officiel_musee" in str(e.value)
-    assert "data.gouv.fr" in str(e.value)  # 指出去哪儿找新地址
+        list(JocondeCatalog(get_json=bad).list(_ORSAY))
+    assert "Invalid query string" in str(e.value)
 
 
-def test_non_200_raises():
+def test_pagination_mismatch_raises():
+    """拉到的行数与 meta.total 对不上必须喊出来(漏页/源在翻页中途变了)。"""
+
+    def liar(url, params=None):
+        if params is None:
+            return _DATASET
+        return (
+            {"data": [], "meta": {"total": 5}}
+            if params["page"] > 1
+            else {
+                "data": [
+                    {
+                        "Reference": "r1",
+                        "Numero_inventaire": "RF 1",
+                        "Titre": "T",
+                        "Domaine": "peinture",
+                        _MUSEUM_COL: "musée d'Orsay",
+                    }
+                ],
+                "meta": {"total": 5},  # ← 说有 5 条,只给了 1 条
+            }
+        )
+
     with pytest.raises(RuntimeError) as e:
-        list(JocondeCatalog(http_get=_fake_http([], status=503)).list(_ORSAY))
-    assert "503" in str(e.value)
+        list(JocondeCatalog(get_json=liar).list(_ORSAY))
+    assert "分页对不上" in str(e.value)
 
 
 def test_clean_year_table_and_passthrough():

@@ -200,11 +200,44 @@
 >    `skipped: no_material`(小皇宫实测,收尾时才发现)。
 > 2. **Joconde 馆名必须用 POP 精确官方名**——先 `search(nom_officiel_musee,"关键词")` 探查
 >    (橘园官方名="musée de l'Orangerie des Tuileries",直觉名查出 0 条),命中的字符串原样填
-> ⚠️ **Joconde 现状(2026-07-27 实测):API 返回法语 HTML 而非 JSON,即不可用**。
-> 预热期间跳过 49+ 次。内容靠 Wikipedia+Wikidata 仍能接地合格,只是材料薄一点
-> (纸上作品/馆藏号等 Joconde 特有信息缺失)。**新馆现在配 `joconde` 意义不大**;
-> 待其恢复后可对已生成件 `generate --force` 补更丰富材料。
-> 这也是纪律①"单源失败跳过继续"的实战来源——修复前它会炸掉整轮 generate。
+> ✅ **Joconde 已修复(2026-09-20 #615),但通道换了形态** ——
+> 以下是断供近两个月后查清的根因与新通道,**上新法国馆前必读**:
+>
+> - **根因**:`data.culture.gouv.fr`(opendatasoft 查询 API)**整站 301** 到
+>   `culture.data.gouv.fr`,而且重定向**把路径也丢了** —— 任何 API 路径都落到
+>   门户首页、返回 HTML 且 **status 200**。所以"返回法语 HTML"不是源故障,
+>   是**源搬家了**;而 `status_code != 200` 那道判断形同虚设,一路崩在 `.json()` 上。
+> - **新通道 = data.gouv.fr 的 Tabular API**,与富化源 `JocondeSource`
+>   **同一条通道、同一份资源**(`sources/joconde.py` 早在 2026-09 就迁好了,
+>   目录源这次才跟上)。资源 id 按 dataset slug `collections-des-musees-de-france-base-joconde`
+>   解析 —— **别硬编码 id**,文件重传时 id 会变,slug 不会;
+>   `resolve_resource_id()` 已有进程内缓存,两个源共用。
+>   筛选走 `?Nom_officiel_musee__exact=<馆名>&page=N&page_size=200`。
+> - **`page_size` 上限 200**(超过直接 400);深翻页正常,无 offset 天花板
+>   —— 旧 opendatasoft 的 `limit+offset ≤ 10000`(旧代码 `_MAX_OFFSET=9900`)没有了。
+>   实测奥赛 4111 条翻到第 42 页正常,**21 秒**拉完;橘园 133 条 1.9 秒。
+> - ⚠️ **终止条件必须看 `meta.total`,不能看 `len(rows) < page_size`** ——
+>   服务端有权把 page_size 钳小,那样第一页就会被误判成末页,**静默少一批件**。
+>   同理:出错时这个 API 返回 `{"errors": [...]}` 而**没有 `data` 键**,
+>   `data.get("data") or []` 会把报错读成"这馆没有藏品"。两处都要显式喊出来。
+> - 📌 也**有**整包 CSV(`ministere-culture.s3.sbg.io.cloud.ovh.net/POP/joconde.csv`,
+>   1.2GB,`|` 分隔,68 字段,多值 `;`),但只在需要全量统计时才值得下
+>   (例:核对某馆官方名有无变体写法)。日常上新馆走 Tabular API。
+> - ⚠️ **`Millesime_de_creation` 是脏的且会持续脏**:Joconde 把创作年和法语精度词
+>   **反序**拼在一起(`1853 vers`=约1853、`1865 entre,1908 et`、`1836 commencé`)。
+>   **源数据本身就长这样**(已核对官方 CSV 与库里记录一致,不是中间平台加工的)。
+>   入库时清洗(`_clean_year`),否则它会进 LLM 材料 ——
+>   `pipeline.py` 把 year 当 "Creation year" 喂给模型。
+>   只归一化**语义确定**的形态(约/区间);`1867 vers,1868 ou`(约1867**或**1868)
+>   压成区间是改写原意,原样留着。实测残留:奥赛 341/4111、橘园 42/133。
+>   `avant`/`après` 要按界面语言渲染 → 后端没有语言维度,留给前端 `year_format.dart`,
+>   **两边规则成对,改一边要改另一边**。
+> - ⚠️ **`Domaine` 从 list 变成 `;` 分隔字符串**:直接丢进 `for d in domaine`
+>   会**逐字符**遍历、全部落到 `unknown` 且**不报错**。换通道最容易静默踩的一脚。
+>
+> 断供期间(2026-07-22 ~ 09-20)生成的件材料偏薄(纸上作品/馆藏号等 Joconde
+> 特有信息缺失),可对已生成件 `generate --force` 补更丰富材料。
+> 这段历史也是纪律①"单源失败跳过继续"与纪律 31「容错必须配探活」的实战来源。
 >    `joconde_museum`。非法国馆跳过此条。
 
 连接器已存在时(Wikidata 全球通用),上新馆只需:

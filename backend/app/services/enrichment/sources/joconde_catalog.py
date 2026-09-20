@@ -1,29 +1,26 @@
-"""JocondeCatalog：从 Joconde 开放数据整包 CSV 里筛出该馆全部作品 → StubRecord。
+"""JocondeCatalog：按馆名分页查 Joconde 开放数据 → 该馆全部作品 StubRecord。
 补 Wikidata 对纸上作品(粉彩/素描)的覆盖偏科(实证:Wikidata 收奥赛纸上仅 167,
 Joconde 有 434 素描)。多为 © RMN 版权图、无免费图 → 落文字层 stub(可搜、不可拍)。
-去重靠 Joconde reference(P347)+ 馆藏号,不覆盖既有 Wikidata 件(见 catalog_loader.filter_new_stubs)。"""
+去重靠 Joconde reference(P347)+ 馆藏号,不覆盖既有 Wikidata 件(见 catalog_loader.filter_new_stubs)。
+
+⚠️ 2026-09 换过接入方式,与 `JocondeSource`(富化源)**同一条通道、同一份资源** ——
+见那边的模块 docstring(断供时间线、公告日≠断供日)。这里只补目录侧的:
+旧 opendatasoft 的 `limit+offset ≤ 10000` 天花板(原 `_MAX_OFFSET=9900`)没有了,
+Tabular API 深翻页正常(奥赛 4111 条实测翻到第 42 页)。
+"""
 
 from __future__ import annotations
 
-import csv
 import re
 import time
 from typing import Iterable
 
 from app.services.enrichment.catalog_source import CatalogSource, StubRecord
+from app.services.enrichment.sources.joconde import TABULAR_URL, resolve_resource_id
 
-# 整包 CSV(约 1.2GB,`|` 分隔,68 字段,多值用 `;`)。
-#
-# ⚠️ 2026-09-20 起这是唯一通道。原先的 opendatasoft 查询 API
-# (data.culture.gouv.fr)已**整站 301** 到 culture.data.gouv.fr,而且重定向
-# **把路径也丢了** —— 任何 API 路径都落到首页、返回 HTML 且 status **200**,
-# 于是 `status_code != 200` 那道判断形同虚设,一路崩在 resp.json() 上。
-#
-# 换通道顺带解掉一个老限制:opendatasoft 的 limit+offset ≤ 10000 让大馆
-# 最多只能拿 9900 条(原 `_MAX_OFFSET`),整包 CSV 没有这个天花板。
-_CSV_URL = "https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/joconde.csv"
 _UA = "GoMuseumEnrichment/1.0 (appcraft008@gmail.com)"
 _MUSEUM_COL = "Nom_officiel_musee"
+_PAGE = 200  # Tabular API 的 page_size 上限(超过直接 400)
 
 # `Millesime_de_creation` 归一化。Joconde 把创作年和法语精度词**反序**拼在
 # 一起:`1853 vers`(约1853)、`1865 entre,1908 et`、`1911 vers,1912 ou,1914 et`。
@@ -81,19 +78,6 @@ def _clean_title(raw: str | None) -> str | None:
     return t or None
 
 
-def _norm_museum(raw: str | None) -> str:
-    """馆名比对用的归一化:折叠空白 + casefold。
-
-    整包 CSV 是全法国的馆,没有服务端筛选了,**过滤漏一点就少一批件**,
-    而且少得很安静(看起来像"这馆藏品就这么多")。编目里同一个馆出现
-    大小写/多空格变体是常事,所以不做字面相等。
-
-    仍是**精确相等**不是子串匹配 —— 子串会把"musée d'Orsay - annexe"
-    这类另一个馆误收进来。
-    """
-    return " ".join((raw or "").split()).casefold()
-
-
 def _clean_year(raw: str | None) -> str | None:
     """`Millesime_de_creation` → 语言中立年代。表外形态原样返回。
 
@@ -112,7 +96,7 @@ def _clean_year(raw: str | None) -> str | None:
 
 
 def _category(domaine) -> str:
-    """CSV 的 `Domaine` 是 `;` 分隔的**字符串**(旧 API 给的是 list)。
+    """`Domaine` 现在是 `;` 分隔的**字符串**(旧 opendatasoft API 给的是 list)。
 
     ⚠️ 传字符串给下面这个循环会**逐字符**遍历、全部落到 "unknown" 且不报错
     —— 换通道时最容易静默踩的一脚,所以在这里统一拆。
@@ -150,49 +134,74 @@ def _to_stub(rec: dict, slug: str) -> StubRecord | None:
     )
 
 
-def _default_http_get(url, headers=None, timeout=None):
+def _default_get_json(url, params=None):
     import requests
 
     time.sleep(0.2)  # 礼貌限速(公共开放数据)
-    # stream=True:1.2GB 整包,必须边下边过滤,不能 .content 进内存。
-    return requests.get(url, headers=headers, timeout=timeout, stream=True)
+    r = requests.get(
+        url,
+        params=params,
+        headers={"User-Agent": _UA, "Accept": "application/json"},
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json()
 
 
 class JocondeCatalog(CatalogSource):
     name = "joconde"
 
-    def __init__(self, http_get=None):
-        self._http_get = http_get or _default_http_get
+    def __init__(self, get_json=None):
+        self._get_json = get_json or _default_get_json
 
     def list(self, cfg) -> Iterable[StubRecord]:
         museum = getattr(cfg, "joconde_museum", None)
         if not museum:
             return
-        resp = self._http_get(
-            _CSV_URL,
-            headers={"User-Agent": _UA, "Accept": "text/csv"},
-            timeout=60,
-        )
-        status = getattr(resp, "status_code", 200)
-        if status != 200:
-            raise RuntimeError(f"Joconde CSV 不可用(HTTP {status}):{_CSV_URL}")
+        # 资源 id 按 dataset slug 解析(文件重传时 id 会变,slug 不会),
+        # 与 JocondeSource 共用那份进程内缓存。
+        rid = resolve_resource_id(self._get_json)
+        url = TABULAR_URL.format(rid=rid)
 
-        rows = csv.DictReader(resp.iter_lines(decode_unicode=True), delimiter="|")
-        if _MUSEUM_COL not in (rows.fieldnames or ()):
-            # 拿到的不是那份 CSV(重定向到门户首页、被改版、被换 schema)。
-            # 不报出来的话下面那个循环会安静地一条不匹配,看起来像"这馆没有藏品"。
-            raise RuntimeError(
-                f"Joconde CSV 缺列 {_MUSEUM_COL},拿到的不是预期的那份数据"
-                f"(表头:{(rows.fieldnames or ['<空>'])[:3]}…)。源可能又搬家了:"
-                f"去 data.gouv.fr 的 collections-des-musees-de-france-base-joconde "
-                f"查当前资源地址。"
+        page, seen = 1, 0
+        while True:
+            data = self._get_json(
+                url,
+                {
+                    f"{_MUSEUM_COL}__exact": museum,
+                    "page": page,
+                    "page_size": _PAGE,
+                },
             )
+            # ⚠️ 出错时这个 API 返回的是 {"errors": [...]},**没有 data 键**。
+            # 不认它的话下面 `or []` 会把报错读成"这个馆没有藏品"——
+            # 静默少一批件是这条链路最难查的失败(同纪律 31)。
+            if "data" not in data:
+                raise RuntimeError(
+                    f"Joconde 表格 API 返回错误(page={page}, museum={museum!r}):"
+                    f"{data.get('errors') or data}"
+                )
+            rows = data["data"] or []
+            total = (data.get("meta") or {}).get("total")
+            for rec in rows:
+                stub = _to_stub(rec, cfg.slug)
+                if stub:
+                    yield stub
+            seen += len(rows)
 
-        want = _norm_museum(museum)
-        for rec in rows:
-            # 按馆名过滤:整包是全法国的馆,没有服务端筛选了。
-            if _norm_museum(rec.get(_MUSEUM_COL)) != want:
-                continue
-            s = _to_stub(rec, cfg.slug)
-            if s:
-                yield s
+            # 终止**以 meta.total 为准**,不看 `len(rows) < _PAGE`:
+            # 服务端若把 page_size 钳到比我们请求的更小(它有权这么做),
+            # 那个判断会在第一页就误判成末页 —— 静默少一批件。
+            if total is None:
+                if len(rows) < _PAGE:
+                    break
+            elif seen >= total:
+                break
+            elif not rows:
+                # total 说还有,却给了空页 —— 漏页/源在翻页中途变了。
+                # 不喊出来就是安静地少一批件(同纪律 31)。
+                raise RuntimeError(
+                    f"Joconde 分页对不上:拉到 {seen} 行,meta.total={total}"
+                    f"(museum={museum!r})"
+                )
+            page += 1
