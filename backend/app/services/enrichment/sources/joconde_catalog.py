@@ -1,31 +1,46 @@
-"""JocondeCatalog：从 data.culture.gouv.fr(Joconde 开放数据)列该馆全部作品 → StubRecord。
+"""JocondeCatalog：从 Joconde 开放数据整包 CSV 里筛出该馆全部作品 → StubRecord。
 补 Wikidata 对纸上作品(粉彩/素描)的覆盖偏科(实证:Wikidata 收奥赛纸上仅 167,
 Joconde 有 434 素描)。多为 © RMN 版权图、无免费图 → 落文字层 stub(可搜、不可拍)。
 去重靠 Joconde reference(P347)+ 馆藏号,不覆盖既有 Wikidata 件(见 catalog_loader.filter_new_stubs)。"""
 
 from __future__ import annotations
 
+import csv
 import re
 import time
 from typing import Iterable
 
 from app.services.enrichment.catalog_source import CatalogSource, StubRecord
 
-_RECORDS_URL = (
-    "https://data.culture.gouv.fr/api/explore/v2.1/catalog/datasets/"
-    "base-joconde-extrait/records"
-)
+# 整包 CSV(约 1.2GB,`|` 分隔,68 字段,多值用 `;`)。
+#
+# ⚠️ 2026-09-20 起这是唯一通道。原先的 opendatasoft 查询 API
+# (data.culture.gouv.fr)已**整站 301** 到 culture.data.gouv.fr,而且重定向
+# **把路径也丢了** —— 任何 API 路径都落到首页、返回 HTML 且 status **200**,
+# 于是 `status_code != 200` 那道判断形同虚设,一路崩在 resp.json() 上。
+#
+# 换通道顺带解掉一个老限制:opendatasoft 的 limit+offset ≤ 10000 让大馆
+# 最多只能拿 9900 条(原 `_MAX_OFFSET`),整包 CSV 没有这个天花板。
+_CSV_URL = "https://ministere-culture.s3.sbg.io.cloud.ovh.net/POP/joconde.csv"
 _UA = "GoMuseumEnrichment/1.0 (appcraft008@gmail.com)"
-_SELECT = (
-    "reference",
-    "numero_inventaire",
-    "titre",
-    "auteur",
-    "domaine",
-    "millesime_de_creation",
+_MUSEUM_COL = "Nom_officiel_musee"
+
+# `Millesime_de_creation` 归一化。Joconde 把创作年和法语精度词**反序**拼在
+# 一起:`1853 vers`(约1853)、`1865 entre,1908 et`、`1911 vers,1912 ou,1914 et`。
+# 源数据本身就长这样(已核对官方 CSV 与库里三条记录一致),不是中间平台加工的
+# —— 所以清洗必须在入库这一步做,否则脏值会进 LLM 材料
+# (`pipeline.py` 把 year 当 "Creation year" 喂给模型)。
+#
+# 这里只做**语言中立**的形态;`avant`/`après` 要按界面语言渲染,
+# 后端没有语言维度,留给前端 `year_format.dart`(规则与这里成对,改一边要改另一边)。
+# 尾部 `N tirage` 是**印制年**不是创作年,丢掉是归位不是丢信息。
+_MILL_RULES = (
+    (re.compile(r"^(\d+) vers$"), lambda m: f"c. {m[1]}"),
+    (re.compile(r"^(\d+) vers,\d+ tirage$"), lambda m: f"c. {m[1]}"),
+    (re.compile(r"^(\d+) entre,(\d+) et$"), lambda m: f"{m[1]}–{m[2]}"),
+    (re.compile(r"^(\d+) entre,(\d+) et,\d+ tirage$"), lambda m: f"{m[1]}–{m[2]}"),
+    (re.compile(r"^(\d+)-(\d+)$"), lambda m: f"{m[1]}–{m[2]}"),
 )
-_PAGE = 100  # Opendatasoft 单页上限
-_MAX_OFFSET = 9900  # limit+offset ≤ 10000 的保护
 
 _DATES = re.compile(r"\s*\([^)]*\)\s*$")  # 作者尾部"(1844-1926)"
 _DOMAINE_CAT = {
@@ -66,9 +81,33 @@ def _clean_title(raw: str | None) -> str | None:
     return t or None
 
 
+def _clean_year(raw: str | None) -> str | None:
+    """`Millesime_de_creation` → 语言中立年代。表外形态原样返回。
+
+    见 `_MILL_RULES`。猜出来的年代比读着别扭的年代糟糕得多,所以只收
+    能确定语义的形态 —— `1867 vers,1868 ou`(约1867**或**1868)压成区间
+    是改写原意,不做。
+    """
+    if not raw:
+        return None
+    t = raw.strip()
+    for pat, render in _MILL_RULES:
+        m = pat.match(t)
+        if m:
+            return render(m)
+    return t or None
+
+
 def _category(domaine) -> str:
+    """CSV 的 `Domaine` 是 `;` 分隔的**字符串**(旧 API 给的是 list)。
+
+    ⚠️ 传字符串给下面这个循环会**逐字符**遍历、全部落到 "unknown" 且不报错
+    —— 换通道时最容易静默踩的一脚,所以在这里统一拆。
+    """
+    if isinstance(domaine, str):
+        domaine = domaine.split(";")
     for d in domaine or []:
-        c = _DOMAINE_CAT.get(str(d).lower())
+        c = _DOMAINE_CAT.get(str(d).strip().lower())
         if c:
             return c
     return "unknown"
@@ -78,23 +117,17 @@ def _to_stub(rec: dict, slug: str) -> StubRecord | None:
     """一条 Joconde 记录 → StubRecord。无馆藏号或无 reference(无法幂等去重/合成把手)→ None。
     非 Wikidata 作品:对外把手 qid 合成为 `joconde-<ref>`(命名空间防撞车、非 Q 格式,让它
     可搜/可导航/可懒生成而不误入 Wikidata SPARQL);真实身份仍是对象 UUID。"""
-    inv = _clean_inv(rec.get("numero_inventaire"))
-    ref = rec.get("reference")
+    inv = _clean_inv(rec.get("Numero_inventaire"))
+    ref = rec.get("Reference")
     if not inv or not ref:
         return None
     return StubRecord(
         inventory_number=inv,
         qid=f"joconde-{ref}",
-        title=_clean_title(rec.get("titre")),
-        artist=_clean_artist(rec.get("auteur")),
-        # ⚠️ 这个字段是**脏的**,原样透传:Joconde 把创作年和法语精度词
-        # 反序拼在一起 —— `1853 vers`(约1853)、`1865 entre,1908 et`、
-        # `1911 vers,1912 ou,1914 et`。prod 上 713 件是这个形态。
-        # 已核对官方 CSV:源数据本身就长这样,换通道不会变干净。
-        # 目前靠前端 `year_format.dart` 兜底显示(覆盖 84%);
-        # 真正的治本是在这里解析成结构化年代 —— 重写本源时一并做。
-        year=rec.get("millesime_de_creation"),
-        category=_category(rec.get("domaine")),
+        title=_clean_title(rec.get("Titre")),
+        artist=_clean_artist(rec.get("Auteur")),
+        year=_clean_year(rec.get("Millesime_de_creation")),
+        category=_category(rec.get("Domaine")),
         image_url=None,  # © RMN 版权图,无免费图 → 文字层
         popularity=0,
         owning_museum=slug,
@@ -104,11 +137,12 @@ def _to_stub(rec: dict, slug: str) -> StubRecord | None:
     )
 
 
-def _default_http_get(url, params=None, headers=None, timeout=None):
+def _default_http_get(url, headers=None, timeout=None):
     import requests
 
     time.sleep(0.2)  # 礼貌限速(公共开放数据)
-    return requests.get(url, params=params, headers=headers, timeout=timeout)
+    # stream=True:1.2GB 整包,必须边下边过滤,不能 .content 进内存。
+    return requests.get(url, headers=headers, timeout=timeout, stream=True)
 
 
 class JocondeCatalog(CatalogSource):
@@ -121,44 +155,30 @@ class JocondeCatalog(CatalogSource):
         museum = getattr(cfg, "joconde_museum", None)
         if not museum:
             return
-        offset = 0
-        while offset <= _MAX_OFFSET:
-            resp = self._http_get(
-                _RECORDS_URL,
-                params={
-                    "where": f'nom_officiel_musee="{museum}"',
-                    "select": ",".join(_SELECT),
-                    "limit": _PAGE,
-                    "offset": offset,
-                },
-                headers={"User-Agent": _UA, "Accept": "application/json"},
-                timeout=30,
+        resp = self._http_get(
+            _CSV_URL,
+            headers={"User-Agent": _UA, "Accept": "text/csv"},
+            timeout=60,
+        )
+        status = getattr(resp, "status_code", 200)
+        if status != 200:
+            raise RuntimeError(f"Joconde CSV 不可用(HTTP {status}):{_CSV_URL}")
+
+        rows = csv.DictReader(resp.iter_lines(decode_unicode=True), delimiter="|")
+        if _MUSEUM_COL not in (rows.fieldnames or ()):
+            # 拿到的不是那份 CSV(重定向到门户首页、被改版、被换 schema)。
+            # 不报出来的话下面那个循环会安静地一条不匹配,看起来像"这馆没有藏品"。
+            raise RuntimeError(
+                f"Joconde CSV 缺列 {_MUSEUM_COL},拿到的不是预期的那份数据"
+                f"(表头:{(rows.fieldnames or ['<空>'])[:3]}…)。源可能又搬家了:"
+                f"去 data.gouv.fr 的 collections-des-musees-de-france-base-joconde "
+                f"查当前资源地址。"
             )
-            if getattr(resp, "status_code", 200) != 200:
-                break
-            # ⚠️ 这里不能只看 status_code:data.culture.gouv.fr 已**整站 301**
-            # 到 culture.data.gouv.fr,而且重定向**把路径也丢了** —— 任何 API
-            # 路径最终都落到那个站的首页,返回 HTML 且 status **200**。
-            # 于是 status 判断放行、resp.json() 抛 JSONDecodeError,
-            # 报错完全看不出真实原因。非 JSON 一律当作"源不可用"明确报出来。
-            try:
-                payload = resp.json() or {}
-            except ValueError as e:
-                raise RuntimeError(
-                    "Joconde 目录源返回的不是 JSON。该 opendatasoft 查询 API "
-                    "(data.culture.gouv.fr) 已下线;数据集现在是 data.gouv.fr 上的"
-                    "整包 CSV(ministere-culture.s3.sbg.io.cloud.ovh.net/POP/"
-                    "joconde.csv,约 1.2GB,`|` 分隔)。**通道形态变了**:原来的"
-                    "按馆名分页查询没有对应物,要改成下载整包后本地按 "
-                    "Nom_officiel_musee 过滤。上新法国馆前必须先做这件事。"
-                ) from e
-            results = payload.get("results") or []
-            if not results:
-                break
-            for rec in results:
-                s = _to_stub(rec, cfg.slug)
-                if s:
-                    yield s
-            offset += len(results)
-            if len(results) < _PAGE:
-                break
+
+        for rec in rows:
+            # 按馆名过滤:整包是全法国的馆,没有服务端筛选了。
+            if (rec.get(_MUSEUM_COL) or "").strip() != museum:
+                continue
+            s = _to_stub(rec, cfg.slug)
+            if s:
+                yield s
