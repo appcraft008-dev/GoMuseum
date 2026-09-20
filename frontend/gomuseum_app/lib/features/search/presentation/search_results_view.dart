@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
+import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/search/data/search_api.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -173,9 +174,11 @@ class _ObjectHitRow extends StatelessWidget {
                       style: GmText.serif(size: 14.5, weight: FontWeight.w600)),
                   const SizedBox(height: 3),
                   Text(
-                    [obj.artist, if (obj.year != null) obj.year!]
-                        .where((s) => s.isNotEmpty)
-                        .join(' · '),
+                    [
+                      obj.artist,
+                      if (obj.year != null)
+                        formatYear(obj.year!, AppLocalizations.of(context)!)
+                    ].where((s) => s.isNotEmpty).join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GmText.sans(size: 11.5, color: gm.sub),

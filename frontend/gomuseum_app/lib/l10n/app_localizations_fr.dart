@@ -293,6 +293,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String ticketDurationDays(String days) {
+    return '$days JOURS';
+  }
+
+  @override
+  String yearBce(String year) {
+    return '$year av. J.-C.';
+  }
+
+  @override
   String get today => 'Aujourd\'hui';
 
   @override

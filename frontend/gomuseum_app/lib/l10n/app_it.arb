@@ -87,6 +87,8 @@
   "footprintEmptyHint": "Le opere riconosciute vengono salvate qui automaticamente",
   "footprintGoRecognize": "Riconosci la tua prima opera",
   "itemsCount": "{count} opere",
+  "ticketDurationDays": "{days} GIORNI",
+  "yearBce": "{year} a.C.",
   "today": "Oggi",
   "yesterday": "Ieri",
   "dateMonthDay": "{day}/{month}",

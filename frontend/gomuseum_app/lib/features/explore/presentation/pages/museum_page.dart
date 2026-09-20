@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
+import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
@@ -692,10 +693,11 @@ class _ObjectRow extends StatelessWidget {
   final ObjectListItem item;
   final VoidCallback onTap;
 
-  String get _meta {
+  String _meta(BuildContext context) {
     final parts = <String>[
       if (item.artist.isNotEmpty) item.artist,
-      if (item.year != null && item.year!.isNotEmpty) item.year!,
+      if (item.year != null && item.year!.isNotEmpty)
+        formatYear(item.year!, AppLocalizations.of(context)!),
     ];
     return parts.join(' · ');
   }
@@ -746,10 +748,10 @@ class _ObjectRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (_meta.isNotEmpty) ...[
+                  if (_meta(context).isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(
-                      _meta,
+                      _meta(context),
                       style: GmText.sans(size: 11.5, color: gm.sub),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

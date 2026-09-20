@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -13,8 +14,9 @@ class GuideArtistCard extends StatelessWidget {
   final Artist artist;
 
   /// 生卒年 · 国籍（缺项跳过；全缺则 null）。
-  String? _metaLine() {
-    final b = artist.birth, d = artist.death;
+  String? _metaLine(AppLocalizations l10n) {
+    final b = artist.birth == null ? null : formatYear(artist.birth!, l10n);
+    final d = artist.death == null ? null : formatYear(artist.death!, l10n);
     String? years;
     if (b != null && d != null) {
       years = '$b – $d';
@@ -34,7 +36,7 @@ class GuideArtistCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
-    final meta = _metaLine();
+    final meta = _metaLine(l10n);
     final hasWorks = artist.notableWorks.isNotEmpty;
     final hasBio = (artist.bio ?? '').trim().isNotEmpty;
 

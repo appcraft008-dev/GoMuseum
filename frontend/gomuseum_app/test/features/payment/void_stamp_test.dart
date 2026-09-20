@@ -57,7 +57,12 @@ void main() {
       await t.pumpAndSettle();
 
       // FittedBox 的可用宽度 ÷ 文字的自然宽度 = 它实际用的缩放比。
-      final box = t.renderObject<RenderBox>(find.byType(FittedBox));
+      // 按「包着戳文字的那个」定位:票头的有效期也用了 FittedBox,
+      // byType 会同时命中两个。
+      final box = t.renderObject<RenderBox>(find.ancestor(
+        of: find.text(l10n.ticketVoid),
+        matching: find.byType(FittedBox),
+      ));
       final text = t.renderObject<RenderBox>(find.text(l10n.ticketVoid));
       // 基准字号从**组件自己**读,不在测试里抄一份 —— 抄了的话改组件
       // 字号这条测试察觉不到,等于白测。

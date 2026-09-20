@@ -162,6 +162,22 @@
       }
     }
   },
+  "ticketDurationDays": "{days} DAYS",
+  "@ticketDurationDays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "yearBce": "{year} BC",
+  "@yearBce": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "today": "Today",
   "yesterday": "Yesterday",
   "dateMonthDay": "{month}/{day}",

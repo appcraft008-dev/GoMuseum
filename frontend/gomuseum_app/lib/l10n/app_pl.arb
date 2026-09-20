@@ -87,6 +87,8 @@
   "footprintEmptyHint": "Rozpoznane dzieła są tu zapisywane automatycznie",
   "footprintGoRecognize": "Rozpoznaj swoje pierwsze dzieło",
   "itemsCount": "{count} dzieł",
+  "ticketDurationDays": "{days} DNI",
+  "yearBce": "{year} p.n.e.",
   "today": "Dziś",
   "yesterday": "Wczoraj",
   "dateMonthDay": "{day}.{month}",

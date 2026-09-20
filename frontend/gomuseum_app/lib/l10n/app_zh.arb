@@ -87,6 +87,8 @@
   "footprintEmptyHint": "识别过的展品会自动记录在这里",
   "footprintGoRecognize": "去识别第一件作品",
   "itemsCount": "{count} 件",
+  "ticketDurationDays": "{days} 天",
+  "yearBce": "公元前{year}年",
   "today": "今天",
   "yesterday": "昨天",
   "dateMonthDay": "{month}月{day}日",
