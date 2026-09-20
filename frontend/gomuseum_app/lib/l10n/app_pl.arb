@@ -88,6 +88,8 @@
   "footprintGoRecognize": "Rozpoznaj swoje pierwsze dzieło",
   "itemsCount": "{count} dzieł",
   "ticketDurationDays": "{days} DNI",
+  "yearBefore": "przed {year}",
+  "yearAfter": "po {year}",
   "yearBce": "{year} p.n.e.",
   "today": "Dziś",
   "yesterday": "Wczoraj",

@@ -33,17 +33,23 @@ void main() {
       expect(formatYear('1854-1856', en), '1854–1856');
     });
 
-    test('与界面语言无关：归一化结果对十种语言一致', () {
+    test('与界面语言无关：circa 与区间对十种语言一致', () {
       expect(formatYear('1832 vers', zh), 'c. 1832');
       expect(formatYear('1829 entre,1831 et', zh), '1829–1831');
+    });
+
+    test('avant/après 没有中立记号 → 走 l10n', () {
+      expect(formatYear('1859 avant', en), 'before 1859');
+      expect(formatYear('1859 avant', zh), '1859年前');
+      expect(formatYear('1864 après', en), 'after 1864');
+      expect(formatYear('1864 après', zh), '1864年后');
     });
   });
 
   group('表外形态一律原样 —— 猜出来的年代比读着别扭的糟糕得多', () {
-    // avant/après/ou/(?) 没有通用的语言中立记号，不强行处理。
+    // 剩下这些语义本身就模糊：「约1867**或**1868」不是「1867 到 1868」，
+    // 压成区间是改写原意；`(?)` 是编目员自己都存疑。原样最诚实。
     const untouched = [
-      '1859 avant',
-      '1864 après',
       '1901 (?)',
       '1911,?',
       '1898 après,?',

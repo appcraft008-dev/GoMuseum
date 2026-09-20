@@ -296,6 +296,16 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String yearBefore(String year) {
+    return 'prima del $year';
+  }
+
+  @override
+  String yearAfter(String year) {
+    return 'dopo il $year';
+  }
+
+  @override
   String yearBce(String year) {
     return '$year a.C.';
   }

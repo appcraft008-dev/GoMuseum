@@ -88,6 +88,8 @@
   "footprintGoRecognize": "첫 작품을 인식하세요",
   "itemsCount": "작품 {count}점",
   "ticketDurationDays": "{days}일",
+  "yearBefore": "{year}년 이전",
+  "yearAfter": "{year}년 이후",
   "yearBce": "기원전 {year}년",
   "today": "오늘",
   "yesterday": "어제",

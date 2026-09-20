@@ -641,6 +641,18 @@ abstract class AppLocalizations {
   /// **'{days} DAYS'**
   String ticketDurationDays(String days);
 
+  /// No description provided for @yearBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'before {year}'**
+  String yearBefore(String year);
+
+  /// No description provided for @yearAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'after {year}'**
+  String yearAfter(String year);
+
   /// No description provided for @yearBce.
   ///
   /// In en, this message translates to:
