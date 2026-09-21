@@ -229,6 +229,23 @@ zh/fr 一条不缺。这跟 A 里"英语锐度贴门槛"是两回事（一个是
 不是当场补。2351 个任务照常出批；这 456 处单独记账，同属 backlog 那 2280 条
 needs_review + 内容缺口的一部分，不是音频侧新问题。
 
+**追加原则（2026-09-21 用户明确要求）：不呈现给 APP 用户的正文一律不生成音频。**
+排查后发现 128 件里 3 件无可用图（`ObjectImage` 无 `image_key`/`source_url`，
+非 `view_quarantine`）——`_has_image_clause`（`museum_repo.py`）已把这类对象
+排除在浏览列表外，与橘园 3 件无图作品同一先例（"识别与列表都进不去，
+堵点是图不是音频"，见 [[tts-selfhost-voxcpm-recipe]]）。已在跑批中途停下、
+从 jobs.json 剔除这 3 件涉及的 22 个任务、重启剩余 2329 个：
+
+| qid | 作品 | 缺口 |
+| --- | --- | --- |
+| `Q87454049` | （标题为空，无法被搜索命中，双重不可达） | guide/material-technique/qa_0/qa_1 × zh/en |
+| `Q87455762` | 波斯女先知（？），曾被称为圣女贞德 | guide/background/facts/material-technique/qa_0/qa_2 × zh/en |
+| `Q87456734` | 吹笛者 | guide/material-technique/qa_0/qa_2 × zh/en |
+
+同批构建脚本（`/tmp/build_jobs_128.py`，未入库）当时也漏了显式校验
+`status == "published"`（只挡了 `needs_review`，理论上 `draft` 会漏过）——
+本批实测无 `draft` 行未触发，但下次沿用同一套脚本前应先补上这条校验。
+
 | 语言 | no_text（正文压根不存在） | needs_review（存在但未发布） |
 | --- | --- | --- |
 | zh | 90 | 5 |
