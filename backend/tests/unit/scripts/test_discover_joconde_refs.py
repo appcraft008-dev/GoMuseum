@@ -146,7 +146,21 @@ def test_self_test_sample_is_capped(monkeypatch):
     self_test(None, "rid", objs, [LOC])
     checked = [x for x in seen if x != "ZZ_NO_SUCH_INVENTORY_NUMBER_42"]
     assert len(checked) == _SELF_TEST_MAX
-    assert checked == sorted(checked), "取样要确定性(排序后取前 N),否则两次跑不可复现"
+
+    # 可复现:同一批输入两次跑拿到同一批样本。
+    seen.clear()
+    self_test(None, "rid", objs, [LOC])
+    again = [x for x in seen if x != "ZZ_NO_SUCH_INVENTORY_NUMBER_42"]
+    assert again == checked, "取样要确定性,否则两次跑的自检结果不可比"
+
+    # 但**不能靠排序**拿到确定性 —— 按馆藏号升序取前 N 是取簇:
+    # 卢浮宫实测那样会选出一整批无部门前缀的纯数字号(特异性最弱的一类),
+    # 20/20 全未命中,而真实命中率是 42%。可复现 ≠ 有代表性。
+    assert (
+        checked
+        != sorted(objs_inv := [o.inventory_number for o in objs])[:_SELF_TEST_MAX]
+    ), "取样退回了「按馆藏号排序取前 N」——那是取簇"
+    assert set(checked) <= set(objs_inv)
 
 
 def test_self_test_passes_when_lookup_agrees_with_authoritative_p347(monkeypatch):

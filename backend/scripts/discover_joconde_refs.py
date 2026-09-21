@@ -32,6 +32,7 @@ attributes —— 那一步才让展签面板(尺寸/材质)出数,且不碰正�
 """
 
 import argparse
+import hashlib
 import sys
 import time
 
@@ -56,7 +57,14 @@ _PAGE = 200  # 上游硬上限(超过直接 400 "Page size exceeds allowed maxim
 _IMPOSSIBLE_INV = "ZZ_NO_SUCH_INVENTORY_NUMBER_42"
 # 金标准取样上限。多查不会更准 —— 能检出系统性错配的样本量很小,
 # 而每件都要一次上游往返(卢浮宫有 7312 件权威 P347,全查要半小时,纯浪费)。
-# 按馆藏号排序取前 N 而不是随机:同一个库两次跑的自检样本一致,结果可复现。
+#
+# ⚠️ 取样按**馆藏号的 md5 排序**,不是按馆藏号本身排序。两者都可复现
+# (同一个库两次跑拿到同一批),但后者是**取簇**:字符串升序的前 20 全是
+# 无部门前缀的纯数字号(`133`、`2004 1 128`、`1877.001.0036`),
+# 而那正是模块头说"特异性很弱"的那一类。2026-09-21 卢浮宫实测:
+# 按馆藏号排序的金标准 20/20 全未命中,而分层随机抽样的真实命中率是 42%
+# —— 自检差点把一次正常的反查判成"匹配方式对本馆不成立"。
+# 可复现 ≠ 有代表性,别拿前者换后者。
 _SELF_TEST_MAX = 20
 
 
@@ -186,7 +194,8 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
             # `joconde_ref_via` 这个留痕字段本来是为"将来能整批撤回"留的,
             # 这里发现它的第二个用途:把自己写的和权威的分开。
             and not (o.attributes or {}).get("joconde_ref_via")
-        )
+        ),
+        key=lambda t: hashlib.md5(t[0].encode()).hexdigest(),
     )[:_SELF_TEST_MAX]
     if not gold:
         raise SystemExit(
