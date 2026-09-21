@@ -22,6 +22,10 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
+/// 首页横向边距。此前是散落在各处的字面量 26，而 _slogan/_quotaLine 漏了，
+/// 于是那两块贴着屏幕边渲染。
+const double _pagePadding = 26;
+
 class _HomePageState extends ConsumerState<HomePage> {
   int _cardPage = 0;
 
@@ -119,8 +123,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _slogan(AppLocalizations l10n) {
     // 标语本身带 `\n`（本意 2 行）。法语首行较长、27px 会被迫再折成 3 行；
     // FittedBox.scaleDown 把整块按可用宽度等比缩小到恰好 2 行（英/中已够宽、不缩）。
-    return SizedBox(
-      width: double.infinity,
+    // ⚠️ 必须给横向边距：scaleDown 缩到的是**可用宽度**，不留边距就等于缩到
+    // 满屏宽、左右零留白贴着屏幕边——法语首页上肉眼可见（同页其它元素都是 26）。
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _pagePadding),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
@@ -151,10 +157,13 @@ class _HomePageState extends ConsumerState<HomePage> {
       behavior: HitTestBehavior.opaque,
       onTap: () => context.push('/benefits'),
       // 各语言长度差异大（德语/波兰语明显长于中日韩），FittedBox 保证单行不换行，
-      // 与上方 _slogan 用同一手法。
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(text, style: GmText.sans(size: 12, color: gm.sub)),
+      // 与上方 _slogan 用同一手法——包括那里的横向边距，同样的理由。
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _pagePadding),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(text, style: GmText.sans(size: 12, color: gm.sub)),
+        ),
       ),
     );
   }

@@ -58,4 +58,55 @@ void main() {
     final old = MuseumSummary.fromJson(const {'slug': 'orsay'});
     expect(old.coverImage, isNull);
   });
+
+  test('name_i18n 加法字段(2026-09-21)：十语馆名；老后端不返回 → 回退两语', () {
+    final m = MuseumSummary.fromJson(const {
+      'slug': 'louvre',
+      'name_zh': '卢浮宫',
+      'name_en': 'Louvre Museum',
+      'name_i18n': {
+        'zh': '卢浮宫',
+        'en': 'Louvre Museum',
+        'fr': 'Musée du Louvre',
+        'ja': 'ルーヴル美術館',
+      },
+    });
+    // 判别式用卢浮宫:橘园/奥赛的 name_en 本身就是法语拼写,拿它们测的话
+    // "回退英文名"和"真给了法语名"输出一样,分不开。
+    expect(m.localizedName('fr'), 'Musée du Louvre'); // ← 不是 "Louvre Museum"
+    expect(m.localizedName('ja'), 'ルーヴル美術館');
+    expect(m.localizedName('zh'), '卢浮宫');
+    expect(m.localizedName('en'), 'Louvre Museum');
+    // 表里没有的语言 → 旧回退链,不返回 null 也不显 slug
+    expect(m.localizedName('ko'), 'Louvre Museum');
+
+    // 老后端(无此键)必须与改动前行为完全一致
+    final old = MuseumSummary.fromJson(const {
+      'slug': 'louvre',
+      'name_zh': '卢浮宫',
+      'name_en': 'Louvre Museum',
+    });
+    expect(old.nameI18n, isEmpty);
+    expect(old.localizedName('fr'), 'Louvre Museum');
+    expect(old.localizedName('zh'), '卢浮宫');
+  });
+
+  test('name_i18n 脏值防御：null / 空串 / 非字符串一律跳过,不崩', () {
+    // 富化数据天然缺字段,裸强转是出过事故的写法(馆藏页整页崩)。
+    final m = MuseumSummary.fromJson(const {
+      'slug': 'x',
+      'name_en': 'X Museum',
+      'name_i18n': {'fr': null, 'de': '', 'ja': 123, 'ko': '박물관'},
+    });
+    expect(m.nameI18n, const {'ko': '박물관'});
+    expect(m.localizedName('fr'), 'X Museum'); // null 值 → 回退,不是显示 "null"
+    expect(m.localizedName('ja'), 'X Museum');
+    expect(m.localizedName('ko'), '박물관');
+  });
+
+  test('name_i18n 不是 Map 时不崩(后端换形状/中间层塞了字符串)', () {
+    final m = MuseumSummary.fromJson(const {'slug': 'x', 'name_i18n': 'oops'});
+    expect(m.nameI18n, isEmpty);
+    expect(m.localizedName('fr'), 'x');
+  });
 }

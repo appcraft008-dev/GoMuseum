@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
+import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/core/services/tts_service.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
@@ -1071,12 +1072,19 @@ class _HeroImagesState extends State<_HeroImages> {
             ),
 
           // Credit bottom-right
+          // 宽度必须锁住:credit 是 Commons 的自由文本,个别件(如 Q21849357)整段
+          // 作者生平都塞在里面。Stack 里的 Positioned 不给约束 = 无限宽,
+          // 那种值会直接横着冲出屏幕。
           if (credit != null && credit.trim().isNotEmpty)
             Positioned(
               bottom: 10,
               right: 12,
+              left: 12,
               child: Text(
                 credit,
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: GmText.sans(size: 9, color: GmFixed.heroCredit),
               ),
             ),
@@ -1297,15 +1305,21 @@ class _WallLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final gm = context.gm;
 
-    // Truncate medium if overly long (>14 chars)
-    String? medium = facts.medium;
-    if (medium != null && medium.length > 14) {
-      medium = '${medium.substring(0, 12)}…';
-    }
+    // ⚠️ 这里原本按 14 个字符硬截 medium(`substring(0, 12) + '…'`)，于是法语的
+    // "Huile sur toile"(15 字符)显示成 "Huile sur to…"。而下面那个 Text 本来就
+    // 有 maxLines + ellipsis —— 真放不下时它会自己省略，再截一道是多余的，
+    // 只是把刀提前架在了一个按英语长度拍的阈值上("Oil on canvas" 13 字符刚好
+    // 过关，法语德语系统性中招)。删掉，交给排版。
+    final medium = facts.medium;
 
     final parts = <String>[
       if (facts.artist?.isNotEmpty == true) facts.artist!,
-      if (facts.date?.isNotEmpty == true) facts.date!,
+      // ⚠️ `facts.date` 和列表/搜索里的 `year` 是**同一个值的两个名字**
+      // （后端 `museum_objects.year` → 这里叫 date、那里叫 year）。
+      // 第一次接 formatYear 时 grep 的是 `year`，墙签这条就因为叫 date 漏了，
+      // 于是列表显示「140 BC」而点进来还是「-140」。改这块记得两个名字都 grep。
+      if (facts.date?.isNotEmpty == true)
+        formatYear(facts.date!, AppLocalizations.of(context)!),
       if (medium?.isNotEmpty == true) medium!,
       if (facts.dimensions?.isNotEmpty == true) facts.dimensions!,
     ];

@@ -1,5 +1,7 @@
 // lib/features/content/data/models/museum_detail_model.dart
 import 'package:equatable/equatable.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart'
+    show parseNameI18n;
 
 class MuseumCategory extends Equatable {
   const MuseumCategory(
@@ -33,6 +35,7 @@ class MuseumDetail extends Equatable {
     this.archiveCount,
     this.description,
     this.coverImage,
+    this.nameI18n = const {},
   });
 
   final String slug;
@@ -61,8 +64,12 @@ class MuseumDetail extends Equatable {
   /// 封面直链（large 档，加法字段）；无合规封面 → null，封面 banner 隐藏。
   final String? coverImage;
 
-  /// 按 UI 语言取馆名：zh→中文名；其余→英文/拉丁名。
-  String localizedName(String lang) => lang == 'zh' ? name : nameEn;
+  /// 十语馆名（后端 `name_i18n`）。老后端不返回 → 空表。
+  final Map<String, String> nameI18n;
+
+  /// 按 UI 语言取馆名。与 MuseumSummary 共用一套解析与回退，别让两边漂移。
+  String localizedName(String lang) =>
+      nameI18n[lang] ?? (lang == 'zh' ? name : nameEn);
 
   factory MuseumDetail.fromJson(Map<String, dynamic> j) {
     final slug = j['slug'] as String? ?? '';
@@ -93,6 +100,7 @@ class MuseumDetail extends Equatable {
       coverImage: (j['cover_image'] as String?)?.isNotEmpty == true
           ? j['cover_image'] as String
           : null,
+      nameI18n: parseNameI18n(j['name_i18n']),
     );
   }
 
@@ -111,5 +119,6 @@ class MuseumDetail extends Equatable {
         archiveCount,
         description,
         coverImage,
+        nameI18n,
       ];
 }

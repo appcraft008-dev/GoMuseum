@@ -142,7 +142,7 @@ App 的价值是**在现场拍一张就认出它**（识别），不是独家文
 > | 原稿的事实陈述 | 2026-09-20 晚起 |
 > |---|---|
 > | 「`object_content` **无条件**调用 `maybe_trigger`」 | ❌ 已改：**匿名调用者不点火**，只有可识别身份才触发 |
-> | 「全局速率限制也不存在」 | ❌ 已改：nginx `limit_req 10r/s burst=20`，429 由 nginx 出、请求到不了 uvicorn |
+> | 「全局速率限制也不存在」 | ⚠️ **半改**：nginx `limit_req 10r/s burst=20` 只挂在 `api.gomuseum.app` 上，而本方案的新路由住在 `gomuseum.app` —— **那个 server 块现在零限流**。见下方硬前置条件 |
 > | 「那把锁完全不限制总量」 | ❌ 已改：`_LAZY_DAILY_SECTION_CAP = 300`，当天生成到顶就不再点火 |
 >
 > **公开网页层按定义是匿名的**（访客没有令牌），所以即使实现时真的顺手复用了
@@ -302,7 +302,7 @@ App 的价值是**在现场拍一张就认出它**（识别），不是独家文
 | 风险 | 对策 |
 |---|---|
 | Google 不索引（新域名 + 规模化 AI 内容容易被降权） | **分批上线，只上 665 件有真内容的**，绝不放出"待完善"页 |
-| 音频被爬 | 签名 URL + 限流（**限流那半 2026-09-20 已有**：nginx `10r/s`）+ 异常量监控 |
+| 音频被爬 | 签名 URL + 限流（⚠️ 限流那半**只在 `api.gomuseum.app` 上**，`gomuseum.app` 还没有 —— 见硬前置条件 2）+ 异常量监控 |
 | **内测轨道没推正式** | **前置条件，不是并行项**（见下） |
 | 分享页是"待完善" | `tabs` 非空才给分享入口（原则 8） |
 | 公开发布暴露归属问题 | 页脚来源声明；`images.credit` 字段已有 |
@@ -326,12 +326,43 @@ App 的价值是**在现场拍一张就认出它**（识别），不是独家文
 
 ### ⚠️ 硬前置条件
 
+#### 1. 推到正式轨道
+
 **App 目前在内测轨道，Play 链接对外人打不开** —— 分享页上的下载按钮今天点下去是
 "找不到该应用"。本功能上线**必须排在"推到正式轨道"之后**，
 否则每一个被拉来的人都撞在一堵墙上。
 
 这回到 [[product-backlog]] 里一直没做的那件事：发版最后一步（内测 → 正式放量）
 是这个功能的前置条件。
+
+#### 2. 给 `gomuseum.app` 这个 server 块也配上 `limit_req`
+
+**`limit_req` 是 server/location 级的，不是全局的。** 2026-09-20 那次审计只给
+`api.gomuseum.app` 配了，而本方案的新路由住在 **`gomuseum.app`** ——
+实测（2026-09-21）三个站点的 `limit_req` 行数：
+
+| server 块 | `limit_req` |
+|---|---|
+| `api.gomuseum.app` | ✅ `10r/s burst=20`（实测 40 连发 → 21 过 / 19 个 429） |
+| **`gomuseum.app`** | ❌ **0 行** ← 新路由要落在这儿 |
+| `staging-api.gomuseum.app` | ❌ 0 行 |
+
+今天这样是对的：`gomuseum.app` 现在只有静态政策页，后面没有付费 LLM。
+但 `/a/{slug}/{qid}` 一上去，性质就变了 —— qid 可枚举、`?lang=` 命中懒翻译，
+本文档自己标过那是「6650 个可被爬虫点燃的付费 LLM 任务」。
+
+⚠️ 别把原则 3 当成这条的替代品。原则 3 关掉的是**点火**（匿名不触发生成），
+限流挡的是**量**（DB 查询、R2 出网、渲染）。两件事，各挡各的。
+
+配置在 `/etc/nginx/sites-available/gomuseum.app`，
+仓库侧模板见 `deployment/production/`。⚠️ **CD 带不过去**
+（不在 `backend/` 路径下，且 nginx 跑在宿主机而非容器里），改完必须手动
+`nginx -t && systemctl reload nginx`。
+
+🔑 这条是怎么发现的：我在 2026-09-21 报告里写「nginx 限流还没上」，
+错了 —— 它早就上了。去查实际状态时才看见**上的是哪个 server 块**。
+「某个防护存在」和「它盖到了我要保护的那条路径」是两个问题，
+同型教训见 `anonymous-cost-holes-audit.md` §0.1（闸存在 ≠ 闸判的是这件事）。
 
 ## 二期（不在第一版）
 
@@ -347,7 +378,7 @@ App 的价值是**在现场拍一张就认出它**（识别），不是独家文
 | 需要的东西 | 现状 |
 |---|---|
 | 内容读取 | ✅ `GET /museums/{slug}/objects/{qid}/content` **读仍无鉴权**（返回 tabs/suggested/images/facts/artist），但 2026-09-20 起它**对匿名调用者不再产生副作用**（不触发懒生成）—— 见原则 3 |
-| 全局限流 | ✅ 2026-09-20 起 nginx `limit_req 10r/s burst=20`（原先**完全没有**）。⏳ 阈值是拍的不是量的，有真实用户后要复查，见 [[product-backlog]] |
+| 限流 | ⚠️ **只盖到 `api.gomuseum.app`**，本方案要用的 `gomuseum.app` 那个 server 块是 0 行 —— 见硬前置条件 2。已有那半：`limit_req 10r/s burst=20`（原先**完全没有**）。⏳ 阈值是拍的不是量的，有真实用户后要复查（读 `error.log` 的 `excess` 值，保留 14 天），见 [[product-backlog]] |
 | 作品图 | ✅ `object_images` 表，`_sized(storage, image_key, "large")`，含 `credit` |
 | 音频 key | ✅ `ObjectContentSection.audio_key`（per-section） |
 | 静态站 | ✅ `deployment/website/`（index/privacy/terms，已有 fr 目录 = 多语言先例） |

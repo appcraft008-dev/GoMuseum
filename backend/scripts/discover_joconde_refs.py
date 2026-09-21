@@ -32,6 +32,7 @@ attributes —— 那一步才让展签面板(尺寸/材质)出数,且不碰正�
 """
 
 import argparse
+import hashlib
 import sys
 import time
 
@@ -47,6 +48,7 @@ from app.services.enrichment.sources.joconde import (  # noqa: E402
     TABULAR_URL,
     resolve_resource_id,
 )
+from app.services.enrichment.sources.joconde_catalog import _category  # noqa: E402
 
 _UA = "GoMuseumEnrichment/1.0 (appcraft008@gmail.com)"
 _PAUSE = 0.25  # 礼貌限速。逐条查 ~3000 件约 13 分钟
@@ -56,7 +58,14 @@ _PAGE = 200  # 上游硬上限(超过直接 400 "Page size exceeds allowed maxim
 _IMPOSSIBLE_INV = "ZZ_NO_SUCH_INVENTORY_NUMBER_42"
 # 金标准取样上限。多查不会更准 —— 能检出系统性错配的样本量很小,
 # 而每件都要一次上游往返(卢浮宫有 7312 件权威 P347,全查要半小时,纯浪费)。
-# 按馆藏号排序取前 N 而不是随机:同一个库两次跑的自检样本一致,结果可复现。
+#
+# ⚠️ 取样按**馆藏号的 md5 排序**,不是按馆藏号本身排序。两者都可复现
+# (同一个库两次跑拿到同一批),但后者是**取簇**:字符串升序的前 20 全是
+# 无部门前缀的纯数字号(`133`、`2004 1 128`、`1877.001.0036`),
+# 而那正是模块头说"特异性很弱"的那一类。2026-09-21 卢浮宫实测:
+# 按馆藏号排序的金标准 20/20 全未命中,而分层随机抽样的真实命中率是 42%
+# —— 自检差点把一次正常的反查判成"匹配方式对本馆不成立"。
+# 可复现 ≠ 有代表性,别拿前者换后者。
 _SELF_TEST_MAX = 20
 
 
@@ -92,21 +101,67 @@ def museum_locations(slug: str, path: str = "museums.yaml") -> list[str]:
     return list(locs)
 
 
-def lookup_ref(get_json, rid: str, inv: str, locations: list[str]) -> tuple:
+def _inv_variants(inv: str) -> list[str]:
+    """馆藏号在上游的可能写法。
+
+    ⚠️ 纸上作品(素描/版画)在 Joconde 里**按面分行**:我们的 `INV 8195`
+    那边存成 `INV 8195, recto`(还有 `, verso`)。不试这两个后缀,
+    卢浮宫素描件 `__exact` 全部零行 —— 实测 80 件分层抽样命中率
+    1% → 42%,救回的 33/34 全靠这个后缀。
+
+    只加这两个确定的后缀,**不做通用归一化**(剥空格/连字符)。剥完
+    `E 367.1` → `E3671` 会在全库 80 万行里撞上别的件,而错配的 P347
+    会把别人的作品资料灌进这件且无处报错(见模块头判据①)。
+    """
+    return [inv, f"{inv}, recto", f"{inv}, verso"]
+
+
+def _same_kind(row: dict, category: str | None) -> bool:
+    """这一行的 Domaine 和我们记的品类是同一类吗。
+
+    ⚠️ 卢浮宫的 INV 号在**绘画部和素描部之间重复使用**:`INV 5145` 既是
+    Gudin 的油画(寄存凡尔赛),又是 Muziano 之后的一张素描。两条在上游是
+    不同的 `Numero_inventaire` 字符串(`MV 7196 ; INV 5145 ; LP 5138`
+    对 `INV 5145, recto`),所以判据①的唯一性检查**挡不住** —— 各自都只
+    返回一行。实测 80 件金标准里 7 件(9%)就是这样配错的,全部是
+    "我们记 painting,配到 dessin"。
+
+    只在**用了后缀变体**时才查这一条:原值精确命中不存在这种歧义。
+    品类未知就判否(宁缺毋滥)——猜错的代价是把别人作品的资料灌进这件。
+    """
+    if not category or category == "unknown":
+        return False
+    return _category(row.get("Domaine")) == category
+
+
+def lookup_ref(
+    get_json, rid: str, inv: str, locations: list[str], category: str | None = None
+) -> tuple:
     """馆藏号 → (ref, 原因)。ref 为 None 时原因说明为什么没采纳。
 
     一次请求拿回该号在**全库**的所有行,本地按 locations 过滤 —— 不把
     Localisation 塞进查询条件,是为了能分清"上游根本没这个号"和
     "有,但记在别的馆名下(寄存)",后者是要单独报数的。
+
+    逐个试 `_inv_variants`,第一个**在本馆唯一命中**的就采纳;
+    后缀变体不改变判据①②,只是把同一件的另一种写法也找出来。
     """
-    data = get_json(
-        TABULAR_URL.format(rid=rid),
-        {"Numero_inventaire__exact": inv, "page_size": _PAGE},
-    )
-    rows = data.get("data") or []
+    rows, mine, used_variant = [], [], False
+    for i, cand in enumerate(_inv_variants(inv)):
+        data = get_json(
+            TABULAR_URL.format(rid=rid),
+            {"Numero_inventaire__exact": cand, "page_size": _PAGE},
+        )
+        got = data.get("data") or []
+        rows += got
+        hit = [r for r in got if r.get("Localisation") in locations]
+        if hit:
+            mine, used_variant = hit, i > 0
+            break
     if not rows:
         return None, "上游无此号"
-    mine = [r for r in rows if r.get("Localisation") in locations]
+    if used_variant and len(mine) == 1 and not _same_kind(mine[0], category):
+        return None, "后缀变体命中但品类对不上(号在两个部门重复使用?)"
     if not mine:
         return None, "命中但在别馆(寄存?)"
     if len(mine) > 1:
@@ -152,6 +207,7 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
             (
                 o.inventory_number,
                 (o.attributes or {}).get("external_ids", {}).get("P347"),
+                o.category,
             )
             for o in objs
             if o.inventory_number
@@ -163,7 +219,8 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
             # `joconde_ref_via` 这个留痕字段本来是为"将来能整批撤回"留的,
             # 这里发现它的第二个用途:把自己写的和权威的分开。
             and not (o.attributes or {}).get("joconde_ref_via")
-        )
+        ),
+        key=lambda t: hashlib.md5(t[0].encode()).hexdigest(),
     )[:_SELF_TEST_MAX]
     if not gold:
         raise SystemExit(
@@ -174,8 +231,8 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
     print(f"自检:{len(gold)} 件金标准(权威源) + 1 个负样本", flush=True)
     tally: dict = {}
     conflicts = []
-    for inv, want in gold:
-        got, _ = lookup_ref(get_json, rid, inv, locations)
+    for inv, want, cat in gold:
+        got, _ = lookup_ref(get_json, rid, inv, locations, cat)
         verdict = classify(get_json, rid, want, got)
         tally[verdict] = tally.get(verdict, 0) + 1
         if verdict == "冲突":
@@ -190,6 +247,17 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
         for inv, want, got in conflicts:
             print(f"  🔴 {inv}: 权威={want} 反查={got}")
         raise SystemExit("自检未通过:反查与**仍然有效**的权威值冲突,已中止。")
+    # ⚠️ 金标准**全员未命中**也要拦。只看"有没有冲突"的话,一个什么都查不到的
+    # 反查永远零冲突 —— 自检照样打勾,然后整馆跑出 1% 命中率,看起来像
+    # "这个馆上游就是没数据"。2026-09-21 卢浮宫实测踩到:20/20 全是
+    # "反查未命中",自检却报 ✓(真因是上游按 recto/verso 分行,见 _inv_variants)。
+    # 金标准是**已知在上游存在**的件,查不到它们就是反查本身坏了。
+    if tally.get("反查未命中", 0) == len(gold):
+        raise SystemExit(
+            f"自检未通过:{len(gold)} 件金标准**全部**反查未命中。\n"
+            "它们是已知在上游存在的件(权威 P347 来自 Wikidata),全查不到\n"
+            "说明匹配方式对本馆不成立(如上游馆藏号写法不同),不是'本馆没数据'。"
+        )
     print(
         "  ✓ 无冲突,负样本正确拒绝 —— "
         + "、".join(f"{k} {v}" for k, v in sorted(tally.items())),
@@ -231,7 +299,9 @@ def main(
     reasons: dict = {}
     for i, o in enumerate(todo):
         try:
-            ref, why = lookup_ref(_get_json, rid, o.inventory_number, locations)
+            ref, why = lookup_ref(
+                _get_json, rid, o.inventory_number, locations, o.category
+            )
         except Exception as e:  # 单件网络失败跳过,幂等重跑再补(纪律①)
             ref, why = None, f"请求失败({type(e).__name__})"
         reasons[why] = reasons.get(why, 0) + 1

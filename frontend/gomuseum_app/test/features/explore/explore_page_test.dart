@@ -63,6 +63,15 @@ Widget _wrap() => ProviderScope(
     );
 
 void main() {
+  testWidgets('界面上不出现 ISO 国家码', (tester) async {
+    await tester.pumpWidget(_wrap());
+    await tester.pumpAndSettle();
+    // fake 数据里三个馆的 country 是 FR/FR/NL。首馆大卡的页脚曾把它**原样**
+    // 渲染出来,用户看到的就是一个 "FR" —— 机器码,且卡上方已有城市名。
+    expect(find.text('FR'), findsNothing);
+    expect(find.text('NL'), findsNothing);
+  });
+
   testWidgets('渲染刊头、搜索框与默认城市馆列表', (tester) async {
     await tester.pumpWidget(_wrap());
     // let the FutureProvider resolve + postframe callback settle

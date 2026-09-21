@@ -227,4 +227,43 @@ void main() {
 
     expect(find.text('MUSEUM:louvre'), findsOneWidget);
   });
+
+  testWidgets('标语与额度行不贴屏幕边 —— 它们漏了页面的横向边距', (tester) async {
+    // 两处都是 FittedBox(scaleDown)，而 scaleDown 缩到的是**可用宽度**：
+    // 不给边距就等于缩到满屏宽、左右零留白贴着屏幕边（法语首页肉眼可见）。
+    // 同页其它元素都有 26 的横向边距，只有这两块漏了。
+    //
+    // ⚠️ 画布必须收窄到真手机宽度。默认画布 800dp 宽，法语标语在测试字体下
+    // 还撑不满，scaleDown 压根不触发、文字自然居中 —— 那样这条测试在
+    // "有边距"和"没边距"两种实现下都是绿的，等于没测（第一版就是这么写错的）。
+    tester.view.physicalSize = const Size(411 * 3, 900 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
+        ],
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('fr'),
+            home: Scaffold(body: HomePage())),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    for (final finder in [
+      find.textContaining('Approchez-vous'),
+      find.textContaining('scans gratuits', findRichText: true),
+    ]) {
+      final r = tester.getRect(finder.first);
+      expect(r.left, greaterThan(0), reason: '左边贴着屏幕边了');
+      expect(r.right, lessThan(411), reason: '右边贴着屏幕边了');
+    }
+  });
 }

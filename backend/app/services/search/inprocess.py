@@ -22,7 +22,13 @@ import time
 from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
-from app.services.museum_repo import _pick, _resolve_name, _sized
+from app.services.museum_repo import (
+    _pick,
+    _resolve_name,
+    _sized,
+    museum_name,
+    museum_names,
+)
 from app.services.recognition.matcher import normalize, normalize_inv
 
 logger = logging.getLogger(__name__)
@@ -191,12 +197,28 @@ def _search_museums(db, query: str, language: str) -> list[dict]:
     qn = normalize(query)
     out = []
     for m in db.query(Museum).all():
-        hay = [normalize(x) for x in (m.name_zh, m.name_en, m.city_zh, m.city_en) if x]
+        # 十语馆名一起进匹配面:此前只有 name_zh/name_en,而匹配是归一化**子串**,
+        # 于是在法语界面搜 "Musée du Louvre" 一条都搜不到("musee du louvre"
+        # 不是 "louvre museum" 的子串)——用户用自己语言里的馆名反而找不到馆。
+        hay = [
+            normalize(x)
+            for x in (
+                *museum_names(m).values(),
+                m.name_zh,
+                m.name_en,
+                m.city_zh,
+                m.city_en,
+            )
+            if x
+        ]
         if any(qn in h for h in hay):
             out.append(
                 {
                     "slug": m.slug,
-                    "name": _pick(language, m.name_zh, m.name_en, None),
+                    "name": museum_name(m, language),
+                    # city 仍是中英两套(四个馆都在巴黎,city_en 在多数语言里恰好对)。
+                    # ja/ko/zh-hant 会看到 "Paris" 而不是 パリ/파리/巴黎 —— 同一类
+                    # 缺陷但本次未报,留着别顺手改,要改就照 names 的办法补 cities。
                     "city": _pick(language, m.city_zh, m.city_en, None),
                 }
             )
