@@ -56,6 +56,21 @@ museums:
                  Q125191]
     country_lang: fr
     sources: [wikipedia]        # v1 不碰 Joconde 142k(留给 Meilisearch 换代)
+    # 本馆在 Joconde `Localisation` 列的写法。**全量实测取得**(2026-09-21):
+    # 对 `Nom_officiel_musee__exact "musée du Louvre"` 的全部 142082 条逐条统计,
+    # 不抽样 —— 抽样会漏掉小部门(Objets d'art 只占 0.08%)。
+    # 下面五项合计 141042/142082 = 99.27%;余下 1040 条是寄存在外馆的,按配方
+    # "漏寄存件是已知代价(宁缺毋滥)"不收。
+    # ⚠️ 古物三部门(埃及/近东/希腊)实测**全为 0** —— Joconde 不收卢浮的古物,
+    #    别照"八大部门"推着往里加,加了也只是多五个永不命中的字符串。
+    # ⚠️ 这里只喂 discover_joconde_refs.py 当跨馆误配的闸,不影响 sources
+    #    (上面那条"v1 不碰 Joconde"的决定没变:富化走 backfill_joconde_attrs.py)。
+    joconde_locations:
+      - "Paris ; musée du Louvre département des Arts graphiques"   # 125746
+      - "Paris ; musée du Louvre"                                   #   7823
+      - "Paris ; musée du Louvre département des Peintures"         #   5360
+      - "Paris ; musée du Louvre département des Sculptures"        #   1993
+      - "Paris ; musée du Louvre département des Objets d'art"      #    120
     collect_all_types: true     # 百科式大馆:整部门全收(古物/装饰艺术 P31 长尾不可枚举)
     fetch_limit: 40000          # 18.5k 条目 × 多 P31 重复行余量
     sample_size: 30

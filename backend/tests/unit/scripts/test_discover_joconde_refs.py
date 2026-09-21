@@ -89,8 +89,9 @@ def test_query_uses_exact_not_contains():
 
 
 class _Obj:
-    def __init__(self, inv, p347=None, via=None):
+    def __init__(self, inv, p347=None, via=None, category="painting"):
         self.inventory_number = inv
+        self.category = category
         self.attributes = {"external_ids": {"P347": p347} if p347 else {}}
         if via:
             self.attributes["joconde_ref_via"] = via
@@ -119,7 +120,7 @@ def test_self_test_uses_the_authoritative_ones_when_both_kinds_exist(monkeypatch
     ]
     seen = []
 
-    def fake_lookup(g, rid, inv, locs):
+    def fake_lookup(g, rid, inv, locs, cat=None):
         seen.append(inv)
         return ("M_AUTH" if inv == "PPP_AUTH" else None), "采纳"
 
@@ -137,7 +138,7 @@ def test_self_test_sample_is_capped(monkeypatch):
     objs = [_Obj("PPP%03d" % i, "M%d" % i) for i in range(200)]
     seen = []
 
-    def fake_lookup(g, rid, inv, locs):
+    def fake_lookup(g, rid, inv, locs, cat=None):
         seen.append(inv)
         return ({"PPP%03d" % i: "M%d" % i for i in range(200)}.get(inv), "采纳")
 
@@ -146,7 +147,21 @@ def test_self_test_sample_is_capped(monkeypatch):
     self_test(None, "rid", objs, [LOC])
     checked = [x for x in seen if x != "ZZ_NO_SUCH_INVENTORY_NUMBER_42"]
     assert len(checked) == _SELF_TEST_MAX
-    assert checked == sorted(checked), "取样要确定性(排序后取前 N),否则两次跑不可复现"
+
+    # 可复现:同一批输入两次跑拿到同一批样本。
+    seen.clear()
+    self_test(None, "rid", objs, [LOC])
+    again = [x for x in seen if x != "ZZ_NO_SUCH_INVENTORY_NUMBER_42"]
+    assert again == checked, "取样要确定性,否则两次跑的自检结果不可比"
+
+    # 但**不能靠排序**拿到确定性 —— 按馆藏号升序取前 N 是取簇:
+    # 卢浮宫实测那样会选出一整批无部门前缀的纯数字号(特异性最弱的一类),
+    # 20/20 全未命中,而真实命中率是 42%。可复现 ≠ 有代表性。
+    assert (
+        checked
+        != sorted(objs_inv := [o.inventory_number for o in objs])[:_SELF_TEST_MAX]
+    ), "取样退回了「按馆藏号排序取前 N」——那是取簇"
+    assert set(checked) <= set(objs_inv)
 
 
 def test_self_test_passes_when_lookup_agrees_with_authoritative_p347(monkeypatch):
@@ -154,7 +169,10 @@ def test_self_test_passes_when_lookup_agrees_with_authoritative_p347(monkeypatch
     table = {"PPP746": "M7353", "PPP1006": "M7358"}
     monkeypatch.setattr(
         "scripts.discover_joconde_refs.lookup_ref",
-        lambda g, rid, inv, locs: (table.get(inv), "采纳" if inv in table else "无"),
+        lambda g, rid, inv, locs, cat=None: (
+            table.get(inv),
+            "采纳" if inv in table else "无",
+        ),
     )
     monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
     self_test(None, "rid", objs, [LOC])  # 不抛 = 通过
@@ -167,7 +185,7 @@ def test_self_test_fails_on_a_conflict_with_a_live_authoritative_ref(monkeypatch
     objs = [_Obj("PPP746", "M7353"), _Obj("PPP1006", "M7358")]
     monkeypatch.setattr(
         "scripts.discover_joconde_refs.lookup_ref",
-        lambda g, rid, inv, locs: ("M_WRONG", "采纳"),
+        lambda g, rid, inv, locs, cat=None: ("M_WRONG", "采纳"),
     )
     monkeypatch.setattr(
         "scripts.discover_joconde_refs.ref_exists", lambda g, rid, ref: True
@@ -186,7 +204,7 @@ def test_self_test_tolerates_a_dead_authoritative_ref(monkeypatch):
     objs = [_Obj("PDUT933", "M1111160004")]
     monkeypatch.setattr(
         "scripts.discover_joconde_refs.lookup_ref",
-        lambda g, rid, inv, locs: (
+        lambda g, rid, inv, locs, cat=None: (
             ("M1111160004529", "采纳") if inv == "PDUT933" else (None, "无")
         ),
     )
@@ -205,7 +223,10 @@ def test_self_test_tolerates_a_lookup_miss(monkeypatch):
     table = {"PPP746": "M7353"}
     monkeypatch.setattr(
         "scripts.discover_joconde_refs.lookup_ref",
-        lambda g, rid, inv, locs: (table.get(inv), "采纳" if inv in table else "无"),
+        lambda g, rid, inv, locs, cat=None: (
+            table.get(inv),
+            "采纳" if inv in table else "无",
+        ),
     )
     monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
     self_test(None, "rid", objs, [LOC])  # 不抛 = 通过
@@ -218,7 +239,10 @@ def test_self_test_fails_when_impossible_inventory_number_matches(monkeypatch):
     objs = [_Obj("PPP746", "M7353")]
     monkeypatch.setattr(
         "scripts.discover_joconde_refs.lookup_ref",
-        lambda g, rid, inv, locs: ("M7353" if inv == "PPP746" else "M_ANY", "采纳"),
+        lambda g, rid, inv, locs, cat=None: (
+            "M7353" if inv == "PPP746" else "M_ANY",
+            "采纳",
+        ),
     )
     monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
     with pytest.raises(SystemExit):
@@ -251,3 +275,150 @@ def test_locations_are_read_from_config(tmp_path):
         % (LOC, OTHER)
     )
     assert museum_locations("petit_palais", str(p)) == [LOC, OTHER]
+
+
+# ── 纸上作品的 recto/verso 后缀 ────────────────────────────────────────────
+# 上游把素描/版画**按面分行**:我们的 `INV 8195` 那边是 `INV 8195, recto`。
+# 不试后缀的话卢浮宫素描件 __exact 全部零行 —— 实测 80 件分层抽样
+# 命中率 1% → 42%,救回的 33/34 全靠这个后缀。
+
+
+def _by_inv(table):
+    """按被查的馆藏号返回不同结果的假 get_json（真上游就是这样)。"""
+    seen = []
+
+    def get_json(url, params=None):
+        params = params or {}
+        seen.append(params)
+        return {"data": table.get(params.get("Numero_inventaire__exact"), [])}
+
+    get_json.seen = seen
+    return get_json
+
+
+def test_recto_suffix_is_found():
+    g = _by_inv(
+        {
+            "INV 8195, recto": [
+                {"Reference": "M8195", "Localisation": LOC, "Domaine": "dessin"}
+            ]
+        }
+    )
+    assert lookup_ref(g, "rid", "INV 8195", [LOC], "works_on_paper") == (
+        "M8195",
+        "采纳",
+    )
+
+
+def test_verso_suffix_is_found():
+    g = _by_inv(
+        {
+            "RF 20815, verso": [
+                {"Reference": "M2081", "Localisation": LOC, "Domaine": "estampe"}
+            ]
+        }
+    )
+    assert lookup_ref(g, "rid", "RF 20815", [LOC], "works_on_paper") == (
+        "M2081",
+        "采纳",
+    )
+
+
+def test_plain_value_still_wins_without_extra_requests():
+    """原值命中就停,不再多打两次上游(逐条查 1 万件,每件省两次往返)。"""
+    g = _by_inv({"PPP377": [{"Reference": "M111", "Localisation": LOC}]})
+    assert lookup_ref(g, "rid", "PPP377", [LOC]) == ("M111", "采纳")
+    assert len(g.seen) == 1
+
+
+def test_suffix_variants_do_not_loosen_the_museum_gate():
+    """后缀变体只是换写法,不放宽判据② —— 命中在别馆照样拒绝。"""
+    g = _by_inv(
+        {
+            "INV 8195, recto": [
+                {"Reference": "M8195", "Localisation": OTHER, "Domaine": "dessin"}
+            ]
+        }
+    )
+    assert lookup_ref(g, "rid", "INV 8195", [LOC], "works_on_paper") == (
+        None,
+        "命中但在别馆(寄存?)",
+    )
+
+
+def test_suffix_variants_do_not_loosen_the_uniqueness_gate():
+    """判据①也不放宽:同一变体下本馆两条同号,仍然拒绝。"""
+    g = _by_inv(
+        {
+            "INV 8195, recto": [
+                {"Reference": "A", "Localisation": LOC, "Domaine": "dessin"},
+                {"Reference": "B", "Localisation": LOC, "Domaine": "dessin"},
+            ]
+        }
+    )
+    assert lookup_ref(g, "rid", "INV 8195", [LOC], "works_on_paper")[0] is None
+
+
+def test_no_general_normalisation():
+    """**只**加这两个确定的后缀,不剥空格/连字符。剥完 `E 367.1` → `E3671`
+    会在全库 80 万行里撞上别的件,而错配的 P347 无处报错。
+    """
+    g = _by_inv({"INV8195": [{"Reference": "M8195", "Localisation": LOC}]})
+    assert lookup_ref(g, "rid", "INV 8195", [LOC]) == (None, "上游无此号")
+
+
+def test_self_test_fails_when_every_gold_sample_misses(monkeypatch):
+    """金标准**全员**未命中 = 反查本身坏了,不是"本馆没数据"。
+
+    只看"有没有冲突"的话,一个什么都查不到的反查永远零冲突、自检照样打勾。
+    2026-09-21 卢浮宫实测踩到:20/20 全未命中而自检报 ✓。
+    """
+    objs = [_Obj("INV 8195", "M1"), _Obj("INV 483", "M2")]
+    monkeypatch.setattr(
+        "scripts.discover_joconde_refs.lookup_ref",
+        lambda g, rid, inv, locs, cat=None: (None, "上游无此号"),
+    )
+    monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
+    with pytest.raises(SystemExit, match="全部"):
+        self_test(None, "rid", objs, [LOC])
+
+
+def test_suffix_variant_rejected_when_kind_differs():
+    """卢浮宫 `INV 5145` 的真实场景:同号在两个部门各有一件毫不相干的作品。
+
+    我们库里是 Gudin 的**油画**(寄存凡尔赛),而 `INV 5145, recto` 是
+    Muziano 之后的一张**素描**。两条在上游是不同的 Numero_inventaire 字符串,
+    所以判据①的唯一性检查各自都只看到一行、挡不住。实测 80 件金标准里
+    7 件(9%)是这样配错的,全是"我们记 painting,配到 dessin"。
+    """
+    g = _by_inv(
+        {
+            "INV 5145, recto": [
+                {
+                    "Reference": "50350007462",
+                    "Localisation": LOC,
+                    "Domaine": "dessin",
+                }
+            ]
+        }
+    )
+    assert lookup_ref(g, "rid", "INV 5145", [LOC], "painting")[0] is None
+
+
+def test_original_value_hit_is_not_subject_to_kind_check():
+    """原值精确命中不存在这种歧义,不该被品类闸误杀(品类数据本身会缺)。"""
+    g = _by_inv({"PPP377": [{"Reference": "M111", "Localisation": LOC}]})
+    assert lookup_ref(g, "rid", "PPP377", [LOC], None) == ("M111", "采纳")
+
+
+def test_suffix_variant_rejected_when_our_kind_is_unknown():
+    """品类未知就判否 —— 猜错的代价是把别人作品的资料灌进这件(宁缺毋滥)。"""
+    g = _by_inv(
+        {
+            "INV 8195, recto": [
+                {"Reference": "M8195", "Localisation": LOC, "Domaine": "dessin"}
+            ]
+        }
+    )
+    assert lookup_ref(g, "rid", "INV 8195", [LOC], "unknown")[0] is None
+    assert lookup_ref(g, "rid", "INV 8195", [LOC], None)[0] is None
