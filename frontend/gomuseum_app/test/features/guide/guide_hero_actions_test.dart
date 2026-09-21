@@ -139,4 +139,50 @@ void main() {
         reason: '墙签该显示「${zh.yearBce('140')}」');
     expect(find.textContaining('-140'), findsNothing, reason: '原始负数不该露给用户');
   });
+
+  // ⚠️ 这条也是补的：墙签原本按 14 个字符硬截 medium，法语 "Huile sur toile"
+  // (15 字符) 显示成 "Huile sur to…"。阈值是按英语长度拍的
+  // ("Oil on canvas" 13 字符刚好过关)，法语德语系统性中招；而外层 Text 本来
+  // 就有 maxLines + ellipsis，真放不下会自己省略，再截一道纯属多余。
+  testWidgets('墙签不按字符数硬截材质 —— "Huile sur toile" 得完整', (t) async {
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        objectContentProvider((slug: 'louvre', qid: 'Q12418'))
+            .overrideWith((ref) => const ObjectContent(
+                  qid: 'Q12418',
+                  category: 'painting',
+                  language: 'fr',
+                  status: ContentStatus.ready,
+                  title: 'La Joconde',
+                  images: [],
+                  facts: ObjectFacts(
+                      artist: 'Léonard de Vinci',
+                      date: '1503',
+                      medium: 'Huile sur toile',
+                      dimensions: '77 × 53 cm'),
+                  tabs: [
+                    ObjectTab(
+                        sectionCode: 'overview',
+                        label: 'Visite standard',
+                        body: 'Texte.',
+                        hasAudio: false)
+                  ],
+                  suggestedQuestions: [],
+                )),
+        _entitlementsOverride,
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
+        theme: AppTheme.lightTheme(),
+        home: const GuidePage(args: GuideArgs(slug: 'louvre', qid: 'Q12418')),
+      ),
+    ));
+    await t.pumpAndSettle();
+
+    expect(find.textContaining('Huile sur toile'), findsWidgets);
+    expect(find.textContaining('Huile sur to…'), findsNothing,
+        reason: '截断该交给排版，不是按字符数提前砍');
+  });
 }

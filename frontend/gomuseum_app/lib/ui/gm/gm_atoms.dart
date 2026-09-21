@@ -64,47 +64,78 @@ class GmSectionHead extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
-    final effectiveNumberColor = numberColor ?? gm.accent;
-    return Row(
-      children: [
-        Text(
-          number,
-          style: GmText.serif(
-            size: 13,
-            weight: FontWeight.w700,
-            color: effectiveNumberColor,
-            letterSpacing: 2,
-          ),
-        ),
-        const SizedBox(width: 12),
-        // label 原来是不限宽的 Text——法语「Aide & Mentions légales」这类较长
-        // 译法在窄屏下会让 Row 整体溢出(实测 34px)。包一层 Flexible + 单行省略：
-        // 短文案渲染不受影响(仍按内容自身宽度显示，hairline 照常吃掉剩余空间)，
-        // 长文案则安全省略号收尾，不会撑爆整行。
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GmText.sans(
-                size: 12,
-                letterSpacing: context.gmLetterSpacing(3),
-                weight: FontWeight.w600),
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(child: GmHairline()),
-        if (note != null) ...[
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: onNoteTap,
-            behavior: HitTestBehavior.opaque,
-            child: Text(note!, style: GmText.sans(size: 11.5, color: gm.sub)),
-          ),
-        ],
-      ],
+    final numberStyle = GmText.serif(
+      size: 13,
+      weight: FontWeight.w700,
+      color: numberColor ?? gm.accent,
+      letterSpacing: 2,
+    );
+    final labelStyle = GmText.sans(
+        size: 12,
+        letterSpacing: context.gmLetterSpacing(3),
+        weight: FontWeight.w600);
+    final noteStyle = GmText.sans(size: 11.5, color: gm.sub);
+
+    // 标题**不能**是 Row 的 flex 子节点。曾经是 `Flexible(label)` + `Expanded(线)`：
+    // 两者 flex 都是 1，而 Expanded 是 tight —— 于是那条装饰线**跟标题平分**剩余
+    // 宽度。实测 411dp 宽下「Louvre Museum」需 163 只分到 61 → 显示成「Louvr…」，
+    // 「Musées à Paris」需 176 只分到 108 →「Musées à…」。不是文案太长，
+    // 是分空间的规则错了。（loose 的 Flexible 少用的那部分也不会回流给线，
+    // 而是堆在行尾，所以短标题时 note 还会离右边缘浮着一截。）
+    //
+    // 要「标题按自身宽度排、线吃掉剩余、note 贴右」，标题就只能是非 flex；
+    // 而它一旦是非 flex 就自己不会收缩，上限必须算出来 —— 所以这里量一次
+    // 编号与 note 的实际宽度，剩下的给标题，再给线留一小截。
+    return LayoutBuilder(
+      builder: (context, c) {
+        final scaler = MediaQuery.textScalerOf(context);
+        double widthOf(String s, TextStyle style) => (TextPainter(
+              text: TextSpan(text: s, style: style),
+              textDirection: Directionality.of(context),
+              textScaler: scaler,
+            )..layout())
+                .width;
+
+        final fixed = widthOf(number, numberStyle) +
+            12 + // 编号与标题之间
+            12 + // 标题与线之间
+            (note == null ? 0 : widthOf(note!, noteStyle) + 12);
+        final maxLabel =
+            (c.maxWidth - fixed - _minHairline).clamp(0.0, double.infinity);
+
+        return Row(
+          children: [
+            Text(number, style: numberStyle),
+            const SizedBox(width: 12),
+            ConstrainedBox(
+              // 上限而非配额：短标题完整显示，只有真的放不下才省略
+              //（法语「Aide & Mentions légales」那类）。
+              constraints: BoxConstraints(maxWidth: maxLabel),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(child: GmHairline()),
+            if (note != null) ...[
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: onNoteTap,
+                behavior: HitTestBehavior.opaque,
+                child: Text(note!, style: noteStyle),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
+
+  /// 标题再长也给发丝线留这么宽 —— 线是这个栏头的识别特征，缩到 0 就不成形了。
+  static const double _minHairline = 16;
 }
 
 /// 发丝线

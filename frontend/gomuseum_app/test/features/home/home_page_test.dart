@@ -227,4 +227,38 @@ void main() {
 
     expect(find.text('MUSEUM:louvre'), findsOneWidget);
   });
+
+  testWidgets('标语与额度行不贴屏幕边 —— 它们漏了页面的横向边距', (tester) async {
+    // 两处都是 FittedBox(scaleDown)，而 scaleDown 缩到的是**可用宽度**：
+    // 不给边距就等于缩到满屏宽、左右零留白贴着屏幕边（法语首页肉眼可见）。
+    // 同页其它元素都有 26 的横向边距，只有这两块漏了。
+    // 断言写成"离边缘还有距离"而不是具体像素 —— 与字体、语言都无关。
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
+        ],
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('fr'),
+            home: Scaffold(body: HomePage())),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final screen =
+        tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    for (final finder in [
+      find.textContaining('Approchez-vous'),
+      find.textContaining('scans gratuits', findRichText: true),
+    ]) {
+      final r = tester.getRect(finder.first);
+      expect(r.left, greaterThan(0), reason: '左边贴着屏幕边了');
+      expect(r.right, lessThan(screen), reason: '右边贴着屏幕边了');
+    }
+  });
 }

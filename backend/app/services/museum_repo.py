@@ -413,10 +413,13 @@ def museum_names(museum: Museum) -> dict[str, str]:
     ⚠️ 回退到 DB 的 name_zh/name_en 必须留着:DB 里可能有 yaml 没配的馆
     (手工建的/刚删了配置),那时两语总比没有强。
     """
-    return _museum_names().get(museum.slug) or {
+    names = _museum_names().get(museum.slug) or {
         "zh": museum.name_zh,
         "en": museum.name_en,
     }
+    # 空值不进表:DB 那条回退路径上 name_zh/name_en 可能是 None,留着只会让
+    # 每个消费方都得判一次"这个键在但值是 null"。
+    return {k: v for k, v in names.items() if v}
 
 
 def museum_name(museum: Museum, language: str) -> str:

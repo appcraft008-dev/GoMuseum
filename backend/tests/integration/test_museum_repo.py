@@ -302,8 +302,9 @@ def test_museum_missing_from_yaml_still_gets_a_name(session):
     names = next(r for r in list_museums(session) if r["slug"] == "aaa_museum")[
         "name_i18n"
     ]
-    # 回退 DB 两语(fixture 只写了 name_en;拿不到名字总比显示 slug 强)
-    assert names == {"zh": None, "en": "aaa_museum"}
+    # 回退 DB(fixture 只写了 name_en;拿不到名字总比显示 slug 强)。
+    # 空值不进表——否则前端每个消费方都得判一次"键在但值是 null"。
+    assert names == {"en": "aaa_museum"}
 
 
 def test_credit_hides_the_painter_but_keeps_the_photographer(session):
