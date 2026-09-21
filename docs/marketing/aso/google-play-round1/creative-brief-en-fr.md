@@ -66,16 +66,22 @@
 
 ### EN（素材：`docs/play-assets/screenshots/en-US/`）
 
-| # | 素材文件 | 营销目标 | 主标题 | 副标题（可选） | 为什么在这个位置 |
+### ⚠️ 硬规则：每张 3–5 个词，大字，无副标题
+
+**用户 2026-09-21 定：「每张图的文案 3-5 个单词，用大字！你这样写一句话根本没人看」。**
+
+本文件上一版写的是整句（最长 8 个词）并带副标题——在手机上的商店页缩略图里读不清，等于没有。**全部重写，副标题一律取消**（副标题必然用小字，而小字在这个尺寸下不存在）。
+
+| # | 素材文件 | 营销目标 | 主标题（3–5 词） | 词数 | 为什么是这句 |
 |---|---|---|---|---|---|
-| 1 | `screenshot_EN_01_home.jpg` | **Hook** — 一句话说清是什么 | **You don't need to know its name.** | Point your camera. Hear its story. | Slot 1 决定 80% 的转化判断。用核心那句，而不是功能名。它同时是竞品用户亲口描述的痛点（F5） |
-| 2 | `screenshot_EN_02_scan.jpg` | 核心机制可视化 | **Point your camera — that's the whole step.** | | 紧接 Slot 1 的"怎么做到"。差异化最强的一帧，直接对应 Title 里的 `Scan` |
-| 3 | `screenshot_EN_03_result.jpg` | **支柱1 · 信得过** | **Sourced, checked — never invented.** | | 前三张的收口。F6 证明这个类目里"像 AI 编的"已是成形疑虑，必须在折叠线以上就反驳掉 |
-| 4 | `screenshot_EN_04_explore.jpg` | 覆盖面（转化层） | **Louvre, Orsay, Orangerie, Petit Palais — one app.** | | 方向B 降到第 4 位：它是功能说明，差异化弱，但对"值不值得装"有加分 |
-| 5 | `screenshot_EN_05_collection.jpg` | 内容广度 | **Thousands of works, four collections.** | Search by artwork or artist. | 原写 "650+"，2026-09-21 改回——那是缓存快照不是能力上限（懒生成约 20 秒补齐），且数字会随上新馆持续过期 |
-| 6 | `screenshot_EN_06_indepth.jpg` | 内容深度 | **Go as deep as you want.** | Artist · Background · Analysis · Facts | 只留 1 张。上一版素材里这个界面有 5 张重复变体，不该占 5 个位 |
-| 7 | `screenshot_EN_07_pass.jpg` | **支柱3 · 零门槛** | **One pass. Not a subscription.** | First 5 scans free — no account needed. | 转化前最后一击。两个竞品都有"付了还要再付"的差评，这里正面安抚 |
-| 8 | `screenshot_EN_08_footprints.jpg` | 留存信号 | **Everything you've seen, kept.** | | 弱转化、强留存的功能，放最后。Play 页面很少有人滑到第 8 张，位置合适 |
+| 1 | `screenshot_EN_01_home.jpg` | **Hook** | **Don't know its name?** | 4 | Slot 1 决定约 80% 的转化判断。用**问句**直接说中用户此刻的处境，比陈述产品功能有力。这正是 F5 竞品用户亲口描述的断点 |
+| 2 | `screenshot_EN_02_scan.jpg` | 核心机制 | **Point. That's it.** | 3 | 上一版写 "Point your camera — that's the whole step."（8 词）且与 Slot 1 副标题重复。砍到 3 词，"就这么简单"的语气反而更强 |
+| 3 | `screenshot_EN_03_result.jpg` | **支柱1 · 信得过** | **Sourced. Never invented.** | 3 | 前三张收口。F6 证明本类目"像 AI 编的"已是成形疑虑，必须在折叠线以上反驳 |
+| 4 | `screenshot_EN_04_explore.jpg` | 覆盖面 | **Four museums. One app.** | 4 | 上一版列了四个馆名（7 词，小图上糊成一片）。**截图不参与索引**，所以馆名在这里没有关键词价值，只有阅读成本——砍掉 |
+| 5 | `screenshot_EN_05_collection.jpg` | 内容广度 | **Thousands of works.** | 3 | 不写具体数字：那是缓存快照不是能力上限（懒生成约 20 秒补齐），且会随上新馆持续过期 |
+| 6 | `screenshot_EN_06_indepth.jpg` | 内容深度 | **As deep as you want.** | 5 | 只留 1 张。素材里这个界面有多张重复变体，不该占多个位 |
+| 7 | `screenshot_EN_07_pass.jpg` | **支柱3 · 零门槛** | **One pass. No subscription.** | 4 | 转化前最后一击。两个竞品都有"付了还要再付"的差评，正面安抚 |
+| 8 | `screenshot_EN_08_footprints.jpg` | 留存信号 | **Everything you've seen.** | 3 | 弱转化强留存，放最后 |
 
 **备用图**：`screenshot_spare_pass_top.jpg`（Slot 7 的构图备选）、`screenshot_spare_result_qa.jpg`（预设问答 —— ⚠️ brief §四 明令**不进前三张**，只能作为 Slot 6 的替代，且文案必须写明是预先准备的问答、不是实时对话）。
 
@@ -83,16 +89,18 @@
 
 结构照搬，**但 Slot 1 的角度随法语市场定位调整**（法语获客词是 `audioguide`，不是识别）：
 
-| # | 素材文件 | 主标题 | 副标题（可选） | 与 EN 的差异 |
+同一条 3–5 词硬规则，**法语原生表达，不是直译**（法语通常比英语长约 20%，逐字译必然超）：
+
+| # | 素材文件 | 主标题（3–5 词） | 词数 | 法语侧说明 |
 |---|---|---|---|---|
-| 1 | `screenshot_FR_01_home.jpg` | **Pas besoin de connaître son titre.** | Pointez. Écoutez. | 同一核心句，法语原生表达（不是直译） |
-| 2 | `screenshot_FR_02_scan.jpg` | **Pointez votre appareil photo — c'est tout.** | | 同 EN |
-| 3 | `screenshot_FR_03_result.jpg` | **Sourcé, vérifié — jamais inventé.** | | 同 EN |
-| 4 | `screenshot_FR_04_explore.jpg` | **Louvre, Orsay, Orangerie, Petit Palais — une seule app.** | | 同 EN |
-| 5 | `screenshot_FR_05_collection.jpg` | **Des milliers d'œuvres, quatre collections.** | Cherchez par œuvre ou par artiste. | 同 EN：数字改回能力口径 |
-| 6 | `screenshot_FR_06_indepth.jpg` | **Aussi loin que vous voulez.** | Artiste · Contexte · Analyse · Faits | 同 EN |
-| 7 | `screenshot_FR_07_pass.jpg` | **Un seul pass. Pas un abonnement.** | 5 premiers scans gratuits — sans compte. | 同 EN |
-| 8 | `screenshot_FR_08_footprints.jpg` | **Tout ce que vous avez vu, conservé.** | | 同 EN |
+| 1 | `screenshot_FR_01_home.jpg` | **Son titre ? Peu importe.** | 4 | 不直译 "Don't know its name?"。"名字？不重要" 是更自然的法语口语，且语气更笃定 |
+| 2 | `screenshot_FR_02_scan.jpg` | **Pointez. C'est tout.** | 3 | 上一版 7 词，砍到 3 |
+| 3 | `screenshot_FR_03_result.jpg` | **Sourcé. Jamais inventé.** | 3 | 去掉 `vérifié`，两个词已足够 |
+| 4 | `screenshot_FR_04_explore.jpg` | **Quatre musées. Une app.** | 4 | 同 EN：馆名不进截图（截图不参与索引） |
+| 5 | `screenshot_FR_05_collection.jpg` | **Des milliers d'œuvres.** | 3 | `œuvre` 用连字 |
+| 6 | `screenshot_FR_06_indepth.jpg` | **Aussi loin que vous voulez.** | 5 | 与 EN 同构，法语这句本身就短 |
+| 7 | `screenshot_FR_07_pass.jpg` | **Un pass. Pas d'abonnement.** | 4 | 去掉 `seul` 和 `un`，省两词 |
+| 8 | `screenshot_FR_08_footprints.jpg` | **Votre visite, conservée.** | 3 | 不直译 "Everything you've seen"（法语会变 6 词），改用"您的参观，留存" |
 
 **FR 备用图**：`screenshot_spare_result_qa.jpg`（无 `pass_top` 备选，与 EN 不对称，非阻塞）。
 
