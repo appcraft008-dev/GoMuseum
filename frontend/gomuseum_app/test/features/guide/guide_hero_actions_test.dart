@@ -97,4 +97,46 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('zh'));
     expect(find.text(l10n.fbTitleObject), findsWidgets);
   });
+
+  // ⚠️ 这条是补的：墙签漏接 formatYear，列表显示「140 BC」而点进来还是「-140」。
+  // 漏的原因是同一个值在两个模型里叫不同名字（列表 `year` / ObjectFacts `date`），
+  // 当初 grep `year` 根本搜不到这里。
+  testWidgets('墙签的年代也要格式化 —— 不能列表对了详情页还是 -140', (t) async {
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        objectContentProvider((slug: 'louvre', qid: 'Q152249'))
+            .overrideWith((ref) => const ObjectContent(
+                  qid: 'Q152249',
+                  category: 'sculpture',
+                  language: 'zh',
+                  status: ContentStatus.ready,
+                  title: '米洛的维纳斯',
+                  images: [],
+                  facts: ObjectFacts(date: '-140', medium: '大理石'),
+                  tabs: [
+                    ObjectTab(
+                        sectionCode: 'overview',
+                        label: '通用描述',
+                        body: '正文。',
+                        hasAudio: false)
+                  ],
+                  suggestedQuestions: [],
+                )),
+        _entitlementsOverride,
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        theme: AppTheme.lightTheme(),
+        home: const GuidePage(args: GuideArgs(slug: 'louvre', qid: 'Q152249')),
+      ),
+    ));
+    await t.pumpAndSettle();
+
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    expect(find.textContaining(zh.yearBce('140')), findsWidgets,
+        reason: '墙签该显示「${zh.yearBce('140')}」');
+    expect(find.textContaining('-140'), findsNothing, reason: '原始负数不该露给用户');
+  });
 }
