@@ -234,3 +234,40 @@ def test_pack_skip_artworks_avoids_object_queries(session):
     # 该消失的是**逐件行加载**:按热度排序取全部藏品行 + 按 id 批量取图。
     assert "order by museum_objects.popularity" not in joined, f"仍在全量取藏品: {seen}"
     assert "object_images.object_id in" not in joined, f"仍在批量取图: {seen}"
+
+
+def _add(session, slug):
+    upsert_museum(session, {"slug": slug, "name_en": slug, "country": "FR"})
+    session.commit()
+
+
+def test_list_orders_by_yaml_rank_not_slug(session):
+    """馆序按 museums.yaml 的 rank,不是 slug 字母序。
+
+    判别式是刻意挑的:louvre/orsay/orangerie 的 rank 序(1,2,3)与字母序
+    (louvre,orangerie,orsay)在中间两位上**正好相反**。排序没生效时这条必红——
+    换成按 slug 排的实现,断言的后两位就会掉个个儿。
+    """
+    for slug in ("louvre", "orangerie"):
+        _add(session, slug)
+
+    assert [r["slug"] for r in list_museums(session)] == [
+        "louvre",  # rank 1
+        "orsay",  # rank 2  ← 字母序里它在 orangerie 之后
+        "orangerie",  # rank 3
+    ]
+
+
+def test_museum_without_rank_never_takes_the_hero_slot(session):
+    """这才是这个改动真正要挡的回归。
+
+    首条会被探索页拿去上大卡。以前顺序是 slug 字母序,于是上一个 slug
+    排在 `louvre` 前面的馆(随便一个 `aaa_...`/`british_museum`)就会**无声**
+    顶掉卢浮宫的首位——谁都没做这个决定。没配 rank 的馆一律落末尾。
+    """
+    for slug in ("louvre", "aaa_museum"):
+        _add(session, slug)
+
+    slugs = [r["slug"] for r in list_museums(session)]
+    assert slugs[0] == "louvre"
+    assert slugs[-1] == "aaa_museum"  # yaml 里没有它 → RANK_LAST
