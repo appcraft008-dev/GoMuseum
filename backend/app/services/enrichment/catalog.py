@@ -5,6 +5,10 @@ from pathlib import Path
 
 import yaml
 
+# 未配 rank 的馆排到末尾。museum_repo 的排序键共用这一个常量,
+# 免得两边各写一个 999 之后悄悄漂移。
+RANK_LAST = 999
+
 
 @dataclass(frozen=True)
 class MuseumConfig:
@@ -37,6 +41,10 @@ class MuseumConfig:
     # 只有 commonswiki,Petit Palais 建筑=Q820892 才有 enwiki)。显式配置而非自动
     # 跟随 P276——P276 也可能指向城市,那会拿城市文章当馆介绍材料。
     intro_qid: str | None = None
+    # 探索页馆序(小→大,首位上大卡)。**不是富化配置,是呈现决策**,放这里是因为
+    # museums.yaml 本来就兼任馆元数据真相源(name/city/country 也从这走)。
+    # 缺省 RANK_LAST → 未配的馆落到末尾,内部再按 slug,保证顺序稳定。
+    rank: int = RANK_LAST
 
 
 class MuseumCatalog:
@@ -68,6 +76,7 @@ class MuseumCatalog:
                 collection_qids=list(m.get("collection_qids") or []),
                 collect_all_types=bool(m.get("collect_all_types") or False),
                 intro_qid=m.get("intro_qid"),
+                rank=int(m.get("rank") or RANK_LAST),
             )
         return cls(configs)
 
@@ -75,3 +84,6 @@ class MuseumCatalog:
         if slug not in self._configs:
             raise KeyError(f"未知馆: {slug}")
         return self._configs[slug]
+
+    def items(self):
+        return self._configs.items()

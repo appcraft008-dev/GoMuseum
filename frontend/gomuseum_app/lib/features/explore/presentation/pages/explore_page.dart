@@ -344,17 +344,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     padding: EdgeInsets.symmetric(vertical: 11),
                     child: GmHairline(),
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        museum.country.isNotEmpty
-                            ? museum.country
-                            : museum.localizedCity(lang),
-                        style: GmText.sans(size: 11, color: gm.sub),
-                      ),
-                      const Spacer(),
-                      GmIcon(GmIcons.chevR, size: 17, color: gm.faint),
-                    ],
+                  // 页脚只留"可点进去"的箭头。这里原本还显示 museum.country——
+                  // 而那是 ISO 国家码,直接把 "FR" 摆给用户看;就算本地化成「法国」
+                  // 也是废话:卡片上方已经有城市名,section 头也写着城市。
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GmIcon(GmIcons.chevR, size: 17, color: gm.faint),
                   ),
                 ],
               ),

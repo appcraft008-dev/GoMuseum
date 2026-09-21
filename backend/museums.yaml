@@ -1,6 +1,12 @@
 # 馆配置：加一个馆 = 加一段
+#
+# `rank` = 探索页馆序(小→大)，**rank 最小的那个上大卡**。这是编辑决策，
+# 不是可计算的量：别拿 popularity 排(prod 里 77% 的记录是 0，等于在噪声里排)，
+# 也别拿 artwork_count 排(那是数据导入进度，不是值得逛的程度)。
+# 加新馆时**必须显式给 rank**——不给会落到末尾，而不会悄悄顶掉现有的首位。
 museums:
   orsay:
+    rank: 2
     name_zh: 奥赛博物馆
     name_en: Musée d'Orsay
     city_zh: 巴黎
@@ -21,6 +27,7 @@ museums:
     sample_size: 30
     sample_qids: []
   orangerie:
+    rank: 3
     name_zh: 橘园美术馆
     name_en: Musée de l'Orangerie
     city_zh: 巴黎
@@ -39,6 +46,7 @@ museums:
     sample_size: 10
     sample_qids: []
   louvre:
+    rank: 1
     name_zh: 卢浮宫
     name_en: Louvre Museum
     city_zh: 巴黎
@@ -76,6 +84,7 @@ museums:
     sample_size: 30
     sample_qids: []
   petit_palais:
+    rank: 4
     name_zh: 小皇宫美术馆
     name_en: Petit Palais
     city_zh: 巴黎

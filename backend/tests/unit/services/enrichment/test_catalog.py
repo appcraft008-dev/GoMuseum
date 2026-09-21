@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.enrichment.catalog import MuseumCatalog, MuseumConfig
+from app.services.enrichment.catalog import RANK_LAST, MuseumCatalog, MuseumConfig
 
 
 def test_get_returns_typed_config():
@@ -121,3 +121,34 @@ def test_collect_all_types_defaults_false(tmp_path):
         encoding="utf-8",
     )
     assert MuseumCatalog.from_file(p).get("orsay").collect_all_types is False
+
+
+def test_rank_parsed_and_defaults_to_last(tmp_path):
+    # 探索页馆序:配了按配的来,没配的落末尾(而不是靠 slug 字母序抢到首位)
+    p = tmp_path / "m.yaml"
+    p.write_text(
+        "museums:\n  a:\n    rank: 2\n    name_zh: 甲\n    name_en: A\n    city_zh: 城\n"
+        "    city_en: C\n    country: FR\n    wikidata_qid: Q1\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n"
+        "  b:\n    name_zh: 乙\n    name_en: B\n    city_zh: 城\n"
+        "    city_en: C\n    country: FR\n    wikidata_qid: Q2\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n",
+        encoding="utf-8",
+    )
+    cat = MuseumCatalog.from_file(p)
+    assert cat.get("a").rank == 2
+    assert cat.get("b").rank == RANK_LAST
+
+
+def test_every_museum_has_a_distinct_explicit_rank():
+    """上新馆必须显式表态它排第几。
+
+    两道断言各挡一种"顺序没人做过决定"的情形:
+    - 漏配 → 落末尾,界面上不显眼,但首位归属其实仍是没人定过的;
+    - 撞号 → 同 rank 之间的先后**又退回 slug 字母序**,等于白配。
+    """
+    items = list(MuseumCatalog.from_file("museums.yaml").items())
+    missing = [slug for slug, cfg in items if cfg.rank == RANK_LAST]
+    assert not missing, f"这些馆没配 rank: {missing}"
+    ranks = [cfg.rank for _, cfg in items]
+    assert len(set(ranks)) == len(ranks), f"rank 有重复: {sorted(ranks)}"

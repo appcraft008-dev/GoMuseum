@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime, timezone
+from functools import lru_cache
 
 from sqlalchemy import and_, exists, func, or_
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from app.models.content import (
 )
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
 from app.services.storage import get_object_storage
 
@@ -351,11 +353,29 @@ def _humanize_dimensions(raw):
     return f"{_fmt(vals[0])} × {_fmt(vals[1])} cm"
 
 
+@lru_cache(maxsize=1)
+def _museum_ranks() -> dict[str, int]:
+    """slug → 探索页名次。真相源是 museums.yaml 的 `rank`。
+
+    不进 DB 是有意的:它是纯呈现决策,改一次要配一次迁移 + 一次 prod 写操作,
+    而 yaml 改完随 CD 就生效。进程内只解析一次(馆配置不会热变)。
+    """
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+
+    return {
+        slug: cfg.rank for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
+    }
+
+
 def list_museums(db: Session) -> list[dict]:
     rows = (
         db.query(Museum, func.count(MuseumObject.id).label("cnt"))
         .outerjoin(MuseumObject, MuseumObject.museum_id == Museum.id)
         .group_by(Museum.id)
+        # 按 slug 只是兜底次序——真正的排序在下面按 rank 做。别把它当最终顺序:
+        # 首条会被探索页拿去上大卡,而字母序意味着哪天上个 `british_museum`
+        # 就会无声顶掉卢浮宫的首位。
         .order_by(Museum.slug)
         .all()
     )
@@ -369,6 +389,9 @@ def list_museums(db: Session) -> list[dict]:
             _sized(storage, m.cover_image_key, "thumb") if m.cover_image_key else None
         )
         out.append(row)
+    # DB 里可能有 yaml 没配的馆(手工建的/刚删了配置),给它末位,再按 slug 稳定排。
+    ranks = _museum_ranks()
+    out.sort(key=lambda r: (ranks.get(r["slug"], RANK_LAST), r["slug"]))
     return out
 
 
