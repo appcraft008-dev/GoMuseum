@@ -48,6 +48,7 @@ from app.services.enrichment.sources.joconde import (  # noqa: E402
     TABULAR_URL,
     resolve_resource_id,
 )
+from app.services.enrichment.sources.joconde_catalog import _category  # noqa: E402
 
 _UA = "GoMuseumEnrichment/1.0 (appcraft008@gmail.com)"
 _PAUSE = 0.25  # 礼貌限速。逐条查 ~3000 件约 13 分钟
@@ -115,7 +116,27 @@ def _inv_variants(inv: str) -> list[str]:
     return [inv, f"{inv}, recto", f"{inv}, verso"]
 
 
-def lookup_ref(get_json, rid: str, inv: str, locations: list[str]) -> tuple:
+def _same_kind(row: dict, category: str | None) -> bool:
+    """这一行的 Domaine 和我们记的品类是同一类吗。
+
+    ⚠️ 卢浮宫的 INV 号在**绘画部和素描部之间重复使用**:`INV 5145` 既是
+    Gudin 的油画(寄存凡尔赛),又是 Muziano 之后的一张素描。两条在上游是
+    不同的 `Numero_inventaire` 字符串(`MV 7196 ; INV 5145 ; LP 5138`
+    对 `INV 5145, recto`),所以判据①的唯一性检查**挡不住** —— 各自都只
+    返回一行。实测 80 件金标准里 7 件(9%)就是这样配错的,全部是
+    "我们记 painting,配到 dessin"。
+
+    只在**用了后缀变体**时才查这一条:原值精确命中不存在这种歧义。
+    品类未知就判否(宁缺毋滥)——猜错的代价是把别人作品的资料灌进这件。
+    """
+    if not category or category == "unknown":
+        return False
+    return _category(row.get("Domaine")) == category
+
+
+def lookup_ref(
+    get_json, rid: str, inv: str, locations: list[str], category: str | None = None
+) -> tuple:
     """馆藏号 → (ref, 原因)。ref 为 None 时原因说明为什么没采纳。
 
     一次请求拿回该号在**全库**的所有行,本地按 locations 过滤 —— 不把
@@ -125,19 +146,22 @@ def lookup_ref(get_json, rid: str, inv: str, locations: list[str]) -> tuple:
     逐个试 `_inv_variants`,第一个**在本馆唯一命中**的就采纳;
     后缀变体不改变判据①②,只是把同一件的另一种写法也找出来。
     """
-    rows = []
-    for cand in _inv_variants(inv):
+    rows, mine, used_variant = [], [], False
+    for i, cand in enumerate(_inv_variants(inv)):
         data = get_json(
             TABULAR_URL.format(rid=rid),
             {"Numero_inventaire__exact": cand, "page_size": _PAGE},
         )
         got = data.get("data") or []
         rows += got
-        if [r for r in got if r.get("Localisation") in locations]:
+        hit = [r for r in got if r.get("Localisation") in locations]
+        if hit:
+            mine, used_variant = hit, i > 0
             break
     if not rows:
         return None, "上游无此号"
-    mine = [r for r in rows if r.get("Localisation") in locations]
+    if used_variant and len(mine) == 1 and not _same_kind(mine[0], category):
+        return None, "后缀变体命中但品类对不上(号在两个部门重复使用?)"
     if not mine:
         return None, "命中但在别馆(寄存?)"
     if len(mine) > 1:
@@ -183,6 +207,7 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
             (
                 o.inventory_number,
                 (o.attributes or {}).get("external_ids", {}).get("P347"),
+                o.category,
             )
             for o in objs
             if o.inventory_number
@@ -206,8 +231,8 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
     print(f"自检:{len(gold)} 件金标准(权威源) + 1 个负样本", flush=True)
     tally: dict = {}
     conflicts = []
-    for inv, want in gold:
-        got, _ = lookup_ref(get_json, rid, inv, locations)
+    for inv, want, cat in gold:
+        got, _ = lookup_ref(get_json, rid, inv, locations, cat)
         verdict = classify(get_json, rid, want, got)
         tally[verdict] = tally.get(verdict, 0) + 1
         if verdict == "冲突":
@@ -274,7 +299,9 @@ def main(
     reasons: dict = {}
     for i, o in enumerate(todo):
         try:
-            ref, why = lookup_ref(_get_json, rid, o.inventory_number, locations)
+            ref, why = lookup_ref(
+                _get_json, rid, o.inventory_number, locations, o.category
+            )
         except Exception as e:  # 单件网络失败跳过,幂等重跑再补(纪律①)
             ref, why = None, f"请求失败({type(e).__name__})"
         reasons[why] = reasons.get(why, 0) + 1
