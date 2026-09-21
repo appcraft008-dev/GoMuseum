@@ -92,18 +92,41 @@ def museum_locations(slug: str, path: str = "museums.yaml") -> list[str]:
     return list(locs)
 
 
+def _inv_variants(inv: str) -> list[str]:
+    """馆藏号在上游的可能写法。
+
+    ⚠️ 纸上作品(素描/版画)在 Joconde 里**按面分行**:我们的 `INV 8195`
+    那边存成 `INV 8195, recto`(还有 `, verso`)。不试这两个后缀,
+    卢浮宫素描件 `__exact` 全部零行 —— 实测 80 件分层抽样命中率
+    1% → 42%,救回的 33/34 全靠这个后缀。
+
+    只加这两个确定的后缀,**不做通用归一化**(剥空格/连字符)。剥完
+    `E 367.1` → `E3671` 会在全库 80 万行里撞上别的件,而错配的 P347
+    会把别人的作品资料灌进这件且无处报错(见模块头判据①)。
+    """
+    return [inv, f"{inv}, recto", f"{inv}, verso"]
+
+
 def lookup_ref(get_json, rid: str, inv: str, locations: list[str]) -> tuple:
     """馆藏号 → (ref, 原因)。ref 为 None 时原因说明为什么没采纳。
 
     一次请求拿回该号在**全库**的所有行,本地按 locations 过滤 —— 不把
     Localisation 塞进查询条件,是为了能分清"上游根本没这个号"和
     "有,但记在别的馆名下(寄存)",后者是要单独报数的。
+
+    逐个试 `_inv_variants`,第一个**在本馆唯一命中**的就采纳;
+    后缀变体不改变判据①②,只是把同一件的另一种写法也找出来。
     """
-    data = get_json(
-        TABULAR_URL.format(rid=rid),
-        {"Numero_inventaire__exact": inv, "page_size": _PAGE},
-    )
-    rows = data.get("data") or []
+    rows = []
+    for cand in _inv_variants(inv):
+        data = get_json(
+            TABULAR_URL.format(rid=rid),
+            {"Numero_inventaire__exact": cand, "page_size": _PAGE},
+        )
+        got = data.get("data") or []
+        rows += got
+        if [r for r in got if r.get("Localisation") in locations]:
+            break
     if not rows:
         return None, "上游无此号"
     mine = [r for r in rows if r.get("Localisation") in locations]
@@ -190,6 +213,17 @@ def self_test(get_json, rid: str, objs: list, locations: list[str]) -> None:
         for inv, want, got in conflicts:
             print(f"  🔴 {inv}: 权威={want} 反查={got}")
         raise SystemExit("自检未通过:反查与**仍然有效**的权威值冲突,已中止。")
+    # ⚠️ 金标准**全员未命中**也要拦。只看"有没有冲突"的话,一个什么都查不到的
+    # 反查永远零冲突 —— 自检照样打勾,然后整馆跑出 1% 命中率,看起来像
+    # "这个馆上游就是没数据"。2026-09-21 卢浮宫实测踩到:20/20 全是
+    # "反查未命中",自检却报 ✓(真因是上游按 recto/verso 分行,见 _inv_variants)。
+    # 金标准是**已知在上游存在**的件,查不到它们就是反查本身坏了。
+    if tally.get("反查未命中", 0) == len(gold):
+        raise SystemExit(
+            f"自检未通过:{len(gold)} 件金标准**全部**反查未命中。\n"
+            "它们是已知在上游存在的件(权威 P347 来自 Wikidata),全查不到\n"
+            "说明匹配方式对本馆不成立(如上游馆藏号写法不同),不是'本馆没数据'。"
+        )
     print(
         "  ✓ 无冲突,负样本正确拒绝 —— "
         + "、".join(f"{k} {v}" for k, v in sorted(tally.items())),

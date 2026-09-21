@@ -251,3 +251,82 @@ def test_locations_are_read_from_config(tmp_path):
         % (LOC, OTHER)
     )
     assert museum_locations("petit_palais", str(p)) == [LOC, OTHER]
+
+
+# ── 纸上作品的 recto/verso 后缀 ────────────────────────────────────────────
+# 上游把素描/版画**按面分行**:我们的 `INV 8195` 那边是 `INV 8195, recto`。
+# 不试后缀的话卢浮宫素描件 __exact 全部零行 —— 实测 80 件分层抽样
+# 命中率 1% → 42%,救回的 33/34 全靠这个后缀。
+
+
+def _by_inv(table):
+    """按被查的馆藏号返回不同结果的假 get_json（真上游就是这样)。"""
+    seen = []
+
+    def get_json(url, params=None):
+        params = params or {}
+        seen.append(params)
+        return {"data": table.get(params.get("Numero_inventaire__exact"), [])}
+
+    get_json.seen = seen
+    return get_json
+
+
+def test_recto_suffix_is_found():
+    g = _by_inv({"INV 8195, recto": [{"Reference": "M8195", "Localisation": LOC}]})
+    assert lookup_ref(g, "rid", "INV 8195", [LOC]) == ("M8195", "采纳")
+
+
+def test_verso_suffix_is_found():
+    g = _by_inv({"RF 20815, verso": [{"Reference": "M2081", "Localisation": LOC}]})
+    assert lookup_ref(g, "rid", "RF 20815", [LOC]) == ("M2081", "采纳")
+
+
+def test_plain_value_still_wins_without_extra_requests():
+    """原值命中就停,不再多打两次上游(逐条查 1 万件,每件省两次往返)。"""
+    g = _by_inv({"PPP377": [{"Reference": "M111", "Localisation": LOC}]})
+    assert lookup_ref(g, "rid", "PPP377", [LOC]) == ("M111", "采纳")
+    assert len(g.seen) == 1
+
+
+def test_suffix_variants_do_not_loosen_the_museum_gate():
+    """后缀变体只是换写法,不放宽判据② —— 命中在别馆照样拒绝。"""
+    g = _by_inv({"INV 8195, recto": [{"Reference": "M8195", "Localisation": OTHER}]})
+    assert lookup_ref(g, "rid", "INV 8195", [LOC]) == (None, "命中但在别馆(寄存?)")
+
+
+def test_suffix_variants_do_not_loosen_the_uniqueness_gate():
+    """判据①也不放宽:同一变体下本馆两条同号,仍然拒绝。"""
+    g = _by_inv(
+        {
+            "INV 8195, recto": [
+                {"Reference": "A", "Localisation": LOC},
+                {"Reference": "B", "Localisation": LOC},
+            ]
+        }
+    )
+    assert lookup_ref(g, "rid", "INV 8195", [LOC])[0] is None
+
+
+def test_no_general_normalisation():
+    """**只**加这两个确定的后缀,不剥空格/连字符。剥完 `E 367.1` → `E3671`
+    会在全库 80 万行里撞上别的件,而错配的 P347 无处报错。
+    """
+    g = _by_inv({"INV8195": [{"Reference": "M8195", "Localisation": LOC}]})
+    assert lookup_ref(g, "rid", "INV 8195", [LOC]) == (None, "上游无此号")
+
+
+def test_self_test_fails_when_every_gold_sample_misses(monkeypatch):
+    """金标准**全员**未命中 = 反查本身坏了,不是"本馆没数据"。
+
+    只看"有没有冲突"的话,一个什么都查不到的反查永远零冲突、自检照样打勾。
+    2026-09-21 卢浮宫实测踩到:20/20 全未命中而自检报 ✓。
+    """
+    objs = [_Obj("INV 8195", "M1"), _Obj("INV 483", "M2")]
+    monkeypatch.setattr(
+        "scripts.discover_joconde_refs.lookup_ref",
+        lambda g, rid, inv, locs: (None, "上游无此号"),
+    )
+    monkeypatch.setattr("scripts.discover_joconde_refs.time.sleep", lambda s: None)
+    with pytest.raises(SystemExit, match="全部"):
+        self_test(None, "rid", objs, [LOC])
