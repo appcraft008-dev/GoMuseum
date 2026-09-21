@@ -1,6 +1,7 @@
 # GoMuseum · Creative Brief — Feature Graphic + Screenshots（EN + FR）
 
-**本轮重做，检索/实测日 2026-09-21。** 素材已全部就位并核对过文件名：EN/FR 各 8 张主图 + 备用图。上一版记录的两个阻塞项（`999992` 占位数据、"Ask anything" 自由输入框）**已在素材侧修复**，本版不再列为阻塞。
+**本轮重做，检索/实测日 2026-09-21。** EN/FR 各 8 张主图 + 备用图的**原始 UI 抓图**已就位，上一版的两个阻塞项（`999992` 占位数据、"Ask anything" 输入框）已在素材侧修复。
+⚠️ **但营销文案图层尚未合成，且新发现三个阻塞** —— 见 §四。
 
 ---
 
@@ -54,7 +55,7 @@
 | 艺术品与手机界面关系 | 若重做：手机取景框对着一幅**未标注名字**的画作，画面上不出现任何作品标题文字 —— 视觉上直接演出"不需要知道名字" |
 | 品牌元素 | 图标 + 字标，维持 |
 | **禁止出现** | ① 任何暗示官方合作的馆徽/馆名背书；② 任何暗示实时 AI 对话的聊天气泡/麦克风图标；③ "AI" 字样；④ 具体作品的高清全画幅（版权风险，用取景框局部） |
-| **法语版术语一致性** | 标语法语形式须与 metadata 的动词一致：metadata 用 `Scannez`，故标语用 **`SCANNEZ · ÉCOUTEZ · EXPLOREZ`**。⚠️ 本轮**未打开 png 核对**现有法语标语实际写的是什么，上传前必须目视确认。 |
+| **法语版术语一致性** | 标语法语形式须与 metadata 的动词一致：metadata 用 `Scannez`，故标语用 **`SCANNEZ · ÉCOUTEZ · EXPLOREZ`**。✅ **2026-09-21 已打开 `fr-FR.png` 核对：实为 `SCANNEZ · ÉCOUTEZ · EXPLOREZ`，通过。** |
 
 **FR 为什么不加那句副标题**：法语市场的获客词是 `audioguide louvre`（见 `keyword-research-fr-FR.md`），Feature Graphic 应当强化 audioguide 语境而非识别语境。建议 FR 副标题用 `Le guide qui vous suit, sans location.`（不租设备、跟着你走）。
 
@@ -64,43 +65,42 @@
 
 排序原则：**前三张必须共同讲完"核心那句 + 支柱1"**，第 4–6 张补支柱 2/3 与覆盖面，第 7–8 张收口。
 
-### EN（素材：`docs/play-assets/screenshots/en-US/`）
-
 ### ⚠️ 硬规则：每张 3–5 个词，大字，无副标题
 
-**用户 2026-09-21 定：「每张图的文案 3-5 个单词，用大字！你这样写一句话根本没人看」。**
+**用户 2026-09-21 定：「每张图的文案 3-5 个单词，用大字！你这样写一句话根本没人看」。** 副标题一律取消——副标题必然用小字，而小字在这个尺寸下等于不存在。
 
-本文件上一版写的是整句（最长 8 个词）并带副标题——在手机上的商店页缩略图里读不清，等于没有。**全部重写，副标题一律取消**（副标题必然用小字，而小字在这个尺寸下不存在）。
+⚠️ **修订记录（2026-09-21 第二次）**：我第一次执行这条规则时**把八句全改了**，而逐句数下来只有 1/2/4/6 四句超标（7-8 词），3/5/7/8 本来就是 4-5 词。结果是把 `Not a subscription` 削成 `No subscription`（丢了力度）、把 `Everything you've seen, kept.` 的 `kept` 砍掉（`kept` 才是留存这个点本身）。
+**教训：规则是用来筛的，不是用来一刀切的——先数哪几句真的违规，只动那几句。**
+
+### EN（素材：`docs/play-assets/screenshots/en-US/`）
 
 | # | 素材文件 | 营销目标 | 主标题（3–5 词） | 词数 | 为什么是这句 |
 |---|---|---|---|---|---|
-| 1 | `screenshot_EN_01_home.jpg` | **Hook** | **Don't know its name?** | 4 | Slot 1 决定约 80% 的转化判断。用**问句**直接说中用户此刻的处境，比陈述产品功能有力。这正是 F5 竞品用户亲口描述的断点 |
-| 2 | `screenshot_EN_02_scan.jpg` | 核心机制 | **Point. That's it.** | 3 | 上一版写 "Point your camera — that's the whole step."（8 词）且与 Slot 1 副标题重复。砍到 3 词，"就这么简单"的语气反而更强 |
-| 3 | `screenshot_EN_03_result.jpg` | **支柱1 · 信得过** | **Sourced. Never invented.** | 3 | 前三张收口。F6 证明本类目"像 AI 编的"已是成形疑虑，必须在折叠线以上反驳 |
+| 1 | `screenshot_EN_01_home.jpg` | **Hook** | **You don't need its name.** | 5 | Slot 1 决定约 80% 的转化判断。这是**承诺**不是提问——「你不需要知道它叫什么」正是 F5 竞品用户亲口描述的断点。<br>⚠️ 曾改成问句 `Don't know its name?`，**是错的**：图上没有答案，提问就只是提问，承诺才有钩子 |
+| 2 | `screenshot_EN_02_scan.jpg` | 核心机制 | **Point. That's it.** | 3 | 原为 "Point your camera — that's the whole step."（8 词）且与 Slot 1 当时的副标题重复。砍到 3 词，"就这么简单"的语气反而更强 |
+| 3 | `screenshot_EN_03_result.jpg` | **支柱1 · 信得过** | **Sourced, checked — never invented.** | 4 | **保留原句**（本来就 4 词）。前三张收口，F6 证明本类目"像 AI 编的"已是成形疑虑 |
 | 4 | `screenshot_EN_04_explore.jpg` | 覆盖面 | **Four museums. One app.** | 4 | 上一版列了四个馆名（7 词，小图上糊成一片）。**截图不参与索引**，所以馆名在这里没有关键词价值，只有阅读成本——砍掉 |
-| 5 | `screenshot_EN_05_collection.jpg` | 内容广度 | **Thousands of works.** | 3 | 不写具体数字：那是缓存快照不是能力上限（懒生成约 20 秒补齐），且会随上新馆持续过期 |
+| 5 | `screenshot_EN_05_collection.jpg` | 内容广度 | **Thousands of works, four collections.** | 5 | **保留原句**（本来就 5 词）。不写具体数字：那是缓存快照不是能力上限（懒生成约 20 秒补齐），会随上新馆持续过期 |
 | 6 | `screenshot_EN_06_indepth.jpg` | 内容深度 | **As deep as you want.** | 5 | 只留 1 张。素材里这个界面有多张重复变体，不该占多个位 |
-| 7 | `screenshot_EN_07_pass.jpg` | **支柱3 · 零门槛** | **One pass. No subscription.** | 4 | 转化前最后一击。两个竞品都有"付了还要再付"的差评，正面安抚 |
-| 8 | `screenshot_EN_08_footprints.jpg` | 留存信号 | **Everything you've seen.** | 3 | 弱转化强留存，放最后 |
+| 7 | `screenshot_EN_07_pass.jpg` | **支柱3 · 零门槛** | **One pass. Not a subscription.** | 5 | **保留原句**。`Not a subscription` 比 `No subscription` 有力，是纠正而非陈述。两个竞品都有"付了还要再付"的差评 |
+| 8 | `screenshot_EN_08_footprints.jpg` | 留存信号 | **Everything you've seen, kept.** | 4 | **保留原句**。`kept` 不能省——"看过的都留着"才是这个功能本身 |
 
 **备用图**：`screenshot_spare_pass_top.jpg`（Slot 7 的构图备选）、`screenshot_spare_result_qa.jpg`（预设问答 —— ⚠️ brief §四 明令**不进前三张**，只能作为 Slot 6 的替代，且文案必须写明是预先准备的问答、不是实时对话）。
 
 ### FR（素材：`docs/play-assets/screenshots/fr-FR/`）
 
-结构照搬，**但 Slot 1 的角度随法语市场定位调整**（法语获客词是 `audioguide`，不是识别）：
-
 同一条 3–5 词硬规则，**法语原生表达，不是直译**（法语通常比英语长约 20%，逐字译必然超）：
 
 | # | 素材文件 | 主标题（3–5 词） | 词数 | 法语侧说明 |
 |---|---|---|---|---|
-| 1 | `screenshot_FR_01_home.jpg` | **Son titre ? Peu importe.** | 4 | 不直译 "Don't know its name?"。"名字？不重要" 是更自然的法语口语，且语气更笃定 |
+| 1 | `screenshot_FR_01_home.jpg` | **Pas besoin de son titre.** | 5 | 不逐字译。法语 `Pas besoin de connaître son titre.` 是 6 词，去掉 `connaître` 后既合规又更直接 |
 | 2 | `screenshot_FR_02_scan.jpg` | **Pointez. C'est tout.** | 3 | 上一版 7 词，砍到 3 |
-| 3 | `screenshot_FR_03_result.jpg` | **Sourcé. Jamais inventé.** | 3 | 去掉 `vérifié`，两个词已足够 |
+| 3 | `screenshot_FR_03_result.jpg` | **Sourcé, vérifié — jamais inventé.** | 4 | **保留原句**（本来就 4 词） |
 | 4 | `screenshot_FR_04_explore.jpg` | **Quatre musées. Une app.** | 4 | 同 EN：馆名不进截图（截图不参与索引） |
-| 5 | `screenshot_FR_05_collection.jpg` | **Des milliers d'œuvres.** | 3 | `œuvre` 用连字 |
+| 5 | `screenshot_FR_05_collection.jpg` | **Des milliers d'œuvres, quatre collections.** | 5 | **保留原句**（本来就 5 词）。`œuvre` 用连字 |
 | 6 | `screenshot_FR_06_indepth.jpg` | **Aussi loin que vous voulez.** | 5 | 与 EN 同构，法语这句本身就短 |
-| 7 | `screenshot_FR_07_pass.jpg` | **Un pass. Pas d'abonnement.** | 4 | 去掉 `seul` 和 `un`，省两词 |
-| 8 | `screenshot_FR_08_footprints.jpg` | **Votre visite, conservée.** | 3 | 不直译 "Everything you've seen"（法语会变 6 词），改用"您的参观，留存" |
+| 7 | `screenshot_FR_07_pass.jpg` | **Un pass. Pas d'abonnement.** | 4 | 原 `Un seul pass. Pas un abonnement.` 是 6 词，去掉 `seul`/`un` 后合规 |
+| 8 | `screenshot_FR_08_footprints.jpg` | **Votre visite, conservée.** | 3 | 不直译——`Tout ce que vous avez vu, conservé.` 是 7 词，改用"您的参观，留存" |
 
 **FR 备用图**：`screenshot_spare_result_qa.jpg`（无 `pass_top` 备选，与 EN 不对称，非阻塞）。
 
@@ -145,14 +145,12 @@
 
 付费墙截图的币种（`EN_07` 显示 £7.99；定价策略待用户在 Console 内测试）、FR 单复数语法（"1 œuvres"）。
 
-**已被用户明确搁置、不要再提**：FR 付费墙截图的币种（定价策略待用户在 Console 内测试）、FR 单复数语法（"1 œuvres"）。
-
 ---
 
 ## 五、与实验方案的接口
 
 Slot 1 是 `experiment-and-measurement-plan.md` 第一轮 A/B 的承载位：
-- **A 版**：`You don't need to know its name.`（方向A，本轮推荐）
-- **B 版**：`Louvre, Orsay, Orangerie, Petit Palais — one app.`（方向B，覆盖面）
+- **A 版**：`You don't need its name.`（方向A，本轮推荐）
+- **B 版**：`Four museums. One app.`（方向B，覆盖面）
 
 ⚠️ 零真实用户 ⇒ 该实验**现在跑不了**，gated on 正式轨道放量。
