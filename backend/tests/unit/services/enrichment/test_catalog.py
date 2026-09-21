@@ -152,3 +152,39 @@ def test_every_museum_has_a_distinct_explicit_rank():
     assert not missing, f"这些馆没配 rank: {missing}"
     ranks = [cfg.rank for _, cfg in items]
     assert len(set(ranks)) == len(ranks), f"rank 有重复: {sorted(ranks)}"
+
+
+def test_names_parsed_and_defaults_to_empty(tmp_path):
+    # 馆名其余八语;不配 → 空 dict(消费方回退 name_zh/name_en,老馆零影响)
+    p = tmp_path / "m.yaml"
+    p.write_text(
+        "museums:\n  a:\n    names:\n      fr: Musée A\n      ja: A美術館\n"
+        "    name_zh: 甲\n    name_en: A\n    city_zh: 城\n"
+        "    city_en: C\n    country: FR\n    wikidata_qid: Q1\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n"
+        "  b:\n    name_zh: 乙\n    name_en: B\n    city_zh: 城\n"
+        "    city_en: C\n    country: FR\n    wikidata_qid: Q2\n"
+        "    category_filter: Q3305213\n    fetch_limit: 5\n    sample_size: 2\n",
+        encoding="utf-8",
+    )
+    cat = MuseumCatalog.from_file(p)
+    assert cat.get("a").names == {"fr": "Musée A", "ja": "A美術館"}
+    assert cat.get("b").names == {}
+
+
+def test_every_museum_has_all_eight_extra_languages():
+    """上新馆必须把八语馆名配齐——漏一门,那门语言的用户看到的是英文名。
+
+    这正是本次报上来的现象:卢浮宫 name_en 是 "Louvre Museum",法语界面
+    照搬英文名;而隔壁三个馆的 name_en 恰好是法语拼写,于是看着像
+    "只有卢浮宫漏译"。少配一门语言不会报错,只会悄悄回退——所以要这道闸。
+    """
+    want = {"zh-hant", "fr", "de", "es", "it", "ja", "ko", "pl"}
+    for slug, cfg in MuseumCatalog.from_file("museums.yaml").items():
+        assert (
+            set(cfg.names) == want
+        ), f"{slug} 的 names 不全: 缺 {want - set(cfg.names)}"
+        # zh/en 不该出现在这里(它们的真相源是 name_zh/name_en,写两处会漂移)
+        assert not {"zh", "en"} & set(
+            cfg.names
+        ), f"{slug}: zh/en 应写在 name_zh/name_en"

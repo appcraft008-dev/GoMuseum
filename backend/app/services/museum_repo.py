@@ -185,6 +185,29 @@ def _pick(lang: str, zh, en, fr, fallback=""):
     return en or zh or fallback
 
 
+def _photo_credit(credit: str | None, artist_aliases) -> str | None:
+    """图片署名——但"作者本人"不算署名。
+
+    `credit` 来自 Commons 文件元数据的 `Artist` 字段,意思是"谁做了这个文件"。
+    平面画的扫描件里 Commons 惯例把画家填进去,于是它和展签上的作者名重复,
+    还常是**另一种语言的拼法**(Leonardo da Vinci / Léonard de Vinci),
+    同一屏两个名字对不上,看着就是个 bug。
+    但雕塑和实物照片里它是真的摄影师(Mbzt / Shonagon / Philippe Cendron),
+    **那是 CC 协议要求的署名,删了违约**——所以不能一刀切把 credit 砍掉。
+
+    判据:credit 命中该件作者任一语言的写法 → 是画家,不显示;否则原样留着。
+    prod 65 件实测:57 判隐藏、8 判保留,保留的全是真摄影师,零误杀。
+    """
+    if not credit:
+        return None
+    norm = credit.strip().casefold()
+    return (
+        None
+        if any(norm == a.strip().casefold() for a in artist_aliases if a)
+        else credit
+    )
+
+
 def _sized(storage, key, size):
     """image_key 是基础键(images/{qid}/{sort}),按档位拼文件名。size: thumb|large。"""
     return storage.public_url(f"{key}_{size}.jpg")
@@ -368,6 +391,43 @@ def _museum_ranks() -> dict[str, int]:
     }
 
 
+@lru_cache(maxsize=1)
+def _museum_names() -> dict[str, dict[str, str]]:
+    """slug → {语言: 馆名}。真相源是 museums.yaml,同 `_museum_ranks` 的理由。
+
+    yaml 里 `names` 只写 zh/en 之外的八语,这里把 name_zh/name_en 并进来,
+    对外就是一张完整的十语表——调用方不必知道它由两处拼成。
+    """
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+
+    return {
+        slug: {"zh": cfg.name_zh, "en": cfg.name_en, **cfg.names}
+        for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
+    }
+
+
+def museum_names(museum: Museum) -> dict[str, str]:
+    """该馆的 {语言: 馆名} 全表。
+
+    ⚠️ 回退到 DB 的 name_zh/name_en 必须留着:DB 里可能有 yaml 没配的馆
+    (手工建的/刚删了配置),那时两语总比没有强。
+    """
+    names = _museum_names().get(museum.slug) or {
+        "zh": museum.name_zh,
+        "en": museum.name_en,
+    }
+    # 空值不进表:DB 那条回退路径上 name_zh/name_en 可能是 None,留着只会让
+    # 每个消费方都得判一次"这个键在但值是 null"。
+    return {k: v for k, v in names.items() if v}
+
+
+def museum_name(museum: Museum, language: str) -> str:
+    """馆名按语言取。没这门语言 → 回退英文名(而不是 slug)。"""
+    names = museum_names(museum)
+    return names.get(language) or names.get("en") or names.get("zh") or museum.slug
+
+
 def list_museums(db: Session) -> list[dict]:
     rows = (
         db.query(Museum, func.count(MuseumObject.id).label("cnt"))
@@ -384,6 +444,9 @@ def list_museums(db: Session) -> list[dict]:
     for m, cnt in rows:
         row = {f: getattr(m, f) for f in _PACK_FIELDS}
         row["artwork_count"] = cnt
+        # 十语馆名(加法字段)。本端点没有 `language` 参数,所以给整张表、前端按
+        # 当前界面语言挑;老 App 不认这个键,继续吃 name_zh/name_en,行为不变。
+        row["name_i18n"] = museum_names(m)
         # 探索页缩略图(spec 2026-07-20 museum-cover-intro-quality,加法):同一行零成本可读
         row["cover_image"] = (
             _sized(storage, m.cover_image_key, "thumb") if m.cover_image_key else None
@@ -520,6 +583,9 @@ def get_museum_pack(
     pack.update(
         {
             "qid": m.qid,
+            # 与 /museums 列表同形的十语馆名(加法)。这个端点虽然有 `language`,
+            # 但给整张表能让前端两个模型共用一套取名逻辑,少一条分叉。
+            "name_i18n": museum_names(m),
             "source": _LEGACY_SOURCE,
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             # 独立 COUNT:artworks=False 时列表为空,但件数是门面字段(App 显"17283 件"),
@@ -600,22 +666,6 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         .all()
     ]
     attrs = obj.attributes or {}
-    images = [
-        {
-            "url": (
-                _sized(storage, i.image_key, "large") if i.image_key else i.source_url
-            ),
-            "credit": i.credit,
-        }
-        for i in db.query(ObjectImage)
-        .filter(
-            ObjectImage.object_id == obj.id,
-            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
-        )
-        .order_by(ObjectImage.sort)
-        .all()
-        if i.image_key or i.source_url
-    ]
     from app.models.artist import Artist
 
     aqid = attrs.get("artist_qid")
@@ -630,6 +680,28 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         },
         (art.name_en if art else None) or obj.artist_en or obj.artist_zh,
     )
+    artist_aliases = {
+        *((art.name_i18n or {}).values() if art else ()),
+        *((art.name_zh, art.name_en) if art else ()),
+        obj.artist_zh,
+        obj.artist_en,
+    }
+    images = [
+        {
+            "url": (
+                _sized(storage, i.image_key, "large") if i.image_key else i.source_url
+            ),
+            "credit": _photo_credit(i.credit, artist_aliases),
+        }
+        for i in db.query(ObjectImage)
+        .filter(
+            ObjectImage.object_id == obj.id,
+            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
+        )
+        .order_by(ObjectImage.sort)
+        .all()
+        if i.image_key or i.source_url
+    ]
     facts = {
         "artist": resolved_artist,
         "date": obj.year,
@@ -641,7 +713,10 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         ),
         "dimensions": _humanize_dimensions(attrs.get("dimensions")),
         "inventory": obj.inventory_number,
-        "location": _pick(language, museum.name_zh, museum.name_en, museum.name_en),
+        # ⚠️ 这里原本是 `_pick(language, name_zh, name_en, name_en)`——fr 那个槽位
+        # 填的就是 name_en,所以法语界面上写着 "Louvre Museum"。十语都得有名字,
+        # 不是给 fr 单独打个补丁,故整条换成 museum_name()。
+        "location": museum_name(museum, language),
         # provenance/exhibitions/bibliography 移出面板(进证据包材料级,阶段2 用),保形不删键
         "provenance": None,
         "artist_life": None,  # ponytail: 未存作者生平，接 Wikidata 作者源后再补

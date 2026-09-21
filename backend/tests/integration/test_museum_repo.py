@@ -71,6 +71,7 @@ def test_list_shape(session):
         "country",
         "artwork_count",
         "cover_image",  # 加法字段:探索页缩略图(spec 2026-07-20)
+        "name_i18n",  # 加法字段:十语馆名(本端点无 language 参数,给整张表)
     }
     assert rows[0]["artwork_count"] == 1
     assert rows[0]["cover_image"] is None  # 未设 cover_image_key → null(前端隐藏)
@@ -101,6 +102,7 @@ def test_pack_shape(session):
         "qid",
         "name_zh",
         "name_en",
+        "name_i18n",  # 加法字段:十语馆名,与 /museums 列表同形
         "city_zh",
         "city_en",
         "country",
@@ -271,3 +273,54 @@ def test_museum_without_rank_never_takes_the_hero_slot(session):
     slugs = [r["slug"] for r in list_museums(session)]
     assert slugs[0] == "louvre"
     assert slugs[-1] == "aaa_museum"  # yaml 里没有它 → RANK_LAST
+
+
+def test_list_returns_all_ten_languages_not_just_zh_en(session):
+    """非中文界面此前一律吃 name_en,所以法语用户看到的是 "Louvre Museum"。
+
+    判别式挑卢浮宫是有讲究的:橘园/奥赛/小皇宫的 name_en 本身就是法语拼写,
+    拿它们测的话"回退到英文名"和"真的给了法语名"两种实现**输出一样**,
+    测了也分不开——只有 name_en 是纯英文的卢浮宫能把两者区分开。
+    """
+    _add(session, "louvre")
+
+    names = next(r for r in list_museums(session) if r["slug"] == "louvre")["name_i18n"]
+    assert names["fr"] == "Musée du Louvre"  # ← 不是 "Louvre Museum"
+    assert names["en"] == "Louvre Museum"
+    assert names["ja"] == "ルーヴル美術館"
+    assert names["zh"] == "卢浮宫"
+    # 老字段原样留着(这里是 fixture 写进 DB 的值,没被新逻辑动过):
+    # 老 App 仍按 name_zh/name_en 解析,这是加法不是改法
+    row = next(r for r in list_museums(session) if r["slug"] == "louvre")
+    assert row["name_en"] == "louvre"
+
+
+def test_museum_missing_from_yaml_still_gets_a_name(session):
+    """DB 里可能有 yaml 没配的馆(手工建的/刚删了配置),它不能变成没名字。"""
+    _add(session, "aaa_museum")
+
+    names = next(r for r in list_museums(session) if r["slug"] == "aaa_museum")[
+        "name_i18n"
+    ]
+    # 回退 DB(fixture 只写了 name_en;拿不到名字总比显示 slug 强)。
+    # 空值不进表——否则前端每个消费方都得判一次"键在但值是 null"。
+    assert names == {"en": "aaa_museum"}
+
+
+def test_credit_hides_the_painter_but_keeps_the_photographer(session):
+    """图片署名去重:作者本人不算署名,真摄影师必须留着。
+
+    两条一起测是必须的——只测"隐藏画家"的话,一个 `return None` 的实现
+    也能通过,而那会把 CC 协议要求的摄影师署名一并删掉(违约)。
+    """
+    from app.services.museum_repo import _photo_credit
+
+    leonardo = {"Leonardo da Vinci", "Léonard de Vinci", "列奥纳多·达·芬奇"}
+    # 平面画扫描件:Commons 把画家填进 Artist 字段,与展签作者重复 → 不显示
+    assert _photo_credit("Leonardo da Vinci", leonardo) is None
+    # 大小写/空白不该让它漏网
+    assert _photo_credit("  leonardo DA vinci ", leonardo) is None
+    # 雕塑实物照:这是真摄影师(Wikimedia 用户名),删了违反 CC 署名要求
+    assert _photo_credit("Mbzt", {"Mesha", "메샤"}) == "Mbzt"
+    # 无作者的件 → 无从判断是不是画家,一律保留
+    assert _photo_credit("Shonagon", set()) == "Shonagon"

@@ -339,3 +339,18 @@ def test_refresh_failure_keeps_stale_index(monkeypatch):
         _t.sleep(0.02)
     assert ip._index_cache[None][1] is stale, "重建失败应保留旧索引"
     ip._index_cache.clear()
+
+
+def test_museum_findable_and_named_in_the_user_s_own_language(session):
+    """用自己语言里的馆名搜馆,得搜得到,而且显示的也得是那个名字。
+
+    判别式用日语名:馆名匹配是归一化**子串**,`オルセー美術館` 既不是
+    name_zh(奥赛博物馆)也不是 name_en(Orsay Museum)的子串——换回只看
+    两语的实现,这条必红(搜不到,museums 为空)。
+    """
+    museums, _ = search(
+        session, _FakeStorage(), "オルセー美術館", museum_id=None, language="ja"
+    )
+    assert [m["slug"] for m in museums] == ["orsay"]
+    # 搜得到还不够:显示名也得是日语的,而不是回退英文
+    assert museums[0]["name"] == "オルセー美術館"
