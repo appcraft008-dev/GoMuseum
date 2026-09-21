@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
+import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/core/services/tts_service.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
@@ -1305,7 +1306,12 @@ class _WallLabel extends StatelessWidget {
 
     final parts = <String>[
       if (facts.artist?.isNotEmpty == true) facts.artist!,
-      if (facts.date?.isNotEmpty == true) facts.date!,
+      // ⚠️ `facts.date` 和列表/搜索里的 `year` 是**同一个值的两个名字**
+      // （后端 `museum_objects.year` → 这里叫 date、那里叫 year）。
+      // 第一次接 formatYear 时 grep 的是 `year`，墙签这条就因为叫 date 漏了，
+      // 于是列表显示「140 BC」而点进来还是「-140」。改这块记得两个名字都 grep。
+      if (facts.date?.isNotEmpty == true)
+        formatYear(facts.date!, AppLocalizations.of(context)!),
       if (medium?.isNotEmpty == true) medium!,
       if (facts.dimensions?.isNotEmpty == true) facts.dimensions!,
     ];
