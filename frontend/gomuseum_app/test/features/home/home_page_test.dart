@@ -232,7 +232,14 @@ void main() {
     // 两处都是 FittedBox(scaleDown)，而 scaleDown 缩到的是**可用宽度**：
     // 不给边距就等于缩到满屏宽、左右零留白贴着屏幕边（法语首页肉眼可见）。
     // 同页其它元素都有 26 的横向边距，只有这两块漏了。
-    // 断言写成"离边缘还有距离"而不是具体像素 —— 与字体、语言都无关。
+    //
+    // ⚠️ 画布必须收窄到真手机宽度。默认画布 800dp 宽，法语标语在测试字体下
+    // 还撑不满，scaleDown 压根不触发、文字自然居中 —— 那样这条测试在
+    // "有边距"和"没边距"两种实现下都是绿的，等于没测（第一版就是这么写错的）。
+    tester.view.physicalSize = const Size(411 * 3, 900 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -250,15 +257,13 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    final screen =
-        tester.view.physicalSize.width / tester.view.devicePixelRatio;
     for (final finder in [
       find.textContaining('Approchez-vous'),
       find.textContaining('scans gratuits', findRichText: true),
     ]) {
       final r = tester.getRect(finder.first);
       expect(r.left, greaterThan(0), reason: '左边贴着屏幕边了');
-      expect(r.right, lessThan(screen), reason: '右边贴着屏幕边了');
+      expect(r.right, lessThan(411), reason: '右边贴着屏幕边了');
     }
   });
 }
