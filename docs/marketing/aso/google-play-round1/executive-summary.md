@@ -1,74 +1,158 @@
-# GoMuseum · Google Play ASO Round 1 — Executive Summary
+# GoMuseum · Google Play ASO Round 1 — Executive Summary（重做版）
 
-生成于 2026-09-08。范围：Google Play only，英文+法文市场。完整产出见同目录其余9个文件。**所有文案/截图/实验方案均为草案，交付审核，未做任何线上/代码改动。**
+**执行日 2026-09-21 · 平台：仅 Google Play · 市场：en-US + fr-FR**
+本版取代 2026-09-19 首版。首版的产品事实与竞争判断来自项目文档转述；**本版全部改为实测**（prod DB 直查 / prod API / Google Play 网页实访），并因此推翻了首版的三条核心结论。
 
-## 最重要的5项发现
+---
 
-1. **拍照识别仍是空位，但表述要更精确**——扩大竞品样本后（新发现至少8款既有资料没覆盖的竞品），"没人做识别"这个说法不再成立（ArtScan、Art Identifier、Smartify、Grand Palais Art Scan 都在做）。真正成立的判断是：**覆盖卢浮宫/奥赛/橘园/小皇宫这4家馆、且以拍照识别为核心交互方式的App，目前没有直接竞品**。
-2. **发现一批既有资料完全没提到的直接竞品**——至少4款"单馆音频导览"App（`air.com.*.paris.vusiem`系列）出自同一发行商模板，精确命中"Louvre guide"/"Orsay guide"这类高意图搜索词，且用户真实差评集中在"内购解锁墙故障、押金归还问题"，这是本轮找到的可用差异化叙事素材。
-3. **Bloomberg Connects 已拿下 Paris Musées 官方合作**（含卢浮宫、奥赛，40种语言）——这是既有资料未追踪到的新竞争信号，直接提高了"不得暗示官方合作"这条限制的重要性，法文市场尤其敏感。
-4. **截图素材有两个真实缺陷，上传前必须处理**：①首页截图显示"999992 free scans left"测试占位数据，需用真实数据（5次）重新截图；②Mona Lisa详情页截图里有"Ask anything..."自由输入框，暗示实时AI对话，与产品实际状态（`/chat/ask`已下线返回503）冲突，直接用会构成"宣传不存在的功能"。
-5. **既有商店文案的语言数量写错了**——写的是"9 languages"，代码实际支持10种（简繁中文是两个独立选项），本轮已在新文案里修正；同一问题也存在于刚发布的落地页（`deployment/website/`），需要一并修正（不在本轮范围内，记录供参考）。
+## 最重要的 5 项发现
 
-## 补充决策（2026-09-13，用户拍板）："AI"不作为卖点
+### 🟢 1. 覆盖量不是问题——**问题是我一开始用错了框架**（本条结论已反转）
 
-用户明确倾向：**标题/简短描述/完整描述均不用"AI"（法文对应"IA"）这个词做卖点**。理由与本轮竞品研究结论一致——"AI"在2026年已趋同质化、不再是差异化信号，且可能招来用户对AI生成内容质量的天然警惕；改用"grounded / fact-checked / never invented"这组更具体的信任表述，比空泛提"AI"更有说服力，也更贴合本项目"正确性靠构造不靠宣传"的产品原则。据此，下方英/法文最终推荐已改为**不含AI/IA字样的版本**（原含AI字样的候选已在 `metadata-final-{en-US,fr-FR}.md` 中标记为已否决，保留存档供参考），同期已同步修正落地页（`deployment/website/`）标题标签与文案中的AI/IA提法。
+我先测出 prod `content_status` = **ready 665 / stub 26,556（2.4%）**，据此判定 `thousands of works` 失实、是政策风险。
+
+**这个判定错了。** 项目自己的实测值写在 `pipeline.py` 注释里：**懒生成 TTFC 16–18s → 约 20 秒**，"只有第一个看到这件作品的人要等"；`lazy_audio` 同样全覆盖。
+
+⇒ `ready/stub` 测的是**缓存冷热**，不是用户能不能拿到。扫一件冷的，等约 20 秒就有讲解。**`thousands of works` 描述的是系统能力，覆盖 27,221 件目录，表述成立。**
+
+**⭐ 但这件事换来了本轮最好的一句文案。** 最终处置不是在 650 和 thousands 之间选，而是**把数字整个拿掉、改讲机制**——数字必然过期，机制不会：
+
+> **Not written up yet? Scan it anyway — GoMuseum researches that work and writes its guide on the spot.**
+
+竞品没有一个能说这句话。
+
+**教训**：`ready/stub` 这种字段名天然诱导"有/没有"的二分读法，而在懒生成架构下它们只是"热/冷"。**凡按需生成的系统，覆盖率分母都别按库存算。**
+
+### 🔴 2. 「拍照识别是无人占领的空位」——**不成立**，但真相比原结论更有用
+
+`scan painting identify`（en_US）返回**至少 10 个**艺术品识别 App；FR `reconnaissance œuvre d'art` 里 **Smartify 排第 1（4,6★ / 1M+ 下载）**。
+
+**但**：这批 App 里一大半是**估值**意图（Art Appraisal: Scan & Value、Art Identifier & Value、Estimation Tableau…），不是看展意图。而 `louvre guide` 的结果里**一个识别类 App 都没有**。
+
+> **修正后的可辩护表述**：不是"没人做识别"，是**"没有任何巴黎博物馆导览 App 做现场识别"**。
+
+### 🔴 3. 「audio guide 是 izi.TRAVEL 垄断的红海」——**不成立**
+
+`museum audio guide`（en_US）**只返回 8 个结果**，izi.TRAVEL、Bloomberg Connects、GuidiGO **一个都没出现**。`louvre guide` 的在位者评分是 **2.9 / 3.6 / 3.7**，同家 MUSEUM BUDDY 的 Orsay 版只有 **1.6★**。
+
+这个词不是红海，是**薄且防守薄弱**的。首版据此把 `audio guide` 排除在 Title 外，本轮把 `Guide` 放回了 Title。
+
+### 🔴 4. **EN 与 FR 的机会结构相反** —— 本轮最具操作性的发现
+
+| | EN | FR |
+|---|---|---|
+| 识别词 | 拥挤但**意图错位**（估值），卢浮宫场景无人占 | **Smartify 4,6★ 占第 1** |
+| 导览词 | `louvre guide` 弱，在位者 2.9–3.7 | **`audioguide louvre` 仅 8 结果**，头部 2,5★/2,0★ |
+| **Title 差异化词** | **`Scan` 进 Title** | **`scan` 不进 Title，改 `Audioguide`** |
+| 识别功能的角色 | 获客 + 转化 | **仅转化** |
+
+brief §五 问"方向A 在法文市场是否同样成立" → **不同样成立**，且有证据。这是本轮唯一一条**有依据地调整了既有定位**的结论。
+
+### 🟢 5. 核心痛点与"不用 AI"的决定，都拿到了外部证据
+
+- **痛点**（F5）：MUSEUM BUDDY 付费用户 2026-06 差评自述——馆里很少有作品标着馆藏号，没有地图就没法手动找到它们。**这正是 GoMuseum 相机识别消除的那一步**，而且是用户自己的话，不是我们的营销假设。
+- **不用 "AI"**（F6）：TourBlink 差评原话含 "Poor grammar, incorrect facts, and an AI voice (and probably AI writing)"，并称 Wikipedia 更有信息量。用户 2026-09-13 拍板"全篇不拿 AI 当卖点"时给的理由（招来对 AI 内容质量的警惕）**在这个类目已经是成形的用户疑虑**。
+  ⇒ 推论：`grounded / sourced / never invented` 不只是卖点，是**针对既有疑虑的直接反驳**，应当前置到 Slot 3（折叠线以上）。
+
+---
+
+## ASO 要让用户一下记住什么（核心交付）
+
+**不是六条并列卖点** —— 商店页停留 3–6 秒，六条并列等于记住零条。
+
+### 核心（唯一要被记住的一句）
+
+> **你不需要知道它叫什么。** 看到哪件拍哪件，立刻知道它是什么、听它的故事。
+
+所有替代方案都卡在同一个前提上：*你得先知道你在看什么*。导览器要输编号，搜索要知道名字，Smartify 要那件在它的合作目录里。识别不是"多一个功能"，是把这一步整个删掉。
+
+### 三根支柱（依次消解三个拒绝理由）
+
+| | 支柱 | 消解 |
+|---|---|---|
+| 1 | **信得过** — 有据可溯，不脑补 | "AI 生成的能信吗？" |
+| 2 | **不受束缚** — 不租不押金不排队，你走到哪它讲到哪 | "比租讲解器强在哪？" |
+| 3 | **零门槛试** — 免注册、免费额度、一次性通票不是订阅 | "要花我多少钱？" |
+
+### 转化层（进页面，不进前三张截图）
+
+四馆 · 10 语文字讲解 · 搜索 · 隐私
+
+> 首版把"一站四馆"和核心定位并排放在同一层，这是它最主要的结构问题。方向B 是功能说明，位置应在 Slot 4。
+
+---
 
 ## 英文市场最终推荐
 
-- **Title:** `GoMuseum: Scan Louvre Art`（25/30字符）
-- **Short description:** `Scan artwork at the Louvre & Orsay for an instant museum audio guide.`（69/80字符，=既有稿，本轮验证后确认无需改动）
-- **Full description:** 见 `metadata-final-en-US.md`（1816/4000字符，45%利用率，较既有稿提升定位精度+竞品差异化叙事+官方合作撇清声明，且不含AI字样）
-- 详见 `metadata-final-en-US.md`（含2个已否决的AI版本存档+关键词覆盖矩阵）
+| 字段 | 推荐 | 字符 |
+|---|---|---|
+| Title | `GoMuseum: Louvre Guide & Scan` | 29/30 |
+| Short desc | `Scan art at the Louvre or Orsay — no title or number needed, just listen.` | 73/80 |
+| Full desc | 见 `metadata-final-en-US.md` | 2105/4000 |
+| Slot 1 | `You don't need to know its name.` | — |
 
 ## 法文市场最终推荐
 
-- **Titre:** `GoMuseum : Scannez le Louvre`（28/30字符）
-- **Description courte:** `Photographiez une œuvre au Louvre ou à Orsay pour un guide audio instantané.`（76/80字符，=既有稿，本轮验证后确认无需改动）
-- **Description complète:** 见 `metadata-final-fr-FR.md`（1971/4000字符，不含IA字样）
-- ⚠️ "guide audio"（两词）vs "audioguide"（一词）本轮未裁定，建议作为 Phase 4 A/B测试候选，而非拍脑袋二选一
-- 详见 `metadata-final-fr-FR.md`
+| 字段 | 推荐 | 字符 |
+|---|---|---|
+| Titre | `GoMuseum : Audioguide Louvre` | 28/30 |
+| Desc. courte | `Scannez une œuvre au Louvre ou à Orsay : ni titre ni numéro, écoutez.` | 69/80 |
+| Desc. complète | 见 `metadata-final-fr-FR.md` | 2466/4000 |
+| Slot 1 | `Pas besoin de connaître son titre.` | — |
 
-## 方向A是否得到验证
+## 方向A 是否得到验证
 
-**部分验证，但需要修正表述**（见上方"最重要的5项发现"第1条）。原始判断"竞品都做audio guide，没人做识别"过于宽泛，本轮用真实竞品数据把它收窄到一个仍然成立、但更具体的空位：**识别 + 这4家特定巴黎博物馆**的组合。这个收窄后的结论在英文和法文市场看下来都成立（法文市场同样没找到"识别+这4馆"的直接竞品），但法文市场竞品覆盖没有像英文那样逐个验证到评分/评论细节，属于中等置信度而非高置信度结论。
+**分市场回答：**
 
-## 需要修正的已有结论
+- **EN：部分验证，且需要重新表述。** 原命题"识别无人做"被证伪；可辩护的版本是"没有任何巴黎博物馆导览 App 做现场识别"，这一条实测成立（`louvre guide` 结果零识别玩家）。同时 F5 提供了痛点真实存在的用户原话。⇒ **方向A 作为差异化/转化支点成立；作为搜索获客词不成立**（识别功能词的流量意图错位到估值）。
+- **FR：不成立。** Smartify 以 4,6★ 占住识别词。法语应改用 `audioguide` 获客，识别降为转化卖点。
 
-1. 语言数量 9→10（`en-US.md`/`fr-FR.md`/落地页三处都受影响，本轮只改了本目录内的新文案，原始三处文件未动，需要用户决定是否同步）
-2. "音频导览类竞品都没有识别功能"→收窄为"覆盖这4家馆的识别类App没有直接竞品"（见上）
-3. `app-marketing-context.md`记录的既有竞品认知（izi.TRAVEL评分下滑迹象、Smartify评分来源冲突）需要标记为"待人工核实"而非既定事实
+**brief 明令"不得在没有数据的情况下宣称已有结论已被验证"** —— 本轮据此把方向A 拆成了"获客"和"转化"两个问题分别回答，而不是笼统说"验证通过"。
 
-## 可以立即实施的项目（Quick Wins）
+## 需要修正的既有结论
 
-1. 用真实免费次数（5次）重新截取首页截图，替换含占位数据的版本
-2. 排查`screenshot_EN_7.jpg`里"Ask anything"输入框是产品UI残留还是仍在渲染中的旧组件——这是产品侧待办，不是ASO文案能解决的，但会直接影响能否合规上传截图
-3. Title从8/30字符利用率提升到25-28/30——`metadata-final-{en-US,fr-FR}.md`已给出可直接采用的3个候选版本
-4. `docs/play-assets/screenshots/en-US/screenshot_FR_13.jpg`文件位置/命名错位，需要确认它该删除还是移到`fr-FR/`目录
+| 出处 | 原结论 | 修正 |
+|---|---|---|
+| `en-US.md` L22 / `fr-FR.md` L21 | "thousands of works" / "des milliers d'œuvres" | **665 / 656 件**。失实，必改 |
+| `en-US.md` L3–6 调研注记 | audio guide 被 izi.TRAVEL 等 saturated | Play 当前搜索**不支持**此说法，该词仅 8 个结果 |
+| `en-US.md` L5–6 | "none of them do photo recognition"、识别位"largely unclaimed" | 识别类 App 至少 10 个；应改为"无巴黎博物馆导览 App 做现场识别" |
+| 首版 metadata（EN） | Title `GoMuseum: Scan Louvre Art` | 改 `GoMuseum: Louvre Guide & Scan`（把 `Guide` 词根放回） |
+| 首版 metadata（FR） | 与 EN 同构，scan 优先 | 改 `Audioguide` 优先（F4） |
+| 首版 `app-marketing-context` | "9 种语言"已修为 10 | ✅ 保持，但**须限定为文字讲解** |
+
+> ⚠️ 前 3 条所在的 `docs/play-assets/store-listing/*.md` 是 brief §十三 指定的**只读输入，本轮未改动**。修正落在本目录的 metadata 文件里。是否回改源文件请用户定。
+
+## 可以立即实施
+
+1. 用本轮 metadata 替换 Play Console 里的 EN/FR 三个字段（Title / Short / Full）。
+2. 按 `creative-brief-en-fr.md` 的顺序与文案重排 8 张截图 —— **素材已齐备，不用重截**。
+3. 类目建议 Travel & Local（与 TourBlink / MUSEUM BUDDY 一致；Smartify 选 Education）。
 
 ## 仍需真实数据验证的假设
 
-1. **本轮所有关键词的Volume/Difficulty全部是方向性判断**，没有Appeeky等付费数据源支撑（`keyword-research-{en-US,fr-FR}.md`已逐项标注），正式接入真实数据源后需要整体复核
-2. Smartify的Play评分（4.55 vs 2.8两个来源冲突）未解决，需人工直接打开Play页面核实
-3. FR市场的`vusiem`/`tourblink`系列竞品是否真的有独立法语listing，本轮WebFetch抓取Play页面两次尝试均因内容截断失败，未能验证（方法论限制，非结论）
-4. FR/CN截图目录（各12张）本轮未逐张核实是否与EN截图一一对应，`creative-brief-en-fr.md`的排序建议默认对应但未验证
+1. **所有关键词判断**。本轮只看到供给侧（结果数、在位者评分），**看不到需求侧搜索量**。Play Console 的 Search terms 报告是唯一能证伪它们的数据源。
+2. **`audioguide louvre` 只有 8 个结果** —— 可能意味着供给少（机会），也可能意味着需求少（陷阱）。本轮无法区分，**这是法语方案最大的未知数**。
+3. ~~`TourLens: Louvre Guide` 是否真做识别~~ → ✅ **已查清**：确实做（标语 "Scan Anything to Listen"），故 **"零竞争"的说法收回**；但它 1K 下载、零评分、两年未更新，不构成障碍，Title 推荐不变。详见 `competitor-analysis-en-fr.md`。
+4. Bloomberg Connects 与 Paris Musées 的官方合作（既有资料的说法）本轮**未验证**。
+
+## 🔴 产品侧风险（ASO 修不了，本轮新发现）
+
+**GoMuseum 全程依赖网络**（识别是服务端调用、音频从 R2 流式取），而**两个不同竞品的用户各自抱怨卢浮宫馆内网络极差**，竞品普遍把 offline 当头部卖点。
+
+本轮处置：文案不承诺 offline、不夸 instant，并在 Full description 末尾加联网提示以管理预期、防 1 星差评。
+**但这是产品缺口，不是文案缺口。** 建议列入 backlog 评估。
 
 ## 推荐的下一步行动顺序
 
-1. 产品侧先确认并处理两个截图缺陷（占位数据、Ask anything输入框）——这是唯一真正阻塞视觉素材上传的问题
-2. 用户审核本轮全部10份文档，对文案/截图顺序/实验方案给出修改意见
-3. 待 Play 正式转入公开轨道、能连接 Console 后，才能真正启动 Phase 4 的核心定位A/B测试——本轮方案是提前准备，不是可以现在执行的任务
-4. 法文市场的竞品验证（尤其`vusiem`系列是否有独立FR listing）建议作为下一轮的第一项，置信度目前偏低
+1. **用户审核本轮文案**（brief §十四 要求所有产出先交审核）
+2. 核实 `TourLens: Louvre Guide` 是否做识别 → 决定 EN Title 是否回退到备选 A
+3. 决定是否回改 `docs/play-assets/store-listing/*.md` 里那句失实表述
+4. 正式轨道放量 → 上传 metadata + 截图 → 部署落地页
+5. 累积 ≥1,000 页面访问后启动第一轮 A/B（**不要放量当天就开**）
+6. 第 7 天读 Search terms 报告，回填两份 keyword-research 的"仍需验证"章节
 
-## 文件清单
+---
 
-- `app-marketing-context.md`
-- `current-listing-audit.md`
-- `competitor-analysis-en-fr.md`
-- `keyword-research-en-US.md`
-- `keyword-research-fr-FR.md`
-- `metadata-final-en-US.md`
-- `metadata-final-fr-FR.md`
-- `creative-brief-en-fr.md`
-- `experiment-and-measurement-plan.md`
-- `executive-summary.md`（本文件）
+## 本轮执行边界确认（brief §十四）
+
+✅ 未修改应用代码 · ✅ 未修改 4 个前置输入文件 · ✅ 未连接 Play Console · ✅ 未上传任何素材 · ✅ 未发布任何内容 · ✅ 未做 Apple 相关工作 · ✅ prod 仅只读查询（`SELECT`），无任何写操作
