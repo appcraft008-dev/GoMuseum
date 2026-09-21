@@ -45,6 +45,9 @@ class MuseumConfig:
     # museums.yaml 本来就兼任馆元数据真相源(name/city/country 也从这走)。
     # 缺省 RANK_LAST → 未配的馆落到末尾,内部再按 slug,保证顺序稳定。
     rank: int = RANK_LAST
+    # 馆名的其余八语(lang → 名)。zh/en 不在这里,它们是上面的 name_zh/name_en,
+    # 这样每种语言只有一处定义。解析用 museum_repo.museum_names()。
+    names: dict[str, str] = field(default_factory=dict)
 
 
 class MuseumCatalog:
@@ -77,6 +80,7 @@ class MuseumCatalog:
                 collect_all_types=bool(m.get("collect_all_types") or False),
                 intro_qid=m.get("intro_qid"),
                 rank=int(m.get("rank") or RANK_LAST),
+                names={k: str(v) for k, v in (m.get("names") or {}).items() if v},
             )
         return cls(configs)
 
