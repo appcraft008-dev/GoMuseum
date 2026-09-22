@@ -69,6 +69,7 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
           limit: _limit,
           offset: offset,
           language: language);
+      if (!mounted) return; // autoDispose 后:响应回来时页面可能已退出
       final merged = replace ? page.items : [...state.items, ...page.items];
       state = state.copyWith(
         items: merged,
@@ -78,17 +79,27 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
         clearError: true,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(loading: false, error: e);
     }
   }
 }
 
-final objectListProvider = StateNotifierProvider.family<
+/// ⚠️ **只缓存成功结果**——`autoDispose` + 首屏拉到了才 `keepAlive`。
+/// 理由同 museumDetailProvider(见那里的长注释):不带 autoDispose 的 family 会把
+/// 错误态永久钉死,一次网络抖动就让这个 (馆,分类,语言) 再也不发请求,
+/// 只有重启 App 能解。成功结果照旧永久驻留,不影响换语言/换分类的缓存命中。
+final objectListProvider = StateNotifierProvider.autoDispose.family<
     ObjectListNotifier,
     ObjectListState,
     ({String slug, String category, String language})>((ref, a) {
   final ds = ref.watch(catalogDataSourceProvider);
-  return ObjectListNotifier(
-      ds: ds, slug: a.slug, category: a.category, language: a.language)
-    ..loadInitial();
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  final notifier = ObjectListNotifier(
+      ds: ds, slug: a.slug, category: a.category, language: a.language);
+  notifier.loadInitial().then((_) {
+    if (!disposed && notifier.state.error == null) ref.keepAlive();
+  });
+  return notifier;
 });
