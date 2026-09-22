@@ -50,9 +50,11 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
   final String language;
   static const _limit = 50;
 
-  Future<void> loadInitial() async {
+  /// 返回首屏是否拉到了 —— provider 据此决定要不要 keepAlive(只缓存成功结果)。
+  Future<bool> loadInitial() async {
     state = const ObjectListState(loading: true);
     await _fetch(0, replace: true);
+    return mounted && state.error == null;
   }
 
   Future<void> loadMore() async {
@@ -94,12 +96,12 @@ final objectListProvider = StateNotifierProvider.autoDispose.family<
     ObjectListState,
     ({String slug, String category, String language})>((ref, a) {
   final ds = ref.watch(catalogDataSourceProvider);
-  var disposed = false;
-  ref.onDispose(() => disposed = true);
   final notifier = ObjectListNotifier(
       ds: ds, slug: a.slug, category: a.category, language: a.language);
-  notifier.loadInitial().then((_) {
-    if (!disposed && notifier.state.error == null) ref.keepAlive();
+  // ok 为 false 也涵盖"页面已退出"(notifier 随 provider 一起 dispose),
+  // 所以不必再单独盯 provider 的 dispose。
+  notifier.loadInitial().then((ok) {
+    if (ok) ref.keepAlive();
   });
   return notifier;
 });
