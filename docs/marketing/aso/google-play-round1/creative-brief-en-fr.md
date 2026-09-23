@@ -91,14 +91,25 @@
 | # | 大字 | 第二行 | 词数 | 素材 | 构图要点 |
 |---|---|---|---|---|---|
 | 1 | **SCAN & LISTEN** | — | 3 | `EN_02_scan` | 取景框对着画 **+ 保留底部 "Recognizing…" 提示条**（见下方说明）。一张图讲完"动作 + 系统在响应" |
-| 2 | **SOURCED, NEVER INVENTED** | — | 3 | `EN_03_result` | 讲解正文，来源标注入镜。结果页在此出场，故第 1 屏不需要拼接 |
+| 2 | **SOURCED, NEVER INVENTED** | — | 3 | `EN_03_result`<br>《自由引导人民》 | ⭐ **2026-09-23 重截：`Artwork Info` 展开，露出 `Inventory No. RF 129` + `Location: Louvre Museum`。** 馆藏登记号是「这不是编的」最硬的可见证据 —— 比原计划的"来源标注入镜"更有力。结果页在此出场，故第 1 屏不需要拼接 |
 | 3 | **EXPLORE FREELY** | `No account. 5 free scans.` | 2 | **首页（2026-09-23 新截）** | ✅ 已解决。新首页显示 `5 free scans left · Upgrade for full access`，且 `Nearby Museums` 不再截断。<br>❌ **不用设置页** —— 理由见 §四 B3 |
 | 4 | **IN-DEPTH GUIDE** | — | 3 | `EN_06_indepth` | **不拼接**：一张讲解页，让 tab 栏自己入镜 —— 那排 tab 本身就说明"还有更多章节" |
 | 5 | **RICH ART COLLECTION** | — | 3 | `EN_05_collection` | **不拼接**：藏品列表页本来就是网格，App 自己的 UI 已经在展示"多"，再拼一次是重复劳动 |
-| 6 | **NO RENTAL, NO QUEUE** | — | 4 | **设计合成图**（非截屏） | ⭐ **用户 2026-09-23 选定方案 B：做设计图，不用现成截屏。** 七屏里唯一一张非截屏。完整 brief 见 §三之二 |
+| 6 | **NO RENTAL, NO QUEUE** | — | 4 | **设计合成图**（非截屏）<br>主体 = `EN_09_audio`《米洛的维纳斯》 | ⭐ **用户 2026-09-23 选定方案 B：做设计图，不用现成截屏。** 七屏里唯一一张非截屏。完整 brief 见 §三之二。<br>✅ 主体素材已就位：播放中状态（暂停键 / `Free preview` / `-0:53` / `1.0x` 全部可见） |
 | 7 | **PARIS CITY PASS** | `Louvre · Orsay · Orangerie · Petit Palais` | 3 | `EN_07_pass` | 转化前最后一击。**第二行必须点名四个馆**（用户 2026-09-23 定）——通票的价值就是「一张票四个馆」，而讲解器是**每馆各租一次**。<br>原写 `One-time. Not a subscription.`，删掉不亏：定价页 UI 里本来就印着 `One-time · not a subscription` 和价格 ⇒ **大字讲覆盖范围，界面自己讲付费形态**，分工不重复 |
 
 `EN_08_footprints` 本轮不入选（留存类功能，弱转化）；备用图 `spare_pass_top`（Slot 7 构图备选）、`spare_result_qa`（⚠️ 预设问答，文案必须写明非实时对话，不进前三张）。
+
+#### ⭐ 前三张刻意用三件不同作品
+
+| Slot | 作品 | 类型 |
+|---|---|---|
+| 1 `SCAN & LISTEN` | 蒙娜丽莎（取景框内） | 绘画 |
+| 2 `SOURCED, NEVER INVENTED` | 自由引导人民 | 绘画 |
+| 6 `NO RENTAL, NO QUEUE` | 米洛的维纳斯 | **雕塑** |
+
+商店页是横向滑动浏览，**同一件作品出现两次会被读成重复**。维纳斯是雕塑，顺带证明了「不只是画」。
+（首轮 Slot 2 与 Slot 6 都用蒙娜丽莎，只差"待播 vs 播放中"——已于 2026-09-23 换掉。）
 
 ### FR（素材：`docs/play-assets/screenshots/fr-FR/`）
 
@@ -113,6 +124,11 @@
 | 5 | **DES MILLIERS D'ŒUVRES** | — | 3 | 取自描述正文（比直译 `COLLECTION RICHE` 具体，法语里也更有分量）|
 | 6 | **NI LOCATION, NI FILE D'ATTENTE** | — | 5 | 描述已有 |
 | 7 | **PASS VILLE PARIS** | `Louvre · Orsay · Orangerie · Petit Palais` | 3 | 描述已有。第二行**不用翻译**——四个都是专名，法英同形 |
+
+**FR 素材与 EN 一一对应**（同作品、同状态、同 slot 编号），2026-09-23 已全部就位并逐张核对：
+- `FR_03_result`《La Liberté guidant le peuple》—— `Informations sur l'œuvre` 展开，`N° d'inventaire RF 129` / `Lieu de conservation : Musée du Louvre`
+- `FR_09_audio`《Vénus de Milo》—— 播放中，`Écoute gratuite` / `-0:54` / `1.0x`
+- ✅ 法语侧顺带验证到两件事：`œ` 连字正确、正文用法式引号 « »；**BC 年代正确本地化为 `140 av. J.-C.`**（英文侧为 `140 BC`）
 
 ### 三之二、Slot 6 设计合成图 Brief（`NO RENTAL, NO QUEUE`）
 
@@ -140,9 +156,11 @@
 
 这是七屏里唯一的非截屏，**最容易在商店页横向滑动时显得"不是一套"**。必须与其余六屏共用：同一背景色（暖纸 `#F3EDDF` 系）、同一字体与字号、同一上方留白比例（约 25%）、同一手机缩放与出血方式。
 
-#### 素材缺口
+#### ✅ 素材缺口已补齐（2026-09-23）
 
-主体那张"讲解播放中（音频控件可见）"的界面，**应与 Slot 2 用的 `EN_03_result` 不同屏**，否则七屏里出现两张几乎一样的画面。⏳ 需确认现有素材里有没有音频播放态的截屏；没有则**需补截一张（英法各一）**。
+主体那张"讲解播放中（音频控件可见）"的界面已就位：`EN_09_audio` / `FR_09_audio`，**且刻意换成了与 Slot 2 不同的作品**（米洛的维纳斯 vs 自由引导人民），顺带让七屏里出现一件雕塑。播放态的暂停键、`Free preview` / `Écoute gratuite` 徽标、倒计时、`1.0x` 倍速全部入镜。
+
+⚠️ **合成时注意**：这批截屏的状态栏带一个红色通知角标（WeLink），设计侧应**裁掉或遮住整条状态栏** —— 商店截图不该出现开发者自己的通知。
 
 #### 若设计侧做不出来的退路
 
