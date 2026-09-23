@@ -92,11 +92,11 @@
 |---|---|---|---|---|---|
 | 1 | **SCAN & LISTEN** | — | 3 | `EN_02_scan` | 取景框对着画 **+ 保留底部 "Recognizing…" 提示条**（见下方说明）。一张图讲完"动作 + 系统在响应" |
 | 2 | **SOURCED, NEVER INVENTED** | — | 3 | `EN_03_result` | 讲解正文，来源标注入镜。结果页在此出场，故第 1 屏不需要拼接 |
-| 3 | **EXPLORE FREELY** | `No account. 5 free scans.` | 2 | `EN_04_explore` | ⚠️ 必须是**未付费状态**的探索页，现有素材是已解锁账号 |
+| 3 | **EXPLORE FREELY** | `No account. 5 free scans.` | 2 | **首页（2026-09-23 新截）** | ✅ 已解决。新首页显示 `5 free scans left · Upgrade for full access`，且 `Nearby Museums` 不再截断。<br>❌ **不用设置页** —— 理由见 §四 B3 |
 | 4 | **IN-DEPTH GUIDE** | — | 3 | `EN_06_indepth` | **不拼接**：一张讲解页，让 tab 栏自己入镜 —— 那排 tab 本身就说明"还有更多章节" |
 | 5 | **RICH ART COLLECTION** | — | 3 | `EN_05_collection` | **不拼接**：藏品列表页本来就是网格，App 自己的 UI 已经在展示"多"，再拼一次是重复劳动 |
-| 6 | **NO RENTAL, NO QUEUE** | — | 4 | `EN_01_home` 或新截 | 手机 vs 租借讲解器的对比构图 |
-| 7 | **PARIS CITY PASS** | `One-time. Not a subscription.` | 3 | `EN_07_pass` | 转化前最后一击 |
+| 6 | **NO RENTAL, NO QUEUE** | — | 4 | `EN_04_explore` | ⚠️ 首页已改派给 Slot 3，此处改用四馆列表页：**「一个 App 四个馆」正是「不用各馆各租一次」的论据**。<br>🟡 但这屏本质是**对比性主张**，没有任何 App 界面天然对应 —— 若设计侧能出「手机 vs 租借柜台」的对比构图会更强；做不了就用本页，或砍掉走 6 屏 |
+| 7 | **PARIS CITY PASS** | `Louvre · Orsay · Orangerie · Petit Palais` | 3 | `EN_07_pass` | 转化前最后一击。**第二行必须点名四个馆**（用户 2026-09-23 定）——通票的价值就是「一张票四个馆」，而讲解器是**每馆各租一次**。<br>原写 `One-time. Not a subscription.`，删掉不亏：定价页 UI 里本来就印着 `One-time · not a subscription` 和价格 ⇒ **大字讲覆盖范围，界面自己讲付费形态**，分工不重复 |
 
 `EN_08_footprints` 本轮不入选（留存类功能，弱转化）；备用图 `spare_pass_top`（Slot 7 构图备选）、`spare_result_qa`（⚠️ 预设问答，文案必须写明非实时对话，不进前三张）。
 
@@ -112,7 +112,7 @@
 | 4 | **GUIDES APPROFONDIS** | — | 2 | 新拟 |
 | 5 | **DES MILLIERS D'ŒUVRES** | — | 3 | 取自描述正文（比直译 `COLLECTION RICHE` 具体，法语里也更有分量）|
 | 6 | **NI LOCATION, NI FILE D'ATTENTE** | — | 5 | 描述已有 |
-| 7 | **PASS VILLE PARIS** | `Paiement unique. Pas d'abonnement.` | 3 | 描述已有 |
+| 7 | **PASS VILLE PARIS** | `Louvre · Orsay · Orangerie · Petit Palais` | 3 | 描述已有。第二行**不用翻译**——四个都是专名，法英同形 |
 
 ### 尺寸与构图规格
 
@@ -131,7 +131,7 @@
 | 2 | 覆盖量文案 | ✅ 已改为能力口径（不再写数字），见 §三 Slot 5 |
 | 3 | **截图是否已带营销文案图层** | 🔴 **不通过，见 B1** |
 | 4 | **大字/标题不得拿 AI 当卖点；不得出现暗示实时自由问答的输入框** | ✅ **通过**（判据已修正，见 B2）|
-| 5 | 免费状态截图（Slot 3 `EXPLORE FREELY` 需要）| 🔴 **不通过，见 B3** |
+| 5 | 免费状态截图（Slot 3 `EXPLORE FREELY` 需要）| ✅ **通过**（2026-09-23 用户重截首页，见 B3）|
 | 6 | FR 截图内是否残留英文 UI | ⏳ 未逐张核对 |
 | 7 | `spare_result_qa` 若启用需写明预设问答、不进前三张 | ⏳ 当前未启用 |
 
@@ -164,10 +164,21 @@ F6 那条证据我也用偏了：TourBlink 那个差评骂的是**内容质量**
 
 🔑 **教训**：把"不当卖点"执行成"字样不许出现"，是**把决定的范围扩大到它原本没覆盖的地方**。下次引用既有决定前，先回去看原话的适用对象是什么。
 
-### 🔴 B3. `screenshot_EN_01_home.jpg` 两个问题
+### ✅ B3. 免费状态截图 —— **已解决**（2026-09-23 用户重截）
 
-1. **"Pass active · full access unlocked"** —— 已付费账号状态。首页在新方案里不再是 Slot 1，但 **Slot 3 `EXPLORE FREELY` 必须用未付费状态重截**，否则「免费开始」这句话被画面自己打脸。
-2. **"Nearby M…" 被截断** —— 可见的 UI 溢出缺陷，出现在最重要的那张图上。
+用户重截了英法各两张候选（首页 + 设置页）。**结论：两个市场都用首页，设置页不可用。**
+
+**首页（采用）**：`5 free scans left · Upgrade for full access` / `5 scans gratuits restants · Passez à l'offre complète`。顺带修好了旧素材的两个缺陷 —— 原 `Pass active · full access unlocked`（已付费状态）和 `Nearby M…` 截断，现在都正常。
+
+**设置页（否决，三条理由）**：
+
+1. 🔴 **与第二行文案自相矛盾**。Slot 3 第二行是 `No account. 5 free scans.`，而设置页底部是 `Compte / User — hong.yang.01-t8@hotmail.com` —— **画面里明晃晃一个已登录账号**。这条最致命。
+2. 🔴 **真实邮箱会随截图公开上商店页**（PII）。
+3. 🔴 **`Offline museum packs — Coming soon` / `Packs de musée hors ligne — Bientôt`** —— 与「不承诺 offline」（F7）直接冲突，等于把一个不存在的功能摆上商店页。
+
+另有两个非决定性缺陷：文字换行断裂（英文 `Use/r` 断两行，**法文 `Utili/sate/ur` 断三行**）、底部被裁。
+
+> 🔑 **顺带一条通则**：**配置页/设置页不适合做商店截图** —— 没人因为看到设置界面而下载，这是 `screenshot-optimization` 的公认反模式。本次差点被「哪张更清楚地显示免费额度」带偏：设置页的额度确实更醒目，但**更醒目的错误画面仍然是错的**。
 
 ### 已被用户明确搁置，不要再提
 
