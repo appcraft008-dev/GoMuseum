@@ -99,7 +99,9 @@ def test_content_includes_facts_title_images_status(session):
     assert d["images"][0]["url"] == "https://img/x.jpg"  # upsert_object 把 http→https
     f = d["facts"]
     assert f["artist"] == "库尔贝" and f["date"] == "1866"
-    assert f["medium"] == "油画" and f["dimensions"] == "46 × 55 cm"  # 已人性化
+    # 「布面」来自源串自己的 toile,不是这张表补的 —— 见
+    # test_humanize_medium_never_invents_the_support
+    assert f["medium"] == "布面油画" and f["dimensions"] == "46 × 55 cm"
     assert f["inventory"] == "RF 1995 10" and f["location"] == "奥赛博物馆"
     # exhibitions 已移出面板(进证据包材料级)
     assert f["exhibitions"] == []
@@ -172,8 +174,8 @@ def test_content_facts_curated_and_humanized(session):
     assert not f.get("bibliography")
     assert not f.get("provenance")
     assert not f.get("exhibitions")
-    # medium 人性化(zh huile→油画);基础项保留
-    assert f["medium"] == "油画"
+    # medium 人性化(zh huile→油画,承载物 toile→布面);基础项保留
+    assert f["medium"] == "布面油画"
     assert "artist" in f and "date" in f
 
 
@@ -205,7 +207,10 @@ def test_content_facts_medium_prefers_evidence_pack_p186(session):
         "flagged": [],
     }
     session.commit()
-    assert get_object_content(session, "orsay", "Q1", "zh")["facts"]["medium"] == "油画"
+    assert (
+        get_object_content(session, "orsay", "Q1", "zh")["facts"]["medium"]
+        == "布面油画"
+    )
     assert (
         get_object_content(session, "orsay", "Q1", "en")["facts"]["medium"]
         == "Oil on canvas"
@@ -221,13 +226,13 @@ def test_content_facts_medium_humanized_from_attributes(session):
     o.evidence_pack = None
     session.commit()
     f = get_object_content(session, "orsay", "Q1", "zh")["facts"]
-    assert f["medium"] == "油画"  # 人性化,非原始法语
+    assert f["medium"] == "布面油画"  # 人性化,非原始法语；承载物来自源串的 toile
 
 
 def test_humanize_medium_and_dimensions():
     from app.services.museum_repo import _humanize_dimensions, _humanize_medium
 
-    assert _humanize_medium("peinture à l'huile (toile)", "zh") == "油画"
+    assert _humanize_medium("peinture à l'huile (toile)", "zh") == "布面油画"
     assert _humanize_medium("huile sur toile", "en") == "Oil on canvas"
     assert _humanize_medium("bronze", "zh") == "青铜"
     assert (
@@ -239,6 +244,52 @@ def test_humanize_medium_and_dimensions():
     assert _humanize_dimensions(None) is None
 
 
+def test_humanize_medium_never_invents_the_support():
+    """承载物只能来自源串,不许这张表替它补。
+
+    2026-09-23 修复前:`huile`/`oil` 直接映射成 "Oil on canvas"/"Huile sur toile"
+    —— 源串只说了"油",画布是凭空补的。prod 实测 9242 件含 huile 的作品里
+    **2412 件承载物不是画布**(1603 木 / 563 纸卡 / 142 铜),全被标成 canvas,
+    其中包括《蒙娜丽莎》(源 "peinture à l'huile;bois",实为杨木板)。
+    这直接违反项目原则「正确性靠构造,不许脑补」,且它正好印在商店截图
+    「SOURCED, NEVER INVENTED」那一屏上。
+
+    这里钉三件事:①不再凭空补 ②真有承载物时要拼出来 ③词序/分隔符不可信。
+    """
+    from app.services.museum_repo import _humanize_medium
+
+    # ① 源串只说媒介 → 只输出媒介,不许出现 canvas/toile
+    assert _humanize_medium("Peinture à l'huile", "en") == "Oil"
+    assert _humanize_medium("Peinture à l'huile", "fr") == "Huile"
+
+    # ② 源串真有承载物 → 拼接。蒙娜丽莎这条是本次修复的靶心
+    assert _humanize_medium("peinture à l'huile;bois", "en") == "Oil on wood"
+    assert _humanize_medium("peinture à l'huile;bois", "zh") == "木板油画"
+    assert _humanize_medium("peinture à l'huile;peuplier", "en") == "Oil on poplar"
+    assert _humanize_medium("peinture à l'huile;cuivre", "en") == "Oil on copper"
+    assert _humanize_medium("peinture à l'huile;carton", "en") == "Oil on cardboard"
+    # 真画布的那 6830 件不能因为修复而退化
+    assert _humanize_medium("peinture à l'huile;toile", "en") == "Oil on canvas"
+    assert _humanize_medium("peinture à l'huile;toile", "fr") == "Huile sur toile"
+
+    # ③ 上游词序不可信、分隔符混用、还有整句无分隔的写法
+    assert _humanize_medium("toile;peinture à l'huile", "en") == "Oil on canvas"
+    assert _humanize_medium("peinture à l'huile, toile", "en") == "Oil on canvas"
+    # ⚠️ 这条是不能按分隔符切 token 的原因:切了只剩 "Oil"
+    assert _humanize_medium("huile sur toile", "en") == "Oil on canvas"
+    assert (
+        _humanize_medium("Peinture à l'huile;Toile (matériau)", "en") == "Oil on canvas"
+    )
+
+    # 媒介命中后要把区间剔除,否则 "pierre noire" 的残串会被 "pierre" 二次命中
+    assert _humanize_medium("pierre noire;blanc (rehaut)", "zh") == "黑石笔"
+
+    # 无媒介时,承载物词独立成材质(旧行为不变)
+    assert _humanize_medium("fond d'or;bois", "zh") == "木"
+    assert _humanize_medium("marbre", "zh") == "大理石"
+    assert _humanize_medium("technique inconnue", "zh") == "technique inconnue"
+
+
 def test_humanize_medium_joconde_terms_and_ambiguities():
     """Joconde 法语材质。串全部摘自上游 11273 条真实取值。
 
@@ -247,8 +298,8 @@ def test_humanize_medium_joconde_terms_and_ambiguities():
     """
     from app.services.museum_repo import _humanize_medium
 
-    assert _humanize_medium("tempera;fond d'or;peuplier", "zh") == "蛋彩"
-    assert _humanize_medium("mine de plomb;papier calque", "zh") == "石墨铅笔"
+    assert _humanize_medium("tempera;fond d'or;peuplier", "zh") == "杨木板蛋彩"
+    assert _humanize_medium("mine de plomb;papier calque", "zh") == "纸本石墨铅笔"
     assert (
         _humanize_medium("bas-relief;calcaire", "zh") == "石灰岩"
     )  # 技法在前,材质在后
@@ -266,8 +317,9 @@ def test_humanize_medium_joconde_terms_and_ambiguities():
     assert _humanize_medium("fond d'or;bois", "zh") == "木"
 
     # 布面别抢走油画:huile 排在 toile 前
-    assert _humanize_medium("peinture à l'huile;toile", "zh") == "油画"
-    assert _humanize_medium("toile, marouflée", "zh") == "布面"
+    assert _humanize_medium("peinture à l'huile;toile", "zh") == "布面油画"
+    # 独立出现时是名词「画布」;作承载物拼接时才用定语形「布面」(见 _ZH_ATTR)
+    assert _humanize_medium("toile, marouflée", "zh") == "画布"
 
 
 def test_humanize_medium_english_terms_and_ambiguities():
@@ -280,7 +332,8 @@ def test_humanize_medium_english_terms_and_ambiguities():
 
     assert _humanize_medium("Carrara marble", "zh") == "大理石"
     assert _humanize_medium("elephant ivory", "en") == "Ivory"
-    assert _humanize_medium("poplar wood", "zh") == "木"
+    # poplar 排在 wood 前 → 取更具体的「杨木」而不是泛指的「木」
+    assert _humanize_medium("poplar wood", "zh") == "杨木"
     assert _humanize_medium("cast iron", "zh") == "铸铁"
 
     # 歧义①:gelatin/albumen/salted 排在 silver 之前 ——
