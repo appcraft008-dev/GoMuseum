@@ -1,67 +1,134 @@
-# GoMuseum · Keyword Research — English (Google Play)
+# GoMuseum · Keyword Research — en-US (Google Play)
 
-**当前无真实搜索量/难度数据**（无 Appeeky 等付费 ASO 数据源）。以下 Volume/Difficulty/Relevance 全部基于搜索结果数量、竞品覆盖密度、语义相关性的**方向性判断**，非真实检索量，检索日期 2026-09-08，来源见 `competitor-analysis-en-fr.md` 及本文件末尾 Sources。
+> **当前无真实搜索量/难度数据，以下判断基于搜索结果数量、竞品覆盖、在位者评分与语义相关性，属于方向性判断。**
+> 数据来源：Google Play 网页搜索实访（`hl=en_US&gl=US`），检索日 **2026-09-21**。Play 不公开搜索量；本轮未采购第三方数据源，**不虚构任何量化指标**。
+> 下表的 Volume / Difficulty 列**不是搜索量与难度数值**，是基于实测证据的**三档定性标注**（高/中/低），并注明证据。
 
-## 关键词分组
+## 证据口径说明
 
-### 品牌词
-- gomuseum
+| 我观察到的 | 我能推出的 | 我**不能**推出的 |
+|---|---|---|
+| 某词返回 8 个结果 vs 30 个结果 | 该词的**供给侧**竞争强度 | 该词的需求侧搜索量 |
+| 在位者评分 2.9 / 评论 246 | 在位者**质量弱、可攻** | 排名难度数值 |
+| Play 结果里出现/不出现某 App | 该 App 是否占据该词 | 它的下载量归因 |
 
-### 博物馆名称词
-- louvre, louvre museum, musée d'orsay / orsay museum, musée de l'orangerie / orangerie museum, petit palais
+---
 
-### 博物馆导览词
-- louvre guide, louvre audio guide, museum audio guide, paris museum guide, orsay guide
+## ⭐ 排除一个关键词，只有三种正当理由（2026-09-21 补写）
 
-### 艺术品/画作识别词
-- art recognition, artwork recognition, painting identifier, art scanner, scan artwork, identify painting
+用户提出的质疑：**"有竞品用了的词我们就不能用了吗？高频词不用，用户不就搜不到我们了？"**
+**这个质疑是对的，本文件首版没把三种理由分开写，读起来像"竞品占了就得躲"。** 现补上判据：
 
-### 巴黎旅行场景词（长尾）
-- louvre without audio guide rental, skip the audio guide line louvre, one day at the louvre, free things to do at the louvre, louvre app instead of audio guide
+| 类型 | 判据 | 结果 | 本文件里的例子 |
+|---|---|---|---|
+| **① 失实** | 说了就是假话 | **完全不用**，任何字段都不用 | `offline`（产品不支持）、`thousands of works` |
+| **② 意图错配** | 能排上去，但搜这个词的人不是我们的用户，转化过来变 1 星差评 | **完全不用** | `art appraisal` / `art value` / `skip the line` |
+| **③ 标题预算** | 30 字符零和，放不下 | **照常用**，只是不放最贵的位置 | `audio guide`、FR 的 `scan` |
 
-## Top Keywords by Opportunity（方向性判断）
+**只有 ③ 跟竞品有关，而 ③ 不是"不用"。**
 
-| Keyword | Volume(推测) | Difficulty(推测) | Relevance | Opportunity | 依据 |
-|---|---|---|---|---|---|
-| louvre guide | 75 | 80 | 90 | 中 | 至少6款直接竞品命中（vusiem/tourblink系列+izi.TRAVEL+Bloomberg Connects），竞争激烈但意图极强 |
-| louvre audio guide | 70 | 82 | 75 | 中低 | 竞争同上，但"audio guide"和我们的"scan"定位有语义错位，转化后体验落差风险 |
-| museum audio guide | 60 | 60 | 55 | 中 | 泛词，竞争密度低于"louvre"专名但意图不如专名精确 |
-| art recognition | 50 | 55 | 85 | 中高 | 本轮新发现至少5款通用识别App在争这个词（ArtScan、Art Identifier、Painting & Art Identification、Painting Identifier AI Scanner），但**都不绑定任何博物馆** |
-| painting identifier | 45 | 50 | 80 | 中高 | 同上，通用识别类竞品密集但无博物馆场景锚定 |
-| scan artwork louvre | 20 | 15 | 95 | **高** | 复合长尾词，几乎无直接竞品同时命中"scan/识别"+"louvre"，是本轮验证到的最干净空位 |
-| louvre app instead of audio guide rental | 15 | 10 | 90 | **高** | 场景词，直接命中我们商店文案已有的差异化叙事（"no rental, no queue"），竞争几乎为零 |
-| free things to do at the louvre | 30 | 25 | 40 | 中 | 泛旅行攻略词，意图偏"信息查找"而非"下载App"，转化率存疑，落地页更适合承接（已有 `deployment/website/`） |
+### 为什么"高频词不用会搜不到"在 Play 上不成立
 
-## 关键词分层
+Play **全文索引 4000 字符的完整描述**（iOS 不索引描述，这是两个平台最大的差别）。所以：
 
-**Primary（3-5，标题/短描述必须覆盖）：**
-1. louvre（专名，最高意图）
-2. scan / recognition（功能差异化词，二选一或都用，视字符预算）
-3. audio guide（照顾"louvre audio guide"这类高流量泛词，即使定位不完全一致也要留一点入口流量）
+- **词写进完整描述 = 已被索引 = 用户搜得到。** 竞品用不用完全不影响这一点。
+- Title 的作用是**权重**，不是**有无**。放进 Title 只是排得更靠前，不放也照样出现。
+- ⇒ **除了 ①② 两类，所有相关词一律写进完整描述**。本轮 EN/FR 的关键词矩阵正是这么做的 —— `audio guide`、`recognition`、`painting`、FR 的 `reconnaissance` 全部在完整描述里，一个都没漏。
 
-**Secondary（短描述/完整描述前段）：**
-- musée d'orsay / orsay, orangerie, petit palais, art recognition, painting
+> **一句话**：竞品强不强，只影响"要不要花 30 字符里的一个去跟它抢"，**从不影响"这个词写不写"**。
 
-**Long-tail（完整描述自然分布，4000字符里有大量空间）：**
-- scan artwork louvre, louvre app instead of audio guide rental, identify painting, museum guide app, paris museum guide
+---
 
-**Aspirational（当前不主攻，随体量增长再评估）：**
-- museum audio guide（泛词，被 izi.TRAVEL/Bloomberg Connects 这类大平台占据，短期难撼动）
+## 关键词分组与评估
 
-## 与 Phase 2 竞品分析交叉验证
+### 1. 品牌词
 
-- "louvre guide"类专名词竞争度**高于本轮最初预期**（新发现的 vusiem/tourblink 系列把这个词打得更拥挤了）——不该把标题预算全押在这上面
-- "art recognition"类功能词竞争度**也高于最初预期**（新发现一批通用识别App）——但没有一个绑定Paris四馆，"scan artwork louvre"这类复合长尾词才是真正干净的空位，这是本轮最重要的关键词发现，比既有资料里"scan是空位"的判断更精确
+| Keyword | 供给侧竞争 | 相关性 | 判断 |
+|---|---|---|---|
+| gomuseum | 无 | 100 | 必然自动覆盖，无需布局 |
 
-## Recommendations
+零真实用户 ⇒ 品牌词零搜索量，**本轮不投入任何字符预算**。
 
-1. 标题（30字符）应该同时容纳"louvre"专名+"scan/recognition"功能词，而不是二选一——具体版本交给 Phase 3 `metadata-optimization`
-2. 完整描述里明确写出"scan artwork"这类复合长尾词的自然变体（如"scan any painting at the Louvre"），这是本轮验证到的最高机会分关键词
-3. 落地页（`deployment/website/index.html`，已发布前状态）比商店描述更适合承接"free things to do at the louvre"这类信息查找型长尾词，两者分工不要混淆
+### 2. 博物馆专名词（**最高意图**）
 
-## Sources
-- [ArtScan - Identifier Tableaux](https://apps.apple.com/us/app/artscan-identifier-tableaux/id6630371903)
-- [Art Identifier App](https://apps.apple.com/us/app/art-identifier/id6747607478)
-- [Painting & Art Identification - Google Play](https://play.google.com/store/apps/details?id=com.seapps.artidentification&hl=en_US)
-- [Painting Identifier AI Scanner](https://apps.apple.com/us/app/id6751956074)
-- 其余竞品来源见 `competitor-analysis-en-fr.md`
+| Keyword | 实测证据 | 判断 |
+|---|---|---|
+| **louvre** | `louvre guide` 返回 30+ 结果，但**头部评分 2.9–3.7**，无识别类玩家 | ⭐ **一级目标**。高意图 + 在位者弱 |
+| **louvre guide** | 同上 | ⭐ 一级 |
+| **louvre audio guide** | `museum audio guide` 仅 8 结果，其中 Louvre Museum Free Guide 2.9★ | ⭐ 一级，比预想的好打 |
+| musée d'orsay / orsay | `louvre guide` 结果中 Orsay Museum Free Guide **1.6★** | 二级。在位者极弱但词本身量小 |
+| orangerie / petit palais | 未单独检索 | 三级，仅放 Full desc |
+
+⚠️ **合规**：Play 允许在描述中提及你的 App 覆盖的真实地点，但**不得让用户以为这是官方 App**。竞品 `Louvre Chatbot Guide` 的做法是在描述里直写 "unofficial"。GoMuseum 采用同等做法（见 metadata 的 independent-guide 声明）。**标题里出现 "Louvre" 本身不违规**（大量在位者都这么做），但不可写成 "Louvre Official" 之类。
+
+### 3. 博物馆导览词
+
+| Keyword | 实测证据 | 判断 |
+|---|---|---|
+| **museum audio guide** | **仅 8 个结果**，izi.TRAVEL/Bloomberg/GuidiGO **均未出现** | ⭐ 一级。**推翻了"红海"的既有判断** |
+| museum guide | 未单独检索 | 二级 |
+| paris museum guide | `guide musée paris`(FR) 拥挤；EN 侧未单独检索 | 二级 |
+| audio guide | 泛词，量大意图弱 | 三级，Full desc 自然覆盖 |
+
+### 4. 艺术品识别词（**功能词**）
+
+| Keyword | 实测证据 | 判断 |
+|---|---|---|
+| art recognition | 头部 Google A&C 4.2、Smartify 4.6 | 🟡 **不作为主攻**。有强在位者 |
+| painting identifier | `scan painting identify` 返回 10+ 识别 App | 🟡 **且意图错位**——多为估值 App |
+| artwork recognition | 同上 | 🟡 |
+| **scan**（作为修饰词） | `louvre guide` 结果中**零识别玩家** | ⭐ **一级，但只在与 louvre 组合时** |
+
+> **本轮最重要的关键词判断**：
+> 单独的识别功能词（`art recognition` / `painting identifier`）**不是 GoMuseum 的获客词** —— 那里的流量意图是"我这幅画值多少钱"，转化过来也不是我们的用户。
+> 但 **`louvre` × `scan` 的组合是真空**。所以 scan 的正确用法是**修饰专名**，不是独立主攻。
+
+**直接回答 brief §五的提问**："用户是否会主动搜索 art recognition / painting identifier？"
+→ **会，而且有足够多的 App 在供给侧抢这个词** —— 说明存在需求。**但这批需求里相当一部分是艺术品估值意图，不是看展意图**（证据：结果里 Art Appraisal: Scan & Value 4.1、Art Identifier & **Value** 4.0、Estimation Tableau 等的存在与排名）。
+→ **即便用户不搜识别功能词，该功能仍应作为页面转化卖点**：F5 的竞品用户原话证明"找不到作品是什么"是真实且被反复抱怨的痛点。**这正是"搜索获客关键词"与"页面转化卖点"必须分开的原因**，也是本轮结论。
+
+### 5. 巴黎旅行场景词 / 长尾高意图词
+
+| Keyword | 判断 |
+|---|---|
+| paris museum app | 二级，Full desc |
+| things to do in paris | ✗ 不建议。泛旅游词，与 App 功能距离太远 |
+| louvre mona lisa | 三级，Full desc 自然出现（作品名） |
+| **louvre without audio guide rental** | ⭐ 长尾高意图，对应 F5/竞品差评主题，Full desc 用整段承接（`NO RENTAL, NO QUEUE`） |
+| skip the line louvre | ✗ 不建议。我们不卖门票，会带来错配流量与差评 |
+
+### 6. 不建议使用的词
+
+| Keyword | 原因 |
+|---|---|
+| AI / AI guide / AI audio guide | 用户 2026-09-13 拍板；且 F6 实测显示 "AI" 在本类目已是**差评词** |
+| official louvre / louvre official | 合规红线 |
+| art appraisal / art value / art worth | 意图错配，会招来估值用户 → 差评 |
+| free tickets / skip the line | 不提供该功能 |
+| offline / offline guide | **产品当前不支持**（F7）。竞品的头部卖点，但我们写了就是失实 |
+
+---
+
+## 关键词布局（EN）
+
+| Keyword | Title | Short desc | Full desc | 说明 |
+|---|---|---|---|---|
+| louvre | ✓ | ✓ | ✓ 多次 | 最高意图专名，三字段全覆盖 |
+| guide | ✓ | | ✓ | 承接 `louvre guide` / `museum audio guide` |
+| scan | ✓ | ✓ | ✓ | 差异化 + 与 louvre 组合的真空位 |
+| orsay | | ✓ | ✓ | 二级专名 |
+| audio guide | | | ✓ | 全文索引即可，不占 Title |
+| artwork / painting / sculpture | | ✓(art) | ✓ | 语义相关词，自然覆盖 |
+| recognize / recognition | | | ✓ | 功能词变体，Full desc |
+| orangerie / petit palais | | | ✓ | 三级专名 |
+| paris | | | ✓ | 场景词 |
+
+**Title 取舍说明**：30 字符只够放 3 个实义词。选中 `Louvre + Guide + Scan` 的理由是三者分别承接**最高意图专名**、**最大流量词根**、**唯一零竞争差异化词**。被舍弃的是 `Orsay`（量小）与 `Audio`（可由 Full desc 索引承接）。
+
+> **与 FR 的布局差异**：见 `keyword-research-fr-FR.md`。核心差异是 **scan 在 EN 进 Title、在 FR 不进 Title** —— 因为 Smartify 在 FR 已占住识别词（F4）。
+
+## 仍需真实数据验证的假设
+
+1. `louvre guide` 与 `museum audio guide` 的**实际搜索量之比** —— 本轮只知供给侧强弱，不知需求侧大小。发布后看 Play Console 的 Search terms 报告。
+2. `scan` 进 Title 是否真能带来 `louvre scan` 类长尾曝光 —— 只有上线后才能观测。
+3. `TourLens: Louvre Guide` 是否真做识别 —— 若是，`louvre` × `scan` 的"真空"判断需要收回。
