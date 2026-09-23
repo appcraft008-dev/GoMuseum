@@ -626,11 +626,17 @@ class _ObjectGrid extends ConsumerWidget {
             ),
             const SizedBox(height: 10),
             GestureDetector(
-              onTap: () => ref
-                  .read(objectListProvider(
-                          (slug: slug, category: category, language: lang))
-                      .notifier)
-                  .loadInitial(),
+              // 馆包一起重试:整页失败时它多半也挂了(标题回退成 slug、分类条消失),
+              // 只重列表的话那两处永远回不来。
+              onTap: () {
+                ref.invalidate(
+                    museumDetailProvider((slug: slug, language: lang)));
+                ref
+                    .read(objectListProvider(
+                            (slug: slug, category: category, language: lang))
+                        .notifier)
+                    .loadInitial();
+              },
               child: Text(
                 l10n.retry,
                 style: GmText.sans(size: 13, color: gm.accent),

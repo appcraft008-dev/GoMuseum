@@ -224,8 +224,13 @@ def _pack_values(pack, source):
 
 # 常见材质 → 本地化干净名(按词首关键词命中;未知原样)。ponytail: 覆盖主流画/雕塑材质,缺再加。
 _MEDIUM_NORM = {
-    "huile": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
-    "oil": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
+    # ⚠️ 只写媒介,**不写承载物**。曾是 "Oil on canvas"/"Huile sur toile" ——
+    # 源串里只说了"油",画布是这张表凭空补的。2026-09-23 实测 prod 9242 件含
+    # huile 的作品里 2412 件承载物不是画布(1603 木/563 纸卡/142 铜),全被标成
+    # canvas,含《蒙娜丽莎》(源 "peinture à l'huile;bois",实为杨木板)。
+    # 承载物现由 _SUPPORT_KEYS 单独扫描后拼接,见 _humanize_medium。
+    "huile": {"zh": "油画", "en": "Oil", "fr": "Huile"},
+    "oil": {"zh": "油画", "en": "Oil", "fr": "Huile"},
     "bronze": {"zh": "青铜", "en": "Bronze", "fr": "Bronze"},
     "marbre": {"zh": "大理石", "en": "Marble", "fr": "Marbre"},
     "aquarelle": {"zh": "水彩", "en": "Watercolour", "fr": "Aquarelle"},
@@ -233,6 +238,9 @@ _MEDIUM_NORM = {
     "gouache": {"zh": "水粉", "en": "Gouache", "fr": "Gouache"},
     "fusain": {"zh": "炭笔", "en": "Charcoal", "fr": "Fusain"},
     "plâtre": {"zh": "石膏", "en": "Plaster", "fr": "Plâtre"},
+    # ⚠️ "salted paper" 必须排在 "salted" 前:媒介名自身含 "paper",只吃掉
+    # "salted" 的话残串里的 "paper" 会被承载物扫描二次命中 → "纸本盐纸法"。
+    "salted paper": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
     "salted": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
     "papier salé": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
     "albumen": {"zh": "蛋白印相", "en": "Albumen print", "fr": "Tirage albuminé"},
@@ -269,7 +277,7 @@ _MEDIUM_NORM = {
     "cire": {"zh": "蜡", "en": "Wax", "fr": "Cire"},
     "noyer": {"zh": "胡桃木", "en": "Walnut", "fr": "Noyer"},
     "bois": {"zh": "木", "en": "Wood", "fr": "Bois"},
-    "toile": {"zh": "布面", "en": "Canvas", "fr": "Toile"},
+    "toile": {"zh": "画布", "en": "Canvas", "fr": "Toile"},
     # 以下补 **英文**(Wikidata P186,优先级高于 attributes 故更常出现在面板上)
     # 与法语长尾。按 prod 全量 11449 条真值定(2026-09-12)。
     # ⚠️ gelatin/albumen/salted 在上面、排在 silver 之前 —— 否则
@@ -307,6 +315,16 @@ _MEDIUM_NORM = {
     # stone 放在 limestone/sandstone 之后是多余的保险:\b 本就不匹配词内的
     # "…stone",但排在后面,以后有人删掉 \b 也不会立刻把石灰岩变成「石」。
     "stone": {"zh": "石", "en": "Stone", "fr": "Pierre"},
+    # 英文承载物 —— P186 是 medium 的**优先**源(见 get_object_content),
+    # 而此前这里只有法语 toile/bois,英文 "canvas"/"panel" 无键可命中。
+    # 按 prod P186 真值定(2026-09-23):canvas 429 / panel 54 / poplar panel 15
+    # / cardboard 11 / paper 11 / wood 6 / oak panel 4。
+    # ⚠️ poplar 与 oak 必须排在 panel 前:"poplar panel" 要判成杨木板不是泛指嵌板。
+    "canvas": {"zh": "画布", "en": "Canvas", "fr": "Toile"},
+    "poplar": {"zh": "杨木", "en": "Poplar", "fr": "Peuplier"},
+    "oak": {"zh": "橡木", "en": "Oak", "fr": "Chêne"},
+    "panel": {"zh": "木板", "en": "Panel", "fr": "Panneau"},
+    "cardboard": {"zh": "卡纸", "en": "Cardboard", "fr": "Carton"},
     "wood": {"zh": "木", "en": "Wood", "fr": "Bois"},
     "paper": {"zh": "纸", "en": "Paper", "fr": "Papier"},
     # 法语长尾:木材/石材/金属的具体名称
@@ -329,6 +347,9 @@ _MEDIUM_NORM = {
     "plume": {"zh": "羽毛笔", "en": "Pen", "fr": "Plume"},
     "parchemin": {"zh": "羊皮纸", "en": "Parchment", "fr": "Parchemin"},
     "papier": {"zh": "纸", "en": "Paper", "fr": "Papier"},
+    # 上游真实取值:"peinture à l'huile;carton" 116 条、panneau 见于多馆嵌板画
+    "carton": {"zh": "卡纸", "en": "Cardboard", "fr": "Carton"},
+    "panneau": {"zh": "木板", "en": "Panel", "fr": "Panneau"},
 }
 # 有意不收的词:
 # - 技法而非材质(bas-relief/haut-relief/modelage/taille/fond d'or/grisaille/
@@ -339,15 +360,102 @@ _MEDIUM_NORM = {
 # - "paint":\bpaint 会连 "painting" 一起吃掉,而它只值 1 件。
 
 
+# _MEDIUM_NORM 里哪些键是**承载物**(可以跟在媒介后面,如"油 + 木板")。
+# 不另建一张表是有意的:翻译只有一份真相源,且 dict 顺序(=歧义裁决)自动继承。
+_SUPPORT_KEYS = frozenset(
+    {
+        "toile",
+        "bois",
+        "panneau",
+        "peuplier",
+        "chêne",
+        "noyer",
+        "papier",
+        "carton",
+        "cuivre",
+        "vélin",
+        "parchemin",
+        "canvas",
+        "poplar",
+        "oak",
+        "panel",
+        "cardboard",
+        "wood",
+        "paper",
+    }
+)
+
+# 中文拼接用的定语形("木" → "木板油画" 才通顺)。缺省回退 zh。
+_ZH_ATTR = {
+    "toile": "布面",
+    "canvas": "布面",
+    "bois": "木板",
+    "wood": "木板",
+    "panneau": "木板",
+    "peuplier": "杨木板",
+    "chêne": "橡木板",
+    "noyer": "胡桃木板",
+    "papier": "纸本",
+    "paper": "纸本",
+    "carton": "卡纸",
+    "cardboard": "卡纸",
+    "poplar": "杨木板",
+    "oak": "橡木板",
+    "panel": "木板",
+    "cuivre": "铜版",
+    "vélin": "犊皮纸",
+    "parchemin": "羊皮纸",
+}
+
+# 媒介 + 承载物的拼接式。其余语言回退英式(与 _MEDIUM_NORM 的英语回退一致)。
+_MEDIUM_JOIN = {"en": "{m} on {s}", "fr": "{m} sur {s}", "zh": "{s}{m}"}
+
+
+def _scan_medium(low, keys, *, want_support):
+    """按 _MEDIUM_NORM 的表序找第一个词首匹配,返回 (键, 条目, 区间)。
+
+    表序即语义(见 _MEDIUM_NORM 的注释),所以这里**必须**按 dict 顺序遍历,
+    不能先按长度或字母排。
+    """
+    for kw, m in _MEDIUM_NORM.items():
+        if (kw in keys) is not want_support:
+            continue
+        hit = re.search(rf"\b{re.escape(kw)}", low)
+        if hit:
+            return kw, m, hit.span()
+    return None, None, None
+
+
 def _humanize_medium(raw, lang):
     """原始材质串(法语 Joconde / 英语 Wikidata P186)→ 本地化干净名;未命中原样。
-    词首边界匹配,防 'toile' 误中 'oil'。"""
+
+    **一次扫两样:媒介 + 承载物**,因为一条串常同时含两者,而且词序不可信 ——
+    上游同时存在 "peinture à l'huile;toile" 与 "toile;peinture à l'huile",
+    分隔符 ";" 和 "," 混用,还有 "huile sur toile" 这种整句无分隔的写法。
+    故**不按分隔符切 token**(切了 "huile sur toile" 会退化成只剩 "Oil"),
+    而是全串扫描、把媒介命中的区间剔除后再扫承载物 —— 这样 "pierre noire"
+    命中媒介后,残串里不会再被 "pierre" 二次命中。
+
+    ⚠️ 只拼接**源串里真有的**信息。曾经 huile→"Oil on canvas" 是把画布凭空
+    补进去,prod 上 2412 件因此说谎(见 _MEDIUM_NORM 里 huile 条的注释)。
+    """
     if not raw:
         return None
     low = raw.lower()
-    for kw, m in _MEDIUM_NORM.items():
-        if re.search(rf"\b{kw}", low):
-            return m.get(lang) or m.get("en")
+    _, med, span = _scan_medium(low, _SUPPORT_KEYS, want_support=False)
+    rest = low[: span[0]] + " " + low[span[1] :] if span else low
+    sup_kw, sup, _ = _scan_medium(rest, _SUPPORT_KEYS, want_support=True)
+
+    def _t(entry):
+        return entry.get(lang) or entry.get("en")
+
+    if med and sup:
+        s = _ZH_ATTR.get(sup_kw, _t(sup)) if lang == "zh" else _t(sup).lower()
+        return _MEDIUM_JOIN.get(lang, _MEDIUM_JOIN["en"]).format(m=_t(med), s=s)
+    if med:
+        return _t(med)
+    if sup:
+        return _t(sup)
     return raw
 
 
