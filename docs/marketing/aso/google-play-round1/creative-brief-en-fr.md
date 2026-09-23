@@ -61,48 +61,65 @@
 
 ---
 
-## 三、商店截图排序（Play 允许 2–8 张，本轮用满 8）
+## 三、商店截图方案（Play 允许 2–8 张，本轮用 7 张）
 
-排序原则：**前三张必须共同讲完"核心那句 + 支柱1"**，第 4–6 张补支柱 2/3 与覆盖面，第 7–8 张收口。
+**2026-09-23 重做。** 上一版用的是我自己提炼的 8 句短句，用户判断**不如直接用完整描述里已有的那组区块标题**。采纳，原因想清楚了：我写的是**句子**，那组是**标签** —— 大字排版上标签能占满一行还看得清，句子不行；且截图与描述共用同一套词，是加分的一致性。
 
-### ⚠️ 硬规则：每张 3–5 个词，大字，无副标题
+### 硬规则
 
-**用户 2026-09-21 定：「每张图的文案 3-5 个单词，用大字！你这样写一句话根本没人看」。** 副标题一律取消——副标题必然用小字，而小字在这个尺寸下等于不存在。
+| 规则 | 依据 |
+|---|---|
+| **大字用区块标签**（ALL CAPS，来自完整描述） | 用户 2026-09-23 定 |
+| **每屏 3–5 个词** | 用户 2026-09-21 定：「用大字！你这样写一句话根本没人看」 |
+| **单图满幅，不做多图拼接** | 用户 2026-09-23 定。商店页一次露出约 1.5–2 张、每张约屏宽 40% ⇒ 2 图拼接后每个手机仅占屏宽 20%，界面全糊。**更根本的是：在那个尺寸上手机 UI 里的字本来就读不清**，它的作用是"看起来像个真 App"，传递信息的是大字 —— 拼接等于牺牲唯一还能辨认的东西（完整屏幕形状），去换本来就没在传信息的东西（UI 细节） |
+| 万不得已要拼接时：**一张主图 + 局部补充** | 用户 2026-09-23 定。不是并排两个等大的手机，是一个主图配一条被裁切的局部 |
+| 第二行仅在标签有歧义时加 | 见下表，7 屏里只有 2 屏需要 |
 
-⚠️ **修订记录（2026-09-21 第二次）**：我第一次执行这条规则时**把八句全改了**，而逐句数下来只有 1/2/4/6 四句超标（7-8 词），3/5/7/8 本来就是 4-5 词。结果是把 `Not a subscription` 削成 `No subscription`（丢了力度）、把 `Everything you've seen, kept.` 的 `kept` 砍掉（`kept` 才是留存这个点本身）。
-**教训：规则是用来筛的，不是用来一刀切的——先数哪几句真的违规，只动那几句。**
+### 排序（与用户初版的差异已标出）
+
+用户初版优先级：`SCAN & LISTEN / PARIS CITY PASS / EXPLORE FREELY / IN-DEPTH GUIDE / NO RENTAL, NO QUEUE / RICH ART COLLECTION`
+
+**本方案动了两处**，理由如下；若用户不认可可直接改回：
+
+1. 🔴 **`PARIS CITY PASS` 从第 2 移到第 7**。Slot 1–3 决定约 80% 的下载判断，第 2 屏亮付费墙等于在用户还不知道这 App 干什么之前就开口要钱。更具体：卢浮宫两个在位者（TourBlink 3.7★ / MUSEUM BUDDY 2.9★）**差评主题都是付费失败**（"付了还被要求再付"各一条，见 `competitor-analysis-en-fr.md`），第 2 屏亮通票会立刻落进那个框。定价屏是**打消顾虑**不是**制造欲望**，得放在欲望之后。
+2. 🟡 **新增 `SOURCED, NEVER INVENTED` 到第 2**。用户初版 6 屏里没有回答"AI 编的能信吗"，而这个疑虑在本类目**已经成形**（F6：TourBlink 差评原话骂内容语法差、事实错、"probably AI writing"，并称 Wikipedia 更有信息量）。`IN-DEPTH GUIDE` 讲的是"多深"不是"可不可信"，替代不了。
+
+逻辑链：**是什么 → 能信吗 → 门槛多低 → 有多深 → 有多广 → 比替代品强在哪 → 多少钱**
 
 ### EN（素材：`docs/play-assets/screenshots/en-US/`）
 
-| # | 素材文件 | 营销目标 | 主标题（3–5 词） | 词数 | 为什么是这句 |
+| # | 大字 | 第二行 | 词数 | 素材 | 构图要点 |
 |---|---|---|---|---|---|
-| 1 | `screenshot_EN_01_home.jpg` | **Hook** | **You don't need its name.** | 5 | Slot 1 决定约 80% 的转化判断。这是**承诺**不是提问——「你不需要知道它叫什么」正是 F5 竞品用户亲口描述的断点。<br>⚠️ 曾改成问句 `Don't know its name?`，**是错的**：图上没有答案，提问就只是提问，承诺才有钩子 |
-| 2 | `screenshot_EN_02_scan.jpg` | 核心机制 | **Point. That's it.** | 3 | 原为 "Point your camera — that's the whole step."（8 词）且与 Slot 1 当时的副标题重复。砍到 3 词，"就这么简单"的语气反而更强 |
-| 3 | `screenshot_EN_03_result.jpg` | **支柱1 · 信得过** | **Sourced, checked — never invented.** | 4 | **保留原句**（本来就 4 词）。前三张收口，F6 证明本类目"像 AI 编的"已是成形疑虑 |
-| 4 | `screenshot_EN_04_explore.jpg` | 覆盖面 | **Four museums. One app.** | 4 | 上一版列了四个馆名（7 词，小图上糊成一片）。**截图不参与索引**，所以馆名在这里没有关键词价值，只有阅读成本——砍掉 |
-| 5 | `screenshot_EN_05_collection.jpg` | 内容广度 | **Thousands of works, four collections.** | 5 | **保留原句**（本来就 5 词）。不写具体数字：那是缓存快照不是能力上限（懒生成约 20 秒补齐），会随上新馆持续过期 |
-| 6 | `screenshot_EN_06_indepth.jpg` | 内容深度 | **As deep as you want.** | 5 | 只留 1 张。素材里这个界面有多张重复变体，不该占多个位 |
-| 7 | `screenshot_EN_07_pass.jpg` | **支柱3 · 零门槛** | **One pass. Not a subscription.** | 5 | **保留原句**。`Not a subscription` 比 `No subscription` 有力，是纠正而非陈述。两个竞品都有"付了还要再付"的差评 |
-| 8 | `screenshot_EN_08_footprints.jpg` | 留存信号 | **Everything you've seen, kept.** | 4 | **保留原句**。`kept` 不能省——"看过的都留着"才是这个功能本身 |
+| 1 | **SCAN & LISTEN** | — | 3 | `EN_02_scan` | 取景框对着画 **+ 保留底部 "Recognizing…" 提示条**（见下方说明）。一张图讲完"动作 + 系统在响应" |
+| 2 | **SOURCED, NEVER INVENTED** | — | 3 | `EN_03_result` | 讲解正文，来源标注入镜。结果页在此出场，故第 1 屏不需要拼接 |
+| 3 | **EXPLORE FREELY** | `No account. 5 free scans.` | 2 | `EN_04_explore` | ⚠️ 必须是**未付费状态**的探索页，现有素材是已解锁账号 |
+| 4 | **IN-DEPTH GUIDE** | — | 3 | `EN_06_indepth` | **不拼接**：一张讲解页，让 tab 栏自己入镜 —— 那排 tab 本身就说明"还有更多章节" |
+| 5 | **RICH ART COLLECTION** | — | 3 | `EN_05_collection` | **不拼接**：藏品列表页本来就是网格，App 自己的 UI 已经在展示"多"，再拼一次是重复劳动 |
+| 6 | **NO RENTAL, NO QUEUE** | — | 4 | `EN_01_home` 或新截 | 手机 vs 租借讲解器的对比构图 |
+| 7 | **PARIS CITY PASS** | `One-time. Not a subscription.` | 3 | `EN_07_pass` | 转化前最后一击 |
 
-**备用图**：`screenshot_spare_pass_top.jpg`（Slot 7 的构图备选）、`screenshot_spare_result_qa.jpg`（预设问答 —— ⚠️ brief §四 明令**不进前三张**，只能作为 Slot 6 的替代，且文案必须写明是预先准备的问答、不是实时对话）。
+`EN_08_footprints` 本轮不入选（留存类功能，弱转化）；备用图 `spare_pass_top`（Slot 7 构图备选）、`spare_result_qa`（⚠️ 预设问答，文案必须写明非实时对话，不进前三张）。
 
 ### FR（素材：`docs/play-assets/screenshots/fr-FR/`）
 
-同一条 3–5 词硬规则，**法语原生表达，不是直译**（法语通常比英语长约 20%，逐字译必然超）：
+标签直接取自法语完整描述已有的区块标题（4 个直接对应），另外 3 个按同一风格拟定：
 
-| # | 素材文件 | 主标题（3–5 词） | 词数 | 法语侧说明 |
+| # | 大字 | 第二行 | 词数 | 来源 |
 |---|---|---|---|---|
-| 1 | `screenshot_FR_01_home.jpg` | **Pas besoin de son titre.** | 5 | 不逐字译。法语 `Pas besoin de connaître son titre.` 是 6 词，去掉 `connaître` 后既合规又更直接 |
-| 2 | `screenshot_FR_02_scan.jpg` | **Pointez. C'est tout.** | 3 | 上一版 7 词，砍到 3 |
-| 3 | `screenshot_FR_03_result.jpg` | **Sourcé, vérifié — jamais inventé.** | 4 | **保留原句**（本来就 4 词） |
-| 4 | `screenshot_FR_04_explore.jpg` | **Quatre musées. Une app.** | 4 | 同 EN：馆名不进截图（截图不参与索引） |
-| 5 | `screenshot_FR_05_collection.jpg` | **Des milliers d'œuvres, quatre collections.** | 5 | **保留原句**（本来就 5 词）。`œuvre` 用连字 |
-| 6 | `screenshot_FR_06_indepth.jpg` | **Aussi loin que vous voulez.** | 5 | 与 EN 同构，法语这句本身就短 |
-| 7 | `screenshot_FR_07_pass.jpg` | **Un pass. Pas d'abonnement.** | 4 | 原 `Un seul pass. Pas un abonnement.` 是 6 词，去掉 `seul`/`un` 后合规 |
-| 8 | `screenshot_FR_08_footprints.jpg` | **Votre visite, conservée.** | 3 | 不直译——`Tout ce que vous avez vu, conservé.` 是 7 词，改用"您的参观，留存" |
+| 1 | **SCANNEZ & ÉCOUTEZ** | — | 3 | 描述已有 |
+| 2 | **SOURCÉ, JAMAIS INVENTÉ** | — | 3 | 取自描述正文 `fondés sur des sources vérifiées — jamais inventés` |
+| 3 | **EXPLOREZ LIBREMENT** | `Sans compte. 5 scans offerts.` | 2 | 描述已有 |
+| 4 | **GUIDES APPROFONDIS** | — | 2 | 新拟 |
+| 5 | **DES MILLIERS D'ŒUVRES** | — | 3 | 取自描述正文（比直译 `COLLECTION RICHE` 具体，法语里也更有分量）|
+| 6 | **NI LOCATION, NI FILE D'ATTENTE** | — | 5 | 描述已有 |
+| 7 | **PASS VILLE PARIS** | `Paiement unique. Pas d'abonnement.` | 3 | 描述已有 |
 
-**FR 备用图**：`screenshot_spare_result_qa.jpg`（无 `pass_top` 备选，与 EN 不对称，非阻塞）。
+### 尺寸与构图规格
+
+1. **大字按缩略图尺寸设计，不是按满屏**。实操判据：**把成图缩到 25% 仍能读出标题才算过**。大致是字高 ≥ 图高的 7%、字宽占满图宽 80% 以上。
+2. **手机 mockup 不占满画面**：上方留约 25% 给大字，整机居中缩小。即使缩得很小，"上面一行大字 + 下面一个屏幕"的结构还在。
+3. ⚠️ **第 1 屏不从底部出血** —— 底部的 "Recognizing…" 提示条要保住（见 §四 B2）。其余屏可以底部出血。
+4. 七屏共用同一套字体、字号、留白与色彩，商店页里是横向滑动浏览，风格跳动会显得廉价。
 
 ---
 
@@ -113,8 +130,8 @@
 | 1 | Feature Graphic 法语标语与 metadata 动词一致 | ✅ **通过**。`fr-FR.png` 实为 `SCANNEZ · ÉCOUTEZ · EXPLOREZ` |
 | 2 | 覆盖量文案 | ✅ 已改为能力口径（不再写数字），见 §三 Slot 5 |
 | 3 | **截图是否已带营销文案图层** | 🔴 **不通过，见 B1** |
-| 4 | **任一截图不得出现 "AI" 字样或聊天输入框** | 🔴 **不通过，见 B2** |
-| 5 | Slot 1 是否呈现免费入口 | 🔴 **不通过，见 B3** |
+| 4 | **大字/标题不得拿 AI 当卖点；不得出现暗示实时自由问答的输入框** | ✅ **通过**（判据已修正，见 B2）|
+| 5 | 免费状态截图（Slot 3 `EXPLORE FREELY` 需要）| 🔴 **不通过，见 B3** |
 | 6 | FR 截图内是否残留英文 UI | ⏳ 未逐张核对 |
 | 7 | `spare_result_qa` 若启用需写明预设问答、不进前三张 | ⏳ 当前未启用 |
 
@@ -125,20 +142,31 @@
 ⚠️ **本文件上一版写的"素材已齐备，不用重截"是误导** —— UI 抓图确实齐了，但**营销合成没做**。而截图是整个商店页转化权重最高的位置（见 `experiment-and-measurement-plan.md` 的价值排序）。
 ⇒ **必须先做图层合成才能上传**，这是设计活，不是 ASO 活。
 
-### 🔴 B2. `screenshot_EN_02_scan.jpg` 屏幕上印着 "AI"
+### ✅ B2. ~~截图里印着 "AI"~~ → **判据本身错了，已撤销**（2026-09-23）
 
-原文：**"Recognizing… / AI is comparing with collections and public art databases"**。
+**原判定**：`screenshot_EN_02_scan.jpg` 底部有 "Recognizing… / AI is comparing with collections and public art databases"，据此判为不可上传。
 
-这是**产品界面内的文字**，文案图层盖不住。传上去等于把 "AI" 放上商店页，违反 2026-09-13 用户决定，且 `competitor-analysis-en-fr.md` F6 实测显示本类目里"像 AI 写的"已是差评词。
+**撤销理由（用户 2026-09-23 指出）**：2026-09-13 拍板的原文范围是**不拿 "AI" 字样当卖点** —— 针对的是标题/简短描述/完整描述，因为当时的候选文案是 `AI-narrated audio guide`，**把 AI 当差异化在卖**。我把它扩大成了"这两个字母不许出现在任何一个像素里"，**两回事**。
 
-**三个可选处置**（属产品/设计决策，待用户定）：
-1. 改 App 内该句文案（如 "Comparing with museum collections and public art databases"）后重截 —— 最干净，但要发包
-2. 换一帧：取识别**进行中但未弹出该 bottom sheet** 的瞬间重截
-3. 构图时把 bottom sheet 裁切掉 / 用文案图层覆盖该区域
+这行字是**状态提示**不是价值主张：它在说"我正在干活"，不是"我比别人强因为我有 AI"。而且 **"Recognizing…" 是这一帧唯一的动作信息** —— 去掉它，画面就只是一个对着画的静止取景框，看不出发生了什么。
+
+F6 那条证据我也用偏了：TourBlink 那个差评骂的是**内容质量**（语法差、事实错），不是"它提了 AI"。我们的反驳是内容本身 + `SOURCED, NEVER INVENTED` 那一屏，**把字母藏起来既解决不了那个问题，也不该由它来解决**。
+
+**修正后的边界：**
+
+| 仍然成立 | 已撤销 |
+|---|---|
+| **大字/标题不卖 AI**（不得出现 `AI-POWERED` 这类 headline） | ~~任一截图内不得出现 "AI" 字样~~ |
+| **商店描述不拿 AI 当差异化**（2026-09-13 原决定本意） | |
+| **不得出现暗示实时自由问答的输入框** —— 这条是**功能真实性**（`/chat/ask` 返回 503），与 AI 这个词无关，独立成立 | |
+
+⇒ **该 bottom sheet 保留入镜**，第 1 屏构图因此不从底部出血（见 §三 规格 3）。
+
+🔑 **教训**：把"不当卖点"执行成"字样不许出现"，是**把决定的范围扩大到它原本没覆盖的地方**。下次引用既有决定前，先回去看原话的适用对象是什么。
 
 ### 🔴 B3. `screenshot_EN_01_home.jpg` 两个问题
 
-1. **"Pass active · full access unlocked"** —— 这是**已付费账号**的状态。Slot 1 是 Hook 位，应当呈现免费入口（"first 5 scans free"），而不是一个已解锁的账号。
+1. **"Pass active · full access unlocked"** —— 已付费账号状态。首页在新方案里不再是 Slot 1，但 **Slot 3 `EXPLORE FREELY` 必须用未付费状态重截**，否则「免费开始」这句话被画面自己打脸。
 2. **"Nearby M…" 被截断** —— 可见的 UI 溢出缺陷，出现在最重要的那张图上。
 
 ### 已被用户明确搁置，不要再提
