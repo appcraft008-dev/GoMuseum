@@ -41,8 +41,11 @@ class GmNavScan extends StatelessWidget {
             GmIcon(icon, size: 21, color: color, strokeWidth: on ? 1.9 : 1.6),
             const SizedBox(height: 4),
             // scaleDown + 单行：拉丁文长标签(Footprints/Paramètres)缩放适配，不换行。
+            // 边距原来是 2 —— 长标签缩放后会把整个槽位填满，相邻两项之间几乎
+            // 没有空隙，法语下「Empreintes Paramètres」连成一串读不开。
+            // 加大边距让 scaleDown 多缩一点，换来看得见的间隔。
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(

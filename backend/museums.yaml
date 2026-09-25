@@ -1,8 +1,33 @@
 # 馆配置：加一个馆 = 加一段
+#
+# `rank` = 探索页馆序(小→大)，**rank 最小的那个上大卡**。这是编辑决策，
+# 不是可计算的量：别拿 popularity 排(prod 里 77% 的记录是 0，等于在噪声里排)，
+# 也别拿 artwork_count 排(那是数据导入进度，不是值得逛的程度)。
+# 加新馆时**必须显式给 rank**——不给会落到末尾，而不会悄悄顶掉现有的首位。
+#
+# `names` = 馆名的**其余八语**。zh 和 en 仍在 name_zh / name_en（那两个是
+# onboard 管线写进 DB 的列），所以每种语言只有一处定义，不会两边漂移。
+# 没有 names 之前，非中文界面一律吃 name_en —— 法语用户看到的是 "Louvre Museum"，
+# 而隔壁三个馆的 name_en 恰好是法语拼写，于是看起来像"只有卢浮宫漏译"。
+# 取值来自 Wikidata 标签，但**不是照抄**，三处按显示场景调整过：
+#   ① 法语标签按维基惯例小写开头(`musée du Louvre`)，这里是卡片标题位 → 首字大写；
+#   ② de/pl 标签用弯撇号 U+2019 → 统一成 ASCII `'`，与既有 name_en 一致；
+#   ③ 小皇宫的馆本体标签是法律全名(`musée des Beaux-Arts de la ville de Paris`)，
+#      游客认的是建筑名 → 取建筑条目 Q820892 的标签(十语齐全，且与 name_en 相同)。
 museums:
   orsay:
+    rank: 2
     name_zh: 奥赛博物馆
     name_en: Musée d'Orsay
+    names:
+      zh-hant: 奧賽博物館
+      fr: Musée d'Orsay
+      de: Musée d'Orsay
+      es: Museo de Orsay
+      it: Museo d'Orsay
+      ja: オルセー美術館
+      ko: 오르세 미술관
+      pl: Musée d'Orsay
     city_zh: 巴黎
     city_en: Paris
     country: FR
@@ -21,8 +46,18 @@ museums:
     sample_size: 30
     sample_qids: []
   orangerie:
+    rank: 3
     name_zh: 橘园美术馆
     name_en: Musée de l'Orangerie
+    names:
+      zh-hant: 橘園美術館
+      fr: Musée de l'Orangerie
+      de: Musée de l'Orangerie
+      es: Museo de la Orangerie
+      it: Museo dell'Orangerie
+      ja: オランジュリー美術館
+      ko: 오랑주리 미술관
+      pl: Musée de l'Orangerie
     city_zh: 巴黎
     city_en: Paris
     country: FR
@@ -39,8 +74,18 @@ museums:
     sample_size: 10
     sample_qids: []
   louvre:
+    rank: 1
     name_zh: 卢浮宫
     name_en: Louvre Museum
+    names:
+      zh-hant: 羅浮宮
+      fr: Musée du Louvre
+      de: Louvre
+      es: Museo del Louvre
+      it: Museo del Louvre
+      ja: ルーヴル美術館
+      ko: 루브르 박물관
+      pl: Luwr
     city_zh: 巴黎
     city_en: Paris
     country: FR
@@ -76,8 +121,18 @@ museums:
     sample_size: 30
     sample_qids: []
   petit_palais:
+    rank: 4
     name_zh: 小皇宫美术馆
     name_en: Petit Palais
+    names:
+      zh-hant: 小皇宮美術館
+      fr: Petit Palais
+      de: Petit Palais
+      es: Petit Palais
+      it: Petit Palais
+      ja: プティ・パレ
+      ko: 프티 팔레
+      pl: Petit Palais
     city_zh: 巴黎
     city_en: Paris
     country: FR

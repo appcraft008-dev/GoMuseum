@@ -3,6 +3,22 @@
 // 后端同时返回中英两套名；前端按当前 UI 语言挑。
 import 'package:equatable/equatable.dart';
 
+/// 解析后端的 `name_i18n`（十语馆名，加法字段，2026-09-21）。
+///
+/// 老后端不返回这个键 → 空表，取名回退 name_zh/name_en，与改动前完全一致。
+///
+/// ⚠️ 整条路径不许出现裸强转（`as Map` / `as String`）：富化数据天然缺字段，
+/// 而这个键将来也可能被中间层换形状。类型不对就当"没有"，一律走回退，
+/// 绝不让馆名解析把页面整页拖崩（2026-06-16 事故就是这么来的）。
+Map<String, String> parseNameI18n(dynamic raw) {
+  if (raw is! Map) return const {};
+  return {
+    for (final e in raw.entries)
+      if (e.value is String && (e.value as String).isNotEmpty)
+        '${e.key}': e.value as String,
+  };
+}
+
 class MuseumSummary extends Equatable {
   const MuseumSummary({
     required this.slug,
@@ -14,6 +30,7 @@ class MuseumSummary extends Equatable {
     required this.coordinates,
     required this.artworkCount,
     this.coverImage,
+    this.nameI18n = const {},
   });
 
   final String slug;
@@ -41,8 +58,17 @@ class MuseumSummary extends Equatable {
   /// 探索页缩略图(thumb 档，加法字段，2026-07-20)；无合规封面 → null，前端显占位图标。
   final String? coverImage;
 
-  /// 按 UI 语言取馆名：zh→中文名；其余（en/fr…）→英文/拉丁名。
-  String localizedName(String lang) => lang == 'zh' ? name : nameEn;
+  /// 十语馆名（后端 `name_i18n`）。老后端不返回 → 空表。
+  final Map<String, String> nameI18n;
+
+  /// 按 UI 语言取馆名。
+  ///
+  /// ⚠️ 这里原本是 `lang == 'zh' ? name : nameEn` —— 非中文一律吃英文名，
+  /// 法语用户看到的是 "Louvre Museum"。而橘园/奥赛/小皇宫的 name_en 恰好写成
+  /// 法语拼写，所以现象是"只有卢浮宫没翻译"，掩盖了"十语只有两套名"这个真相。
+  /// 回退链留着：后端老版本或 yaml 没配的馆仍按旧行为走。
+  String localizedName(String lang) =>
+      nameI18n[lang] ?? (lang == 'zh' ? name : nameEn);
 
   /// 按 UI 语言取城市名。
   String localizedCity(String lang) => lang == 'zh' ? city : cityEn;
@@ -66,6 +92,7 @@ class MuseumSummary extends Equatable {
       coverImage: (j['cover_image'] as String?)?.isNotEmpty == true
           ? j['cover_image'] as String
           : null,
+      nameI18n: parseNameI18n(j['name_i18n']),
     );
   }
 
@@ -79,6 +106,7 @@ class MuseumSummary extends Equatable {
         country,
         coordinates,
         artworkCount,
-        coverImage
+        coverImage,
+        nameI18n
       ];
 }

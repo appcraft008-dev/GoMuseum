@@ -1,69 +1,242 @@
-# GoMuseum · Competitor Analysis (EN + FR, Google Play)
+# GoMuseum · Competitor Analysis — EN + FR (Google Play)
 
-数据来源：2026-09-08 WebSearch 实时检索（非 Appeeky API，无法直接抓取 Play 页面详情——WebFetch 对 Play 商店页两次尝试均因内容截断失败，方法论限制记录在案）。评分/评价数量凡出现来源冲突的均并列标注，不单一采信。
+**数据来源：Google Play 网页版实访（Chrome），en_US/gl=US 与 fr_FR/gl=FR 两套区域参数分别检索。检索日 2026-09-21。**
+所有排名、评分、评论数、下载量、描述原文均为页面实际显示值。**无任何搜索量/难度数据** —— Play 不公开，本轮也未购买第三方数据源。凡涉及"竞争程度"的判断，依据是结果数量、在位者评分与评论量，属**方向性判断**。
 
-## 一、既有认知 vs 本轮验证结果
+---
 
-| 既有认知竞品 | 本轮验证 | 结论 |
+## F1–F7：七项实测发现（按对决策的影响排序）
+
+### 🔴 F1. 「拍照识别是无人占领的空位」——**在英文关键词层面不成立**
+
+`scan painting identify`（en_US）返回**至少 10 个艺术品识别 App**：
+
+| App | 开发者 | 评分 |
 |---|---|---|
-| izi.TRAVEL | ✅ 仍在架，Google Play 有独立 Beta 版并行（`travel.opas.client` + `travel.opas.client.beta`），历史评分约4星/50万+安装，但近期有用户反馈"更新后功能不可用" | 仍是重要竞品，但近期口碑有下滑迹象 |
-| Bloomberg Connects | ✅ 仍在架，且**新增变量**：Paris Musées 14 家场馆（含卢浮宫、奥赛）已加入 Bloomberg Connects，40种语言 | 比既有认知更强——现在直接覆盖我们的核心馆藏，合规披露要求更高（见下） |
-| GuidiGO | ✅ 仍在架（`com.guidigo`），仍是通用导览平台 | 结论不变 |
-| Smartify | ✅ 是功能最接近的竞品（拍照识别），评分**来源冲突**：AppBrain 显示4.55/5（7.5千评价），另一来源显示2.8星——两个数字差异过大，不采信单一数字，标记待人工核实 | 最直接竞品，但"覆盖不了所有作品"是其已知弱点（与博物馆版权合作机制有关） |
+| Painting Recognition - ArtScan | Hanva,LLC | 2.0 |
+| Art Scanner with AI | Loyd Kim | 3.9 |
+| Artident: Art Identification | Seapps | — |
+| Art Appraisal: Scan & Value | EternalBeam Software | 4.1 |
+| Painting Identifier | Asil ARSLAN | 2.9 |
+| Artora: Art Scan & Identifier | Scaling Engine Limited | 4.5 |
+| Artwork Identifier | Asil ARSLAN | 3.0 |
+| The Eye: Painting Identifier | NerdForm Labs LLC | — |
+| ArtScan – Discover Art | SashaSer | — |
+| Art Identifier & Value | Three Minds Hub | 4.0 |
 
-## 二、既有资料未覆盖、本轮新发现的竞品
+`art recognition`（en_US）头部：Google Arts & Culture 4.2 / ArtScan 2.0 / Art Scanner with AI 3.9 / Artly 4.5 / **Smartify 4.6**。
 
-这批是既有 `en-US.md`/`fr-FR.md` 完全没提到的，直接命中"Louvre guide"/"Orsay guide"这类精确长尾词，比大平台更该被当作关键词层面的直接对手：
+**但关键在于意图分层**。这批 App 里名字带 **Value / Appraisal / Identifier** 的一大半服务的是**"我家这幅画值多少钱"**，不是"我站在卢浮宫里这是什么"。
 
-| App | Package | 定位 | 已知弱点（用户真实吐槽） |
+> **修正后的结论**：识别这个**功能词**空间是拥挤的，但**"博物馆现场识别"这个意图**没有被卢浮宫场景的玩家占据 —— `louvre guide` 的结果里**一个识别类 App 都没有**。
+> **对既有资料的修正**：`docs/play-assets/store-listing/en-US.md` 开头写的"none of them do photo recognition… largely unclaimed"**不准确**，应改为"没有任何一个巴黎博物馆导览 App 做现场识别"。
+
+### 🔴 F2. 「audio guide 是 izi.TRAVEL 垄断的红海」——**不成立**
+
+`museum audio guide`（en_US）**只返回 8 个结果**：
+
+British Museum Audio（官方，4.6）/ Acropolis Museum - Audio Guide / Museum Audio Guide (OBVA) / VoiceMap 4.7 / **Louvre Museum Free Guide 2.9** / Egyptian Museum Audio Guide $3.99 / British Museum 3D Audio Guide / PocketGuide 3.9。
+
+**izi.TRAVEL 没有出现。Bloomberg Connects 没有出现。GuidiGO 没有出现。**
+
+> **对既有资料的修正**：既有稿称此类目被 izi.TRAVEL（300 万+下载）等"saturated"，**Play 当前搜索结果不支持这一说法**。这个词反而是**薄的**。
+> ⚠️ 不推翻"这些 App 存在且体量大"这一事实 —— 只推翻"它们占据了这个搜索词"。
+
+### 🔴 F3. `louvre guide` 在位者**评分普遍很低**，是可攻的
+
+`louvre guide`（en_US）结果序：
+
+| # | App | 开发者 | 评分 | 是否识别 | 是否固定路线 |
+|---|---|---|---|---|---|
+| 1 | Louvre Visit, Tours & Guide | TourBlink | 3.7 | ✗ | ✓ 60–120 分钟路线 |
+| 2 | Louvre Museum Free Guide | MUSEUM BUDDY | **2.9** | ✗ | ✓ 离线路线 |
+| 3 | Louvre Museum Travel Guide | Tours & Travel Inc. | — | ✗ | ✓ |
+| 4 | Louvre Chatbot Guide | Emoji Guide | 3.6 | ✗ | 聊天机器人 |
+| 5 | Louvre in 2 Hours | In 2 Hours | — | ✗ | ✓ |
+| 6 | **TourLens: Louvre Guide** | Fleek Inc. | — | ？名字暗示镜头 | ？ |
+| 7 | Louvre Museum Audio & Map Tour | Heritage & Lexicon | — | ✗ | ✓ |
+
+同家 MUSEUM BUDDY 的 **Orsay Museum Free Guide 仅 1.6★**（en）/ **2,0★**（fr）。
+
+> ✅ **已查清（2026-09-21）**：`TourLens: Louvre Guide` **确实做扫描识别**，标语就是 "Scan Anything to Listen"。但它是**已弃的项目**，不构成防守障碍 —— 详见下方档案。
+> ⭐ **它零评分、1K 下载还能排 `louvre guide` 第 6，这是"这个词防守有多弱"的最佳单点证据。**
+
+### 🔴 F4. **EN 与 FR 的机会结构相反** —— 本轮最具操作性的发现
+
+| 查询 | 市场 | 结果数/强度 | 头部在位者 |
 |---|---|---|---|
-| Louvre Museum Audio & Map Tour | `com.louvre.elite` | 单馆付费高端定位，"精英旅行者"话术 | 用户反馈买了 premium 仍反复弹窗要求升级、部分展项音频付费后仍播不出来 |
-| Louvre Museum Audio Guide | `air.com.lvr.paris.vusiem` | 单馆音频导览，"3小时逛完卢浮宫" | 下载的导览内容会丢失、已购内容访问困难 |
-| Louvre Visit, Tours & Guide | `com.tourblink.louvre` | 本地人/博主制作的步行导览，支持离线 | 未发现具体投诉，样本少 |
-| Louvre Chatbot Guide | `com.wavemining.louvre` | 免费非官方 Chatbot 讲故事 | 形态是聊天机器人而非拍照识别，差异化仍成立 |
-| Audio Guide Orsay Museum | `air.com.dor.paris.vusiem` | 单馆音频导览 | 与 Louvre 同发行商同模板 |
-| Musée d'Orsay Travel Guide | `com.etips.orsay.travel.guide` | 免费，14+语言，行程规划型 | 通用行程规划工具改的，非专注单件展品讲解 |
-| Audio Guide Musée de l'Orangerie | `air.com.orangerie.paris.vusiem` | 单馆音频导览 | 同上发行商模板 |
-| Orsay Visit, Tours & Guide | `com.tourblink.museeorsay` | 步行导览，离线可用 | 与 Louvre Tourblink 同发行商 |
-| Grand Palais Art Scan | Apple（Android未确认） | **官方**图像识别，但用途是展览图录伴侣App，非常设馆藏 | 场景窄（限特展图录），非全馆覆盖，威胁度低但说明"官方也在用识别技术"这个心智已被教育过 |
-| ArtScan / Art Scanner with AI | 多平台，通用"识别任意画作"工具 | 不绑定任何博物馆，全球通用识别 | 无本地化博物馆内容/语音讲解，是"识别"心智的泛化竞品而非直接竞品 |
+| `art recognition` | EN | 拥挤但意图错位 | Google Arts & Culture 4.2、Smartify 4.6（第 5） |
+| `louvre guide` | EN | **弱**，无识别玩家 | TourBlink 3.7、MUSEUM BUDDY 2.9 |
+| `reconnaissance œuvre d'art` | **FR** | **Smartify 排第 1，4,6★** | Smartify / ArtScan / Artly 4,5 / DailyArt 4,7 / Google A&C |
+| `audioguide louvre` | **FR** | **仅 8 个结果，头部很弱** | MUSEUM BUDDY 2,5 / Louvre Chatbot 4,5 / TourBlink 4,3 |
+| `guide musée paris` | FR | 拥挤，但被**城市指南**和 Paris Musées 官方 App 占据 | Odyssey 4,2 / Civitatis 4,7 / Paris Musées Second Canvas 4,4 |
 
-**关键发现**：至少4款"单馆音频导览"（`air.com.*.paris.vusiem` 系列）明显出自同一个发行商模板工厂，批量复制到不同博物馆——这类App 命中"Louvre guide"精确搜索词的概率很高，但功能同质化、评价里反复出现"内容访问故障"投诉。GoMuseum 的差异化机会不只是"没人做拍照识别"，还有"这批模板App口碑本身就有硬伤"——文案里可以隐含对比"没有恼人的内购解锁墙"，不点名批评竞品。
+**含义**：
+- **EN**：识别角度在卢浮宫语境下无人占 → 方向A（scan）可用作差异化，但**搜索获客**要靠 `louvre guide` 类专名词。
+- **FR**：识别角度**已被 Smartify 以 4,6★ 占住**，硬碰是劣势；而 `audioguide louvre` 是真空位 → **法语市场应以 audioguide/guide 词做获客，scan 退为页面转化卖点**。
 
-## 三、正式确认：拍照识别仍是空位，但要更精确表述
+这正好回答 brief §五要求的"判断方向A在英文和法文市场是否同样成立"：**不同样成立**，且有证据。
 
-- **旧结论**（"音频导览类竞品都没有拍照识别"）在扩大竞品样本后依然成立——上表所有单馆/多馆音频导览类App均无拍照识别功能
-- **需要修正的表述**：不能再说"没人做识别"，Smartify、ArtScan、Grand Palais Art Scan 都在做识别；准确表述应为——**"覆盖卢浮宫/奥赛/橘园/小皇宫这4家馆、且以拍照识别为核心交互方式的App，目前没有直接竞品"**（Smartify 覆盖范围通用但不专注这4馆且有已知覆盖缺口；Grand Palais Art Scan 场景窄）
+### 🟢 F5. **核心痛点被竞品用户原话证实**（本轮最强的一条证据）
 
-## 四、法文市场
+MUSEUM BUDDY「Louvre Museum Free Guide」2026-06-06 差评，用户原话大意：买了 premium 仍被要求升级才能看地图，而且**馆里很少有作品标着馆藏号，没有 App 里的地图就没法手动找到它们**。
 
-- 未搜到专门只做法语市场、且做拍照识别的博物馆类竞品——上表英文搜索结果里的单馆App（vusiem/tourblink系列）大概率有法语版本（同一App多语言），需 Phase 3 落实文案时逐一核实是否有独立法语listing
-- Bloomberg Connects 的 Paris Musées 合作是法文市场最需要警惕的信号——40种语言、官方场馆背书，是法语本地用户最可能先接触到的替代品
+> 这不是我们的营销假设，是一个真实付费用户自己描述的**识别断点**：墙上没有编号 ⇒ 传统导览的"输编号听讲解"模型在卢浮宫现场直接失效。
+> **GoMuseum 的相机识别恰好消掉这一步。** 这条应当成为整个 ASO 叙事的锚点。
 
-## 五、Top Opportunities（沿用竞品分析技能输出格式）
+### 🟢 F6. **"AI" 被用户当作差评词** —— 2026-09-13 那条决定有了外部证据
 
-1. **Quick Win：** 文案里可以强调"无内购解锁墙式故障"这个隐性对比点（多个竞品的真实差评主题），但措辞要克制、不指名道姓
-2. **Keyword Gap：** `air.com.*.vusiem` 系列App 大概率已经占了"[museum name] audio guide"这类词的一部分搜索结果位——GoMuseum 应该在标题/短描述里同时覆盖"scan"/"recognition"类词，抢占它们完全没有布局的语义空间
-3. **Creative Edge：** 待 Phase 3 screenshot-optimization 具体化
-4. **Feature Gap：** 拍照识别 + 覆盖全部4馆常设展品，两点叠加目前无人同时占据
-5. **Market Gap：** Bloomberg Connects 已经拿下 Paris Musées 官方合作，GoMuseum 不该也不能走"官方合作"叙事（`app-marketing-context.md` 已有此限制），应继续走"非官方但更懂拍照识别场景"的独立产品定位
+TourBlink 2025-09-18 差评，用户原话包含："Poor grammar, incorrect facts, and an AI voice (and probably AI writing)"，并称 Wikipedia 更有信息量。
 
-## Sources
+> 用户 2026-09-13 拍板"全篇不拿 AI 当卖点"时给的理由是"AI 已同质化、反而招来对内容质量的警惕"。**本轮实测证实了后半句**：在这个类目里，"像 AI 写的"已经是差评理由本身。
+> **推论**：GoMuseum 的 "grounded / fact-checked / never invented" 不只是一个卖点，它是**针对这条已成形的用户疑虑的直接反驳**，应当前置。
 
-- [izi.TRAVEL: Audio Tour Guides - Apps on Google Play](https://play.google.com/store/apps/details?id=travel.opas.client&hl=en_US)
-- [Smartify: Arts and Culture - Apps on Google Play](https://play.google.com/store/apps/details?id=com.mobgen.smartify)
-- [Smartify Stats - Similarweb](https://www.similarweb.com/app/google-play/com.mobgen.smartify/statistics/)
-- [Louvre Museum Audio & Map Tour - Apps on Google Play](https://play.google.com/store/apps/details?id=com.louvre.elite&hl=en)
-- [Louvre Museum Audio Guide - Apps on Google Play](https://play.google.com/store/apps/details?id=air.com.lvr.paris.vusiem&hl=en_US)
-- [Louvre Visit, Tours & Guide - Apps on Google Play](https://play.google.com/store/apps/details?id=com.tourblink.louvre&hl=en)
-- [Louvre Chatbot Guide - Apps on Google Play](https://play.google.com/store/apps/details?id=com.wavemining.louvre&hl=en_US)
-- [Audio Guide Orsay Museum - Apps on Google Play](https://play.google.com/store/apps/details?id=air.com.dor.paris.vusiem&hl=en_US)
-- [Musée d'Orsay Travel Guide - Apps on Google Play](https://play.google.com/store/apps/details?id=com.etips.orsay.travel.guide)
-- [Audio Guide Musée de l'Orangerie - Apps on Google Play](https://play.google.com/store/apps/details?id=air.com.orangerie.paris.vusiem&hl=en_US)
-- [Orsay Visit, Tours & Guide - Apps on Google Play](https://play.google.com/store/apps/details?id=com.tourblink.museeorsay&hl=en_US)
-- [Grand Palais Art Scan - App Store](https://apps.apple.com/fr/app/grand-palais-art-scan/id808208874)
-- [ArtScan - Identifier Tableaux - App Store](https://apps.apple.com/us/app/artscan-identifier-tableaux/id6630371903)
-- [Art Scanner with AI - Apps on Google Play](https://play.google.com/store/apps/details?id=loyd.kim.art.scanner.ai&hl=en_US)
-- [GuidiGO - Apps on Google Play](https://play.google.com/store/apps/details?id=com.guidigo&hl=en_US)
-- [Paris Musées is now available on Bloomberg Connects](https://www.parismusees.paris.fr/en/news/paris-musees-is-now-available-on-the-bloomberg-connects-app)
-- [Connects: Arts+Culture - Apps on Google Play](https://play.google.com/store/apps/details?id=org.bloomberg.connects.docent&hl=en_US)
+### 🔴 F7. **新增风险：GoMuseum 全程依赖网络，而卢浮宫网络很差**
+
+两个不同 App 的用户独立抱怨：
+- MUSEUM BUDDY 2026-05-27：在馆内 4.5 小时，连馆方 WiFi 也下不完内容，卡在 68%。
+- TourBlink 2025-09-18：没有网络连引导功能都用不了，**"internet access at the Louvre is terrible"**。
+
+竞品普遍把 **OFFLINE** 当头部卖点（TourBlink 整段 `OFFLINE APPLICATION`；MUSEUM BUDDY 强调 "fully offline audio guide"）。
+
+> **GoMuseum 识别是服务端调用、音频从 R2 流式取 —— 现场没网就全废。**
+> 这是 ASO 修不了的产品风险，且它**反噬"即时"这个卖点**。本轮处理：文案不承诺 offline、不夸"instant"，并把它列入 `executive-summary.md` 的产品侧待办。**不建议在没有离线能力前把 offline 写进任何素材。**
+
+---
+
+## 主要竞品逐个档案
+
+### Smartify: Arts and Culture — `com.mobgen.smartify`
+
+| 项 | 值（en_US，2026-09-21 页面显示） |
+|---|---|
+| 标题 | Smartify: Arts and Culture |
+| 开发者 | Smartify CiC |
+| 评分/评论 | **4.6★ / 7.92K reviews**（评分区块显示 4.7 / 7.71K） |
+| 下载量 | **1M+** |
+| 更新 | 2026-09-16（活跃维护） |
+| 类目 | Education |
+| 收费 | In-app purchases |
+| 简短标语 | Discover Art, Explore Museums |
+| 识别 | ✓ "Scan paintings, sculptures and objects to reveal what you're looking at" |
+| 自由探索 | ✓ |
+| 固定路线 | 部分（audio tours） |
+| 多语言 | ✓ |
+
+**核心定位**：全球广度 —— "Hundreds of museums, art galleries, historic places and more, all in one app"，社会企业，与馆方合作分成。
+
+**它自己的免责声明（重要）**：描述末尾明确写着与馆方合作是为保护艺术家版权，并说明**无法识别每一件作品**。
+> ⭐ 这是一个**行业先例**：类目里最成功的识别类 App 自己就在商店描述里限定识别覆盖。GoMuseum 按 F1/3.2 诚实标注覆盖量，**不是竞争劣势，是这个类目的通行做法**。
+
+**差评主题**（页面显示的高赞评论）：
+1. **强制注册挡死使用**（2023-09，44 人认为有用）：注册表单姓名字段报错，无法继续，直接卸载。官方回复承诺加 SKIP 按钮。
+2. **识别失败/体验差**（2023-06，37 人认为有用）：为识别一幅画而下载，扫描框固定为正方形不可调，缩放只有两档，点扫描后卡住数分钟，多次重试无果。官方回复指出有"Continue as a guest"入口。
+3. **识别覆盖不全**（2021-03，67 人认为有用）：整体好评，但明说"它不能识别所有东西"。
+
+**GoMuseum 可利用的差异化**：
+- 🎯 **免注册即用**：Smartify 最高赞差评就是注册墙挡住了使用（而且官方回复说"其实有游客入口"= 入口没做明显）。GoMuseum 的 guest 模式应当**前置到截图里**，不是埋在功能列表。
+- 🎯 **四馆深度 vs 全球广度**：Smartify 是合作制、覆盖广但每馆浅；GoMuseum 是四馆深挖。定位不冲突，可共存。
+- ⚠️ **不要在 FR 市场正面打识别**（见 F4）。
+
+### Louvre Visit, Tours & Guide（TourBlink）— `com.tourblink.louvre`
+
+| 项 | 值 |
+|---|---|
+| 评分/评论 | 3.7★ / 1.01K reviews |
+| 下载量 | 100K+ |
+| 更新 | 2026-08-15 |
+| 类目 | Travel & Local |
+| 收费 | In-app purchases，路线单价"不到 €5" |
+| 识别 | ✗ |
+| 固定路线 | ✓ 核心卖点，60–120 分钟 itineraries |
+| 离线 | ✓ 整段 `OFFLINE APPLICATION` 头部卖点 |
+| FR 本地化 | ✓ 标题译为「Louvre : visite et guide」，FR 评分 4,3 > EN 3.7 |
+
+**差评主题**：① 已购买但播放三件后被要求再次付费（IAP 解锁失败）；② 语法差、**事实有误**、AI 配音、房间号与顺序不对、无网不能用。
+
+> 💡 **可直接借鉴的一点**：TourBlink 在 FR 把标题本地化了，FR 评分明显高于 EN。**GoMuseum 的 FR 标题必须是原生法语，不是英文标题照搬** —— 这与 brief §三的要求一致，并有实例支持。
+
+### Louvre Museum Free Guide（MUSEUM BUDDY）— `air.com.lvr.paris.vusiem`
+
+| 项 | 值 |
+|---|---|
+| 评分/评论 | **2.9★ / 246 reviews**（评分区块 2.8 / 231） |
+| 下载量 | 50K+ |
+| 更新 | 2026-09-18 |
+| 收费 | In-app purchases |
+| 识别 | ✗ |
+| 固定路线 | ✓ |
+| 离线 | ✓ 头部卖点，"audio for over a thousand highlights" |
+
+**同系列**：Orsay（1.6★ en / 2,0★ fr）、Vatican、Rodin、Egyptian、Pitti、Accademia —— 一个单馆导览 App 矩阵，**评分普遍很低**。
+
+**差评主题**（全部是 2026 年的近期评论）：① 付费后引导选项消失；② **馆内下载不完**（4.5 小时卡 68%）；③ 付费后仍被要求升级 + **墙上没有馆藏号导致找不到作品**（= F5）。
+
+> 这是 GoMuseum 最直接的"被攻击目标"：同样打 `louvre guide` 高意图词，在位者 2.9★ 且差评集中在**离线下载模型本身的失败**和**编号找不到**。
+
+### Louvre Chatbot Guide（Emoji Guide）— `com.wavemining.louvre`
+
+FR 4,5★ / EN 3.6★。自我描述为 "free, **unofficial** chatbot guide"。
+
+> 两点可借鉴：① 它**主动写明 unofficial** —— 与本项目"不得暗示官方关系"的要求是同一做法，说明这在类目里是常规且不伤转化；② 它在 FR 的评分显著高于 EN，再次印证法语市场对本地化内容的回报。
+
+### ⭐ TourLens: Louvre Guide（Fleek Inc.）— `com.fleek.wuzu`
+
+**GoMuseum 唯一的正面同类：同样是"在卢浮宫扫作品听讲解"。** 2026-09-21 详情页实测。
+
+| 项 | 值 |
+|---|---|
+| 评分/评论 | **无评分、无评论**（页面不显示星级） |
+| 下载量 | **1K+**（四个量级低于 Smartify） |
+| 更新 | **2024-09-24 —— 两年未更新** |
+| 可用性 | 页面显示 "This app is not available for any of your devices" |
+| 收费 | **完全免费，无内购** |
+| 开发者 | (주)플릭 / Fleek Inc.，首尔江南区；客服邮箱 `busking@fleek.fitness`（健身域名） |
+| 类目 | Travel & Local |
+| 内容分级 | Teen · "Diverse Content: Discretion Advised"（对博物馆 App 而言异常） |
+| 标语 | **"Scan Anything to Listen"** |
+
+**定位漂移（它失败的原因，也是我们的机会）**：正文描述讲的是"扫一切"——绘画、雕塑、建筑、地标、街道、自家社区；只有 What's New 才改口讲卢浮宫的 docent 式讲解。这是一个**泛用识别 App 硬转到卢浮宫场景**，没有任何一馆的内容深度。
+
+**对 GoMuseum 的三点含义**：
+1. 🔴 **"零竞争"的说法必须收回**。正面同类存在，且排在 `louvre guide` 第 6。
+2. 🟢 **但它不构成防守障碍**：Play 排名重安装量、互动、评分、更新近度 —— 它四项全弱，两年未更新且在部分设备不可用。
+3. ⭐ **它同时验证了机会和失败模式**：有人看到了同一个空位（说明判断没错），但"扫一切"的泛用定位没有内容深度支撑，做不起来。**GoMuseum 的差异化恰恰是四馆深度（665 件讲解 / 219 件音频），不是"能扫更多东西"。** 这条应当写进定位纪律：**别往"扫一切"的方向漂。**
+
+### Bloomberg Connects — `org.bloomberg.connects.docent`
+
+本轮**未能取得页面数据**（详情页未访问）。既有资料称其已拿下 Paris Musées 官方合作 —— **本轮未验证**。但 FR `guide musée paris` 结果里确实有多个 **Paris Musées 自有 App**（Musée d'Art moderne 3,3 / Musée Libération / Paris Musées Second Canvas 4,4），官方阵营在法语市场确实存在。
+> ⚠️ 小皇宫（Petit Palais）属 Paris Musées 体系 —— GoMuseum 覆盖该馆时，**撇清官方关系的声明尤其必要**。
+
+---
+
+## 竞争位置小结
+
+```
+                        识别能力强
+                             │
+              Smartify ●     │
+            (全球广·馆方合作) │      ● GoMuseum（目标位）
+                             │        四馆深 · 免注册 · 接地讲解
+   全球广度 ─────────────────┼───────────────── 单馆/单城深度
+                             │
+                             │   ● TourBlink 3.7
+              Bloomberg?     │   ● MUSEUM BUDDY 2.9（离线路线，评分差）
+                             │   ● Louvre Chatbot 3.6/4.5
+                        无识别能力
+```
+
+## Top Opportunities
+
+1. **Quick Win**：`louvre guide` 在位者评分 2.9–3.7，且差评集中在"付费失败"和"找不到作品"。GoMuseum 的免注册 + 免费额度 + 相机识别对这三条各有一记。
+2. **Keyword Gap（EN）**：`louvre` × `scan` 的组合**零竞争** —— 没有任何巴黎博物馆 App 做识别。
+3. **Keyword Gap（FR）**：`audioguide louvre` 仅 8 个结果且头部弱 —— 比识别词好打得多。
+4. **Creative Edge**：F5 那条用户原话可以直接翻译成 Slot 1 的文案角度（"墙上没有编号也没关系"）。
+5. **Trust Edge**：F6 说明"不脑补、有据可溯"在这个类目是**有需求的反命题**，不是自说自话。
+
+## Threats to Monitor
+
+- **`TourLens: Louvre Guide`（Fleek Inc.）** —— 名字暗示镜头识别且已排 `louvre guide` 第 6。**上传前必查**。
+- **Smartify 在 FR 的统治力**（`reconnaissance œuvre d'art` 第 1，4,6★，1M+ 下载，两周一更新）。
+- **Paris Musées 官方 App 矩阵**在法语市场的存在，叠加小皇宫的归属关系。
+- GoMuseum 自身的**网络依赖**（F7）—— 这是竞品的成熟卖点而我们没有。

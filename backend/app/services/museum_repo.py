@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime, timezone
+from functools import lru_cache
 
 from sqlalchemy import and_, exists, func, or_
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from app.models.content import (
 )
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
 from app.services.storage import get_object_storage
 
@@ -183,6 +185,29 @@ def _pick(lang: str, zh, en, fr, fallback=""):
     return en or zh or fallback
 
 
+def _photo_credit(credit: str | None, artist_aliases) -> str | None:
+    """图片署名——但"作者本人"不算署名。
+
+    `credit` 来自 Commons 文件元数据的 `Artist` 字段,意思是"谁做了这个文件"。
+    平面画的扫描件里 Commons 惯例把画家填进去,于是它和展签上的作者名重复,
+    还常是**另一种语言的拼法**(Leonardo da Vinci / Léonard de Vinci),
+    同一屏两个名字对不上,看着就是个 bug。
+    但雕塑和实物照片里它是真的摄影师(Mbzt / Shonagon / Philippe Cendron),
+    **那是 CC 协议要求的署名,删了违约**——所以不能一刀切把 credit 砍掉。
+
+    判据:credit 命中该件作者任一语言的写法 → 是画家,不显示;否则原样留着。
+    prod 65 件实测:57 判隐藏、8 判保留,保留的全是真摄影师,零误杀。
+    """
+    if not credit:
+        return None
+    norm = credit.strip().casefold()
+    return (
+        None
+        if any(norm == a.strip().casefold() for a in artist_aliases if a)
+        else credit
+    )
+
+
 def _sized(storage, key, size):
     """image_key 是基础键(images/{qid}/{sort}),按档位拼文件名。size: thumb|large。"""
     return storage.public_url(f"{key}_{size}.jpg")
@@ -199,8 +224,13 @@ def _pack_values(pack, source):
 
 # 常见材质 → 本地化干净名(按词首关键词命中;未知原样)。ponytail: 覆盖主流画/雕塑材质,缺再加。
 _MEDIUM_NORM = {
-    "huile": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
-    "oil": {"zh": "油画", "en": "Oil on canvas", "fr": "Huile sur toile"},
+    # ⚠️ 只写媒介,**不写承载物**。曾是 "Oil on canvas"/"Huile sur toile" ——
+    # 源串里只说了"油",画布是这张表凭空补的。2026-09-23 实测 prod 9242 件含
+    # huile 的作品里 2412 件承载物不是画布(1603 木/563 纸卡/142 铜),全被标成
+    # canvas,含《蒙娜丽莎》(源 "peinture à l'huile;bois",实为杨木板)。
+    # 承载物现由 _SUPPORT_KEYS 单独扫描后拼接,见 _humanize_medium。
+    "huile": {"zh": "油画", "en": "Oil", "fr": "Huile"},
+    "oil": {"zh": "油画", "en": "Oil", "fr": "Huile"},
     "bronze": {"zh": "青铜", "en": "Bronze", "fr": "Bronze"},
     "marbre": {"zh": "大理石", "en": "Marble", "fr": "Marbre"},
     "aquarelle": {"zh": "水彩", "en": "Watercolour", "fr": "Aquarelle"},
@@ -208,6 +238,9 @@ _MEDIUM_NORM = {
     "gouache": {"zh": "水粉", "en": "Gouache", "fr": "Gouache"},
     "fusain": {"zh": "炭笔", "en": "Charcoal", "fr": "Fusain"},
     "plâtre": {"zh": "石膏", "en": "Plaster", "fr": "Plâtre"},
+    # ⚠️ "salted paper" 必须排在 "salted" 前:媒介名自身含 "paper",只吃掉
+    # "salted" 的话残串里的 "paper" 会被承载物扫描二次命中 → "纸本盐纸法"。
+    "salted paper": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
     "salted": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
     "papier salé": {"zh": "盐纸法", "en": "Salted paper", "fr": "Papier salé"},
     "albumen": {"zh": "蛋白印相", "en": "Albumen print", "fr": "Tirage albuminé"},
@@ -244,7 +277,7 @@ _MEDIUM_NORM = {
     "cire": {"zh": "蜡", "en": "Wax", "fr": "Cire"},
     "noyer": {"zh": "胡桃木", "en": "Walnut", "fr": "Noyer"},
     "bois": {"zh": "木", "en": "Wood", "fr": "Bois"},
-    "toile": {"zh": "布面", "en": "Canvas", "fr": "Toile"},
+    "toile": {"zh": "画布", "en": "Canvas", "fr": "Toile"},
     # 以下补 **英文**(Wikidata P186,优先级高于 attributes 故更常出现在面板上)
     # 与法语长尾。按 prod 全量 11449 条真值定(2026-09-12)。
     # ⚠️ gelatin/albumen/salted 在上面、排在 silver 之前 —— 否则
@@ -282,6 +315,16 @@ _MEDIUM_NORM = {
     # stone 放在 limestone/sandstone 之后是多余的保险:\b 本就不匹配词内的
     # "…stone",但排在后面,以后有人删掉 \b 也不会立刻把石灰岩变成「石」。
     "stone": {"zh": "石", "en": "Stone", "fr": "Pierre"},
+    # 英文承载物 —— P186 是 medium 的**优先**源(见 get_object_content),
+    # 而此前这里只有法语 toile/bois,英文 "canvas"/"panel" 无键可命中。
+    # 按 prod P186 真值定(2026-09-23):canvas 429 / panel 54 / poplar panel 15
+    # / cardboard 11 / paper 11 / wood 6 / oak panel 4。
+    # ⚠️ poplar 与 oak 必须排在 panel 前:"poplar panel" 要判成杨木板不是泛指嵌板。
+    "canvas": {"zh": "画布", "en": "Canvas", "fr": "Toile"},
+    "poplar": {"zh": "杨木", "en": "Poplar", "fr": "Peuplier"},
+    "oak": {"zh": "橡木", "en": "Oak", "fr": "Chêne"},
+    "panel": {"zh": "木板", "en": "Panel", "fr": "Panneau"},
+    "cardboard": {"zh": "卡纸", "en": "Cardboard", "fr": "Carton"},
     "wood": {"zh": "木", "en": "Wood", "fr": "Bois"},
     "paper": {"zh": "纸", "en": "Paper", "fr": "Papier"},
     # 法语长尾:木材/石材/金属的具体名称
@@ -304,6 +347,9 @@ _MEDIUM_NORM = {
     "plume": {"zh": "羽毛笔", "en": "Pen", "fr": "Plume"},
     "parchemin": {"zh": "羊皮纸", "en": "Parchment", "fr": "Parchemin"},
     "papier": {"zh": "纸", "en": "Paper", "fr": "Papier"},
+    # 上游真实取值:"peinture à l'huile;carton" 116 条、panneau 见于多馆嵌板画
+    "carton": {"zh": "卡纸", "en": "Cardboard", "fr": "Carton"},
+    "panneau": {"zh": "木板", "en": "Panel", "fr": "Panneau"},
 }
 # 有意不收的词:
 # - 技法而非材质(bas-relief/haut-relief/modelage/taille/fond d'or/grisaille/
@@ -314,15 +360,102 @@ _MEDIUM_NORM = {
 # - "paint":\bpaint 会连 "painting" 一起吃掉,而它只值 1 件。
 
 
+# _MEDIUM_NORM 里哪些键是**承载物**(可以跟在媒介后面,如"油 + 木板")。
+# 不另建一张表是有意的:翻译只有一份真相源,且 dict 顺序(=歧义裁决)自动继承。
+_SUPPORT_KEYS = frozenset(
+    {
+        "toile",
+        "bois",
+        "panneau",
+        "peuplier",
+        "chêne",
+        "noyer",
+        "papier",
+        "carton",
+        "cuivre",
+        "vélin",
+        "parchemin",
+        "canvas",
+        "poplar",
+        "oak",
+        "panel",
+        "cardboard",
+        "wood",
+        "paper",
+    }
+)
+
+# 中文拼接用的定语形("木" → "木板油画" 才通顺)。缺省回退 zh。
+_ZH_ATTR = {
+    "toile": "布面",
+    "canvas": "布面",
+    "bois": "木板",
+    "wood": "木板",
+    "panneau": "木板",
+    "peuplier": "杨木板",
+    "chêne": "橡木板",
+    "noyer": "胡桃木板",
+    "papier": "纸本",
+    "paper": "纸本",
+    "carton": "卡纸",
+    "cardboard": "卡纸",
+    "poplar": "杨木板",
+    "oak": "橡木板",
+    "panel": "木板",
+    "cuivre": "铜版",
+    "vélin": "犊皮纸",
+    "parchemin": "羊皮纸",
+}
+
+# 媒介 + 承载物的拼接式。其余语言回退英式(与 _MEDIUM_NORM 的英语回退一致)。
+_MEDIUM_JOIN = {"en": "{m} on {s}", "fr": "{m} sur {s}", "zh": "{s}{m}"}
+
+
+def _scan_medium(low, keys, *, want_support):
+    """按 _MEDIUM_NORM 的表序找第一个词首匹配,返回 (键, 条目, 区间)。
+
+    表序即语义(见 _MEDIUM_NORM 的注释),所以这里**必须**按 dict 顺序遍历,
+    不能先按长度或字母排。
+    """
+    for kw, m in _MEDIUM_NORM.items():
+        if (kw in keys) is not want_support:
+            continue
+        hit = re.search(rf"\b{re.escape(kw)}", low)
+        if hit:
+            return kw, m, hit.span()
+    return None, None, None
+
+
 def _humanize_medium(raw, lang):
     """原始材质串(法语 Joconde / 英语 Wikidata P186)→ 本地化干净名;未命中原样。
-    词首边界匹配,防 'toile' 误中 'oil'。"""
+
+    **一次扫两样:媒介 + 承载物**,因为一条串常同时含两者,而且词序不可信 ——
+    上游同时存在 "peinture à l'huile;toile" 与 "toile;peinture à l'huile",
+    分隔符 ";" 和 "," 混用,还有 "huile sur toile" 这种整句无分隔的写法。
+    故**不按分隔符切 token**(切了 "huile sur toile" 会退化成只剩 "Oil"),
+    而是全串扫描、把媒介命中的区间剔除后再扫承载物 —— 这样 "pierre noire"
+    命中媒介后,残串里不会再被 "pierre" 二次命中。
+
+    ⚠️ 只拼接**源串里真有的**信息。曾经 huile→"Oil on canvas" 是把画布凭空
+    补进去,prod 上 2412 件因此说谎(见 _MEDIUM_NORM 里 huile 条的注释)。
+    """
     if not raw:
         return None
     low = raw.lower()
-    for kw, m in _MEDIUM_NORM.items():
-        if re.search(rf"\b{kw}", low):
-            return m.get(lang) or m.get("en")
+    _, med, span = _scan_medium(low, _SUPPORT_KEYS, want_support=False)
+    rest = low[: span[0]] + " " + low[span[1] :] if span else low
+    sup_kw, sup, _ = _scan_medium(rest, _SUPPORT_KEYS, want_support=True)
+
+    def _t(entry):
+        return entry.get(lang) or entry.get("en")
+
+    if med and sup:
+        s = _ZH_ATTR.get(sup_kw, _t(sup)) if lang == "zh" else _t(sup).lower()
+        return _MEDIUM_JOIN.get(lang, _MEDIUM_JOIN["en"]).format(m=_t(med), s=s)
+    if med:
+        return _t(med)
+    if sup:
+        return _t(sup)
     return raw
 
 
@@ -351,11 +484,66 @@ def _humanize_dimensions(raw):
     return f"{_fmt(vals[0])} × {_fmt(vals[1])} cm"
 
 
+@lru_cache(maxsize=1)
+def _museum_ranks() -> dict[str, int]:
+    """slug → 探索页名次。真相源是 museums.yaml 的 `rank`。
+
+    不进 DB 是有意的:它是纯呈现决策,改一次要配一次迁移 + 一次 prod 写操作,
+    而 yaml 改完随 CD 就生效。进程内只解析一次(馆配置不会热变)。
+    """
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+
+    return {
+        slug: cfg.rank for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
+    }
+
+
+@lru_cache(maxsize=1)
+def _museum_names() -> dict[str, dict[str, str]]:
+    """slug → {语言: 馆名}。真相源是 museums.yaml,同 `_museum_ranks` 的理由。
+
+    yaml 里 `names` 只写 zh/en 之外的八语,这里把 name_zh/name_en 并进来,
+    对外就是一张完整的十语表——调用方不必知道它由两处拼成。
+    """
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+
+    return {
+        slug: {"zh": cfg.name_zh, "en": cfg.name_en, **cfg.names}
+        for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
+    }
+
+
+def museum_names(museum: Museum) -> dict[str, str]:
+    """该馆的 {语言: 馆名} 全表。
+
+    ⚠️ 回退到 DB 的 name_zh/name_en 必须留着:DB 里可能有 yaml 没配的馆
+    (手工建的/刚删了配置),那时两语总比没有强。
+    """
+    names = _museum_names().get(museum.slug) or {
+        "zh": museum.name_zh,
+        "en": museum.name_en,
+    }
+    # 空值不进表:DB 那条回退路径上 name_zh/name_en 可能是 None,留着只会让
+    # 每个消费方都得判一次"这个键在但值是 null"。
+    return {k: v for k, v in names.items() if v}
+
+
+def museum_name(museum: Museum, language: str) -> str:
+    """馆名按语言取。没这门语言 → 回退英文名(而不是 slug)。"""
+    names = museum_names(museum)
+    return names.get(language) or names.get("en") or names.get("zh") or museum.slug
+
+
 def list_museums(db: Session) -> list[dict]:
     rows = (
         db.query(Museum, func.count(MuseumObject.id).label("cnt"))
         .outerjoin(MuseumObject, MuseumObject.museum_id == Museum.id)
         .group_by(Museum.id)
+        # 按 slug 只是兜底次序——真正的排序在下面按 rank 做。别把它当最终顺序:
+        # 首条会被探索页拿去上大卡,而字母序意味着哪天上个 `british_museum`
+        # 就会无声顶掉卢浮宫的首位。
         .order_by(Museum.slug)
         .all()
     )
@@ -364,11 +552,17 @@ def list_museums(db: Session) -> list[dict]:
     for m, cnt in rows:
         row = {f: getattr(m, f) for f in _PACK_FIELDS}
         row["artwork_count"] = cnt
+        # 十语馆名(加法字段)。本端点没有 `language` 参数,所以给整张表、前端按
+        # 当前界面语言挑;老 App 不认这个键,继续吃 name_zh/name_en,行为不变。
+        row["name_i18n"] = museum_names(m)
         # 探索页缩略图(spec 2026-07-20 museum-cover-intro-quality,加法):同一行零成本可读
         row["cover_image"] = (
             _sized(storage, m.cover_image_key, "thumb") if m.cover_image_key else None
         )
         out.append(row)
+    # DB 里可能有 yaml 没配的馆(手工建的/刚删了配置),给它末位,再按 slug 稳定排。
+    ranks = _museum_ranks()
+    out.sort(key=lambda r: (ranks.get(r["slug"], RANK_LAST), r["slug"]))
     return out
 
 
@@ -497,6 +691,9 @@ def get_museum_pack(
     pack.update(
         {
             "qid": m.qid,
+            # 与 /museums 列表同形的十语馆名(加法)。这个端点虽然有 `language`,
+            # 但给整张表能让前端两个模型共用一套取名逻辑,少一条分叉。
+            "name_i18n": museum_names(m),
             "source": _LEGACY_SOURCE,
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             # 独立 COUNT:artworks=False 时列表为空,但件数是门面字段(App 显"17283 件"),
@@ -577,22 +774,6 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         .all()
     ]
     attrs = obj.attributes or {}
-    images = [
-        {
-            "url": (
-                _sized(storage, i.image_key, "large") if i.image_key else i.source_url
-            ),
-            "credit": i.credit,
-        }
-        for i in db.query(ObjectImage)
-        .filter(
-            ObjectImage.object_id == obj.id,
-            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
-        )
-        .order_by(ObjectImage.sort)
-        .all()
-        if i.image_key or i.source_url
-    ]
     from app.models.artist import Artist
 
     aqid = attrs.get("artist_qid")
@@ -607,6 +788,28 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         },
         (art.name_en if art else None) or obj.artist_en or obj.artist_zh,
     )
+    artist_aliases = {
+        *((art.name_i18n or {}).values() if art else ()),
+        *((art.name_zh, art.name_en) if art else ()),
+        obj.artist_zh,
+        obj.artist_en,
+    }
+    images = [
+        {
+            "url": (
+                _sized(storage, i.image_key, "large") if i.image_key else i.source_url
+            ),
+            "credit": _photo_credit(i.credit, artist_aliases),
+        }
+        for i in db.query(ObjectImage)
+        .filter(
+            ObjectImage.object_id == obj.id,
+            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
+        )
+        .order_by(ObjectImage.sort)
+        .all()
+        if i.image_key or i.source_url
+    ]
     facts = {
         "artist": resolved_artist,
         "date": obj.year,
@@ -618,7 +821,10 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         ),
         "dimensions": _humanize_dimensions(attrs.get("dimensions")),
         "inventory": obj.inventory_number,
-        "location": _pick(language, museum.name_zh, museum.name_en, museum.name_en),
+        # ⚠️ 这里原本是 `_pick(language, name_zh, name_en, name_en)`——fr 那个槽位
+        # 填的就是 name_en,所以法语界面上写着 "Louvre Museum"。十语都得有名字,
+        # 不是给 fr 单独打个补丁,故整条换成 museum_name()。
+        "location": museum_name(museum, language),
         # provenance/exhibitions/bibliography 移出面板(进证据包材料级,阶段2 用),保形不删键
         "provenance": None,
         "artist_life": None,  # ponytail: 未存作者生平，接 Wikidata 作者源后再补

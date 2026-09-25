@@ -50,9 +50,11 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
   final String language;
   static const _limit = 50;
 
-  Future<void> loadInitial() async {
+  /// 返回首屏是否拉到了 —— provider 据此决定要不要 keepAlive(只缓存成功结果)。
+  Future<bool> loadInitial() async {
     state = const ObjectListState(loading: true);
     await _fetch(0, replace: true);
+    return mounted && state.error == null;
   }
 
   Future<void> loadMore() async {
@@ -69,6 +71,7 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
           limit: _limit,
           offset: offset,
           language: language);
+      if (!mounted) return; // autoDispose 后:响应回来时页面可能已退出
       final merged = replace ? page.items : [...state.items, ...page.items];
       state = state.copyWith(
         items: merged,
@@ -78,17 +81,27 @@ class ObjectListNotifier extends StateNotifier<ObjectListState> {
         clearError: true,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(loading: false, error: e);
     }
   }
 }
 
-final objectListProvider = StateNotifierProvider.family<
+/// ⚠️ **只缓存成功结果**——`autoDispose` + 首屏拉到了才 `keepAlive`。
+/// 理由同 museumDetailProvider(见那里的长注释):不带 autoDispose 的 family 会把
+/// 错误态永久钉死,一次网络抖动就让这个 (馆,分类,语言) 再也不发请求,
+/// 只有重启 App 能解。成功结果照旧永久驻留,不影响换语言/换分类的缓存命中。
+final objectListProvider = StateNotifierProvider.autoDispose.family<
     ObjectListNotifier,
     ObjectListState,
     ({String slug, String category, String language})>((ref, a) {
   final ds = ref.watch(catalogDataSourceProvider);
-  return ObjectListNotifier(
-      ds: ds, slug: a.slug, category: a.category, language: a.language)
-    ..loadInitial();
+  final notifier = ObjectListNotifier(
+      ds: ds, slug: a.slug, category: a.category, language: a.language);
+  // ok 为 false 也涵盖"页面已退出"(notifier 随 provider 一起 dispose),
+  // 所以不必再单独盯 provider 的 dispose。
+  notifier.loadInitial().then((ok) {
+    if (ok) ref.keepAlive();
+  });
+  return notifier;
 });
