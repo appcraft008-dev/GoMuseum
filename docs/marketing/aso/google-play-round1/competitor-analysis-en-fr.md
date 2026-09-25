@@ -240,3 +240,30 @@ FR 4,5★ / EN 3.6★。自我描述为 "free, **unofficial** chatbot guide"。
 - **Smartify 在 FR 的统治力**（`reconnaissance œuvre d'art` 第 1，4,6★，1M+ 下载，两周一更新）。
 - **Paris Musées 官方 App 矩阵**在法语市场的存在，叠加小皇宫的归属关系。
 - GoMuseum 自身的**网络依赖**（F7）—— 这是竞品的成熟卖点而我们没有。
+
+## 法语差评实读（2026-09-25，待办第 3 项）
+
+**为什么做**：上文法语文案的痛点是从**英文**评论推的（只读过英文页）。这次直接读法语商店（`lang=fr country=fr`）的评论。
+**方法与样本**（⚠️ 小样本，主题计数是关键词粗计、类别有重叠，只表示量级）：`google-play-scraper`（非官方）取最新评论，Sort=NEWEST：TourBlink 53 条、MUSEUM BUDDY 11 条、Louvre Chatbot 93 条、Smartify 156 条，共 313 条。**评论时间跨度很大**：TourBlink/MUSEUM BUDDY 的差评大多是 2016–2020 年，产品可能已变；2024–2026 年的近期差评单独标出。评论 ≠ 搜索需求，也不是随机样本（人们更爱在极端体验后留评）。
+
+### 各家读到了什么
+
+| App（FR） | ≤3★ 主题（条数/该档总数） | 好评主题 |
+|---|---|---|
+| **TourBlink**（4,3★） | **付费不满 8/14**（"Tout est payant"、"on a déjà payé notre ticket"、"autant prendre celui du musée"、多收 3 € 票务费）；**AI/机器人语音 3/14**；**内容不准/过时 3/14**；缺路线 2/14 | 路线（"sans se perdre dans ce labyrinthe"）：提到路线的 11 条里 8 条是 4–5★ |
+| **MUSEUM BUDDY**（2,5★，仅 11 条） | **付费/升级 5/7**（"dites gratuite mais demande sans cesse un accès à votre carte bancaire"）；无法语 3/7 | 几乎没有 |
+| **Louvre Chatbot**（4,5★） | 只有 10 件作品（2019）；"on ne peut pas poser nos questions"（**2025-12**）；错别字；讲得太浅 | **轶事/背景故事**、适合和孩子一起、"Plus d'œuvres serait idéal"（多条） |
+| **Smartify**（FR 识别词第 1） | ≤2★ 共 64 条：**识别失败 ~26**（"Ne reconnaît pas la Joconde"、"1 tableau sur 10"、"seulement les connus"、"ne reconnaît pas les photos, seulement des scans"）；**崩溃/打不开 ~19**；**全英文/没有法语 ~6**（"le texte en anglais qui est juste à côté du tableau"）；强制注册 2 | — |
+
+### 结论（对 GoMuseum 的含义）
+
+1. **⭐ 最近期的法语差评是"机器人语音 + 内容有错"**（TourBlink 2024-10、2025-02：voix robotique / informations fausses / "tirées d'une IA ou de wikipédia"；2020 还有 4★ 说法语声音"métallique"）。GoMuseum 的音频也是合成语音。⇒ **法语文案与截图不得暗示真人/自然人声**（现有 FR 稿没有这类表述，已核对）；法语音频的第一印象是真实风险，值得用真人耳朵对照这条差评检查一次（**这是需要你判断的事**，我不评音质）。"SOURCED, NEVER INVENTED / SOURCÉ, JAMAIS INVENTÉ"那一屏直接对应"信息有错"的抱怨。
+2. **⭐ 付费不透明是法语差评里最集中的一条**（TourBlink 8/14、MUSEUM BUDDY 5/7；抱怨的是"标着免费却处处收钱/已买门票还要再付"，不是价格本身）。⇒ 现有 FR 完整描述已写明"5 premières reconnaissances et premier guide audio gratuits"和"Un paiement unique, pas un abonnement"，方向对；**应用内付费墙同样要在点击前就说清什么免费、什么收费**（记下，不在本轮范围）。
+3. **Smartify 的法语用户主要被"识别不出来"和"全是英文"伤到。** 后者是 GoMuseum 的真实差异（原生法语讲解，此前只是推断，现在有法语原话佐证）；前者是**警告**：扫描优先的产品最容易吃 1★，而 GoMuseum 的识别边界是有图作品（14,106/27,221）。**"识别失败时的体验"决定评分，值得单独审一遍**（未做）。
+4. **"提供更多作品"是好评产品也在被要求的东西**（Louvre Chatbot 4,5★ 仍有多条"plus d'œuvres"）。覆盖量是 GoMuseum 相对它的现实优势，页面/描述可以在不夸大的前提下强调。
+5. **家庭/带孩子**的提及有 10/313 条（TourBlink "idéal quand on a un enfant qui n'aime pas les musées"、Chatbot "jeu d'énigmes en famille"）。**只是假设，不是结论**：样本小，且没有证据说明 GoMuseum 更适合孩子。不建议据此改文案。
+6. **路线是有人要的**（TourBlink 好评里 8 条提路线）。GoMuseum 选择"自由探索、不做寻路"，这意味着**想要固定路线的那批人不是我们的目标用户**，别为他们改定位；但也说明"EXPLORE FREELY"的对面确实存在一个受欢迎的选项。
+7. **没找到的**：**网络/离线的抱怨在 313 条法语评论里为 0**（英文评论里有 "internet at the Louvre is terrible"）。这**不能**推出法语用户不在意网络（样本小、多为老评论），只说明**法语侧没有证据支持把"离线"当作痛点写进法语文案**，此前 F7 只能作为英文侧证据。
+
+### 对既有文案的影响
+**无需修改已送审文案。** 上面第 1、2 条与现有法语稿一致；第 3 点强化"原生法语"卖点，已在描述中；其余是产品/后续待办，不属 listing。
