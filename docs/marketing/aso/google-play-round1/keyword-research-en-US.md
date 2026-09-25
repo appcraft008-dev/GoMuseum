@@ -127,6 +127,12 @@ Play **全文索引 4000 字符的完整描述**（iOS 不索引描述，这是�
 
 > **与 FR 的布局差异**：见 `keyword-research-fr-FR.md`。核心差异是 **scan 在 EN 进 Title、在 FR 不进 Title** —— 因为 Smartify 在 FR 已占住识别词（F4）。
 
+## 需求代理验证（2026-09-25）
+
+Google 自动补全（`gl=us` / `gl=gb`，`hl=en`，代理指标，不给量级）：`louvre audio guide` 的联想为 free / worth it / reddit / app / 3ds / price；`louvre audio guide app` 在 US、GB 都出现。⇒ ① `audio guide app` 是真实存在的查询形态，与短描述用词一致；② 用户在和官方租借（3DS）比价与口碑；③ Reddit 是他们查证的地方。
+⚠️ `louvre guide` 的联想几乎全是真人导览与门票（`guided tour` / `skip the line`）——**Web 侧意图偏向真人导览**，标题里的 `Louvre Guide` 在 Play 内是否同样被这样理解未知，标题不可 A/B，交给 Search terms 报告。
+EN 的 Trends 对比未取到（限流）。法语侧完整结论见 `keyword-research-fr-FR.md` 同名章节。
+
 ## 仍需真实数据验证的假设
 
 1. `louvre guide` 与 `museum audio guide` 的**实际搜索量之比** —— 本轮只知供给侧强弱，不知需求侧大小。发布后看 Play Console 的 Search terms 报告。
