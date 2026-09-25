@@ -80,6 +80,17 @@ Google Play Store Listing Experiments 需要**自然流量**才能分流。零�
 | **Search terms 报告** | ⭐ **唯一能证伪本轮关键词判断的真实数据源**。本轮所有"方向性判断"都等它来验 |
 | en-US vs fr-FR 分市场 | 验证 F4 的市场差异结论 |
 
+**外部渠道的来源参数约定**（落地页 CTA 已按此实现，2026-09-25）：链接带 `&referrer=` + URL 编码的 `utm_source / utm_medium / utm_campaign / utm_content`，Play 会把它原样交给 App 首次启动的 Install Referrer，用来区分"哪个渠道的安装质量高"（配合 4.2 的识别率/付费率）。
+
+| 参数 | 取值 |
+|---|---|
+| `utm_source` | `gomuseum.app`（落地页）· `reddit` · `tripadvisor` · `youtube` |
+| `utm_medium` | `landing` · `post` · `video` |
+| `utm_campaign` | `en` · `fr`（与 listing 语言一致） |
+| `utm_content` | 同一页面多个入口时区分位置（落地页：`hero` / `footer`） |
+
+⚠️ 这只是**发出去的标签**。App 侧尚未读取 Install Referrer，所以最多只有 Play Console 的 Acquisition 报告可能按它拆分（我未在 Console 里实测过该维度，放量后核实），**无法**和 4.2 的产品指标关联；要关联需另做前端改动（读 Install Referrer 并随埋点上报），发包时再评估。
+
 ### 4.2 产品侧（埋点）
 
 | 指标 | 定义 | 为什么必须看 |
