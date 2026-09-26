@@ -79,7 +79,9 @@ class _Tr:
     def __init__(self):
         self.calls = []
 
-    def translate_object(self, en_sections, target_langs, titles=None, artists=None):
+    def translate_object(
+        self, en_sections, target_langs, titles=None, artists=None, **_kw
+    ):
         from app.services.enrichment.quality import SectionQuality
 
         lang = target_langs[0]
@@ -97,11 +99,13 @@ class _Tr:
             }
         }
 
-    def translate_section(self, text, lang, *, strong=False, title=None, artist=None):
+    def translate_section(
+        self, text, lang, *, strong=False, title=None, artist=None, **_kw
+    ):
         self.calls.append(("sec", lang, text))
         return f"{text}?" if "?" in text else f"{text}_{lang}"
 
-    def check_faithfulness(self, en, translated, lang, title=None, artist=None):
+    def check_faithfulness(self, en, translated, lang, title=None, artist=None, **_kw):
         return True, []
 
 
@@ -257,3 +261,36 @@ def test_parallel_workers_produce_same_result_as_serial(session):
     de = _rows(session, "Q1", "de")
     assert set(de) == {"guide", "background"}
     assert de["guide"].body == "de EN guide."
+
+
+def test_translate_passes_artist_english_name_and_museum_name(session):
+    """补语种路径必须把作者英文原名 + 馆规范名传到正文与问答两侧
+    (半个单一真相源的坑:只接一条路径,另一条永远不会红)。"""
+    from app.services.enrichment.backfill import translate_object_language
+
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    m.name_zh = "奥赛博物馆"
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Henri de Toulouse-Lautrec"
+    session.commit()
+    seen = []
+
+    class _Rec(_Tr):
+        def translate_object(self, en_sections, target_langs, **kw):
+            seen.append(("section", kw.get("artist_en"), kw.get("museums")))
+            return super().translate_object(en_sections, target_langs, **kw)
+
+        def translate_section(self, text, lang, **kw):
+            seen.append(("qa", kw.get("artist_en"), kw.get("museum")))
+            return super().translate_section(text, lang, **kw)
+
+    translate_object_language(session, o, "zh", _Rec())
+    sec = [x for x in seen if x[0] == "section"]
+    qa = [x for x in seen if x[0] == "qa"]
+    assert sec and all(
+        x[1] == "Henri de Toulouse-Lautrec" and x[2] == {"zh": "奥赛博物馆"}
+        for x in sec
+    )
+    assert qa and all(
+        x[1] == "Henri de Toulouse-Lautrec" and x[2] == "奥赛博物馆" for x in qa
+    )

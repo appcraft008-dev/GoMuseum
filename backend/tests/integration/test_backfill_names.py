@@ -64,7 +64,9 @@ class _Translator:
     def __init__(self):
         self.calls = []
 
-    def translate_section(self, text, lang, *, strong=False, title=None, artist=None):
+    def translate_section(
+        self, text, lang, *, strong=False, title=None, artist=None, **_kw
+    ):
         self.calls.append((text, lang))
         return f"{text}_{lang}"
 
@@ -233,7 +235,7 @@ def test_fill_i18n_prefers_translate_name(session):
             return f"{text}~{lang}"
 
         def translate_section(
-            self, text, lang, *, strong=False, title=None, artist=None
+            self, text, lang, *, strong=False, title=None, artist=None, **_kw
         ):
             calls.append(("section", text, lang))
             return f"{text}_{lang}"

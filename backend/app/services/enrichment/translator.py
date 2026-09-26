@@ -73,9 +73,10 @@ class ContentTranslator:
         title=None,
         artist=None,
         museum=None,
+        artist_en=None,
     ) -> str:
         system, user = build_translation_prompt(
-            en_body, target_lang, title, artist, museum
+            en_body, target_lang, title, artist, museum, artist_en=artist_en
         )
         fn = (
             self._complete_strong
@@ -105,9 +106,17 @@ class ContentTranslator:
         target_lang: str,
         title: str | None = None,
         artist: str | None = None,
+        artist_en: str | None = None,
+        museum: str | None = None,
     ):
         system, user = build_faithfulness_prompt(
-            en_body, translated, target_lang, title, artist
+            en_body,
+            translated,
+            target_lang,
+            title,
+            artist,
+            artist_en=artist_en,
+            museum=museum,
         )
         data = _parse()(self._complete_judge(system, user))
         return bool(data.get("faithful")), (data.get("issues") or [])
@@ -118,38 +127,45 @@ class ContentTranslator:
         target_langs: list[str],
         titles: dict | None = None,
         artists: dict | None = None,
+        artist_en: str | None = None,
+        museums: dict | None = None,
     ) -> dict:
         """把英语段落铺到目标语言。跳过 'en'（轴心不翻）与空 body 段。
         titles={lang: 规范标题}:正文引用标题统一用显示名(消除分叉)。
         artists={lang: 作者规范名}:正文称呼作者统一用作者卡译名(消除音译分叉)。
+        artist_en=作者英文原名:告诉模型规范名**只属于这个人**(同姓的画中人不是作者)。
+        museums={lang: 馆规范名}:正文提到本馆统一用馆名(否则「小宫/小皇宫」分叉)。
         返回 {lang: {section_code: SectionQuality}}。"""
         titles = titles or {}
         artists = artists or {}
+        museums = museums or {}
         out: dict = {}
         for lang in target_langs:
             if lang == "en":
                 continue
             title = titles.get(lang)
             artist = artists.get(lang)
+            names = dict(
+                title=title,
+                artist=artist,
+                artist_en=artist_en,
+                museum=museums.get(lang),
+            )
             lang_result: dict = {}
             for code, en_body in en_sections.items():
                 if not en_body:
                     continue
-                translated = self.translate_section(
-                    en_body, lang, title=title, artist=artist
-                )
-                ok, issues = self.check_faithfulness(
-                    en_body, translated, lang, title, artist
-                )
+                translated = self.translate_section(en_body, lang, **names)
+                ok, issues = self.check_faithfulness(en_body, translated, lang, **names)
                 lang_ok = _lang_ok(translated, lang)
                 if (not ok or not lang_ok) and self._complete_strong:
                     # 不忠实 或 语言不符 → 强模型(gpt-4o)重译一次并采用
                     # (总比 mini 的坏译好;顽固少数才付费,语言无关靠闸信号触发)
                     translated = self.translate_section(
-                        en_body, lang, strong=True, title=title, artist=artist
+                        en_body, lang, strong=True, **names
                     )
                     ok, issues = self.check_faithfulness(
-                        en_body, translated, lang, title, artist
+                        en_body, translated, lang, **names
                     )
                     lang_ok = _lang_ok(translated, lang)
                 published = ok and lang_ok  # 忠实且语言正确才发布

@@ -73,10 +73,14 @@ class _FakeGate:
 
 
 class _FakeTranslator:
-    def translate_section(self, t, lang, *, strong=False, title=None, artist=None):
+    def translate_section(
+        self, t, lang, *, strong=False, title=None, artist=None, **_kw
+    ):
         return t + "_" + lang
 
-    def translate_object(self, en_sections, target_langs, titles=None, artists=None):
+    def translate_object(
+        self, en_sections, target_langs, titles=None, artists=None, **_kw
+    ):
         return {
             "fr": {
                 "overview": SectionQuality(
@@ -174,7 +178,7 @@ def test_generate_object_translates_per_language_with_priority(session):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             assert len(target_langs) == 1  # 逐语言调用(翻完即存)
             lang = target_langs[0]
@@ -221,6 +225,7 @@ class _FakeQA:
         covered=None,
         titles=None,
         artists=None,
+        **_kw,
     ):
         return {
             "en": [{"question": "Q?", "answer": "A.", "status": "published"}],
@@ -287,7 +292,7 @@ def test_generate_object_produces_guide_section(session):
 
     class _GuideTranslator(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             return {
                 "fr": {
@@ -445,7 +450,7 @@ def test_priority_lang_guide_persisted_before_canonical(session, monkeypatch):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             lang = target_langs[0]
             return {lang: {c: _ok(f"{lang} {b}") for c, b in en_sections.items()}}
@@ -634,6 +639,7 @@ def test_generate_object_passes_covered_to_qa(session):
             covered=None,
             titles=None,
             artists=None,
+            **_kw,
         ):
             seen["covered"] = covered
             return {"en": []}
@@ -1109,12 +1115,12 @@ def test_translate_qa_items_threads_title(session):
 
     class _Tr:
         def translate_section(
-            self, text, lang, *, strong=False, title=None, artist=None
+            self, text, lang, *, strong=False, title=None, artist=None, **_kw
         ):
             seen.append(title)
             return "译:" + text
 
-        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
             return True, []
 
     translate_qa_items(
@@ -1176,12 +1182,12 @@ def test_translate_qa_items_threads_artist(session):
 
     class _Tr:
         def translate_section(
-            self, text, lang, *, strong=False, title=None, artist=None
+            self, text, lang, *, strong=False, title=None, artist=None, **_kw
         ):
             seen.append(artist)
             return "译:" + text
 
-        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
             return True, []
 
     translate_qa_items(
@@ -1214,7 +1220,7 @@ def test_generate_passes_artist_glossary_to_translations(session, monkeypatch):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             seen["translate"].append(artists)
             lang = target_langs[0]
@@ -1241,6 +1247,7 @@ def test_generate_passes_artist_glossary_to_translations(session, monkeypatch):
             covered=None,
             titles=None,
             artists=None,
+            **_kw,
         ):
             seen["qa"] = artists
             return {"en": []}
@@ -1271,7 +1278,7 @@ def test_qa_runs_parallel_with_translations(session):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             assert qa_started.wait(timeout=5), "qa 未先于翻译启动(退化回串行?)"
             lang = target_langs[0]
@@ -1298,6 +1305,7 @@ def test_qa_runs_parallel_with_translations(session):
             covered=None,
             titles=None,
             artists=None,
+            **_kw,
         ):
             qa_started.set()
             return {"en": [{"question": "Q?", "answer": "A.", "status": "published"}]}

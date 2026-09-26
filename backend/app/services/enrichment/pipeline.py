@@ -387,16 +387,22 @@ def generate_object(
         # 作者译名一致性:锁作者卡规范名。全新作者此时 Artist 行未建(延后在
         # _enrich_artist_and_titles)→ glossary 缺,仅首件首语言 guide 有分叉风险(可接受,
         # 不为它把作者块拉回首屏关键路径)。
-        from app.services.enrichment.backfill import artist_names_i18n
+        from app.services.enrichment.backfill import (
+            artist_names_i18n,
+            translation_names,
+        )
 
         _aname = artist_names_i18n(db, o).get(lang_priority)
         _artists_pr = {lang_priority: _aname} if _aname else None
+        _artist_en_pr, _museums_pr = translation_names(db, o, [lang_priority])
         try:
             res = translator.translate_object(
                 {"guide": en_published["guide"]},
                 [lang_priority],
                 titles=_titles,
                 artists=_artists_pr,
+                artist_en=_artist_en_pr,
+                museums=_museums_pr,
             ).get(lang_priority, {})
             p, n = persist_gated_sections(db, qid, lang_priority, res, model)
             counts[lang_priority] = (p, n)
@@ -427,6 +433,10 @@ def generate_object(
     from app.services.enrichment.backfill import artist_names_i18n
 
     _anames = artist_names_i18n(db, o)
+    # 作者英文原名 + 馆规范名:正文与问答同一份(纪律 22:翻译侧注入什么,检查侧就知道什么)
+    from app.services.enrichment.backfill import translation_names
+
+    _artist_en, _museums = translation_names(db, o, target_langs)
 
     # qa ‖ 翻译并行:两者都只读 en_published/material,互不依赖(实测 qa 24.9s 是最大后台
     # 单块,串行白排队)。线程里只跑纯 LLM(suggest 不碰 db),persist 留主线程(session 非
@@ -450,6 +460,8 @@ def generate_object(
             covered=covered,
             titles=_qa_titles,
             artists=_anames,
+            artist_en=_artist_en,
+            museums=_museums,
         )
 
     # 逐语言:翻完一门立即落库(懒生成场景用户尽早看到自己的语言);单语言失败不拖垮其他
@@ -474,6 +486,8 @@ def generate_object(
                     [lang],
                     titles=_titles,
                     artists=_artists,
+                    artist_en=_artist_en,
+                    museums=_museums,
                 ).get(lang, {})
             except Exception:
                 logger.exception("translate %s/%s failed for %s", lang, code, qid)
