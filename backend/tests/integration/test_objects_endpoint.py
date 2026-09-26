@@ -61,3 +61,34 @@ def test_objects_endpoint_returns_page(client):
 
 def test_objects_endpoint_unknown_museum_404(client):
     assert client.get("/museums/nope/objects").status_code == 404
+
+
+def test_list_order_matches_top_objects_on_popularity_ties(client):
+    """同分必须有确定顺序且与生成用的 top_objects 一致:否则 App 列表前 N 件
+    ≠ 已生成的 TOP-N(小皇宫第 19 位显示「待完善」),分页也会重复/漏件。"""
+    from app.services.enrichment.pipeline import top_objects
+
+    s = client.app.dependency_overrides[get_db]()
+    m = s.query(Museum).filter_by(slug="orsay").one()
+    for i in range(8):
+        upsert_object(
+            s,
+            m.id,
+            {
+                "qid": f"Q{100 + i}",
+                "title_en": "T",
+                "popularity": 4,
+                "image": f"http://i/{i}.jpg",
+            },
+        )
+    s.commit()
+    expected = [o.qid for o in top_objects(s, m.id).all()]
+    s.close()
+
+    pages = [
+        client.get("/museums/orsay/objects", params={"limit": 3, "offset": off}).json()[
+            "items"
+        ]
+        for off in (0, 3, 6)
+    ]
+    assert [it["qid"] for p in pages for it in p] == expected
