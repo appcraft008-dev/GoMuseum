@@ -425,7 +425,9 @@ _DEFAULT_GUIDE_SYSTEM = (
     "not a summary of everything. Structure (5 beats, flowing, not labeled): "
     "(1) a hook that gets them looking; (2) POINT OUT 1-2 concrete details by describing "
     "them directly — name what is there, do not preface it with a phrase that tells the "
-    "visitor to look; (3) explain why those details matter; (4) add only the necessary "
+    "visitor to look; (3) explain why those details matter — carry the meaning inside the "
+    "sentence itself; do NOT open it with 'These details…' / 'This detail…' / 'Such "
+    "details…' as the subject; (4) add only the necessary "
     # ⚠️ 2026-09-13 第二轮:#543 之后 guide 仍有 45% 违反**自己 prompt 里的**禁用词
     # (prod 实测 20 段中 9 段:8 段 `as you take in`、1 段 `as you stand here`),
     # 而深度段用同一个 _BANNED_BLOCK 是 0 违反。查下来根因不在黑名单:
@@ -439,14 +441,42 @@ _DEFAULT_GUIDE_SYSTEM = (
     #   ③ "'MAY freely use framing guidance'把它放出来了" → 收紧无效(5/10)。
     # 只有约束结尾这一拍有效:**6/10 → 0/10**,接地存活 0.98→0.96(没靠少说话换)。
     # 🔑 通法:**笼统的禁用词清单打不过具体的结构指令 —— 禁令要长在指令所在的那一拍上。**
-    "background; (5) end on a memory point or an open question — enter it WITHOUT a "
-    "second-person transition: do NOT begin the closing with 'As you…', 'Next time "
-    "you…', 'When you…', 'Standing here…' or any similar lead-in. Go straight to the "
-    "thought or the question. "
+    # ⚠️ 2026-09-26 第三轮:黑名单开头与 As-you 结尾都清掉后,guide 换了三个槽位模板
+    # (小皇宫 TOP20):首句「In {年}, {作者} captured a moment…」14/19、第三拍
+    # 「These details…」11/19、结尾反问 19/19(「What feelings does this evoke…?」)。
+    # 都是**本 prompt 自己的指令**被执行成公式:"open question" 被当默认、"首句必须带
+    # 年份/人名" 被当成「年份+人名开头」。所以约束仍写在各自那一拍上,不另起清单。
+    # A/B 第一版证伪了「end on a memory point」这个说法本身:问句 20/20→0/20,但模型把
+    # "memory point" 执行成「The image of X … lingers in the mind / Remember the image
+    # of…」(30 件约 25 件)—— 词本身就是模板种子。所以结尾不再提"记住/画面",改成
+    # 「最后一个没讲过的具体事实,说完就停」。开头「禁 In YEAR, ARTIST captured 框架」
+    # 只从 15/20 压到 10/20 → 换成可检查的硬约束:首句不放年份。
+    # A/B 第二版:「再补一个没讲过的事实收尾」逼模型去凑事实 —— 闸删的句子集中到了
+    # **最后一句**(10 句 vs 旧版 3 句),接地均值 0.926→0.888,删完正文停在半截;
+    # 没被删的则变成念目录(「measures X by Y cm」「housed in the Petit Palais」)。
+    # 开头改成「首句不放年份」后又长出「In 'TITLE,' ARTIST captures…」10/20。
+    # 所以:结尾不要求新内容(主线讲完就停),开头不拿标题/作者当句子框架。
+    "background; (5) stop when the throughline is complete. There is no separate closing "
+    "beat: the last sentence stays on something specific already set up in THIS guide, "
+    "and adds no new fact just to have an ending. The last sentence must NOT be a "
+    "question to the visitor, a moral, a sentence about what the work 'remains', "
+    "'reminds us of', 'embodies' or how it 'lingers', an instruction to remember, or "
+    "catalogue data (dimensions, where it is housed, how it was acquired). Do NOT begin "
+    "it with 'As you…', 'Next time you…', 'When you…', 'Standing here…', 'Notably…' or "
+    "any similar lead-in. "
     "OPENING: the first sentence MUST carry something specific to THIS work — a named "
-    "person, a place, a year, a number, or one concrete thing visible in it — so that it "
-    "could not be pasted onto any other artwork. Do NOT open by inviting the visitor to "
-    "look or pause. "
+    "person, a place, a number, or one concrete thing visible in it — so that it could "
+    "not be pasted onto any other artwork. Begin with the subject itself (the person, "
+    "object or event in the work), NOT with the title, artist or year as the frame of "
+    "the sentence ('In YEAR, ARTIST captured…', 'In TITLE, ARTIST presents…', "
+    '"ARTIST\'s TITLE captures…" open most guides already, and title, artist and date '
+    "are shown on screen above the guide). "
+    # ⚠️ 别加「没有看图块就别从外观开头」这类条件句:试过(v4),无看图描述的件照样
+    # 编外观(毛绒扶手椅),旧 prompt 在同样的件上也编 —— 这是接地闸对外观描写的
+    # 老盲区,不是本条引入的;防线是生成前先看图(pipeline 里的 ensure_description)。
+    # 我一度以为是本条引入的,实为误判:留出集 10 件里 5 件本来就有看图描述,
+    # 「蓝腰带红披风」「红金铠甲」都出自描述。
+    "Do NOT open by inviting the visitor to look or pause. "
     "BANNED OPENINGS (overused to the point of being filler): 'Take a moment…', "
     "'As you look at…', 'As you stand…', 'Stand before…', 'Picture this…', "
     "'Imagine standing…', 'Let's take a closer look…'. "
@@ -461,7 +491,7 @@ _DEFAULT_GUIDE_SYSTEM = (
     "and gentle impressions clearly phrased as impression. You MUST NOT invent verifiable "
     "facts (names, dates, events, attributions, medium, what is depicted) not in the material. "
     "If the material is too thin for a specific opening, open on the most concrete fact you "
-    "DO have (medium, dimensions, date, where it came from) — never pad with an invitation to look. "
+    "DO have (medium, dimensions, where it came from) — never pad with an invitation to look. "
     "This is the HEADLINE; deep modules cover the rest, so DON'T try to cover everything. "
     "Write in English, ONE continuous narration. Return ONLY the text, no commentary, no quotes."
 )
