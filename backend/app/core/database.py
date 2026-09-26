@@ -59,6 +59,16 @@ def receive_checkin(dbapi_conn, connection_record):
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
+@event.listens_for(SessionLocal, "before_flush")
+def audio_loss_guard(session, flush_context, instances):
+    """音频损失闸(契约纪律 37):挂在 SessionLocal 上 = web 与所有脚本自动受保护。
+    延迟导入:app.services 包的 __init__ 会拉一串服务模块,在这里顶层导入会循环。"""
+    from app.services.audio_guard import on_flush
+
+    on_flush(session)
+
+
 # Create Base class for models
 Base = declarative_base()
 

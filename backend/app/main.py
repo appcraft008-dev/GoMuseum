@@ -34,6 +34,12 @@ if settings.ENVIRONMENT == "production":
     if settings.DEBUG:
         raise RuntimeError("DEBUG must be disabled in production")
 
+# 音频损失闸在 web 进程里只记账不拦(契约纪律 37):用户请求不该因它报错,
+# web 侧的损失照样进 audio_invalidations,由每日盘点兜。脚本进程默认拦截。
+from app.services.audio_guard import set_record_only  # noqa: E402
+
+set_record_only()
+
 app = FastAPI(
     title="GoMuseum API",
     description="Backend API service for GoMuseum project - Artwork Recognition",
