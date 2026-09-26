@@ -231,6 +231,9 @@ def test_prod_snapshot_lists_write_surface_and_is_restorable(db, monkeypatch):
         payload["artists"][0]["bio_audio"]["zh"] == "object-audio/artist/Q34618/zh.mp3"
     )
     assert payload["object_content_sections"][0]["audio_key"].endswith("zh-guide.mp3")
+    from app.core.config import settings
+
+    assert s["snapshot_key"].startswith(f"ops-snapshots/{settings.ENVIRONMENT}/")
 
 
 def test_inventory_collects_all_three_audio_locations(db):

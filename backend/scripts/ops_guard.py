@@ -90,7 +90,10 @@ def write_surface_and_snapshot(db, label: str, object_ids: list) -> dict:
         f"(简介音频 {summary['artist_bio_audio']} 条,只补缺不覆盖)"
     )
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    key = f"ops-snapshots/{stamp}_{label}.json.gz"
+    from app.core.config import settings
+
+    # staging 与 prod 共用一个 R2 桶 —— 按环境分目录,别让 staging 的快照混进 prod 的
+    key = f"ops-snapshots/{settings.ENVIRONMENT}/{stamp}_{label}.json.gz"
     payload = {
         "label": label,
         "created_at": stamp,

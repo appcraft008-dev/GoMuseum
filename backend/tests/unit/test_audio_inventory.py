@@ -46,3 +46,14 @@ def test_unexplained_loss_gets_the_highest_severity_subject():
     subject, body = render(PREV, now, d, "2026-09-26T04:20:00+00:00")
     assert subject.startswith("⛔") and "来源不明" in subject
     assert "(跨馆作者) / artist: 1" in body
+
+
+def test_inventory_paths_are_namespaced_by_environment(monkeypatch):
+    """staging 与 prod 共用 R2 桶:不分环境,两边会互相覆盖基线(满屏误报)。"""
+    from app.core.config import settings
+    from scripts import audio_inventory
+
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    assert audio_inventory._prefix() == "ops-inventory/staging"
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    assert audio_inventory._prefix() == "ops-inventory/production"
