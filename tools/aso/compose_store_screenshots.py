@@ -145,7 +145,58 @@ SLIDES = {
             bottom=2185,
         ),
     ],
+    "zh-CN": [
+        dict(
+            key="scan-and-listen",
+            src="ZH_02_scan",
+            head="拍照识别，即听讲解",
+            bottom=2350,
+        ),
+        dict(
+            key="sourced-never-invented",
+            src="ZH_03_result",
+            head="来源可查，绝不编造",
+            bottom=1900,
+        ),
+        dict(
+            key="explore-freely",
+            src="ZH_01_home",
+            head="自由探索",
+            sub="无需注册 · 5 次免费扫描",
+            bottom=1900,
+        ),
+        dict(
+            key="in-depth-guide",
+            src="ZH_06_indepth",
+            head="深度中文讲解",
+            bottom=1900,
+        ),
+        dict(
+            key="thousands-of-works",
+            src="ZH_05_collection",
+            head="数千件作品",
+            bottom=1900,
+        ),
+        dict(
+            key="no-rental-no-queue",
+            src="ZH_09_audio",
+            head="不租讲解器，不排队",
+            special="norental",
+        ),
+        dict(
+            key="paris-7-day-pass",
+            src="ZH_07_pass",
+            head="巴黎 7 日通票",
+            sub="卢浮宫 · 奥赛 · 橘园 · 小皇宫",
+            bottom=2185,
+        ),
+    ],
 }
+
+
+# 中文用 Noto SC 子集（完整字体 8–12MB；子集只含 SLIDES 用到的字，见 fonts/README.md）
+HEAD_FONT = {"zh-CN": "NotoSerifSC-Bold-subset.otf"}
+SUB_FONT = {"zh-CN": "NotoSansSC-Regular-subset.otf"}
 
 
 def font(name: str, size: int) -> ImageFont.FreeTypeFont:
@@ -175,28 +226,33 @@ def balanced_split(text: str, f: ImageFont.FreeTypeFont) -> list[str]:
     return [" ".join(words[:i]), " ".join(words[i:])]
 
 
-def layout_head(text: str) -> tuple[list[str], ImageFont.FreeTypeFont]:
+def layout_head(
+    text: str, lang: str = "en-US"
+) -> tuple[list[str], ImageFont.FreeTypeFont]:
     """能一行就一行；有逗号就在逗号处断（必要时把字号略缩，最低 92）；否则均衡两行。
 
     只按宽度均衡会把 "NI LOCATION, NI / FILE D’ATTENTE" 断在 NI 后面，撕开语义；
     而 "NI FILE D’ATTENTE" 单行在 104px 下占画布 94%，故此处宁可缩小 ~6% 也不撕开。
     """
-    hf = font("NotoSerif-Bold.ttf", HEAD_SIZE)
+    head_font = HEAD_FONT.get(lang, "NotoSerif-Bold.ttf")
+    hf = font(head_font, HEAD_SIZE)
     if hf.getlength(text) <= MAX_TEXT_W:
         return [text], hf
     if "," in text:
         for size in range(HEAD_SIZE, MIN_HEAD_SIZE - 1, -2):
-            f = font("NotoSerif-Bold.ttf", size)
+            f = font(head_font, size)
             lines = comma_split(text, f)
             if lines:
                 return lines, f
     return balanced_split(text, hf), hf
 
 
-def draw_text_block(canvas: Image.Image, head: str, sub: str | None) -> None:
+def draw_text_block(
+    canvas: Image.Image, head: str, sub: str | None, lang: str = "en-US"
+) -> None:
     d = ImageDraw.Draw(canvas)
-    sf = font("NotoSans-Regular.ttf", SUB_SIZE)
-    lines, hf = layout_head(head)
+    sf = font(SUB_FONT.get(lang, "NotoSans-Regular.ttf"), SUB_SIZE)
+    lines, hf = layout_head(head, lang)
     if hf.size != HEAD_SIZE:
         print(f"    ↳ 「{head}」字号 {hf.size}px（为保住逗号处断行）")
     lh = round(hf.size * 1.14)
@@ -313,7 +369,7 @@ def norental_slide(canvas: Image.Image, shot: Image.Image) -> None:
 
 def compose(lang: str, spec: dict) -> Image.Image:
     canvas = Image.new("RGB", (W, H), BG)
-    draw_text_block(canvas, spec["head"], spec.get("sub"))
+    draw_text_block(canvas, spec["head"], spec.get("sub"), lang)
     shot = load_shot(lang, spec["src"])
     if spec.get("special") == "norental":
         norental_slide(canvas, shot)

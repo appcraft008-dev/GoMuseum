@@ -13,15 +13,17 @@
 import sys
 from pathlib import Path
 
+from PIL import Image, ImageDraw
+
 sys.path.insert(0, str(Path(__file__).parent))
 
 import compose_store_screenshots as c  # noqa: E402
 
 
 def test_headlines_fit_and_break_at_comma():
-    for slides in c.SLIDES.values():
+    for lang, slides in c.SLIDES.items():
         for s in slides:
-            lines, f = c.layout_head(s["head"])
+            lines, f = c.layout_head(s["head"], lang)
             assert len(lines) <= 2, s["head"]
             assert all(f.getlength(ln) <= c.MAX_TEXT_W for ln in lines), s["head"]
             if len(lines) == 2 and "," in s["head"]:
@@ -36,3 +38,22 @@ def test_every_slide_meets_play_spec():
             assert im.size == (1080, 1920), s["key"]
             assert im.mode == "RGB", s["key"]  # 无 alpha
             assert max(im.size) / min(im.size) <= 2, s["key"]
+
+
+def _glyph(f, ch):
+    im = Image.new("L", (140, 140), 0)
+    ImageDraw.Draw(im).text((10, 10), ch, font=f, fill=255)
+    return im.tobytes()
+
+
+def test_zh_font_subset_covers_every_character():
+    """中文字体是子集：文案里加了新字却没重新子集化，会画成空白方框而不报错。"""
+    for font_name, key in (
+        (c.HEAD_FONT["zh-CN"], "head"),
+        (c.SUB_FONT["zh-CN"], "sub"),
+    ):
+        f = c.font(font_name, 100)
+        tofu = _glyph(f, "龘")  # 子集里必然没有
+        for s in c.SLIDES["zh-CN"]:
+            for ch in s.get(key, "").replace(" ", ""):
+                assert _glyph(f, ch) != tofu, (ch, font_name)
