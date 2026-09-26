@@ -229,9 +229,13 @@ def generate_object(
             from app.services.enrichment.backfill import bio_en_usable
 
             art = db.query(Artist).filter_by(qid=aqid).first()
-            # force 刷新已存作者;bio 空或 en 位坏值(老bug遗留中文)也重生成
-            # (契约"完整性判断按语言维度":坏值=缺失)
-            if art is None or force or not bio_en_usable(art.bio):
+            # ⛔ 契约纪律 37:作者实体**跨馆共享**,这里是「单件生成」—— 只能补缺,
+            # 不能覆盖。`force` 刷新的是**这件作品**的内容,与作者无关,故不参与判断。
+            # (2026-09-26 事故:小皇宫 TOP20 三次 --force 重写了 14 位跨馆作者,
+            # 6 位的 40 条简介音频脱钩、库尔贝代表作被换成小皇宫那几件,靠 pg_dump 恢复。)
+            # bio 空或 en 位坏值(老bug遗留中文)仍重生成(契约"坏值=缺失")。
+            new_artist = art is None
+            if new_artist or not bio_en_usable(art.bio):
                 bio_en = (
                     enricher.generate_artist_bio(o.attributes)
                     if hasattr(enricher, "generate_artist_bio")
@@ -246,22 +250,26 @@ def generate_object(
                                 bios[lang] = translator.translate_section(bio_en, lang)
                             except Exception:
                                 pass
-                if art is None:
+                if new_artist:
                     art = Artist(qid=aqid)
                     db.add(art)
-                art.name_en = o.artist_en
+                # 已有作者:以下字段**已有就不动**,只补缺(同纪律 37)。
+                # 这件作品上的 artist_en/代表作只是它这一侧的视角,不能盖掉全馆共享的那份。
+                if not art.name_en:
+                    art.name_en = o.artist_en
                 # 中文名缺(Wikidata 无 zh 标签)→ 翻译补,同标题机制
-                name_zh = o.artist_zh
-                if (
-                    not name_zh
-                    and o.artist_en
-                    and hasattr(translator, "translate_section")
-                ):
-                    try:
-                        name_zh = translator.translate_section(o.artist_en, "zh")
-                    except Exception:
-                        name_zh = None
-                art.name_zh = name_zh
+                if not art.name_zh:
+                    name_zh = o.artist_zh
+                    if (
+                        not name_zh
+                        and o.artist_en
+                        and hasattr(translator, "translate_section")
+                    ):
+                        try:
+                            name_zh = translator.translate_section(o.artist_en, "zh")
+                        except Exception:
+                            name_zh = None
+                    art.name_zh = name_zh
                 try:
                     alabels = _wikidata_labels(aqid, target_langs)
                     art.name_i18n = _fill_i18n(
@@ -269,10 +277,14 @@ def generate_object(
                     )
                 except Exception:
                     pass
-                art.birth = af.get("artist_birth")
-                art.death = af.get("artist_death")
-                art.nationality = af.get("artist_nationality")
-                art.notable_works = af.get("artist_notable_works")
+                for field, key in (
+                    ("birth", "artist_birth"),
+                    ("death", "artist_death"),
+                    ("nationality", "artist_nationality"),
+                    ("notable_works", "artist_notable_works"),
+                ):
+                    if not getattr(art, field):
+                        setattr(art, field, af.get(key))
                 if bios:
                     art.bio = {**(art.bio or {}), **bios}  # 合并:保留其它语种,更新本次
                     # bio 变更 → 对应语言旧音频失效(下次点播放重生成)
