@@ -923,7 +923,9 @@ def list_objects(
     if category and category != "all":
         q = q.filter(MuseumObject.category == category)
     total = q.count()
-    q = q.order_by(MuseumObject.popularity.desc())
+    # 同分按 id:与生成用的 top_objects 同一规则(列表前 N 件 = 已生成的 TOP-N),
+    # 且分页 LIMIT/OFFSET 需要全序,否则同分件跨页重复/漏掉(小皇宫 97% 热度为 0)
+    q = q.order_by(MuseumObject.popularity.desc(), MuseumObject.id)
     objs = q.limit(limit).offset(offset).all()
 
     obj_ids = [o.id for o in objs]
