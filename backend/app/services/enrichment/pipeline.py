@@ -483,6 +483,20 @@ def generate_object(
     return result
 
 
+def top_objects(db, museum_id, limit=None):
+    """馆内 TOP-N:popularity 降序、同分按 id —— 生成与质量报告共用这一个定义。
+
+    同分裁决不能省:小皇宫 97% 的件热度为 0,不带 id 时「前 20」取到哪几件
+    由 DB 扫表顺序决定,生成的那批和报告看的那批可能不是同一批。
+    """
+    q = (
+        db.query(MuseumObject)
+        .filter_by(museum_id=museum_id)
+        .order_by(MuseumObject.popularity.desc(), MuseumObject.id)
+    )
+    return q.limit(limit) if limit else q
+
+
 def generate_museum(
     db,
     slug,
@@ -498,17 +512,11 @@ def generate_museum(
     registry=None,
     country_lang=None,
 ) -> dict:
-    """按馆批量：popularity 降序逐件 generate_object，聚合。"""
+    """按馆批量：TOP-N(见 top_objects)逐件 generate_object，聚合。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return {"slug": slug, "error": "unknown museum"}
-    q = (
-        db.query(MuseumObject)
-        .filter_by(museum_id=m.id)
-        .order_by(MuseumObject.popularity.desc())
-    )
-    if limit:
-        q = q.limit(limit)
+    q = top_objects(db, m.id, limit)
     results = [
         generate_object(
             db,
