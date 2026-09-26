@@ -26,7 +26,7 @@ def test_closing_constraint_sits_in_beat_five():
     根因就是"禁令离指令太远":模型执行的是那一拍的指示。
     这里用位置断言钉住 —— 挪走了这条会红。
     """
-    i_beat5 = G.index("(5) stop when the throughline is complete")
+    i_beat5 = G.index("(5) close on the last background point")
     i_opening = G.index("OPENING:")
     for rule in (
         "Do NOT begin it with 'As you…'",
@@ -76,3 +76,28 @@ def test_beat_three_bans_the_these_details_subject():
     i3 = G.index("(3) explain why those details matter")
     i4 = G.index("(4)")
     assert i3 < G.index("'These details…'") < i4
+
+
+def test_background_beat_carries_the_length():
+    """#647 上 prod 后中文中位 368→300 字:第(4)拍原文「add only the NECESSARY
+    background」本身是压缩指令,加上「主线讲完就停」被执行成「尽早收住」,
+    背景整段被砍。篇幅必须明确落在第(4)拍,且不能再出现 "only the necessary"。
+    """
+    i4, i5 = G.index("(4)"), G.index("(5)")
+    assert "this beat carries most of the length" in G[i4:i5]
+    assert "only the necessary" not in G
+    assert "spending it on beat (4)" in G
+
+
+def test_background_beat_does_not_list_categories_to_fill():
+    """v7:第(4)拍列出「how it was received」→ 材料没写反响的件就编一个反响
+    (沃拉尔两幅肖像两次都挂起)。列类别就是邀请逐类填空。"""
+    beat4 = G[G.index("(4)") : G.index("(5)")]
+    assert "how it was received;" not in beat4
+    assert "skipping whatever it does not cover" in beat4
+
+
+def test_last_sentence_states_a_fact():
+    """v7:结尾换成「stands as a testament to…」8/20 —— 结尾要求陈述事实。"""
+    beat5 = G[G.index("(5)") : G.index("OPENING:")]
+    assert "STATES A FACT" in beat5

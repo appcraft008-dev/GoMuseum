@@ -427,7 +427,10 @@ _DEFAULT_GUIDE_SYSTEM = (
     "them directly — name what is there, do not preface it with a phrase that tells the "
     "visitor to look; (3) explain why those details matter — carry the meaning inside the "
     "sentence itself; do NOT open it with 'These details…' / 'This detail…' / 'Such "
-    "details…' as the subject; (4) add only the necessary "
+    "details…' as the subject; (4) the background the material actually gives — stating "
+    "only what it says and skipping whatever it does not cover (do not guess how the "
+    "work was received or what it meant for the artist); this beat carries most of the "
+    "length"
     # ⚠️ 2026-09-13 第二轮:#543 之后 guide 仍有 45% 违反**自己 prompt 里的**禁用词
     # (prod 实测 20 段中 9 段:8 段 `as you take in`、1 段 `as you stand here`),
     # 而深度段用同一个 _BANNED_BLOCK 是 0 违反。查下来根因不在黑名单:
@@ -456,7 +459,23 @@ _DEFAULT_GUIDE_SYSTEM = (
     # 没被删的则变成念目录(「measures X by Y cm」「housed in the Petit Palais」)。
     # 开头改成「首句不放年份」后又长出「In 'TITLE,' ARTIST captures…」10/20。
     # 所以:结尾不要求新内容(主线讲完就停),开头不拿标题/作者当句子框架。
-    "background; (5) stop when the throughline is complete. There is no separate closing "
+    # ⚠️ 2026-09-26 第四轮(#647 上 prod 后用户读中文:「比之前短了好多」):中文中位
+    # 368→300 字,缩掉的不只是结尾反问 —— 模型把「stop when the throughline is complete」
+    # 执行成「尽早收住」,连第(4)拍背景一起砍(《棋手》整段「杜米埃以社会讽刺著称」没了、
+    # 《光荣的失败者》「沙龙首展的赞誉与批评」没了),还常常整篇一段。而第(4)拍原文是
+    # 「add only the NECESSARY background」—— 本身就是压缩指令,旧版全靠第(5)拍的反问
+    # 撑篇幅。所以:篇幅明确放到第(4)拍,结尾「以最后一个背景点收住」,分 2-4 段。
+    # v7 A/B:篇幅与背景回来了(英文 1128→1450,背景句 1.4→2.4),但第(4)拍列出
+    # 「how it was received」后,材料没写反响的件就去编(沃拉尔两幅肖像两次都 0.56 挂起)
+    # —— 列类别=邀请逐类填空;结尾换成「stands as a testament to…」8/20 → 结尾要求
+    # 「陈述事实」而非「评价作品」(结构约束,不靠加禁用词)。
+    # v8 定稿。结尾仍有 4-7/20 评价句或「now housed in the Petit Palais」(观众就站在
+    # 小皇宫里,零信息)。⛔ 试过 v9 把禁令改成「not where it is housed now … history of
+    # owners and gifts is fine」→ 「现藏何处」收尾 4-6 → 7-8,**更差**:指令里点名的
+    # 东西本身就是种子(同 memory point 那一课)。别再往这句里加名词。
+    "; (5) close on the last background point: the last sentence STATES A FACT (what "
+    "happened, who, when), not a judgement of what the work shows, proves or 'stands as "
+    "a testament to'. There is no separate closing "
     "beat: the last sentence stays on something specific already set up in THIS guide, "
     "and adds no new fact just to have an ending. The last sentence must NOT be a "
     "question to the visitor, a moral, a sentence about what the work 'remains', "
@@ -464,6 +483,9 @@ _DEFAULT_GUIDE_SYSTEM = (
     "catalogue data (dimensions, where it is housed, how it was acquired). Do NOT begin "
     "it with 'As you…', 'Next time you…', 'When you…', 'Standing here…', 'Notably…' or "
     "any similar lead-in. "
+    "LENGTH: when the material supports it, aim for the target length given below, "
+    "spending it on beat (4); write shorter only when the material is thin — never pad. "
+    "Write it as 2-4 short paragraphs. "
     "OPENING: the first sentence MUST carry something specific to THIS work — a named "
     "person, a place, a number, or one concrete thing visible in it — so that it could "
     "not be pasted onto any other artwork. Begin with the subject itself (the person, "
