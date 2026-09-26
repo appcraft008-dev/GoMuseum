@@ -139,8 +139,28 @@
 | 识别功能的角色 | 获客 + 转化 | **仅转化** | 同上 |
 | 城市泛词 | `paris museum guide` 二级可用 | `guide musée paris` **降级** | FR 该词被官方 App 与城市指南占据 |
 
+## 需求代理验证（2026-09-25，回答"仅 8 个结果是供给少还是需求少"）
+
+**数据来源与性质（均为代理指标，不是 Play 搜索量）**：① Google Trends explore，`geo=FR`，近 12 个月，Web 搜索，`hl=fr`，2026-09-25 经浏览器读取；数值是**相对指数**（组内最大值=100，`0` 表示低于峰值的 1%，不是零搜索）。② Google 自动补全（`gl=fr hl=fr`），2026-09-25；只说明"这个查询确实有人搜过"，**不给量级**。Google Web 的搜索需求 ≠ Play 商店内的搜索需求。
+
+| 查询（FR，12 个月均值，同一组内比较） | 指数 |
+|---|---|
+| `guide louvre` | 53 |
+| `audio guide louvre`（分写） | 5 |
+| `audioguide louvre`（连写） | 0（<1%） |
+
+**结论**
+
+1. **需求侧是小的，不只是供给少。** 连写形式不到 `guide louvre` 的 1%，分写形式约 9%。所以 `audioguide louvre` **不是一个靠量取胜的获客词**，它在标题里的理由应改写为"意图精准（想要语音讲解的人）"，而不是"这个词是空位所以量大"。⚠️ 但这不是同口径对比：`guide louvre` 混着书、平面图、Nintendo 3DS 攻略和真人导览，不能据此说"audioguide 的需求只有 guide 的 1%"，只能说它**在 Web 上是小词**。
+2. **分写可能比连写更常见（与本文件上文"法语用户普遍连写"冲突）。** 上文那条依据是"Play 对连写查询返回正常结果集"，那只能证明能查到，不是用户习惯。Trends 里分写 5 vs 连写 0，但两者都贴着噪声下限，**差异本身不可靠**；自动补全里两种写法都有联想（输入 `audioguide` 时第 1 位就是 `audioguide louvre`）。**判断：两种写法都存在，谁多无法确定。**
+3. **现有 FR 完整描述里"audio guide"分写为 0 次**（连写 14 次）。下次改描述时自然加 1 处零成本（不堆砌）。⛔ 不建议现在改：刚送审，且标题不可 A/B、描述可以，等放量后用 Search terms 报告决定。
+4. **补全里的意图修饰词**（FR：`gratuit` `avis` `prix` `app` `3ds`；EN 同构：`free` `worth it` `reddit` `price` `app` `3ds`）。`3ds` 指官方租借的 Nintendo 3DS 讲解器；`gratuit/free/price/worth it` 说明这批人在**和租借比价**。⇒ 支持 NO RENTAL 与 "5 free scans" 两张图的方向；`reddit` 支持把 Reddit 当渠道。⚠️ 别把"free"说过头：真实是免费 5 次扫描。
+5. `application louvre` 的补全指向官方 App「Ma visite」与无关的 Louvre Lens/酒店集团——与上文"官方 App 占据泛词"一致，未发现新情况。
+
+**没拿到的**：Trends 的 EN 对比（pytrends 429，浏览器连续两次不出图，限流，未重试）；Play 商店内的自动补全（网页版搜索框不显示联想词）。
+
 ## 仍需真实数据验证
 
-1. `audioguide louvre` 的真实搜索量是否足以支撑获客 —— 结果少可能意味着**供给少**，也可能意味着**需求少**。本轮无法区分。**这是本文件最大的未知数。**
+1. `audioguide louvre` 的真实搜索量是否足以支撑获客 —— **2026-09-25 已部分回答**：Web 侧是小词（见上节），"需求少"成分不能排除；Play 内真实量仍只有 Search terms 报告能答。
 2. Smartify 在 FR 的第 1 位是否稳定（单次检索快照）。
-3. 法语用户输入 `audioguide` 连写的比例 —— 只有 Console 的 Search terms 报告能答。
+3. 法语用户输入 `audioguide` 连写 vs `audio guide` 分写的比例 —— Trends 给不出可靠差异（见上节第 2 点），只有 Console 的 Search terms 报告能答。

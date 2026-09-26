@@ -20,15 +20,17 @@ API = os.environ.get("GOMUSEUM_API", "https://api.gomuseum.app/api/v1")
 # 取文本的 HTTP 会话:对网关错误自动重试。prod 部署会 recreate 容器,窗口里
 # Nginx 返 502 —— 实测一次 502 就把跑了 4 小时的批次整个掐断(run_chunked.sh
 # 是 set -e,一个 python 非零退出就中止整轮)。用 urllib3 自带的重试策略,
-# 不自己写重试分支:它只重试 502/503/504 与连接错误,4xx(内容真的没有)照常上抛。
+# 不自己写重试分支:它只重试 502/503/504/429 与连接错误,其余 4xx(内容真的
+# 没有)照常上抛。429 是 2026-09-21 卢浮宫缺口批次(128件)实测加入的——
+# nginx limit_req 对本地跑批的突发请求量会限流,不是内容问题。
 _HTTP = requests.Session()
 _HTTP.mount(
     "https://",
     HTTPAdapter(
         max_retries=Retry(
             total=5,
-            backoff_factor=5,  # 退避 5→10→20→40s,足够跨过一次部署窗口
-            status_forcelist=(502, 503, 504),
+            backoff_factor=5,  # 退避 5→10→20→40s,足够跨过一次部署窗口/限流窗口
+            status_forcelist=(429, 502, 503, 504),
             allowed_methods=("GET",),
         )
     ),

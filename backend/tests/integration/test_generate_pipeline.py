@@ -1317,3 +1317,57 @@ def test_strip_name_shared_helper(session):
 
     assert strip_name("《睡莲》") == "睡莲"
     assert strip_name('"Water Lilies"') == "Water Lilies"
+
+
+def _seed_ranked(session):
+    """同分件多于 N —— 不带同分裁决时「前 N」取哪几件不确定。"""
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    for i, pop in enumerate([5, 0, 0, 0, 0]):
+        upsert_object(
+            session,
+            m.id,
+            {
+                "qid": f"QT{i}",
+                "title_en": f"T{i}",
+                "category": "painting",
+                "popularity": pop,
+                "attributes": {},
+            },
+        )
+    session.commit()
+    return m
+
+
+def test_top_objects_breaks_popularity_ties_by_id(session):
+    from app.services.enrichment.pipeline import top_objects
+
+    m = _seed_ranked(session)
+    everyone = session.query(MuseumObject).filter_by(museum_id=m.id).all()
+    expected = sorted(everyone, key=lambda o: (-(o.popularity or 0), str(o.id)))
+    got = top_objects(session, m.id, 3).all()
+    assert [o.qid for o in got] == [o.qid for o in expected[:3]]
+    assert got[0].qid == "QT0"  # 热度最高的永远排第一
+    assert len(top_objects(session, m.id).all()) == len(everyone)  # 不传 = 全馆
+
+
+def test_quality_report_top_n_sees_exactly_the_generated_batch(session):
+    from app.services.enrichment.pipeline import top_objects
+    from scripts.text_quality_report import load
+
+    m = _seed_ranked(session)
+    for o in session.query(MuseumObject).filter_by(museum_id=m.id):
+        session.add(
+            ObjectContentSection(
+                object_id=o.id,
+                language="en",
+                section_code="guide",
+                body=f"Body of {o.qid}.",
+                status="published",
+            )
+        )
+    session.commit()
+    top = {o.qid for o in top_objects(session, m.id, 3)}
+    rows = load(session, "orsay", "en", None, 5000, top=3)
+    assert {q for q, _ in rows["guide"]} == top
+    with pytest.raises(SystemExit):
+        load(session, None, "en", None, 5000, top=3)  # TOP-N 是馆内排名

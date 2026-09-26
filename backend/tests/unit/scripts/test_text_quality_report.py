@@ -10,6 +10,10 @@ from scripts.text_quality_report import (
     banned_phrase_rate,
     cross_work_ngrams,
     head_diversity,
+    opening_skeleton_share,
+    question_ending_rate,
+    sentence_opener_spread,
+    skeleton,
 )
 
 # 实测从 prod 抓到的套话骨架(2026-09-13,guide 段 63.8% 这么开头)
@@ -174,3 +178,54 @@ def test_short_fragments_do_not_dilute_the_anchor_rate():
     """片段/标点残渣不计入分母,否则一段的锚点率会被切碎的短句拉低。"""
     a, t = anchor_rate(["Yes. No. David painted this in 1801 for the Salon."])
     assert t == 1 and a == 1
+
+
+# 2026-09-26 prod 小皇宫 TOP20 guide 原文开头(槽位填充模板:同句式、换年份/作者/标题)
+SLOT_FILLED = [
+    'In 1866, Gustave Courbet painted "The Sleepers," a striking portrayal. '
+    "These details matter to the scene. What feelings does this evoke for you?",
+    'In 1817, Jean-Auguste-Dominique Ingres captured a tender moment in "Henry IV". '
+    "These details reveal a king at home. What emotions does this portrayal evoke?",
+    'In 1490, Andrea Mantegna captured a moment of divine intimacy in "Madonna". '
+    "These details are not decorative. What does this scene evoke about devotion?",
+]
+
+
+def test_head_diversity_is_blind_to_slot_filled_templates():
+    """**已知盲区,钉住它**:旧指标把槽位模板判成 100% 多样。
+
+    这正是 TOP20 guide 14/19 段同一句式而报告显示 89% 的原因 ——
+    骨架指标存在的理由就是这条测试。
+    """
+    uniq, total, _ = head_diversity(SLOT_FILLED)
+    assert uniq == total == 3
+
+
+def test_skeleton_collapses_the_slots():
+    assert skeleton('In 1866, Gustave Courbet painted "The Sleepers".') == "in # x"
+    assert (
+        skeleton("In 1817, Jean-Auguste-Dominique Ingres captured a tender moment")
+        == "in # x"
+    )
+    # 句首大写是语法不是槽位 —— 否则每句都变 "x …" 指标直接废掉
+    assert skeleton("Marie Bracquemond painted it in 1880").startswith("marie x")
+
+
+def test_opening_skeleton_share_separates_slot_filled_from_varied():
+    sn, st, sk = opening_skeleton_share(SLOT_FILLED)
+    assert (sn, st, sk) == (3, 3, "in # x")
+    vn, vt, _ = opening_skeleton_share(VARIED)
+    assert vn == 1 and vt == 3
+
+
+def test_sentence_opener_spread_finds_mid_text_transitions():
+    """「These details…」在第二句,首句骨架与 5-gram 都看不到它。"""
+    top = dict((g, n) for n, g in sentence_opener_spread(_rows(SLOT_FILLED)))
+    assert top["these details"] == 3
+    assert max(n for n, _ in sentence_opener_spread(_rows(VARIED))) == 1
+
+
+def test_question_ending_rate():
+    assert question_ending_rate(SLOT_FILLED) == (3, 3)
+    assert question_ending_rate(VARIED) == (0, 3)
+    assert question_ending_rate(["这幅画在说什么？"]) == (1, 1)  # 全角问号
