@@ -28,6 +28,8 @@
     python scripts/text_quality_report.py                      # 全部馆
     python scripts/text_quality_report.py --museum louvre --lang en
     python scripts/text_quality_report.py --section guide --top-ngrams 25
+    python scripts/text_quality_report.py --museum petit_palais --top 20 --lang zh
+        # 只看 TOP-N:与 `onboard generate --limit N` 选的是同一批件
 """
 
 from __future__ import annotations
@@ -151,7 +153,14 @@ def report(rows_by_section: dict, top_ngrams: int) -> None:
             print('      %4d 次 (%5.1f%%)  "%s…"' % (c, 100.0 * c / total, h))
 
 
-def load(db, museum: str | None, lang: str, section: str | None, limit: int) -> dict:
+def load(
+    db,
+    museum: str | None,
+    lang: str,
+    section: str | None,
+    limit: int,
+    top: int | None = None,
+) -> dict:
     q = (
         db.query(
             MuseumObject.qid,
@@ -170,6 +179,15 @@ def load(db, museum: str | None, lang: str, section: str | None, limit: int) -> 
         if m is None:
             raise SystemExit(f"museum not found: {museum}")  # typo 别静默 0 段
         q = q.filter(MuseumObject.museum_id == m.id)
+        if top:
+            # 与 onboard generate --limit 同一个 TOP-N 定义,看的正是刚生成的那批
+            from app.services.enrichment.pipeline import top_objects
+
+            q = q.filter(
+                MuseumObject.id.in_([o.id for o in top_objects(db, m.id, top)])
+            )
+    elif top:
+        raise SystemExit("--top 需要配 --museum(TOP-N 是馆内排名)")
     if section:
         q = q.filter(ObjectContentSection.section_code == section)
     out: dict = collections.defaultdict(list)
@@ -186,15 +204,17 @@ def main() -> None:
     p.add_argument("--section", help="只看某段")
     p.add_argument("--limit", type=int, default=5000)
     p.add_argument("--top-ngrams", type=int, default=20)
+    p.add_argument("--top", type=int, help="只看馆内 TOP-N 件(需 --museum)")
     a = p.parse_args()
     db = SessionLocal()
     try:
-        rows = load(db, a.museum, a.lang, a.section, a.limit)
+        rows = load(db, a.museum, a.lang, a.section, a.limit, a.top)
     finally:
         db.close()
     if not rows:
         raise SystemExit("没有匹配的已发布段")
-    print(f"语言 {a.lang}" + (f" / 馆 {a.museum}" if a.museum else " / 全部馆") + "\n")
+    scope = f" / 馆 {a.museum}" if a.museum else " / 全部馆"
+    print(f"语言 {a.lang}{scope}" + (f" TOP{a.top}" if a.top else "") + "\n")
     report(rows, a.top_ngrams)
 
 
