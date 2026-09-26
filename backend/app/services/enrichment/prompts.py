@@ -277,7 +277,6 @@ def build_faithfulness_prompt(
     target_lang: str,
     title: str | None = None,
     artist: str | None = None,
-    artist_en: str | None = None,
     museum: str | None = None,
 ):
     """[title]/[artist] 该作品与其作者在目标语言的**规范名**
@@ -320,17 +319,13 @@ def build_faithfulness_prompt(
         # 翻译侧注入了馆名,检查侧也必须知道(纪律 22),否则「小皇宫美术馆」会被判成
         # 「Petit Palais」的错译。
         names.append(f"museum -> 「{museum}」")
-    # ⚠️ 2026-09-26:STEP 0「删掉这些字符串再判」把**指代对象**也豁免了 —— 韩语把画中人
-    # (作者的父亲 Alphonse)换成作者名「앙리 드 툴루즈로트레크」,正好是被删掉的那个
-    # 字符串,闸满分放行。豁免的本意只是「名字怎么写」不算错,不是「名字指谁」不查。
-    who = (
-        f"EXCEPTION — the pre-approval covers only HOW a name is written, not WHO it "
-        f"refers to: the artist is {artist_en}. If the TRANSLATION uses the artist's "
-        f"name where the SOURCE refers to a different person (for example a relative "
-        f"who shares the surname), that is a wrong-person error: report it.\n"
-        if (artist and artist_en)
-        else ""
-    )
+    # ⚠️ 已知局限(2026-09-26,别再按同一思路改):STEP 0「删掉规范名再判」也豁免了
+    # **指代对象** —— 韩语把画中人(作者父亲 Alphonse)换成作者名「앙리 …」,正是被删掉
+    # 的那个字符串,闸满分放行。试过在 STEP 0 后加「豁免只管写法、不管指谁」的例外:
+    # 只读 A/B 里坏样本 1/2 照样放行(**没拦住**),好样本 159 条里新误拒 7 条
+    # (如「マリー・ブラックモン 不对,原文是 Marie Bracquemond」—— 例外反而让它开始盯名字),
+    # 已撤。**这类错在翻译侧防**:build_translation_prompt 给出作者英文原名 + 同姓他人规则
+    # (A/B:主语正确 3/5 → 5/5,「过闸且换错人」2 → 0)。
     note = ""
     if names:
         mapping = "; ".join(names)
@@ -345,7 +340,6 @@ def build_faithfulness_prompt(
             f"Dutch with no shared letters, and that mismatch is CORRECT, not an error). "
             f"Do not reason about them, do not mention them, do not include any issue "
             f"whose subject is a name/title translation choice.\n"
-            f"{who}"
             f"STEP 1: now judge only the remaining facts (dates, places, what is depicted, "
             f"attributions, events) for the usual add/omit/alter faithfulness check.\n\n"
         )

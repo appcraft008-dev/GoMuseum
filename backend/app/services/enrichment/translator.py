@@ -115,9 +115,8 @@ class ContentTranslator:
             target_lang,
             title,
             artist,
-            artist_en=artist_en,
             museum=museum,
-        )
+        )  # artist_en 不进检查侧:试过「指代例外」A/B 证明有害,见 build_faithfulness_prompt
         data = _parse()(self._complete_judge(system, user))
         return bool(data.get("faithful")), (data.get("issues") or [])
 
