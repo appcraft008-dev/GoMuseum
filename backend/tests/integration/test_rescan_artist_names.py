@@ -52,7 +52,9 @@ def session():
 class _Tr:
     """重译带 glossary → 译文含规范名(真实链路由 prompt 保证,这里直接体现)。"""
 
-    def translate_object(self, en_sections, target_langs, titles=None, artists=None):
+    def translate_object(
+        self, en_sections, target_langs, titles=None, artists=None, **_kw
+    ):
         lang = target_langs[0]
         name = (artists or {}).get(lang, "")
         return {
@@ -68,10 +70,12 @@ class _Tr:
             }
         }
 
-    def translate_section(self, text, lang, *, strong=False, title=None, artist=None):
+    def translate_section(
+        self, text, lang, *, strong=False, title=None, artist=None, **_kw
+    ):
         return f"{artist or ''}译:{text}"
 
-    def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+    def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
         return True, []
 
 

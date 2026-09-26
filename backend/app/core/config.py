@@ -130,6 +130,10 @@ class Settings(BaseSettings):
     PASSWORD_RESET_TTL_MINUTES: int = 30
     EMAIL_VERIFY_TTL_MINUTES: int = 1440  # 24h,验证邮箱不急
 
+    # 运维告警收件人(每日音频盘点 scripts/audio_inventory.py,契约纪律 37 第③层)。
+    # 不配置 → 盘点脚本以退出码 2 结束、在 cron 日志里留痕,**不静默跳过**。
+    OPS_ALERT_EMAIL: Optional[str] = None
+
     # AI Performance
     AI_STRATEGY_TIMEOUT: int = 30  # 增加到30秒，给AI足够时间响应
     AI_TOTAL_TIMEOUT: int = 60  # 总超时60秒

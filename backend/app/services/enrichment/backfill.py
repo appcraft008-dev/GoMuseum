@@ -8,8 +8,7 @@ import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 
-from sqlalchemy.orm import sessionmaker
-
+from app.core.database import guarded_sessionmaker
 from app.models.artist import Artist
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
@@ -27,6 +26,28 @@ def artist_names_i18n(db, o) -> dict:
         return {}
     art = db.query(Artist).filter_by(qid=aqid).first()
     return dict(art.name_i18n or {}) if art else {}
+
+
+def translation_names(db, o, langs) -> tuple:
+    """翻译时除标题/作者译名外还要告诉模型的两样:(作者英文原名, {lang: 馆规范名})。
+
+    - 作者英文原名:只给译名时模型得自己猜「哪个名字是作者」,同姓画中人会被换成作者
+      (《驾驶邮车》画的是作者父亲,韩语 2/3 被写成作者本人,且闸满分放行)。
+    - 馆规范名:正文提到本馆统一用 museums.name_zh(否则「小宫/小皇宫」混用);
+      只钉有权威译名的语言,规则同馆介绍(`museum_intro._canonical_museum_name`)。
+    正文/问答/懒翻译/补语种**全走这一个函数**,免得哪条路径漏传(半个单一真相源,#547)。
+    """
+    from app.services.enrichment.museum_intro import _canonical_museum_name
+
+    artist_en = artist_names_i18n(db, o).get("en") or o.artist_en
+    m = db.query(Museum).filter_by(id=o.museum_id).first()
+    museums = {}
+    if m is not None:
+        for lang in langs:
+            name = _canonical_museum_name(m, lang)
+            if name:
+                museums[lang] = name
+    return artist_en, museums
 
 
 def backfill_content_status(db) -> dict:
@@ -139,6 +160,7 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     missing = {c: b for c, b in en_secs.items() if c not in have}
     _aname = artist_names_i18n(db, o).get(lang)
     _artists = {lang: _aname} if _aname else None
+    _artist_en, _museums = translation_names(db, o, [lang])
     if missing:
         title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
         _titles = {lang: title} if title else None
@@ -148,7 +170,12 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
         ]
         for code in ordered:
             res = translator.translate_object(
-                {code: missing[code]}, [lang], titles=_titles, artists=_artists
+                {code: missing[code]},
+                [lang],
+                titles=_titles,
+                artists=_artists,
+                artist_en=_artist_en,
+                museums=_museums,
             ).get(lang, {})
             pub, _nr = persist_gated_sections(db, o.qid, lang, res, model)
             counts["sections"] += pub
@@ -166,7 +193,13 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     ):
         _qa_title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
         items = translate_qa_items(
-            translator, en_qa, lang, title=_qa_title, artist=_aname
+            translator,
+            en_qa,
+            lang,
+            title=_qa_title,
+            artist=_aname,
+            artist_en=_artist_en,
+            museum=_museums.get(lang),
         )
         counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
     aqid = (o.attributes or {}).get("artist_qid")
@@ -184,6 +217,27 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
             except Exception:
                 pass
     return counts
+
+
+def translate_scope(db, m, limit=None) -> list:
+    """补语种会处理的对象 id(有已发布 en 的件,热度降序、同分按 id)。
+
+    单独抽出来是为了让 `onboard translate` 开跑前的快照(纪律 37)与实际要写的是**同一批**。
+    同分裁决同 #645 的 top_objects:小皇宫 97% 件热度为 0,不带 id 时 --limit 取哪批不确定。
+    """
+    has_en = db.query(ObjectContentSection.object_id).filter(
+        ObjectContentSection.language == "en",
+        ObjectContentSection.status == "published",
+        ObjectContentSection.body.isnot(None),
+    )
+    q = (
+        db.query(MuseumObject.id)
+        .filter(MuseumObject.museum_id == m.id, MuseumObject.id.in_(has_en))
+        .order_by(MuseumObject.popularity.desc(), MuseumObject.id)
+    )
+    if limit:
+        q = q.limit(limit)
+    return [oid for (oid,) in q.all()]
 
 
 def backfill_languages(
@@ -204,22 +258,7 @@ def backfill_languages(
     if not m:
         return {"error": "unknown museum"}
 
-    has_en = db.query(ObjectContentSection.object_id).filter(
-        ObjectContentSection.language == "en",
-        ObjectContentSection.status == "published",
-        ObjectContentSection.body.isnot(None),
-    )
-    q = (
-        db.query(MuseumObject.id)
-        .filter(
-            MuseumObject.museum_id == m.id,
-            MuseumObject.id.in_(has_en),
-        )
-        .order_by(MuseumObject.popularity.desc())
-    )
-    if limit:
-        q = q.limit(limit)
-    ids = [oid for (oid,) in q.all()]
+    ids = translate_scope(db, m, limit)
 
     counts = {"objects": 0, "sections": 0, "qa": 0, "bios": 0, "errors": 0}
     if not ids:
@@ -227,7 +266,7 @@ def backfill_languages(
 
     # 线程内 session 绑**入参 db 的同一个 engine**(而不是全局 SessionLocal):
     # 生产里两者一致,测试里则自动跟着 in-memory sqlite —— 否则这段代码不可测。
-    make_session = sessionmaker(bind=db.get_bind())
+    make_session = guarded_sessionmaker(bind=db.get_bind())  # 带音频损失闸(纪律 37)
 
     def _one(oid):
         """一件的全部语言。线程内独立 session,失败只影响这一件。"""

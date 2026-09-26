@@ -73,10 +73,14 @@ class _FakeGate:
 
 
 class _FakeTranslator:
-    def translate_section(self, t, lang, *, strong=False, title=None, artist=None):
+    def translate_section(
+        self, t, lang, *, strong=False, title=None, artist=None, **_kw
+    ):
         return t + "_" + lang
 
-    def translate_object(self, en_sections, target_langs, titles=None, artists=None):
+    def translate_object(
+        self, en_sections, target_langs, titles=None, artists=None, **_kw
+    ):
         return {
             "fr": {
                 "overview": SectionQuality(
@@ -174,7 +178,7 @@ def test_generate_object_translates_per_language_with_priority(session):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             assert len(target_langs) == 1  # 逐语言调用(翻完即存)
             lang = target_langs[0]
@@ -221,6 +225,7 @@ class _FakeQA:
         covered=None,
         titles=None,
         artists=None,
+        **_kw,
     ):
         return {
             "en": [{"question": "Q?", "answer": "A.", "status": "published"}],
@@ -287,7 +292,7 @@ def test_generate_object_produces_guide_section(session):
 
     class _GuideTranslator(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             return {
                 "fr": {
@@ -445,7 +450,7 @@ def test_priority_lang_guide_persisted_before_canonical(session, monkeypatch):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             lang = target_langs[0]
             return {lang: {c: _ok(f"{lang} {b}") for c, b in en_sections.items()}}
@@ -634,6 +639,7 @@ def test_generate_object_passes_covered_to_qa(session):
             covered=None,
             titles=None,
             artists=None,
+            **_kw,
         ):
             seen["covered"] = covered
             return {"en": []}
@@ -947,7 +953,12 @@ def test_generate_object_passes_country_lang_to_artist_material(session, monkeyp
     assert seen["country_lang"] == "nl"
 
 
-def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
+def test_generate_object_force_does_not_refresh_artist_bio(session, monkeypatch):
+    """原名 test_generate_object_force_refreshes_artist_bio(#117),**断言的正是事故行为**:
+    `assert calls == 1  # force 刷新了 bio`。#117 当年要修的是「en 位存成中文」的坏数据,
+    那条路现在由 bio_en_usable(坏值=缺失)单独负责;借 --force 刷新共享作者的副作用是
+    2026-09-26 那次跨馆事故的直接原因(契约纪律 37)。改为钉住:force 不碰合法的已有 bio。
+    """
     import app.services.enrichment.pipeline as pl
     from app.models.artist import Artist
     from app.models.museum_object import MuseumObject
@@ -981,9 +992,8 @@ def test_generate_object_force_refreshes_artist_bio(session, monkeypatch):
         force=True,
     )
     art = session.query(Artist).filter_by(qid="Q9").one()
-    assert calls["n"] == 1  # force 刷新了 bio
-    assert art.bio["en"] == "bio v1。"  # en 更新
-    assert art.bio["fr"] == "fr bio"  # 其它语种保留(合并)
+    assert calls["n"] == 0  # 合法英文 bio → force 也不重生成
+    assert art.bio == {"en": "old wrong", "fr": "fr bio"}  # 原样保留
 
 
 def test_generate_fills_artist_facts_i18n(session, monkeypatch):
@@ -1105,12 +1115,12 @@ def test_translate_qa_items_threads_title(session):
 
     class _Tr:
         def translate_section(
-            self, text, lang, *, strong=False, title=None, artist=None
+            self, text, lang, *, strong=False, title=None, artist=None, **_kw
         ):
             seen.append(title)
             return "译:" + text
 
-        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
             return True, []
 
     translate_qa_items(
@@ -1172,12 +1182,12 @@ def test_translate_qa_items_threads_artist(session):
 
     class _Tr:
         def translate_section(
-            self, text, lang, *, strong=False, title=None, artist=None
+            self, text, lang, *, strong=False, title=None, artist=None, **_kw
         ):
             seen.append(artist)
             return "译:" + text
 
-        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
             return True, []
 
     translate_qa_items(
@@ -1210,7 +1220,7 @@ def test_generate_passes_artist_glossary_to_translations(session, monkeypatch):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             seen["translate"].append(artists)
             lang = target_langs[0]
@@ -1237,6 +1247,7 @@ def test_generate_passes_artist_glossary_to_translations(session, monkeypatch):
             covered=None,
             titles=None,
             artists=None,
+            **_kw,
         ):
             seen["qa"] = artists
             return {"en": []}
@@ -1267,7 +1278,7 @@ def test_qa_runs_parallel_with_translations(session):
 
     class _Tr(_FakeTranslator):
         def translate_object(
-            self, en_sections, target_langs, titles=None, artists=None
+            self, en_sections, target_langs, titles=None, artists=None, **_kw
         ):
             assert qa_started.wait(timeout=5), "qa 未先于翻译启动(退化回串行?)"
             lang = target_langs[0]
@@ -1294,6 +1305,7 @@ def test_qa_runs_parallel_with_translations(session):
             covered=None,
             titles=None,
             artists=None,
+            **_kw,
         ):
             qa_started.set()
             return {"en": [{"question": "Q?", "answer": "A.", "status": "published"}]}
@@ -1371,3 +1383,126 @@ def test_quality_report_top_n_sees_exactly_the_generated_batch(session):
     assert {q for q, _ in rows["guide"]} == top
     with pytest.raises(SystemExit):
         load(session, None, "en", None, 5000, top=3)  # TOP-N 是馆内排名
+
+
+def test_force_regeneration_never_rewrites_a_shared_artist(session, monkeypatch):
+    """契约纪律 37:作者实体跨馆共享,单件/单馆的 --force 只能补缺,不能覆盖。
+
+    2026-09-26 事故:对小皇宫 TOP20 三次 `generate --force`,每次都把 14 位
+    跨馆作者(卢浮/奥赛/橘园也有作品)的简介整篇重写、清掉简介音频 —— 6 位作者
+    40 条音频从库里脱钩;库尔贝代表作被换成小皇宫那几件、安格尔中文名被改写,
+    所有馆一起变。靠当天 04:20 的 pg_dump 才恢复。
+
+    这里的对象带着**与作者行不同**的事实(另一组代表作/生年/译名),
+    正是"用这一件作品的视角覆盖全馆共享的作者"那个错法。
+    """
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_facts",
+        lambda qid, artist_qid=None: {
+            "artist_qid": "Q34618",
+            "artist_birth": "1900",
+            "artist_nationality": "Nowhere",
+            "artist_notable_works": ["The Sleepers"],
+        },
+    )
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    before = dict(
+        qid="Q34618",
+        name_en="Gustave Courbet",
+        name_zh="古斯塔夫·库尔贝",
+        birth="1819",
+        nationality="France",
+        notable_works=["A Burial at Ornans"],
+        bio={"en": "Courbet was a Realist.", "zh": "库尔贝是现实主义画家。"},
+        bio_audio={"en": "object-audio/artist/Q34618/en-x.mp3"},
+        bio_audio_engine={"en": "voxcpm2"},
+    )
+    session.add(Artist(**before))
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en, o.artist_zh = (
+        "G. Courbet",
+        "居斯塔夫·库尔贝",
+    )  # 这件作品的写法与作者行不同
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+    called = {"bio": 0}
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            called["bio"] += 1
+            return "A different bio."
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en", "zh"],
+        model="m",
+        force=True,
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q34618").one()
+    assert called["bio"] == 0, "--force 不许重写已有作者的简介"
+    for k, v in before.items():
+        assert getattr(art, k) == v, f"共享作者字段 {k} 被单件 --force 改写"
+
+
+def test_existing_artist_with_junk_bio_only_fills_missing_fields(session, monkeypatch):
+    """坏 bio 重生成这条路保留(纪律「坏值=缺失」),但它**只能换 bio**:
+    名字/生年/代表作这些共享字段已有就不许用这一件作品的视角覆盖;缺的才补。
+    """
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    monkeypatch.setattr(
+        pl,
+        "_artist_facts",
+        lambda qid, artist_qid=None: {
+            "artist_qid": "Q39931",
+            "artist_birth": "1841",
+            "artist_notable_works": ["Portrait of Vollard"],
+        },
+    )
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    session.add(
+        Artist(
+            qid="Q39931",
+            name_en="Pierre-Auguste Renoir",
+            notable_works=["Bal du moulin de la Galette"],
+            bio={"en": "雷诺阿是法国印象派画家。"},  # 坏 en → 视为缺失
+        )
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Renoir"
+    o.attributes = {"artist_extract_en": "material"}
+    session.commit()
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            return "Proper English bio."
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q39931").one()
+    assert art.bio["en"] == "Proper English bio."  # 坏 bio 照样修
+    assert art.name_en == "Pierre-Auguste Renoir"  # 已有 → 不被这件作品的写法覆盖
+    assert art.notable_works == ["Bal du moulin de la Galette"]  # 已有 → 不动
+    assert art.birth == "1841"  # 缺 → 补

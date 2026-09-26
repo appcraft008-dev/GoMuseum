@@ -983,6 +983,70 @@
 >
 >    ⚠️ 出包前先确认目标 versionCode 在 Play 侧没被占(号被占时别逐个 +1 猜,
 >    去 Console 看最高号一次到位 —— 曾为此白出三版包)。
+> 37. **⛔ 共享实体不许被单件/单馆操作顺带改写;动 prod 前的备份范围 = 这条命令真正会写的所有表**
+>     (2026-09-26 跨馆作者事故添,**最高严重级**)。
+>
+>    **事故**:为调小皇宫 guide 文本,对 TOP20 跑了三次 `onboard generate --force`。
+>    `generate` 听起来只动作品,但 `--force` 会顺带把**作者实体**(`artists` 表,按 QID
+>    **全库共享**,卢浮/奥赛/橘园/小皇宫共用同一张作者卡)整篇重写:
+>    - 14 位作者的简介被重写,**6 位作者 40 条简介音频从库里脱钩**
+>      (大卫、安格尔各 10 语,西斯莱、塞尚各 8 语,曼特尼亚、丢勒各 2 语)
+>    - 库尔贝的代表作被换成小皇宫那几件(《世界的起源》→《浪中女人》),安格尔中文名被改写
+>    - **所有馆的作者卡一起变** —— 而动手前只备份了「以为在改的」作品表,没备份作者表
+>
+>    ⚠️ **这不是第一次**:同一 bug 在 **2026-09-14**(小皇宫 47 件 `--force` 重跑)就发作过,
+>    西斯莱/塞尚的 en、zh 与库尔贝/雷诺阿的 zh 简介音频当天脱钩,**12 天没人发现** ——
+>    直到用户点库尔贝的中文简介发现「不像之前秒播」(那是点击时懒生成的 tts-1)。
+>    那次早于备份保留期(约 9 天),原文找不回,只能重录(见 `docs/ops/audio-followups.md` P0)。
+>    **「损坏没人发现」和「损坏本身」一样严重。**
+>
+>    靠当天 04:20 的每日 `pg_dump` 才逐字段恢复(14/14 独立比对零差异;40 个音频文件
+>    都还在 R2,只是库里的 key 被清了 —— **若期间有人跑了孤儿音频 GC,就永久丢失**)。
+>    代码层根因:`pipeline._enrich_artist_and_titles` 的判断是
+>    `if art is None or force or …`,且重写分支用**这一件作品**上的 `artist_en`/代表作
+>    覆盖作者行;而原测试 `test_generate_object_force_refreshes_artist_bio`
+>    **断言的正是这个行为**(绿着的),所以没有任何东西会拦。
+>
+>    → **规则**(必须全部遵守):
+>    ① **共享实体只补缺、不覆盖。** 共享实体 = 任何按 QID/键被多件作品或多个馆引用的行
+>      (现为 `artists`:bio / bio_audio / name_* / birth / death / nationality /
+>      notable_works / *_i18n)。单件或单馆的命令(`generate --force/--qid/--limit`、
+>      `translate`、懒生成)**只能写缺失字段**;`--force` 的语义是「重做**这件作品**的内容」,
+>      **永远不包括共享实体**。确需刷新共享实体 → 另写**独立的显式命令**,执行前打印
+>      「受影响的馆 × 件数 × 会作废的音频条数」,由用户确认。
+>      (已落地于 `pipeline._enrich_artist_and_titles`,由 `test_force_regeneration_never_rewrites_a_shared_artist`
+>      与 `test_existing_artist_with_junk_bio_only_fills_missing_fields` 钉住;撤掉修复两条都红。)
+>    ② **动 prod 数据前先列「写入面清单」,按代码列,不按命令名猜。** 读这条命令的实际
+>      写路径:会写哪些表 → 哪些行 → 这些行还被谁引用(其它馆 / 音频 / 译文 / 缓存)。
+>      命令名是意图,不是写入范围(`generate` 写了 `artists`,`--force` 清了 `bio_audio`)。
+>    ③ **备份范围 = ② 列出的全部表**,不是「我以为在改的那张表」。并先查一次
+>      「这批操作会作废多少条已有音频」—— 不为 0 就停下来问用户。
+>    ④ **兜底恢复路径**:每日 04:20 `/opt/gomuseum/backups/gomuseum_YYYYMMDD_042001.sql.gz`
+>      (prod `pg_dump`,留约 9 天)。**只恢复受影响的行/字段**:从 dump 里截出该表的
+>      `COPY` 段本地解析,按主键逐字段写回,再**独立重拉一次 prod 与备份比对**(不信恢复脚本
+>      自己的校验)。音频类字段恢复前先确认 key 指向的 R2 文件都还在。
+>    ⑤ **音频 key 被清空后、恢复完成前,禁止跑孤儿音频 GC**(`gc_orphan_audio.py`):
+>      那些文件此刻正是「孤儿」,GC 会把可恢复的事故变成不可恢复的。
+>    ⑥ **测试若断言了「覆盖共享实体」这种行为,它是在钉漏洞,不是在钉功能**
+>      (同纪律 33 与匿名成本洞那一课:测试钉不住「这个行为本身就不该存在」)。
+>      改共享实体相关逻辑时,先 grep 有没有测试在断言旧行为,有就改写成反向钉住并写明来由。
+
+>    ⑦ **机制(不靠人记得):四层防线**(2026-09-26 落地;规则①-⑥ 是教训,这里是**强制执行**)。
+>
+>    | 层 | 机制 | 位置 |
+>    |---|---|---|
+>    | ① 拦 | **音频损失闸**:`SessionLocal` 的 `before_flush` 钩子,任何写入让已有音频「有 key→没 key」(段/问答置空或删行、作者 `bio_audio` 少了语种)即判损失。**脚本进程默认拦截**(抛 `AudioLossBlocked`,继承 `BaseException` 以穿过管线里的 `except Exception`),需显式 `--allow-audio-loss N` / `GOMUSEUM_ALLOW_AUDIO_LOSS=N`(是**额度**不是开关);web 进程只记账不拦。换成另一个 key(重录)不算损失 | `app/services/audio_guard.py`、`app.core.database.guarded_sessionmaker` |
+>    | ② 存 | **音频失效台账** `audio_invalidations`:每条损失记 key、所属行、语种、**当时的文字**、命令。GC 不删台账里 60 天内的 key | `app/models/audio_invalidation.py`、`scripts/gc_orphan_audio.py` |
+>    | ③ 查 | **每日音频盘点**:备份后比对每个音频槽位的 key,「昨天有今天没」即告警邮件(`OPS_ALERT_EMAIL`);台账里没有的标「来源不明」(最高级,说明有写入绕过了闸);发不出去就不推进基线 | `scripts/audio_inventory.py`、`backup.sh` |
+>    | ④ 退 | **跑前快照**:`onboard generate/translate --target prod` 开跑前打印写入面清单(含已有音频条数、跨馆作者数)并把这批行快照到 R2 `ops-snapshots/`;**备份保留** 7 天 → 14 天每日 + 8 周每周 | `scripts/ops_guard.py`、`backup.sh` |
+>
+>    配套约束(由测试钉住,违反即 CI 红):
+>    - **不许直接调 `sessionmaker(`**,只用 `guarded_sessionmaker`(补语种线程池曾自建会话、绕过闸)
+>      —— `tests/unit/test_no_bare_sessionmaker.py`
+>    - **不许用 `query(...).delete()/update()` 批量语句删带音频的行或改 audio_key**(绕过 session 事件);
+>      `persist_suggested_questions` 已从批量删改为逐行删
+>    - 两次事故的写法(正文重写清 audio_key、作者 bio_audio 被 pop)都有用例复现并断言被拦
+>      —— `tests/integration/test_audio_guard.py`
 
 ---
 
@@ -1483,6 +1547,12 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 
 ## 变更记录
 
+- 2026-09-26:**⛔ 跨馆作者事故,新增纪律 37「共享实体只补缺不覆盖 + 备份范围=真实写入面」**。
+  为调小皇宫 guide 文本对 TOP20 跑了三次 `generate --force`,顺带把 14 位跨馆作者(`artists`
+  全库共享)的简介重写、6 位作者 40 条简介音频从库里脱钩、库尔贝代表作与安格尔中文名被改写,
+  卢浮/奥赛/橘园的作者卡一起变。动手前只备份了作品表。用当天 04:20 `pg_dump` 逐字段恢复
+  14/14(独立比对零差异,R2 音频文件都在)。代码:`--force` 不再参与作者重写判断,已有作者字段
+  只补缺;原测试 `force_refreshes_artist_bio` 断言的正是事故行为,已改写为反向钉住。
 - 2026-09-20:**候选态不再当场扣费,扣费点挪到用户确认之后**。
   `POST /recognize/confirm` 从纯埋点端点变成**候选态唯一的扣费点**(可选 Bearer,
   首次确认扣 1 次并解锁该件语音;仍恒 204)。起因是用户问「选『都不是』为什么也扣次」——
