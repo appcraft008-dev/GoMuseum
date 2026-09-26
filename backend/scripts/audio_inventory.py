@@ -20,7 +20,7 @@
 cron 在每日 pg_dump 之后跑(见 deployment/production/backup.sh):
   docker exec gomuseum_prod_backend python -m scripts.audio_inventory
 退出码:0 无损失 | 1 有损失且已发告警 | 2 有损失但告警发不出去(未配置/发信失败)
-快照存 R2 `ops-inventory/`(不依赖 VPS 本地文件)。首次运行只建基线。
+快照存 R2 `ops-inventory/{ENVIRONMENT}/`(不依赖 VPS 本地文件;staging 与 prod 共桶,按环境分目录)。首次运行只建基线。
 """
 
 from __future__ import annotations
@@ -33,7 +33,13 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, "/app")
 
-LATEST = "ops-inventory/latest.json.gz"
+
+def _prefix() -> str:
+    """⚠️ staging 与 prod **共用同一个 R2 桶**(gomuseum-assets)—— 不按环境分目录,
+    两边的盘点会互相覆盖对方的基线,prod 拿 staging 的数据当「昨天」比,满屏误报。"""
+    from app.core.config import settings
+
+    return f"ops-inventory/{settings.ENVIRONMENT}"
 
 
 def collect(db) -> dict:
@@ -143,7 +149,8 @@ def main() -> int:
     db = SessionLocal()
     try:
         now = collect(db)
-        raw = st.get(LATEST)
+        latest = f"{_prefix()}/latest.json.gz"
+        raw = st.get(latest)
         prev_doc = json.loads(gzip.decompress(raw)) if raw else None
         ledger = (
             {
@@ -162,10 +169,10 @@ def main() -> int:
     stamp = datetime.now(timezone.utc)
     doc = {"at": stamp.isoformat(), "slots": now}
     blob = gzip.compress(json.dumps(doc, ensure_ascii=False).encode("utf-8"))
-    st.put(f"ops-inventory/{stamp:%Y%m%d}.json.gz", blob, "application/gzip")
+    st.put(f"{_prefix()}/{stamp:%Y%m%d}.json.gz", blob, "application/gzip")
 
     if prev_doc is None:
-        st.put(LATEST, blob, "application/gzip")
+        st.put(latest, blob, "application/gzip")
         print(f"首次运行:建立基线,挂着的音频 {len(now)} 条")
         return 0
 
@@ -175,7 +182,7 @@ def main() -> int:
         f"损失:来源不明 {len(d['unexplained'])},已登记 {len(d['explained'])}"
     )
     if not d["unexplained"] and not d["explained"]:
-        st.put(LATEST, blob, "application/gzip")
+        st.put(latest, blob, "application/gzip")
         return 0
 
     subject, body = render(prev_doc["slots"], now, d, prev_doc["at"])
@@ -190,7 +197,7 @@ def main() -> int:
         # 发不出去就**不推进基线**:明天再比时这批损失还在,不会因为「今天没发出去」被吞掉
         print(f"❌ 告警发送失败:{e}(基线未推进,明天会再报一次)")
         return 2
-    st.put(LATEST, blob, "application/gzip")
+    st.put(latest, blob, "application/gzip")
     print(f"✓ 告警已发送至 {to}")
     return 1
 
