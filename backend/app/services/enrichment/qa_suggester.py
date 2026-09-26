@@ -24,22 +24,25 @@ def _clean_question(q: str):
 
 
 def translate_qa_items(
-    translator, en_items: list, lang: str, title=None, artist=None
+    translator,
+    en_items: list,
+    lang: str,
+    title=None,
+    artist=None,
+    artist_en=None,
+    museum=None,
 ) -> list:
     """把英语问答对翻到 lang(问句截到问号+答案忠实校验)。suggest 与补语种共用。
     title=规范标题:问答引用标题统一用显示名(消除分叉,同 guide/deep)。
     artist=作者规范名:问答称呼作者统一用作者卡译名(消除音译分叉)。"""
     import re as _re
 
+    names = dict(title=title, artist=artist, artist_en=artist_en, museum=museum)
     out = []
     for it in en_items:
-        raw_q = translator.translate_section(
-            it["question"], lang, title=title, artist=artist
-        )
+        raw_q = translator.translate_section(it["question"], lang, **names)
         tq = _clean_question(raw_q)
-        ta = translator.translate_section(
-            it["answer"], lang, title=title, artist=artist
-        )
+        ta = translator.translate_section(it["answer"], lang, **names)
         if not tq:
             # 翻译丢了问号 → 补目标语问号(别回退英文,那样中文里混英文问题);真空才回退英文
             stripped = (raw_q or "").strip()
@@ -50,7 +53,7 @@ def translate_qa_items(
                 tq = it["question"]
         # 翻译侧注入了 title/artist,检查侧也必须知道 —— 否则它拿英文直译当标准,
         # 把规范名判成错译(契约纪律 22;prod 存量 595 条非英语问答卡在 needs_review)。
-        ok, _ = translator.check_faithfulness(it["answer"], ta, lang, title, artist)
+        ok, _ = translator.check_faithfulness(it["answer"], ta, lang, **names)
         from app.services.enrichment.lang_detect import text_in_language
 
         # 语言闸:问句或答案不是目标语(混英文等)→ 不发布
@@ -98,9 +101,12 @@ class QASuggester:
         covered: str | None = None,
         titles: dict | None = None,
         artists: dict | None = None,
+        artist_en: str | None = None,
+        museums: dict | None = None,
     ) -> dict:
         titles = titles or {}
         artists = artists or {}
+        museums = museums or {}
         en_items = self._generate_en(material, facts, category, covered)
         out = {"en": en_items}
         published = [it for it in en_items if it["status"] == "published"]
@@ -113,5 +119,7 @@ class QASuggester:
                 lang,
                 title=titles.get(lang),
                 artist=artists.get(lang),
+                artist_en=artist_en,
+                museum=museums.get(lang),
             )
         return out

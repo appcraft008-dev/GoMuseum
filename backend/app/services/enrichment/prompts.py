@@ -169,6 +169,7 @@ def build_translation_prompt(
     title: str | None = None,
     artist: str | None = None,
     museum: str | None = None,
+    artist_en: str | None = None,
 ):
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _TRANSLATION_SYSTEM.format(lang=lang)
@@ -200,6 +201,17 @@ def build_translation_prompt(
             f"refers to the artist by name, use EXACTLY this rendering, do not use "
             f"any alternative transliteration. Never copy the tags themselves."
         )
+        # ⚠️ 2026-09-26:只给译名不给原名,模型就得自己猜哪个名字是作者 —— 画中人与作者
+        # 同姓时(《驾驶邮车》画的是作者的父亲 Alphonse de Toulouse-Lautrec-Monfa),
+        # 韩语 3 次里 2 次把驾车的人写成作者 Henri(앙리),且忠实度闸满分放行
+        # (闸的 STEP 0 叫它先删掉规范名再判,见 build_faithfulness_prompt)。
+        if artist_en:
+            system += (
+                f" The artist is {artist_en}; apply that canonical name ONLY to "
+                f"{artist_en}. Other people in the text who share the artist's surname "
+                f"(relatives, sitters, patrons) are DIFFERENT people: translate their "
+                f"own names and never replace them with the artist's name."
+            )
     if museum:
         # 馆名真相唯一化(标题/作者之外的第三类名字):正文提到本馆一律用配置的
         # 权威译名。可字面直译的馆名(Petit Palais)模型会自选直译("小宫殿"),
@@ -265,6 +277,7 @@ def build_faithfulness_prompt(
     target_lang: str,
     title: str | None = None,
     artist: str | None = None,
+    museum: str | None = None,
 ):
     """[title]/[artist] 该作品与其作者在目标语言的**规范名**
     (来自 title_i18n / artists.name_i18n,源头是 Wikidata 标签)。
@@ -302,6 +315,17 @@ def build_faithfulness_prompt(
         names.append(f"title -> 「{title}」")
     if artist:
         names.append(f"artist -> 「{artist}」")
+    if museum:
+        # 翻译侧注入了馆名,检查侧也必须知道(纪律 22),否则「小皇宫美术馆」会被判成
+        # 「Petit Palais」的错译。
+        names.append(f"museum -> 「{museum}」")
+    # ⚠️ 已知局限(2026-09-26,别再按同一思路改):STEP 0「删掉规范名再判」也豁免了
+    # **指代对象** —— 韩语把画中人(作者父亲 Alphonse)换成作者名「앙리 …」,正是被删掉
+    # 的那个字符串,闸满分放行。试过在 STEP 0 后加「豁免只管写法、不管指谁」的例外:
+    # 只读 A/B 里坏样本 1/2 照样放行(**没拦住**),好样本 159 条里新误拒 7 条
+    # (如「マリー・ブラックモン 不对,原文是 Marie Bracquemond」—— 例外反而让它开始盯名字),
+    # 已撤。**这类错在翻译侧防**:build_translation_prompt 给出作者英文原名 + 同姓他人规则
+    # (A/B:主语正确 3/5 → 5/5,「过闸且换错人」2 → 0)。
     note = ""
     if names:
         mapping = "; ".join(names)

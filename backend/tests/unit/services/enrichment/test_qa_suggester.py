@@ -36,10 +36,12 @@ class _Gate:
 
 
 class _Translator:
-    def translate_section(self, body, lang, *, strong=False, title=None, artist=None):
+    def translate_section(
+        self, body, lang, *, strong=False, title=None, artist=None, **_kw
+    ):
         return f"[{lang}] {body}"
 
-    def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+    def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
         return True, []
 
 
@@ -126,12 +128,12 @@ def test_translate_qa_appends_qmark_not_english_fallback():
 
     class _Tr:
         def translate_section(
-            self, text, lang, *, strong=False, title=None, artist=None
+            self, text, lang, *, strong=False, title=None, artist=None, **_kw
         ):
             # 模拟翻译丢了问号(陈述句式)
             return "梵高的信件揭示了什么" if "?" in text else f"{text}译"
 
-        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
             return True, []
 
     out = translate_qa_items(
@@ -147,13 +149,13 @@ def test_qa_gates_wrong_language():
 
     class _Tr:
         def translate_section(
-            self, text, lang, *, strong=False, title=None, artist=None
+            self, text, lang, *, strong=False, title=None, artist=None, **_kw
         ):
             return (
                 "This whole answer leaked into English instead of the Chinese language."
             )
 
-        def check_faithfulness(self, en, tr, lang, title=None, artist=None):
+        def check_faithfulness(self, en, tr, lang, title=None, artist=None, **_kw):
             return True, []
 
     out = translate_qa_items(

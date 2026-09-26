@@ -29,6 +29,28 @@ def artist_names_i18n(db, o) -> dict:
     return dict(art.name_i18n or {}) if art else {}
 
 
+def translation_names(db, o, langs) -> tuple:
+    """翻译时除标题/作者译名外还要告诉模型的两样:(作者英文原名, {lang: 馆规范名})。
+
+    - 作者英文原名:只给译名时模型得自己猜「哪个名字是作者」,同姓画中人会被换成作者
+      (《驾驶邮车》画的是作者父亲,韩语 2/3 被写成作者本人,且闸满分放行)。
+    - 馆规范名:正文提到本馆统一用 museums.name_zh(否则「小宫/小皇宫」混用);
+      只钉有权威译名的语言,规则同馆介绍(`museum_intro._canonical_museum_name`)。
+    正文/问答/懒翻译/补语种**全走这一个函数**,免得哪条路径漏传(半个单一真相源,#547)。
+    """
+    from app.services.enrichment.museum_intro import _canonical_museum_name
+
+    artist_en = artist_names_i18n(db, o).get("en") or o.artist_en
+    m = db.query(Museum).filter_by(id=o.museum_id).first()
+    museums = {}
+    if m is not None:
+        for lang in langs:
+            name = _canonical_museum_name(m, lang)
+            if name:
+                museums[lang] = name
+    return artist_en, museums
+
+
 def backfill_content_status(db) -> dict:
     """按是否有已发布 section 设 content_status。返回 {"ready": n, "stub": m}（目标态分布）。"""
     ready_ids = {
@@ -139,6 +161,7 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     missing = {c: b for c, b in en_secs.items() if c not in have}
     _aname = artist_names_i18n(db, o).get(lang)
     _artists = {lang: _aname} if _aname else None
+    _artist_en, _museums = translation_names(db, o, [lang])
     if missing:
         title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
         _titles = {lang: title} if title else None
@@ -148,7 +171,12 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
         ]
         for code in ordered:
             res = translator.translate_object(
-                {code: missing[code]}, [lang], titles=_titles, artists=_artists
+                {code: missing[code]},
+                [lang],
+                titles=_titles,
+                artists=_artists,
+                artist_en=_artist_en,
+                museums=_museums,
             ).get(lang, {})
             pub, _nr = persist_gated_sections(db, o.qid, lang, res, model)
             counts["sections"] += pub
@@ -166,7 +194,13 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     ):
         _qa_title = ((o.attributes or {}).get("title_i18n") or {}).get(lang)
         items = translate_qa_items(
-            translator, en_qa, lang, title=_qa_title, artist=_aname
+            translator,
+            en_qa,
+            lang,
+            title=_qa_title,
+            artist=_aname,
+            artist_en=_artist_en,
+            museum=_museums.get(lang),
         )
         counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
     aqid = (o.attributes or {}).get("artist_qid")
