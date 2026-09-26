@@ -56,17 +56,27 @@ def receive_checkin(dbapi_conn, connection_record):
     logger.debug("Connection returned to pool")
 
 
-# Create SessionLocal class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@event.listens_for(SessionLocal, "before_flush")
 def audio_loss_guard(session, flush_context, instances):
-    """音频损失闸(契约纪律 37):挂在 SessionLocal 上 = web 与所有脚本自动受保护。
+    """音频损失闸(契约纪律 37),挂在每个 guarded_sessionmaker 上。
     延迟导入:app.services 包的 __init__ 会拉一串服务模块,在这里顶层导入会循环。"""
     from app.services.audio_guard import on_flush
 
     on_flush(session)
+
+
+def guarded_sessionmaker(**kw):
+    """**应用与脚本里唯一允许的 sessionmaker 入口**:建出来的会话自动挂音频损失闸。
+
+    曾有线程池另起 `sessionmaker(bind=...)`(补语种 backfill_languages),那条路径就
+    绕过了闸 —— 所以不许直接调 sessionmaker,由 tests/unit/test_no_bare_sessionmaker.py 钉住。
+    """
+    factory = sessionmaker(**kw)
+    event.listen(factory, "before_flush", audio_loss_guard)
+    return factory
+
+
+# Create SessionLocal class(web 与所有脚本共用;带音频损失闸)
+SessionLocal = guarded_sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 # Create Base class for models

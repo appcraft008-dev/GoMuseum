@@ -202,3 +202,32 @@ def test_normal_writes_without_audio_are_untouched(db):
     art.bio = {**art.bio, "fr": "Bio fr."}
     db.commit()
     assert db.query(AudioInvalidation).count() == 0
+
+
+def test_prod_snapshot_lists_write_surface_and_is_restorable(db, monkeypatch):
+    """纪律 37 ②④:开跑前列写入面(含已有音频条数与跨馆作者)并快照到 R2。
+    09-26 那次只备份了作品表 —— 这里断言作者表**也**在快照里。"""
+    import gzip
+    import json
+
+    import app.services.storage as storage_mod
+    from scripts.ops_guard import write_surface_and_snapshot
+
+    o = db.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q34618"}
+    db.commit()
+    put = {}
+
+    class _S:
+        def put(self, key, data, content_type):
+            put[key] = data
+
+    monkeypatch.setattr(storage_mod, "get_object_storage", lambda: _S())
+    s = write_surface_and_snapshot(db, "generate_orsay", [o.id])
+    assert s["sections_with_audio"] == 1 and s["qa_with_audio"] == 1
+    assert s["artists_shared"] == 1 and s["artist_bio_audio"] == 2
+    payload = json.loads(gzip.decompress(put[s["snapshot_key"]]))
+    assert (
+        payload["artists"][0]["bio_audio"]["zh"] == "object-audio/artist/Q34618/zh.mp3"
+    )
+    assert payload["object_content_sections"][0]["audio_key"].endswith("zh-guide.mp3")

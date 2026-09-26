@@ -8,8 +8,7 @@ import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 
-from sqlalchemy.orm import sessionmaker
-
+from app.core.database import guarded_sessionmaker
 from app.models.artist import Artist
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
@@ -220,6 +219,27 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
     return counts
 
 
+def translate_scope(db, m, limit=None) -> list:
+    """补语种会处理的对象 id(有已发布 en 的件,热度降序、同分按 id)。
+
+    单独抽出来是为了让 `onboard translate` 开跑前的快照(纪律 37)与实际要写的是**同一批**。
+    同分裁决同 #645 的 top_objects:小皇宫 97% 件热度为 0,不带 id 时 --limit 取哪批不确定。
+    """
+    has_en = db.query(ObjectContentSection.object_id).filter(
+        ObjectContentSection.language == "en",
+        ObjectContentSection.status == "published",
+        ObjectContentSection.body.isnot(None),
+    )
+    q = (
+        db.query(MuseumObject.id)
+        .filter(MuseumObject.museum_id == m.id, MuseumObject.id.in_(has_en))
+        .order_by(MuseumObject.popularity.desc(), MuseumObject.id)
+    )
+    if limit:
+        q = q.limit(limit)
+    return [oid for (oid,) in q.all()]
+
+
 def backfill_languages(
     db, slug, *, langs, translator, limit=None, model="gpt-4o-mini", workers=8
 ) -> dict:
@@ -238,22 +258,7 @@ def backfill_languages(
     if not m:
         return {"error": "unknown museum"}
 
-    has_en = db.query(ObjectContentSection.object_id).filter(
-        ObjectContentSection.language == "en",
-        ObjectContentSection.status == "published",
-        ObjectContentSection.body.isnot(None),
-    )
-    q = (
-        db.query(MuseumObject.id)
-        .filter(
-            MuseumObject.museum_id == m.id,
-            MuseumObject.id.in_(has_en),
-        )
-        .order_by(MuseumObject.popularity.desc())
-    )
-    if limit:
-        q = q.limit(limit)
-    ids = [oid for (oid,) in q.all()]
+    ids = translate_scope(db, m, limit)
 
     counts = {"objects": 0, "sections": 0, "qa": 0, "bios": 0, "errors": 0}
     if not ids:
@@ -261,7 +266,7 @@ def backfill_languages(
 
     # 线程内 session 绑**入参 db 的同一个 engine**(而不是全局 SessionLocal):
     # 生产里两者一致,测试里则自动跟着 in-memory sqlite —— 否则这段代码不可测。
-    make_session = sessionmaker(bind=db.get_bind())
+    make_session = guarded_sessionmaker(bind=db.get_bind())  # 带音频损失闸(纪律 37)
 
     def _one(oid):
         """一件的全部语言。线程内独立 session,失败只影响这一件。"""
