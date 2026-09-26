@@ -22,6 +22,9 @@
   照删就是清空整个音频库。宁可不删
 - **删除比例上限**:一次删掉超过总量 [--max-ratio] 的对象则中止并要求人工确认
 - 先列 R2 再读 DB:列举期间新写入的 key 必定已在 DB 里,不会被误判
+- **音频失效台账里 N 天内登记过的 key 一律不删**(默认 60 天,契约纪律 37):
+  2026-09-14 那次 `--force` 事故让 40 条作者简介音频「看起来」成了孤儿 —— 其实是
+  被误清的在用音频,正等着挂回去。GC 在那时跑一次,可恢复的事故就变成永久丢失。
 
 用法:
   python scripts/gc_orphan_audio.py                    # 只报告
@@ -69,10 +72,24 @@ def referenced_keys(db) -> set[str]:
     return keys
 
 
+def ledger_protected_keys(db, days: int = 60) -> set[str]:
+    """audio_invalidations 里 days 天内登记过的 key —— 可能正等着恢复,不许当孤儿删。"""
+    from app.models.audio_invalidation import AudioInvalidation
+
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+    return {
+        k
+        for (k,) in db.query(AudioInvalidation.audio_key).filter(
+            AudioInvalidation.created_at >= since
+        )
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="真删(默认只报告)")
     ap.add_argument("--grace-days", type=int, default=7)
+    ap.add_argument("--ledger-days", type=int, default=60)  # 纪律 37
     ap.add_argument(
         "--max-ratio",
         type=float,
@@ -93,6 +110,7 @@ def main() -> int:
     db = SessionLocal()
     try:
         refs = referenced_keys(db)
+        protected = ledger_protected_keys(db, ns.ledger_days) - refs
     finally:
         db.close()
 
@@ -104,9 +122,12 @@ def main() -> int:
         )
         return 1
 
-    orphans, kept_young = [], 0
+    orphans, kept_young, kept_ledger = [], 0, 0
     for key, size, mtime in objects:
         if key in refs:
+            continue
+        if key in protected:
+            kept_ledger += 1  # 纪律 37:近期被清的在用音频,可能正等着挂回
             continue
         if isinstance(mtime, datetime) and mtime > cutoff:
             kept_young += 1  # 宽限期内:可能有人正拿着旧 URL 在播
@@ -117,6 +138,7 @@ def main() -> int:
     ratio = len(orphans) / len(objects)
     print(f"R2 音频对象 {len(objects)} 个,DB 引用 {len(refs)} 个")
     print(f"宽限期内跳过 {kept_young} 个(<{ns.grace_days} 天,可能有人在播)")
+    print(f"失效台账保护跳过 {kept_ledger} 个(<{ns.ledger_days} 天内被清,可能待恢复)")
     print(f"孤儿 {len(orphans)} 个 / {total_mb:.1f} MB(占比 {ratio:.1%})")
     for k, s in orphans[:10]:
         print(f"  {k}  {s/1e6:.2f} MB")

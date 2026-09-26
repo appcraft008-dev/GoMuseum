@@ -110,3 +110,29 @@ def test_ratio_ceiling_blocks_mass_deletion():
     """一次删太多 = 对账逻辑大概率出错,先中止再说。"""
     total, orphans, max_ratio = 1000, 800, 0.5
     assert (orphans / total) > max_ratio
+
+
+def test_ledger_recent_invalidations_are_protected_from_gc():
+    """纪律 37:近期被清的在用音频(如 09-14 事故)看起来像孤儿,实为待恢复 —— 不许删。"""
+    from gc_orphan_audio import ledger_protected_keys
+
+    from app.models.audio_invalidation import AudioInvalidation
+
+    e = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=e, tables=[AudioInvalidation.__table__])
+    s = sessionmaker(bind=e)()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    for key, age in (("recent.mp3", 3), ("old.mp3", 90)):
+        s.add(
+            AudioInvalidation(
+                entity="artist_bio",
+                audio_key=key,
+                change="removed",
+                allowed="allowed",
+                created_at=now - timedelta(days=age),
+            )
+        )
+    s.commit()
+    assert ledger_protected_keys(s, 60) == {"recent.mp3"}

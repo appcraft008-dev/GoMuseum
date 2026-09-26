@@ -231,3 +231,14 @@ def test_prod_snapshot_lists_write_surface_and_is_restorable(db, monkeypatch):
         payload["artists"][0]["bio_audio"]["zh"] == "object-audio/artist/Q34618/zh.mp3"
     )
     assert payload["object_content_sections"][0]["audio_key"].endswith("zh-guide.mp3")
+
+
+def test_inventory_collects_all_three_audio_locations(db):
+    """音频 key 存在三处(段 / 问答 / 作者 bio_audio JSON),漏一处盘点就对那处失明。"""
+    from scripts.audio_inventory import collect
+
+    slots = collect(db)
+    kinds = sorted({s.split("|", 1)[0] for s in slots})
+    assert kinds == ["artist", "qa", "section"]
+    assert slots["artist|Q34618|zh"]["key"] == "object-audio/artist/Q34618/zh.mp3"
+    assert sum(1 for s in slots if s.startswith("artist|")) == 2
