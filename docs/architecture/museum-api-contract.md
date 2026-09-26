@@ -1031,6 +1031,23 @@
 >      (同纪律 33 与匿名成本洞那一课:测试钉不住「这个行为本身就不该存在」)。
 >      改共享实体相关逻辑时,先 grep 有没有测试在断言旧行为,有就改写成反向钉住并写明来由。
 
+>    ⑦ **机制(不靠人记得):四层防线**(2026-09-26 落地;规则①-⑥ 是教训,这里是**强制执行**)。
+>
+>    | 层 | 机制 | 位置 |
+>    |---|---|---|
+>    | ① 拦 | **音频损失闸**:`SessionLocal` 的 `before_flush` 钩子,任何写入让已有音频「有 key→没 key」(段/问答置空或删行、作者 `bio_audio` 少了语种)即判损失。**脚本进程默认拦截**(抛 `AudioLossBlocked`,继承 `BaseException` 以穿过管线里的 `except Exception`),需显式 `--allow-audio-loss N` / `GOMUSEUM_ALLOW_AUDIO_LOSS=N`(是**额度**不是开关);web 进程只记账不拦。换成另一个 key(重录)不算损失 | `app/services/audio_guard.py`、`app.core.database.guarded_sessionmaker` |
+>    | ② 存 | **音频失效台账** `audio_invalidations`:每条损失记 key、所属行、语种、**当时的文字**、命令。GC 不删台账里 60 天内的 key | `app/models/audio_invalidation.py`、`scripts/gc_orphan_audio.py` |
+>    | ③ 查 | **每日音频盘点**:备份后比对每个音频槽位的 key,「昨天有今天没」即告警邮件(`OPS_ALERT_EMAIL`);台账里没有的标「来源不明」(最高级,说明有写入绕过了闸);发不出去就不推进基线 | `scripts/audio_inventory.py`、`backup.sh` |
+>    | ④ 退 | **跑前快照**:`onboard generate/translate --target prod` 开跑前打印写入面清单(含已有音频条数、跨馆作者数)并把这批行快照到 R2 `ops-snapshots/`;**备份保留** 7 天 → 14 天每日 + 8 周每周 | `scripts/ops_guard.py`、`backup.sh` |
+>
+>    配套约束(由测试钉住,违反即 CI 红):
+>    - **不许直接调 `sessionmaker(`**,只用 `guarded_sessionmaker`(补语种线程池曾自建会话、绕过闸)
+>      —— `tests/unit/test_no_bare_sessionmaker.py`
+>    - **不许用 `query(...).delete()/update()` 批量语句删带音频的行或改 audio_key**(绕过 session 事件);
+>      `persist_suggested_questions` 已从批量删改为逐行删
+>    - 两次事故的写法(正文重写清 audio_key、作者 bio_audio 被 pop)都有用例复现并断言被拦
+>      —— `tests/integration/test_audio_guard.py`
+
 ---
 
 ## 音频批量生产与灌入(引擎无关;任何自托管/云端引擎都适用)

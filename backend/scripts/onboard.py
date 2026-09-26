@@ -73,6 +73,8 @@ def build_parser() -> argparse.ArgumentParser:
     ge.add_argument("--force", action="store_true")
     ge.add_argument("--limit", type=int, default=None)
     ge.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
+    # 纪律 37:默认一条已有音频都不许失效;确需重录时显式给出预期条数
+    ge.add_argument("--allow-audio-loss", type=int, default=0)
     rp = sub.add_parser("report")
     rp.add_argument("--langs", default=None)
     na = sub.add_parser("names")  # 显示名回填(铺目录后即跑;幂等可重跑)
@@ -94,6 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
     tr.add_argument("--limit", type=int, default=None)
     tr.add_argument("--allow-full", action="store_true")  # staging 护栏逃生门
     tr.add_argument("--workers", type=int, default=8)  # 并发件数;撞限流就调小
+    tr.add_argument("--allow-audio-loss", type=int, default=0)  # 纪律 37
     im = sub.add_parser("images")  # 图像物化:下载→两档→R2→署名(幂等,names 后跑)
     im.add_argument("--target", choices=["staging", "prod"], required=True)
     im.add_argument("--limit", type=int, default=None)
@@ -222,8 +225,14 @@ def cmd_catalog(
     print(f"✓ catalog 落库({source}): {out}")
 
 
-def cmd_generate(slug, qid, langs, force, limit, target, allow_full=False) -> None:
-    from scripts.ops_guard import staging_limit
+def cmd_generate(
+    slug, qid, langs, force, limit, target, allow_full=False, allow_audio_loss=0
+) -> None:
+    from scripts.ops_guard import (
+        apply_audio_loss_allowance,
+        staging_limit,
+        write_surface_and_snapshot,
+    )
 
     limit = staging_limit(target, limit, allow_full)
     # 守卫：--target 必须匹配当前容器 ENVIRONMENT（与 cmd_load 同，先于构造 LLM 组件）
@@ -250,8 +259,20 @@ def cmd_generate(slug, qid, langs, force, limit, target, allow_full=False) -> No
         registry=c["registry"],
         country_lang=c["country_lang"],
     )
+    apply_audio_loss_allowance(allow_audio_loss)
     db = SessionLocal()
     try:
+        if target == "prod":  # 纪律 37:开跑前列写入面 + 快照
+            from app.models.museum import Museum
+            from app.models.museum_object import MuseumObject
+            from app.services.enrichment.pipeline import top_objects
+
+            if qid:
+                scope = [o.id for o in db.query(MuseumObject).filter_by(qid=qid)]
+            else:
+                m = db.query(Museum).filter_by(slug=slug).one()
+                scope = [o.id for o in top_objects(db, m.id, limit)]
+            write_surface_and_snapshot(db, f"generate_{slug}", scope)
         if qid:
             out = generate_object(db, qid, **common)
         else:
@@ -330,8 +351,13 @@ def cmd_translate(
     target: str,
     allow_full: bool = False,
     workers: int = 8,
+    allow_audio_loss: int = 0,
 ) -> None:
-    from scripts.ops_guard import staging_limit
+    from scripts.ops_guard import (
+        apply_audio_loss_allowance,
+        staging_limit,
+        write_surface_and_snapshot,
+    )
 
     limit = staging_limit(target, limit, allow_full)
     expected = _ENV_BY_TARGET[target]
@@ -340,11 +366,19 @@ def cmd_translate(
             f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
             f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
         )
-    from app.services.enrichment.backfill import backfill_languages
+    from app.services.enrichment.backfill import backfill_languages, translate_scope
     from app.services.enrichment.factory import build_translator
 
+    apply_audio_loss_allowance(allow_audio_loss)
     db = SessionLocal()
     try:
+        if target == "prod":  # 纪律 37:开跑前列写入面 + 快照(与实际处理同一批)
+            from app.models.museum import Museum
+
+            m = db.query(Museum).filter_by(slug=slug).one()
+            write_surface_and_snapshot(
+                db, f"translate_{slug}", translate_scope(db, m, limit)
+            )
         out = backfill_languages(
             db,
             slug,
@@ -540,7 +574,14 @@ def main(argv=None) -> None:
         cmd_catalog(ns.slug, ns.target, ns.limit, ns.source)
     elif ns.command == "generate":
         cmd_generate(
-            ns.slug, ns.qid, ns.langs, ns.force, ns.limit, ns.target, ns.allow_full
+            ns.slug,
+            ns.qid,
+            ns.langs,
+            ns.force,
+            ns.limit,
+            ns.target,
+            ns.allow_full,
+            ns.allow_audio_loss,
         )
     elif ns.command == "report":
         cmd_report(ns.slug, ns.langs)
@@ -557,7 +598,15 @@ def main(argv=None) -> None:
             ns.batch_job,
         )
     elif ns.command == "translate":
-        cmd_translate(ns.slug, ns.langs, ns.limit, ns.target, ns.allow_full, ns.workers)
+        cmd_translate(
+            ns.slug,
+            ns.langs,
+            ns.limit,
+            ns.target,
+            ns.allow_full,
+            ns.workers,
+            ns.allow_audio_loss,
+        )
     elif ns.command == "images":
         cmd_images(ns.slug, ns.limit, ns.target)
     elif ns.command == "views":

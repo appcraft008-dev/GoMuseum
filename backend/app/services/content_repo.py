@@ -244,9 +244,15 @@ def persist_suggested_questions(
     obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if not obj:
         return 0
-    db.query(ObjectSuggestedQuestion).filter_by(
+    # ⚠️ 逐行 session.delete,不用 query(...).delete() 批量语句:批量语句绕过 session 事件,
+    # 带音频的问答被删时音频损失闸(app.services.audio_guard,契约纪律 37)看不见。
+    # 先 flush 删除再插入 —— 同一次 flush 里 SQLAlchemy 先 INSERT 后 DELETE,
+    # 会撞 (object_id, language, sort) 唯一约束。
+    for old in db.query(ObjectSuggestedQuestion).filter_by(
         object_id=obj.id, language=language
-    ).delete()
+    ):
+        db.delete(old)
+    db.flush()
     n = 0
     for i, it in enumerate(items):
         status = it.get("status", "published")
