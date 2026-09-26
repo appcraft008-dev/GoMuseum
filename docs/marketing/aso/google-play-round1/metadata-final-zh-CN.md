@@ -1,6 +1,6 @@
 # GoMuseum · Final Metadata — 简体中文 zh-CN（Google Play）
 
-**状态：草案，未上传，等待用户审核。** 追加于 2026-09-25（Round 1 只覆盖 EN/FR，见 `app-marketing-context.md`；zh-CN 之前只有旧 listing，未做 ASO）。
+**状态：用户已于 2026-09-26 上传 Play Console（文案 + 7 张商店图，待审核）。** 追加于 2026-09-25（Round 1 只覆盖 EN/FR，见 `app-marketing-context.md`；zh-CN 之前只有旧 listing，未做 ASO）。
 依据 `keyword-research-zh-CN.md`（实测 2026-09-25）与 EN/FR 定稿的产品事实边界。字符数为脚本实测（Python `len()`，CJK 每字 1 个）。
 
 ---
