@@ -72,22 +72,64 @@ def _split_paragraphs(text: str | None) -> list[str]:
 # ⚠️ 别把 It/Its/This 加进来:「It was commissioned for the coronation…」
 # 「Its significance lies in…」指的是**作品本身**,段落就展示在作品页上,
 # 指代成立 —— prod 全库 46 段是这种,加进来就是又一轮误杀。
-# ⚠️ 已知漏掉的三种(实测各 1-2 段,**故意不补**):代词在句中而非句首
-# (「The rich texture of his brown suit…」)、This + 抽象名词(「This choice
-# allowed Courbet…」)、句中引号被切开(「Sentier de la Mi-côte' is that…」)。
-# 每补一种都要往正则里加分支,而每个分支都带着误杀好开头的风险 ——
-# 上一版正是因为想「一网打尽」才误杀了 17 段。漏 3 段 > 误杀 17 段。
+# ⚠️ 已知漏掉的两种(**故意不补**):This + 抽象名词(「This choice allowed
+# Courbet…」)、句中引号被切开(「Sentier de la Mi-côte' is that…」)。
+# 每补一种都要加分支,而每个分支都带着误杀好开头的风险 ——
+# 上一版正是因为想「一网打尽」才误杀了 17 段。
 _ORPHANED_OPENING = re.compile(
     r"^(?:He|His|Him|She|Her|Hers|They|Them|Their)\b"  # 指人的代词,无先行词
     r"|^[a-z]"  # 小写开头 = 句子被腰斩
 )
 
+# 「代词在句中」原先也在故意不补之列,2026-09-27 小皇宫 TOP21-30 用户读出两篇 guide:
+#   曼特尼亚「To his left, another child…」(首句,代词不在句首)
+#   博纳尔《沃拉尔与猫》「The warm browns … of the room … To his left, …」(第二句;
+#   引出沃拉尔的首句被闸删了,全文再没出现过沃拉尔)
+# 判据:**第一个带性别的单数代词之前**,既没出现专名,也没出现指人/动物的名词 → 悬空。
+# 只看 he/his/him/she/her/hers:they/their 常指物(「tall trees … their foliage」),
+# 带进来就是误杀。宁可放过(句首的非虚词大写词一律当专名),不可误杀。
+# 实测:prod 全部已发布英文段 2829 段命中 48 段,逐条读过**全是真悬空**
+# (「He painted each of the four figures…」「This work showcases his…」),误杀 0;
+# 已知漏网:代词前刚出现过别的专名(热尔韦「…of Venus … His brushwork」)。
+_GENDERED_PRONOUN = re.compile(r"\b(?:he|his|him|she|her|hers)\b", re.I)
+_ANTECEDENT_NOUN = re.compile(
+    r"\b(?:man|men|woman|women|girl|boy|child|children|infant|baby|mother|father|"
+    r"son|daughter|sister|brother|wife|husband|figure|sitter|subject|artist|"
+    r"painter|sculptor|model|lady|gentleman|king|queen|saint|goddess|god|youth|"
+    r"soldier|rider|horseman|horsemen|knight|shepherd|peasant|dancer|bather|nude|"
+    r"person|people|couple|cat|dog|horse|lion|bird)s?\b",
+    re.I,
+)
+# 句首大写词若是虚词就不算专名;不在表里的句首大写词一律当专名(偏向放行)
+_SENTENCE_FUNCTION_WORDS = {
+    "The", "A", "An", "This", "These", "That", "Those", "In", "On", "At", "To",
+    "With", "By", "From", "For", "As", "Its", "It", "Of", "And", "But", "While",
+    "Beneath", "Behind", "Above", "Below", "Around", "Against", "Here", "There",
+}  # fmt: skip
+_CAPITALIZED = re.compile(r"(?:^|(?<=[\s(\"'“‘]))([A-Z][\w’'-]*)")
+
+
+def _pronoun_lacks_antecedent(body: str) -> bool:
+    m = _GENDERED_PRONOUN.search(body)
+    if not m:
+        return False
+    before = body[: m.start()]
+    if _ANTECEDENT_NOUN.search(before):
+        return False
+    for cm in _CAPITALIZED.finditer(before):
+        prev = before[: cm.start()].rstrip()
+        at_sentence_start = not prev or prev[-1] in ".!?\n"
+        if not at_sentence_start or cm.group(1) not in _SENTENCE_FUNCTION_WORDS:
+            return False  # 出现过专名 → 可能就是先行词,放行
+    return True
+
 
 def _opening_is_orphaned(body: str | None) -> bool:
-    """正文开头是不是悬空的(指代无着落/语法残缺)。"""
+    """正文是不是悬空的(开头语法残缺,或指人代词找不到先行词)。"""
     if not body:
         return False
-    return bool(_ORPHANED_OPENING.match(body.strip()))
+    body = body.strip()
+    return bool(_ORPHANED_OPENING.match(body)) or _pronoun_lacks_antecedent(body)
 
 
 @dataclass
@@ -97,6 +139,8 @@ class SectionQuality:
     grounding_ratio: float
     conflicts: list[str] = field(default_factory=list)
     score: float = 0.0
+    # 因正文悬空而挂起(而非存活率不够):guide 据此重写一次,见 pipeline
+    orphaned: bool = False
 
 
 def _parse():
@@ -157,7 +201,8 @@ class QualityGate:
         kept_body = "\n\n".join(kept_paras) if kept_paras else None
 
         published = kept_body is not None and grounding_ratio >= GROUNDING_THRESHOLD
-        if published and _opening_is_orphaned(kept_body):
+        orphaned = published and _opening_is_orphaned(kept_body)
+        if orphaned:
             published = False
         if published:
             from app.services.enrichment.lang_detect import text_in_language
@@ -171,6 +216,7 @@ class QualityGate:
             grounding_ratio=grounding_ratio,
             conflicts=[],
             score=grounding_ratio,
+            orphaned=orphaned,
         )
 
     def gate(self, material: str, facts: str, sections: dict) -> dict:

@@ -1506,3 +1506,62 @@ def test_existing_artist_with_junk_bio_only_fills_missing_fields(session, monkey
     assert art.name_en == "Pierre-Auguste Renoir"  # 已有 → 不被这件作品的写法覆盖
     assert art.notable_works == ["Bal du moulin de la Galette"]  # 已有 → 不动
     assert art.birth == "1841"  # 缺 → 补
+
+
+def _guide_run(session, drafts, verdicts_for):
+    """真实 QualityGate + 假模型:drafts 依次作为每次 guide 生成的产出。"""
+    import json
+
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import QualityGate
+
+    calls = []
+
+    class _Enr(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            calls.append(1)
+            return drafts[len(calls) - 1]
+
+    def complete(system, user):
+        return json.dumps({"verdicts": verdicts_for(user)})
+
+    gate = QualityGate(complete)
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=gate,
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    row = (
+        session.query(ObjectContentSection)
+        .filter_by(language="en", section_code="guide")
+        .one()
+    )
+    return row, len(calls)
+
+
+def test_orphaned_guide_is_regenerated_once(session):
+    """博纳尔《沃拉尔与猫》:引出沃拉尔的首句被闸删,剩下「To his left…」无着落。
+    guide 是作品页主讲解,挂起=这件没讲解 → 重写一次,新稿过闸就发布。"""
+    first = "Vollard sits by the fire. To his left, a sculpture. The cat sleeps."
+    second = "Vollard sits by the fire. A sculpture stands nearby. The cat sleeps."
+    row, n = _guide_run(
+        session,
+        [first, second],
+        lambda user: [False, True, True] if "To his left" in user else [True] * 3,
+    )
+    assert n == 2
+    assert row.status == "published"
+    assert row.body == second
+
+
+def test_guide_held_for_low_grounding_is_not_regenerated(session):
+    """对照组:存活率不够(脑补多)而挂起的 guide **不**重写 —— 重写只为悬空,
+    否则就成了「换着花样生成直到过闸」,闸的意义没了。"""
+    draft = "Vollard sits by the fire. He was born in 1700. He owned a castle."
+    row, n = _guide_run(session, [draft, "unused"], lambda user: [True, False, False])
+    assert n == 1
+    assert row.status == "needs_review"

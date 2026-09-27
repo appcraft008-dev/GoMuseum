@@ -31,6 +31,7 @@ base64、任务是**认出这是哪件**(候选名 + 墙签 OCR),用 mini 足够
 from __future__ import annotations
 
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +87,125 @@ def ensure_description(db, obj) -> bool:
     except Exception:
         logger.exception("VISION_FAILED qid=%s url=%s", obj.qid, url)
         return False
+    if _QUOTED.search(text):  # 绝大多数描述没有转写,不查作者、不调模型
+        text = strip_signatures(text, _artist_names(db, obj))
     from sqlalchemy.orm.attributes import flag_modified
 
     obj.attributes = {**attrs, KEY: text, VIA_KEY: f"{MODEL}/{DETAIL}"}
     flag_modified(obj, "attributes")
     db.flush()
     return True
+
+
+# ---- 签名过滤(看图之后,纯文本) ----------------------------------------------
+# 看图 prompt 里已经写了「不许转写签名」,但模型认不出**不像签名的签名**:
+#   齐马《圣母子》画中字条上的「IOANNES B」(= Ioannes Baptista,作者本名拉丁化)
+#   被当成「inscription」转写,下游 guide 写成「铭文暗示了艺术家的身份」。
+# 在 prompt 里加细则反而更糟(2026-09-27 A/B,各 2 次):新写法点名了
+# 「名字+年份」,库尔贝自画像从 0/2 → 2/2 转写出「Gustave Courbet 1842」,
+# 齐马照旧 2/2 —— **禁令里点名的东西就是种子**(同 guide 的教训)。
+# 所以不再指望看图模型自我克制,而是看完之后单独判:这条转写是不是这位作者的签名。
+# 这一步**可以**给作者名(看图那步不许给,见下方 _SYSTEM 注释),因为它只做分类、
+# 不产出描述。prod 全部 6 条带转写的描述实测:签名 2/2 判中,ECCE AGNUS DEI /
+# GLORIA / 梅尔松铭文 3/3 保留;单独的年份(克莱兰「1876」)模型判不是 → 用代码判。
+_QUOTED = re.compile(r'"([^"]+)"|“([^”]+)”')
+_YEAR_ONLY = re.compile(r"^\W*\d{4}\W*$")
+# 引号里的句号(「…"GLORIA." The setting…」)后面也要断开,否则删签名句会连带删下一句
+_SENTENCE = re.compile(r"(?<=[.!?])\s+|(?<=[.!?][\"”])\s+")
+_SIGNATURE_SYSTEM = (
+    "You check text transcribed from a photograph of an artwork. For each quoted text, "
+    "answer whether it is (part of) the ARTIST'S SIGNATURE or signing date — i.e. the "
+    "artist's own name in any language, Latinized, abbreviated or partial form, "
+    "optionally with a year or words like pinxit/fecit/f./opus. Text that names "
+    "someone else, or is a title, motto, dedication, scripture or label, is NOT a "
+    'signature. Reply JSON {"signature":[true|false,...]} in the same order.'
+)
+
+
+def _artist_names(db, obj) -> list[str]:
+    from app.models.artist import Artist
+
+    names = {obj.artist_en}
+    aq = (obj.attributes or {}).get("artist_qid")
+    art = db.query(Artist).filter_by(qid=aq).one_or_none() if aq else None
+    if art:
+        names |= set((art.name_i18n or {}).values()) | {art.name_en}
+    return sorted(n for n in names if n and re.search(r"[A-Za-z]", n))
+
+
+def _classify_signatures(names: list[str], quoted: list[str]) -> list[bool]:
+    import asyncio
+    import json
+
+    from app.services.content_generation_service import _get_openai_client
+
+    client = _get_openai_client()
+    if client is None:
+        raise RuntimeError("OpenAI client 不可用")
+
+    async def _run():
+        return await client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": _SIGNATURE_SYSTEM},
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {"artist": names, "quoted_texts": quoted}, ensure_ascii=False
+                    ),
+                },
+            ],
+        )
+
+    resp = asyncio.run(_run())
+    from app.services.llm_usage import record_llm_usage
+
+    usage = getattr(resp, "usage", None)
+    record_llm_usage(
+        "vision",
+        "gpt-4o-mini",
+        getattr(usage, "prompt_tokens", 0),
+        getattr(usage, "completion_tokens", 0),
+    )
+    flags = json.loads(resp.choices[0].message.content).get("signature") or []
+    return [bool(f) for f in flags]
+
+
+def strip_signatures(text: str, names: list[str], classify=None) -> str:
+    """删掉描述里转写了作者签名/落款年份的**整句**。没有引号转写就原样返回(不调模型)。
+
+    判不出来(调用失败/返回条数不对)→ 原样返回:签名漏网是老行为,
+    而因为这一步失败把整段视觉描述丢掉,那一件就回到脑补状态,更糟。
+    """
+    # 引号内部不断句:签名常带首字母缩写(「h. Daumier」「G. Courbet」),
+    # 在那个点上切开会让引号两半各落一句,一条转写都认不出来,签名原样漏过
+    spans = [m.span() for m in _QUOTED.finditer(text)]
+    cuts = [
+        m
+        for m in _SENTENCE.finditer(text)
+        if not any(a < m.start() < b for a, b in spans)
+    ]
+    starts = [0] + [m.end() for m in cuts]
+    ends = [m.start() for m in cuts] + [len(text)]
+    sentences = [text[a:b] for a, b in zip(starts, ends)]
+    quoted = [
+        (i, a or b) for i, s in enumerate(sentences) for a, b in _QUOTED.findall(s)
+    ]
+    if not quoted:
+        return text
+    drop = {i for i, q in quoted if _YEAR_ONLY.match(q)}
+    rest = [(i, q) for i, q in quoted if i not in drop]
+    if rest and names:
+        try:
+            flags = (classify or _classify_signatures)(names, [q for _, q in rest])
+        except Exception:
+            logger.exception("signature check failed; keeping description as is")
+            flags = []
+        if len(flags) == len(rest):
+            drop |= {i for (i, _), f in zip(rest, flags) if f}
+    return " ".join(s for i, s in enumerate(sentences) if i not in drop)
 
 
 # ⚠️ 这段 prompt 里**不出现作品标题、作者、年代** —— 调用方也不许传。
