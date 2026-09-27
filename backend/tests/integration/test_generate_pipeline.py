@@ -718,6 +718,39 @@ def test_generate_object_creates_and_reuses_artist(session, monkeypatch):
     assert calls["n"] == 1
 
 
+def test_artist_facts_failure_still_writes_bio(session, monkeypatch):
+    """作者结构化属性抓取失败(Wikidata 抖动)时,已知 artist_qid 仍要生成作者简介。"""
+    import app.services.enrichment.pipeline as pl
+    from app.models.artist import Artist
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+
+    def boom(qid, artist_qid=None):
+        raise RuntimeError("wikidata 503")
+
+    monkeypatch.setattr(pl, "_artist_facts", boom)
+
+    class _Enr(_FakeEnricher):
+        def generate_artist_bio(self, artist_obj):
+            return "Morot bio."
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.attributes = {"artist_qid": "Q405759", "artist_extract_en": "Aimé Morot..."}
+    session.commit()
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+    art = session.query(Artist).filter_by(qid="Q405759").one()
+    assert (art.bio or {}).get("en") == "Morot bio."
+
+
 def test_generate_object_translates_missing_artist_name_zh(session, monkeypatch):
     import app.services.enrichment.pipeline as pl
     from app.models.artist import Artist
