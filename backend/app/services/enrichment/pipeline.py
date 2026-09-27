@@ -371,6 +371,16 @@ def generate_object(
     # 流式先出:guide 先 gate+落库(先于深度模块),前端轮询中途即可显示主讲解。
     if guide_text:
         gq = gate.check_section(material, facts, guide_text)
+        # 闸删句后剩下的正文悬空(「To his left…」而沃拉尔那句已被删)→ 重写一次。
+        # 只对 guide:它是作品页的主讲解,挂起=这件没有讲解;深度段挂起就挂起(宁缺)。
+        # 生成有随机性,重写一次多半不再撞上同一处删句;仍悬空就照常挂起。
+        if getattr(gq, "orphaned", False):
+            logger.info("guide orphaned after gate, regenerating once: %s", qid)
+            retry = enricher.generate_default_guide(
+                obj, facts, guide_target_chars(o.popularity)
+            )
+            if retry:
+                gq = gate.check_section(material, facts, retry)
         persist_gated_sections(db, qid, "en", {"guide": gq}, model)
         if gq.status == "published" and gq.body:
             en_published["guide"] = gq.body
