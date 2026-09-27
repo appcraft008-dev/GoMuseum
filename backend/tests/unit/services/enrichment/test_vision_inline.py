@@ -113,3 +113,89 @@ def test_pipeline_looks_at_the_image_before_it_builds_the_material():
     i_vision = src.index("ensure_description(db, o)")
     i_material = src.index("material = build_material(obj)")
     assert i_vision < i_material, "ensure_description 必须在 build_material 之前调用"
+
+
+# ---- 签名过滤:看完图之后删掉转写了作者签名的句子 --------------------------
+# 下面的描述原文都取自 prod(2026-09-27)。分类器用假的,钉住的是「判了之后删什么、
+# 留什么」;分类器本身的判断力在 prod 全部 6 条带转写的描述上实测过(见 vision.py 注释)。
+
+
+def _clf(answers):
+    seen = []
+
+    def classify(names, quoted):
+        seen.append((names, quoted))
+        return [answers[q] for q in quoted]
+
+    return classify, seen
+
+
+def test_strips_the_sentence_carrying_a_latinized_signature():
+    """齐马《圣母子》:字条上的「IOANNES B」被当成铭文转写,下游 guide 写成
+    「铭文暗示了艺术家的身份」。整句删掉,其它观察一句不少。"""
+    text = (
+        "Both figures have halos around their heads. "
+        'At the bottom of the painting, the inscription "IOANNES B" is visible. '
+        "The sky is partly cloudy."
+    )
+    classify, seen = _clf({"IOANNES B": True})
+    out = vision.strip_signatures(text, ["Cima da Conegliano"], classify)
+    assert "IOANNES" not in out
+    assert (
+        out == "Both figures have halos around their heads. The sky is partly cloudy."
+    )
+    assert seen == [(["Cima da Conegliano"], ["IOANNES B"])]
+
+
+def test_keeps_scripture_and_motto_inscriptions():
+    """对照组:作品上的经文/题字是**要**转写的(《Credo》教训),不能跟着签名一起删。
+    句号在引号里面(「…PECCATA." The child…」)—— 断句要在引号后断开,
+    否则删一句会连带吃掉下一句。"""
+    text = (
+        'A scroll reads "ECCE AGNUS DEI ECCE QUI TOLLIT PECCATA." '
+        "The child points towards the central figure."
+    )
+    classify, _ = _clf({"ECCE AGNUS DEI ECCE QUI TOLLIT PECCATA.": False})
+    assert vision.strip_signatures(text, ["Andrea Mantegna"], classify) == text
+
+
+def test_lone_year_is_a_signing_date_without_asking_the_model():
+    """克莱兰:单独一个「1876」模型判「不是签名」,但它就是落款年份 —— 代码直接删。"""
+    text = 'The dog rests on a cushion. The number "1876" appears in the lower right.'
+
+    def classify(names, quoted):
+        raise AssertionError("纯年份不该送去问模型")
+
+    out = vision.strip_signatures(text, ["Georges Clairin"], classify)
+    assert out == "The dog rests on a cushion."
+
+
+def test_classifier_failure_keeps_the_description():
+    """判不出来 → 原样保留。签名漏网是老行为;为这一步失败丢掉整段视觉描述,
+    那一件就回到脑补外观的状态,更糟。"""
+    text = 'An inscription reads "Gustave Courbet 1842." The dog is black.'
+
+    def boom(names, quoted):
+        raise RuntimeError("openai down")
+
+    assert vision.strip_signatures(text, ["Gustave Courbet"], boom) == text
+
+
+def test_description_without_quotes_skips_the_artist_lookup(monkeypatch):
+    """没有引号转写(绝大多数)→ 不查作者、不调模型。"""
+    _patch(monkeypatch, desc="A donkey grazes.")
+    monkeypatch.setattr(
+        vision, "_artist_names", lambda db, o: (_ for _ in ()).throw(AssertionError)
+    )
+    o = _obj({})
+    assert vision.ensure_description(_DB(), o) is True
+    assert o.attributes[vision.KEY] == "A donkey grazes."
+
+
+def test_ensure_description_strips_signature_before_saving(monkeypatch):
+    _patch(monkeypatch, desc='A black dog. An inscription reads "G. Courbet 1842."')
+    monkeypatch.setattr(vision, "_artist_names", lambda db, o: ["Gustave Courbet"])
+    monkeypatch.setattr(vision, "_classify_signatures", lambda n, q: [True])
+    o = _obj({})
+    vision.ensure_description(_DB(), o)
+    assert o.attributes[vision.KEY] == "A black dog."

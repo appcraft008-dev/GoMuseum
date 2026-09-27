@@ -41,6 +41,15 @@ def _gate(verdicts):
         "Their flowing garments and tender expressions convey a warmth.",
         "She was the only female artist to exhibit in the first show.",
         "moment of tension between two chess players.",  # 小写 = 被腰斩
+        # 代词在句中、之前没有任何可当先行词的专名/指人名词(2026-09-27 起拦)
+        "The rich texture of his brown suit contrasts with the headscarf.",
+        # 真实案例:曼特尼亚《圣母子与圣徒》guide 首句
+        "To his left, another child, the Infant Saint John the Baptist, points towards him.",
+        # 真实案例:博纳尔《沃拉尔与猫》guide —— 引出沃拉尔的首句被闸删了,
+        # 第二句的 his 无着落,全文再没出现沃拉尔
+        "The warm browns and muted blues of the room create an inviting atmosphere. "
+        "To his left, a mantelpiece showcases a small sculpture.",
+        "This work was part of his ongoing exploration of religious themes.",
     ],
 )
 def test_orphaned_openings_are_caught(opening):
@@ -50,13 +59,12 @@ def test_orphaned_openings_are_caught(opening):
 @pytest.mark.parametrize(
     "opening",
     [
-        "The rich texture of his brown suit contrasts with the headscarf.",  # 代词在句中
         "This choice allowed Courbet to experiment with texture.",  # This + 抽象名词
         "Sentier de la Mi-côte' is that it was painted on-site.",  # 句中引号被切开
     ],
 )
 def test_known_misses_are_documented_not_silently_forgotten(opening):
-    """这三种断法**故意不拦** —— 每补一种都要加正则分支,而每个分支都带着
+    """这两种断法**故意不拦** —— 每补一种都要加正则分支,而每个分支都带着
     误杀好开头的风险(上一版想一网打尽,误杀了 17 段)。漏 3 段 > 误杀 17 段。
 
     这条用例存在的意义是:如果哪天有人加了分支把它们拦住了,这里会变红,
@@ -80,6 +88,14 @@ def test_known_misses_are_documented_not_silently_forgotten(opening):
         "One figure stands with her back to us, draped in a cloth.",  # her 有同句先行词
         # It/Its/This 指作品本身 —— 段落就展示在作品页上,指代成立(全库 46 段)
         "It was commissioned for the coronation of Charles X.",
+        # 代词之前有先行词:指人名词 / 专名 / 句首人名 —— 必须放行
+        "A woman in a dark dress sits on the grass, cradling her child.",
+        "The seated Virgin Mary cradles the Christ Child, who reaches up with his hand.",
+        "In Self-Portrait with a Black Dog, Courbet's technique showcases his mastery.",
+        "Ambroise Vollard is captured here in profile; his brown suit is crisp.",
+        "Monet's church was painted in 1879, when he lived in Vétheuil.",
+        # they/their 常指物,不在判据内
+        "Tall trees rise on the right, their sparse foliage a delicate silhouette.",
         "Its significance lies in how it bridges two traditions.",
         "This painting quickly found its home at the Petit Palais.",
     ],
