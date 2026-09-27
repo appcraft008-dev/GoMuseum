@@ -210,6 +210,10 @@ def generate_object(
             af = _artist_facts(o.qid, artist_qid=aqid)
         except Exception:
             af = {}
+        # 结构化属性抓失败不等于没作者:已解析的 aqid 要留着,否则下面整段作者块
+        # (bio/名字)被静默跳过。2026-09-27 小皇宫《好撒玛利亚人》Q65734706 就这样没了作者简介。
+        if aqid:
+            af = {"artist_qid": aqid, **af}
         if af:
             o.attributes = {**(o.attributes or {}), **af}
             db.flush()
