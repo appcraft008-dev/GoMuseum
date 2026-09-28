@@ -50,6 +50,9 @@ def _gate(verdicts):
         "The warm browns and muted blues of the room create an inviting atmosphere. "
         "To his left, a mantelpiece showcases a small sculpture.",
         "This work was part of his ongoing exploration of religious themes.",
+        # 真实案例(2026-09-28):丢勒《约阿希姆与天使》analysis —— His 是作者不是天使
+        "The fine lines render the flowing robes of the angel. His use of shading "
+        "adds depth.",
     ],
 )
 def test_orphaned_openings_are_caught(opening):
@@ -94,6 +97,8 @@ def test_known_misses_are_documented_not_silently_forgotten(opening):
         "In Self-Portrait with a Black Dog, Courbet's technique showcases his mastery.",
         "Ambroise Vollard is captured here in profile; his brown suit is crisp.",
         "Monet's church was painted in 1879, when he lived in Vétheuil.",
+        # 真实案例(2026-09-28):《爱的低语》guide,词表缺 ballerina 被误判挂起
+        "The ballerina in a pink tutu stands poised, her hands delicately clasped.",
         # they/their 常指物,不在判据内
         "Tall trees rise on the right, their sparse foliage a delicate silhouette.",
         "Its significance lies in how it bridges two traditions.",
