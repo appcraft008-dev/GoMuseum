@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import re
+
 from app.services.enrichment.prompts import build_qa_prompt
 
 
@@ -21,6 +23,14 @@ def _clean_question(q: str):
     if not idx:
         return None  # 无问号 = 陈述句,不发
     return q[: min(idx) + 1].strip()
+
+
+# 问句里出现第二句 = 翻译模型把问题「答」了(2026-09-28 小皇宫 TOP50:
+# 「库尔贝晚年因政治参与遭遇了什么?」→ 中文成了一段「……被迫流亡到瑞士……?」)。
+# 拉丁/韩文只认「完整小写词或韩文 + 句点 + 大写/韩文」:德语「Ludwig XIV.」「Dr. Paul」
+# 「17. Jahrhundert」「Hl. Sebastian」都带句点,宽松版在 prod 存量上误伤 17 条(已逐条核对)。
+# 标题里自带的句点(「Le Repos au bord d'un ruisseau. Lisière de bois」)判前先把标题抠掉。
+_MULTI_SENTENCE = re.compile(r"[。！]|(?:[a-zß-ÿ]{3}|[가-힣])[.!]\s+[A-ZÀ-Þ가-힣]")
 
 
 def translate_qa_items(
@@ -54,6 +64,12 @@ def translate_qa_items(
         # 翻译侧注入了 title/artist,检查侧也必须知道 —— 否则它拿英文直译当标准,
         # 把规范名判成错译(契约纪律 22;prod 存量 595 条非英语问答卡在 needs_review)。
         ok, _ = translator.check_faithfulness(it["answer"], ta, lang, **names)
+        # 问句也要查:原先只查答案,问句被「答掉」或把作者换成画中人
+        # (「弗拉戈纳尔的家庭背景」→「拉朗德的家庭背景」)都直接发布了。
+        q_ok, _ = translator.check_faithfulness(it["question"], tq, lang, **names)
+        q_ok = q_ok and not _MULTI_SENTENCE.search(
+            tq.replace(title, "") if title else tq
+        )
         from app.services.enrichment.lang_detect import text_in_language
 
         # 语言闸:问句或答案不是目标语(混英文等)→ 不发布
@@ -62,7 +78,7 @@ def translate_qa_items(
             {
                 "question": tq,
                 "answer": ta,
-                "status": "published" if (ok and lang_ok) else "needs_review",
+                "status": "published" if (ok and q_ok and lang_ok) else "needs_review",
             }
         )
     return out
