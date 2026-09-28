@@ -200,6 +200,43 @@ def test_run_lazy_translation_clears_lock(session, monkeypatch):
     assert not (_obj(session).attributes or {}).get("lazy_lock_at")
 
 
+def test_lazy_run_tags_only_its_own_rows(session, monkeypatch):
+    """懒任务写的段标 ai_lazy(日上限只数它);此前就有的段、别的件都不动。"""
+    import app.services.enrichment.lazy as lazy
+
+    _publish(session, "Q1", "en")  # 任务开始前已有(批量写的)
+    old = session.query(ObjectContentSection).one()
+    old.generated_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    other = MuseumObject(museum_id=_obj(session).museum_id, qid="Q2")
+    session.add(other)
+    session.commit()
+
+    def fake_translate(db, qid, lang):
+        for oid in (_obj(db).id, other.id):
+            db.add(
+                ObjectContentSection(
+                    object_id=oid,
+                    language=lang,
+                    section_code="guide",
+                    body="x",
+                    generated_at=datetime.now(timezone.utc),
+                )
+            )
+        db.commit()
+
+    monkeypatch.setattr(lazy, "_translate", fake_translate)
+    lazy.run_lazy_translation("Q1", "de", session_factory=lambda: session, close=False)
+    got = {
+        (r.object_id == other.id, r.language): r.source
+        for r in session.query(ObjectContentSection)
+    }
+    assert got == {
+        (False, "en"): "ai_generated",
+        (False, "de"): lazy.LAZY_SOURCE,
+        (True, "de"): "ai_generated",
+    }
+
+
 def test_run_lazy_generation_clears_lock(session, monkeypatch):
     # 完成后清锁;生成本体由 generate_object 负责置 ready/empty(此处 fake)
     import app.services.enrichment.lazy as lazy
