@@ -91,12 +91,16 @@ _ORPHANED_OPENING = re.compile(
 # 实测:prod 全部已发布英文段 2829 段命中 48 段,逐条读过**全是真悬空**
 # (「He painted each of the four figures…」「This work showcases his…」),误杀 0;
 # 已知漏网:代词前刚出现过别的专名(热尔韦「…of Venus … His brushwork」)。
+# 词表缺词会误杀:2026-09-28《爱的低语》guide「The ballerina … her hands」被判悬空挂起
+# (表里有 dancer 没 ballerina)。只补这一个:prod 63 处命中里它是唯一缺词误判;
+# 别顺手补 angel —— 丢勒「the robes of the angel. His use of shading」的 His 是作者,真悬空。
 _GENDERED_PRONOUN = re.compile(r"\b(?:he|his|him|she|her|hers)\b", re.I)
 _ANTECEDENT_NOUN = re.compile(
     r"\b(?:man|men|woman|women|girl|boy|child|children|infant|baby|mother|father|"
     r"son|daughter|sister|brother|wife|husband|figure|sitter|subject|artist|"
     r"painter|sculptor|model|lady|gentleman|king|queen|saint|goddess|god|youth|"
-    r"soldier|rider|horseman|horsemen|knight|shepherd|peasant|dancer|bather|nude|"
+    r"soldier|rider|horseman|horsemen|knight|shepherd|peasant|dancer|ballerina|"
+    r"bather|nude|"
     r"person|people|couple|cat|dog|horse|lion|bird)s?\b",
     re.I,
 )
