@@ -162,3 +162,8 @@ def test_translate_section_strips_echoed_text_wrapper_tags():
 
     t = ContentTranslator(fake_complete)
     assert t.translate_section("x", "fr") == "Le cheval brun."
+    # 标签名是模型自己编的,prod 里还见过 <translated_text>
+    t2 = ContentTranslator(
+        lambda s, u: "<translated_text>Les joueurs</translated_text>"
+    )
+    assert t2.translate_section("x", "fr") == "Les joueurs"
