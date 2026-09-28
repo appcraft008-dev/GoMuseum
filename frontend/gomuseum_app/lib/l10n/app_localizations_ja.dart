@@ -345,15 +345,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoSavePhotoNeedsAccess => '写真を保存するには写真ライブラリへのアクセスが必要です';
 
   @override
-  String get ttsVoice => 'TTS音声';
-
-  @override
-  String get ttsVoiceValue => '落ち着いた · 女性';
-
-  @override
-  String get ttsVoiceSelect => '音声を選択';
-
-  @override
   String get secAccount => 'アカウント';
 
   @override

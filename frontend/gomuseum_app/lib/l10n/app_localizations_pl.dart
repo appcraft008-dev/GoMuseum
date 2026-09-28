@@ -349,15 +349,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zapisywanie zdjęć wymaga dostępu do galerii';
 
   @override
-  String get ttsVoice => 'Głos TTS';
-
-  @override
-  String get ttsVoiceValue => 'Spokojny · Kobiecy';
-
-  @override
-  String get ttsVoiceSelect => 'Wybierz głos';
-
-  @override
   String get secAccount => 'Konto';
 
   @override

@@ -23,7 +23,6 @@ class GenerateTtsAudio {
     return await repository.generateTtsAudio(
       text: params.text,
       language: params.language,
-      voice: params.voice,
       speed: params.speed,
     );
   }
@@ -52,13 +51,11 @@ class GenerateTtsAudio {
 class GenerateTtsAudioParams {
   final String text;
   final String language;
-  final String? voice;
   final double? speed;
 
   const GenerateTtsAudioParams({
     required this.text,
     required this.language,
-    this.voice,
     this.speed,
   });
 }

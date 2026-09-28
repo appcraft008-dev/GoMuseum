@@ -349,15 +349,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se necesita acceso a la fototeca para guardar las fotos';
 
   @override
-  String get ttsVoice => 'Voz TTS';
-
-  @override
-  String get ttsVoiceValue => 'Serena · Femenina';
-
-  @override
-  String get ttsVoiceSelect => 'Elegir voz';
-
-  @override
   String get secAccount => 'Cuenta';
 
   @override

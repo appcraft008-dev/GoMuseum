@@ -99,13 +99,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               value: ref.watch(autoSavePhotoProvider),
               onChanged: _setAutoSavePhoto,
             ),
-            _row(
-              gm: gm,
-              icon: GmIcons.volume,
-              label: l10n.ttsVoice,
-              value: l10n.ttsVoiceValue,
-              onTap: () => _comingSoon(l10n.ttsVoiceSelect),
-            ),
             _appearanceRow(gm),
             const SizedBox(height: 12),
             GmSectionHead(number: '02', label: l10n.secAccount),
