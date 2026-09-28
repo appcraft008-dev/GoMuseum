@@ -19,7 +19,7 @@ from app.core.database import Base
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
-from app.services.enrichment.lazy import daily_budget_exhausted
+from app.services.enrichment.lazy import LAZY_SOURCE, daily_budget_exhausted
 
 
 @pytest.fixture()
@@ -47,7 +47,7 @@ def db():
     s.close()
 
 
-def _add(s, n, *, at):
+def _add(s, n, *, at, source=LAZY_SOURCE):
     for i in range(n):
         s.add(
             ObjectContentSection(
@@ -56,6 +56,7 @@ def _add(s, n, *, at):
                 section_code=f"s{at.timestamp()}-{i}",
                 body="x",
                 generated_at=at,
+                source=source,
             )
         )
     s.commit()
@@ -120,3 +121,13 @@ def test_generated_at_null_does_not_count(db):
     )
     db.commit()
     assert daily_budget_exhausted(db, cap=1) is False
+
+
+def test_batch_written_sections_do_not_count(db):
+    """负样本:批量任务(默认来源)写的段不占懒生成额度。
+
+    2026-09-28:批量补译 440 段吃光当天额度,用户点开新语言全被跳过。
+    配对正样本是 test_at_cap_is_exhausted(同样 3 段、来源是懒任务 → 停)。
+    """
+    _add(db, 50, at=_today(), source="ai_generated")
+    assert daily_budget_exhausted(db, cap=3) is False

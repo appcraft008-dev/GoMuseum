@@ -20,6 +20,10 @@ _SEM = threading.Semaphore(2)
 # 300 段 ≈ 170 件 ≈ $1-3/天;近 40 天真实业务量是 838 段/40 天,远低于它。
 # ponytail: 一条 count 查询,不建表不加字段。见 daily_budget_exhausted。
 _LAZY_DAILY_SECTION_CAP = 300
+# 懒生成/懒翻译写的段打这个来源,日上限只数它。原先不分来源:2026-09-28 我批量
+# 补译小皇宫 440 段把当天额度吃光,用户点开第 61 件的 7 门语言全被「预算用尽」跳过,
+# App 显示错误。批量是运营者主动花的钱,不该挤掉用户那份。
+LAZY_SOURCE = "ai_lazy"
 
 
 def lock_active(obj: MuseumObject) -> bool:
@@ -98,6 +102,20 @@ def _translate(db, qid: str, language: str) -> dict:
     return out
 
 
+def _tag_lazy_rows(db, obj: MuseumObject, since) -> None:
+    """把本次懒任务写的段标成 LAZY_SOURCE(日上限只数这些)。
+
+    ponytail: 按「该件 + 本次开始后生成」圈行,不往写入咽喉里穿参数;
+    同一件恰好同时被批量写入会多计几段,只会让闸更早停,方向安全。"""
+    from app.models.content import ObjectContentSection
+
+    db.query(ObjectContentSection).filter(
+        ObjectContentSection.object_id == obj.id,
+        ObjectContentSection.generated_at >= since,
+    ).update({"source": LAZY_SOURCE}, synchronize_session=False)
+    db.commit()
+
+
 def _run_locked(
     qid: str, work, label: str, *, session_factory=None, close=True
 ) -> None:
@@ -120,6 +138,7 @@ def _run_locked(
     try:
         db = session_factory()
         try:
+            t0 = datetime.now(timezone.utc)
             try:
                 out = work(db)
                 logger.info("%s done: %s -> %s", label, qid, out)
@@ -128,6 +147,7 @@ def _run_locked(
                 logger.exception("%s failed: %s", label, qid)
             o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
             if o:
+                _tag_lazy_rows(db, o, t0)  # 失败前已落库的段也是花掉的钱,照样计
                 _clear_lock(db, o)
         finally:
             if close:
@@ -242,9 +262,9 @@ def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
     一个脚本化账号约 5 天能跑完全库。这道闸钉住的是**最坏一天能花多少钱**，
     与调用者是谁无关 —— 正是身份闸覆盖不到的那一半。
 
-    ⚠️ 计数**不区分来源**：批量上新馆写的段也算进来。这是刻意的 ——
-    它管的是当天总花费。代价是上新馆那天懒生成会暂停，所以挡住时要打日志，
-    否则是静默行为。
+    只数懒任务写的段(`source == LAZY_SOURCE`)。原先刻意不分来源、管当天总花费,
+    代价是批量跑的那天用户点开新语言全被跳过 —— 2026-09-28 实际发生(见 LAZY_SOURCE)。
+    批量是运营者看着跑的,不需要这道止损。
     """
     from app.models.content import ObjectContentSection
 
@@ -253,7 +273,10 @@ def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
     )
     return (
         db.query(ObjectContentSection)
-        .filter(ObjectContentSection.generated_at >= start)
+        .filter(
+            ObjectContentSection.generated_at >= start,
+            ObjectContentSection.source == LAZY_SOURCE,
+        )
         .count()
         >= cap
     )
