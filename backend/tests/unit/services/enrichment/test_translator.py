@@ -33,6 +33,24 @@ def test_check_faithfulness_false_with_issues():
     assert issues == ["dropped the year"]
 
 
+def test_german_compound_numbers_reach_judge_as_digits():
+    # 判定模型把 sechsundsiebzig 读成 67:送判定的副本要换成数字,其它语言不动
+    seen = []
+
+    def fake_complete(system, user):
+        seen.append(user)
+        return json.dumps({"faithful": True, "issues": []})
+
+    t = ContentTranslator(fake_complete)
+    de = (
+        "Sechsundzwanzig Künstler; Platz sechs von achtundfünfzig; mit sechsundsiebzig."
+    )
+    t.check_faithfulness("en", de, "de")
+    assert "26 Künstler" in seen[0] and "von 58" in seen[0] and "mit 76" in seen[0]
+    t.check_faithfulness("en", "einundzwanzig", "fr")
+    assert "einundzwanzig" in seen[1]
+
+
 def test_translate_object_skips_en_and_marks_unfaithful():
     # fr 忠实→published；de 不忠实→needs_review
     def router(system, user):
