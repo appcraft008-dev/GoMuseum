@@ -152,3 +152,18 @@ def test_translate_section_strips_leaked_canonical_tags():
     assert "<canonical" not in out and "</canonical" not in out
     # 只剥标签,名字本身必须留下(别剥成空)
     assert "사슬에 묶인 행동" in out and "아리스티드 마욜" in out
+
+
+def test_translate_section_strips_echoed_text_wrapper_tags():
+    """原文包在 <source_text> 里,模型偶尔给译文也套 <target_text>(prod 2 段法语已发布)。"""
+
+    def fake_complete(system, user):
+        return "<target_text>\nLe cheval brun.\n</target_text>"
+
+    t = ContentTranslator(fake_complete)
+    assert t.translate_section("x", "fr") == "Le cheval brun."
+    # 标签名是模型自己编的,prod 里还见过 <translated_text>
+    t2 = ContentTranslator(
+        lambda s, u: "<translated_text>Les joueurs</translated_text>"
+    )
+    assert t2.translate_section("x", "fr") == "Les joueurs"
