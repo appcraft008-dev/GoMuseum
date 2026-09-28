@@ -16,7 +16,11 @@ from app.services.enrichment.quality import SectionQuality
 _NAME_QUOTES = "《》\"'“”‘’«»"
 
 # 规范名注入用的 XML 标签(prompts.build_translation_prompt),偶尔被模型抄进译文。
-_CANONICAL_TAG = re.compile(r"</?canonical_(?:title|artist|museum)>")
+# 原文用 <source_text> 包裹(prompts.build_translation_prompt),模型偶尔照样给译文
+# 套 <target_text>:2026-09-28 prod 有 2 段已发布法语、1 段日语带着它。
+_CANONICAL_TAG = re.compile(
+    r"</?(?:canonical_(?:title|artist|museum)|source_text|target_text)>"
+)
 
 
 # 德语复合数字词「个位在前」,判定模型读错:sechsundsiebzig(76)读成 67、
