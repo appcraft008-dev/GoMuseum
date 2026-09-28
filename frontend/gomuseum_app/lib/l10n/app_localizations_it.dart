@@ -349,15 +349,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Serve l\'accesso alla libreria foto per salvare le foto';
 
   @override
-  String get ttsVoice => 'Voce TTS';
-
-  @override
-  String get ttsVoiceValue => 'Pacata · Femminile';
-
-  @override
-  String get ttsVoiceSelect => 'Scegli voce';
-
-  @override
   String get secAccount => 'Account';
 
   @override

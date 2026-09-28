@@ -725,24 +725,6 @@ abstract class AppLocalizations {
   /// **'Photo library access is needed to save photos'**
   String get autoSavePhotoNeedsAccess;
 
-  /// No description provided for @ttsVoice.
-  ///
-  /// In en, this message translates to:
-  /// **'TTS voice'**
-  String get ttsVoice;
-
-  /// No description provided for @ttsVoiceValue.
-  ///
-  /// In en, this message translates to:
-  /// **'Calm · Female'**
-  String get ttsVoiceValue;
-
-  /// No description provided for @ttsVoiceSelect.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose voice'**
-  String get ttsVoiceSelect;
-
   /// No description provided for @secAccount.
   ///
   /// In en, this message translates to:

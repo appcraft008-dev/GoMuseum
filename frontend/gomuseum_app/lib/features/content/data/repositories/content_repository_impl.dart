@@ -45,14 +45,12 @@ class ContentRepositoryImpl implements ContentRepository {
   Future<Either<Failure, String>> generateTtsAudio({
     required String text,
     required String language,
-    String? voice,
     double? speed,
   }) async {
     try {
       final result = await remoteDataSource.generateTtsAudio(
         text: text,
         language: language,
-        voice: voice,
         speed: speed,
       );
       return Right(result);

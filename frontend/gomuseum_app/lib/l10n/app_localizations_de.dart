@@ -350,15 +350,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Für das Speichern von Fotos wird Zugriff auf die Fotomediathek benötigt';
 
   @override
-  String get ttsVoice => 'TTS-Stimme';
-
-  @override
-  String get ttsVoiceValue => 'Ruhig · Weiblich';
-
-  @override
-  String get ttsVoiceSelect => 'Stimme wählen';
-
-  @override
   String get secAccount => 'Konto';
 
   @override

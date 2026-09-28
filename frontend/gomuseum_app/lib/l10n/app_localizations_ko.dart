@@ -345,15 +345,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get autoSavePhotoNeedsAccess => '사진을 저장하려면 사진 보관함 접근 권한이 필요합니다';
 
   @override
-  String get ttsVoice => 'TTS 음성';
-
-  @override
-  String get ttsVoiceValue => '차분함 · 여성';
-
-  @override
-  String get ttsVoiceSelect => '음성 선택';
-
-  @override
   String get secAccount => '계정';
 
   @override
