@@ -108,8 +108,12 @@ def unlock_audio(
     # qid 必须真实存在。不校验的话,客户端一个笔误就让用户白掉一次额度 ——
     # 这是他花钱换来的东西,而且 404 比"扣了钱什么也没解锁"好排查得多。
     from app.models.museum_object import MuseumObject
+    from app.services.visibility import can_preview, qid_visible
 
-    if not db.query(MuseumObject.id).filter_by(qid=qid).first():
+    # 隐身馆的藏品与不存在的同一个 404,且在扣额度之前(可见性闸)
+    if not db.query(MuseumObject.id).filter_by(qid=qid).first() or not qid_visible(
+        db, qid, can_preview(db, credentials)
+    ):
         raise HTTPException(status_code=404, detail={"reason": "object_not_found"})
 
     from app.services.benefits_service import BenefitsService

@@ -302,11 +302,17 @@ def _known_object(session, qid="Q12418"):
     """解锁端点要校验 qid 真实存在 —— 测试库里得真有这一行,
     否则测的是 404 分支而不是扣费分支。"""
     import uuid as _uuid
+    from datetime import datetime
 
+    from app.models.museum import Museum
     from app.models.museum_object import MuseumObject
 
+    Museum.__table__.create(bind=session.get_bind(), checkfirst=True)
     MuseumObject.__table__.create(bind=session.get_bind(), checkfirst=True)
-    session.add(MuseumObject(id=_uuid.uuid4(), qid=qid, museum_id=_uuid.uuid4()))
+    # 端点还要过可见性闸:藏品得挂在一个已放出的馆上
+    mid = _uuid.uuid4()
+    session.add(Museum(id=mid, slug="orsay", published_at=datetime(2026, 1, 1)))
+    session.add(MuseumObject(id=_uuid.uuid4(), qid=qid, museum_id=mid))
     session.commit()
 
 

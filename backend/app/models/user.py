@@ -28,6 +28,9 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     is_guest = Column(Boolean, default=False, nullable=False)  # Guest user flag
+    # 只回答一件事:能不能看见 published_at IS NULL 的馆。不发权益、不给额度。
+    # 是 DB 列不是环境变量:验收付费链路的测试号是消耗品,换号一条 SQL,不用重新部署。
+    can_preview = Column(Boolean, default=False, server_default="false", nullable=False)
     email_verified_at = Column(DateTime, nullable=True)
 
     # Timestamps

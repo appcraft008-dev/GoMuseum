@@ -4,6 +4,7 @@ spec docs/superpowers/specs/2026-07-03-recognition-design.md。"""
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import logging
@@ -25,8 +26,31 @@ _CACHE_TTL_MATCH = 30 * 86400  # 命中稳定:30天
 _CACHE_TTL_MISS = 86400  # 未收录:目录会生长,只缓 1 天
 
 
-def _cache_key(slug: str | None, sha: str, language: str) -> str:
-    return f"recog3:{slug or 'global'}:{language}:{sha}"
+def _cache_key(slug: str | None, sha: str, language: str, visible=None) -> str:
+    # 可见馆集合进键:预览者的结果(可能含隐身馆藏品)不会被普通用户命中;
+    # 放出新馆后集合变了,旧键自然作废,不需要清缓存。
+    vtag = (
+        "all"
+        if visible is None
+        else hashlib.md5(
+            ",".join(sorted(str(v) for v in visible)).encode()
+        ).hexdigest()[:8]
+    )
+    return f"recog3:{slug or 'global'}:{language}:{vtag}:{sha}"
+
+
+def _drop_hidden(db, ranked: list, visible) -> list:
+    """去掉隐身馆的藏品(可见性闸)。向量索引是进程内缓存、不带可见性,在这里按
+    一份新鲜的可见集合过滤;隐身馆通常只有一家,查它的 qid 集合比回查全部命中便宜。"""
+    if visible is None or not ranked:
+        return ranked
+    hidden = {
+        r[0]
+        for r in db.query(MuseumObject.qid).filter(
+            MuseumObject.museum_id.notin_(visible)
+        )
+    }
+    return [(q, s) for q, s in ranked if q not in hidden] if hidden else ranked
 
 
 def _open_upright(image_bytes: bytes):
@@ -174,6 +198,7 @@ def recognize(
     vector_query_fn=None,
     embed_crops_fn=None,
     user_id=None,
+    visible=None,
 ) -> dict | None:
     """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
     slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
@@ -190,7 +215,7 @@ def recognize(
     phash = ImageService.generate_perceptual_hash(image_bytes)
 
     redis = redis if redis is not None else _get_redis()
-    ckey = _cache_key(slug, sha, language)
+    ckey = _cache_key(slug, sha, language, visible)
     if redis is not None:
         try:
             hit = redis.get(ckey)
@@ -241,6 +266,7 @@ def recognize(
                             if s > agg.get(qid, -2.0):
                                 agg[qid] = s
                     ranked = sorted(agg.items(), key=lambda kv: -kv[1])
+            ranked = _drop_hidden(db, ranked, visible)
             out = _vector_out(db, storage, ranked, language)
             if out is not None:
                 engine = "vector_crops" if crops_used else "vector"
@@ -270,9 +296,10 @@ def recognize(
         if not queries and not label_lines:
             out["reason"] = "no_candidates"
         else:
-            results = match(
-                build_index(db, museum_id), queries, label_lines, artist_hints
-            )
+            index = build_index(db, museum_id)
+            if visible is not None:
+                index = [e for e in index if e["museum_id"] in visible]
+            results = match(index, queries, label_lines, artist_hints)
             top = results[0] if results else None
             # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);
             # 直判只属于向量像素证据。将来 matcher 若回传"馆藏号命中"类型,可为 inv 命中恢复直判。
@@ -383,6 +410,7 @@ def recognize_billed(
     redis=None,
     embed_fn=None,
     vector_query_fn=None,
+    visible=None,
 ) -> dict | None:
     """带配额的识别(计费规则,用户 2026-07-04 批准 / 2026-09-20 修订):
     match 扣 1;unrecognized 不扣(不为失败付费);缓存命中不扣(不重复扣);
@@ -423,6 +451,7 @@ def recognize_billed(
         embed_fn=embed_fn,
         vector_query_fn=vector_query_fn,
         user_id=user_id,  # 埋点顺带记足迹;device_id 不传(匿名就是匿名)
+        visible=visible,
     )
     if out is not None and out.get("outcome") == "match":
         cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)

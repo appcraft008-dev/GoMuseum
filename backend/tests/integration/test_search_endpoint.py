@@ -1,5 +1,7 @@
 """搜索端点契约:全局(museums+objects 两段)vs 馆域(仅 objects)、language、404、空态。"""
 
+from datetime import datetime
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -55,6 +57,8 @@ def client():
             "attributes": {"title_i18n": {"zh": "星夜"}},
         },
     )
+    # 可见性闸:测试馆视为已放出
+    s.query(Museum).update({"published_at": datetime(2026, 1, 1)})
     s.commit()
     s.close()
     inprocess._index_cache.clear()
