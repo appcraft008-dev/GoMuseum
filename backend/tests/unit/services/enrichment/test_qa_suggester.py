@@ -183,3 +183,67 @@ def test_fact_field_is_dropped_not_shown():
         "m", "f", "painting", ["en"]
     )
     assert out["en"] == [{"question": "Q1?", "answer": "A1.", "status": "published"}]
+
+
+class _EchoTr:
+    """译文 = 预设表;忠实度按 bad 集合判。"""
+
+    def __init__(self, table, bad=()):
+        self.table, self.bad = table, set(bad)
+
+    def translate_section(self, text, lang, **_kw):
+        return self.table.get(text, text)
+
+    def check_faithfulness(self, en, tr, lang, **_kw):
+        return (tr not in self.bad), []
+
+
+def _one(tr, q, a="Answer text.", lang="zh", **kw):
+    from app.services.enrichment.qa_suggester import translate_qa_items
+
+    return translate_qa_items(tr, [{"question": q, "answer": a}], lang, **kw)[0]
+
+
+def test_question_translated_into_an_answer_is_held(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+    )
+    tr = _EchoTr(
+        {
+            "What happened to Courbet later?": "库尔贝晚年遭遇了许多挑战。他最终被迫流亡到瑞士？",
+            "Answer text.": "答案。",
+        }
+    )
+    assert _one(tr, "What happened to Courbet later?")["status"] == "needs_review"
+
+
+def test_question_that_fails_faithfulness_is_held(monkeypatch):
+    """问句换了人(作者→画中人)只有问句的忠实度检查能抓到。"""
+    monkeypatch.setattr(
+        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+    )
+    tr = _EchoTr(
+        {
+            "What was Fragonard's family background?": "拉朗德的家庭背景如何？",
+            "Answer text.": "答案。",
+        },
+        bad={"拉朗德的家庭背景如何？"},
+    )
+    assert (
+        _one(tr, "What was Fragonard's family background?")["status"] == "needs_review"
+    )
+
+
+def test_abbreviations_and_dotted_titles_are_not_second_sentences(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+    )
+    title = "Le Repos au bord d'un ruisseau. Lisière de bois"
+    for q in (
+        "Wie war die Reaktion des Hofes auf das Porträt Ludwig XIV. von Rigaud?",
+        "Warum zeigte van Gogh dieses Bild Dr. Paul Gachet?",
+        "Was geschah mit dem Stundenbuch nach dem 17. Jahrhundert?",
+        f"Pourquoi Sisley a-t-il peint '{title}' ici ?",
+    ):
+        tr = _EchoTr({})
+        assert _one(tr, q, lang="de", title=title)["status"] == "published", q
