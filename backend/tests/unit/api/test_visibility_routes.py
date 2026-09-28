@@ -8,11 +8,7 @@
 登记"接了闸"只是声明;行为由 `tests/integration/test_visibility_gate.py` 的 2×2 验证。
 """
 
-import inspect
-import re
-import typing
-
-from fastapi.routing import APIRoute
+from pathlib import Path
 
 from app.main import app
 
@@ -41,27 +37,25 @@ REGISTRY = {
 }
 
 
-def _locating_params(route: APIRoute) -> set[str]:
-    """读端点函数签名,不读 `route.dependant`:后者是 FastAPI 内部结构,CI 与本地
-    版本不同(0.141 vs 0.115)时整个探测器静默失明 —— 实测过一次,靠下面的自检才发现。"""
-    names = set(re.findall(r"\{(\w+)\}", route.path))
-    try:
-        hints = typing.get_type_hints(route.endpoint)
-    except Exception:
-        hints = {}
-    for name, param in inspect.signature(route.endpoint).parameters.items():
-        names.add(name)
-        ann = hints.get(name, param.annotation)
-        names |= set(getattr(ann, "model_fields", None) or {})
-    return names & _KEYS
-
-
 def _locating_routes() -> set[tuple[str, str]]:
+    """从 OpenAPI 读,不碰 `app.routes`。
+
+    两次教训:①`route.dependant` 是内部结构;②FastAPI 0.141 起 `include_router`
+    不再把子路由摊平进 `app.routes`(包成 `_IncludedRouter`)—— CI 用 0.141、本地
+    0.115,探测器在 CI 上一条路由都没扫到。OpenAPI 是公开契约,完整路径、参数名、
+    请求体字段都在里面,跨版本稳定。代价是 `include_in_schema=False` 的路由看不见,
+    由 `test_no_new_routes_hidden_from_openapi` 兜住。"""
+    spec = app.openapi()
+    comps = spec.get("components", {}).get("schemas", {})
     out = set()
-    for r in app.routes:
-        if isinstance(r, APIRoute) and _locating_params(r):
-            for m in r.methods:
-                out.add((m, r.path))
+    for path, ops in spec["paths"].items():
+        for method, op in ops.items():
+            names = {p["name"] for p in op.get("parameters", [])}
+            for c in op.get("requestBody", {}).get("content", {}).values():
+                ref = c.get("schema", {}).get("$ref", "")
+                names |= set(comps.get(ref.split("/")[-1], {}).get("properties", {}))
+            if names & _KEYS:
+                out.add((method.upper(), path))
     return out
 
 
@@ -86,3 +80,20 @@ def test_detector_sees_path_query_and_body_params():
     assert ("GET", "/api/v1/museums/{slug}") in found  # path
     assert ("POST", "/api/v1/entitlements/audio/unlock") in found  # query
     assert ("POST", "/api/v1/recognize/confirm") in found  # body
+
+
+# 从 OpenAPI 隐藏的路由探测器看不见 —— 只允许这两个与馆/藏品无关的 HTML 页
+_HIDDEN_OK = {"auth.py": 2}  # /auth/reset、/auth/verify-email
+
+
+def test_no_new_routes_hidden_from_openapi():
+    endpoints = Path(__file__).resolve().parents[3] / "app" / "api"
+    hidden = {}
+    for f in endpoints.rglob("*.py"):
+        n = f.read_text(encoding="utf-8").count("include_in_schema=False")
+        if n:
+            hidden[f.name] = n
+    assert hidden == _HIDDEN_OK, (
+        f"有路由从 OpenAPI 隐藏了自己: {hidden}。可见性闸登记簿靠 OpenAPI 扫描,"
+        "隐藏的路由会绕过它 —— 确认与馆/藏品无关后再加进 _HIDDEN_OK。"
+    )
