@@ -8,6 +8,10 @@
 登记"接了闸"只是声明;行为由 `tests/integration/test_visibility_gate.py` 的 2×2 验证。
 """
 
+import inspect
+import re
+import typing
+
 from fastapi.routing import APIRoute
 
 from app.main import app
@@ -38,11 +42,17 @@ REGISTRY = {
 
 
 def _locating_params(route: APIRoute) -> set[str]:
-    d = route.dependant
-    names = {p.name for p in d.path_params + d.query_params}
-    for b in d.body_params:
-        names.add(b.name)
-        names |= set(getattr(getattr(b, "type_", None), "model_fields", {}) or {})
+    """读端点函数签名,不读 `route.dependant`:后者是 FastAPI 内部结构,CI 与本地
+    版本不同(0.141 vs 0.115)时整个探测器静默失明 —— 实测过一次,靠下面的自检才发现。"""
+    names = set(re.findall(r"\{(\w+)\}", route.path))
+    try:
+        hints = typing.get_type_hints(route.endpoint)
+    except Exception:
+        hints = {}
+    for name, param in inspect.signature(route.endpoint).parameters.items():
+        names.add(name)
+        ann = hints.get(name, param.annotation)
+        names |= set(getattr(ann, "model_fields", None) or {})
     return names & _KEYS
 
 
