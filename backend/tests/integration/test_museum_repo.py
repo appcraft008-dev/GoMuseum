@@ -1,3 +1,5 @@
+from datetime import datetime
+
 # tests/integration/test_museum_repo.py
 import pytest
 from sqlalchemy import create_engine
@@ -56,6 +58,8 @@ def session():
             "attributes": {},
         },
     )
+    # 可见性闸:测试馆视为已放出
+    s.query(Museum).update({"published_at": datetime(2026, 1, 1)})
     s.commit()
     yield s
 
@@ -240,6 +244,8 @@ def test_pack_skip_artworks_avoids_object_queries(session):
 
 def _add(session, slug):
     upsert_museum(session, {"slug": slug, "name_en": slug, "country": "FR"})
+    # 可见性闸:测试馆视为已放出
+    session.query(Museum).update({"published_at": datetime(2026, 1, 1)})
     session.commit()
 
 

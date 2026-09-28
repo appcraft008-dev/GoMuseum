@@ -1,3 +1,5 @@
+from datetime import datetime
+
 # tests/integration/test_museums_endpoint_db.py
 import pytest
 from fastapi.testclient import TestClient
@@ -52,6 +54,8 @@ def client():
             "attributes": {},
         },
     )
+    # 可见性闸:测试馆视为已放出
+    s.query(Museum).update({"published_at": datetime(2026, 1, 1)})
     s.commit()
     app.dependency_overrides[get_db] = lambda: (yield s)
     yield TestClient(app)

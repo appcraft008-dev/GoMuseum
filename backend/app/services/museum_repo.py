@@ -536,16 +536,19 @@ def museum_name(museum: Museum, language: str) -> str:
     return names.get(language) or names.get("en") or names.get("zh") or museum.slug
 
 
-def list_museums(db: Session) -> list[dict]:
+def list_museums(db: Session, *, preview: bool = False) -> list[dict]:
+    """preview=False 只列已放出的馆(可见性闸,spec 2026-09-20)。"""
+    q = db.query(Museum, func.count(MuseumObject.id).label("cnt")).outerjoin(
+        MuseumObject, MuseumObject.museum_id == Museum.id
+    )
+    if not preview:
+        q = q.filter(Museum.published_at.isnot(None))
     rows = (
-        db.query(Museum, func.count(MuseumObject.id).label("cnt"))
-        .outerjoin(MuseumObject, MuseumObject.museum_id == Museum.id)
-        .group_by(Museum.id)
+        q.group_by(Museum.id)
         # 按 slug 只是兜底次序——真正的排序在下面按 rank 做。别把它当最终顺序:
         # 首条会被探索页拿去上大卡,而字母序意味着哪天上个 `british_museum`
         # 就会无声顶掉卢浮宫的首位。
-        .order_by(Museum.slug)
-        .all()
+        .order_by(Museum.slug).all()
     )
     storage = get_object_storage()
     out = []

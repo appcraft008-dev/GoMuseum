@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -41,6 +43,8 @@ def client():
             "image": "http://i/1.jpg",  # 有图过滤后:列表对象需有图
         },
     )
+    # 可见性闸:测试馆视为已放出
+    s.query(Museum).update({"published_at": datetime(2026, 1, 1)})
     s.commit()
     s.close()
 

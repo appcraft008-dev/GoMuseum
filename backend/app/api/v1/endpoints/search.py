@@ -8,6 +8,7 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.config import MAX_PAGE_LIMIT
@@ -15,13 +16,19 @@ from app.core.database import get_db
 from app.models.museum import Museum
 from app.services.search.inprocess import search as run_search
 from app.services.storage import get_object_storage
+from app.services.visibility import can_preview, museum_visible, visible_museum_ids
 
 router = APIRouter()
+_bearer = HTTPBearer(auto_error=False)
 
 
 @router.get("/search")
 def global_search(
-    q: str = "", language: str = "zh", limit: int = 20, db: Session = Depends(get_db)
+    q: str = "",
+    language: str = "zh",
+    limit: int = 20,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
 ) -> dict:
     museums, objects = run_search(
         db,
@@ -30,6 +37,7 @@ def global_search(
         museum_id=None,
         language=language,
         limit=min(limit, MAX_PAGE_LIMIT),
+        visible=visible_museum_ids(db, can_preview(db, credentials)),
     )
     return {"query": q, "museums": museums, "objects": objects}
 
@@ -40,10 +48,11 @@ def museum_search(
     q: str = "",
     language: str = "zh",
     limit: int = 20,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     m = db.query(Museum).filter_by(slug=slug).first()
-    if not m:
+    if not m or not museum_visible(db, slug, can_preview(db, credentials)):
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     _, objects = run_search(
         db,

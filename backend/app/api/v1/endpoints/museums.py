@@ -18,6 +18,7 @@ from app.services.museum_repo import (
 )
 from app.services.museum_repo import list_museums as repo_list
 from app.services.museum_repo import list_objects as repo_list_objects
+from app.services.visibility import can_preview, museum_visible, qid_visible
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +83,22 @@ def _caller_id(
         return None
 
 
+def _hidden(db: Session, credentials, slug: str, qid: str | None = None) -> bool:
+    """可见性闸(spec 2026-09-20)。True = 调用方按"不存在"返回它自己的 404。
+    必须放在任何花钱动作(懒生成/TTS)**之前**。"""
+    preview = can_preview(db, credentials)
+    if not museum_visible(db, slug, preview):
+        return True
+    return qid is not None and not qid_visible(db, qid, preview)
+
+
 @router.get("")
-def list_museums(db: Session = Depends(get_db)) -> list[dict]:
+def list_museums(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> list[dict]:
     """已收录馆包列表（不含完整馆藏，供探索页索引）"""
-    return repo_list(db)
+    return repo_list(db, preview=can_preview(db, credentials))
 
 
 @router.get("/{slug}/objects/{qid}/content")
@@ -112,6 +125,8 @@ def object_content(
     """
     from app.services.enrichment.lazy import maybe_trigger
 
+    if _hidden(db, credentials, slug, qid):
+        raise HTTPException(status_code=404, detail=f"object not found: {qid}")
     if _caller_id(db, credentials):
         maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
     data = get_object_content(db, slug, qid, language)
@@ -142,6 +157,9 @@ def object_audio(
     _require_audio_access(
         db, credentials, qid, language=language, section=section, slug=slug
     )
+    # 放在鉴权之后、TTS 之前:匿名对隐身馆和未知 qid 同样先吃 401,不泄漏差异
+    if _hidden(db, credentials, slug, qid):
+        raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
 
     try:
         if section == "qa":
@@ -183,6 +201,9 @@ async def object_audio_stream(
     _require_audio_access(
         db, credentials, qid, language=language, section=section, slug=slug
     )
+    # 放在鉴权之后、TTS 之前:匿名对隐身馆和未知 qid 同样先吃 401,不泄漏差异
+    if _hidden(db, credentials, slug, qid):
+        raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
 
     try:
         status, payload = await stream_section_audio(qid, language, section)
@@ -207,9 +228,12 @@ def list_objects(
     sort: str = "popularity",
     limit: int = 50,
     offset: int = 0,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     """分页藏品列表（A2/A3 列表页）"""
+    if _hidden(db, credentials, slug):
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     page = repo_list_objects(
         db,
         slug,
@@ -257,6 +281,7 @@ def get_museum_pack(
     slug: str,
     language: str = "zh",
     artworks: bool = True,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     """完整馆包：馆元数据 + 按热度排序的馆藏列表。
@@ -264,6 +289,8 @@ def get_museum_pack(
     `artworks=false` 省掉藏品数组(加法参数,缺省 true 保老 App 不变)——
     列表页走分页 /objects,门面只要 cover/categories/description。
     卢浮宫实测:全量 5.0MB/5.7s → 省掉后 KB 级。"""
+    if _hidden(db, credentials, slug):
+        raise HTTPException(status_code=404, detail=f"museum pack not found: {slug}")
     pack = repo_pack(db, slug, language, artworks=artworks)
     if pack is None:
         raise HTTPException(status_code=404, detail=f"museum pack not found: {slug}")

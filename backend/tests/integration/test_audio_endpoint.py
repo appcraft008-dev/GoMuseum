@@ -1,3 +1,5 @@
+from datetime import datetime
+
 # tests/integration/test_audio_endpoint.py
 """guide 音频懒生成端点(点播放触发):无 key→生成+落库+返 URL;有 key→秒返不重生成。"""
 import pytest
@@ -101,6 +103,8 @@ def client(monkeypatch):
     )
     s.add(Artist(qid="Q296", name_en="Manet", bio={"zh": "马奈是法国画家，生于巴黎。"}))
     obj.attributes = {"artist_qid": "Q296"}
+    # 可见性闸:测试馆视为已放出
+    s.query(Museum).update({"published_at": datetime(2026, 1, 1)})
     s.commit()
 
     import app.services.enrichment.lazy_audio as la
@@ -193,6 +197,8 @@ def test_audio_busy_when_section_locked(monkeypatch):
     obj.attributes = {
         "audio_locks": {"zh:guide": datetime.now(timezone.utc).isoformat()}
     }
+    # 可见性闸:测试馆视为已放出
+    s.query(Museum).update({"published_at": datetime(2026, 1, 1)})
     s.commit()
 
     monkeypatch.setattr(la, "get_object_storage", lambda: FakeStorage())

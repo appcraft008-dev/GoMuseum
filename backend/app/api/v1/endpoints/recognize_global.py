@@ -50,10 +50,19 @@ def run_recognition(
         QuotaExceededError,
         recognize_billed,
     )
+    from app.services.visibility import (
+        can_preview,
+        museum_visible,
+        visible_museum_ids,
+    )
 
     user_id = _user_id(db, credentials)
     if not user_id and not device_id:
         raise HTTPException(status_code=401, detail={"reason": "identity_required"})
+    preview = can_preview(db, credentials)
+    # 隐身馆与未知馆同一个 404,且在扣费/调 GPT 之前
+    if slug is not None and not museum_visible(db, slug, preview):
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     data = image.file.read()
     try:
         out = recognize_billed(
@@ -64,6 +73,7 @@ def run_recognition(
             device_id=device_id,
             language=language,
             mode=mode,
+            visible=visible_museum_ids(db, preview),
         )
     except QuotaExceededError:
         # 付费漏斗的关键一环:没有它就答不出"多少人撞到额度墙"
@@ -128,7 +138,11 @@ def recognize_confirm(
     qid 可以任填 —— 确认过一次就能用一次额度解锁全馆。改选那件要听,走详情页
     的手动解锁确认(`/entitlements/audio/unlock`,那里明写"将用掉 1 次")。"""
     from app.services.recognition.events import confirm_event
+    from app.services.visibility import can_preview, qid_visible
 
+    # 隐身馆的藏品:什么都不做(恒 204,与未知 qid 不可区分)
+    if not qid_visible(db, body.qid, can_preview(db, credentials)):
+        return Response(status_code=204)
     first_time = confirm_event(db, body.phash, body.qid)
     user_id = _user_id(db, credentials)
     # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。

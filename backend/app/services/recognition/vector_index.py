@@ -50,13 +50,22 @@ def _get(db) -> tuple:
     return mat, qids, museum_ids
 
 
-def query_index(db, vec: np.ndarray, museum_id=None) -> list[tuple[str, float]]:
-    """查询向量 → [(qid, score)] 同 qid 取最大分、降序。空(或过滤后为空)→ []。"""
+def query_index(
+    db, vec: np.ndarray, museum_id=None, visible=None
+) -> list[tuple[str, float]]:
+    """查询向量 → [(qid, score)] 同 qid 取最大分、降序。空(或过滤后为空)→ []。
+    visible:可见馆 id 集合(None=不限),查询时过滤 —— 索引本身不带可见性。"""
     mat, qids, museum_ids = _get(db)
     if len(qids) == 0:
         return []
-    if museum_id is not None:
-        mask = np.array([mid == museum_id for mid in museum_ids])
+    if museum_id is not None or visible is not None:
+        mask = np.array(
+            [
+                (museum_id is None or mid == museum_id)
+                and (visible is None or mid in visible)
+                for mid in museum_ids
+            ]
+        )
         if not mask.any():
             return []
         mat = mat[mask]
