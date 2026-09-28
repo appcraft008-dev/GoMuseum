@@ -164,3 +164,22 @@ def test_qa_gates_wrong_language():
         "zh",
     )
     assert out[0]["status"] == "needs_review"  # 答案英文→语言不符→不发布
+
+
+def test_fact_field_is_dropped_not_shown():
+    """prompt 让模型先填 `fact`(材料原句),它只是出题脚手架,不能落库也不能拼进答案。"""
+
+    class _C:
+        def __call__(self, system, user):
+            return json.dumps(
+                {
+                    "qa": [
+                        {"fact": "Source sentence.", "question": "Q1?", "answer": "A1."}
+                    ]
+                }
+            )
+
+    out = QASuggester(_C(), _Gate(), _Translator()).suggest(
+        "m", "f", "painting", ["en"]
+    )
+    assert out["en"] == [{"question": "Q1?", "answer": "A1.", "status": "published"}]
