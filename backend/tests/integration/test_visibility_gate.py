@@ -346,3 +346,40 @@ def test_unlock_hidden_qid_open_to_preview(client):
     r = client.post("/api/v1/entitlements/audio/unlock?qid=Q9", headers=PREVIEW)
     assert r.status_code == 200
     assert "Q9" in r.json()["free_audio_qids"]
+
+
+# ---- 对照组:已放出馆的藏品级端点对普通调用者必须照常开放 --------------------
+# 没有这组,一个"qid 一律不可见"的过严实现能让上面全部用例照绿(破坏验证实测)。
+
+
+def test_published_content_open_to_normal(client, monkeypatch):
+    _spy(monkeypatch, "app.services.enrichment.lazy.maybe_trigger")
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/content?language=zh", headers=NORMAL
+    )
+    assert r.status_code == 200
+
+
+@pytest.mark.parametrize("suffix", ["audio", "audio/stream"])
+def test_published_audio_open_to_normal(client, audio_spies, suffix):
+    r = client.get(f"/api/v1/museums/orsay/objects/Q1/{suffix}", headers=NORMAL)
+    assert r.status_code == 200
+
+
+def test_unlock_published_qid_spends_quota(client, db):
+    r = client.post("/api/v1/entitlements/audio/unlock?qid=Q1", headers=NORMAL)
+    assert r.status_code == 200
+    assert (
+        db.query(UserBenefits).filter_by(user_id="u-normal").one().recognition_quota
+        == 4
+    )
+
+
+def test_confirm_on_published_qid_reaches_billing(client, monkeypatch):
+    calls = _spy(
+        monkeypatch, "app.services.recognition.events.confirm_event", ret=False
+    )
+    client.post(
+        "/api/v1/recognize/confirm", json={"phash": "p", "qid": "Q1"}, headers=NORMAL
+    )
+    assert len(calls) == 1
