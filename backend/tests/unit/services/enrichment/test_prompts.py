@@ -471,3 +471,14 @@ def test_injected_canonical_names_carry_no_quote_template():
                 assert after not in quotes, f"{lang}/{value} 右邻是引号 {after!r}"
         # 注入本身还在(别把测试写成"删掉注入就绿")
         assert "TITLE" in system and "ARTIST" in system and "MUSEUM" in system
+
+
+def test_qa_system_builds_chip_from_a_fact_first():
+    """「先摘事实再出题」必须长在接地那条规则本身里(挪到末尾就管不住出题那一拍)。"""
+    from app.services.enrichment.prompts import _QA_SYSTEM
+
+    rule4 = _QA_SYSTEM.split("\n4. ")[1].split("\n5. ")[0]
+    assert "FROM A FACT" in rule4 and "verbatim" in rule4
+    assert rule4.index("`fact`") < rule4.index("`question`") < rule4.index("`answer`")
+    assert '"fact"' in _QA_SYSTEM  # 输出 schema 带 fact
+    assert "satisfying hook" not in _QA_SYSTEM  # 「钩子」诱导答案补推测尾巴

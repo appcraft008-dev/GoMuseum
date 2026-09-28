@@ -347,6 +347,15 @@ def build_faithfulness_prompt(
     return system, user
 
 
+# 规则 4「先摘事实、再出题」(2026-09-28):旧版只写「Grounded only」,模型先想好一个
+# 好听的问题(「X 的经历如何影响了这幅画?」),材料只有 X 的经历、没有那条因果,
+# 答案就得靠「likely influenced」补 → 接地闸拒。小皇宫 TOP31-50 线上一轮只过 37%。
+# 改成先把材料里的一句原文放进 `fact`,问题从它反推,答案只复述它 —— 靠顺序构造接地,
+# 不靠禁词(禁令里点名的词会变种子,见 guide 的 A/B)。`fact` 解析时直接丢弃。
+# 只读 A/B(小皇宫 TOP50,同材料/covered/闸,新旧各跑两轮,每臂 300 题):
+#   过闸  旧 163 (54%) → 新 202 (67%);零问答件 11 → 7 (/100 件次);
+#   已发布答案含 likely/may/suggest… 42 → 20。留出组 TOP1-20:71/120 → 82/120,没退步。
+# ⚠️ 单轮噪声很大:同一旧 prompt 在 TOP31-50 上线上 37%、重跑 53%/55%,别拿单轮判优劣。
 _QA_SYSTEM = (
     "You write 'curious visitor' question chips for ONE artwork, using ONLY the provided "
     "MATERIAL. WRITE IN ENGLISH (both question and answer) — this is the English axis; other "
@@ -365,17 +374,21 @@ _QA_SYSTEM = (
     "answer is already in it is rejected. Exhaust the peripheral angles above to reach the count; "
     "drop below the minimum ONLY if the material truly offers nothing more — never pad by "
     "re-asking a covered theme.\n"
-    "4. Grounded only: every answer fully supported by the material, no outside knowledge.\n"
+    "4. Build each chip FROM A FACT, in this order: first copy into `fact` one sentence from the "
+    "MATERIAL, verbatim, that carries a peripheral piece of information not already covered; then "
+    "write the `question` that this fact answers; then the `answer`, which says what the fact says, "
+    "in your own words, and nothing it does not say. If the fact states no reason, consequence or "
+    "link to this artwork, the question must not ask for one.\n"
     "5. FORMAT (strict): `question` MUST be ONE short, genuine interrogative sentence ending in "
-    "'?' — nothing after the '?', no statement or description appended. Put ALL the substance / "
-    "explanation in `answer` (1-3 sentences, your own words, a satisfying hook). A declarative "
+    "'?' — nothing after the '?', no statement or description appended. Put ALL the substance "
+    "in `answer` (1-2 sentences, your own words). A declarative "
     "sentence in the `question` field, or content trailing after the '?', is WRONG. Example — "
     'GOOD: {"question": "Why did Van Gogh use so much blue and yellow here?", "answer": "In his '
     'letters he wrote that the night is richer in colour than the day..."}. '
     'BAD: question = "Interestingly, the couple in the foreground symbolises love..." '
     "(a statement, no question mark).\n"
     "Write 2 to 4 such questions (aim for 3); fewer only if the material genuinely can't support more. "
-    'Return STRICT JSON: {"qa": [{"question": "...", "answer": "..."}, ...]}. No commentary.'
+    'Return STRICT JSON: {"qa": [{"fact": "...", "question": "...", "answer": "..."}, ...]}. No commentary.'
 )
 
 
