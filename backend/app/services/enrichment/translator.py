@@ -19,6 +19,28 @@ _NAME_QUOTES = "《》\"'“”‘’«»"
 _CANONICAL_TAG = re.compile(r"</?canonical_(?:title|artist|museum)>")
 
 
+# 德语复合数字词「个位在前」,判定模型读错:sechsundsiebzig(76)读成 67、
+# achtundfünfzig 读成「8 和 58」,正确译文被判篡改(2026-09-28 prod 含此类词的
+# 7 段里 3 段每次必判错)。判定 prompt 加说明、翻译 prompt 要求写数字,A/B 都零效果;
+# 只把**送去判定的副本**换成数字后 3/3 通过。用户看到的正文不改。
+_DE_UNITS = "ein zwei drei vier fünf sechs sieben acht neun".split()
+_DE_TENS = "zwanzig dreißig vierzig fünfzig sechzig siebzig achtzig neunzig".split()
+_DE_COMPOUND_NUM = re.compile(
+    rf"\b({'|'.join(_DE_UNITS)})und({'|'.join(_DE_TENS)})\b", re.IGNORECASE
+)
+
+
+def _de_numbers_to_digits(text: str) -> str:
+    return _DE_COMPOUND_NUM.sub(
+        lambda m: str(
+            (_DE_TENS.index(m.group(2).lower()) + 2) * 10
+            + _DE_UNITS.index(m.group(1).lower())
+            + 1
+        ),
+        text,
+    )
+
+
 def strip_name(text: str) -> str:
     """剥模型套上的书名号/引号(translate_name 与 batch 回填共用)。"""
     return (text or "").strip().strip(_NAME_QUOTES)
@@ -109,6 +131,8 @@ class ContentTranslator:
         artist_en: str | None = None,
         museum: str | None = None,
     ):
+        if target_lang == "de":
+            translated = _de_numbers_to_digits(translated)
         system, user = build_faithfulness_prompt(
             en_body,
             translated,
