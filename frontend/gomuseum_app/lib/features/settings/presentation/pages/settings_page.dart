@@ -113,7 +113,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             // 等以后真能跳商店了,「鼓励我们」再加回来——那时它才有东西可跳。
             _row(
               gm: gm,
-              icon: GmIcons.flag,
+              icon: GmIcons.edit,
               label: l10n.fbTitleApp,
               onTap: () => showFeedbackSheet(context, scope: FeedbackScope.app),
             ),
