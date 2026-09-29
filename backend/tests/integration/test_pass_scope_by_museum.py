@@ -410,3 +410,30 @@ def test_confirm_charges_by_the_confirmed_artworks_museum(
     assert r.status_code == 204
     assert _quota(db) == (4 if charged else 5)
     assert _unlocked(db) == ([qid] if charged else [])
+
+
+# ---- /me.offers:不知道在哪家馆的购买入口 ---------------------------------
+
+
+def test_offers_list_every_sellable_ticket_but_never_a_hidden_one(db, monkeypatch):
+    assert [o["product_id"] for o in es.pass_offers(db, "zh")] == ["paris_pass_7d"]
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    # rijks 已放出 → 荷兰票可买
+    assert {o["product_id"] for o in es.pass_offers(db, "zh")} == {
+        "paris_pass_7d",
+        "nl_pass_7d",
+    }
+    # rijks 改回隐身:荷兰票对公众消失(演练期的票不能从这里漏出去),预览者仍看得到
+    _m(db, "rijks").published_at = None
+    db.commit()
+    assert [o["product_id"] for o in es.pass_offers(db, "zh")] == ["paris_pass_7d"]
+    assert "nl_pass_7d" in {
+        o["product_id"] for o in es.pass_offers(db, "zh", preview=True)
+    }
+
+
+def test_me_carries_offers(client, db):
+    me = client.get("/api/v1/entitlements/me?language=en", headers=AUTH).json()
+    by_id = {o["product_id"]: o for o in me["offers"]}
+    assert by_id["paris_pass_7d"]["label"] == "Paris"
+    assert by_id["nl_pass_7d"]["covers"] == ["rijks"]  # client fixture 把 nl 置为在售
