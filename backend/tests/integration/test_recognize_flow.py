@@ -50,7 +50,10 @@ def session():
         ],
     )
     s = sessionmaker(bind=engine)()
-    m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
+    # city_en:通票范围按馆的城市判(D7),巴黎票要能认出这家馆
+    m = upsert_museum(
+        s, {"slug": "orsay", "name_en": "Orsay", "city_en": "Paris", "country": "FR"}
+    )
     upsert_object(
         s,
         m.id,
