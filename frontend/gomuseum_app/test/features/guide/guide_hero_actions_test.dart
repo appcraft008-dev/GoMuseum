@@ -27,29 +27,30 @@ final _entitlementsOverride =
 final _museumEntitlementsOverride = museumEntitlementsProvider
     .overrideWith((ref, _) async => Entitlements.unknown);
 
-ObjectContent _sample() => const ObjectContent(
+ObjectContent _sample({ShareInfo? share}) => ObjectContent(
       qid: 'Q1',
       category: 'painting',
       language: 'zh',
       status: ContentStatus.ready,
       title: '罗纳河上的星夜',
-      images: [],
-      facts: ObjectFacts(artist: '梵高', date: '1888'),
-      tabs: [
+      images: const [],
+      facts: const ObjectFacts(artist: '梵高', date: '1888'),
+      tabs: const [
         ObjectTab(
             sectionCode: 'overview',
             label: '通用描述',
             body: '主线讲解正文。',
             hasAudio: false),
       ],
-      suggestedQuestions: [],
+      suggestedQuestions: const [],
+      share: share,
     );
 
-Future<void> _pumpGuide(WidgetTester t) async {
+Future<void> _pumpGuide(WidgetTester t, {ShareInfo? share}) async {
   await t.pumpWidget(ProviderScope(
     overrides: [
       objectContentProvider((slug: 'orsay', qid: 'Q1'))
-          .overrideWith((ref) => _sample()),
+          .overrideWith((ref) => _sample(share: share)),
       _entitlementsOverride,
       _museumEntitlementsOverride,
     ],
@@ -68,6 +69,32 @@ Finder _icon(GmIcons name) =>
     find.byWidgetPredicate((w) => w is GmIcon && w.icon == name);
 
 void main() {
+  testWidgets('share 为 null → 没有分享键(不可分享的件不给入口)', (t) async {
+    await _pumpGuide(t);
+    expect(_icon(GmIcons.share), findsNothing);
+  });
+
+  testWidgets('share 非 null → 分享键在反馈键右边,同款底衬,读屏认得出', (t) async {
+    await _pumpGuide(t,
+        share: const ShareInfo(
+            url: 'https://x/a/orsay/Q1',
+            text: 't',
+            imageUrl: 'https://x/c.png'));
+    expect(_icon(GmIcons.share), findsOneWidget);
+    final box = t.widget<Container>(
+      find
+          .ancestor(of: _icon(GmIcons.share), matching: find.byType(Container))
+          .first,
+    );
+    final d = box.decoration as BoxDecoration;
+    expect(d.shape, BoxShape.circle);
+    expect(d.color, GmPalette.light.surface);
+    expect(t.getCenter(_icon(GmIcons.share)).dx,
+        greaterThan(t.getCenter(_icon(GmIcons.flag)).dx));
+    final l10n = lookupAppLocalizations(const Locale('zh'));
+    expect(find.bySemanticsLabel(l10n.guideShare), findsOneWidget);
+  });
+
   testWidgets('反馈键用主墨色，不是那个最弱的次级色', (t) async {
     await _pumpGuide(t);
     final flag = t.widget<GmIcon>(_icon(GmIcons.flag));

@@ -35,17 +35,30 @@ const kLoginToUpgrade = '/login?$kUpgradeParam=1';
 /// 具体的分支。见 `test/core/router/auth_guard_test.dart`。
 ///
 /// 返回 null 表示不重定向。
+/// App Links 落点前缀(spec 2026-09-20-share-web-pages-design §六)。
+const kDeepLinkPrefix = '/a/';
+
+/// 登录后可以送回去的目标:只认站内的 `/a/...` 深链接。
+/// 其余受保护路由被弹去登录后照旧回首页(不改既有行为);外部/伪造的 from 一律丢弃。
+String? deepLinkReturn(String? from) =>
+    from != null && from.startsWith(kDeepLinkPrefix) ? from : null;
+
 String? authRedirect({
   required User? user,
   required String path,
   bool upgrading = false,
+  String? location,
+  String? from,
 }) {
   final isLoggedIn = user != null;
   final isPublicRoute = path == '/login' || path == '/register';
 
-  // 未登录且访问受保护路由 → 跳转登录页
+  // 未登录且访问受保护路由 → 跳转登录页。
+  // 深链接要把原目标带过去:冷启动时登录态还在 loading,user 是 null,
+  // 不带的话等登录态就绪就只剩"回首页",用户点的那件作品丢了。
   if (!isLoggedIn && !isPublicRoute) {
-    return '/login';
+    final back = deepLinkReturn(location);
+    return back == null ? '/login' : '/login?from=${Uri.encodeComponent(back)}';
   }
 
   // 已登录还停在登录/注册页 → 回首页。
@@ -63,8 +76,9 @@ String? authRedirect({
   // 而登录页又刚好把游客按钮藏了，等于锁在门外。
   // 冷启动那次弹过来根本不是用户的意图，身份判据分不出这两种到达方式。
   // 2026-09-05 真机发现。
+  // 深链接例外:冷启动那次弹过来时带着 from,回原目标而不是首页。
   if (isLoggedIn && isPublicRoute && !upgrading) {
-    return '/';
+    return deepLinkReturn(from) ?? '/';
   }
 
   // 无需重定向
@@ -90,6 +104,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         // `?upgrade=1` = 用户**主动**来换身份（游客转正、或收据冲突时换账号）。
         // 没有它就说明这次是守卫自己把人弹过来的，那就该弹回去。
         upgrading: state.uri.queryParameters[kUpgradeParam] == '1',
+        location: state.uri.toString(),
+        from: state.uri.queryParameters['from'],
       );
     },
     refreshListenable: _GoRouterRefreshStream(ref),
@@ -101,6 +117,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         // 解析 URL 是路由的活，页面只收一个布尔值（见 LoginPage.upgrading）
         builder: (context, state) => LoginPage(
           upgrading: state.uri.queryParameters[kUpgradeParam] == '1',
+          returnTo: deepLinkReturn(state.uri.queryParameters['from']),
         ),
       ),
 
@@ -108,7 +125,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         name: 'register',
-        builder: (context, state) => const RegisterPage(),
+        builder: (context, state) => RegisterPage(
+          returnTo: deepLinkReturn(state.uri.queryParameters['from']),
+        ),
       ),
       // Shell路由 - 包含底部导航栏的页面
       ShellRoute(
@@ -189,6 +208,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           }
           return GuidePage(args: args);
         },
+      ),
+
+      // App Links 落点:gomuseum.app/a/{slug}/{qid} → 直达那件藏品的讲解页。
+      // 链接里的 lang 忽略:App 用用户自己的语言。隐身馆/不存在的 qid 走讲解页自己的错误态。
+      GoRoute(
+        path: '/a/:slug/:qid',
+        name: 'deeplink-object',
+        builder: (context, state) => GuidePage(
+          args: GuideArgs(
+            slug: state.pathParameters['slug'],
+            qid: state.pathParameters['qid'],
+          ),
+        ),
       ),
 
       // 馆藏清单页

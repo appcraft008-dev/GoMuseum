@@ -2116,6 +2116,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unlock and play'**
   String get unlockAudioCta;
+
+  /// 讲解页顶栏分享键的读屏标签
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get guideShare;
 }
 
 class _AppLocalizationsDelegate

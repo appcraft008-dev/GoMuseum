@@ -126,4 +126,60 @@ void main() {
       expect(u.email, isNull);
     });
   });
+
+  group('🔴 App Links 深链接不能在冷启动的登录来回里丢掉', () {
+    // 时序:点链接冷启动 → 登录态 loading(user=null) → 守卫弹去 /login →
+    // 加载完已登录 → 守卫再跑。旧行为送回 '/' —— 用户点了作品链接却落在首页。
+    const link = '/a/louvre/Q1?lang=zh&s=app';
+
+    test('未登录访问深链接 → 去登录页并带上原目标', () {
+      expect(
+        authRedirect(user: null, path: '/a/louvre/Q1', location: link),
+        '/login?from=${Uri.encodeComponent(link)}',
+      );
+    });
+
+    test('登录态就绪后停在 /login?from=深链接 → 送回原目标,不是首页', () {
+      expect(
+          authRedirect(user: _user(isGuest: true), path: '/login', from: link),
+          link);
+      expect(
+          authRedirect(user: _user(isGuest: false), path: '/login', from: link),
+          link);
+    });
+
+    test('from 不是深链接(伪造/外部)→ 照旧回首页', () {
+      expect(
+          authRedirect(
+              user: _user(isGuest: true), path: '/login', from: '/benefits'),
+          '/');
+      expect(
+          authRedirect(
+              user: _user(isGuest: true),
+              path: '/login',
+              from: 'https://evil.example/a/x'),
+          '/');
+    });
+
+    test('非深链接的受保护路由行为不变:仍是裸 /login', () {
+      expect(authRedirect(user: null, path: '/benefits', location: '/benefits'),
+          '/login');
+    });
+
+    test('已登录直接访问深链接 → 放行', () {
+      expect(
+          authRedirect(
+              user: _user(isGuest: false),
+              path: '/a/louvre/Q1',
+              location: link),
+          isNull);
+    });
+
+    test('deepLinkReturn 只认 /a/ 开头的站内路径', () {
+      expect(deepLinkReturn(link), link);
+      expect(deepLinkReturn('/history'), isNull);
+      expect(deepLinkReturn(null), isNull);
+      expect(deepLinkReturn('//evil.example/a/x'), isNull);
+    });
+  });
 }

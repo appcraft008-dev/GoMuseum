@@ -348,5 +348,6 @@
       }
     }
   },
-  "unlockAudioCta": "解放して再生"
+  "unlockAudioCta": "解放して再生",
+  "guideShare": "共有"
 }

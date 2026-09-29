@@ -1115,4 +1115,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get unlockAudioCta => '解放して再生';
+
+  @override
+  String get guideShare => '共有';
 }

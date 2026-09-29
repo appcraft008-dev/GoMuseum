@@ -348,5 +348,6 @@
       }
     }
   },
-  "unlockAudioCta": "Sblocca e ascolta"
+  "unlockAudioCta": "Sblocca e ascolta",
+  "guideShare": "Condividi"
 }
