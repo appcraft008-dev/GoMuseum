@@ -188,6 +188,10 @@ def build_checks(db, slug: str, langs: list[str]) -> dict:
 
     from app.services.museum_repo import get_museum_pack
 
+    # 先热身一次再计时:verify 是新起的 CLI 进程,首调要付 yaml 解析/存储初始化等一次性
+    # 开销(2026-09-29 实测冷 ~1000ms、同刻 prod API 0.12s)。App 打的是常驻 worker,
+    # 这一项要抓的是"全量加载混进门面"—— 那在热调用里照样超时,门槛不放宽。
+    get_museum_pack(db, slug, artworks=False)
     t0 = _t.time()
     get_museum_pack(db, slug, artworks=False)
     facade_ms = int((_t.time() - t0) * 1000)
