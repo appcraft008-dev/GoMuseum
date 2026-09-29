@@ -381,7 +381,24 @@
   "restoreNothingFound": "No incomplete payment found",
   "restoreSucceeded": "Your pass has been restored",
   "audioFreePreview": "Free preview",
-  "audioLockedHint": "Audio commentary needs the pass — artworks you've scanned are free to listen to.",
+  "audioLockedHint": "Audio commentary needs the pass — artworks you've scanned are free to listen to for {days} days.",
+  "@audioLockedHint": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFreePreviewDays": "Free preview · {days} days left",
+  "@audioFreePreviewDays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFreeExpiredHint": "The free preview for this artwork has ended — you'll need a pass to keep listening.",
+  "audioPassExpiredHint": "Your pass has expired — get another one to keep listening.",
   "quotaExhausted": "You've used all your free recognitions.",
   "activateLater": "Later",
   "paywallLoginToBuy": "Sign in to buy",

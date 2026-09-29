@@ -167,12 +167,24 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
 
     if (_hintedQids.add(widget.qid)) {
-      showPaywallHint(context, onLearnMore: _showPaywall);
+      showPaywallHint(context,
+          onLearnMore: _showPaywall, message: _lockedReason(ent));
     } else {
       _showPaywall();
     }
     if (mounted) setState(() => _ui = _Ui.idle);
     return true;
+  }
+
+  /// 撞墙的原因写在提示里(D8)。不写的话,解锁过、过了 7 天的人会以为 App 坏了:
+  /// 他记得自己拍过这件,昨天还能听。
+  String _lockedReason(Entitlements ent) {
+    final l10n = AppLocalizations.of(context)!;
+    if (ent.isExpired) return l10n.audioPassExpiredHint;
+    if (ent.freeAudioExpired.contains(widget.qid)) {
+      return l10n.audioFreeExpiredHint;
+    }
+    return l10n.audioLockedHint('${ent.freeAudioDays}');
   }
 
   /// 花 1 次免费额度解锁这一件的语音。返回 true = 已解锁,可以继续播。
@@ -358,6 +370,16 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     return ent.canPlayAudio(widget.qid, section: widget.section);
   }
 
+  /// 「免费试听 · 剩 X 天」(D8)。后端没给到期时刻(老后端)就只写「免费试听」。
+  String _freePreviewLabel(AppLocalizations l10n) {
+    final ent = ref.watch(museumEntitlementsProvider(widget.slug)).value;
+    final until = ent?.freeAudioUntil[widget.qid];
+    if (until == null) return l10n.audioFreePreview;
+    final left =
+        (until.difference(DateTime.now()).inHours / 24).ceil().clamp(1, 999);
+    return l10n.audioFreePreviewDays('$left');
+  }
+
   Future<Map<String, String>> _authHeaders() async {
     final token = await ref.read(authRepositoryProvider).getAccessToken();
     return token == null ? const {} : {'Authorization': 'Bearer $token'};
@@ -493,7 +515,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(border: Border.all(color: gm.faint)),
-              child: Text(l10n.audioFreePreview,
+              child: Text(_freePreviewLabel(l10n),
                   style: GmText.sans(size: 10, color: gm.sub)),
             ),
             const SizedBox(width: 8),

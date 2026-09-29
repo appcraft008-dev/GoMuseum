@@ -733,8 +733,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get audioFreePreview => '무료 체험';
 
   @override
-  String get audioLockedHint =>
-      '음성 해설에는 패스가 필요합니다. 촬영해서 인식한 작품은 무료로 들을 수 있습니다.';
+  String audioLockedHint(String days) {
+    return '음성 해설은 패스가 필요합니다. 사진으로 인식한 작품은 $days일 동안 무료로 들을 수 있습니다.';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return '무료 청취 · $days일 남음';
+  }
+
+  @override
+  String get audioFreeExpiredHint => '이 작품의 무료 청취가 끝났습니다. 계속 들으려면 패스가 필요합니다.';
+
+  @override
+  String get audioPassExpiredHint => '패스가 만료되었습니다. 계속 들으려면 새 패스를 구매하세요.';
 
   @override
   String get quotaExhausted => '무료 인식 횟수를 모두 사용했습니다.';

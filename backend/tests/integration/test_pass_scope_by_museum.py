@@ -437,3 +437,17 @@ def test_me_carries_offers(client, db):
     by_id = {o["product_id"]: o for o in me["offers"]}
     assert by_id["paris_pass_7d"]["label"] == "Paris"
     assert by_id["nl_pass_7d"]["covers"] == ["rijks"]  # client fixture 把 nl 置为在售
+
+
+def test_summary_reports_expired_unlocks_and_window(db, monkeypatch):
+    """D8 界面:前端要能分清「从没解锁」与「解锁过但过期了」,才能写明原因。"""
+    b = _ben(db, "u")
+    es.unlock_free_audio(db, "u", ["Q1"])
+    db.refresh(b)
+    out = es.summary(db, "u", b)
+    assert out["free_audio_expired"] == [] and out["free_audio_days"] == 7
+    t0 = datetime.now(timezone.utc)
+    monkeypatch.setattr(es, "_now", lambda: t0 + timedelta(days=8))
+    out = es.summary(db, "u", b)
+    assert out["free_audio_expired"] == ["Q1"]
+    assert out["free_audio_qids"] == []

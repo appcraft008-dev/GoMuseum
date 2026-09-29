@@ -370,6 +370,10 @@ def summary(
         "free_audio_qids": unlocked,
         # 加法字段:{qid: 到期时刻},新 App 显示「还剩 X 天」
         "free_audio_until": free_audio_until(benefits),
+        # 加法字段(D8 界面):已过期的解锁 + 窗口天数(文案「识别后 N 天内免费听」
+        # 的 N 由后端给,改窗口不用发版)
+        "free_audio_expired": free_audio_expired(benefits),
+        "free_audio_days": FREE_AUDIO_WINDOW.days,
         "passes": _passes(db, user_id, language),
         # 可买的票(加法):不知道用户在哪家馆的购买入口据此列出每一张
         "offers": pass_offers(db, language, preview=preview),
@@ -498,6 +502,17 @@ def free_audio_until(benefits) -> dict[str, str]:
         for q, t in _free_unlocks(benefits).items()
         if t is not None and t + FREE_AUDIO_WINDOW > now
     }
+
+
+def free_audio_expired(benefits) -> list[str]:
+    """解锁过、但 7 天已过的作品。前端据此写明「免费试听已结束」,而不是只弹一个
+    不解释原因的付费墙 —— 用户记得自己拍过这件,会以为 App 坏了。"""
+    now = _now()
+    return [
+        q
+        for q, t in _free_unlocks(benefits).items()
+        if t is None or t + FREE_AUDIO_WINDOW <= now
+    ]
 
 
 def free_audio_qids(benefits) -> list[str]:
