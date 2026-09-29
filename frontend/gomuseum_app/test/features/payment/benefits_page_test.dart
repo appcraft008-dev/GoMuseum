@@ -157,10 +157,9 @@ void main() {
     expect(find.textContaining('30 天失效'), findsOneWidget);
   });
 
-  testWidgets('生效中:识别显示「不限次」而不是次数,且没有购买按钮', (t) async {
+  testWidgets('生效中:票上写到期日,且没有购买按钮', (t) async {
     await _pump(t, _wrap(_active));
     final l10n = await _l10n();
-    expect(find.text(l10n.unlimited), findsOneWidget);
     expect(find.text(l10n.paywallBuy), findsNothing);
     expect(find.text(l10n.ticketValidUntil), findsOneWidget);
   });
@@ -352,6 +351,85 @@ void main() {
     expect(find.textContaining('巴黎'), findsWidgets);
   });
 
+  // ---- 手里不止一张票(2026-09-29 真机:荷兰票缩成一行「到期日待填」,
+  // 激活后巴黎票又缩成一行)—— 每张票一样大、各自写清状态 ----------------
+
+  Entitlements held(List<OwnedPass> passes,
+          {List<PassOffer> offers = const [_paris, _nl]}) =>
+      Entitlements(
+        state: passes.any((p) => p.isActive)
+            ? 'active'
+            : 'purchased_not_activated',
+        canPurchase: true,
+        canRecognize: true,
+        canAudioAny: passes.any((p) => p.isActive),
+        freeRecognitionsLeft: 3,
+        freeRecognitionsTotal: 5,
+        offers: offers,
+        passes: passes,
+      );
+
+  final now = DateTime.now();
+  final parisActive = OwnedPass(
+      productId: 'paris_pass_7d',
+      label: '巴黎',
+      days: 7,
+      state: 'active',
+      expiresAt: now.add(const Duration(days: 4)));
+  final nlPending = OwnedPass(
+      productId: 'nl_pass_7d',
+      label: '荷兰',
+      days: 7,
+      state: 'purchased_not_activated',
+      activateBy: DateTime(2026, 10, 29));
+  final nlActive = OwnedPass(
+      productId: 'nl_pass_7d',
+      label: '荷兰',
+      days: 7,
+      state: 'active',
+      expiresAt: now.add(const Duration(days: 7)));
+
+  testWidgets('⭐ 巴黎生效 + 荷兰未激活:两张票一样画,荷兰那张写清未激活与作废日', (t) async {
+    await _pump(t, _wrap(held([parisActive, nlPending])));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallTitle('巴黎', '7')), findsOneWidget);
+    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
+    expect(find.text(l10n.benefitsPassNotActivated), findsOneWidget);
+    expect(find.text(l10n.benefitsPassStartsOnFirstUse), findsOneWidget);
+    expect(find.text(l10n.benefitsPassVoidAfter(DateTime(2026, 10, 29))),
+        findsOneWidget);
+    expect(find.text(l10n.ticketStubPending), findsNothing,
+        reason: '「到期日待填」在列表里读起来像没填完的占位符');
+    // 已有生效的票时不放「开始」:不带馆的 /activate 会认到生效那张,按了没反应
+    expect(find.text(l10n.benefitsStartNow('7')), findsNothing);
+    // 每张票各自列出它管的馆,用户看得出「哪张票管哪里」
+    expect(find.textContaining('国立博物馆'), findsOneWidget);
+    expect(find.textContaining('卢浮宫'), findsOneWidget);
+  });
+
+  testWidgets('⭐ 两张都生效:都是完整的票,先到期的排上面(不因激活先后被挤成小字)', (t) async {
+    // 故意把后到期的放在前面:顺序要按到期日,不按后端给的顺序
+    await _pump(t, _wrap(held([nlActive, parisActive])));
+    final l10n = await _l10n();
+    expect(find.text(l10n.ticketValidUntil), findsNWidgets(2));
+    final paris = t.getTopLeft(find.text(l10n.paywallTitle('巴黎', '7'))).dy;
+    final nl = t.getTopLeft(find.text(l10n.paywallTitle('荷兰', '7'))).dy;
+    expect(paris, lessThan(nl), reason: '巴黎 4 天后到期,该先用');
+  });
+
+  testWidgets('还有票外的馆:列出其他馆的免费识别额度(D7:不限次只在票覆盖的馆)', (t) async {
+    await _pump(t, _wrap(held([parisActive])));
+    final l10n = await _l10n();
+    expect(find.text(l10n.benefitsOtherMuseumsRecognition), findsOneWidget);
+    expect(find.text(l10n.quotaValue('3', 5)), findsOneWidget);
+  });
+
+  testWidgets('手里的票已覆盖全部在售范围:不列其他馆额度', (t) async {
+    await _pump(t, _wrap(held([parisActive, nlActive])));
+    final l10n = await _l10n();
+    expect(find.text(l10n.benefitsOtherMuseumsRecognition), findsNothing);
+  });
+
   testWidgets('十种语言都不缺键(缺了会抛,不是显示英文)', (t) async {
     final d = DateTime(2026, 9, 10, 14, 32);
     for (final locale in AppLocalizations.supportedLocales) {
@@ -375,6 +453,10 @@ void main() {
         l10n.benefitsFeatDeepAudio,
         l10n.benefitsNeedsPass,
         l10n.benefitsNotStartedHead,
+        l10n.benefitsPassNotActivated,
+        l10n.benefitsPassStartsOnFirstUse,
+        l10n.benefitsPassVoidAfter(d),
+        l10n.benefitsOtherMuseumsRecognition,
         l10n.benefitsNotStartedBody('7'),
         l10n.benefitsStartNow('7'),
         l10n.benefitsStartNowNote,

@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.core.database import Base
 
-# 14 个核心事件(改这里前先问:少了它哪个问题答不了?)
+# 15 个核心事件(改这里前先问:少了它哪个问题答不了?)
 EVENTS = (
     # 识别漏斗
     "recognition_succeeded",
@@ -38,6 +38,10 @@ EVENTS = (
     # 免费额度发放(刷额度的形态=同 IP 大量新游客;device_id 客户端可控,
     # 不做 IP 封堵——博物馆共享 WiFi 会误伤真实用户,先观测再决定)
     "guest_created",
+    # 分享落地页被看(props.source=app 是 App 分享来的,direct 是其余)。
+    # 回答的问题:分享这条获客渠道有没有人进来 —— ≥100 真实活跃用户前别看(spec §八)。
+    # 分享次数 ≈ card.png 的 nginx 访问量,不另设事件。
+    "share_page_view",
 )
 
 

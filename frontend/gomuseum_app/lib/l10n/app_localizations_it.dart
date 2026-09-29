@@ -967,6 +967,24 @@ class AppLocalizationsIt extends AppLocalizations {
   String get benefitsNotStartedHead => 'Il conteggio non è ancora partito';
 
   @override
+  String get benefitsPassNotActivated => 'Non attivato';
+
+  @override
+  String get benefitsPassStartsOnFirstUse => 'Parte al primo utilizzo al museo';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Scade se non attivato entro il $dateString';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition =>
+      'Riconoscimento foto negli altri musei';
+
+  @override
   String benefitsNotStartedBody(String days) {
     return 'La prima volta che userai il commento audio o il riconoscimento al museo ti chiederemo una conferma. I tuoi $days giorni partono da quel momento.';
   }
@@ -1138,4 +1156,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get unlockAudioCta => 'Sblocca e ascolta';
+
+  @override
+  String get guideShare => 'Condividi';
 }

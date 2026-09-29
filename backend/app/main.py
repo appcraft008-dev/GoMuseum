@@ -92,6 +92,11 @@ app.add_middleware(
 # Include API v1 router
 app.include_router(api_router, prefix="/api/v1")
 
+# 公开网页层(分享落地页)不带 /api/v1 前缀:链接是 gomuseum.app/a/{slug}/{qid}
+from app.api.web.share_pages import router as share_web_router  # noqa: E402
+
+app.include_router(share_web_router)
+
 
 @app.on_event("startup")
 async def startup_event():

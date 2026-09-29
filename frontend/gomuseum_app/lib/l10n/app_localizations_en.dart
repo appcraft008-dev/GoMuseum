@@ -959,6 +959,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get benefitsNotStartedHead => 'The clock hasn\'t started';
 
   @override
+  String get benefitsPassNotActivated => 'Not activated';
+
+  @override
+  String get benefitsPassStartsOnFirstUse => 'Starts on first use at a museum';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Void if not activated by $dateString';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition =>
+      'Photo recognition at other museums';
+
+  @override
   String benefitsNotStartedBody(String days) {
     return 'The first time you use audio commentary or recognition at the museum, we\'ll ask you to confirm. Your $days days start from that moment.';
   }
@@ -1131,4 +1149,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unlockAudioCta => 'Unlock and play';
+
+  @override
+  String get guideShare => 'Share';
 }

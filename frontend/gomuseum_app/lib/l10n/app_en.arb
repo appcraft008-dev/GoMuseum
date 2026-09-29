@@ -514,6 +514,18 @@
   "benefitsFeatDeepAudio": "Audio for in-depth sections",
   "benefitsNeedsPass": "Pass needed",
   "benefitsNotStartedHead": "The clock hasn't started",
+  "benefitsPassNotActivated": "Not activated",
+  "benefitsPassStartsOnFirstUse": "Starts on first use at a museum",
+  "benefitsPassVoidAfter": "Void if not activated by {date}",
+  "@benefitsPassVoidAfter": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "benefitsOtherMuseumsRecognition": "Photo recognition at other museums",
   "benefitsNotStartedBody": "The first time you use audio commentary or recognition at the museum, we'll ask you to confirm. Your {days} days start from that moment.",
   "@benefitsNotStartedBody": {
     "placeholders": {
@@ -618,5 +630,9 @@
       }
     }
   },
-  "unlockAudioCta": "Unlock and play"
+  "unlockAudioCta": "Unlock and play",
+  "guideShare": "Share",
+  "@guideShare": {
+    "description": "讲解页顶栏分享键的读屏标签"
+  }
 }

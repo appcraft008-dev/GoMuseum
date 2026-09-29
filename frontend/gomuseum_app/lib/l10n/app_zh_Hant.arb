@@ -291,6 +291,10 @@
   "benefitsFeatDeepAudio": "深度內容音訊",
   "benefitsNeedsPass": "需通票",
   "benefitsNotStartedHead": "還沒開始計時",
+  "benefitsPassNotActivated": "未啟用",
+  "benefitsPassStartsOnFirstUse": "在館內首次使用時開始計時",
+  "benefitsPassVoidAfter": "{date} 前未啟用將作廢",
+  "benefitsOtherMuseumsRecognition": "其他館拍照辨識",
   "benefitsNotStartedBody": "到館後首次使用語音導覽或辨識時，會請你確認一次，{days} 天從那一刻開始。",
   "benefitsStartNow": "現在就開始 {days} 天",
   "benefitsStartNowNote": "不在館裡的話，建議到館再開始",
@@ -344,5 +348,6 @@
       }
     }
   },
-  "unlockAudioCta": "解鎖並播放"
+  "unlockAudioCta": "解鎖並播放",
+  "guideShare": "分享"
 }

@@ -15,7 +15,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key, this.upgrading = false});
+  const LoginPage({super.key, this.upgrading = false, this.returnTo});
 
   /// 这次是不是**主动**来换身份的（游客转正 / 收据冲突换账号）。
   ///
@@ -28,6 +28,10 @@ class LoginPage extends ConsumerStatefulWidget {
   /// 弹到这一页（登录态还没加载完），那次到达不是用户的意图。按身份判会让每个
   /// 冷启动的游客都看不到游客按钮 —— 而他本来就该被直接送回首页。
   final bool upgrading;
+
+  /// 登录成功后回到哪里。只可能是 App Links 深链接(路由已用 deepLinkReturn 过滤);
+  /// null = 首页。
+  final String? returnTo;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -156,8 +160,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 GestureDetector(
                   // 意图要跟着走：从「转正登录页」点进注册，如果不带 upgrade，
                   // 守卫会把已登录的游客从注册页弹回首页 —— 转正这条路又断了。
-                  onTap: () => context.push(
-                      upgrading ? '/register?$kUpgradeParam=1' : '/register'),
+                  // 深链接目标同理要带过去,否则从注册页登录成功就回了首页。
+                  onTap: () => context.push(Uri(
+                    path: '/register',
+                    queryParameters: {
+                      if (upgrading) kUpgradeParam: '1',
+                      if (widget.returnTo != null) 'from': widget.returnTo!,
+                    },
+                  ).toString()),
                   child: Text(
                     l10n.authNoAccount,
                     textAlign: TextAlign.center,
@@ -376,7 +386,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      context.go('/');
+      context.go(widget.returnTo ?? '/');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.authLoginFailed)),
@@ -423,7 +433,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               );
 
       if (success && mounted) {
-        context.go('/');
+        context.go(widget.returnTo ?? '/');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -519,7 +529,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               );
 
       if (success && mounted) {
-        context.go('/');
+        context.go(widget.returnTo ?? '/');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -568,7 +578,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       setState(() => _isLoading = false);
 
       if (success && mounted) {
-        context.go('/');
+        context.go(widget.returnTo ?? '/');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

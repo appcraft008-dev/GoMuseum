@@ -18,6 +18,7 @@ import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/core/services/tts_service.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/guide/presentation/share_object.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/domain/entities/explanation.dart';
 import 'package:gomuseum_app/features/content/domain/usecases/generate_explanation.dart';
@@ -334,6 +335,9 @@ class _GuidePageState extends ConsumerState<GuidePage>
                     qid: content.qid,
                     language: _language,
                   ),
+                  onShare: content.share == null
+                      ? null
+                      : () => shareObject(content.share!),
                 ),
               ],
               body: _A5Body(
@@ -781,6 +785,7 @@ class _A5HeroSliverAppBar extends StatelessWidget {
     required this.content,
     required this.onBack,
     required this.onFeedback,
+    this.onShare,
     this.fallbackImagePath,
     this.fallbackImageUrl,
   });
@@ -793,8 +798,10 @@ class _A5HeroSliverAppBar extends StatelessWidget {
   final VoidCallback onBack;
 
   /// 「内容反馈」——错漏靠用户反馈兜底(CLAUDE.md「AI 内容质量原则」)。
-  /// 分享以后加在它右边。
   final VoidCallback onFeedback;
+
+  /// 分享(在反馈键右边)。null = 这件不可分享(后端 share 为 null),不渲染这个键。
+  final VoidCallback? onShare;
 
   /// hero 完全展开时的高度；顶栏标题的淡入时机由它推出来。
   static const double _expandedHeight = 286;
@@ -832,13 +839,22 @@ class _A5HeroSliverAppBar extends StatelessWidget {
         centerTitle: true,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: EdgeInsets.only(right: onShare == null ? 8 : 6),
             child: _HeroAction(
               icon: GmIcons.flag,
               onTap: onFeedback,
               label: AppLocalizations.of(context)!.fbTitleObject,
             ),
           ),
+          if (onShare != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _HeroAction(
+                icon: GmIcons.share,
+                onTap: onShare!,
+                label: AppLocalizations.of(context)!.guideShare,
+              ),
+            ),
         ],
         flexibleSpace: FlexibleSpaceBar(
           collapseMode: CollapseMode.parallax,
