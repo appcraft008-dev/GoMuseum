@@ -353,8 +353,27 @@
   "museumOpeningHours": "Opening Hours",
   "museumOfficialSite": "Official Website",
   "museumIntroComingSoon": "Museum introduction coming soon",
-  "paywallTitle": "Paris 7-Day Pass",
-  "paywallPitch": "Unlimited photo recognition and full audio commentary across the Louvre, Orsay, the Orangerie and the Petit Palais.",
+  "paywallTitle": "{label} {days}-Day Pass",
+  "@paywallTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallPitch": "Unlimited photo recognition and full audio commentary at {museums}.",
+  "paywallPitchGeneric": "Unlimited photo recognition and full audio commentary.",
+  "passNotOnSale": "Passes for this museum aren't on sale yet.",
+  "@paywallPitch": {
+    "placeholders": {
+      "museums": {
+        "type": "String"
+      }
+    }
+  },
   "paywallFreeAlways": "Browsing, search and full written commentary are always free.",
   "paywallBuy": "Get the pass",
   "paywallRestore": "Paid but no pass?",
@@ -362,7 +381,24 @@
   "restoreNothingFound": "No incomplete payment found",
   "restoreSucceeded": "Your pass has been restored",
   "audioFreePreview": "Free preview",
-  "audioLockedHint": "Audio commentary needs the pass — artworks you've scanned are free to listen to.",
+  "audioLockedHint": "Audio commentary needs the pass — artworks you've scanned are free to listen to for {days} days.",
+  "@audioLockedHint": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFreePreviewDays": "Free preview · {days} days left",
+  "@audioFreePreviewDays": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFreeExpiredHint": "The free preview for this artwork has ended — you'll need a pass to keep listening.",
+  "audioPassExpiredHint": "Your pass has expired — get another one to keep listening.",
   "quotaExhausted": "You've used all your free recognitions.",
   "activateLater": "Later",
   "paywallLoginToBuy": "Sign in to buy",
@@ -383,7 +419,14 @@
   "unlimited": "Unlimited",
   "paywallPriceNote": "One-time · not a subscription",
   "paywallClockHead": "The clock doesn't start at purchase",
-  "paywallClockBody": "Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.",
+  "paywallClockBody": "Your {days} days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.",
+  "@paywallClockBody": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
   "paywallLapseNote": "An unactivated pass lapses 30 days after purchase.",
   "@paywallLapseNote": {
     "description": "Paywall: unactivated passes expire. Required disclosure — the backend really does forfeit them (ACTIVATION_WINDOW), so this line must ship with it."
@@ -413,7 +456,14 @@
       }
     }
   },
-  "activateSheetTitle": "Start your 7 days now?",
+  "activateSheetTitle": "Start your {days} days now?",
+  "@activateSheetTitle": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
   "activateSheetBody": "The clock starts on confirm and ends {date} {time}. This can't be undone.",
   "@activateSheetBody": {
     "placeholders": {
@@ -431,10 +481,17 @@
   "activateWaiting": "Confirming…",
   "activateWaitingNote": "The ticket isn't torn yet — it starts once confirmed",
   "activateDoneTitle": "Your pass has started",
-  "activateDoneBody": "Audio commentary at all four museums and unlimited recognition are unlocked.",
+  "activateDoneBody": "Audio commentary and unlimited recognition are unlocked.",
   "activateDoneCta": "Continue",
   "activateFailTitle": "Couldn't confirm — your ticket wasn't used",
-  "activateFailBody": "No connection, so the 7 days haven't started. Your pass is still intact; try again.",
+  "activateFailBody": "No connection, so the {days} days haven't started. Your pass is still intact; try again.",
+  "@activateFailBody": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
   "activateRetry": "Try again",
   "benefitsMyPass": "My pass",
   "benefitsSecFreeQuota": "Free allowance",
@@ -450,15 +507,35 @@
   "benefitsFeatBrowse": "Browsing, search, full written commentary",
   "benefitsFeatPresetQa": "Suggested questions answered",
   "benefitsFeatRecognition": "Unlimited photo recognition",
-  "benefitsFeatAllAudio": "Audio commentary across all four museums",
+  "benefitsFeatAllAudio": "Audio commentary at every museum on your pass",
   "benefitsFeatDeepAudio": "Audio for in-depth sections",
   "benefitsNeedsPass": "Pass needed",
   "benefitsNotStartedHead": "The clock hasn't started",
-  "benefitsNotStartedBody": "The first time you use audio commentary or recognition at the museum, we'll ask you to confirm. Your 7 days start from that moment.",
-  "benefitsMuseums": "Louvre · Orsay · Orangerie · Petit Palais",
-  "benefitsStartNow": "Start my 7 days now",
+  "benefitsNotStartedBody": "The first time you use audio commentary or recognition at the museum, we'll ask you to confirm. Your {days} days start from that moment.",
+  "@benefitsNotStartedBody": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "benefitsStartNow": "Start my {days} days now",
+  "@benefitsStartNow": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
   "benefitsStartNowNote": "If you're not at the museum yet, it's better to wait",
-  "benefitsExpiredBody": "Your 7 days are up. Your free allowance is back, and written commentary is still complete.",
+  "benefitsExpiredBody": "Your {days} days are up. Your free allowance is back, and written commentary is still complete.",
+  "@benefitsExpiredBody": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
   "benefitsPrevPass": "Previous pass used up · {start} – {end}",
   "@benefitsPrevPass": {
     "description": "Benefits page: the previous pass, already used up.",

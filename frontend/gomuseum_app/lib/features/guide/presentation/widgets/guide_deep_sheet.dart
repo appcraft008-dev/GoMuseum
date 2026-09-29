@@ -1,3 +1,5 @@
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,7 +47,11 @@ Future<void> showGuideDeepSheet(
 /// 用 Consumer 就地读权益:外层抽屉是普通 StatefulWidget,
 /// 为一条提示条把整棵树改成 Consumer 版不划算。
 class _DeepAudioLockBar extends StatelessWidget {
-  const _DeepAudioLockBar();
+  const _DeepAudioLockBar({this.slug, this.language});
+
+  /// 这家馆:权益按馆判(持巴黎票进荷兰的馆要显示锁),购买只卖这家馆的票。
+  final String? slug;
+  final String? language;
 
   @override
   Widget build(BuildContext context) {
@@ -53,14 +59,30 @@ class _DeepAudioLockBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Consumer(
       builder: (context, ref, _) {
-        final ent = ref.watch(entitlementsProvider).value;
+        final s = slug;
+        final ent = (s == null
+                ? ref.watch(entitlementsProvider)
+                : ref.watch(museumEntitlementsProvider(s)))
+            .value;
         // 通票内不显示;权益读不到时也不显示 —— 拿不准就别在人家脸上贴锁
         if (ent == null || !ent.known || ent.canAudioAny) {
           return const SizedBox.shrink();
         }
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => context.push('/benefits'),
+          onTap: () async {
+            String? pid;
+            if (s != null && language != null) {
+              try {
+                pid = (await ref.read(
+                        museumDetailProvider((slug: s, language: language!))
+                            .future))
+                    .pass
+                    ?.productId;
+              } catch (_) {}
+            }
+            if (context.mounted) context.push(benefitsRoute(pid));
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
             decoration: BoxDecoration(
@@ -174,7 +196,7 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
             ),
           ),
           Container(height: 1.5, color: gm.line),
-          const _DeepAudioLockBar(),
+          _DeepAudioLockBar(slug: widget.slug, language: widget.language),
           // Tab 栏（横滚，粘顶）
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,

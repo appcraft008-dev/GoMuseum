@@ -21,6 +21,8 @@ class GmTicket extends StatelessWidget {
   const GmTicket({
     super.key,
     required this.child,
+    required this.stamp,
+    required this.days,
     this.stub,
     this.torn = 0.0,
     this.dim = false,
@@ -30,6 +32,13 @@ class GmTicket extends StatelessWidget {
 
   /// 票面主体,通常是 [GmTicketFace]。
   final Widget child;
+
+  /// 票头刻印的地名(「PARIS」),来自后端下发的票([PassOffer.stampText])。
+  /// 必填:此前写死 `GOMUSEUM · PARIS`,荷兰的票也会印上巴黎。
+  final String stamp;
+
+  /// 这张票管几天(票头右侧),来自后端 —— 同样不再写死 7。
+  final int days;
 
   /// 存根位。null 时不画撕线 —— 没有存根就没有"可撕"的语义。
   final Widget? stub;
@@ -147,8 +156,9 @@ class GmTicket extends StatelessWidget {
     0, 0, 0, 1, 0, //
   ];
 
-  /// 票头。`GOMUSEUM · PARIS` 是票面刻印,**不翻译** —— 品牌标记加地名,
-  /// 纸质门票上的印刷也不会随读者语言变。
+  /// 票头。`GOMUSEUM · <地名>` 是票面刻印,**不翻译** —— 品牌标记加地名,
+  /// 纸质门票上的印刷也不会随读者语言变。地名取自后端(见 [stamp]):后端给了
+  /// 刻印就用刻印,没给就用本地化的范围名大写 —— 后者会随语言变,是退而求其次。
   ///
   /// 右侧的有效期**要翻**:它携带的是产品规格(这张票管几天),不是刻印。
   /// 原先写死 `7 JOURS`,中文/日文用户读不懂一串法语。
@@ -162,7 +172,7 @@ class GmTicket extends StatelessWidget {
             Text('◆', style: GmText.sans(size: 9, color: gm.accent)),
             const SizedBox(width: 8),
             Text(
-              'GOMUSEUM · PARIS',
+              'GOMUSEUM · $stamp',
               style: GmText.sans(
                   size: 9.5,
                   letterSpacing: 2.5,
@@ -178,7 +188,7 @@ class GmTicket extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  AppLocalizations.of(context)!.ticketDurationDays('7'),
+                  AppLocalizations.of(context)!.ticketDurationDays('$days'),
                   style:
                       GmText.sans(size: 9.5, letterSpacing: 1, color: gm.faint),
                 ),

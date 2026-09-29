@@ -1,4 +1,4 @@
-/// 通票商品的**本地化价格**。
+/// 通票商品的**本地化价格**,按商品 ID 分别查(哪张票由后端下发,见 pass_offer.dart)。
 ///
 /// 付费墙此前根本不显示价格 —— 用户是在不知道多少钱的情况下点「获取通票」的。
 /// 这既是转化问题,也是 Google Play 的合规要求(购买前必须清楚展示价格)。
@@ -11,15 +11,14 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
-import 'package:gomuseum_app/core/services/iap_service.dart';
-
 /// 只查商品详情,**不订阅 purchaseStream**:付费墙只要一个价格串,
 /// 购买全流程(初始化/验证/发权益)仍然只在权益页那一处实现。
-final passPriceProvider = FutureProvider<String?>((ref) async {
+final passPriceProvider =
+    FutureProvider.autoDispose.family<String?, String>((ref, productId) async {
   try {
     final iap = InAppPurchase.instance;
     if (!await iap.isAvailable()) return null;
-    final res = await iap.queryProductDetails({IapService.kParisPass7d});
+    final res = await iap.queryProductDetails({productId});
     if (res.error != null || res.productDetails.isEmpty) return null;
     return res.productDetails.first.price;
   } catch (_) {

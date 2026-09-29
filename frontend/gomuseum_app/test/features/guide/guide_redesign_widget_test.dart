@@ -14,6 +14,9 @@ import 'package:gomuseum_app/theme/app_theme.dart';
 // FlutterSecureStorage，测试环境没有平台通道 mock，会真的挂起）。
 final _entitlementsOverride =
     entitlementsProvider.overrideWith((ref) async => Entitlements.unknown);
+// 播放器按馆读权益(持巴黎票进荷兰的馆要被拦)—— 这一份也得替身
+final _museumEntitlementsOverride = museumEntitlementsProvider
+    .overrideWith((ref, _) async => Entitlements.unknown);
 
 ObjectContent _sample() => const ObjectContent(
       qid: 'Q1',
@@ -48,6 +51,7 @@ void main() {
         objectContentProvider((slug: 'orsay', qid: 'Q1'))
             .overrideWith((ref) => _sample()),
         _entitlementsOverride,
+        _museumEntitlementsOverride,
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -102,6 +106,7 @@ void main() {
         objectContentProvider((slug: 'orsay', qid: 'Q2'))
             .overrideWith((ref) => c),
         _entitlementsOverride,
+        _museumEntitlementsOverride,
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

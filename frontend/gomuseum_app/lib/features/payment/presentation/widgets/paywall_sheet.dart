@@ -24,6 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/data/pass_product.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/benefits_sections.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/gm_ticket.dart';
@@ -34,28 +35,57 @@ import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_ticket_button.dart';
 
-/// 通票时长。后端按商品算(`pass_duration(entitlement_type)`),前端只在
-/// **激活确认页预告结束时刻**时需要它 —— 那一刻权益还没激活,后端没有
-/// expires_at 可给。激活成功后一律用后端返回的 `expires_at`,不用这个值。
-///
-/// ponytail: 目前在售商品只有 paris_pass_7d。真出第二种时长的票时,
-/// 这里要改成从后端拿(否则确认页会预告一个错的结束时刻)。
-const Duration _kPassDuration = Duration(days: 7);
+/// 一张在售票的票面(标题/卖点/价格全部来自后端下发的 [PassOffer])。
+/// 付费墙与权益页共用 —— 两处各拼一份的话,迟早一处还写着「巴黎 7 日」。
+GmTicketFace saleTicketFace(
+  BuildContext context,
+  WidgetRef ref,
+  PassOffer offer, {
+  bool showPrice = true,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  return GmTicketFace(
+    title: passTitle(l10n, offer.label, offer.days),
+    pitch: passPitch(context, offer.covers),
+    price:
+        showPrice ? ref.watch(passPriceProvider(offer.productId)).value : '—',
+    priceNote: showPrice ? l10n.paywallPriceNote : null,
+  );
+}
+
+/// 票名「<范围> <天数> 日通票」。范围名来自后端;认不出是哪张票时(老后端、
+/// 历史票)留空,标题退化成「7 日通票」—— 宁可不写地名,也不编一个(巴黎)出来。
+String passTitle(AppLocalizations l10n, String label, int days) => l10n
+    .paywallTitle(label, '$days')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .replaceAll(RegExp(r'^[\s–-]+|[\s–-]+$'), '')
+    .trim();
+
+/// 卖点:「不限次识别,<这张票覆盖的馆>全部语音讲解」。馆名来自后端,
+/// 上新馆自动变长;拿不到馆名时用不点名的通用版,绝不回落到写死的四馆。
+String passPitch(BuildContext context, List<String> covers) {
+  final l10n = AppLocalizations.of(context)!;
+  if (covers.isEmpty) return l10n.paywallPitchGeneric;
+  return l10n.paywallPitch(
+      joinMuseums(covers, Localizations.localeOf(context).languageCode));
+}
 
 /// 轻提示条:第一次撞墙时只轻碰一下,不打断现场体验。
 ///
 /// [onLearnMore] 必填:此前它可选、缺省回落到 `showPaywallSheet(context)`,
 /// 而那个 sheet 不带 onBuy —— 用户点"获取通票"只会关掉弹窗、什么都不发生。
 /// 改必填是让编译器堵死这条路,不能再"忘了传"。
+///
+/// [message]:撞墙的**原因**(通票过期 / 这件的免费试听结束)。不给 = 默认提示。
 void showPaywallHint(BuildContext context,
-    {required VoidCallback onLearnMore}) {
+    {required VoidCallback onLearnMore, String? message}) {
   final l10n = AppLocalizations.of(context)!;
   // 清队列:`ScaffoldMessenger` 是 **MaterialApp 根上那一个**,提示条会排队挨个
   // 播完。连点几件锁着的作品就攒出一串,而这条提示的本意是"轻碰一下"。
   ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(l10n.audioLockedHint),
+      content: Text(message ?? l10n.audioLockedHint('7')),
       duration: const Duration(seconds: 4),
       // ⚠️ **必须显式写 false,否则 duration 是句空话。**
       // Flutter 的 `SnackBar` 构造器里:`persist = persist ?? action != null`
@@ -83,10 +113,15 @@ void showPaywallHint(BuildContext context,
 /// 正下方。它唯一覆盖的场景(付了钱但后端验证没成功)**机器自己认得出**
 /// (Play 有购买 + 后端无权益),已改为权益页自动静默恢复。
 /// 手动入口只在权益页底部留一个兜底。
+///
+/// [offer]:这家馆该买的票(馆包/402 的 `pass`)。null = 不知道在哪家馆 →
+/// 列出 `/me.offers` 的每一张。[onBuy] 收到要买的商品 ID(列出多张时为 null,
+/// 由权益页让用户挑)。
 Future<void> showPaywallSheet(
   BuildContext context, {
   String reason = 'unknown',
-  required VoidCallback onBuy,
+  PassOffer? offer,
+  required void Function(String? productId) onBuy,
 }) {
   final gm = context.gm;
   return showModalBottomSheet<void>(
@@ -94,9 +129,13 @@ Future<void> showPaywallSheet(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: gm.ink.withValues(alpha: 0.32),
-    builder: (_) => PaywallSheetContent(onBuy: onBuy),
+    builder: (_) => PaywallSheetContent(offer: offer, onBuy: onBuy),
   );
 }
+
+/// 购买入口统一跳权益页(购买全流程只在那里实现)。带 `?pass=` 就只卖那一张。
+String benefitsRoute(String? productId) =>
+    productId == null ? '/benefits' : '/benefits?pass=$productId';
 
 /// 弹层外壳:暖纸底、直角(4px)、顶部发丝线。小屏内容超出可滚,CTA 不会被挤出屏幕。
 class _PaywallSheetShell extends StatelessWidget {
@@ -155,9 +194,10 @@ class _SecondaryAction extends StatelessWidget {
 
 /// 屏 1 · 付费页。抽出便于单测(不依赖 showModalBottomSheet)。
 class PaywallSheetContent extends ConsumerWidget {
-  const PaywallSheetContent({super.key, this.onBuy});
+  const PaywallSheetContent({super.key, this.offer, this.onBuy});
 
-  final VoidCallback? onBuy;
+  final PassOffer? offer;
+  final void Function(String? productId)? onBuy;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -169,22 +209,24 @@ class PaywallSheetContent extends ConsumerWidget {
     // ⚠️ 权益**读不到**(离线)和**未登录**是两回事。混在一起就会对着一个
     // 已登录、只是断网的用户说「登录后购买」,他照做也没用。
     final unknown = ent != null && !ent.known;
-    // 拿不到价格就不显示价格块 —— 见 passPriceProvider,绝不显示假金额
-    final price = ref.watch(passPriceProvider).value;
+    // 卖哪张票由后端决定:知道在哪家馆就卖那一张,不知道就每张都列出来
+    // (不猜"第一张" —— 票多了会卖错)。拿不到任何在售票就说「暂未开售」。
+    final offers = offer != null ? [offer!] : (ent?.offers ?? const []);
 
     if (unknown) return _unknownSheet(context, gm, l10n, ref);
 
     return _PaywallSheetShell(
       children: [
-        GmTicket(
-          stub: _clockClause(context, gm, l10n),
-          child: GmTicketFace(
-            title: l10n.paywallTitle,
-            pitch: l10n.paywallPitch,
-            price: price,
-            priceNote: l10n.paywallPriceNote,
+        if (offers.isEmpty) BenNotice(head: l10n.passNotOnSale, body: ''),
+        for (final o in offers) ...[
+          GmTicket(
+            stamp: o.stampText,
+            days: o.days,
+            stub: _clockClause(context, gm, l10n, o.days),
+            child: saleTicketFace(context, ref, o),
           ),
-        ),
+          const SizedBox(height: 10),
+        ],
         // 未登录:说清"为什么要先登录",而不是只把按钮换个字
         if (!canBuy)
           BenNotice(
@@ -208,17 +250,18 @@ class PaywallSheetContent extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 18),
-        GmTicketButton(
-          label: canBuy ? l10n.paywallBuy : l10n.paywallLoginToBuy,
-          onTap: () {
-            Navigator.of(context).pop();
-            if (canBuy) {
-              onBuy?.call();
-            } else {
-              context.push(kLoginToUpgrade);
-            }
-          },
-        ),
+        if (offers.isNotEmpty)
+          GmTicketButton(
+            label: canBuy ? l10n.paywallBuy : l10n.paywallLoginToBuy,
+            onTap: () {
+              Navigator.of(context).pop();
+              if (canBuy) {
+                onBuy?.call(offers.length == 1 ? offers.first.productId : null);
+              } else {
+                context.push(kLoginToUpgrade);
+              }
+            },
+          ),
       ],
     );
   }
@@ -232,14 +275,13 @@ class PaywallSheetContent extends ConsumerWidget {
           AppLocalizations l10n, WidgetRef ref) =>
       _PaywallSheetShell(
         children: [
-          GmTicket(
-            stub: const SizedBox(height: 1),
-            child: GmTicketFace(
-              title: l10n.paywallTitle,
-              pitch: l10n.paywallPitch,
-              price: '—',
+          if (offer != null)
+            GmTicket(
+              stamp: offer!.stampText,
+              days: offer!.days,
+              stub: const SizedBox(height: 1),
+              child: saleTicketFace(context, ref, offer!, showPrice: false),
             ),
-          ),
           BenNotice(
             head: l10n.edgeUnknownHead,
             body: l10n.edgeUnknownBody,
@@ -260,8 +302,8 @@ class PaywallSheetContent extends ConsumerWidget {
 
   /// ⭐ 旅游产品的关键承诺:买了不马上开始烧有效期。
   /// 放在**存根位**(撕下去的那半)——它讲的正是"什么时候撕"。
-  Widget _clockClause(
-          BuildContext context, GmPalette gm, AppLocalizations l10n) =>
+  Widget _clockClause(BuildContext context, GmPalette gm, AppLocalizations l10n,
+          int days) =>
       Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,7 +315,7 @@ class PaywallSheetContent extends ConsumerWidget {
                   color: gm.accentDeep,
                   height: 1.4)),
           const SizedBox(height: 4),
-          Text(l10n.paywallClockBody,
+          Text(l10n.paywallClockBody('$days'),
               style: GmText.sans(size: 12, color: gm.sub, height: 1.6)),
           const SizedBox(height: 4),
           // ⚠️ **合规必需,不是装饰**:后端 `ACTIVATION_WINDOW` 会真的作废
@@ -290,20 +332,38 @@ class PaywallSheetContent extends ConsumerWidget {
 /// **绝不静默激活**:旅游产品用户常提前几天买,误触一次就烧掉整张票 = 差评来源。
 /// 反过来,不做这一步同样致命——通票会永远停在 purchased_not_activated,
 /// `can.audio_any` 恒 false,用户付了钱依然被拦(此前正是如此)。
+///
+/// [museum]:在馆内时必传(按馆激活,只动覆盖这家馆的票)。[offer] 是这家馆在售的
+/// 票,用来认出手里哪一张是它。**不在馆内且手里不止一张未激活票时不弹**:
+/// 猜错一张就是替用户烧掉另一个国家的 7 天 —— 让他到那家馆用的时候再激活。
 Future<bool> ensurePassActivated(
   BuildContext context,
   WidgetRef ref,
-  Entitlements ent,
-) async {
+  Entitlements ent, {
+  String? museum,
+  PassOffer? offer,
+}) async {
   if (ent.isActive) return true;
   if (!ent.isPurchasedNotActivated) return false;
+
+  final pending = ent.passes.where((p) => p.isPurchasedNotActivated).toList();
+  OwnedPass? target;
+  if (offer != null) {
+    target = pending.where((p) => p.productId == offer.productId).firstOrNull;
+  }
+  target ??= pending.length == 1 ? pending.first : null;
+  if (museum == null && target == null) return false;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: context.gm.ink.withValues(alpha: 0.42),
-    builder: (_) => const ActivatePassSheet(),
+    builder: (_) => ActivatePassSheet(
+      museum: museum,
+      label: target?.label ?? offer?.label ?? '',
+      days: target?.days ?? offer?.days ?? 7,
+    ),
   );
   return ok ?? false;
 }
@@ -316,7 +376,19 @@ Future<bool> ensurePassActivated(
 enum ActivateStep { confirm, activating, done, failed }
 
 class ActivatePassSheet extends ConsumerStatefulWidget {
-  const ActivatePassSheet({super.key});
+  const ActivatePassSheet({
+    super.key,
+    this.museum,
+    required this.label,
+    required this.days,
+  });
+
+  /// 在哪家馆激活(按馆激活,见 [activatePass])。
+  final String? museum;
+
+  /// 要激活的那张票的范围名与天数(来自后端,不写死)。
+  final String label;
+  final int days;
 
   @override
   ConsumerState<ActivatePassSheet> createState() => _ActivatePassSheetState();
@@ -328,12 +400,15 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
 
   /// 确认页预告的结束时刻。在 initState 定一次 —— 每次 build 重算会让
   /// 用户盯着的那个时间一直往后跳。
-  late final DateTime _projectedEnd = DateTime.now().add(_kPassDuration);
+  ///
+  /// 天数取自这张票(后端下发),不是常量 —— 1 日票会预告错的结束时刻。
+  late final DateTime _projectedEnd =
+      DateTime.now().add(Duration(days: widget.days));
 
   Future<void> _activate() async {
     setState(() => _step = ActivateStep.activating);
-    final updated = await activatePass(ref);
-    ref.invalidate(entitlementsProvider);
+    final updated = await activatePass(ref, museum: widget.museum);
+    invalidateEntitlements(ref);
     if (!mounted) return;
     setState(() {
       if (updated?.isActive == true) {
@@ -366,12 +441,13 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
             tween: Tween(begin: 0, end: done ? 1 : 0),
             duration: const Duration(milliseconds: 200),
             builder: (_, torn, __) => GmTicket(
+              stamp: widget.label.toUpperCase(),
+              days: widget.days,
               torn: torn,
               dim: _step == ActivateStep.activating,
               stub: _stub(gm, l10n),
               child: GmTicketFace(
-                title: l10n.paywallTitle,
-                pitch: l10n.paywallPitch,
+                title: passTitle(l10n, widget.label, widget.days),
                 paidLabel: l10n.ticketPaid,
               ),
             ),
@@ -387,7 +463,7 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
       case ActivateStep.confirm:
       case ActivateStep.activating:
         return [
-          Text(l10n.activateSheetTitle,
+          Text(l10n.activateSheetTitle('${widget.days}'),
               style: GmText.serif(
                   size: 18,
                   weight: FontWeight.w700,
@@ -412,7 +488,7 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
           Text(l10n.activateFailTitle,
               style: GmText.serif(size: 18, weight: FontWeight.w700)),
           const SizedBox(height: 7),
-          Text(l10n.activateFailBody,
+          Text(l10n.activateFailBody('${widget.days}'),
               style: GmText.sans(size: 13, color: gm.sub, height: 1.7)),
         ];
     }

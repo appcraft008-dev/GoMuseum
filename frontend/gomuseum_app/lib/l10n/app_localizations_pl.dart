@@ -719,11 +719,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String get museumIntroComingSoon => 'Wprowadzenie do muzeum wkrótce';
 
   @override
-  String get paywallTitle => 'Karnet paryski na 7 dni';
+  String paywallTitle(String label, String days) {
+    return 'Karnet na $days dni – $label';
+  }
 
   @override
-  String get paywallPitch =>
-      'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio w Luwrze, Orsay, Orangerie i Petit Palais.';
+  String paywallPitch(String museums) {
+    return 'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio: $museums.';
+  }
+
+  @override
+  String get paywallPitchGeneric =>
+      'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio.';
+
+  @override
+  String get passNotOnSale =>
+      'Karnet do tego muzeum nie jest jeszcze w sprzedaży.';
 
   @override
   String get paywallFreeAlways =>
@@ -748,8 +759,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String get audioFreePreview => 'Darmowy odsłuch';
 
   @override
-  String get audioLockedHint =>
-      'Komentarz audio wymaga karnetu — dzieła, które zeskanowałeś, odsłuchasz za darmo.';
+  String audioLockedHint(String days) {
+    return 'Komentarz audio wymaga karnetu — zeskanowanych dzieł możesz słuchać za darmo przez $days dni.';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return 'Za darmo · zostało $days dni';
+  }
+
+  @override
+  String get audioFreeExpiredHint =>
+      'Darmowy odsłuch tego dzieła się skończył — aby słuchać dalej, potrzebujesz karnetu.';
+
+  @override
+  String get audioPassExpiredHint =>
+      'Twój karnet wygasł — kup kolejny, aby słuchać dalej.';
 
   @override
   String get quotaExhausted => 'Wykorzystano wszystkie darmowe rozpoznania.';
@@ -794,8 +819,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get paywallClockHead => 'Czas nie zaczyna biec w chwili zakupu';
 
   @override
-  String get paywallClockBody =>
-      'Twoje 7 dni rusza przy pierwszym potwierdzonym użyciu funkcji premium. Kup wcześniej, uruchom w muzeum.';
+  String paywallClockBody(String days) {
+    return 'Twoje $days dni rusza przy pierwszym potwierdzonym użyciu funkcji premium. Kup wcześniej, uruchom w muzeum.';
+  }
 
   @override
   String get paywallLapseNote =>
@@ -829,7 +855,9 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get activateSheetTitle => 'Rozpocząć 7 dni teraz?';
+  String activateSheetTitle(String days) {
+    return 'Rozpocząć $days dni teraz?';
+  }
 
   @override
   String activateSheetBody(DateTime date, DateTime time) {
@@ -856,7 +884,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get activateDoneBody =>
-      'Komentarz audio w czterech muzeach i nielimitowane rozpoznawanie są odblokowane.';
+      'Komentarz audio i nielimitowane rozpoznawanie są odblokowane.';
 
   @override
   String get activateDoneCta => 'Dalej';
@@ -866,8 +894,9 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się potwierdzić — bilet nie został użyty';
 
   @override
-  String get activateFailBody =>
-      'Brak połączenia, 7 dni jeszcze nie ruszyło. Karnet jest nienaruszony, spróbuj ponownie.';
+  String activateFailBody(String days) {
+    return 'Brak połączenia, $days dni jeszcze nie ruszyło. Karnet jest nienaruszony, spróbuj ponownie.';
+  }
 
   @override
   String get activateRetry => 'Spróbuj ponownie';
@@ -919,7 +948,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get benefitsFeatAllAudio =>
-      'Komentarz audio we wszystkich czterech muzeach';
+      'Komentarz audio we wszystkich muzeach karnetu';
 
   @override
   String get benefitsFeatDeepAudio => 'Audio do sekcji pogłębionych';
@@ -931,22 +960,23 @@ class AppLocalizationsPl extends AppLocalizations {
   String get benefitsNotStartedHead => 'Odliczanie jeszcze się nie zaczęło';
 
   @override
-  String get benefitsNotStartedBody =>
-      'Gdy pierwszy raz użyjesz w muzeum komentarza audio lub rozpoznawania, poprosimy o potwierdzenie. Twoje 7 dni ruszy w tym momencie.';
+  String benefitsNotStartedBody(String days) {
+    return 'Gdy pierwszy raz użyjesz w muzeum komentarza audio lub rozpoznawania, poprosimy o potwierdzenie. Twoje $days dni ruszy w tym momencie.';
+  }
 
   @override
-  String get benefitsMuseums => 'Luwr · Orsay · Orangerie · Petit Palais';
-
-  @override
-  String get benefitsStartNow => 'Zacznij moje 7 dni teraz';
+  String benefitsStartNow(String days) {
+    return 'Zacznij moje $days dni teraz';
+  }
 
   @override
   String get benefitsStartNowNote =>
       'Jeśli nie jesteś jeszcze w muzeum, lepiej poczekaj';
 
   @override
-  String get benefitsExpiredBody =>
-      'Twoje 7 dni dobiegło końca. Darmowa pula wróciła, a komentarz tekstowy nadal jest pełny.';
+  String benefitsExpiredBody(String days) {
+    return 'Twoje $days dni dobiegło końca. Darmowa pula wróciła, a komentarz tekstowy nadal jest pełny.';
+  }
 
   @override
   String benefitsPrevPass(DateTime start, DateTime end) {

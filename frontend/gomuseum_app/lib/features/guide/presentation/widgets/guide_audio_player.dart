@@ -18,6 +18,7 @@ import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -127,7 +128,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// ⚠️ 已购未激活的用户要先走激活确认,不能直接弹付费墙——他已经付过钱了,
   /// 再让他看购买页是最糟的体验。买了不立即计时是有意设计,这里是它的触发器。
   Future<bool> _blockedByPaywall() async {
-    final ent = ref.read(entitlementsProvider).value;
+    final ent = ref.read(museumEntitlementsProvider(widget.slug)).value;
     if (ent == null) return false;
 
     // ⚠️ 这一段**必须排在 canPlayAudio 之前**。已解锁作品的 qid 会让
@@ -136,7 +137,13 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     // 只会撞后端 402(免费只放行主讲解段,问答/作者介绍段不在内),
     // 最后以为没买成功而**重复购买**。2026-09-02 真机实测撞到,买了两次。
     if (ent.isPurchasedNotActivated) {
-      if (await ensurePassActivated(context, ref, ent)) return false; // 已生效,继续播
+      // 按馆激活:只撕覆盖这家馆的那张(持两国未激活票时不能烧错)
+      final offer = await _museumOffer();
+      if (!mounted) return true;
+      if (await ensurePassActivated(context, ref, ent,
+          museum: widget.slug, offer: offer)) {
+        return false; // 已生效,继续播
+      }
       if (mounted) setState(() => _ui = _Ui.idle);
       return true; // 用户选了"再等等"
     }
@@ -160,12 +167,24 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
 
     if (_hintedQids.add(widget.qid)) {
-      showPaywallHint(context, onLearnMore: _showPaywall);
+      showPaywallHint(context,
+          onLearnMore: _showPaywall, message: _lockedReason(ent));
     } else {
       _showPaywall();
     }
     if (mounted) setState(() => _ui = _Ui.idle);
     return true;
+  }
+
+  /// 撞墙的原因写在提示里(D8)。不写的话,解锁过、过了 7 天的人会以为 App 坏了:
+  /// 他记得自己拍过这件,昨天还能听。
+  String _lockedReason(Entitlements ent) {
+    final l10n = AppLocalizations.of(context)!;
+    if (ent.isExpired) return l10n.audioPassExpiredHint;
+    if (ent.freeAudioExpired.contains(widget.qid)) {
+      return l10n.audioFreeExpiredHint;
+    }
+    return l10n.audioLockedHint('${ent.freeAudioDays}');
   }
 
   /// 花 1 次免费额度解锁这一件的语音。返回 true = 已解锁,可以继续播。
@@ -200,7 +219,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     if (ok != true) return false;
     final unlocked = await unlockFreeAudio(ref, widget.qid);
     // 解锁改了额度,权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
-    ref.invalidate(entitlementsProvider);
+    invalidateEntitlements(ref);
     return unlocked;
   }
 
@@ -210,17 +229,35 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 不传就等于按钮只关弹窗、什么都不做——付费墙形同虚设(实测撞到过)。
   /// 购买全流程(IAP 初始化/查商品/验证/发权益)只在权益页有完整实现,
   /// 这里统一跳过去,不在播放器里另搭一套。
-  void _showPaywall() => showPaywallSheet(
-        context,
-        reason: 'audio',
-        onBuy: () {
-          // 提示条挂在**根 ScaffoldMessenger** 上,不属于当前页 —— 不清掉的话
-          // 它会跟着飘到权益页,在那儿悬着一个多余的「获取通票」,而那一页
-          // 本来就有自己的购买入口(2026-09-04 真机实测撞到)。
-          ScaffoldMessenger.of(context).clearSnackBars();
-          context.push('/benefits');
-        },
-      );
+  /// 这家馆卖的票(馆包 `pass`,后端下发)。拿不到 = null,付费墙说「暂未开售」,
+  /// **绝不回落到巴黎票** —— 此前付费墙在任何馆都卖「巴黎 7 日通票」。
+  Future<PassOffer?> _museumOffer() async {
+    try {
+      final m = await ref.read(
+          museumDetailProvider((slug: widget.slug, language: widget.language))
+              .future);
+      return m.pass;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _showPaywall() async {
+    final offer = await _museumOffer();
+    if (!mounted) return;
+    await showPaywallSheet(
+      context,
+      reason: 'audio',
+      offer: offer,
+      onBuy: (productId) {
+        // 提示条挂在**根 ScaffoldMessenger** 上,不属于当前页 —— 不清掉的话
+        // 它会跟着飘到权益页,在那儿悬着一个多余的「获取通票」,而那一页
+        // 本来就有自己的购买入口(2026-09-04 真机实测撞到)。
+        ScaffoldMessenger.of(context).clearSnackBars();
+        context.push(benefitsRoute(productId));
+      },
+    );
+  }
 
   bool _autoPlayed = false;
 
@@ -228,7 +265,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 拿不到权益时不自动播 —— 宁可不响,也不要一进页面就撞墙。
   void _maybeAutoPlay() {
     if (!widget.autoPlay || _autoPlayed || _ui != _Ui.idle) return;
-    final ent = ref.read(entitlementsProvider).value;
+    final ent = ref.read(museumEntitlementsProvider(widget.slug)).value;
     if (ent == null) return;
     // 已购未激活:绝不自动播——那会在进页面的瞬间弹出激活确认,等于替用户
     // 决定何时开始烧那 7×24 小时。等他主动点播放键再问(见 _blockedByPaywall)。
@@ -316,7 +353,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 起播后看门狗兜底(9s position 不动→回退)，永不永久静音。
   /// 客户端权益缓存过期时,前置闸可能放行而后端拒绝——这里保证仍弹墙。
   bool _showPaywallAnyway() {
-    ref.invalidate(entitlementsProvider); // 顺便刷新,下次判断就准了
+    invalidateEntitlements(ref); // 顺便刷新,下次判断就准了
     _showPaywall();
     return true;
   }
@@ -327,10 +364,20 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 只判 isActive 会让刚买完的人继续看到「免费试听」——他刚付了钱,
   /// 这个标只会让他怀疑购买没成功。
   bool _isFreePreview() {
-    final ent = ref.watch(entitlementsProvider).value;
+    final ent = ref.watch(museumEntitlementsProvider(widget.slug)).value;
     if (ent == null || ent.isActive || ent.isPurchasedNotActivated)
       return false;
     return ent.canPlayAudio(widget.qid, section: widget.section);
+  }
+
+  /// 「免费试听 · 剩 X 天」(D8)。后端没给到期时刻(老后端)就只写「免费试听」。
+  String _freePreviewLabel(AppLocalizations l10n) {
+    final ent = ref.watch(museumEntitlementsProvider(widget.slug)).value;
+    final until = ent?.freeAudioUntil[widget.qid];
+    if (until == null) return l10n.audioFreePreview;
+    final left =
+        (until.difference(DateTime.now()).inHours / 24).ceil().clamp(1, 999);
+    return l10n.audioFreePreviewDays('$left');
   }
 
   Future<Map<String, String>> _authHeaders() async {
@@ -468,7 +515,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(border: Border.all(color: gm.faint)),
-              child: Text(l10n.audioFreePreview,
+              child: Text(_freePreviewLabel(l10n),
                   style: GmText.sans(size: 10, color: gm.sub)),
             ),
             const SizedBox(width: 8),
