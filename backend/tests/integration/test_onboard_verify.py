@@ -198,7 +198,7 @@ def test_museum_without_a_pass_on_sale_fails(session):
     """⑧ 放出一家买不了票的馆 = 看得到、撞付费墙、买不了。换个没有在售通票的城市必须红。"""
     _healthy(session)
     session.query(Museum).filter_by(slug="m1").update(
-        {"city_en": "Amsterdam", "country": "NL"}  # nl_pass_7d 目前 on_sale=False
+        {"city_en": "Madrid", "country": "ES"}  # 没有任何在售票覆盖西班牙
     )
     session.commit()
     res = build_checks(session, "m1", LANGS)
