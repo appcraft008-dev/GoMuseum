@@ -1,5 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:dio/dio.dart';
+import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart'
+    show currentUserProvider;
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import '../../data/datasources/history_remote_datasource.dart';
@@ -100,6 +102,9 @@ class History extends _$History {
   @override
   HistoryState build() {
     _lang = apiLanguage(ref.watch(resolvedLocaleProvider));
+    // 足迹是 per-user 数据:换账号必须重拉。首页「继续游览」常驻持有这份缓存,
+    // 不依赖账号的话会给 B 显示 A 看过的作品(同 #692 那类缺陷)。
+    ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
     // build 返回前 state 未初始化，必须推迟到微任务再加载
     Future.microtask(loadHistory);
     return const HistoryState(isLoading: true);

@@ -110,6 +110,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeNearby => '近くの美術館';
 
   @override
+  String get homeMuseums => '美術館・博物館';
+
+  @override
+  String get homeEnableLocation => '位置情報をオンにすると近くの館を表示します';
+
+  @override
+  String get homeContinue => '続きから見る';
+
+  @override
   String get statusOpen => '開館中';
 
   @override

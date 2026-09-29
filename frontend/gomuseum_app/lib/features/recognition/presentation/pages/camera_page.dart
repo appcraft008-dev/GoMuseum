@@ -28,6 +28,7 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
+import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
 
@@ -240,7 +241,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     final shot = await controller.takePicture();
     _saveShotToGallery(shot); // 不 await：见方法注释
-    await _recognizeImage(shot);
+    await _recognizeImage(shot, live: true);
   }
 
   /// 「自动保存照片」开着时，把这张快门照片写进系统相册。
@@ -288,7 +289,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   /// 拍摄/选图共用：识别 + 三档路由 + 命中扣额度。
-  Future<void> _recognizeImage(XFile shot) async {
+  /// 这次识别是不是**快门现场拍的**。只有它 + 命中才记为「人在这家馆」,供首页判
+  /// 当前城市(spec 2026-09-29 §一)。图库/最近照片不算:可能在家翻旧照、出发前拿网图试。
+  bool _lastShotLive = false;
+
+  Future<void> _recognizeImage(XFile shot, {bool live = false}) async {
+    _lastShotLive = live;
     setState(() => _captured = shot);
     final benefits = ref.read(benefitsStateProvider.notifier);
     final lang = apiLanguage(ref.read(resolvedLocaleProvider));
@@ -346,6 +352,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   void _goGuide(String slug, String qid) {
+    // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」
+    if (_lastShotLive) {
+      // 这个页马上 pushReplacement 被销毁:写完存储时 ref 已不能用,所以先拿容器
+      final container = ProviderScope.containerOf(context, listen: false);
+      unawaited(recordLiveMatch(slug)
+          .then((_) => container.invalidate(nearbyProvider))
+          .catchError((_) {}));
+    }
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
     unawaited(

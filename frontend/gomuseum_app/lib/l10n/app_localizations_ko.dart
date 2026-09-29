@@ -110,6 +110,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeNearby => '근처 미술관';
 
   @override
+  String get homeMuseums => '박물관·미술관';
+
+  @override
+  String get homeEnableLocation => '위치를 켜면 가까운 미술관을 보여 드려요';
+
+  @override
+  String get homeContinue => '이어서 보기';
+
+  @override
   String get statusOpen => '개관 중';
 
   @override
