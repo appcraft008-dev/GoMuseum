@@ -933,6 +933,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsNotStartedHead => '아직 시간이 시작되지 않았습니다';
 
   @override
+  String get benefitsPassNotActivated => '미활성';
+
+  @override
+  String get benefitsPassStartsOnFirstUse => '박물관에서 처음 사용할 때 시작됩니다';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString까지 활성화하지 않으면 만료됩니다';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition => '다른 박물관 사진 인식';
+
+  @override
   String benefitsNotStartedBody(String days) {
     return '미술관에서 음성 해설이나 인식을 처음 사용할 때 한 번 확인을 요청합니다. $days일은 그 순간부터 시작됩니다.';
   }

@@ -975,6 +975,25 @@ class AppLocalizationsFr extends AppLocalizations {
   String get benefitsNotStartedHead => 'Le décompte n\'a pas commencé';
 
   @override
+  String get benefitsPassNotActivated => 'Non activé';
+
+  @override
+  String get benefitsPassStartsOnFirstUse =>
+      'Démarre à la première utilisation au musée';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Annulé s\'il n\'est pas activé avant le $dateString';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition =>
+      'Reconnaissance photo dans les autres musées';
+
+  @override
   String benefitsNotStartedBody(String days) {
     return 'La première fois que vous utiliserez le commentaire audio ou la reconnaissance au musée, nous vous demanderons de confirmer. Vos $days jours démarrent à cet instant.';
   }

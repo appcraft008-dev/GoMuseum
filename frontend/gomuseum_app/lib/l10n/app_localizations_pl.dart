@@ -970,6 +970,25 @@ class AppLocalizationsPl extends AppLocalizations {
   String get benefitsNotStartedHead => 'Odliczanie jeszcze się nie zaczęło';
 
   @override
+  String get benefitsPassNotActivated => 'Nieaktywny';
+
+  @override
+  String get benefitsPassStartsOnFirstUse =>
+      'Startuje przy pierwszym użyciu w muzeum';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Przepada, jeśli nie zostanie aktywowany do $dateString';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition =>
+      'Rozpoznawanie ze zdjęcia w innych muzeach';
+
+  @override
   String benefitsNotStartedBody(String days) {
     return 'Gdy pierwszy raz użyjesz w muzeum komentarza audio lub rozpoznawania, poprosimy o potwierdzenie. Twoje $days dni ruszy w tym momencie.';
   }

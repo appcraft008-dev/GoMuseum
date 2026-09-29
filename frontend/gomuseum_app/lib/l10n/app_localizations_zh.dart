@@ -929,6 +929,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsNotStartedHead => '还没开始计时';
 
   @override
+  String get benefitsPassNotActivated => '未激活';
+
+  @override
+  String get benefitsPassStartsOnFirstUse => '在馆内首次使用时开始计时';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString 前未激活将作废';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition => '其他馆拍照识别';
+
+  @override
   String benefitsNotStartedBody(String days) {
     return '到馆后首次使用语音讲解或识别时，会请你确认一次，$days 天从那一刻开始。';
   }
@@ -2016,6 +2033,23 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get benefitsNotStartedHead => '還沒開始計時';
+
+  @override
+  String get benefitsPassNotActivated => '未啟用';
+
+  @override
+  String get benefitsPassStartsOnFirstUse => '在館內首次使用時開始計時';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString 前未啟用將作廢';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition => '其他館拍照辨識';
 
   @override
   String benefitsNotStartedBody(String days) {

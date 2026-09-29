@@ -933,6 +933,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get benefitsNotStartedHead => 'まだ計測は始まっていません';
 
   @override
+  String get benefitsPassNotActivated => '未開始';
+
+  @override
+  String get benefitsPassStartsOnFirstUse => '館内で初めて使ったときに計測開始';
+
+  @override
+  String benefitsPassVoidAfter(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateStringまでに開始しないと無効になります';
+  }
+
+  @override
+  String get benefitsOtherMuseumsRecognition => '他の館での写真認識';
+
+  @override
   String benefitsNotStartedBody(String days) {
     return '館内で音声ガイドまたは認識を初めて使うときに確認をお願いします。$days 日間はその時点から始まります。';
   }
