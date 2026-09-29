@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.museum import Museum
 from app.models.purchase import Entitlement, Purchase
 from app.models.user_benefits import UserBenefits
 from app.services import entitlement_service as es
@@ -20,7 +21,12 @@ def session():
     )
     Base.metadata.create_all(
         bind=engine,
-        tables=[Purchase.__table__, Entitlement.__table__, UserBenefits.__table__],
+        tables=[
+            Purchase.__table__,
+            Entitlement.__table__,
+            UserBenefits.__table__,
+            Museum.__table__,  # summary 的 offers 要查可买的馆
+        ],
     )
     yield sessionmaker(bind=engine)()
 
