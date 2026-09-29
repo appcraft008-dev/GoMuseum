@@ -71,7 +71,9 @@ PASSES: dict[str, dict] = {
             "ko": "네덜란드",
             "pl": "Holandia",
         },
-        "on_sale": False,  # 国立博物馆隐身演练期;Play 商品生效且放馆时改 True
+        # 2026-09-29 Play 商品已建。在售≠公众可见:offers/covers 只列覆盖**已放出**馆的票,
+        # 国立博物馆隐身期间只有 can_preview 账号看得到、买得到(演练购买链路用)。
+        "on_sale": True,
     },
 }
 
