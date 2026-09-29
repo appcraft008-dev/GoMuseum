@@ -9,7 +9,10 @@ import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'auth_provider.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
-  const RegisterPage({super.key});
+  const RegisterPage({super.key, this.returnTo});
+
+  /// 注册成功后回到哪里(App Links 深链接,路由已过滤);null = 首页。
+  final String? returnTo;
 
   @override
   ConsumerState<RegisterPage> createState() => _RegisterPageState();
@@ -192,7 +195,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      context.go('/');
+      context.go(widget.returnTo ?? '/');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

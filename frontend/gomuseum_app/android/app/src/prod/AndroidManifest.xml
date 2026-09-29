@@ -1,0 +1,16 @@
+<!-- App Links(spec 2026-09-20-share-web-pages-design §六):只挂 prod flavor。
+     staging 包名是 com.gomuseum.app.staging,assetlinks.json 只登记了正式包名,挂上也验证不过。
+     staging 手测用:adb shell am start -a android.intent.action.VIEW
+       -n com.gomuseum.app.staging/com.gomuseum.app.MainActivity -d "https://gomuseum.app/a/louvre/Q..." -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MainActivity">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="gomuseum.app" android:pathPrefix="/a/" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
