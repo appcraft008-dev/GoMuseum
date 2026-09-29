@@ -801,7 +801,7 @@ class _A5HeroSliverAppBar extends StatelessWidget {
   final VoidCallback onFeedback;
 
   /// 分享(在反馈键右边)。null = 这件不可分享(后端 share 为 null),不渲染这个键。
-  final VoidCallback? onShare;
+  final Future<void> Function()? onShare;
 
   /// hero 完全展开时的高度；顶栏标题的淡入时机由它推出来。
   static const double _expandedHeight = 286;
@@ -841,7 +841,7 @@ class _A5HeroSliverAppBar extends StatelessWidget {
           Padding(
             padding: EdgeInsets.only(right: onShare == null ? 8 : 6),
             child: _HeroAction(
-              icon: GmIcons.flag,
+              icon: GmIcons.edit,
               onTap: onFeedback,
               label: AppLocalizations.of(context)!.fbTitleObject,
             ),
@@ -849,9 +849,8 @@ class _A5HeroSliverAppBar extends StatelessWidget {
           if (onShare != null)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: _HeroAction(
-                icon: GmIcons.share,
-                onTap: onShare!,
+              child: _ShareAction(
+                onShare: onShare!,
                 label: AppLocalizations.of(context)!.guideShare,
               ),
             ),
@@ -880,15 +879,53 @@ class _A5HeroSliverAppBar extends StatelessWidget {
 /// 油画上会糊掉——深浅都糊，所以光换颜色解决不了，得让它自带一块底。
 ///
 /// 两个键同款处理：同一个顶栏里一个有底一个裸着，看着更像 bug。
+/// 分享键:点下去要先下载分享图(~0.2-2s)才弹系统面板 —— 期间转圈、再点无效。
+/// V42 真机:没有这个反馈,用户以为没点上,20 秒里连点了 5 次。
+class _ShareAction extends StatefulWidget {
+  const _ShareAction({required this.onShare, required this.label});
+
+  final Future<void> Function() onShare;
+  final String label;
+
+  @override
+  State<_ShareAction> createState() => _ShareActionState();
+}
+
+class _ShareActionState extends State<_ShareAction> {
+  bool _busy = false;
+
+  Future<void> _tap() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onShare();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => _HeroAction(
+        icon: GmIcons.share,
+        onTap: _tap,
+        label: widget.label,
+        busy: _busy,
+      );
+}
+
 class _HeroAction extends StatelessWidget {
   const _HeroAction({
     required this.icon,
     required this.onTap,
     required this.label,
+    this.busy = false,
   });
 
   final GmIcons icon;
   final VoidCallback onTap;
+
+  /// true = 正在处理,图标换成小转圈
+  final bool busy;
 
   /// 读屏用。线性图标没有文字，不给标签的话读屏只会念出一个"按钮"。
   final String label;
@@ -912,7 +949,16 @@ class _HeroAction extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: gm.line),
             ),
-            child: Center(child: GmIcon(icon, size: 18, color: gm.ink)),
+            child: Center(
+              child: busy
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 1.6, color: gm.ink),
+                    )
+                  : GmIcon(icon, size: 18, color: gm.ink),
+            ),
           ),
         ),
       ),

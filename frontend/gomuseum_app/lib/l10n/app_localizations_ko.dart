@@ -711,11 +711,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String paywallPitch(String museums) {
-    return '사진 인식 무제한, $museums의 음성 해설을 모두 이용할 수 있습니다.';
+    return '사진 인식 무제한, $museums의 음성 해설을 들을 수 있습니다.';
   }
 
   @override
-  String get paywallPitchGeneric => '사진 인식 무제한, 음성 해설을 모두 이용할 수 있습니다.';
+  String get paywallPitchGeneric => '사진 인식 무제한, 음성 해설을 들을 수 있습니다.';
 
   @override
   String get passNotOnSale => '이 미술관의 패스는 아직 판매하지 않습니다.';
@@ -921,7 +921,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsFeatRecognition => '무제한 사진 인식';
 
   @override
-  String get benefitsFeatAllAudio => '패스에 포함된 모든 미술관의 음성 해설';
+  String get benefitsFeatAllAudio => '패스에 포함된 미술관의 음성 해설';
 
   @override
   String get benefitsFeatDeepAudio => '심화 콘텐츠 음성';

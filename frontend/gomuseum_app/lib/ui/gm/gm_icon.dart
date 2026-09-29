@@ -46,8 +46,11 @@ enum GmIcons {
   /// 「联系客服」，`doc` 读成文档。旗标是这件事的通用语义。
   flag,
 
-  /// 分享(方框里向上的箭头 —— 安卓/iOS 通用的分享语义)。
+  /// 分享(弧线转发箭头,同微信「转发」—— 用户 2026-09-30 指定)。
   share,
+
+  /// 铅笔 —— 讲解页「内容反馈 / 纠错」。
+  edit,
 }
 
 const Map<GmIcons, List<String>> _iconPaths = {
@@ -141,7 +144,8 @@ const Map<GmIcons, List<String>> _iconPaths = {
   ],
   // 旗杆到底 + 旗面；与本图标集一致的 24×24 viewBox、1.6pt 圆头描边。
   GmIcons.flag: ['M6 20.5V4', 'M6 5h12l-2.4 3.8L18 12.5H6Z'],
-  GmIcons.share: ['M12 3.5v11', 'M8 7.5 12 3.5l4 4', 'M6 11.5v8h12v-8'],
+  GmIcons.share: ['M4.5 19.5c.5-6.5 5-10.5 12-10.5', 'M12.5 4.5 17 9l-4.5 4.5'],
+  GmIcons.edit: ['M15.2 4.8l4 4L9 19H5v-4L15.2 4.8Z', 'M13 7l4 4'],
 };
 
 /// 线性描边图标（对应设计稿 GMIcon）
