@@ -11,7 +11,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -30,6 +30,19 @@ def _benefits(db: Session, user_id: str):
     return db.query(UserBenefits).filter_by(user_id=user_id).one_or_none()
 
 
+def _museum(db: Session, slug: str | None, credentials):
+    """`?museum=slug` → 馆。不给 = None(任意一张票)。
+    未知/隐身馆一律 404(可见性闸:与"不存在"不可区分)。"""
+    if not slug:
+        return None
+    from app.models.museum import Museum
+    from app.services.visibility import can_preview, museum_visible
+
+    if not museum_visible(db, slug, can_preview(db, credentials)):
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
+    return db.query(Museum).filter_by(slug=slug).one()
+
+
 def _me(db: Session, credentials: HTTPAuthorizationCredentials):
     """返回 (user_id, is_guest) —— is_guest 决定 can.purchase(买票前须登录)。"""
     user = AuthService.get_current_user(db, credentials.credentials)
@@ -38,12 +51,24 @@ def _me(db: Session, credentials: HTTPAuthorizationCredentials):
 
 @router.get("/me")
 def my_entitlements(
+    museum: str | None = None,
+    language: str = "zh",
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> dict:
-    """当前权益。到期在读取时实时判定,不依赖定时任务(漏跑=白送权限)。"""
+    """当前权益。到期在读取时实时判定,不依赖定时任务(漏跑=白送权限)。
+
+    `museum`(加法,可选):馆内页面带上 → state/can 只看覆盖这家馆的票。
+    持巴黎票进荷兰的馆,不能显示"通票生效中"而点播放却 402。"""
     user_id, is_guest = _me(db, credentials)
-    return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)
+    return es.summary(
+        db,
+        user_id,
+        _benefits(db, user_id),
+        is_guest=is_guest,
+        museum=_museum(db, museum, credentials),
+        language=language,
+    )
 
 
 @router.get("/history")
@@ -62,6 +87,8 @@ def my_pass_history(
 
 @router.post("/activate")
 def activate_pass(
+    museum: str | None = None,
+    language: str = "zh",
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -69,11 +96,22 @@ def activate_pass(
 
     ⚠️ 绝不静默激活:旅游产品用户常提前几天买,误触一次就烧掉整张票=差评来源。
     幂等:已激活再调不续期也不重置。
+
+    `museum`(加法,可选):只激活覆盖这家馆的那张 —— 同时持两国未激活票时,
+    在荷兰点激活绝不能烧掉巴黎那张。老 App 不带 = 旧行为。
     """
     user_id, is_guest = _me(db, credentials)
-    es.activate(db, user_id)
+    m = _museum(db, museum, credentials)
+    es.activate(db, user_id, m)
     log_event(db, "pass_activated", user_id=user_id)
-    return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)
+    return es.summary(
+        db,
+        user_id,
+        _benefits(db, user_id),
+        is_guest=is_guest,
+        museum=m,
+        language=language,
+    )
 
 
 @router.post("/audio/unlock")
@@ -93,28 +131,31 @@ def unlock_audio(
 
     幂等:已解锁(或通票生效)直接返回,**不重复扣**。额度为 0 → 402,前端弹付费墙。
     """
-    from fastapi import HTTPException
 
     user_id, is_guest = _me(db, credentials)
     benefits = _benefits(db, user_id)
 
-    # 通票内本来就全放行,解锁无意义 —— 但也别报错,幂等返回当前权益即可。
-    if es.resolve_state(db, user_id)[0] == es.ACTIVE:
-        return es.summary(db, user_id, benefits, is_guest=is_guest)
-    # 已解锁过:直接返回,绝不二次扣费(重复点"解锁"不该花两次额度)
-    if qid in es.free_audio_qids(benefits):
-        return es.summary(db, user_id, benefits, is_guest=is_guest)
-
     # qid 必须真实存在。不校验的话,客户端一个笔误就让用户白掉一次额度 ——
     # 这是他花钱换来的东西,而且 404 比"扣了钱什么也没解锁"好排查得多。
-    from app.models.museum_object import MuseumObject
+    # 隐身馆的藏品与不存在的同一个 404,且在扣额度之前(可见性闸)。
     from app.services.visibility import can_preview, qid_visible
 
-    # 隐身馆的藏品与不存在的同一个 404,且在扣额度之前(可见性闸)
-    if not db.query(MuseumObject.id).filter_by(qid=qid).first() or not qid_visible(
-        db, qid, can_preview(db, credentials)
-    ):
+    museum = es.museum_of_qid(db, qid)
+    if museum is None or not qid_visible(db, qid, can_preview(db, credentials)):
         raise HTTPException(status_code=404, detail={"reason": "object_not_found"})
+
+    def _done():
+        return es.summary(
+            db, user_id, _benefits(db, user_id), is_guest=is_guest, museum=museum
+        )
+
+    # 覆盖**这件作品所在馆**的票生效中:本来就能听,不扣。只看任意一张票的话,
+    # 持巴黎票在荷兰点「解锁」会幂等返回、什么都没解锁 —— 用户卡死。
+    if es.resolve_state(db, user_id, museum)[0] == es.ACTIVE:
+        return _done()
+    # 已解锁且未过期:直接返回,绝不二次扣费(重复点"解锁"不该花两次额度)
+    if qid in es.free_audio_qids(benefits):
+        return _done()
 
     from app.services.benefits_service import BenefitsService
 
@@ -122,7 +163,10 @@ def unlock_audio(
     # 等于白送 —— 而这条路径正是免费用户撞墙后走的,白送的就是我们要卖的东西。
     if not BenefitsService(db).consume_recognition(user_id=user_id):
         log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
-        raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+        raise HTTPException(
+            status_code=402,
+            detail={"reason": "pass_required", "pass": es.pass_offer(db, museum)},
+        )
     es.unlock_free_audio(db, user_id, [qid])
     log_event(db, "free_audio_unlocked", user_id=user_id, qid=qid)
-    return es.summary(db, user_id, _benefits(db, user_id), is_guest=is_guest)
+    return _done()

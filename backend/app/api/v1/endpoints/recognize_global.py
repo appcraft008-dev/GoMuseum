@@ -75,7 +75,7 @@ def run_recognition(
             mode=mode,
             visible=visible_museum_ids(db, preview),
         )
-    except QuotaExceededError:
+    except QuotaExceededError as e:
         # 付费漏斗的关键一环:没有它就答不出"多少人撞到额度墙"
         log_event(
             db,
@@ -84,7 +84,18 @@ def run_recognition(
             device_id=device_id,
             museum_slug=slug,
         )
-        raise HTTPException(status_code=402, detail={"reason": "quota_exceeded"})
+        from app.services.entitlement_service import pass_offer
+
+        # `pass` 加法字段:撞墙那家馆该买的票(馆未知 = 全局识别前置闸 → null)
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "reason": "quota_exceeded",
+                "pass": (
+                    pass_offer(db, e.museum, language) if e.museum is not None else None
+                ),
+            },
+        )
     if out is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     return out
@@ -150,11 +161,14 @@ def recognize_confirm(
         from app.services import entitlement_service as es
         from app.services.benefits_service import BenefitsService
 
-        # 通票生效期内不动免费额度(不限次识别是卖给他的权益)。
-        if es.resolve_state(db, user_id)[0] != es.ACTIVE:
-            # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
-            # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
-            if not BenefitsService(db).consume_recognition(user_id=user_id):
-                return Response(status_code=204)
+        # D7/D8:覆盖**这件所在馆**的票生效中 → 不扣、也不写免费解锁(票本来就覆盖)。
+        # 只看任意一张票的话,持最便宜的票就能在别的城市逐件白拿主讲解。
+        museum = es.museum_of_qid(db, body.qid)
+        if es.resolve_state(db, user_id, museum)[0] == es.ACTIVE:
+            return Response(status_code=204)
+        # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
+        # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
+        if not BenefitsService(db).consume_recognition(user_id=user_id):
+            return Response(status_code=204)
         es.unlock_free_audio(db, user_id, [body.qid])
     return Response(status_code=204)

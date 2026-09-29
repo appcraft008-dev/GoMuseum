@@ -27,6 +27,8 @@ REGISTRY = {
     ("POST", "/api/v1/recognize"): GATED,
     ("POST", "/api/v1/recognize/confirm"): GATED,
     ("POST", "/api/v1/entitlements/audio/unlock"): GATED,
+    ("GET", "/api/v1/entitlements/me"): GATED,  # ?museum=
+    ("POST", "/api/v1/entitlements/activate"): GATED,  # ?museum=
     ("POST", "/api/v1/feedback"): "只写不读:收下反馈不回显任何馆/藏品内容",
     ("POST", "/api/v1/content/explanation"): "已退役,恒 410",
     (

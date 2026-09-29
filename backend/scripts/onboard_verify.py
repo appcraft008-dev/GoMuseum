@@ -166,6 +166,22 @@ def build_checks(db, slug: str, langs: list[str]) -> dict:
         )
     )
 
+    # ⑧ 有票可买(spec 2026-09-20 §九③ / 2026-09-28):放出一家没有在售通票覆盖的馆
+    # = 用户看得到内容、撞到付费墙、却买不了票(比看不到馆更糟,丢钱洞同型 #485)。
+    # 只能查后端目录;Play 侧商品是否生效仍需人工确认。
+    from app.services.entitlement_service import pass_for_museum
+
+    pid = pass_for_museum(m)
+    checks.append(
+        _check(
+            "被在售通票覆盖",
+            pid is not None,
+            f"{pid}(city={m.city_en}, country={m.country})",
+            "在 entitlement_service.PASSES 加覆盖该馆的商品并置 on_sale,"
+            "Play Console 建同名商品",
+        )
+    )
+
     # ⑦ 门面响应耗时:规模会让"本来没问题"的设计失效(纪律⑧)。馆包全量曾 8.2s/5MB,
     # 而 App 只要门面字段——这里量的就是 App 实际拿的那份,涨上去立刻红。
     import time as _t

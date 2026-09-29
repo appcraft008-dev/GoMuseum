@@ -29,16 +29,51 @@ from app.models.purchase import Entitlement
 #
 # `scope` 决定这张票能解锁哪些馆(见 covers_museum)。此前 scope 列建了、存了,
 # 却**从未被任何地方读过** —— 巴黎通票能解锁马德里。又一次"写完了没接上"。
+#
+# scope 语法(spec 2026-09-28-multi-city-expansion §3.1):
+#   city:paris   按馆的 city_en(大小写不敏感)
+#   country:NL   按馆的 country(ISO 3166-1 alpha-2)
+#   *            全部
+#   paris        旧写法 = city:paris(DB 里已发出的 Entitlement.scope 不迁移)
+# **城市票还是国家票是这里的配置,改它不用发版** —— 前端只显示 `label`,不知道是哪种。
+#
+# `label`:范围名(十语),付费墙「{label} {days} 日通票」与票面刻印用它。
+# `on_sale`:False = 目录里有、但不下发给前端(演练期/尚未在商店生效)。
 PASSES: dict[str, dict] = {
-    "paris_pass_7d": {"days": 7, "scope": "paris"},
-    # 以后加:
-    # "paris_pass_1d":  {"days": 1,  "scope": "paris"},
-    # "madrid_pass_7d": {"days": 7,  "scope": "madrid"},
-    # "eu_pass_14d":    {"days": 14, "scope": "*"},      # * = 全部城市
+    "paris_pass_7d": {
+        "days": 7,
+        "scope": "city:paris",
+        "label": {
+            "zh": "巴黎",
+            "zh-hant": "巴黎",
+            "en": "Paris",
+            "fr": "Paris",
+            "de": "Paris",
+            "es": "París",
+            "it": "Parigi",
+            "ja": "パリ",
+            "ko": "파리",
+            "pl": "Paryż",
+        },
+    },
+    "nl_pass_7d": {
+        "days": 7,
+        "scope": "country:NL",
+        "label": {
+            "zh": "荷兰",
+            "zh-hant": "荷蘭",
+            "en": "Netherlands",
+            "fr": "Pays-Bas",
+            "de": "Niederlande",
+            "es": "Países Bajos",
+            "it": "Paesi Bassi",
+            "ja": "オランダ",
+            "ko": "네덜란드",
+            "pl": "Holandia",
+        },
+        "on_sale": False,  # 国立博物馆隐身演练期;Play 商品生效且放馆时改 True
+    },
 }
-
-# 兼容旧调用点;新代码一律查 PASSES
-PASS_DURATION = timedelta(days=PASSES["paris_pass_7d"]["days"])
 
 # 未激活票的**保质期**:买了一直不激活,30 天后作废。
 #
@@ -65,14 +100,85 @@ def pass_duration(product_id: str) -> timedelta:
 
 
 def pass_scope(product_id: str) -> str:
-    return PASSES.get(product_id, {}).get("scope", "paris")
+    """未知商品 → 空范围(不覆盖任何馆)。此前默认 "paris":新国家漏配商品时
+    会静默变成一张巴黎票。宁可锁住,不可错放。"""
+    return PASSES.get(product_id, {}).get("scope", "")
 
 
-def covers_museum(scope: str, museum_city: str | None) -> bool:
-    """该 scope 是否覆盖此馆。`*` 覆盖全部;否则按城市(大小写不敏感)。"""
+def covers_museum(scope: str | None, museum) -> bool:
+    """该 scope 是否覆盖此馆(`museum` 需有 city_en / country)。"""
+    if not scope or museum is None:
+        return False
     if scope == "*":
         return True
-    return bool(museum_city) and museum_city.strip().lower() == scope.lower()
+    kind, _, value = scope.partition(":")
+    if not value:  # 旧写法 "paris"
+        kind, value = "city", kind
+    if kind == "city":
+        city = (getattr(museum, "city_en", None) or "").strip().lower()
+        return bool(city) and city == value.strip().lower()
+    if kind == "country":
+        country = (getattr(museum, "country", None) or "").strip().upper()
+        return bool(country) and country == value.strip().upper()
+    return False
+
+
+def pass_for_museum(museum) -> str | None:
+    """这家馆**在售**的通票商品 ID;没有 → None(该馆不能放出,见 onboard_verify)。
+    馆包、402 下发的商品都从这里来 —— 单一真相源。"""
+    for pid, p in PASSES.items():
+        if p.get("on_sale", True) and covers_museum(p["scope"], museum):
+            return pid
+    return None
+
+
+def museum_of_qid(db, qid: str | None):
+    """藏品所属的馆(计费按**作品所在的馆**判,不按 URL 里的 slug —— 后者可以随便填)。"""
+    if not qid:
+        return None
+    from app.models.museum import Museum
+    from app.models.museum_object import MuseumObject
+
+    return (
+        db.query(Museum)
+        .join(MuseumObject, MuseumObject.museum_id == Museum.id)
+        .filter(MuseumObject.qid == qid)
+        .first()
+    )
+
+
+def pass_label(product_id: str, language: str) -> str | None:
+    label = PASSES.get(product_id, {}).get("label") or {}
+    return label.get(language) or label.get("en")
+
+
+def pass_offer(db, museum, language: str = "zh", *, preview: bool = False):
+    """下发给前端的通票形状(馆包 / 402 共用)。没有在售商品 → None,
+    前端显示「暂未开售」,**绝不回落到巴黎票**。
+
+    `covers` = 该票范围内**已放出**的馆的本地化馆名(预览者连隐身馆一起),
+    替代前端写死四馆名的卖点文案 —— 上新馆自动变长,不用发版。"""
+    pid = pass_for_museum(museum)
+    if pid is None:
+        return None
+    from app.models.museum import Museum
+    from app.services.museum_repo import museum_name
+
+    q = db.query(Museum)
+    if not preview:
+        q = q.filter(Museum.published_at.isnot(None))
+    scope = PASSES[pid]["scope"]
+    covers = [
+        museum_name(m, language)
+        for m in sorted(q.all(), key=lambda m: m.slug)
+        if covers_museum(scope, m)
+    ]
+    return {
+        "product_id": pid,
+        "days": PASSES[pid]["days"],
+        "label": pass_label(pid, language),
+        "covers": covers,
+    }
 
 
 # 免费试听只覆盖**主讲解段**。一件作品还有背景/分析/问答/作者介绍等段落,
@@ -114,11 +220,12 @@ def _unactivated_expired(ent) -> bool:
     return deadline is not None and deadline <= _now()
 
 
-def _live_entitlement(db, user_id: str, city: str | None = None):
+def _live_entitlement(db, user_id: str, museum=None):
     """取该用户最相关的一条权益:优先 active,其次待激活。已退款/撤销不算。
 
-    [city] 给了就只认**覆盖该城市**的票(scope 校验)。此前 scope 存了却从没读过,
+    [museum] 给了就只认**覆盖这家馆**的票(scope 校验)。此前 scope 存了却从没读过,
     等于巴黎通票能解锁马德里 —— 多城市那天才会发现,而那时已经在卖了。
+    不给 = 任意一张票(设置页/识别前置闸这类"还不知道是哪家馆"的场合)。
     """
     rows = (
         db.query(Entitlement)
@@ -129,8 +236,9 @@ def _live_entitlement(db, user_id: str, city: str | None = None):
         .order_by(Entitlement.created_at.desc())
         .all()
     )
-    if city is not None:
-        rows = [r for r in rows if covers_museum(r.scope or "paris", city)]
+    if museum is not None:
+        # 老行 scope 为空 = 当年只卖巴黎票
+        rows = [r for r in rows if covers_museum(r.scope or "paris", museum)]
 
     # ⚠️ 顺序不能是"status==ACTIVE 就返回":到期只在读取时算,DB 里那行**永远停在
     # ACTIVE**。老票过期后用户续购,新票是 purchased_not_activated,却被那行过期的
@@ -151,12 +259,10 @@ def _live_entitlement(db, user_id: str, city: str | None = None):
     return rows[0] if rows else None  # ③ 只剩过期的
 
 
-def resolve_state(
-    db, user_id: str, city: str | None = None
-) -> tuple[str, Entitlement | None]:
+def resolve_state(db, user_id: str, museum=None) -> tuple[str, Entitlement | None]:
     """当前权益状态。**到期判断在这里做**,不依赖任何定时任务把 status 刷成 expired
-    ——定时任务漏跑就会白送权限。"""
-    ent = _live_entitlement(db, user_id, city)
+    ——定时任务漏跑就会白送权限。[museum] 见 _live_entitlement。"""
+    ent = _live_entitlement(db, user_id, museum)
     if ent is None:
         return NOT_PURCHASED, None
     if ent.status == PURCHASED_NOT_ACTIVATED:
@@ -170,9 +276,12 @@ def resolve_state(
     return ACTIVE, ent
 
 
-def activate(db, user_id: str) -> tuple[str, Entitlement | None]:
-    """首次使用高级功能且用户确认后调用:开始连续 7×24h。幂等(已激活直接返回)。"""
-    state, ent = resolve_state(db, user_id)
+def activate(db, user_id: str, museum=None) -> tuple[str, Entitlement | None]:
+    """首次使用高级功能且用户确认后调用:开始连续 7×24h。幂等(已激活直接返回)。
+
+    [museum] 给了就只激活**覆盖这家馆**的那张 —— 同时持巴黎、荷兰两张未激活票时,
+    在荷兰点激活绝不能烧掉巴黎那张(spec 2026-09-28 §2.2)。"""
+    state, ent = resolve_state(db, user_id, museum)
     if state != PURCHASED_NOT_ACTIVATED or ent is None:
         return state, ent
     now = _now()
@@ -184,7 +293,15 @@ def activate(db, user_id: str) -> tuple[str, Entitlement | None]:
     return ACTIVE, ent
 
 
-def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
+def summary(
+    db,
+    user_id: str,
+    benefits=None,
+    *,
+    is_guest: bool = False,
+    museum=None,
+    language: str = "zh",
+) -> dict:
     """前端唯一入口。`can` 是前端该看的东西,其余字段供展示。
 
     免费层边界(付费墙建在**现场体验**不在内容):
@@ -196,8 +313,12 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
     身份是设备绑定的 —— 游客买了票,换手机/清数据就永久拿不回(收据已消耗,
     恢复购买会命中幂等、不给新用户发权益)。强制登录让权益天然跟着账号走,
     不必再做收据转移。
+
+    [museum] 给了 → `state`/`can.audio_any`/`expires_at` 只看**覆盖这家馆**的票
+    (馆内页面用;持巴黎票进荷兰的馆不能显示"通票生效中")。不给 = 任意一张票。
+    `passes` 每张票各自的范围与状态,权益页据此写明「哪张票管哪里」。
     """
-    state, ent = resolve_state(db, user_id)
+    state, ent = resolve_state(db, user_id, museum)
     active = state == ACTIVE
     # ⚠️ recognition_quota 是**剩余数**(consume_recognition 每次递减),不是上限。
     # 曾误写成 quota + bonus - used —— 那会重复扣一次 used,少报剩余次数、
@@ -222,7 +343,11 @@ def summary(db, user_id: str, benefits=None, *, is_guest: bool = False) -> dict:
         "free_recognitions_total": (
             None if active else settings.FREE_RECOGNITION_QUOTA + bonus
         ),
+        # 只含**未过期**的解锁(D8:识别解锁 7 天)。老 App 本地闸按它拦,自然跟着到期。
         "free_audio_qids": unlocked,
+        # 加法字段:{qid: 到期时刻},新 App 显示「还剩 X 天」
+        "free_audio_until": free_audio_until(benefits),
+        "passes": _passes(db, user_id, language),
         # ⚠️ **恒为 None**。老字段的语义是"你认领的那一件",而"认领"这件事
         # 已经不存在了(2026-09-19 免费语音改为跟着识别走)。
         # 不删键、恒给 null 是**故意的**:老 App 读到 null 会把本地闸放开、
@@ -258,26 +383,10 @@ def history(db, user_id: str, limit: int = 20) -> list[dict]:
         .limit(limit)
         .all()
     )
-    now = _now()
-
-    def _state(r) -> str:
-        """展示用状态。与 resolve_state 同源的判定,但**逐行**算 ——
-        resolve_state 只回答"当前哪张票说了算",历史要每张票各自的结局。"""
-        if r.status not in (ACTIVE, PURCHASED_NOT_ACTIVATED):
-            return r.status  # refunded / revoked 原样透出
-        if r.status == PURCHASED_NOT_ACTIVATED:
-            return EXPIRED if _unactivated_expired(r) else PURCHASED_NOT_ACTIVATED
-        exp = _aware(r.expires_at)
-        return EXPIRED if exp and exp <= now else ACTIVE
-
-    def _iso(dt):
-        dt = _aware(dt)
-        return dt.isoformat() if dt else None
-
     return [
         {
             "product_id": r.entitlement_type,
-            "state": _state(r),
+            "state": _row_state(r),
             "purchased_at": _iso(r.created_at),
             "activated_at": _iso(r.activated_at),
             "expires_at": _iso(r.expires_at),
@@ -286,9 +395,89 @@ def history(db, user_id: str, limit: int = 20) -> list[dict]:
     ]
 
 
+def _row_state(r) -> str:
+    """展示用状态。与 resolve_state 同源的判定,但**逐行**算 ——
+    resolve_state 只回答"当前哪张票说了算",历史/权益页要每张票各自的结局。"""
+    if r.status not in (ACTIVE, PURCHASED_NOT_ACTIVATED):
+        return r.status  # refunded / revoked 原样透出
+    if r.status == PURCHASED_NOT_ACTIVATED:
+        return EXPIRED if _unactivated_expired(r) else PURCHASED_NOT_ACTIVATED
+    exp = _aware(r.expires_at)
+    return EXPIRED if exp and exp <= _now() else ACTIVE
+
+
+def _iso(dt):
+    dt = _aware(dt)
+    return dt.isoformat() if dt else None
+
+
+def _passes(db, user_id: str, language: str) -> list[dict]:
+    """还能用的票(生效中/待激活),各自带范围名。权益页据此写明
+    「荷兰 7 日通票 · 有效至…」「巴黎 7 日通票 · 待激活」—— 用户看得出哪张票管哪里。"""
+    rows = (
+        db.query(Entitlement)
+        .filter(
+            Entitlement.user_id == user_id,
+            Entitlement.status.in_([ACTIVE, PURCHASED_NOT_ACTIVATED]),
+        )
+        .order_by(Entitlement.created_at.desc())
+        .all()
+    )
+    out = []
+    for r in rows:
+        state = _row_state(r)
+        if state not in (ACTIVE, PURCHASED_NOT_ACTIVATED):
+            continue
+        out.append(
+            {
+                "product_id": r.entitlement_type,
+                "label": pass_label(r.entitlement_type, language),
+                "days": pass_duration(r.entitlement_type).days,
+                "state": state,
+                "expires_at": _iso(r.expires_at),
+                "activate_by": (
+                    _iso(activation_deadline(r))
+                    if state == PURCHASED_NOT_ACTIVATED
+                    else None
+                ),
+            }
+        )
+    return out
+
+
+# D8(spec 2026-09-28 §3.7):音频权利只有「7 天」一个边界。免费识别解锁的主讲解
+# 从解锁时刻起 7 天可听;持票期间识别**不写**这里(票本来就覆盖,过期自然锁)。
+FREE_AUDIO_WINDOW = timedelta(days=7)
+
+
+def _free_unlocks(benefits) -> dict[str, datetime | None]:
+    """{qid: 解锁时刻}。列存的是 {qid: iso};旧形状是纯 qid 列表(迁移 e6b7 已转换),
+    万一还遇到旧列表,时刻记 None = 视为已过期(宁可锁住,不可永久白送)。"""
+    raw = getattr(benefits, "free_audio_qids", None) or {}
+    if isinstance(raw, list):
+        return {q: None for q in raw if q}
+    out = {}
+    for q, ts in raw.items():
+        try:
+            out[q] = _aware(datetime.fromisoformat(ts)) if ts else None
+        except (TypeError, ValueError):
+            out[q] = None
+    return out
+
+
+def free_audio_until(benefits) -> dict[str, str]:
+    """未过期的免费解锁 → {qid: 到期时刻 iso}。到期判断**在读取时算**,不靠定时任务。"""
+    now = _now()
+    return {
+        q: (t + FREE_AUDIO_WINDOW).isoformat()
+        for q, t in _free_unlocks(benefits).items()
+        if t is not None and t + FREE_AUDIO_WINDOW > now
+    }
+
+
 def free_audio_qids(benefits) -> list[str]:
-    """该用户已解锁的免费语音作品。行不存在/列为空都返回 []。"""
-    return list(getattr(benefits, "free_audio_qids", None) or [])
+    """该用户**当前可听**的免费语音作品(已过 7 天的不算)。行不存在/列为空都返回 []。"""
+    return list(free_audio_until(benefits))
 
 
 def can_play_audio(
@@ -299,11 +488,11 @@ def can_play_audio(
     *,
     language: str = "zh",
     section: str = FREE_AUDIO_SECTION,
-    city: str | None = None,
+    museum=None,
 ) -> bool:
-    """某件的语音能不能放。
+    """某件的语音能不能放。[museum] = 这件作品所属的馆,只认覆盖它的票。
 
-    免费用户:**识别出来的作品**的主讲解段可放(可无限重播),其余要票。
+    免费用户:**识别出来的作品**的主讲解段可放(解锁起 7 天内可重播),其余要票。
 
     [language] 不再参与判断(2026-09-19)。此前免费试听绑死 (作品,语言,段),
     于是用中文识别、事后把 App 换成法语的人会撞 402 —— 他没多拿任何东西,
@@ -311,7 +500,7 @@ def can_play_audio(
     5 件 × 语言数、且生成一次永久落库(后来的用户白拿缓存),这点钱买不到
     「同一件作品换个语言就要买票」的困惑。参数留着是为了不动调用方签名。
     """
-    state, _ = resolve_state(db, user_id, city)
+    state, _ = resolve_state(db, user_id, museum)
     if state == ACTIVE:
         return True
     if section != FREE_AUDIO_SECTION:
@@ -330,18 +519,26 @@ def unlock_free_audio(db, user_id: str, qids: list[str]) -> list[str]:
 
     候选卡的几个候选**全部解锁**:识别没把握时用户更需要听着分辨哪件是对的,
     而这一次识别的额度已经扣了。上限仍由免费识别次数兜住。
+
+    D8:记下解锁时刻,7 天后到期。已过期的件再次被(扣费)识别 → 重新计 7 天。
+    ⚠️ 只在**扣了免费额度**的路径上调用;持票识别不写这里。
     """
     if not qids:
         return []
     from app.services.benefits_service import BenefitsService
 
     benefits = BenefitsService(db).get_or_create_benefits(user_id=user_id)
-    current = free_audio_qids(benefits)
-    added = [q for q in dict.fromkeys(qids) if q and q not in current]
+    live = free_audio_until(benefits)
+    added = [q for q in dict.fromkeys(qids) if q and q not in live]
     if not added:
         return []
-    # 整列重新赋值:JSON 列原地 append 不会被 SQLAlchemy 标记为脏,静默丢更新。
-    benefits.free_audio_qids = current + added
+    now = _now().isoformat()
+    unlocks = {
+        q: (t.isoformat() if t else None) for q, t in _free_unlocks(benefits).items()
+    }
+    unlocks.update({q: now for q in added})
+    # 整列重新赋值:JSON 列原地改不会被 SQLAlchemy 标记为脏,静默丢更新。
+    benefits.free_audio_qids = unlocks
     db.commit()
     return added
 
@@ -451,7 +648,7 @@ def audio_access(
     *,
     language: str = "zh",
     section: str = FREE_AUDIO_SECTION,
-    city: str | None = None,
+    museum=None,
 ) -> str:
     """语音闸门:**付费墙真正生效的地方**(前端 UI 只是它的表达)。
 
@@ -473,6 +670,6 @@ def audio_access(
     # 它交给 can_play_audio 判:没有行 → 解锁清单为空 → 免费用户一件都听不了,
     # 而这是对的 —— 一次识别都没做过的人本来就还没解锁任何作品。
     allowed = can_play_audio(
-        db, user_id, qid, benefits, language=language, section=section, city=city
+        db, user_id, qid, benefits, language=language, section=section, museum=museum
     )
     return "allowed" if allowed else "denied"

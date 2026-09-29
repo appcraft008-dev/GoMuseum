@@ -30,6 +30,15 @@ museums:
       pl: Musée d'Orsay
     city_zh: 巴黎
     city_en: Paris
+    city_names:
+      zh-hant: 巴黎
+      fr: Paris
+      de: Paris
+      es: París
+      it: Parigi
+      ja: パリ
+      ko: 파리
+      pl: Paryż
     country: FR
     wikidata_qid: Q23402
     category_filter: Q3305213   # 主类目(兜底)
@@ -60,6 +69,15 @@ museums:
       pl: Musée de l'Orangerie
     city_zh: 巴黎
     city_en: Paris
+    city_names:
+      zh-hant: 巴黎
+      fr: Paris
+      de: Paris
+      es: París
+      it: Parigi
+      ja: パリ
+      ko: 파리
+      pl: Paryż
     country: FR
     wikidata_qid: Q726781
     category_filter: Q3305213
@@ -88,6 +106,15 @@ museums:
       pl: Luwr
     city_zh: 巴黎
     city_en: Paris
+    city_names:
+      zh-hant: 巴黎
+      fr: Paris
+      de: Paris
+      es: París
+      it: Parigi
+      ja: パリ
+      ko: 파리
+      pl: Paryż
     country: FR
     wikidata_qid: Q19675
     # 12部门+馆本体直挂(WDQS 实测 2026-07-21,合计~18.5k件);馆身份仍 Q19675
@@ -135,6 +162,15 @@ museums:
       pl: Petit Palais
     city_zh: 巴黎
     city_en: Paris
+    city_names:
+      zh-hant: 巴黎
+      fr: Paris
+      de: Paris
+      es: París
+      it: Parigi
+      ja: パリ
+      ko: 파리
+      pl: Paryż
     country: FR
     # ⚠️ 馆的正式名是「musée des Beaux-Arts de la ville de Paris」,Petit Palais 是
     # 它所在的建筑(P276)。按纪律①核验过:P195 直挂本馆 2186 幅绘画,不是部门制,

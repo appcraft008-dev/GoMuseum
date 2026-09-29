@@ -76,6 +76,7 @@ def test_list_shape(session):
         "artwork_count",
         "cover_image",  # 加法字段:探索页缩略图(spec 2026-07-20)
         "name_i18n",  # 加法字段:十语馆名(本端点无 language 参数,给整张表)
+        "city_i18n",  # 加法字段:十语城市名(spec 2026-09-28 §3.3)
     }
     assert rows[0]["artwork_count"] == 1
     assert rows[0]["cover_image"] is None  # 未设 cover_image_key → null(前端隐藏)
@@ -119,6 +120,8 @@ def test_pack_shape(session):
         "artworks",
         "description",  # 加法字段:馆介绍(spec 2026-07-18)
         "cover_image",  # 加法字段:封面
+        "pass",  # 加法字段:这家馆卖哪张票(spec 2026-09-28 §3.3)
+        "city_i18n",  # 加法字段:十语城市名
     }
     art = pack["artworks"][0]
     assert set(art.keys()) == {

@@ -46,7 +46,10 @@ def _ben(s, uid, used=0, quota=5, unlocked=None):
         user_id=uid,
         recognition_quota=quota,
         total_recognitions_used=used,
-        free_audio_qids=list(unlocked or []),
+        # {qid: 解锁时刻}(D8:7 天到期);这里记"刚解锁"
+        free_audio_qids={
+            q: datetime.now(timezone.utc).isoformat() for q in unlocked or []
+        },
     )
     s.add(b)
     s.commit()

@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import create_engine
@@ -29,11 +30,17 @@ def session():
     yield sessionmaker(bind=engine)()
 
 
+PARIS = SimpleNamespace(city_en="Paris", country="FR")
+MADRID = SimpleNamespace(city_en="Madrid", country="ES")
+
+
 def _ben(s, uid="u1", unlocked=None):
+    # 解锁清单存 {qid: 解锁时刻}(D8:7 天到期);这里记"刚解锁"
+    now = datetime.now(timezone.utc).isoformat()
     b = UserBenefits(
         user_id=uid,
         recognition_quota=5,
-        free_audio_qids=list(unlocked or []),
+        free_audio_qids={q: now for q in unlocked or []},
     )
     s.add(b)
     s.commit()
@@ -53,7 +60,7 @@ def test_gate_has_no_side_effects(session):
     assert not b.free_audio_qids, "判定阶段绝不能写解锁清单"
 
 
-def test_recognized_artwork_replays_forever(session):
+def test_recognized_artwork_replays_within_its_window(session):
     _ben(session, unlocked=["Q12418"])
     for _ in range(3):
         assert es.audio_access(session, "u1", "Q12418") == "allowed"
@@ -223,7 +230,7 @@ def test_unlock_appends_and_is_idempotent(session):
     assert es.unlock_free_audio(session, "u1", ["Q2"]) == ["Q2"]
     assert es.unlock_free_audio(session, "u1", ["Q1"]) == [], "重复识别不该再记一次"
     session.refresh(b)
-    assert b.free_audio_qids == ["Q1", "Q2"]
+    assert set(b.free_audio_qids) == {"Q1", "Q2"}
     for q in ("Q1", "Q2"):
         assert es.audio_access(session, "u1", q) == "allowed"
 
@@ -232,7 +239,7 @@ def test_unlock_creates_the_row_when_missing(session):
     """行懒建:第一次识别时把行建出来,否则解锁写进空气里。"""
     assert es.unlock_free_audio(session, "新用户", ["Q1"]) == ["Q1"]
     row = session.query(UserBenefits).filter_by(user_id="新用户").one()
-    assert row.free_audio_qids == ["Q1"]
+    assert list(row.free_audio_qids) == ["Q1"]
 
 
 def test_pass_scope_is_actually_enforced(session):
@@ -254,13 +261,14 @@ def test_pass_scope_is_actually_enforced(session):
     _ben(session)
     session.commit()
 
-    assert es.resolve_state(session, "u1", "Paris")[0] == es.ACTIVE
-    assert es.resolve_state(session, "u1", "Madrid")[0] == es.NOT_PURCHASED
+    assert es.resolve_state(session, "u1", PARIS)[0] == es.ACTIVE
+    assert es.resolve_state(session, "u1", MADRID)[0] == es.NOT_PURCHASED
     # 大小写不敏感
-    assert es.resolve_state(session, "u1", "paris")[0] == es.ACTIVE
+    lower = SimpleNamespace(city_en="paris", country="FR")
+    assert es.resolve_state(session, "u1", lower)[0] == es.ACTIVE
     # 音频闸跟着走:巴黎放行,马德里回落免费规则
-    assert es.audio_access(session, "u1", "Q9", city="Paris") == "allowed"
-    assert es.audio_access(session, "u1", "Q9", city="Madrid") == "denied"
+    assert es.audio_access(session, "u1", "Q9", museum=PARIS) == "allowed"
+    assert es.audio_access(session, "u1", "Q9", museum=MADRID) == "denied"
 
 
 def test_product_catalog_drives_duration_and_scope(session):
@@ -283,15 +291,15 @@ def test_product_catalog_drives_duration_and_scope(session):
         span = ent.expires_at - ent.activated_at
         assert span == timedelta(days=1), "1 日票不该发 7 天"
         assert ent.scope == "madrid"
-        assert es.resolve_state(session, "u2", "Paris")[0] == es.NOT_PURCHASED
+        assert es.resolve_state(session, "u2", PARIS)[0] == es.NOT_PURCHASED
     finally:
         es.PASSES.pop("madrid_pass_1d", None)
 
 
 def test_wildcard_scope_covers_every_city(session):
     """多国票:scope='*' 覆盖全部城市。"""
-    assert es.covers_museum("*", "Madrid") is True
-    assert es.covers_museum("*", None) is True
+    assert es.covers_museum("*", MADRID) is True
+    assert es.covers_museum("*", PARIS) is True
 
 
 # HTTPBearer(auto_error=True):没有这个头,依赖注入阶段就 403,替身根本轮不到。
