@@ -1,4 +1,4 @@
-/// 权益页四态(Claude Design `benefits-states.jsx`)。
+/// 权益页四态(Claude Design `benefits-states.jsx`;态 2/3 已合并为「手里的票」,每张一样大)。
 ///
 /// ⭐ **已购之后这一页不再是商店**。四态各有主角:
 ///   未购    → 免费额度 + 功能清单 + 一张待售的票
@@ -295,8 +295,9 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     // ⚠️ `Entitlements.unknown` **不是 null** —— 它是离线回退,state 恰好是
     // not_purchased。少判一个 known,断网的已购用户就会看到一个购买页。
     if (ent == null || !ent.known) return _unknownState(gm, l10n);
-    if (ent.isActive) return _activeState(gm, l10n, ent);
-    if (ent.isPurchasedNotActivated) return _unactivatedState(gm, l10n, ent);
+    if (ent.isActive || ent.isPurchasedNotActivated) {
+      return _heldState(gm, l10n, ent);
+    }
     if (ent.isExpired) {
       // 用过的那张票要有完整起止才画得出存根;拿不到历史就退回未购态,
       // 不去编一张票出来。
@@ -340,93 +341,131 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     ];
   }
 
-  // ── 态 2 · 已购未激活:主角是「还没开始计时」──
-  List<Widget> _unactivatedState(
+  // ── 态 2/3 · 手里有票(生效中 / 未激活,可能不止一张)──
+  //
+  // ⚠️ 这里曾经只有**一个主票位**:谁生效就放大谁,其余的票缩成一行小字。
+  // 持两张票时真机实测两种误读(2026-09-29):先买巴黎后买荷兰 → 荷兰那张只剩
+  // 「到期日待填」一行,像付了钱没拿到东西;激活荷兰后它顶掉主位 → 仍在有效期的
+  // 巴黎票反倒成了小字。所以**每张票一样大**,每张票自己写清管哪里、什么状态。
+  //
+  // 也不再有全局的「已解锁 · 识别不限次」:按 D7 不限次只在票覆盖的馆里,
+  // 两张票时那样写就是错的。票面卖点已经写了这张票解锁什么。
+  List<Widget> _heldState(
       GmPalette gm, AppLocalizations l10n, Entitlements ent) {
-    final mine = _primary(ent);
-    // 手里不止一张未激活票时,这里不放「开始」按钮:不知道用户要撕哪张,猜错一张
-    // 就是替他烧掉另一个国家的 7 天。到那家馆用的时候按馆激活(ensurePassActivated)。
-    final pending = ent.passes.where((p) => p.isPurchasedNotActivated).length;
+    final held = _held(ent);
+    final pending = held.where((p) => p.isPurchasedNotActivated).toList();
     return [
-      const SizedBox(height: 16),
-      _ownedTicket(
-        l10n,
-        mine,
-        stub: GmTicketStubLine(
-            label: l10n.ticketStub, value: l10n.ticketStubPending),
-      ),
-      BenNotice(
-        head: l10n.benefitsNotStartedHead,
-        body: l10n.benefitsNotStartedBody('${mine.days}'),
-        // 30 天不激活会作废 —— 后端 ACTIVATION_WINDOW 真的会没收,必须说
-        note: l10n.paywallLapseNote,
-      ),
-      // 已经买了,截止日期就不是抽象的了:告诉他具体哪天前要激活
-      if (ent.activateBy != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(
-            l10n.ticketDateTime(ent.activateBy!, ent.activateBy!),
-            style: GmText.serif(
-                size: 13, weight: FontWeight.w700, color: gm.accentDeep),
-          ),
+      for (final p in held) ...[
+        const SizedBox(height: 16),
+        _heldTicket(gm, l10n, p),
+      ],
+      // 一张都没生效时才讲「还没开始计时」并给开始按钮。已有生效的票时不给:
+      // 不带馆的 /activate 会先认到那张生效的票,按了什么都不会发生。
+      if (!ent.isActive && pending.isNotEmpty) ...[
+        BenNotice(
+          head: l10n.benefitsNotStartedHead,
+          body: l10n.benefitsNotStartedBody('${pending.first.days}'),
+          // 30 天不激活会作废 —— 后端 ACTIVATION_WINDOW 真的会没收,必须说
+          note: l10n.paywallLapseNote,
         ),
-      BenSectionHead(l10n.benefitsSecIncluded),
-      const SizedBox(height: 4),
-      ..._features(l10n, unlocked: true, onlyPaid: true),
-      _museumsLine(gm, ent, mine.productId),
-      if (pending <= 1) ...[
-        const SizedBox(height: 18),
-        GmTicketButton(
-            label: l10n.benefitsStartNow('${mine.days}'), onTap: _activate),
-        Padding(
-          padding: const EdgeInsets.only(top: 11),
-          child: Text(l10n.benefitsStartNowNote,
-              textAlign: TextAlign.center,
-              style: GmText.sans(size: 11.5, color: gm.faint)),
+        // 不止一张未激活票时不放「开始」:不知道用户要撕哪张,猜错一张就是替他
+        // 烧掉另一个国家的 7 天。到那家馆用的时候按馆激活(ensurePassActivated)。
+        if (pending.length == 1) ...[
+          const SizedBox(height: 18),
+          GmTicketButton(
+              label: l10n.benefitsStartNow('${pending.first.days}'),
+              onTap: _activate),
+          Padding(
+            padding: const EdgeInsets.only(top: 11),
+            child: Text(l10n.benefitsStartNowNote,
+                textAlign: TextAlign.center,
+                style: GmText.sans(size: 11.5, color: gm.faint)),
+          ),
+        ],
+      ],
+      // 手里的票管不到的馆,识别仍走免费额度(D7)。还有没握在手里的票在售
+      // = 还有票外的馆 —— ponytail: 用在售票代替"未覆盖的馆",够准且不用再要数据。
+      if (_sellable(ent).isNotEmpty) ...[
+        const SizedBox(height: 8),
+        BenQuotaRow(
+          label: l10n.benefitsOtherMuseumsRecognition,
+          left: ent.freeRecognitionsLeft,
+          total: ent.freeRecognitionsTotal,
         ),
       ],
-      ..._otherPasses(gm, l10n, ent, mine),
-      ..._moreToBuy(l10n, ent),
-    ];
-  }
-
-  // ── 态 3 · 生效中 ──
-  List<Widget> _activeState(
-      GmPalette gm, AppLocalizations l10n, Entitlements ent) {
-    final mine = _primary(ent);
-    final exp = ent.expiresAt;
-    final daysLeft = exp == null
-        ? null
-        : (exp.difference(DateTime.now()).inHours / 24).ceil().clamp(0, 999);
-    return [
-      const SizedBox(height: 16),
-      _ownedTicket(
-        l10n,
-        mine,
-        torn: 1,
-        stub: exp == null
-            // 契约:可缺字段不裸取。active 却没有 expires_at 是后端异常,
-            // 显示 "—" 而不是编一个日期。
-            ? GmTicketStubLine(label: l10n.ticketValidUntil, value: '—')
-            : BenStubDate(
-                label: l10n.ticketValidUntil,
-                value: l10n.ticketDateTime(exp, exp),
-                trailing: l10n.ticketDaysLeft(daysLeft!),
-              ),
-      ),
-      BenSectionHead(l10n.benefitsSecUnlocked),
-      BenQuotaRow(
-        label: l10n.benefitsRecognition,
-        unlimitedLabel: l10n.unlimited,
-      ),
-      const SizedBox(height: 6),
-      ..._features(l10n, unlocked: true, onlyPaid: true, skipRecognition: true),
-      _museumsLine(gm, ent, mine.productId),
-      ..._otherPasses(gm, l10n, ent, mine),
       ..._moreToBuy(l10n, ent),
       ..._purchaseRecords(gm, l10n, ent),
     ];
+  }
+
+  /// 手里的票:生效中的在前、先到期的最前(最该先用掉);未激活的随后、先作废的在前。
+  /// 老后端不给 passes → 按总状态退回一张无名票(标题「7 日通票」,不编地名)。
+  List<OwnedPass> _held(Entitlements ent) {
+    int by(DateTime? a, DateTime? b) =>
+        (a ?? DateTime(9999)).compareTo(b ?? DateTime(9999));
+    final active = ent.passes.where((p) => p.isActive).toList()
+      ..sort((a, b) => by(a.expiresAt, b.expiresAt));
+    final pending = ent.passes.where((p) => p.isPurchasedNotActivated).toList()
+      ..sort((a, b) => by(a.activateBy, b.activateBy));
+    final held = [...active, ...pending];
+    if (held.isNotEmpty) return held;
+    return [
+      OwnedPass(
+        productId: '',
+        label: '',
+        days: 7,
+        state: ent.state,
+        expiresAt: ent.expiresAt,
+        activateBy: ent.activateBy,
+      ),
+    ];
+  }
+
+  Widget _heldTicket(GmPalette gm, AppLocalizations l10n, OwnedPass p) {
+    final exp = p.expiresAt;
+    final Widget stub;
+    if (p.isActive) {
+      stub = exp == null
+          // 契约:可缺字段不裸取。active 却没有 expires_at 是后端异常,
+          // 显示 "—" 而不是编一个日期。
+          ? GmTicketStubLine(label: l10n.ticketValidUntil, value: '—')
+          : BenStubDate(
+              label: l10n.ticketValidUntil,
+              value: l10n.ticketDateTime(exp, exp),
+              trailing: l10n.ticketDaysLeft(
+                  (exp.difference(DateTime.now()).inHours / 24)
+                      .ceil()
+                      .clamp(0, 999)),
+            );
+    } else {
+      stub = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GmTicketStubLine(
+              label: l10n.benefitsPassNotActivated,
+              value: l10n.benefitsPassStartsOnFirstUse),
+          if (p.activateBy != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(l10n.benefitsPassVoidAfter(p.activateBy!),
+                  style: GmText.sans(size: 11, color: gm.faint)),
+            ),
+        ],
+      );
+    }
+    return GmTicket(
+      stamp: p.label.toUpperCase(),
+      days: p.days,
+      // 撕开 = 开始用了;未激活的票保持完整
+      torn: p.isActive ? 1 : 0,
+      stub: stub,
+      child: GmTicketFace(
+        title: passTitle(l10n, p.label, p.days),
+        pitch: passPitch(context, _coversOf(pid: p.productId)),
+        paidLabel: l10n.ticketPaid,
+      ),
+    );
   }
 
   // ── 态 4 · 已到期 ──
@@ -687,27 +726,6 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
             : () => context.push(kLoginToUpgrade),
       );
 
-  /// 页面主角那张票:生效中的优先,其次待激活的。老后端不给 passes 时退回空名/7 天
-  /// (标题退化成「7 日通票」,不编一个地名出来)。
-  OwnedPass _primary(Entitlements ent) =>
-      ent.passes.where((p) => p.isActive).firstOrNull ??
-      ent.passes.where((p) => p.isPurchasedNotActivated).firstOrNull ??
-      const OwnedPass(productId: '', label: '', days: 7, state: '');
-
-  Widget _ownedTicket(AppLocalizations l10n, OwnedPass p,
-          {required Widget stub, double torn = 0}) =>
-      GmTicket(
-        stamp: p.label.toUpperCase(),
-        days: p.days,
-        torn: torn,
-        stub: stub,
-        child: GmTicketFace(
-          title: passTitle(l10n, p.label, p.days),
-          pitch: passPitch(context, _coversOf(ent: null, pid: p.productId)),
-          paidLabel: l10n.ticketPaid,
-        ),
-      );
-
   /// 某张票覆盖的馆名:从在售票里找(已放出的馆,本地化)。找不到 → 空(用通用卖点)。
   List<String> _coversOf({Entitlements? ent, required String pid}) {
     final e = ent ?? ref.read(entitlementsProvider).value;
@@ -742,49 +760,20 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     return offers.length == 1 ? offers.first : null;
   }
 
-  /// 手里还有别的票(例:巴黎生效中 + 荷兰待激活):逐张列出范围与状态,
-  /// 用户才看得出「哪张票管哪里」。
-  List<Widget> _otherPasses(
-      GmPalette gm, AppLocalizations l10n, Entitlements ent, OwnedPass mine) {
-    final others = ent.passes.where((p) => !identical(p, mine)).toList();
-    if (others.isEmpty) return const [];
-    return [
-      BenSectionHead(l10n.benefitsMyPass),
-      for (final p in others)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          child: Text(
-            [
-              passTitle(l10n, p.label, p.days),
-              if (p.isActive && p.expiresAt != null)
-                '${l10n.ticketValidUntil} ${l10n.ticketDateTime(p.expiresAt!, p.expiresAt!)}',
-              if (p.isPurchasedNotActivated) l10n.ticketStubPending,
-            ].join(' · '),
-            style: GmText.sans(size: 12.5, color: gm.sub),
-          ),
-        ),
-    ];
-  }
-
   List<Widget> _features(
     AppLocalizations l10n, {
     required bool unlocked,
-    bool onlyPaid = false,
-    bool skipRecognition = false,
   }) {
     final needs = l10n.benefitsNeedsPass;
     return [
-      if (!onlyPaid)
-        BenFeatureLine(
-            label: l10n.benefitsFeatBrowse, on: true, needsPassLabel: needs),
-      if (!onlyPaid)
-        BenFeatureLine(
-            label: l10n.benefitsFeatPresetQa, on: true, needsPassLabel: needs),
-      if (!skipRecognition)
-        BenFeatureLine(
-            label: l10n.benefitsFeatRecognition,
-            on: unlocked,
-            needsPassLabel: needs),
+      BenFeatureLine(
+          label: l10n.benefitsFeatBrowse, on: true, needsPassLabel: needs),
+      BenFeatureLine(
+          label: l10n.benefitsFeatPresetQa, on: true, needsPassLabel: needs),
+      BenFeatureLine(
+          label: l10n.benefitsFeatRecognition,
+          on: unlocked,
+          needsPassLabel: needs),
       BenFeatureLine(
           label: l10n.benefitsFeatAllAudio,
           on: unlocked,
@@ -794,17 +783,6 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           on: unlocked,
           needsPassLabel: needs),
     ];
-  }
-
-  /// 这张票能用的馆(后端下发,本地化)。此前写死「卢浮宫 · 奥赛 · 橘园 · 小皇宫」。
-  Widget _museumsLine(GmPalette gm, Entitlements ent, String pid) {
-    final covers = _coversOf(ent: ent, pid: pid);
-    if (covers.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 11),
-      child: Text(covers.join(' · '),
-          style: GmText.sans(size: 11.5, color: gm.faint, height: 1.6)),
-    );
   }
 
   /// 购买记录。⚠️ **没有金额** —— `purchases.amount` 后端从来没写过,

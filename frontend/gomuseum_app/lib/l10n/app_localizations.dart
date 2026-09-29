@@ -1811,6 +1811,30 @@ abstract class AppLocalizations {
   /// **'The clock hasn\'t started'**
   String get benefitsNotStartedHead;
 
+  /// No description provided for @benefitsPassNotActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Not activated'**
+  String get benefitsPassNotActivated;
+
+  /// No description provided for @benefitsPassStartsOnFirstUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts on first use at a museum'**
+  String get benefitsPassStartsOnFirstUse;
+
+  /// No description provided for @benefitsPassVoidAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Void if not activated by {date}'**
+  String benefitsPassVoidAfter(DateTime date);
+
+  /// No description provided for @benefitsOtherMuseumsRecognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo recognition at other museums'**
+  String get benefitsOtherMuseumsRecognition;
+
   /// No description provided for @benefitsNotStartedBody.
   ///
   /// In en, this message translates to:
