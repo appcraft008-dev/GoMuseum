@@ -727,12 +727,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String paywallPitch(String museums) {
-    return 'Unlimited photo recognition and full audio commentary at $museums.';
+    return 'Unlimited photo recognition, plus the audio commentary at $museums.';
   }
 
   @override
   String get paywallPitchGeneric =>
-      'Unlimited photo recognition and full audio commentary.';
+      'Unlimited photo recognition, plus audio commentary.';
 
   @override
   String get passNotOnSale => 'Passes for this museum aren\'t on sale yet.';
@@ -947,7 +947,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get benefitsFeatAllAudio =>
-      'Audio commentary at every museum on your pass';
+      'Audio commentary at the museums on your pass';
 
   @override
   String get benefitsFeatDeepAudio => 'Audio for in-depth sections';

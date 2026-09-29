@@ -711,11 +711,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String paywallPitch(String museums) {
-    return '撮影による作品認識が無制限、$museumsの音声解説がすべて聴けます。';
+    return '撮影による作品認識が無制限、$museumsの音声解説が聴けます。';
   }
 
   @override
-  String get paywallPitchGeneric => '撮影による作品認識が無制限、音声解説がすべて聴けます。';
+  String get paywallPitchGeneric => '撮影による作品認識が無制限、音声解説が聴けます。';
 
   @override
   String get passNotOnSale => 'この館のパスはまだ販売していません。';
@@ -921,7 +921,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get benefitsFeatRecognition => '写真認識が無制限';
 
   @override
-  String get benefitsFeatAllAudio => '対象館すべての音声ガイド';
+  String get benefitsFeatAllAudio => '対象館の音声ガイド';
 
   @override
   String get benefitsFeatDeepAudio => '詳細コンテンツの音声';

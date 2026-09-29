@@ -735,12 +735,12 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String paywallPitch(String museums) {
-    return 'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio: $museums.';
+    return 'Nielimitowane rozpoznawanie ze zdjęć i komentarze audio: $museums.';
   }
 
   @override
   String get paywallPitchGeneric =>
-      'Nielimitowane rozpoznawanie ze zdjęć i pełny komentarz audio.';
+      'Nielimitowane rozpoznawanie ze zdjęć i komentarze audio.';
 
   @override
   String get passNotOnSale =>
@@ -957,8 +957,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nieograniczone rozpoznawanie ze zdjęcia';
 
   @override
-  String get benefitsFeatAllAudio =>
-      'Komentarz audio we wszystkich muzeach karnetu';
+  String get benefitsFeatAllAudio => 'Komentarze audio w muzeach karnetu';
 
   @override
   String get benefitsFeatDeepAudio => 'Audio do sekcji pogłębionych';

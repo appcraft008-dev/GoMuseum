@@ -46,7 +46,10 @@ final _guest = User(
 void main() {
   testWidgets('冷启动点链接:登录态 loading 时去登录页,就绪后回到那件作品', (t) async {
     const link = '/a/orsay/Q1?lang=zh&s=app';
-    t.binding.platformDispatcher.defaultRouteNameTestValue = link;
+    // 安卓冷启动给的是**完整 URL**(引擎 intent.getData().toString())。
+    // 早先这里喂的是裸路径 —— 模拟了一个平台从不产生的输入,测试绿、真机红(V42)。
+    t.binding.platformDispatcher.defaultRouteNameTestValue =
+        'https://gomuseum.app$link';
     addTearDown(t.binding.platformDispatcher.clearDefaultRouteNameTestValue);
 
     final gate = Completer<User?>();
