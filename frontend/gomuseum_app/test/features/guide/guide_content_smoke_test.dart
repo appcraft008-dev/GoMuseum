@@ -74,6 +74,8 @@ Widget _wrap() => ProviderScope(
         // entitlementsProvider；不 override 会打真实网络（AuthInterceptor
         // 读 FlutterSecureStorage，测试环境没有平台通道 mock，会真的挂起）。
         entitlementsProvider.overrideWith((ref) async => Entitlements.unknown),
+        museumEntitlementsProvider
+            .overrideWith((ref, _) async => Entitlements.unknown),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

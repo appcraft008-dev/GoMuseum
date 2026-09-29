@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/data/pass_history.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/domain/entities/user_benefits.dart';
 import 'package:gomuseum_app/features/payment/presentation/pages/benefits_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
@@ -47,6 +48,9 @@ const _expired = Entitlements(
   canAudioAny: false,
   freeRecognitionsLeft: 0,
   freeRecognitionsTotal: 5,
+  offers: [
+    PassOffer(productId: 'paris_pass_7d', days: 7, label: '巴黎', covers: ['卢浮宫'])
+  ],
 );
 
 /// [kind] = `expired-used`(7 天用完)或 `expired-lapsed`(买了没激活作废)。
@@ -97,6 +101,8 @@ class _StubBenefits extends BenefitsState {
 
 /// 一张作废票:标题 + 已付 + 存根日期,没有卖点描述。
 Widget _voidedTicket(String stamp, String date) => GmTicket(
+      stamp: 'PARIS',
+      days: 7,
       torn: 1,
       faded: true,
       voidStamp: stamp,
@@ -121,7 +127,7 @@ void main() {
 
       // 这句话本来在同一屏里出现两次:作废票 + 下面「再来一张」的在售票,
       // 上面那次还正好被戳压住。现在只该剩在售的那一次。
-      expect(find.text(l10n.paywallPitch), findsOneWidget,
+      expect(find.text(l10n.paywallPitch('卢浮宫')), findsOneWidget,
           reason: '作废票又写回卖点描述了 —— 戳会重新压在上面');
     });
   }

@@ -696,11 +696,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get museumIntroComingSoon => '박물관 소개 준비 중입니다';
 
   @override
-  String get paywallTitle => '파리 7일 패스';
+  String paywallTitle(String label, String days) {
+    return '$label $days일 패스';
+  }
 
   @override
-  String get paywallPitch =>
-      '사진 인식 무제한, 루브르·오르세·오랑주리·프티 팔레 4개 관의 음성 해설을 모두 이용할 수 있습니다.';
+  String paywallPitch(String museums) {
+    return '사진 인식 무제한, $museums의 음성 해설을 모두 이용할 수 있습니다.';
+  }
+
+  @override
+  String get paywallPitchGeneric => '사진 인식 무제한, 음성 해설을 모두 이용할 수 있습니다.';
+
+  @override
+  String get passNotOnSale => '이 미술관의 패스는 아직 판매하지 않습니다.';
 
   @override
   String get paywallFreeAlways => '둘러보기, 검색, 전체 텍스트 해설은 언제나 무료입니다.';
@@ -769,8 +778,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get paywallClockHead => '구매 시점에는 시간이 흐르지 않습니다';
 
   @override
-  String get paywallClockBody =>
-      '프리미엄 기능을 처음 사용하고 확인한 때부터 7일이 시작됩니다. 미리 사 두고 미술관에서 시작하세요.';
+  String paywallClockBody(String days) {
+    return '프리미엄 기능을 처음 사용하고 확인한 때부터 $days일이 시작됩니다. 미리 사 두고 미술관에서 시작하세요.';
+  }
 
   @override
   String get paywallLapseNote => '활성화하지 않은 패스는 구매 후 30일이 지나면 만료됩니다.';
@@ -803,7 +813,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get activateSheetTitle => '지금 7일을 시작할까요?';
+  String activateSheetTitle(String days) {
+    return '지금 $days일을 시작할까요?';
+  }
 
   @override
   String activateSheetBody(DateTime date, DateTime time) {
@@ -828,7 +840,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get activateDoneTitle => '패스가 시작되었습니다';
 
   @override
-  String get activateDoneBody => '4개 관의 음성 해설과 무제한 인식이 열렸습니다.';
+  String get activateDoneBody => '음성 해설과 무제한 인식이 열렸습니다.';
 
   @override
   String get activateDoneCta => '계속';
@@ -837,8 +849,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get activateFailTitle => '확인하지 못했습니다. 티켓은 사용되지 않았습니다';
 
   @override
-  String get activateFailBody =>
-      '연결되지 않아 7일이 시작되지 않았습니다. 패스는 그대로입니다. 다시 시도하세요.';
+  String activateFailBody(String days) {
+    return '연결되지 않아 $days일이 시작되지 않았습니다. 패스는 그대로입니다. 다시 시도하세요.';
+  }
 
   @override
   String get activateRetry => '다시 시도';
@@ -887,7 +900,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsFeatRecognition => '무제한 사진 인식';
 
   @override
-  String get benefitsFeatAllAudio => '네 개 미술관 전체 음성 해설';
+  String get benefitsFeatAllAudio => '패스에 포함된 모든 미술관의 음성 해설';
 
   @override
   String get benefitsFeatDeepAudio => '심화 콘텐츠 음성';
@@ -899,21 +912,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsNotStartedHead => '아직 시간이 시작되지 않았습니다';
 
   @override
-  String get benefitsNotStartedBody =>
-      '미술관에서 음성 해설이나 인식을 처음 사용할 때 한 번 확인을 요청합니다. 7일은 그 순간부터 시작됩니다.';
+  String benefitsNotStartedBody(String days) {
+    return '미술관에서 음성 해설이나 인식을 처음 사용할 때 한 번 확인을 요청합니다. $days일은 그 순간부터 시작됩니다.';
+  }
 
   @override
-  String get benefitsMuseums => '루브르 · 오르세 · 오랑주리 · 프티 팔레';
-
-  @override
-  String get benefitsStartNow => '지금 7일 시작하기';
+  String benefitsStartNow(String days) {
+    return '지금 $days일 시작하기';
+  }
 
   @override
   String get benefitsStartNowNote => '아직 미술관이 아니라면 도착한 뒤에 시작하는 편이 좋습니다';
 
   @override
-  String get benefitsExpiredBody =>
-      '7일이 모두 지났습니다. 무료 이용량은 복구되었고 텍스트 해설은 그대로 전부 볼 수 있습니다.';
+  String benefitsExpiredBody(String days) {
+    return '$days일이 모두 지났습니다. 무료 이용량은 복구되었고 텍스트 해설은 그대로 전부 볼 수 있습니다.';
+  }
 
   @override
   String benefitsPrevPass(DateTime start, DateTime end) {

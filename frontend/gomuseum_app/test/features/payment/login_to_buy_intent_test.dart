@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/data/pass_history.dart';
 import 'package:gomuseum_app/features/payment/data/pass_product.dart';
 import 'package:gomuseum_app/features/payment/domain/entities/user_benefits.dart';
@@ -33,6 +34,7 @@ const _guest = Entitlements(
   canAudioAny: false,
   freeRecognitionsLeft: 3,
   freeRecognitionsTotal: 5,
+  offers: [PassOffer(productId: 'paris_pass_7d', days: 7, label: '巴黎')],
 );
 
 class _StubBenefits extends BenefitsState {
@@ -126,7 +128,7 @@ void main() {
     await t.pumpWidget(ProviderScope(
       overrides: [
         entitlementsProvider.overrideWith((ref) async => _guest),
-        passPriceProvider.overrideWith((ref) async => '€7.99'),
+        passPriceProvider.overrideWith((ref, _) async => '€7.99'),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -138,7 +140,7 @@ void main() {
     await t.pumpAndSettle();
 
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
-    showPaywallSheet(ctx, onBuy: () {});
+    showPaywallSheet(ctx, onBuy: (_) {});
     await t.pumpAndSettle();
 
     final cta = find.text(l10n.paywallLoginToBuy);

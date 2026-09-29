@@ -142,7 +142,15 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
       }
       // 402 = 免费额度用尽(后端是付费墙唯一执行点);别落进 ServerException
       // 被当成"识别失败",那样用户只会以为 App 坏了。
-      if (e.response?.statusCode == 402) throw const QuotaExceededException();
+      if (e.response?.statusCode == 402) {
+        // detail.pass = 撞墙那家馆该买的票(加法字段,老后端没有 → null)
+        final detail = e.response?.data is Map
+            ? (e.response!.data as Map)['detail']
+            : null;
+        final pass = detail is Map ? detail['pass'] : null;
+        throw QuotaExceededException('Recognition quota exceeded',
+            pass is Map ? pass['product_id'] as String? : null);
+      }
       throw ServerException('Server error: ${e.message}');
     } catch (e) {
       if (e is ServerException || e is TimeoutException) rethrow;

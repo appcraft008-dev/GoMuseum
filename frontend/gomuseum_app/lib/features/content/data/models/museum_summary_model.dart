@@ -31,6 +31,7 @@ class MuseumSummary extends Equatable {
     required this.artworkCount,
     this.coverImage,
     this.nameI18n = const {},
+    this.cityI18n = const {},
   });
 
   final String slug;
@@ -70,8 +71,13 @@ class MuseumSummary extends Equatable {
   String localizedName(String lang) =>
       nameI18n[lang] ?? (lang == 'zh' ? name : nameEn);
 
-  /// 按 UI 语言取城市名。
-  String localizedCity(String lang) => lang == 'zh' ? city : cityEn;
+  /// 十语城市名(后端 `city_i18n`,加法字段)。老后端不返回 → 空表。
+  final Map<String, String> cityI18n;
+
+  /// 按 UI 语言取城市名。此前只有中英两套:日文用户看到 "Paris" 而不是 パリ,
+  /// 意大利用户看到 "Amsterdam" 之外的城市也是英文拼写。回退链保留给老后端。
+  String localizedCity(String lang) =>
+      cityI18n[lang] ?? (lang == 'zh' ? city : cityEn);
 
   factory MuseumSummary.fromJson(Map<String, dynamic> j) {
     final slug = j['slug'] as String? ?? '';
@@ -93,6 +99,7 @@ class MuseumSummary extends Equatable {
           ? j['cover_image'] as String
           : null,
       nameI18n: parseNameI18n(j['name_i18n']),
+      cityI18n: parseNameI18n(j['city_i18n']),
     );
   }
 
@@ -107,6 +114,7 @@ class MuseumSummary extends Equatable {
         coordinates,
         artworkCount,
         coverImage,
-        nameI18n
+        nameI18n,
+        cityI18n,
       ];
 }

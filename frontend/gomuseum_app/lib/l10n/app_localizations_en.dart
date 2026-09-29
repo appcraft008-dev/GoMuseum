@@ -712,11 +712,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get museumIntroComingSoon => 'Museum introduction coming soon';
 
   @override
-  String get paywallTitle => 'Paris 7-Day Pass';
+  String paywallTitle(String label, String days) {
+    return '$label $days-Day Pass';
+  }
 
   @override
-  String get paywallPitch =>
-      'Unlimited photo recognition and full audio commentary across the Louvre, Orsay, the Orangerie and the Petit Palais.';
+  String paywallPitch(String museums) {
+    return 'Unlimited photo recognition and full audio commentary at $museums.';
+  }
+
+  @override
+  String get paywallPitchGeneric =>
+      'Unlimited photo recognition and full audio commentary.';
+
+  @override
+  String get passNotOnSale => 'Passes for this museum aren\'t on sale yet.';
 
   @override
   String get paywallFreeAlways =>
@@ -787,8 +797,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paywallClockHead => 'The clock doesn\'t start at purchase';
 
   @override
-  String get paywallClockBody =>
-      'Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.';
+  String paywallClockBody(String days) {
+    return 'Your $days days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.';
+  }
 
   @override
   String get paywallLapseNote =>
@@ -822,7 +833,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get activateSheetTitle => 'Start your 7 days now?';
+  String activateSheetTitle(String days) {
+    return 'Start your $days days now?';
+  }
 
   @override
   String activateSheetBody(DateTime date, DateTime time) {
@@ -849,7 +862,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activateDoneBody =>
-      'Audio commentary at all four museums and unlimited recognition are unlocked.';
+      'Audio commentary and unlimited recognition are unlocked.';
 
   @override
   String get activateDoneCta => 'Continue';
@@ -859,8 +872,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t confirm — your ticket wasn\'t used';
 
   @override
-  String get activateFailBody =>
-      'No connection, so the 7 days haven\'t started. Your pass is still intact; try again.';
+  String activateFailBody(String days) {
+    return 'No connection, so the $days days haven\'t started. Your pass is still intact; try again.';
+  }
 
   @override
   String get activateRetry => 'Try again';
@@ -909,7 +923,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get benefitsFeatRecognition => 'Unlimited photo recognition';
 
   @override
-  String get benefitsFeatAllAudio => 'Audio commentary across all four museums';
+  String get benefitsFeatAllAudio =>
+      'Audio commentary at every museum on your pass';
 
   @override
   String get benefitsFeatDeepAudio => 'Audio for in-depth sections';
@@ -921,22 +936,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get benefitsNotStartedHead => 'The clock hasn\'t started';
 
   @override
-  String get benefitsNotStartedBody =>
-      'The first time you use audio commentary or recognition at the museum, we\'ll ask you to confirm. Your 7 days start from that moment.';
+  String benefitsNotStartedBody(String days) {
+    return 'The first time you use audio commentary or recognition at the museum, we\'ll ask you to confirm. Your $days days start from that moment.';
+  }
 
   @override
-  String get benefitsMuseums => 'Louvre · Orsay · Orangerie · Petit Palais';
-
-  @override
-  String get benefitsStartNow => 'Start my 7 days now';
+  String benefitsStartNow(String days) {
+    return 'Start my $days days now';
+  }
 
   @override
   String get benefitsStartNowNote =>
       'If you\'re not at the museum yet, it\'s better to wait';
 
   @override
-  String get benefitsExpiredBody =>
-      'Your 7 days are up. Your free allowance is back, and written commentary is still complete.';
+  String benefitsExpiredBody(String days) {
+    return 'Your $days days are up. Your free allowance is back, and written commentary is still complete.';
+  }
 
   @override
   String benefitsPrevPass(DateTime start, DateTime end) {

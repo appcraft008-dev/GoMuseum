@@ -27,6 +27,7 @@ void main() {
     await t.pumpWidget(ProviderScope(
       overrides: [
         entitlementsProvider.overrideWith((ref) async => _noPass),
+        museumEntitlementsProvider.overrideWith((ref, _) async => _noPass),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -51,6 +52,7 @@ void main() {
           // 作者卡/音频条会 watch entitlementsProvider；不 override 会打真实
           // 网络（AuthInterceptor 读 FlutterSecureStorage 在测试环境会挂起）。
           entitlementsProvider.overrideWith((ref) async => _noPass),
+          museumEntitlementsProvider.overrideWith((ref, _) async => _noPass),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -99,6 +101,7 @@ void main() {
           // 作者卡/音频条会 watch entitlementsProvider；不 override 会打真实
           // 网络（AuthInterceptor 读 FlutterSecureStorage 在测试环境会挂起）。
           entitlementsProvider.overrideWith((ref) async => _noPass),
+          museumEntitlementsProvider.overrideWith((ref, _) async => _noPass),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

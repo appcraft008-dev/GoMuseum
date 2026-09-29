@@ -48,7 +48,11 @@ class RecognitionUnrecognized extends RecognitionState {
 
 /// 免费额度用尽(后端 402)：不是失败，是该弹付费墙。
 class RecognitionQuotaExceeded extends RecognitionState {
-  const RecognitionQuotaExceeded();
+  const RecognitionQuotaExceeded({this.passId});
+
+  /// 402 带回的「这家馆该买的票」(命中后才撞墙时有;前置闸撞墙时还不知道馆 → null,
+  /// 权益页列出全部可买的票)。
+  final String? passId;
 }
 
 class RecognitionError extends RecognitionState {
@@ -95,8 +99,8 @@ class RecognitionNotifier extends _$RecognitionNotifier {
               phash: resp.phash),
         _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug),
       };
-    } on QuotaExceededException {
-      state = const RecognitionQuotaExceeded();
+    } on QuotaExceededException catch (e) {
+      state = RecognitionQuotaExceeded(passId: e.passId);
     } catch (_) {
       state = const RecognitionError('recognize_failed');
     }
@@ -118,6 +122,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
         .confirm(phash: phash, qid: qid);
     // 确认扣掉了 1 次额度，权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
     ref.invalidate(entitlementsProvider);
+    ref.invalidate(museumEntitlementsProvider);
     await ref.read(benefitsStateProvider.notifier).refresh();
   }
 

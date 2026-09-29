@@ -204,7 +204,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/benefits',
         name: 'benefits',
-        builder: (context, state) => const BenefitsPage(),
+        // `?pass=<product_id>`:从馆内来时只卖这家馆的票(spec 2026-09-28 §3.3)
+        builder: (context, state) =>
+            BenefitsPage(passId: state.uri.queryParameters['pass']),
       ),
     ],
 

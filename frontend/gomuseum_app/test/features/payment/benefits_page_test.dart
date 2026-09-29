@@ -8,10 +8,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/data/pass_history.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/data/pass_product.dart';
 import 'package:gomuseum_app/features/payment/presentation/pages/benefits_page.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/app_theme.dart';
+
+// 票的展示数据全部来自后端(offers/passes)—— 前端不认识任何一张具体的票
+const _paris = PassOffer(
+    productId: 'paris_pass_7d', days: 7, label: '巴黎', covers: ['卢浮宫', '奥赛博物馆']);
+const _nl =
+    PassOffer(productId: 'nl_pass_7d', days: 7, label: '荷兰', covers: ['国立博物馆']);
 
 const _free = Entitlements(
   state: 'not_purchased',
@@ -20,6 +27,7 @@ const _free = Entitlements(
   canAudioAny: false,
   freeRecognitionsLeft: 2,
   freeRecognitionsTotal: 5,
+  offers: [_paris],
 );
 
 final _unactivated = Entitlements(
@@ -28,6 +36,14 @@ final _unactivated = Entitlements(
   canRecognize: true,
   canAudioAny: false,
   activateBy: DateTime(2026, 10, 3, 14, 32),
+  offers: const [_paris],
+  passes: const [
+    OwnedPass(
+        productId: 'paris_pass_7d',
+        label: '巴黎',
+        days: 7,
+        state: 'purchased_not_activated'),
+  ],
 );
 
 final _active = Entitlements(
@@ -36,6 +52,11 @@ final _active = Entitlements(
   canRecognize: true,
   canAudioAny: true,
   expiresAt: DateTime.now().add(const Duration(days: 4)),
+  offers: const [_paris],
+  passes: const [
+    OwnedPass(
+        productId: 'paris_pass_7d', label: '巴黎', days: 7, state: 'active'),
+  ],
 );
 
 const _expired = Entitlements(
@@ -45,6 +66,7 @@ const _expired = Entitlements(
   canAudioAny: false,
   freeRecognitionsLeft: 5,
   freeRecognitionsTotal: 5,
+  offers: [_paris],
 );
 
 /// 买了从没激活、30 天窗口过了作废 —— activated_at / expires_at 都是 null。
@@ -66,20 +88,21 @@ Widget _wrap(
   Entitlements ent, {
   List<PassRecord> history = const [],
   Locale locale = const Locale('zh'),
+  String? passId,
 }) =>
     ProviderScope(
       overrides: [
         entitlementsProvider.overrideWith((ref) async => ent),
         passHistoryProvider.overrideWith((ref) async => history),
         // 真的 IAP 插件在测试环境不可用
-        passPriceProvider.overrideWith((ref) async => '€7.99'),
+        passPriceProvider.overrideWith((ref, _) async => '€7.99'),
       ],
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.lightTheme(),
-        home: const BenefitsPage(),
+        home: BenefitsPage(passId: passId),
       ),
     );
 
@@ -125,7 +148,7 @@ void main() {
     final l10n = await _l10n();
     expect(find.text(l10n.paywallBuy), findsNothing);
     expect(find.text(l10n.paywallLoginToBuy), findsNothing);
-    expect(find.text(l10n.benefitsStartNow), findsOneWidget);
+    expect(find.text(l10n.benefitsStartNow('7')), findsOneWidget);
     expect(find.text(l10n.benefitsMyPass), findsOneWidget, reason: '标题不再是商店');
   });
 
@@ -189,7 +212,7 @@ void main() {
   testWidgets('没激活过的票不许说「7 天已经用完」—— 他一天都没用过', (t) async {
     await _pump(t, _wrap(_expired, history: [_lapsedPass]));
     final l10n = await _l10n();
-    expect(find.text(l10n.benefitsExpiredBody), findsNothing);
+    expect(find.text(l10n.benefitsExpiredBody('7')), findsNothing);
     expect(find.text(l10n.benefitsEndedAt), findsNothing,
         reason: '这张票从来没有过到期日,存根位该写购买日');
   });
@@ -218,6 +241,117 @@ void main() {
     expect(l10n.edgeSupportCopied(kSupportEmail), contains(kSupportEmail));
   });
 
+  // ---- 多城市/多国(spec 2026-09-28 §3.3/§3.5)------------------------------
+
+  testWidgets('⭐ 票名/卖点全部来自后端:荷兰的票不会写成巴黎', (t) async {
+    await _pump(
+        t,
+        _wrap(const Entitlements(
+          state: 'not_purchased',
+          canPurchase: true,
+          canRecognize: true,
+          canAudioAny: false,
+          offers: [_nl],
+        )));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
+    expect(find.textContaining('巴黎'), findsNothing);
+    expect(find.textContaining('国立博物馆'), findsOneWidget);
+  });
+
+  testWidgets('⭐ 不知道在哪家馆:每张可买的票各一个购买按钮,不猜「第一张」', (t) async {
+    await _pump(
+        t,
+        _wrap(const Entitlements(
+          state: 'not_purchased',
+          canPurchase: true,
+          canRecognize: true,
+          canAudioAny: false,
+          offers: [_paris, _nl],
+        )));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallBuy), findsNWidgets(2));
+  });
+
+  testWidgets('⭐ 从馆内来(?pass=):只卖这家馆的那张', (t) async {
+    await _pump(
+        t,
+        _wrap(
+            const Entitlements(
+              state: 'not_purchased',
+              canPurchase: true,
+              canRecognize: true,
+              canAudioAny: false,
+              offers: [_paris, _nl],
+            ),
+            passId: 'nl_pass_7d'));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallBuy), findsOneWidget);
+    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
+    expect(find.text(l10n.paywallTitle('巴黎', '7')), findsNothing);
+  });
+
+  testWidgets('⭐ 持巴黎票、从荷兰的馆点进来:照样能买荷兰的票(不能只显示「生效中」)', (t) async {
+    final ent = Entitlements(
+      state: 'active',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: true,
+      expiresAt: DateTime.now().add(const Duration(days: 4)),
+      offers: const [_paris, _nl],
+      passes: const [
+        OwnedPass(
+            productId: 'paris_pass_7d', label: '巴黎', days: 7, state: 'active'),
+      ],
+    );
+    await _pump(t, _wrap(ent, passId: 'nl_pass_7d'));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallBuy), findsOneWidget);
+    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
+  });
+
+  testWidgets('已握在手里的票不再卖 —— 生效中再买同一张只会付两次钱', (t) async {
+    await _pump(t, _wrap(_active, passId: 'paris_pass_7d'));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallBuy), findsNothing);
+  });
+
+  testWidgets('这家馆暂未开售:说清楚,绝不回落卖巴黎票', (t) async {
+    await _pump(t, _wrap(_free, passId: 'nl_pass_7d'));
+    final l10n = await _l10n();
+    expect(find.text(l10n.passNotOnSale), findsOneWidget);
+    expect(find.text(l10n.paywallBuy), findsNothing);
+  });
+
+  testWidgets('⭐ 两张未激活票:权益页不放「开始」—— 猜错就烧掉另一国的 7 天', (t) async {
+    final ent = Entitlements(
+      state: 'purchased_not_activated',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      activateBy: DateTime(2026, 10, 3),
+      offers: const [_paris, _nl],
+      passes: const [
+        OwnedPass(
+            productId: 'paris_pass_7d',
+            label: '巴黎',
+            days: 7,
+            state: 'purchased_not_activated'),
+        OwnedPass(
+            productId: 'nl_pass_7d',
+            label: '荷兰',
+            days: 7,
+            state: 'purchased_not_activated'),
+      ],
+    );
+    await _pump(t, _wrap(ent));
+    final l10n = await _l10n();
+    expect(find.text(l10n.benefitsStartNow('7')), findsNothing);
+    // 两张都列出来,用户看得出手里有哪几张
+    expect(find.textContaining('荷兰'), findsWidgets);
+    expect(find.textContaining('巴黎'), findsWidgets);
+  });
+
   testWidgets('十种语言都不缺键(缺了会抛,不是显示英文)', (t) async {
     final d = DateTime(2026, 9, 10, 14, 32);
     for (final locale in AppLocalizations.supportedLocales) {
@@ -241,11 +375,14 @@ void main() {
         l10n.benefitsFeatDeepAudio,
         l10n.benefitsNeedsPass,
         l10n.benefitsNotStartedHead,
-        l10n.benefitsNotStartedBody,
-        l10n.benefitsMuseums,
-        l10n.benefitsStartNow,
+        l10n.benefitsNotStartedBody('7'),
+        l10n.benefitsStartNow('7'),
         l10n.benefitsStartNowNote,
-        l10n.benefitsExpiredBody,
+        l10n.benefitsExpiredBody('7'),
+        l10n.paywallTitle('X', '7'),
+        l10n.paywallPitch('A, B'),
+        l10n.paywallPitchGeneric,
+        l10n.passNotOnSale,
         l10n.benefitsPrevPass(d, d),
         l10n.benefitsEndedAt,
         l10n.ticketPaid,

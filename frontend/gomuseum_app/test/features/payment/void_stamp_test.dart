@@ -47,6 +47,8 @@ void main() {
       final l10n = await AppLocalizations.delegate.load(locale);
       await t.pumpWidget(_wrap(
         GmTicket(
+          stamp: 'PARIS',
+          days: 7,
           torn: 1,
           faded: true,
           voidStamp: l10n.ticketVoid,
@@ -83,6 +85,8 @@ void main() {
   testWidgets('没传 voidStamp 就不画 —— 否则上面那条恒过', (t) async {
     await t.pumpWidget(_wrap(
       const GmTicket(
+        stamp: 'PARIS',
+        days: 7,
         torn: 1,
         faded: true,
         voidStamp: '已结束',
@@ -93,7 +97,12 @@ void main() {
     expect(find.text('已结束'), findsOneWidget);
 
     await t.pumpWidget(_wrap(
-      const GmTicket(torn: 1, faded: true, child: SizedBox(height: 80)),
+      const GmTicket(
+          stamp: 'PARIS',
+          days: 7,
+          torn: 1,
+          faded: true,
+          child: SizedBox(height: 80)),
       const Locale('zh'),
     ));
     expect(find.text('已结束'), findsNothing);

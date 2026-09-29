@@ -1,4 +1,5 @@
 // lib/features/content/data/models/museum_detail_model.dart
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:equatable/equatable.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart'
     show parseNameI18n;
@@ -36,6 +37,7 @@ class MuseumDetail extends Equatable {
     this.description,
     this.coverImage,
     this.nameI18n = const {},
+    this.pass,
   });
 
   final String slug;
@@ -66,6 +68,10 @@ class MuseumDetail extends Equatable {
 
   /// 十语馆名（后端 `name_i18n`）。老后端不返回 → 空表。
   final Map<String, String> nameI18n;
+
+  /// 这家馆卖哪张票(后端 `pass`,加法字段)。null = 老后端 / 暂未开售 →
+  /// 付费墙显示「暂未开售」,**绝不回落到某张默认的票**。
+  final PassOffer? pass;
 
   /// 按 UI 语言取馆名。与 MuseumSummary 共用一套解析与回退，别让两边漂移。
   String localizedName(String lang) =>
@@ -101,6 +107,7 @@ class MuseumDetail extends Equatable {
           ? j['cover_image'] as String
           : null,
       nameI18n: parseNameI18n(j['name_i18n']),
+      pass: PassOffer.fromJson(j['pass']),
     );
   }
 
@@ -120,5 +127,6 @@ class MuseumDetail extends Equatable {
         description,
         coverImage,
         nameI18n,
+        pass?.productId,
       ];
 }

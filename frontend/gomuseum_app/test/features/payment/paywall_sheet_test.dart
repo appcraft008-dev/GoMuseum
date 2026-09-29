@@ -9,21 +9,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/data/pass_product.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
+
+const _paris = PassOffer(
+    productId: 'paris_pass_7d', days: 7, label: '巴黎', covers: ['卢浮宫']);
+const _nl =
+    PassOffer(productId: 'nl_pass_7d', days: 7, label: '荷兰', covers: ['国立博物馆']);
 
 const _guest = Entitlements(
   state: 'not_purchased',
   canPurchase: false, // 游客:必须先登录才能买
   canRecognize: true,
   canAudioAny: false,
+  offers: [_paris],
 );
 const _member = Entitlements(
   state: 'not_purchased',
   canPurchase: true,
   canRecognize: true,
   canAudioAny: false,
+  offers: [_paris],
 );
 
 /// 让 `/entitlements/activate` 立刻失败:测激活失败分支时不能等真实网络
@@ -48,7 +56,7 @@ Widget _wrap(
       overrides: [
         entitlementsProvider.overrideWith((ref) async => ent),
         // 真的 IAP 插件在测试环境不可用,价格由这里给
-        passPriceProvider.overrideWith((ref) async => price),
+        passPriceProvider.overrideWith((ref, _) async => price),
         dioProvider
             .overrideWithValue(Dio()..httpClientAdapter = _FailingAdapter()),
       ],
@@ -105,7 +113,11 @@ void main() {
 
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
-    showPaywallSheet(ctx, onBuy: () => bought = true);
+    String? boughtId;
+    showPaywallSheet(ctx, onBuy: (id) {
+      bought = true;
+      boughtId = id;
+    });
     await t.pumpAndSettle();
 
     // 通票是消耗型商品,验证成功即被消耗 → 对买成功过的人恢复恒定捞不到东西。
@@ -118,6 +130,62 @@ void main() {
     await t.tap(find.text(l10n.paywallBuy));
     await t.pumpAndSettle();
     expect(bought, isTrue);
+    expect(boughtId, 'paris_pass_7d', reason: '只有一张可买时直接带上它的商品 ID');
+  });
+
+  // ---- 多城市/多国(spec 2026-09-28 §3.3)----------------------------------
+
+  testWidgets('⭐ 馆内付费墙卖**这家馆**的票:荷兰的馆不卖巴黎票', (t) async {
+    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _nl)));
+    await t.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
+    expect(find.textContaining('巴黎'), findsNothing);
+    expect(find.text(l10n.paywallPitch('国立博物馆')), findsOneWidget);
+    expect(find.text('GOMUSEUM · 荷兰'), findsOneWidget);
+  });
+
+  testWidgets('这家馆没有在售的票:说「暂未开售」,不给购买按钮,绝不回落巴黎票', (t) async {
+    const noOffers = Entitlements(
+      state: 'not_purchased',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+    );
+    await t.pumpWidget(_wrap(const PaywallSheetContent(), ent: noOffers));
+    await t.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    expect(find.text(l10n.passNotOnSale), findsOneWidget);
+    expect(find.text(l10n.paywallBuy), findsNothing);
+    expect(find.textContaining('巴黎'), findsNothing);
+  });
+
+  testWidgets('不知道在哪家馆、有两张可买:两张都列出,购买交给权益页挑(不猜第一张)', (t) async {
+    const two = Entitlements(
+      state: 'not_purchased',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      offers: [_paris, _nl],
+    );
+    String? boughtId = 'unset';
+    late BuildContext ctx;
+    await t.pumpWidget(_wrap(Builder(builder: (c) {
+      ctx = c;
+      return const SizedBox();
+    }), ent: two));
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    showPaywallSheet(ctx, onBuy: (id) => boughtId = id);
+    await t.pumpAndSettle();
+    expect(find.text(l10n.paywallTitle('巴黎', '7')), findsOneWidget);
+    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
+    // 两张票会把按钮挤出弹层可视区,先滚过去
+    await t.ensureVisible(find.text(l10n.paywallBuy));
+    await t.pumpAndSettle();
+    await t.tap(find.text(l10n.paywallBuy));
+    await t.pumpAndSettle();
+    expect(boughtId, isNull, reason: '多张时不替用户选');
+    expect(benefitsRoute(boughtId), '/benefits');
   });
 
   testWidgets('游客看到的是「登录后购买」 —— 通票挂账号,游客买了换手机就拿不回', (t) async {
@@ -158,7 +226,7 @@ void main() {
   // 用户看到票撕了、以为计时开始,而后端根本没激活(或反过来)。
 
   testWidgets('确认页:说清不可撤销,存根位是空的(到期日待填)', (t) async {
-    await t.pumpWidget(_wrap(const ActivatePassSheet()));
+    await t.pumpWidget(_wrap(const ActivatePassSheet(label: '巴黎', days: 7)));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.activateTear), findsOneWidget);
@@ -172,7 +240,7 @@ void main() {
 
   testWidgets('后端确认失败:明说票没被使用,可重试 —— 不能让用户以为钱白花了', (t) async {
     // activatePass 走 dio,测试环境必然失败 → 正好覆盖失败分支
-    await t.pumpWidget(_wrap(const ActivatePassSheet()));
+    await t.pumpWidget(_wrap(const ActivatePassSheet(label: '巴黎', days: 7)));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
@@ -225,11 +293,13 @@ void main() {
     for (final locale in AppLocalizations.supportedLocales) {
       final l10n = await AppLocalizations.delegate.load(locale);
       for (final s in [
-        l10n.paywallTitle,
-        l10n.paywallPitch,
+        l10n.paywallTitle('X', '7'),
+        l10n.paywallPitch('A, B'),
+        l10n.paywallPitchGeneric,
+        l10n.passNotOnSale,
         l10n.paywallPriceNote,
         l10n.paywallClockHead,
-        l10n.paywallClockBody,
+        l10n.paywallClockBody('7'),
         l10n.paywallLapseNote,
         l10n.ticketPaid,
         l10n.paywallFreeAlways,
@@ -246,7 +316,7 @@ void main() {
         l10n.ticketValidUntil,
         l10n.ticketDateTime(now, now),
         l10n.ticketDaysLeft(7),
-        l10n.activateSheetTitle,
+        l10n.activateSheetTitle('7'),
         l10n.activateSheetBody(now, now),
         l10n.activateTear,
         l10n.activateLater,
@@ -256,7 +326,7 @@ void main() {
         l10n.activateDoneBody,
         l10n.activateDoneCta,
         l10n.activateFailTitle,
-        l10n.activateFailBody,
+        l10n.activateFailBody('7'),
         l10n.activateRetry,
       ]) {
         expect(s.trim(), isNotEmpty, reason: '$locale 有空文案');

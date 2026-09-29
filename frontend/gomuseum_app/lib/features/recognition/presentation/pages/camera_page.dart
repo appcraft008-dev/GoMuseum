@@ -306,7 +306,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       // 反过来会把 `.value` 清成 null,那个分支永远命不中。
       if (await _passActivatedIfPurchased()) return;
       ref.invalidate(entitlementsProvider); // 客户端闸与后端不一致,重拉一次
-      if (mounted) _showQuotaExhaustedSheet();
+      if (mounted) _showQuotaExhaustedSheet(passId: st.passId);
       return;
     }
     // 额度**由后端扣**，前端只把扣完的结果拉回来给 UI 显示。
@@ -394,7 +394,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
     return ensurePassActivated(context, ref, ent);
   }
 
-  void _showQuotaExhaustedSheet() {
+  /// [passId]:402 告诉了是哪家馆的票就只卖那张;不知道 → 权益页列出全部可买的票。
+  void _showQuotaExhaustedSheet({String? passId}) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
@@ -421,7 +422,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
               icon: GmIcons.ticket,
               onTap: () {
                 Navigator.of(sheetContext).pop();
-                context.push('/benefits');
+                context.push(benefitsRoute(passId));
               },
             ),
           ],
