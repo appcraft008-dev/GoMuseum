@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 
 /// 免费语音覆盖的段。与后端 `entitlement_service.FREE_AUDIO_SECTION` 一一对应 ——
 /// 一件作品有讲解/背景/分析/问答/作者介绍多段,每段独立 TTS,
@@ -28,6 +29,8 @@ class Entitlements {
     this.freeRecognitionsLeft,
     this.freeRecognitionsTotal,
     this.freeAudioQids = const [],
+    this.offers = const [],
+    this.passes = const [],
     this.known = true,
   });
 
@@ -65,6 +68,13 @@ class Entitlements {
   /// 上限天然等于免费识别次数,所以前端没有第二个数字要维护。
   /// 老后端不认识这个字段 → 空表 → 本地闸一律拦;所以**必须先上后端再发包**。
   final List<String> freeAudioQids;
+
+  /// 全部可买的票(`/me.offers`)。给**不知道用户在哪家馆**的购买入口用 ——
+  /// 首页/设置进权益页时把每一张都列出来,不猜"第一张"(票多了会卖错)。
+  final List<PassOffer> offers;
+
+  /// 用户手里的票(生效中/待激活),各自带范围名。
+  final List<OwnedPass> passes;
 
   /// 通票是否生效中。
   bool get isActive => state == 'active';
@@ -126,6 +136,8 @@ class Entitlements {
       freeAudioQids:
           (json['free_audio_qids'] as List?)?.whereType<String>().toList() ??
               const [],
+      offers: PassOffer.listFromJson(json['offers']),
+      passes: OwnedPass.listFromJson(json['passes']),
     );
   }
 }
@@ -152,16 +164,47 @@ final entitlementsProvider = FutureProvider<Entitlements>((ref) async {
   }
 });
 
+/// **某家馆**的权益(`/me?museum=slug`):state/can 只看覆盖这家馆的票。
+///
+/// 馆内页面(讲解/音频/深度)必须用它而不是 [entitlementsProvider]:
+/// 持巴黎票进荷兰的馆,全局那份会说「通票生效中」,本地闸放行、点播放却 402。
+///
+/// `autoDispose.family`:同 museumDetailProvider —— 不带 autoDispose 的 family
+/// 会把错误态永久钉在 App 生命周期上(#630)。
+final museumEntitlementsProvider =
+    FutureProvider.autoDispose.family<Entitlements, String>((ref, slug) async {
+  ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
+  final dio = ref.watch(dioProvider);
+  try {
+    final res = await dio
+        .get('/api/v1/entitlements/me', queryParameters: {'museum': slug});
+    return Entitlements.fromJson(res.data as Map<String, dynamic>);
+  } on DioException {
+    return Entitlements.unknown;
+  }
+});
+
+/// 权益变了(激活/解锁/购买)之后调用:全局与各馆两份缓存一起失效。
+/// 只刷一份的话,设置页和讲解页会各说各的。
+void invalidateEntitlements(WidgetRef ref) {
+  ref.invalidate(entitlementsProvider);
+  ref.invalidate(museumEntitlementsProvider);
+}
+
 /// 激活通票:**买了不立即计时**(旅游产品用户常提前几天买),首次使用高级功能
 /// 且用户**显式确认**后才开始连续 7×24h。幂等——再调不续期也不重置。
 ///
 /// ⚠️ 这一步此前完全没有触发器:后端设计了 purchased_not_activated 状态,
 /// 但没有任何客户端调 /activate,于是 `can.audio_any = (state == active)` 恒为
 /// false —— 用户付了 €7.99 依然被付费墙拦住。
-Future<Entitlements?> activatePass(WidgetRef ref) async {
+///
+/// [museum]:在馆内激活时必传 —— 只激活**覆盖这家馆**的那张。同时持两国未激活票时,
+/// 在荷兰点激活绝不能烧掉巴黎那张。
+Future<Entitlements?> activatePass(WidgetRef ref, {String? museum}) async {
   final dio = ref.read(dioProvider);
   try {
-    final res = await dio.post('/api/v1/entitlements/activate');
+    final res = await dio.post('/api/v1/entitlements/activate',
+        queryParameters: {if (museum != null) 'museum': museum});
     return Entitlements.fromJson(res.data as Map<String, dynamic>);
   } on DioException {
     return null;

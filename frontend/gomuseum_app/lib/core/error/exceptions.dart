@@ -29,7 +29,11 @@ class PurchaseConflictException implements Exception {
 /// 后端才是付费墙的唯一执行点,客户端闸(`can.recognize`)只是表达。
 class QuotaExceededException implements Exception {
   final String message;
-  const QuotaExceededException([this.message = 'Recognition quota exceeded']);
+
+  /// 402 `detail.pass.product_id`:撞墙那家馆该买的票(后端下发;可缺)。
+  final String? passId;
+  const QuotaExceededException(
+      [this.message = 'Recognition quota exceeded', this.passId]);
 
   @override
   String toString() => 'QuotaExceededException: $message';

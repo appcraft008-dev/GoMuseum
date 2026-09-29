@@ -23,7 +23,7 @@ Widget _wrap(Locale locale) => MaterialApp(
       home: const Scaffold(
         body: Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),
-          child: GmTicket(child: SizedBox(height: 80)),
+          child: GmTicket(stamp: 'PARIS', days: 7, child: SizedBox(height: 80)),
         ),
       ),
     );

@@ -13,19 +13,13 @@ class IapService {
   List<ProductDetails> _products = [];
   bool _available = false;
 
-  /// 巴黎 7 日通票(€7.99)——**唯一在售商品**,必须与 Play Console 的商品 ID
-  /// 和后端 `entitlement_service.PARIS_PASS_7D` 三处字面量一致。
+  /// ⚠️ **这里不再写死任何商品 ID**(spec 2026-09-28 §3.5)。在售的票由后端
+  /// 下发(馆包/402 的 `pass`、`/me.offers`),新城市/新国家只在后端加一行 +
+  /// Play 建商品,不发版。此前写死 `paris_pass_7d`:第二个国家的票在已装 App 里
+  /// 根本查不到、买不了。
   ///
-  /// 类型是 **Consumable**(不是订阅、不是 Non-consumable):票会到期,用户
-  /// 下次来巴黎要能再买一张;Non-consumable 买过就永远"已拥有"、无法复购。
-  ///
-  /// ⚠️ 曾在售的 recognition_pack_10 / day_pass / premium_annual 已随收费定案废弃
-  /// (不按馆、不做差价升级——Play 无原生补差价,自做=收错钱风险)。后端仍认老商品
-  /// 以免破已装 App,但新版不再展示、不再引导购买。
-  static const String kParisPass7d = 'paris_pass_7d';
-
-  /// 所有商品ID
-  static const List<String> kProductIds = [kParisPass7d];
+  /// 通票类型是 **Consumable**(不是订阅、不是 Non-consumable):票会到期,用户
+  /// 下次来要能再买一张;Non-consumable 买过就永远"已拥有"、无法复购。
 
   /// 是否可用
   bool get isAvailable => _available;
@@ -58,28 +52,28 @@ class IapService {
       },
     );
 
-    // 加载商品
-    await loadProducts();
-
     return true;
   }
 
-  /// 加载商品列表
-  Future<void> loadProducts() async {
-    if (!_available) return;
-
+  /// 按 ID 查商品详情(带缓存)。查不到返回 null。
+  ///
+  /// 购买前**现查**,不靠启动时的一次性加载:要买的是哪张票由后端决定,
+  /// 启动那一刻并不知道。
+  Future<ProductDetails?> _productFor(String productId) async {
+    for (final p in _products) {
+      if (p.id == productId) return p;
+    }
     try {
-      final response = await _iap.queryProductDetails(kProductIds.toSet());
-
-      if (response.error != null) {
-        debugPrint('查询商品失败: ${response.error}');
-        return;
+      final response = await _iap.queryProductDetails({productId});
+      if (response.error != null || response.productDetails.isEmpty) {
+        debugPrint('查询商品失败: $productId ${response.error}');
+        return null;
       }
-
-      _products = response.productDetails;
-      debugPrint('已加载 ${_products.length} 个商品');
+      _products = [..._products, ...response.productDetails];
+      return response.productDetails.first;
     } catch (e) {
-      debugPrint('加载商品异常: $e');
+      debugPrint('查询商品异常: $e');
+      return null;
     }
   }
 
@@ -92,15 +86,13 @@ class IapService {
       return false;
     }
 
-    final product = _products.firstWhere(
-      (p) => p.id == productId,
-      orElse: () => throw Exception('商品不存在: $productId'),
-    );
+    final product = await _productFor(productId);
+    if (product == null) return false;
 
     final purchaseParam = PurchaseParam(productDetails: product);
 
     try {
-      // 通票是 Consumable:到期后用户要能再买一张(见 kParisPass7d 注释)
+      // 通票是 Consumable:到期后用户要能再买一张(见类顶部注释)
       //
       // ⚠️ `autoConsume: false` 是**必须的**,别图省事去掉。插件默认 true,
       // 而 `_maybeAutoConsumePurchase` 是在把购买投递给 purchaseStream **之前**

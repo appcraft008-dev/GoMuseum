@@ -1,0 +1,75 @@
+/// 馆内音频闸**按馆**判票(spec 2026-09-28 §2.2 / §3.5)。
+///
+/// 事故形态:持巴黎票进荷兰的馆。全局权益说「通票生效中、audio_any=true」,
+/// 若播放器读的是全局那份 → 本地闸放行 → 去拉音频 → 后端 402,用户看到的是
+/// 「按钮坏了」。所以播放器必须读 `museumEntitlementsProvider(slug)`。
+///
+/// 正反两格都要:只测「拦得住」的话,一个无论如何都拦的实现也会绿。
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
+import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/l10n/app_localizations.dart';
+import 'package:gomuseum_app/ui/gm/gm.dart';
+
+const _parisActive = Entitlements(
+  state: 'active',
+  canPurchase: true,
+  canRecognize: true,
+  canAudioAny: true,
+);
+
+/// 同一个人、在荷兰的馆里:巴黎票不覆盖,免费额度也用完了。
+const _notCoveredHere = Entitlements(
+  state: 'not_purchased',
+  canPurchase: true,
+  canRecognize: true,
+  canAudioAny: false,
+  freeRecognitionsLeft: 0,
+  freeRecognitionsTotal: 5,
+);
+
+Widget _app({required Entitlements global, required Entitlements here}) =>
+    ProviderScope(
+      overrides: [
+        entitlementsProvider.overrideWith((ref) async => global),
+        museumEntitlementsProvider.overrideWith((ref, _) async => here),
+      ],
+      child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('zh'),
+        home: Scaffold(
+          body: GuideAudioPlayer(slug: 'rijks', qid: 'Q9', language: 'zh'),
+        ),
+      ),
+    );
+
+void main() {
+  testWidgets('⭐ 全局有巴黎票、这家馆不覆盖:点播放撞墙,不按全局那份放行', (t) async {
+    await t.pumpWidget(_app(global: _parisActive, here: _notCoveredHere));
+    await t.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await t.tap(find.byWidgetPredicate((w) => w is GmIcon).first);
+    await t.pump();
+    expect(find.text(l10n.audioLockedHint), findsOneWidget,
+        reason: '读了全局权益 → 本地闸放行 → 去拉音频吃 402');
+    // 提示条自己会走(见 paywall_sheet 的 persist: false),把计时器跑完
+    await t.pump(const Duration(seconds: 5));
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('对照:这家馆被票覆盖 → 不撞墙', (t) async {
+    await t.pumpWidget(_app(global: _notCoveredHere, here: _parisActive));
+    await t.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await t.tap(find.byWidgetPredicate((w) => w is GmIcon).first);
+    await t.pump();
+    expect(find.text(l10n.audioLockedHint), findsNothing,
+        reason: '按馆的那份说能播,就不该弹墙(过严实现也要能抓到)');
+    await t.pump(const Duration(seconds: 1));
+  });
+}

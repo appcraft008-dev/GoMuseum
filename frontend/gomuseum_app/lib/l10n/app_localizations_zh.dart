@@ -693,10 +693,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get museumIntroComingSoon => '馆方介绍生成中，敬请期待';
 
   @override
-  String get paywallTitle => '巴黎 7 日通票';
+  String paywallTitle(String label, String days) {
+    return '$label $days 日通票';
+  }
 
   @override
-  String get paywallPitch => '不限次拍照识别，卢浮宫、奥赛、橘园、小皇宫四馆全部语音讲解。';
+  String paywallPitch(String museums) {
+    return '不限次拍照识别，$museums全部语音讲解。';
+  }
+
+  @override
+  String get paywallPitchGeneric => '不限次拍照识别，全部语音讲解。';
+
+  @override
+  String get passNotOnSale => '这家馆的通票暂未开售。';
 
   @override
   String get paywallFreeAlways => '浏览、搜索与完整文字讲解始终免费。';
@@ -764,7 +774,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallClockHead => '买了不马上开始计时';
 
   @override
-  String get paywallClockBody => '首次使用高级功能并确认后才开始 7 天计时。提前买好票，到馆再开始。';
+  String paywallClockBody(String days) {
+    return '首次使用高级功能并确认后才开始 $days 天计时。提前买好票，到馆再开始。';
+  }
 
   @override
   String get paywallLapseNote => '未激活的通票在购买后 30 天失效。';
@@ -797,7 +809,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get activateSheetTitle => '现在开始 7 天？';
+  String activateSheetTitle(String days) {
+    return '现在开始 $days 天？';
+  }
 
   @override
   String activateSheetBody(DateTime date, DateTime time) {
@@ -822,7 +836,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activateDoneTitle => '通票已开始';
 
   @override
-  String get activateDoneBody => '四馆语音讲解与不限次识别已解锁。';
+  String get activateDoneBody => '语音讲解与不限次识别已解锁。';
 
   @override
   String get activateDoneCta => '继续';
@@ -831,7 +845,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get activateFailTitle => '没能确认，票没有被使用';
 
   @override
-  String get activateFailBody => '网络没接通，7 天还没开始计时。通票仍然完整，可以再试一次。';
+  String activateFailBody(String days) {
+    return '网络没接通，$days 天还没开始计时。通票仍然完整，可以再试一次。';
+  }
 
   @override
   String get activateRetry => '再试一次';
@@ -879,7 +895,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsFeatRecognition => '不限次拍照识别';
 
   @override
-  String get benefitsFeatAllAudio => '四馆全部语音讲解';
+  String get benefitsFeatAllAudio => '通票内各馆全部语音讲解';
 
   @override
   String get benefitsFeatDeepAudio => '深度内容音频';
@@ -891,19 +907,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsNotStartedHead => '还没开始计时';
 
   @override
-  String get benefitsNotStartedBody => '到馆后首次使用语音讲解或识别时，会请你确认一次，7 天从那一刻开始。';
+  String benefitsNotStartedBody(String days) {
+    return '到馆后首次使用语音讲解或识别时，会请你确认一次，$days 天从那一刻开始。';
+  }
 
   @override
-  String get benefitsMuseums => '卢浮宫 · 奥赛 · 橘园 · 小皇宫';
-
-  @override
-  String get benefitsStartNow => '现在就开始 7 天';
+  String benefitsStartNow(String days) {
+    return '现在就开始 $days 天';
+  }
 
   @override
   String get benefitsStartNowNote => '不在馆里的话，建议到馆再开始';
 
   @override
-  String get benefitsExpiredBody => '7 天已经用完。免费额度已恢复，文字讲解仍然完整。';
+  String benefitsExpiredBody(String days) {
+    return '$days 天已经用完。免费额度已恢复，文字讲解仍然完整。';
+  }
 
   @override
   String benefitsPrevPass(DateTime start, DateTime end) {
@@ -1741,10 +1760,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get museumIntroComingSoon => '館方介紹生成中，敬請期待';
 
   @override
-  String get paywallTitle => '巴黎 7 日通票';
+  String paywallTitle(String label, String days) {
+    return '$label $days 日通票';
+  }
 
   @override
-  String get paywallPitch => '不限次拍照辨識，羅浮宮、奧塞、橘園、小皇宮四館全部語音導覽。';
+  String paywallPitch(String museums) {
+    return '不限次拍照辨識，$museums全部語音導覽。';
+  }
+
+  @override
+  String get paywallPitchGeneric => '不限次拍照辨識，全部語音導覽。';
+
+  @override
+  String get passNotOnSale => '這家館的通票暫未開售。';
 
   @override
   String get paywallFreeAlways => '瀏覽、搜尋與完整文字導覽始終免費。';
@@ -1812,7 +1841,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get paywallClockHead => '買了不馬上開始計時';
 
   @override
-  String get paywallClockBody => '首次使用進階功能並確認後才開始 7 天計時。提前買好票，到館再開始。';
+  String paywallClockBody(String days) {
+    return '首次使用進階功能並確認後才開始 $days 天計時。提前買好票，到館再開始。';
+  }
 
   @override
   String get paywallLapseNote => '未啟用的通票將於購買後 30 天失效。';
@@ -1845,7 +1876,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get activateSheetTitle => '現在開始 7 天？';
+  String activateSheetTitle(String days) {
+    return '現在開始 $days 天？';
+  }
 
   @override
   String activateSheetBody(DateTime date, DateTime time) {
@@ -1870,7 +1903,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get activateDoneTitle => '通票已開始';
 
   @override
-  String get activateDoneBody => '四館語音導覽與不限次辨識已解鎖。';
+  String get activateDoneBody => '語音導覽與不限次辨識已解鎖。';
 
   @override
   String get activateDoneCta => '繼續';
@@ -1879,7 +1912,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get activateFailTitle => '沒能確認，票沒有被使用';
 
   @override
-  String get activateFailBody => '網路沒接通，7 天還沒開始計時。通票仍然完整，可以再試一次。';
+  String activateFailBody(String days) {
+    return '網路沒接通，$days 天還沒開始計時。通票仍然完整，可以再試一次。';
+  }
 
   @override
   String get activateRetry => '再試一次';
@@ -1927,7 +1962,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get benefitsFeatRecognition => '不限次拍照辨識';
 
   @override
-  String get benefitsFeatAllAudio => '四館全部語音導覽';
+  String get benefitsFeatAllAudio => '通票內各館全部語音導覽';
 
   @override
   String get benefitsFeatDeepAudio => '深度內容音訊';
@@ -1939,19 +1974,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get benefitsNotStartedHead => '還沒開始計時';
 
   @override
-  String get benefitsNotStartedBody => '到館後首次使用語音導覽或辨識時，會請你確認一次，7 天從那一刻開始。';
+  String benefitsNotStartedBody(String days) {
+    return '到館後首次使用語音導覽或辨識時，會請你確認一次，$days 天從那一刻開始。';
+  }
 
   @override
-  String get benefitsMuseums => '羅浮宮 · 奧賽 · 橘園 · 小皇宮';
-
-  @override
-  String get benefitsStartNow => '現在就開始 7 天';
+  String benefitsStartNow(String days) {
+    return '現在就開始 $days 天';
+  }
 
   @override
   String get benefitsStartNowNote => '不在館裡的話，建議到館再開始';
 
   @override
-  String get benefitsExpiredBody => '7 天已經用完。免費額度已恢復，文字導覽仍然完整。';
+  String benefitsExpiredBody(String days) {
+    return '$days 天已經用完。免費額度已恢復，文字導覽仍然完整。';
+  }
 
   @override
   String benefitsPrevPass(DateTime start, DateTime end) {

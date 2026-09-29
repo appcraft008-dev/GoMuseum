@@ -1412,14 +1412,26 @@ abstract class AppLocalizations {
   /// No description provided for @paywallTitle.
   ///
   /// In en, this message translates to:
-  /// **'Paris 7-Day Pass'**
-  String get paywallTitle;
+  /// **'{label} {days}-Day Pass'**
+  String paywallTitle(String label, String days);
 
   /// No description provided for @paywallPitch.
   ///
   /// In en, this message translates to:
-  /// **'Unlimited photo recognition and full audio commentary across the Louvre, Orsay, the Orangerie and the Petit Palais.'**
-  String get paywallPitch;
+  /// **'Unlimited photo recognition and full audio commentary at {museums}.'**
+  String paywallPitch(String museums);
+
+  /// No description provided for @paywallPitchGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited photo recognition and full audio commentary.'**
+  String get paywallPitchGeneric;
+
+  /// No description provided for @passNotOnSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Passes for this museum aren\'t on sale yet.'**
+  String get passNotOnSale;
 
   /// No description provided for @paywallFreeAlways.
   ///
@@ -1544,8 +1556,8 @@ abstract class AppLocalizations {
   /// No description provided for @paywallClockBody.
   ///
   /// In en, this message translates to:
-  /// **'Your 7 days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.'**
-  String get paywallClockBody;
+  /// **'Your {days} days begin the first time you use a premium feature and confirm. Buy ahead, start at the museum.'**
+  String paywallClockBody(String days);
 
   /// Paywall: unactivated passes expire. Required disclosure — the backend really does forfeit them (ACTIVATION_WINDOW), so this line must ship with it.
   ///
@@ -1592,8 +1604,8 @@ abstract class AppLocalizations {
   /// No description provided for @activateSheetTitle.
   ///
   /// In en, this message translates to:
-  /// **'Start your 7 days now?'**
-  String get activateSheetTitle;
+  /// **'Start your {days} days now?'**
+  String activateSheetTitle(String days);
 
   /// No description provided for @activateSheetBody.
   ///
@@ -1628,7 +1640,7 @@ abstract class AppLocalizations {
   /// No description provided for @activateDoneBody.
   ///
   /// In en, this message translates to:
-  /// **'Audio commentary at all four museums and unlimited recognition are unlocked.'**
+  /// **'Audio commentary and unlimited recognition are unlocked.'**
   String get activateDoneBody;
 
   /// No description provided for @activateDoneCta.
@@ -1646,8 +1658,8 @@ abstract class AppLocalizations {
   /// No description provided for @activateFailBody.
   ///
   /// In en, this message translates to:
-  /// **'No connection, so the 7 days haven\'t started. Your pass is still intact; try again.'**
-  String get activateFailBody;
+  /// **'No connection, so the {days} days haven\'t started. Your pass is still intact; try again.'**
+  String activateFailBody(String days);
 
   /// No description provided for @activateRetry.
   ///
@@ -1742,7 +1754,7 @@ abstract class AppLocalizations {
   /// No description provided for @benefitsFeatAllAudio.
   ///
   /// In en, this message translates to:
-  /// **'Audio commentary across all four museums'**
+  /// **'Audio commentary at every museum on your pass'**
   String get benefitsFeatAllAudio;
 
   /// No description provided for @benefitsFeatDeepAudio.
@@ -1766,20 +1778,14 @@ abstract class AppLocalizations {
   /// No description provided for @benefitsNotStartedBody.
   ///
   /// In en, this message translates to:
-  /// **'The first time you use audio commentary or recognition at the museum, we\'ll ask you to confirm. Your 7 days start from that moment.'**
-  String get benefitsNotStartedBody;
-
-  /// No description provided for @benefitsMuseums.
-  ///
-  /// In en, this message translates to:
-  /// **'Louvre · Orsay · Orangerie · Petit Palais'**
-  String get benefitsMuseums;
+  /// **'The first time you use audio commentary or recognition at the museum, we\'ll ask you to confirm. Your {days} days start from that moment.'**
+  String benefitsNotStartedBody(String days);
 
   /// No description provided for @benefitsStartNow.
   ///
   /// In en, this message translates to:
-  /// **'Start my 7 days now'**
-  String get benefitsStartNow;
+  /// **'Start my {days} days now'**
+  String benefitsStartNow(String days);
 
   /// No description provided for @benefitsStartNowNote.
   ///
@@ -1790,8 +1796,8 @@ abstract class AppLocalizations {
   /// No description provided for @benefitsExpiredBody.
   ///
   /// In en, this message translates to:
-  /// **'Your 7 days are up. Your free allowance is back, and written commentary is still complete.'**
-  String get benefitsExpiredBody;
+  /// **'Your {days} days are up. Your free allowance is back, and written commentary is still complete.'**
+  String benefitsExpiredBody(String days);
 
   /// Benefits page: the previous pass, already used up.
   ///

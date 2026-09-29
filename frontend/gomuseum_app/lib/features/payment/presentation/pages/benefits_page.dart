@@ -23,7 +23,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:gomuseum_app/core/services/iap_service.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/data/pass_history.dart';
-import 'package:gomuseum_app/features/payment/data/pass_product.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/benefits_sections.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/gm_ticket.dart';
@@ -48,7 +48,11 @@ import 'package:gomuseum_app/ui/gm/gm_ticket_button.dart';
 const kSupportEmail = 'appcraft008@gmail.com';
 
 class BenefitsPage extends ConsumerStatefulWidget {
-  const BenefitsPage({super.key});
+  const BenefitsPage({super.key, this.passId});
+
+  /// `?pass=<product_id>`:从馆内进来时只卖**这家馆**的那张票。
+  /// null = 不知道在哪家馆(首页/设置)→ 列出 `/me.offers` 的每一张。
+  final String? passId;
 
   @override
   ConsumerState<BenefitsPage> createState() => _BenefitsPageState();
@@ -146,9 +150,10 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   void _toast(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  Future<void> _buy() async {
+  Future<void> _buy(String productId) async {
     setState(() => _isPurchasing = true);
-    final ok = await _iapService.purchaseProduct(IapService.kParisPass7d);
+    // 商品 ID 来自后端下发的票 —— 前端不认识任何一张具体的票
+    final ok = await _iapService.purchaseProduct(productId);
     if (!ok && mounted) {
       _toast(AppLocalizations.of(context)!.purchaseFailed);
       setState(() => _isPurchasing = false);
@@ -329,10 +334,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       const SizedBox(height: 4),
       ..._features(l10n, unlocked: false),
       BenSectionHead(l10n.benefitsSecBuyable),
-      const SizedBox(height: 10),
-      _saleTicket(l10n),
-      const SizedBox(height: 18),
-      _buyCta(l10n, ent),
+      ..._saleSection(l10n, ent),
       const SizedBox(height: 3),
       BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
     ];
@@ -341,20 +343,21 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   // ── 态 2 · 已购未激活:主角是「还没开始计时」──
   List<Widget> _unactivatedState(
       GmPalette gm, AppLocalizations l10n, Entitlements ent) {
+    final mine = _primary(ent);
+    // 手里不止一张未激活票时,这里不放「开始」按钮:不知道用户要撕哪张,猜错一张
+    // 就是替他烧掉另一个国家的 7 天。到那家馆用的时候按馆激活(ensurePassActivated)。
+    final pending = ent.passes.where((p) => p.isPurchasedNotActivated).length;
     return [
       const SizedBox(height: 16),
-      GmTicket(
+      _ownedTicket(
+        l10n,
+        mine,
         stub: GmTicketStubLine(
             label: l10n.ticketStub, value: l10n.ticketStubPending),
-        child: GmTicketFace(
-          title: l10n.paywallTitle,
-          pitch: l10n.paywallPitch,
-          paidLabel: l10n.ticketPaid,
-        ),
       ),
       BenNotice(
         head: l10n.benefitsNotStartedHead,
-        body: l10n.benefitsNotStartedBody,
+        body: l10n.benefitsNotStartedBody('${mine.days}'),
         // 30 天不激活会作废 —— 后端 ACTIVATION_WINDOW 真的会没收,必须说
         note: l10n.paywallLapseNote,
       ),
@@ -371,28 +374,36 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       BenSectionHead(l10n.benefitsSecIncluded),
       const SizedBox(height: 4),
       ..._features(l10n, unlocked: true, onlyPaid: true),
-      _museumsLine(gm, l10n),
-      const SizedBox(height: 18),
-      GmTicketButton(label: l10n.benefitsStartNow, onTap: _activate),
-      Padding(
-        padding: const EdgeInsets.only(top: 11),
-        child: Text(l10n.benefitsStartNowNote,
-            textAlign: TextAlign.center,
-            style: GmText.sans(size: 11.5, color: gm.faint)),
-      ),
+      _museumsLine(gm, ent, mine.productId),
+      if (pending <= 1) ...[
+        const SizedBox(height: 18),
+        GmTicketButton(
+            label: l10n.benefitsStartNow('${mine.days}'), onTap: _activate),
+        Padding(
+          padding: const EdgeInsets.only(top: 11),
+          child: Text(l10n.benefitsStartNowNote,
+              textAlign: TextAlign.center,
+              style: GmText.sans(size: 11.5, color: gm.faint)),
+        ),
+      ],
+      ..._otherPasses(gm, l10n, ent, mine),
+      ..._moreToBuy(l10n, ent),
     ];
   }
 
   // ── 态 3 · 生效中 ──
   List<Widget> _activeState(
       GmPalette gm, AppLocalizations l10n, Entitlements ent) {
+    final mine = _primary(ent);
     final exp = ent.expiresAt;
     final daysLeft = exp == null
         ? null
         : (exp.difference(DateTime.now()).inHours / 24).ceil().clamp(0, 999);
     return [
       const SizedBox(height: 16),
-      GmTicket(
+      _ownedTicket(
+        l10n,
+        mine,
         torn: 1,
         stub: exp == null
             // 契约:可缺字段不裸取。active 却没有 expires_at 是后端异常,
@@ -403,11 +414,6 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
                 value: l10n.ticketDateTime(exp, exp),
                 trailing: l10n.ticketDaysLeft(daysLeft!),
               ),
-        child: GmTicketFace(
-          title: l10n.paywallTitle,
-          pitch: l10n.paywallPitch,
-          paidLabel: l10n.ticketPaid,
-        ),
       ),
       BenSectionHead(l10n.benefitsSecUnlocked),
       BenQuotaRow(
@@ -416,8 +422,10 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       ),
       const SizedBox(height: 6),
       ..._features(l10n, unlocked: true, onlyPaid: true, skipRecognition: true),
-      _museumsLine(gm, l10n),
-      ..._purchaseRecords(gm, l10n),
+      _museumsLine(gm, ent, mine.productId),
+      ..._otherPasses(gm, l10n, ent, mine),
+      ..._moreToBuy(l10n, ent),
+      ..._purchaseRecords(gm, l10n, ent),
     ];
   }
 
@@ -434,6 +442,8 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     return [
       const SizedBox(height: 14),
       GmTicket(
+        stamp: _stampFor(ent, lapsed.productId),
+        days: _daysOf(lapsed),
         // 不撕:撕开的语义是"用过了"。这张没被用过,只是作废了 —— 戳说明一切。
         faded: true,
         voidStamp: l10n.ticketVoid,
@@ -446,7 +456,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
               ),
         // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
-          title: l10n.paywallTitle,
+          title: _titleFor(l10n, ent, lapsed.productId, _daysOf(lapsed)),
           paidLabel: l10n.ticketPaid,
         ),
       ),
@@ -469,10 +479,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         total: total,
       ),
       BenSectionHead(l10n.benefitsSecBuyAnother),
-      const SizedBox(height: 10),
-      _saleTicket(l10n),
-      const SizedBox(height: 18),
-      _buyCta(l10n, ent),
+      ..._saleSection(l10n, ent),
       const SizedBox(height: 20),
       BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
     ];
@@ -485,6 +492,8 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     return [
       const SizedBox(height: 14),
       GmTicket(
+        stamp: _stampFor(ent, used.productId),
+        days: _daysOf(used),
         torn: 1,
         faded: true,
         // 撕线 + 褪色都太轻了(见 GmTicket.voidStamp 的说明):真机上这张票
@@ -497,13 +506,13 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         ),
         // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
-          title: l10n.paywallTitle,
+          title: _titleFor(l10n, ent, used.productId, _daysOf(used)),
           paidLabel: l10n.ticketPaid,
         ),
       ),
       Padding(
         padding: const EdgeInsets.only(top: 12),
-        child: Text(l10n.benefitsExpiredBody,
+        child: Text(l10n.benefitsExpiredBody('${_daysOf(used)}'),
             style: GmText.sans(size: 12.5, color: gm.sub, height: 1.7)),
       ),
       BenSectionHead(l10n.benefitsSecCurrentQuota),
@@ -513,10 +522,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         total: total,
       ),
       BenSectionHead(l10n.benefitsSecBuyAnother),
-      const SizedBox(height: 10),
-      _saleTicket(l10n),
-      const SizedBox(height: 18),
-      _buyCta(l10n, ent),
+      ..._saleSection(l10n, ent),
       const SizedBox(height: 3),
       BenSecondaryAction(label: _restoreLabel(l10n), onTap: _restorePurchases),
     ];
@@ -525,16 +531,8 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   // ── 边 1 · 权益读不到(离线)──
   // ⚠️ 绝不能说「登录后购买」:用户可能已登录,只是网络断了。
   List<Widget> _unknownState(GmPalette gm, AppLocalizations l10n) => [
-        const SizedBox(height: 16),
-        GmTicket(
-          // 空存根 + 「—」价格来表达"读不到",而不是叠一层透明度
-          stub: const SizedBox(height: 1),
-          child: GmTicketFace(
-            title: l10n.paywallTitle,
-            pitch: l10n.paywallPitch,
-            price: '—',
-          ),
-        ),
+        // 读不到权益就读不到在售的票 —— 不画票,也绝不编一张默认的(巴黎)票出来
+        const SizedBox(height: 4),
         BenNotice(
           head: l10n.edgeUnknownHead,
           body: l10n.edgeUnknownBody,
@@ -569,6 +567,8 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         ),
         const SizedBox(height: 15),
         GmTicket(
+          stamp: _conflictOffer?.stampText ?? '',
+          days: _conflictOffer?.days ?? 7,
           faded: true,
           // ⚠️ 设计稿在存根位写了对方邮箱(v···@gmail.com)。**不显示** ——
           // 那是别人的账号标识,后端也没给(409 只回 reason)。
@@ -578,8 +578,8 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
             value: l10n.edgeConflictOther,
           ),
           child: GmTicketFace(
-            title: l10n.paywallTitle,
-            pitch: l10n.paywallPitch,
+            title: passTitle(
+                l10n, _conflictOffer?.label ?? '', _conflictOffer?.days ?? 7),
             paidLabel: l10n.ticketPaid,
           ),
         ),
@@ -611,34 +611,66 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
 
   // ── 共用零件 ──
 
-  Widget _saleTicket(AppLocalizations l10n) => GmTicket(
-        stub: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.paywallClockHead,
-                style: GmText.serif(
-                    size: 13.5,
-                    weight: FontWeight.w700,
-                    color: context.gm.accentDeep,
-                    height: 1.4)),
-            const SizedBox(height: 4),
-            Text(l10n.paywallClockBody,
-                style:
-                    GmText.sans(size: 12, color: context.gm.sub, height: 1.6)),
-            const SizedBox(height: 6),
-            // 合规:后端真会作废未激活的票,购买前必须告知(见 ACTIVATION_WINDOW)
-            Text(l10n.paywallLapseNote,
-                style: GmText.sans(
-                    size: 11, color: context.gm.faint, height: 1.55)),
-          ],
+  /// 这一页该卖哪几张票。`?pass=` 给了就只卖那一张;否则 `/me.offers` 全列
+  /// (不猜"第一张")。已经握在手里的票不再卖 —— 生效中/待激活时再买一张同样的票
+  /// 只会让用户付两次钱。
+  List<PassOffer> _sellable(Entitlements ent) {
+    final held = ent.passes.map((p) => p.productId).toSet();
+    return ent.offers
+        .where((o) => widget.passId == null || o.productId == widget.passId)
+        .where((o) => !held.contains(o.productId))
+        .toList();
+  }
+
+  /// 售票区:每张在售票一张票面 + 一个购买按钮。一张都没有 → 「暂未开售」。
+  List<Widget> _saleSection(AppLocalizations l10n, Entitlements ent) {
+    final offers = _sellable(ent);
+    if (offers.isEmpty) {
+      return [BenNotice(head: l10n.passNotOnSale, body: '')];
+    }
+    return [
+      for (final o in offers) ...[
+        const SizedBox(height: 10),
+        GmTicket(
+          stamp: o.stampText,
+          days: o.days,
+          stub: _clockStub(l10n, o.days),
+          child: saleTicketFace(context, ref, o),
         ),
-        child: GmTicketFace(
-          title: l10n.paywallTitle,
-          pitch: l10n.paywallPitch,
-          price: ref.watch(passPriceProvider).value,
-          priceNote: l10n.paywallPriceNote,
-        ),
+        const SizedBox(height: 18),
+        _buyCta(l10n, ent, o),
+      ],
+    ];
+  }
+
+  /// 生效中/待激活时,还有别的票可买(例如持巴黎票、从荷兰的馆点进来)。
+  List<Widget> _moreToBuy(AppLocalizations l10n, Entitlements ent) {
+    if (_sellable(ent).isEmpty) return const [];
+    return [
+      BenSectionHead(l10n.benefitsSecBuyAnother),
+      ..._saleSection(l10n, ent),
+    ];
+  }
+
+  Widget _clockStub(AppLocalizations l10n, int days) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.paywallClockHead,
+              style: GmText.serif(
+                  size: 13.5,
+                  weight: FontWeight.w700,
+                  color: context.gm.accentDeep,
+                  height: 1.4)),
+          const SizedBox(height: 4),
+          Text(l10n.paywallClockBody('$days'),
+              style: GmText.sans(size: 12, color: context.gm.sub, height: 1.6)),
+          const SizedBox(height: 6),
+          // 合规:后端真会作废未激活的票,购买前必须告知(见 ACTIVATION_WINDOW)
+          Text(l10n.paywallLapseNote,
+              style:
+                  GmText.sans(size: 11, color: context.gm.faint, height: 1.55)),
+        ],
       );
 
   /// 买票前必须登录:通票挂账号,游客买了换手机就永久拿不回。
@@ -646,11 +678,93 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   /// ⚠️ busy **只看购买中**,不看 IAP 是否初始化完。挂上 `_isLoading` 会让
   /// 按钮在商店还没连上时一直转圈 —— 用户盯着一个转圈的「获取通票」,
   /// 不知道在等什么;商店真没就绪时 `_buy()` 自己会给出提示。
-  Widget _buyCta(AppLocalizations l10n, Entitlements ent) => GmTicketButton(
+  Widget _buyCta(AppLocalizations l10n, Entitlements ent, PassOffer offer) =>
+      GmTicketButton(
         label: ent.canPurchase ? l10n.paywallBuy : l10n.paywallLoginToBuy,
         busy: _isPurchasing,
-        onTap: ent.canPurchase ? _buy : () => context.push(kLoginToUpgrade),
+        onTap: ent.canPurchase
+            ? () => _buy(offer.productId)
+            : () => context.push(kLoginToUpgrade),
       );
+
+  /// 页面主角那张票:生效中的优先,其次待激活的。老后端不给 passes 时退回空名/7 天
+  /// (标题退化成「7 日通票」,不编一个地名出来)。
+  OwnedPass _primary(Entitlements ent) =>
+      ent.passes.where((p) => p.isActive).firstOrNull ??
+      ent.passes.where((p) => p.isPurchasedNotActivated).firstOrNull ??
+      const OwnedPass(productId: '', label: '', days: 7, state: '');
+
+  Widget _ownedTicket(AppLocalizations l10n, OwnedPass p,
+          {required Widget stub, double torn = 0}) =>
+      GmTicket(
+        stamp: p.label.toUpperCase(),
+        days: p.days,
+        torn: torn,
+        stub: stub,
+        child: GmTicketFace(
+          title: passTitle(l10n, p.label, p.days),
+          pitch: passPitch(context, _coversOf(ent: null, pid: p.productId)),
+          paidLabel: l10n.ticketPaid,
+        ),
+      );
+
+  /// 某张票覆盖的馆名:从在售票里找(已放出的馆,本地化)。找不到 → 空(用通用卖点)。
+  List<String> _coversOf({Entitlements? ent, required String pid}) {
+    final e = ent ?? ref.read(entitlementsProvider).value;
+    return e?.offers.where((o) => o.productId == pid).firstOrNull?.covers ??
+        const [];
+  }
+
+  /// 历史票的范围名:手里的票或在售票里认得出就用,认不出就留空(不编)。
+  String _labelFor(Entitlements ent, String pid) =>
+      ent.passes.where((p) => p.productId == pid).firstOrNull?.label ??
+      ent.offers.where((o) => o.productId == pid).firstOrNull?.label ??
+      '';
+
+  String _stampFor(Entitlements ent, String pid) =>
+      _labelFor(ent, pid).toUpperCase();
+
+  String _titleFor(
+          AppLocalizations l10n, Entitlements ent, String pid, int days) =>
+      passTitle(l10n, _labelFor(ent, pid), days);
+
+  /// 一张历史票管几天:有起止就按起止算,算不出退回 7。
+  int _daysOf(PassRecord r) {
+    final a = r.activatedAt, e = r.expiresAt;
+    if (a == null || e == null) return 7;
+    final d = (e.difference(a).inHours / 24).round();
+    return d > 0 ? d : 7;
+  }
+
+  /// 收据冲突页那张票:不知道是哪张,用唯一在售的那张(多张时不画名字)。
+  PassOffer? get _conflictOffer {
+    final offers = ref.read(entitlementsProvider).value?.offers ?? const [];
+    return offers.length == 1 ? offers.first : null;
+  }
+
+  /// 手里还有别的票(例:巴黎生效中 + 荷兰待激活):逐张列出范围与状态,
+  /// 用户才看得出「哪张票管哪里」。
+  List<Widget> _otherPasses(
+      GmPalette gm, AppLocalizations l10n, Entitlements ent, OwnedPass mine) {
+    final others = ent.passes.where((p) => !identical(p, mine)).toList();
+    if (others.isEmpty) return const [];
+    return [
+      BenSectionHead(l10n.benefitsMyPass),
+      for (final p in others)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          child: Text(
+            [
+              passTitle(l10n, p.label, p.days),
+              if (p.isActive && p.expiresAt != null)
+                '${l10n.ticketValidUntil} ${l10n.ticketDateTime(p.expiresAt!, p.expiresAt!)}',
+              if (p.isPurchasedNotActivated) l10n.ticketStubPending,
+            ].join(' · '),
+            style: GmText.sans(size: 12.5, color: gm.sub),
+          ),
+        ),
+    ];
+  }
 
   List<Widget> _features(
     AppLocalizations l10n, {
@@ -682,15 +796,21 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     ];
   }
 
-  Widget _museumsLine(GmPalette gm, AppLocalizations l10n) => Padding(
-        padding: const EdgeInsets.only(top: 11),
-        child: Text(l10n.benefitsMuseums,
-            style: GmText.sans(size: 11.5, color: gm.faint, height: 1.6)),
-      );
+  /// 这张票能用的馆(后端下发,本地化)。此前写死「卢浮宫 · 奥赛 · 橘园 · 小皇宫」。
+  Widget _museumsLine(GmPalette gm, Entitlements ent, String pid) {
+    final covers = _coversOf(ent: ent, pid: pid);
+    if (covers.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 11),
+      child: Text(covers.join(' · '),
+          style: GmText.sans(size: 11.5, color: gm.faint, height: 1.6)),
+    );
+  }
 
   /// 购买记录。⚠️ **没有金额** —— `purchases.amount` 后端从来没写过,
   /// 而拿商店当前售价顶替是错的:那是"现在卖多少"不是"当时付了多少"。
-  List<Widget> _purchaseRecords(GmPalette gm, AppLocalizations l10n) {
+  List<Widget> _purchaseRecords(
+      GmPalette gm, AppLocalizations l10n, Entitlements ent) {
     final rows = ref.watch(passHistoryProvider).value ?? const <PassRecord>[];
     final withDate = rows.where((r) => r.purchasedAt != null).toList();
     if (withDate.isEmpty) return const [];
@@ -700,7 +820,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 11),
           child: Text(
-            '${l10n.benefitsDateOnly(r.purchasedAt!)} · ${l10n.paywallTitle}',
+            '${l10n.benefitsDateOnly(r.purchasedAt!)} · ${_titleFor(l10n, ent, r.productId, _daysOf(r))}',
             style: GmText.sans(size: 12.5, color: gm.sub),
           ),
         ),
