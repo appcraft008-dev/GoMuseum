@@ -45,6 +45,8 @@ museums:
       ko: 암스테르담
       pl: Amsterdam
     country: NL
+    # 取自 Wikidata P625(2026-09-29);首页「附近」按它算距离
+    coordinates: [52.36, 4.88528]
     # P195 直挂馆本体(2026-09-29 WDQS 实测):全部 6689 / 绘画 5827 /
     # 有图绘画 5349 / 其中有英文维基的仅 137。演练只取有图绘画按热度 TOP N
     # (catalog --limit;SPARQL 按跨语言条目数降序)。官方 data.rijksmuseum.nl
@@ -82,6 +84,8 @@ museums:
       ko: 파리
       pl: Paryż
     country: FR
+    # 取自 Wikidata P625(2026-09-29);首页「附近」按它算距离
+    coordinates: [48.85997, 2.32653]
     wikidata_qid: Q23402
     category_filter: Q3305213   # 主类目(兜底)
     # 四大类(通用分类法映射见 category_config.CATEGORY_BY_QID):
@@ -121,6 +125,8 @@ museums:
       ko: 파리
       pl: Paryż
     country: FR
+    # 取自 Wikidata P625(2026-09-29);首页「附近」按它算距离
+    coordinates: [48.86385, 2.32254]
     wikidata_qid: Q726781
     category_filter: Q3305213
     categories: [Q3305213, Q219423,
@@ -158,6 +164,8 @@ museums:
       ko: 파리
       pl: Paryż
     country: FR
+    # 取自 Wikidata P625(2026-09-29);首页「附近」按它算距离
+    coordinates: [48.86111, 2.33583]
     wikidata_qid: Q19675
     # 12部门+馆本体直挂(WDQS 实测 2026-07-21,合计~18.5k件);馆身份仍 Q19675
     collection_qids: [Q19675, Q3044768, Q3044772, Q3044751, Q3044747,
@@ -214,6 +222,8 @@ museums:
       ko: 파리
       pl: Paryż
     country: FR
+    # 取自 Wikidata P625(2026-09-29);首页「附近」按它算距离
+    coordinates: [48.86605, 2.31455]
     # ⚠️ 馆的正式名是「musée des Beaux-Arts de la ville de Paris」,Petit Palais 是
     # 它所在的建筑(P276)。按纪律①核验过:P195 直挂本馆 2186 幅绘画,不是部门制,
     # 所以不需要 collection_qids。
