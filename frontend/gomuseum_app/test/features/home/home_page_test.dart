@@ -3,6 +3,9 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
+import 'package:gomuseum_app/features/home/data/nearby.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
@@ -51,7 +54,14 @@ const _fakeEntitlements = Entitlements(
   freeRecognitionsTotal: 5,
 );
 
+class _NoHistory extends History {
+  @override
+  HistoryState build() => const HistoryState(isLoading: false, hasMore: false);
+}
+
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('首页渲染刊头、门票 CTA、额度与博物馆卡片', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -59,6 +69,9 @@ void main() {
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
           entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          // 首页现在还读定位/现场命中/足迹:测试里一律"不知道在哪、没有足迹"
+          deviceLocationProvider.overrideWith((ref) async => null),
+          historyProvider.overrideWith(_NoHistory.new),
         ],
         child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -79,7 +92,10 @@ void main() {
     );
     expect(find.text('奥赛博物馆'), findsOneWidget);
     expect(find.text('01'), findsOneWidget);
-    expect(find.text('附近博物馆'), findsOneWidget);
+    // 不知道用户在哪(无定位、无现场命中)→ 不冒充「附近」,并给开启定位的入口
+    expect(find.text('博物馆'), findsOneWidget);
+    expect(find.text('附近博物馆'), findsNothing);
+    expect(find.text('开启定位，显示你身边的馆'), findsOneWidget);
   });
 
   testWidgets('通票生效中：额度提示改说"通票生效中"而非"免费识别还剩"', (tester) async {
@@ -97,6 +113,9 @@ void main() {
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
           entitlementsProvider.overrideWith((ref) async => active),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          // 首页现在还读定位/现场命中/足迹:测试里一律"不知道在哪、没有足迹"
+          deviceLocationProvider.overrideWith((ref) async => null),
+          historyProvider.overrideWith(_NoHistory.new),
         ],
         child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -125,6 +144,9 @@ void main() {
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
           entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          // 首页现在还读定位/现场命中/足迹:测试里一律"不知道在哪、没有足迹"
+          deviceLocationProvider.overrideWith((ref) async => null),
+          historyProvider.overrideWith(_NoHistory.new),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -162,6 +184,9 @@ void main() {
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
           entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          // 首页现在还读定位/现场命中/足迹:测试里一律"不知道在哪、没有足迹"
+          deviceLocationProvider.overrideWith((ref) async => null),
+          historyProvider.overrideWith(_NoHistory.new),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -207,6 +232,9 @@ void main() {
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
           entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          // 首页现在还读定位/现场命中/足迹:测试里一律"不知道在哪、没有足迹"
+          deviceLocationProvider.overrideWith((ref) async => null),
+          historyProvider.overrideWith(_NoHistory.new),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -246,6 +274,9 @@ void main() {
           benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
           entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
           museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          // 首页现在还读定位/现场命中/足迹:测试里一律"不知道在哪、没有足迹"
+          deviceLocationProvider.overrideWith((ref) async => null),
+          historyProvider.overrideWith(_NoHistory.new),
         ],
         child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

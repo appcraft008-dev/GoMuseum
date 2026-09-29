@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/explore/presentation/pages/explore_page.dart';
+import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:gomuseum_app/features/search/data/search_api.dart';
 
 const _fakeMuseums = [
@@ -48,6 +49,8 @@ const _fakeMuseums = [
 Widget _wrap() => ProviderScope(
       overrides: [
         museumsListProvider.overrideWith((_) async => _fakeMuseums),
+        nearbyProvider
+            .overrideWith((ref) async => const Nearby(NearbyMode.none, [])),
         // 搜索改走服务端 /search：输入'卢浮'返回卢浮宫命中（默认 languageProvider=en）。
         searchProvider((slug: null, q: '卢浮', lang: 'en')).overrideWith(
           (ref) => const SearchResults(museums: [
@@ -82,13 +85,15 @@ void main() {
     expect(find.text('卢浮宫'), findsOneWidget);
   });
 
-  testWidgets('切换城市 chips 更新馆列表', (tester) async {
+  // spec 2026-09-29 §三:所有城市在同一条长列表里,点 chip 是**滚过去**,不是过滤掉别的城市
+  testWidgets('点城市 chip:滚到那一段,不把别的城市过滤掉', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('阿姆斯特丹'));
+    await tester.tap(find.text('阿姆斯特丹').first);
     await tester.pumpAndSettle();
     expect(find.text('梵高博物馆'), findsOneWidget);
-    expect(find.text('奥赛博物馆'), findsNothing);
+    expect(find.text('奥赛博物馆', skipOffstage: false), findsOneWidget,
+        reason: '巴黎的馆仍在列表里,只是滚走了');
   });
 
   testWidgets('输入 → 服务端搜索结果替换馆浏览', (tester) async {
@@ -100,4 +105,29 @@ void main() {
     expect(find.text('卢浮宫'), findsOneWidget); // 搜索命中
     expect(find.text('奥赛博物馆'), findsNothing); // 浏览区被搜索结果替换
   });
+
+  testWidgets('⭐ 上下滑:滚到阿姆斯特丹那一段时,阿姆斯特丹 chip 自动高亮', (t) async {
+    t.view.physicalSize = const Size(800, 560); // 矮一点:内容要真的能滚
+    t.view.devicePixelRatio = 1.0;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(_wrap());
+    await t.pumpAndSettle();
+    expect(_chipHighlighted(t, '巴黎'), isTrue, reason: '初始第一座城市高亮');
+    expect(_chipHighlighted(t, '阿姆斯特丹'), isFalse);
+
+    await t.drag(
+        find.byType(SingleChildScrollView).last, const Offset(0, -2000));
+    await t.pumpAndSettle();
+    expect(_chipHighlighted(t, '阿姆斯特丹'), isTrue,
+        reason: '滚到第二座城市段,chip 要跟着切过去');
+    expect(_chipHighlighted(t, '巴黎'), isFalse);
+  });
+}
+
+/// chip 高亮 = 背景填色(未选中是透明底)。
+bool _chipHighlighted(WidgetTester t, String city) {
+  final chip = find.ancestor(
+      of: find.text(city).first, matching: find.byType(Container));
+  final deco = (t.widget<Container>(chip.first).decoration as BoxDecoration?);
+  return deco?.color != null && deco!.color != Colors.transparent;
 }

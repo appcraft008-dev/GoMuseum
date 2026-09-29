@@ -77,6 +77,7 @@ def test_list_shape(session):
         "cover_image",  # 加法字段:探索页缩略图(spec 2026-07-20)
         "name_i18n",  # 加法字段:十语馆名(本端点无 language 参数,给整张表)
         "city_i18n",  # 加法字段:十语城市名(spec 2026-09-28 §3.3)
+        "coordinates",  # 加法字段:馆坐标(首页「附近」,spec 2026-09-29)
     }
     assert rows[0]["artwork_count"] == 1
     assert rows[0]["cover_image"] is None  # 未设 cover_image_key → null(前端隐藏)
@@ -333,3 +334,13 @@ def test_credit_hides_the_painter_but_keeps_the_photographer(session):
     assert _photo_credit("Mbzt", {"Mesha", "메샤"}) == "Mbzt"
     # 无作者的件 → 无从判断是不是画家,一律保留
     assert _photo_credit("Shonagon", set()) == "Shonagon"
+
+
+def test_list_carries_coordinates_from_yaml(session):
+    """首页「附近」在手机本地按馆坐标算距离;yaml 没配的馆给 null(不参与排序,不崩)。"""
+    from app.services.museum_repo import _museum_coords
+
+    rows = {r["slug"]: r for r in list_museums(session)}
+    lat, lng = _museum_coords()["orsay"]
+    assert rows["orsay"]["coordinates"] == [lat, lng]
+    assert 48 < lat < 49 and 2 < lng < 3, "奥赛在巴黎"

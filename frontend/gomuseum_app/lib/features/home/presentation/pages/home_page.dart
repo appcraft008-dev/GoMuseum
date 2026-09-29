@@ -8,7 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
-import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart'
+    show GuideArgs;
+import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
+import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
@@ -34,6 +37,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
     final ent = ref.watch(entitlementsProvider).value;
+    final nearbyAsync = ref.watch(nearbyProvider);
+    final nearby = nearbyAsync.value;
 
     return SafeArea(
       bottom: false,
@@ -65,29 +70,36 @@ class _HomePageState extends ConsumerState<HomePage> {
                       padding: const EdgeInsets.fromLTRB(26, 24, 26, 0),
                       child: GmSectionHead(
                         number: '01',
-                        label: l10n.homeNearby,
+                        // 不知道用户在哪就不冒充「附近」(spec 2026-09-29 §一)
+                        label: nearby?.mode == NearbyMode.none
+                            ? l10n.homeMuseums
+                            : l10n.homeNearby,
                         note: l10n.viewAll,
                         onNoteTap: () => context.go('/explore'),
                       ),
                     ),
                     const SizedBox(height: 14),
-                    // A1 加载中/失败:留白不塞占位馆(宁缺毋滥);探索页有完整重试入口
-                    ref.watch(museumsListProvider).when(
-                          loading: () => const SizedBox(height: 344),
-                          error: (_, __) => const SizedBox(height: 344),
-                          data: (museums) {
-                            if (museums.length != _cardCount) {
-                              WidgetsBinding.instance.addPostFrameCallback(
-                                (_) => mounted
-                                    ? setState(
-                                        () => _cardCount = museums.length)
-                                    : null,
-                              );
-                            }
-                            return _museumCards(museums);
-                          },
-                        ),
+                    // 只列当前城市的馆:轮播长度不再随全局馆数增长,其余城市交给探索页。
+                    // 加载中/失败:留白不塞占位馆(宁缺毋滥);探索页有完整重试入口
+                    nearbyAsync.when(
+                      loading: () => const SizedBox(height: 344),
+                      error: (_, __) => const SizedBox(height: 344),
+                      data: (n) {
+                        final museums = n.museums;
+                        if (museums.length != _cardCount) {
+                          WidgetsBinding.instance.addPostFrameCallback(
+                            (_) => mounted
+                                ? setState(() => _cardCount = museums.length)
+                                : null,
+                          );
+                        }
+                        return _museumCards(museums);
+                      },
+                    ),
                     _pageDots(gm),
+                    if (nearby?.mode == NearbyMode.none)
+                      _enableLocation(gm, l10n),
+                    ..._continueSection(gm, l10n),
                   ],
                 ),
               ),
@@ -96,6 +108,89 @@ class _HomePageState extends ConsumerState<HomePage> {
         },
       ),
     );
+  }
+
+  /// 没有任何位置信号时的一行入口:点了才请求定位权限 —— 不在启动时弹。
+  Widget _enableLocation(GmPalette gm, AppLocalizations l10n) =>
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => requestLocation(ref),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(26, 2, 26, 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GmIcon(GmIcons.pin, size: 14, color: gm.accent),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(l10n.homeEnableLocation,
+                    style: GmText.sans(size: 12, color: gm.accent)),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  /// 02 继续游览:最近识别过的作品(足迹现成数据),点一下回讲解页。
+  /// 没有可回去的作品就整节不显示 —— 编号只编码真实内容。
+  List<Widget> _continueSection(GmPalette gm, AppLocalizations l10n) {
+    final seen = <String>{};
+    final items = [
+      for (final it in ref.watch(historyProvider).items)
+        if (it.hasGuide && seen.add(it.qid!)) it,
+    ].take(6).toList();
+    if (items.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(26, 18, 26, 0),
+        child: GmSectionHead(number: '02', label: l10n.homeContinue),
+      ),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 150,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 26),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, i) {
+            final it = items[i];
+            return GestureDetector(
+              onTap: () => context.push(
+                '/guide',
+                extra: GuideArgs(
+                    slug: it.museumSlug, qid: it.qid, imageUrl: it.thumbnail),
+              ),
+              child: SizedBox(
+                width: 104,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 104,
+                      width: 104,
+                      color: gm.chipBg,
+                      child: it.thumbnail != null
+                          ? Image.network(it.thumbnail!,
+                              fit: BoxFit.cover,
+                              headers: kImageRequestHeaders,
+                              errorBuilder: (_, __, ___) => const SizedBox())
+                          : null,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(it.artworkName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GmText.sans(size: 11.5, height: 1.3)),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      const SizedBox(height: 16),
+    ];
   }
 
   Widget _masthead(GmPalette gm, AppLocalizations l10n) {

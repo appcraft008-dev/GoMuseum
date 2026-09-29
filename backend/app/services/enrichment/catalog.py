@@ -51,6 +51,8 @@ class MuseumConfig:
     # 城市名的其余八语,同 names(zh/en 是上面的 city_zh/city_en)。
     # 解析用 museum_repo.museum_cities();缺语言回退 city_en。
     city_names: dict[str, str] = field(default_factory=dict)
+    # 馆的经纬度 [lat, lng](Wikidata P625)。首页「附近」算距离用;缺省 None → 不参与距离排序。
+    coordinates: tuple[float, float] | None = None
 
 
 class MuseumCatalog:
@@ -84,6 +86,11 @@ class MuseumCatalog:
                 intro_qid=m.get("intro_qid"),
                 rank=int(m.get("rank") or RANK_LAST),
                 names={k: str(v) for k, v in (m.get("names") or {}).items() if v},
+                coordinates=(
+                    (float(m["coordinates"][0]), float(m["coordinates"][1]))
+                    if m.get("coordinates")
+                    else None
+                ),
                 city_names={
                     k: str(v) for k, v in (m.get("city_names") or {}).items() if v
                 },

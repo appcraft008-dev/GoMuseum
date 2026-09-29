@@ -7,7 +7,12 @@ import 'package:gomuseum_app/features/content/data/models/museum_summary_model.d
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 
+///
+/// 依赖当前账号:馆详情/藏品列表/讲解都经过它,账号一变全部重拉(见 [museumsListProvider])。
 final catalogDataSourceProvider = Provider<CatalogRemoteDataSource>((ref) {
+  // 馆的可见性按账号(隐身馆只对预览账号可见,spec 2026-09-20)→ 缓存必须随账号失效。
+  // 不然预览账号看过的隐身馆,切成普通账号/游客后仍从缓存里显示(2026-09-29 真机)。
+  ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   return CatalogRemoteDataSourceImpl(dio: ref.watch(dioProvider));
 });
 
@@ -42,6 +47,9 @@ final objectContentProvider =
 
 /// A1 GET /api/v1/museums → flat list of all museums.
 final museumsListProvider = FutureProvider<List<MuseumSummary>>((ref) async {
+  // 馆的可见性按账号(隐身馆只对预览账号可见,spec 2026-09-20)→ 缓存必须随账号失效。
+  // 不然预览账号看过的隐身馆,切成普通账号/游客后仍从缓存里显示(2026-09-29 真机)。
+  ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   final dio = ref.watch(dioProvider);
   final r = await dio.get('/api/v1/museums');
   return (r.data as List?)

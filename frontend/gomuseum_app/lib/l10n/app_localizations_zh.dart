@@ -110,6 +110,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeNearby => '附近博物馆';
 
   @override
+  String get homeMuseums => '博物馆';
+
+  @override
+  String get homeEnableLocation => '开启定位，显示你身边的馆';
+
+  @override
+  String get homeContinue => '继续游览';
+
+  @override
   String get statusOpen => '开放中';
 
   @override
@@ -1188,6 +1197,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeNearby => '附近博物館';
+
+  @override
+  String get homeMuseums => '博物館';
+
+  @override
+  String get homeEnableLocation => '開啟定位，顯示你身邊的館';
+
+  @override
+  String get homeContinue => '繼續遊覽';
 
   @override
   String get statusOpen => '開放中';
