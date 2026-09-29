@@ -82,8 +82,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     // 只列当前城市的馆:轮播长度不再随全局馆数增长,其余城市交给探索页。
                     // 加载中/失败:留白不塞占位馆(宁缺毋滥);探索页有完整重试入口
                     nearbyAsync.when(
-                      loading: () => const SizedBox(height: 344),
-                      error: (_, __) => const SizedBox(height: 344),
+                      loading: () => const SizedBox(height: 250),
+                      error: (_, __) => const SizedBox(height: 250),
                       data: (n) {
                         final museums = n.museums;
                         if (museums.length != _cardCount) {
@@ -266,19 +266,27 @@ class _HomePageState extends ConsumerState<HomePage> {
   /// 馆卡片走 A1 `GET /museums`(2026-07-26 API 化):上新馆自动出现在首页,
   /// 不再硬编码——此前卢浮宫卡片写死且无 slug,上线后点不动(同橘园 #300 教训)。
   Widget _museumCards(List<MuseumSummary> museums) {
-    return SizedBox(
-      // 留足余量：拉丁衬线行高略高 + 多语言文案，避免卡片底部溢出。
-      height: 344,
-      child: ListView.separated(
-        controller: _cardScrollController,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(left: 26, right: 26),
-        physics: const _SnapScrollPhysics(itemExtent: _cardExtent),
-        itemCount: museums.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, index) => _MuseumCard(
-          museum: museums[index],
-          onTap: () => context.push('/museum/${museums[index].slug}'),
+    // 高度贴合内容(最高那张卡),不再写死:写死 344 时卡片下方留一大片空白,
+    // 而字号放大/多语言时写死值又可能不够。卡片等高 = 整张卡都可点、无死区。
+    // ponytail: 一次建全部卡片(不懒加载);首页只列当前城市的几家馆,够用。
+    return SingleChildScrollView(
+      key: const Key('home-museum-cards'),
+      controller: _cardScrollController,
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.only(left: 26, right: 26),
+      physics: const _SnapScrollPhysics(itemExtent: _cardExtent),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < museums.length; i++) ...[
+              if (i > 0) const SizedBox(width: 14),
+              _MuseumCard(
+                museum: museums[i],
+                onTap: () => context.push('/museum/${museums[i].slug}'),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -365,95 +373,85 @@ class _MuseumCard extends StatelessWidget {
     final gm = context.gm;
     final lang = Localizations.localeOf(context).languageCode;
     final l10n = AppLocalizations.of(context)!;
-    // 卡槽高度由 _museumCards 的 SizedBox 撑到 344，但各卡内容高度不一
-    // （橘园无 topWorks 行，比奥赛矮 ~60px）。GestureDetector 必须撑满整个
-    // 卡槽高度、behavior: opaque，否则矮卡下方的空白卡槽是死区点不到
-    // （真机实测反馈：点橘园卡片"没反应"，根因即此）。
+    // 各卡内容高度不一;_museumCards 的 Row 把它们拉到同高(最高那张),
+    // 卡片本体撑满卡槽 → 没有点不到的死区(真机曾反馈"点橘园没反应")。
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
+      child: Container(
         width: 268,
-        height: double.infinity,
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: Container(
-            width: 268,
-            decoration: BoxDecoration(
-              color: gm.surface,
-              border: Border.all(color: gm.line),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 封面走 A1 cover_image(建筑外观照);无合规封面 → 占位图标
-                Container(
-                  height: 132,
-                  margin: const EdgeInsets.fromLTRB(9, 9, 9, 0),
-                  color: gm.chipBg,
-                  width: double.infinity,
-                  child: museum.coverImage != null
-                      ? Image.network(
-                          sizedImageUrl(museum.coverImage!, 600),
-                          fit: BoxFit.cover,
-                          headers: kImageRequestHeaders,
-                          loadingBuilder: (_, child, p) =>
-                              p == null ? child : const SizedBox.shrink(),
-                          errorBuilder: (_, __, ___) => Center(
-                            child: GmIcon(GmIcons.ticket,
-                                size: 36, color: gm.faint),
-                          ),
-                        )
-                      : Center(
-                          child:
-                              GmIcon(GmIcons.ticket, size: 36, color: gm.faint),
-                        ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              museum.localizedName(lang),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GmText.serif(
-                                  size: 17, weight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
+        decoration: BoxDecoration(
+          color: gm.surface,
+          border: Border.all(color: gm.line),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 封面走 A1 cover_image(建筑外观照);无合规封面 → 占位图标
+            Container(
+              height: 132,
+              margin: const EdgeInsets.fromLTRB(9, 9, 9, 0),
+              color: gm.chipBg,
+              width: double.infinity,
+              child: museum.coverImage != null
+                  ? Image.network(
+                      sizedImageUrl(museum.coverImage!, 600),
+                      fit: BoxFit.cover,
+                      headers: kImageRequestHeaders,
+                      loadingBuilder: (_, child, p) =>
+                          p == null ? child : const SizedBox.shrink(),
+                      errorBuilder: (_, __, ___) => Center(
+                        child:
+                            GmIcon(GmIcons.ticket, size: 36, color: gm.faint),
                       ),
-                      const SizedBox(height: 5),
-                      // meta 只写真实有的(城市 + 藏品数)。营业时间/距离/票价属
-                      // 易变运营数据,后端不存也不脏补(契约红线),前端不再编造。
-                      Text(museum.localizedCity(lang),
-                          style: GmText.sans(size: 12, color: gm.sub)),
-                      if (museum.artworkCount > 0) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            GmIcon(GmIcons.ticket, size: 14, color: gm.faint),
-                            const SizedBox(width: 5),
-                            Text(
-                              l10n.artworkCountLabel(museum.artworkCount),
-                              style: GmText.sans(size: 12, color: gm.sub),
-                            ),
-                          ],
+                    )
+                  : Center(
+                      child: GmIcon(GmIcons.ticket, size: 36, color: gm.faint),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          museum.localizedName(lang),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              GmText.serif(size: 17, weight: FontWeight.w600),
                         ),
-                      ],
+                      ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 5),
+                  // meta 只写真实有的(城市 + 藏品数)。营业时间/距离/票价属
+                  // 易变运营数据,后端不存也不脏补(契约红线),前端不再编造。
+                  Text(museum.localizedCity(lang),
+                      style: GmText.sans(size: 12, color: gm.sub)),
+                  if (museum.artworkCount > 0) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        GmIcon(GmIcons.ticket, size: 14, color: gm.faint),
+                        const SizedBox(width: 5),
+                        Text(
+                          l10n.artworkCountLabel(museum.artworkCount),
+                          style: GmText.sans(size: 12, color: gm.sub),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

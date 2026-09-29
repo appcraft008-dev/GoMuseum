@@ -165,10 +165,10 @@ void main() {
     expect(find.text('BENEFITS'), findsOneWidget);
   });
 
-  testWidgets('橘园卡片(无 topWorks,比奥赛矮)整个卡槽都可点击,不留死区', (tester) async {
-    // 回归：橘园无 topWorks 行，卡片实际渲染高度比奥赛矮 ~60px，
-    // 但卡槽固定 344px 高——此前只有卡片自身 GestureDetector 可点，
-    // 卡片下方的卡槽留白点击无反应（真机反馈"点橘园没反应"的根因）。
+  testWidgets('馆卡片撑满卡槽:卡槽不比卡片高(无空白带)、整张卡可点(无死区)', (tester) async {
+    // 回归①：卡槽曾写死 344px，卡片只有 ~250px → 卡片下方一大片空白(真机截图 2026-09-29)。
+    // 回归②：卡片比卡槽矮时，卡片下方的卡槽点击无反应(真机反馈"点橘园没反应")。
+    // 两者同一个判据：卡片高度 == 卡槽高度。
     final router = GoRouter(routes: [
       GoRoute(path: '/', builder: (_, __) => const HomePage()),
       GoRoute(
@@ -205,10 +205,13 @@ void main() {
     final cardSize = tester.getSize(find
         .ancestor(of: find.text('橘园美术馆'), matching: find.byType(Container))
         .first);
-    // 卡片本体下方 30px 处点击（矮卡下方的卡槽留白区）。
-    final belowCard = Offset(cardTopLeft.dx + cardSize.width / 2,
-        cardTopLeft.dy + cardSize.height + 30);
-    await tester.tapAt(belowCard);
+    final slot = tester.getRect(find.byKey(const Key('home-museum-cards')));
+    expect(cardTopLeft.dy + cardSize.height, slot.bottom);
+    expect(cardSize.height, lessThan(300)); // 不再是写死的 344
+
+    // 卡片底边往上 5px(原先矮卡下方的死区位置)点击
+    await tester.tapAt(Offset(cardTopLeft.dx + cardSize.width / 2,
+        cardTopLeft.dy + cardSize.height - 5));
     await tester.pumpAndSettle();
 
     expect(find.text('MUSEUM:orangerie'), findsOneWidget);
@@ -247,8 +250,8 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.dragUntilVisible(
-        find.text('卢浮宫'), find.byType(ListView).first, const Offset(-300, 0));
+    await tester.dragUntilVisible(find.text('卢浮宫'),
+        find.byKey(const Key('home-museum-cards')), const Offset(-300, 0));
     await tester.pumpAndSettle();
     await tester.tap(find.text('卢浮宫'));
     await tester.pumpAndSettle();
