@@ -348,5 +348,6 @@
       }
     }
   },
-  "unlockAudioCta": "Freischalten und abspielen"
+  "unlockAudioCta": "Freischalten und abspielen",
+  "guideShare": "Teilen"
 }

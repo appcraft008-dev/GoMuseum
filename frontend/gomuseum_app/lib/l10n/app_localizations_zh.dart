@@ -1108,6 +1108,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unlockAudioCta => '解锁并播放';
+
+  @override
+  String get guideShare => '分享';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2214,4 +2217,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get unlockAudioCta => '解鎖並播放';
+
+  @override
+  String get guideShare => '分享';
 }

@@ -186,6 +186,31 @@ class Artist extends Equatable {
       [name, birth, death, nationality, bio, notableWorks];
 }
 
+/// 分享(加法字段 `share`,2026-09-29)。null = 这件在当前语言下不可分享 → 不显示分享键。
+/// 链接/文字/分享图全由服务端下发:版式和文案以后改不用发版。
+class ShareInfo extends Equatable {
+  const ShareInfo(
+      {required this.url, required this.text, required this.imageUrl});
+
+  final String url, text, imageUrl;
+
+  static ShareInfo? fromJson(Object? j) {
+    if (j is! Map<String, dynamic>) return null;
+    final url = j['url'];
+    if (url is! String || url.isEmpty) return null;
+    final text = j['text'];
+    final image = j['image_url'];
+    return ShareInfo(
+      url: url,
+      text: text is String ? text : '',
+      imageUrl: image is String ? image : '',
+    );
+  }
+
+  @override
+  List<Object?> get props => [url, text, imageUrl];
+}
+
 class ObjectContent extends Equatable {
   const ObjectContent({
     required this.qid,
@@ -200,6 +225,7 @@ class ObjectContent extends Equatable {
     this.generating = false,
     this.defaultGuide,
     this.artist,
+    this.share,
   });
   final String qid;
   final String category;
@@ -215,6 +241,7 @@ class ObjectContent extends Equatable {
   final List<SuggestedQuestion> suggestedQuestions;
   final DefaultGuide? defaultGuide;
   final Artist? artist;
+  final ShareInfo? share;
 
   factory ObjectContent.fromJson(Map<String, dynamic> j) => ObjectContent(
         qid: j['qid'] as String? ?? '',
@@ -247,6 +274,7 @@ class ObjectContent extends Equatable {
         artist: j['artist'] is Map<String, dynamic>
             ? Artist.fromJson(j['artist'] as Map<String, dynamic>)
             : null,
+        share: ShareInfo.fromJson(j['share']),
       );
 
   @override
@@ -262,6 +290,7 @@ class ObjectContent extends Equatable {
         tabs,
         suggestedQuestions,
         defaultGuide,
-        artist
+        artist,
+        share,
       ];
 }

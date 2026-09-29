@@ -1116,4 +1116,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get unlockAudioCta => '잠금 해제하고 재생';
+
+  @override
+  String get guideShare => '공유';
 }

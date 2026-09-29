@@ -1160,4 +1160,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get unlockAudioCta => 'Odblokuj i odtwórz';
+
+  @override
+  String get guideShare => 'Udostępnij';
 }

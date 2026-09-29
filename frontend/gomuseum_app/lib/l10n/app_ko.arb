@@ -348,5 +348,6 @@
       }
     }
   },
-  "unlockAudioCta": "잠금 해제하고 재생"
+  "unlockAudioCta": "잠금 해제하고 재생",
+  "guideShare": "공유"
 }

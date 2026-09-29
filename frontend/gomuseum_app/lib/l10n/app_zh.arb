@@ -348,5 +348,6 @@
       }
     }
   },
-  "unlockAudioCta": "解锁并播放"
+  "unlockAudioCta": "解锁并播放",
+  "guideShare": "分享"
 }

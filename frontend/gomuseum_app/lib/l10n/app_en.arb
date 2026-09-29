@@ -630,5 +630,9 @@
       }
     }
   },
-  "unlockAudioCta": "Unlock and play"
+  "unlockAudioCta": "Unlock and play",
+  "guideShare": "Share",
+  "@guideShare": {
+    "description": "讲解页顶栏分享键的读屏标签"
+  }
 }
