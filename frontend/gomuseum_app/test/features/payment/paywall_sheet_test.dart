@@ -275,17 +275,17 @@ void main() {
 
     showPaywallHint(ctx, onLearnMore: () {});
     await t.pump();
-    expect(find.text(l10n.audioLockedHint), findsOneWidget); // 正:真的会显示
+    expect(find.text(l10n.audioLockedHint('7')), findsOneWidget); // 正:真的会显示
 
     // 同一帧内再撞两次 —— 不清队列的话这里就会留下一条永不消失的
     showPaywallHint(ctx, onLearnMore: () {});
     showPaywallHint(ctx, onLearnMore: () {});
     await t.pumpAndSettle();
-    expect(find.text(l10n.audioLockedHint), findsOneWidget); // 没攒成三条
+    expect(find.text(l10n.audioLockedHint('7')), findsOneWidget); // 没攒成三条
 
     await t.pump(const Duration(seconds: 10));
     await t.pumpAndSettle();
-    expect(find.text(l10n.audioLockedHint), findsNothing); // 负:不赖着不走
+    expect(find.text(l10n.audioLockedHint('7')), findsNothing); // 负:不赖着不走
   });
 
   testWidgets('十种语言都不缺键(缺了会抛,不是显示英文)', (t) async {
@@ -306,7 +306,7 @@ void main() {
         l10n.paywallBuy,
         l10n.paywallRestore,
         l10n.audioFreePreview,
-        l10n.audioLockedHint,
+        l10n.audioLockedHint('7'),
         l10n.quotaExhausted,
         l10n.paywallLoginToBuy,
         l10n.paywallLoginWhy,

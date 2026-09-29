@@ -31,6 +31,9 @@ class Entitlements {
     this.freeAudioQids = const [],
     this.offers = const [],
     this.passes = const [],
+    this.freeAudioUntil = const {},
+    this.freeAudioExpired = const [],
+    this.freeAudioDays = 7,
     this.known = true,
   });
 
@@ -75,6 +78,16 @@ class Entitlements {
 
   /// 用户手里的票(生效中/待激活),各自带范围名。
   final List<OwnedPass> passes;
+
+  /// D8:免费解锁各自的到期时刻(播放条「剩 X 天」)。老后端没有 → 空表,不显示天数。
+  final Map<String, DateTime> freeAudioUntil;
+
+  /// D8:解锁过、7 天已过的作品。撞墙时据此写明「免费试听已结束」——
+  /// 用户记得自己拍过这件,只弹付费墙不解释会以为 App 坏了。
+  final List<String> freeAudioExpired;
+
+  /// 免费窗口天数,由后端给(改窗口不用发版)。
+  final int freeAudioDays;
 
   /// 通票是否生效中。
   bool get isActive => state == 'active';
@@ -137,6 +150,17 @@ class Entitlements {
           (json['free_audio_qids'] as List?)?.whereType<String>().toList() ??
               const [],
       offers: PassOffer.listFromJson(json['offers']),
+      freeAudioUntil: {
+        for (final e
+            in ((json['free_audio_until'] as Map?) ?? const {}).entries)
+          if (e.key is String && e.value is String)
+            if (DateTime.tryParse(e.value as String) case final t?)
+              e.key as String: t.toLocal(),
+      },
+      freeAudioExpired:
+          (json['free_audio_expired'] as List?)?.whereType<String>().toList() ??
+              const [],
+      freeAudioDays: json['free_audio_days'] as int? ?? 7,
       passes: OwnedPass.listFromJson(json['passes']),
     );
   }

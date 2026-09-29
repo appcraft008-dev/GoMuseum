@@ -759,8 +759,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String get audioFreePreview => 'Darmowy odsłuch';
 
   @override
-  String get audioLockedHint =>
-      'Komentarz audio wymaga karnetu — dzieła, które zeskanowałeś, odsłuchasz za darmo.';
+  String audioLockedHint(String days) {
+    return 'Komentarz audio wymaga karnetu — zeskanowanych dzieł możesz słuchać za darmo przez $days dni.';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return 'Za darmo · zostało $days dni';
+  }
+
+  @override
+  String get audioFreeExpiredHint =>
+      'Darmowy odsłuch tego dzieła się skończył — aby słuchać dalej, potrzebujesz karnetu.';
+
+  @override
+  String get audioPassExpiredHint =>
+      'Twój karnet wygasł — kup kolejny, aby słuchać dalej.';
 
   @override
   String get quotaExhausted => 'Wykorzystano wszystkie darmowe rozpoznania.';

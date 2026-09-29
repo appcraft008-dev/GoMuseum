@@ -751,8 +751,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioFreePreview => 'Free preview';
 
   @override
-  String get audioLockedHint =>
-      'Audio commentary needs the pass — artworks you\'ve scanned are free to listen to.';
+  String audioLockedHint(String days) {
+    return 'Audio commentary needs the pass — artworks you\'ve scanned are free to listen to for $days days.';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return 'Free preview · $days days left';
+  }
+
+  @override
+  String get audioFreeExpiredHint =>
+      'The free preview for this artwork has ended — you\'ll need a pass to keep listening.';
+
+  @override
+  String get audioPassExpiredHint =>
+      'Your pass has expired — get another one to keep listening.';
 
   @override
   String get quotaExhausted => 'You\'ve used all your free recognitions.';

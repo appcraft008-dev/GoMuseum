@@ -30,18 +30,21 @@ const _notCoveredHere = Entitlements(
   freeRecognitionsTotal: 5,
 );
 
-Widget _app({required Entitlements global, required Entitlements here}) =>
+Widget _app(
+        {required Entitlements global,
+        required Entitlements here,
+        String qid = 'Q9'}) =>
     ProviderScope(
       overrides: [
         entitlementsProvider.overrideWith((ref) async => global),
         museumEntitlementsProvider.overrideWith((ref, _) async => here),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: Locale('zh'),
         home: Scaffold(
-          body: GuideAudioPlayer(slug: 'rijks', qid: 'Q9', language: 'zh'),
+          body: GuideAudioPlayer(slug: 'rijks', qid: qid, language: 'zh'),
         ),
       ),
     );
@@ -54,7 +57,7 @@ void main() {
 
     await t.tap(find.byWidgetPredicate((w) => w is GmIcon).first);
     await t.pump();
-    expect(find.text(l10n.audioLockedHint), findsOneWidget,
+    expect(find.text(l10n.audioLockedHint('7')), findsOneWidget,
         reason: '读了全局权益 → 本地闸放行 → 去拉音频吃 402');
     // 提示条自己会走(见 paywall_sheet 的 persist: false),把计时器跑完
     await t.pump(const Duration(seconds: 5));
@@ -68,8 +71,80 @@ void main() {
 
     await t.tap(find.byWidgetPredicate((w) => w is GmIcon).first);
     await t.pump();
-    expect(find.text(l10n.audioLockedHint), findsNothing,
+    expect(find.text(l10n.audioLockedHint('7')), findsNothing,
         reason: '按馆的那份说能播,就不该弹墙(过严实现也要能抓到)');
     await t.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('D8:通票过期 → 提示写明「通票已过期」', (t) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    const expired = Entitlements(
+      state: 'expired',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      freeRecognitionsLeft: 0,
+    );
+    expect(await _hintAfterTap(t, expired, 'Q101'), l10n.audioPassExpiredHint);
+  });
+
+  testWidgets('D8:这件解锁过但 7 天已过 → 「免费试听已结束」,不是泛泛的锁', (t) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    const lapsed = Entitlements(
+      state: 'not_purchased',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      freeRecognitionsLeft: 0,
+      freeAudioExpired: ['Q102'],
+    );
+    expect(await _hintAfterTap(t, lapsed, 'Q102'), l10n.audioFreeExpiredHint);
+  });
+
+  testWidgets('D8:从没解锁过 → 默认提示,天数取后端给的窗口', (t) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    const never = Entitlements(
+      state: 'not_purchased',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      freeRecognitionsLeft: 0,
+      freeAudioExpired: ['Q1'], // 别的件过期了,不影响这件
+      freeAudioDays: 3,
+    );
+    expect(await _hintAfterTap(t, never, 'Q103'), l10n.audioLockedHint('3'));
+  });
+
+  testWidgets('D8:免费试听的件在播放条上写剩几天', (t) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    final free = Entitlements(
+      state: 'not_purchased',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      freeAudioQids: const ['Q9'],
+      freeAudioUntil: {
+        'Q9': DateTime.now().add(const Duration(days: 2, hours: 3))
+      },
+    );
+    await t.pumpWidget(_app(global: free, here: free));
+    await t.pumpAndSettle();
+    expect(find.text(l10n.audioFreePreviewDays('3')), findsOneWidget);
+  });
+}
+
+// ---- D8:撞墙要写明原因,免费试听要写剩几天 --------------------------------
+
+/// 播放器按 qid 记「已轻提示过」(静态集合,跨用例共享)——每条用自己的 qid。
+Future<String> _hintAfterTap(
+    WidgetTester t, Entitlements here, String qid) async {
+  await t.pumpWidget(_app(global: here, here: here, qid: qid));
+  await t.pumpAndSettle();
+  await t.tap(find.byWidgetPredicate((w) => w is GmIcon).first);
+  await t.pump();
+  final snack = t.widget<SnackBar>(find.byType(SnackBar));
+  final text = (snack.content as Text).data!;
+  await t.pump(const Duration(seconds: 5));
+  await t.pumpAndSettle();
+  return text;
 }

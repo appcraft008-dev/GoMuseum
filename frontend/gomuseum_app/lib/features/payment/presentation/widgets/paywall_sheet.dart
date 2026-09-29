@@ -75,15 +75,17 @@ String passPitch(BuildContext context, List<String> covers) {
 /// [onLearnMore] 必填:此前它可选、缺省回落到 `showPaywallSheet(context)`,
 /// 而那个 sheet 不带 onBuy —— 用户点"获取通票"只会关掉弹窗、什么都不发生。
 /// 改必填是让编译器堵死这条路,不能再"忘了传"。
+///
+/// [message]:撞墙的**原因**(通票过期 / 这件的免费试听结束)。不给 = 默认提示。
 void showPaywallHint(BuildContext context,
-    {required VoidCallback onLearnMore}) {
+    {required VoidCallback onLearnMore, String? message}) {
   final l10n = AppLocalizations.of(context)!;
   // 清队列:`ScaffoldMessenger` 是 **MaterialApp 根上那一个**,提示条会排队挨个
   // 播完。连点几件锁着的作品就攒出一串,而这条提示的本意是"轻碰一下"。
   ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(l10n.audioLockedHint),
+      content: Text(message ?? l10n.audioLockedHint('7')),
       duration: const Duration(seconds: 4),
       // ⚠️ **必须显式写 false,否则 duration 是句空话。**
       // Flutter 的 `SnackBar` 构造器里:`persist = persist ?? action != null`

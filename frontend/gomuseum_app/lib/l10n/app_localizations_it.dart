@@ -758,8 +758,22 @@ class AppLocalizationsIt extends AppLocalizations {
   String get audioFreePreview => 'Ascolto gratuito';
 
   @override
-  String get audioLockedHint =>
-      'L\'audioguida richiede il pass: le opere che hai scansionato si ascoltano gratis.';
+  String audioLockedHint(String days) {
+    return 'Il commento audio richiede il pass: le opere che hai scansionato si ascoltano gratis per $days giorni.';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return 'Gratis · ancora $days giorni';
+  }
+
+  @override
+  String get audioFreeExpiredHint =>
+      'L\'ascolto gratuito di quest\'opera è terminato: serve un pass per continuare.';
+
+  @override
+  String get audioPassExpiredHint =>
+      'Il tuo pass è scaduto: prendine un altro per continuare ad ascoltare.';
 
   @override
   String get quotaExhausted => 'Hai esaurito i riconoscimenti gratuiti.';

@@ -1478,8 +1478,26 @@ abstract class AppLocalizations {
   /// No description provided for @audioLockedHint.
   ///
   /// In en, this message translates to:
-  /// **'Audio commentary needs the pass — artworks you\'ve scanned are free to listen to.'**
-  String get audioLockedHint;
+  /// **'Audio commentary needs the pass — artworks you\'ve scanned are free to listen to for {days} days.'**
+  String audioLockedHint(String days);
+
+  /// No description provided for @audioFreePreviewDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Free preview · {days} days left'**
+  String audioFreePreviewDays(String days);
+
+  /// No description provided for @audioFreeExpiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The free preview for this artwork has ended — you\'ll need a pass to keep listening.'**
+  String get audioFreeExpiredHint;
+
+  /// No description provided for @audioPassExpiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your pass has expired — get another one to keep listening.'**
+  String get audioPassExpiredHint;
 
   /// No description provided for @quotaExhausted.
   ///

@@ -733,7 +733,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get audioFreePreview => '無料試聴';
 
   @override
-  String get audioLockedHint => '音声解説にはパスが必要です。撮影して認識した作品は無料で聴けます。';
+  String audioLockedHint(String days) {
+    return '音声解説にはパスが必要です。撮影で認識した作品は $days 日間無料で聴けます。';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return '無料試聴 · 残り $days 日';
+  }
+
+  @override
+  String get audioFreeExpiredHint => 'この作品の無料試聴は終了しました。続けて聴くにはパスが必要です。';
+
+  @override
+  String get audioPassExpiredHint => 'パスの有効期限が切れました。続けて聴くには新しいパスをご購入ください。';
 
   @override
   String get quotaExhausted => '無料の認識回数を使い切りました。';

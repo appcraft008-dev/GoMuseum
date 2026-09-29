@@ -730,7 +730,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get audioFreePreview => '免费试听';
 
   @override
-  String get audioLockedHint => '语音讲解需要通票——拍照识别出来的作品可以免费听。';
+  String audioLockedHint(String days) {
+    return '语音讲解需要通票——拍照识别出来的作品 $days 天内可以免费听。';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return '免费试听 · 剩 $days 天';
+  }
+
+  @override
+  String get audioFreeExpiredHint => '这件作品的免费试听已结束——需要通票才能继续听。';
+
+  @override
+  String get audioPassExpiredHint => '通票已过期——再买一张即可继续听。';
 
   @override
   String get quotaExhausted => '免费识别次数已用完。';
@@ -1797,7 +1810,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get audioFreePreview => '免費試聽';
 
   @override
-  String get audioLockedHint => '語音導覽需要通票——拍照辨識出來的作品可以免費聽。';
+  String audioLockedHint(String days) {
+    return '語音導覽需要通票——拍照辨識出來的作品 $days 天內可以免費聽。';
+  }
+
+  @override
+  String audioFreePreviewDays(String days) {
+    return '免費試聽 · 剩 $days 天';
+  }
+
+  @override
+  String get audioFreeExpiredHint => '這件作品的免費試聽已結束——需要通票才能繼續聽。';
+
+  @override
+  String get audioPassExpiredHint => '通票已過期——再買一張即可繼續聽。';
 
   @override
   String get quotaExhausted => '免費辨識次數已用完。';
