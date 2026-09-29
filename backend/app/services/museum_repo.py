@@ -543,6 +543,18 @@ def _museum_cities() -> dict[str, dict[str, str]]:
     }
 
 
+@lru_cache(maxsize=1)
+def _museum_coords() -> dict[str, tuple[float, float]]:
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+
+    return {
+        slug: cfg.coordinates
+        for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
+        if cfg.coordinates
+    }
+
+
 def museum_cities(museum: Museum) -> dict[str, str]:
     """该馆的 {语言: 城市名} 全表;yaml 没配的馆回退 DB 的中英两列。"""
     cities = _museum_cities().get(museum.slug) or {
@@ -582,6 +594,10 @@ def list_museums(db: Session, *, preview: bool = False) -> list[dict]:
         row["name_i18n"] = museum_names(m)
         # 十语城市名(加法):城市 chips / 卡片。此前前端只有中英两套
         row["city_i18n"] = museum_cities(m)
+        # 馆坐标 [lat, lng](加法字段,可 null):首页「附近」在手机本地按它算距离,
+        # 用户位置**不上传**(spec 2026-09-29-home-nearby-explore-by-city)
+        c = _museum_coords().get(m.slug)
+        row["coordinates"] = list(c) if c else None
         # 探索页缩略图(spec 2026-07-20 museum-cover-intro-quality,加法):同一行零成本可读
         row["cover_image"] = (
             _sized(storage, m.cover_image_key, "thumb") if m.cover_image_key else None
