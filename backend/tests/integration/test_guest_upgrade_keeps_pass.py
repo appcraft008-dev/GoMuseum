@@ -14,6 +14,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.museum import Museum
 from app.models.purchase import Entitlement, Purchase
 from app.models.user import User
 from app.models.user_benefits import UserBenefits
@@ -32,6 +33,7 @@ def client():
             UserBenefits.__table__,
             Purchase.__table__,
             Entitlement.__table__,
+            Museum.__table__,  # summary 的 offers 要查可买的馆
         ],
     )
     s = sessionmaker(bind=engine)()

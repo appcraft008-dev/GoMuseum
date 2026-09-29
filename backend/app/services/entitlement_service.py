@@ -161,23 +161,45 @@ def pass_offer(db, museum, language: str = "zh", *, preview: bool = False):
     pid = pass_for_museum(museum)
     if pid is None:
         return None
+    return _offer(pid, _museums(db, preview), language)
+
+
+def pass_offers(db, language: str = "zh", *, preview: bool = False) -> list[dict]:
+    """全部可买的票(`/me.offers`)—— 给**不知道用户在哪家馆**的购买入口用
+    (首页/设置进权益页、识别前置闸撞墙)。每张各一个购买按钮,不猜"第一张"。
+
+    只列覆盖至少一家**已放出**馆的在售票:否则演练期的票会从这里漏给公众。"""
+    museums = _museums(db, preview)
+    out = []
+    for pid, p in PASSES.items():
+        if not p.get("on_sale", True):
+            continue
+        offer = _offer(pid, museums, language)
+        if offer["covers"]:
+            out.append(offer)
+    return out
+
+
+def _museums(db, preview: bool) -> list:
     from app.models.museum import Museum
-    from app.services.museum_repo import museum_name
 
     q = db.query(Museum)
     if not preview:
         q = q.filter(Museum.published_at.isnot(None))
+    return sorted(q.all(), key=lambda m: m.slug)
+
+
+def _offer(pid: str, museums: list, language: str) -> dict:
+    from app.services.museum_repo import museum_name
+
     scope = PASSES[pid]["scope"]
-    covers = [
-        museum_name(m, language)
-        for m in sorted(q.all(), key=lambda m: m.slug)
-        if covers_museum(scope, m)
-    ]
     return {
         "product_id": pid,
         "days": PASSES[pid]["days"],
         "label": pass_label(pid, language),
-        "covers": covers,
+        "covers": [
+            museum_name(m, language) for m in museums if covers_museum(scope, m)
+        ],
     }
 
 
@@ -301,6 +323,7 @@ def summary(
     is_guest: bool = False,
     museum=None,
     language: str = "zh",
+    preview: bool = False,
 ) -> dict:
     """前端唯一入口。`can` 是前端该看的东西,其余字段供展示。
 
@@ -348,6 +371,8 @@ def summary(
         # 加法字段:{qid: 到期时刻},新 App 显示「还剩 X 天」
         "free_audio_until": free_audio_until(benefits),
         "passes": _passes(db, user_id, language),
+        # 可买的票(加法):不知道用户在哪家馆的购买入口据此列出每一张
+        "offers": pass_offers(db, language, preview=preview),
         # ⚠️ **恒为 None**。老字段的语义是"你认领的那一件",而"认领"这件事
         # 已经不存在了(2026-09-19 免费语音改为跟着识别走)。
         # 不删键、恒给 null 是**故意的**:老 App 读到 null 会把本地闸放开、

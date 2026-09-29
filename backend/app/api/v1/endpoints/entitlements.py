@@ -20,6 +20,7 @@ from app.models.user_benefits import UserBenefits
 from app.services import entitlement_service as es
 from app.services.auth_service import AuthService
 from app.services.event_log import log_event
+from app.services.visibility import can_preview
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -36,7 +37,7 @@ def _museum(db: Session, slug: str | None, credentials):
     if not slug:
         return None
     from app.models.museum import Museum
-    from app.services.visibility import can_preview, museum_visible
+    from app.services.visibility import museum_visible
 
     if not museum_visible(db, slug, can_preview(db, credentials)):
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
@@ -68,6 +69,7 @@ def my_entitlements(
         is_guest=is_guest,
         museum=_museum(db, museum, credentials),
         language=language,
+        preview=can_preview(db, credentials),
     )
 
 
@@ -138,7 +140,7 @@ def unlock_audio(
     # qid 必须真实存在。不校验的话,客户端一个笔误就让用户白掉一次额度 ——
     # 这是他花钱换来的东西,而且 404 比"扣了钱什么也没解锁"好排查得多。
     # 隐身馆的藏品与不存在的同一个 404,且在扣额度之前(可见性闸)。
-    from app.services.visibility import can_preview, qid_visible
+    from app.services.visibility import qid_visible
 
     museum = es.museum_of_qid(db, qid)
     if museum is None or not qid_visible(db, qid, can_preview(db, credentials)):
