@@ -10,6 +10,7 @@
 - 这里没有任何音频:音频是收费核心资产,公开层一个字节都不给。
 """
 
+import re
 from urllib.parse import urlencode
 
 from app.core.config import settings
@@ -22,6 +23,22 @@ PLAY_URL = (
     "https://play.google.com/store/apps/details?id=com.gomuseum.app"
     "&referrer=utm_source%3Dgomuseum.app%26utm_medium%3Dshare"
 )
+
+
+# 机器访问(链接预览抓取 / 搜索引擎 / 脚本)。只用于给埋点打标记,不拦任何请求。
+# ⚠️ 别写成宽泛的 "bot":手机型号 CUBOT 会被误伤;应用内浏览器(MicroMessenger /
+# FBAN / Instagram)背后是真人,不在这里。正负样本见 tests/integration/test_share.py。
+_BOT_UA = re.compile(
+    r"bot/|bot;|bot\)|bot-|twitterbot|telegrambot|facebookexternalhit"
+    r"|facebookcatalog|whatsapp|crawl|spider|slurp|embedly|skypeuripreview|vkshare"
+    r"|headless|^curl/|^wget/|^python-|go-http-client|^okhttp",
+    re.IGNORECASE,
+)
+
+
+def is_bot(user_agent: str) -> bool:
+    """链接预览/爬虫/脚本 → True。空 UA 也算(真人浏览器都带 UA)。"""
+    return not user_agent.strip() or bool(_BOT_UA.search(user_agent))
 
 
 def public_object(db, slug: str, qid: str) -> MuseumObject | None:
