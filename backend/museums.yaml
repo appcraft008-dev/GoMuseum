@@ -15,6 +15,48 @@
 #   ③ 小皇宫的馆本体标签是法律全名(`musée des Beaux-Arts de la ville de Paris`)，
 #      游客认的是建筑名 → 取建筑条目 Q820892 的标签(十语齐全，且与 name_en 相同)。
 museums:
+  rijksmuseum:
+    # ⚠️ 跨城市扩展的**隐身演练**馆(spec 2026-09-28-multi-city-expansion §五)。
+    # 目录插入后 published_at 为 NULL = 普通用户看不见;只有 can_preview 账号可见。
+    # 放出前置:nl_pass_7d 在 Play 生效且 PASSES 里 on_sale=True(onboard_verify ⑧)。
+    rank: 5
+    name_zh: 阿姆斯特丹国家博物馆
+    name_en: Rijksmuseum
+    # 十语取自 Wikidata Q190804 标签(2026-09-29 查),未改写
+    names:
+      zh-hant: 阿姆斯特丹國家博物館
+      fr: Rijksmuseum
+      de: Rijksmuseum
+      es: Rijksmuseum
+      it: Rijksmuseum
+      ja: アムステルダム国立美術館
+      ko: 암스테르담 국립미술관
+      pl: Rijksmuseum
+    city_zh: 阿姆斯特丹
+    city_en: Amsterdam
+    # 取自 Wikidata Q727 标签
+    city_names:
+      zh-hant: 阿姆斯特丹
+      fr: Amsterdam
+      de: Amsterdam
+      es: Ámsterdam
+      it: Amsterdam
+      ja: アムステルダム
+      ko: 암스테르담
+      pl: Amsterdam
+    country: NL
+    # P195 直挂馆本体(2026-09-29 WDQS 实测):全部 6689 / 绘画 5827 /
+    # 有图绘画 5349 / 其中有英文维基的仅 137。演练只取有图绘画按热度 TOP N
+    # (catalog --limit;SPARQL 按跨语言条目数降序)。官方 data.rijksmuseum.nl
+    # (Linked Art,无需 key;旧 key 制 API 已于 2025-11 停服)的 CC0 高清图源适配器留到正式上馆。
+    wikidata_qid: Q190804
+    category_filter: Q3305213
+    categories: [Q3305213]
+    country_lang: nl
+    sources: [wikipedia]
+    fetch_limit: 6000           # 正式上馆时的上限;演练用 catalog --limit 300
+    sample_size: 5
+    sample_qids: []
   orsay:
     rank: 2
     name_zh: 奥赛博物馆
