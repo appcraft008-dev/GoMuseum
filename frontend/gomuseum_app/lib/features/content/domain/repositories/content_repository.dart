@@ -23,13 +23,11 @@ abstract class ContentRepository {
   ///
   /// [text] - 要转换为语音的文本
   /// [language] - 语言代码
-  /// [voice] - 可选的语音类型
   /// [speed] - 可选的播放速度
   /// 返回音频文件的URL或路径
   Future<Either<Failure, String>> generateTtsAudio({
     required String text,
     required String language,
-    String? voice,
     double? speed,
   });
 }

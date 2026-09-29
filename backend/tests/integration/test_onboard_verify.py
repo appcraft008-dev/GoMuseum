@@ -31,7 +31,17 @@ def session():
         ],
     )
     s = sessionmaker(bind=engine)()
-    upsert_museum(s, {"slug": "m1", "name_en": "M1", "qid": "Q1"})
+    # 巴黎的馆 → 被在售的 paris_pass_7d 覆盖(验收项⑧)
+    upsert_museum(
+        s,
+        {
+            "slug": "m1",
+            "name_en": "M1",
+            "qid": "Q1",
+            "city_en": "Paris",
+            "country": "FR",
+        },
+    )
     s.commit()
     yield s
 
@@ -182,3 +192,15 @@ def test_facade_latency_check_present(session):
     c = _by_name(res, "门面响应")
     assert c["ok"], c["detail"]  # 小库应远小于 1s
     assert "ms" in c["detail"]
+
+
+def test_museum_without_a_pass_on_sale_fails(session):
+    """⑧ 放出一家买不了票的馆 = 看得到、撞付费墙、买不了。换个没有在售通票的城市必须红。"""
+    _healthy(session)
+    session.query(Museum).filter_by(slug="m1").update(
+        {"city_en": "Amsterdam", "country": "NL"}  # nl_pass_7d 目前 on_sale=False
+    )
+    session.commit()
+    res = build_checks(session, "m1", LANGS)
+    failed = [c["name"] for c in res["checks"] if not c["ok"]]
+    assert failed == ["被在售通票覆盖"]

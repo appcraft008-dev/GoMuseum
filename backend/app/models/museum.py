@@ -29,6 +29,9 @@ class Museum(Base):
     )
     description_i18n = Column(JSON, nullable=True)  # {lang: 叙事介绍};gate 通过才写
     cover_image_key = Column(Text, nullable=True)  # 封面(得体性筛选后固化的 R2 基础键)
+    # 可见性开关兼上线日期:NULL = 准备中,只有 can_preview 账号看得到
+    # (spec 2026-09-20-museum-visibility-gate)。只进不出:放出后不支持回收。
+    published_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False

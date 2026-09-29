@@ -17,6 +17,7 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
+from app.services.entitlement_service import pass_offer
 from app.services.storage import get_object_storage
 
 _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
@@ -530,22 +531,46 @@ def museum_names(museum: Museum) -> dict[str, str]:
     return {k: v for k, v in names.items() if v}
 
 
+@lru_cache(maxsize=1)
+def _museum_cities() -> dict[str, dict[str, str]]:
+    """slug → {语言: 城市名}。同 `_museum_names`:yaml `city_names` 写八语,并上 zh/en。"""
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+
+    return {
+        slug: {"zh": cfg.city_zh, "en": cfg.city_en, **cfg.city_names}
+        for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
+    }
+
+
+def museum_cities(museum: Museum) -> dict[str, str]:
+    """该馆的 {语言: 城市名} 全表;yaml 没配的馆回退 DB 的中英两列。"""
+    cities = _museum_cities().get(museum.slug) or {
+        "zh": museum.city_zh,
+        "en": museum.city_en,
+    }
+    return {k: v for k, v in cities.items() if v}
+
+
 def museum_name(museum: Museum, language: str) -> str:
     """馆名按语言取。没这门语言 → 回退英文名(而不是 slug)。"""
     names = museum_names(museum)
     return names.get(language) or names.get("en") or names.get("zh") or museum.slug
 
 
-def list_museums(db: Session) -> list[dict]:
+def list_museums(db: Session, *, preview: bool = False) -> list[dict]:
+    """preview=False 只列已放出的馆(可见性闸,spec 2026-09-20)。"""
+    q = db.query(Museum, func.count(MuseumObject.id).label("cnt")).outerjoin(
+        MuseumObject, MuseumObject.museum_id == Museum.id
+    )
+    if not preview:
+        q = q.filter(Museum.published_at.isnot(None))
     rows = (
-        db.query(Museum, func.count(MuseumObject.id).label("cnt"))
-        .outerjoin(MuseumObject, MuseumObject.museum_id == Museum.id)
-        .group_by(Museum.id)
+        q.group_by(Museum.id)
         # 按 slug 只是兜底次序——真正的排序在下面按 rank 做。别把它当最终顺序:
         # 首条会被探索页拿去上大卡,而字母序意味着哪天上个 `british_museum`
         # 就会无声顶掉卢浮宫的首位。
-        .order_by(Museum.slug)
-        .all()
+        .order_by(Museum.slug).all()
     )
     storage = get_object_storage()
     out = []
@@ -555,6 +580,8 @@ def list_museums(db: Session) -> list[dict]:
         # 十语馆名(加法字段)。本端点没有 `language` 参数,所以给整张表、前端按
         # 当前界面语言挑;老 App 不认这个键,继续吃 name_zh/name_en,行为不变。
         row["name_i18n"] = museum_names(m)
+        # 十语城市名(加法):城市 chips / 卡片。此前前端只有中英两套
+        row["city_i18n"] = museum_cities(m)
         # 探索页缩略图(spec 2026-07-20 museum-cover-intro-quality,加法):同一行零成本可读
         row["cover_image"] = (
             _sized(storage, m.cover_image_key, "thumb") if m.cover_image_key else None
@@ -567,7 +594,12 @@ def list_museums(db: Session) -> list[dict]:
 
 
 def get_museum_pack(
-    db: Session, slug: str, language: str = "zh", *, artworks: bool = True
+    db: Session,
+    slug: str,
+    language: str = "zh",
+    *,
+    artworks: bool = True,
+    preview: bool = False,
 ) -> dict | None:
     """完整馆包。artworks=False 时省掉藏品数组(仍返回该键为空列表,形状不变)——
     列表页走分页 /objects,不需要全量:卢浮宫 17283 件全塞一个响应 = **5MB / 5.7s**,
@@ -713,6 +745,10 @@ def get_museum_pack(
                 or (m.description_i18n or {}).get("en")
                 or next(iter((m.description_i18n or {}).values()), None)
             ),
+            # 这家馆卖哪张票(加法,spec 2026-09-28 §3.3):进馆就知道,付费墙提前查价。
+            # null = 暂未开售,前端绝不回落到巴黎票。
+            "pass": pass_offer(db, m, language, preview=preview),
+            "city_i18n": museum_cities(m),
             # 封面(得体性筛选后固化);large 档(hero 大图)
             "cover_image": (
                 _sized(storage, m.cover_image_key, "large")

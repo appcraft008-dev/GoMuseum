@@ -48,6 +48,9 @@ class MuseumConfig:
     # 馆名的其余八语(lang → 名)。zh/en 不在这里,它们是上面的 name_zh/name_en,
     # 这样每种语言只有一处定义。解析用 museum_repo.museum_names()。
     names: dict[str, str] = field(default_factory=dict)
+    # 城市名的其余八语,同 names(zh/en 是上面的 city_zh/city_en)。
+    # 解析用 museum_repo.museum_cities();缺语言回退 city_en。
+    city_names: dict[str, str] = field(default_factory=dict)
 
 
 class MuseumCatalog:
@@ -81,6 +84,9 @@ class MuseumCatalog:
                 intro_qid=m.get("intro_qid"),
                 rank=int(m.get("rank") or RANK_LAST),
                 names={k: str(v) for k, v in (m.get("names") or {}).items() if v},
+                city_names={
+                    k: str(v) for k, v in (m.get("city_names") or {}).items() if v
+                },
             )
         return cls(configs)
 

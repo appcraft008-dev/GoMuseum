@@ -348,15 +348,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Photo library access is needed to save photos';
 
   @override
-  String get ttsVoice => 'TTS voice';
-
-  @override
-  String get ttsVoiceValue => 'Calm · Female';
-
-  @override
-  String get ttsVoiceSelect => 'Choose voice';
-
-  @override
   String get secAccount => 'Account';
 
   @override

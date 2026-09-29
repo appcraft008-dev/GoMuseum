@@ -192,11 +192,14 @@ def rank(index: list[dict], query: str, limit: int = 20) -> list[tuple[dict, flo
     return scored[:limit]
 
 
-def _search_museums(db, query: str, language: str) -> list[dict]:
-    """博物馆表 name/city 归一化子串匹配(仅全局;小集合,全表内存过滤)。"""
+def _search_museums(db, query: str, language: str, visible=None) -> list[dict]:
+    """博物馆表 name/city 归一化子串匹配(仅全局;小集合,全表内存过滤)。
+    visible=None 全可见(预览者),否则只搜这些馆 id(可见性闸)。"""
     qn = normalize(query)
     out = []
     for m in db.query(Museum).all():
+        if visible is not None and m.id not in visible:
+            continue
         # 十语馆名一起进匹配面:此前只有 name_zh/name_en,而匹配是归一化**子串**,
         # 于是在法语界面搜 "Musée du Louvre" 一条都搜不到("musee du louvre"
         # 不是 "louvre museum" 的子串)——用户用自己语言里的馆名反而找不到馆。
@@ -226,7 +229,14 @@ def _search_museums(db, query: str, language: str) -> list[dict]:
 
 
 def search(
-    db, storage, query: str, *, museum_id=None, language: str = "zh", limit: int = 20
+    db,
+    storage,
+    query: str,
+    *,
+    museum_id=None,
+    language: str = "zh",
+    limit: int = 20,
+    visible=None,
 ) -> tuple[list[dict], list[dict]]:
     """契约实现:(museums, objects)。museum_id 给定=馆域(无 museums 段);None=全局。
     无图 stub 照常在 objects 里(has_image=False)。空 query → ([], [])。
@@ -234,7 +244,11 @@ def search(
     qn = normalize(query)
     objects = []
     if qn:
-        for entry, _score_val in rank(build_search_index(db, museum_id), query, limit):
+        index = build_search_index(db, museum_id)
+        if visible is not None:
+            # 索引不带可见性,查询时过滤(索引是进程内缓存,放出的 SQL 碰不到它)
+            index = [e for e in index if e["museum_id"] in visible]
+        for entry, _score_val in rank(index, query, limit):
             thumbnail = None
             if entry["image_key"]:
                 thumbnail = _sized(storage, entry["image_key"], "thumb")
@@ -263,5 +277,5 @@ def search(
             )
     museums = []
     if museum_id is None and qn:
-        museums = _search_museums(db, query, language)
+        museums = _search_museums(db, query, language, visible)
     return museums, objects

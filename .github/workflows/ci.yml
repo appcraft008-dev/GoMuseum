@@ -162,10 +162,19 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install backend dependencies
+      # 按 poetry.lock 装,与 prod 镜像(backend/Dockerfile)同一套版本。
+      # 此前 `pip install -e ".[dev,test]"` 按 pyproject 的宽松范围现解依赖:
+      # 2026-09-29 CI 装到 FastAPI 0.141,lock/prod 是 0.118 —— CI 测的不是线上那套。
+      # --only main:与 Dockerfile 一致,不装 bench 组(torch 等数 GB)。
+      # 最后一行只把项目自身装进去(--no-deps,不改动任何依赖版本),子进程跑脚本要 import app。
+      - name: Install backend dependencies (from poetry.lock)
         run: |
           cd backend
-          pip install -e ".[dev,test]"
+          pip install "poetry==2.2.1"
+          poetry config virtualenvs.create false
+          poetry install --no-root --only main --extras "dev test" --no-interaction
+          pip install --no-deps -e .
+          python -c "import fastapi; print('fastapi', fastapi.__version__)"
 
       # 本项目最常见的缺陷不是设计错,是"写完了没接上"(已四次:log_event /
       # entitlements.activate / revoke_for_purchase / 真实收据校验)。

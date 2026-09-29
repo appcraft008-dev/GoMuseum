@@ -18,6 +18,7 @@ from app.services.museum_repo import (
 )
 from app.services.museum_repo import list_museums as repo_list
 from app.services.museum_repo import list_objects as repo_list_objects
+from app.services.visibility import can_preview, museum_visible, qid_visible
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,6 @@ def _require_audio_access(
     *,
     language: str = "zh",
     section: str = "guide",
-    slug: str | None = None,
 ) -> str:
     """语音付费墙的**唯一执行点**。前端的付费墙 UI 只是它的表达——
     没有这道闸,老 App / curl / 改客户端都能白拿音频,还会触发 TTS 花我们的钱。
@@ -47,21 +47,29 @@ def _require_audio_access(
     if credentials is None:
         raise HTTPException(status_code=401, detail={"reason": "auth_required"})
     user_id = str(AuthService.get_current_user(db, credentials.credentials).id)
-    # scope 校验:通票只解锁它覆盖的城市。此前 scope 存了却从没读过。
-    city = None
-    if slug:
-        from app.models.museum import Museum
-
-        m = db.query(Museum.city_en).filter(Museum.slug == slug).first()
-        city = m[0] if m else None
+    # scope 校验:通票只解锁覆盖**这件作品所在馆**的范围(按 qid 反查,不信 URL 的 slug)
+    museum = es.museum_of_qid(db, qid)
     kind = es.audio_access(
-        db, user_id, qid, language=language, section=section, city=city
+        db, user_id, qid, language=language, section=section, museum=museum
     )
     if kind == "denied":
         # 服务端自己就知道付费墙被撞到了,不必等前端埋点
         log_event(db, "paywall_viewed_from_audio", user_id=user_id, qid=qid)
-        raise HTTPException(status_code=402, detail={"reason": "pass_required"})
+        raise HTTPException(
+            status_code=402, detail=_pass_required(db, museum, language)
+        )
     return user_id
+
+
+def _pass_required(db: Session, museum, language: str) -> dict:
+    """402 响应体。`pass` = 这家馆该买的那张票(加法字段;老 App 只读 reason)。
+    撞墙那一刻兜底:拿着老馆包缓存的 App 也不会卖错票(spec 2026-09-28 §3.3)。"""
+    from app.services import entitlement_service as es
+
+    return {
+        "reason": "pass_required",
+        "pass": es.pass_offer(db, museum, language) if museum is not None else None,
+    }
 
 
 def _caller_id(
@@ -82,10 +90,22 @@ def _caller_id(
         return None
 
 
+def _hidden(db: Session, credentials, slug: str, qid: str | None = None) -> bool:
+    """可见性闸(spec 2026-09-20)。True = 调用方按"不存在"返回它自己的 404。
+    必须放在任何花钱动作(懒生成/TTS)**之前**。"""
+    preview = can_preview(db, credentials)
+    if not museum_visible(db, slug, preview):
+        return True
+    return qid is not None and not qid_visible(db, qid, preview)
+
+
 @router.get("")
-def list_museums(db: Session = Depends(get_db)) -> list[dict]:
+def list_museums(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> list[dict]:
     """已收录馆包列表（不含完整馆藏，供探索页索引）"""
-    return repo_list(db)
+    return repo_list(db, preview=can_preview(db, credentials))
 
 
 @router.get("/{slug}/objects/{qid}/content")
@@ -112,6 +132,8 @@ def object_content(
     """
     from app.services.enrichment.lazy import maybe_trigger
 
+    if _hidden(db, credentials, slug, qid):
+        raise HTTPException(status_code=404, detail=f"object not found: {qid}")
     if _caller_id(db, credentials):
         maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
     data = get_object_content(db, slug, qid, language)
@@ -139,9 +161,10 @@ def object_audio(
         get_or_make_qa_audio_url,
     )
 
-    _require_audio_access(
-        db, credentials, qid, language=language, section=section, slug=slug
-    )
+    _require_audio_access(db, credentials, qid, language=language, section=section)
+    # 放在鉴权之后、TTS 之前:匿名对隐身馆和未知 qid 同样先吃 401,不泄漏差异
+    if _hidden(db, credentials, slug, qid):
+        raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
 
     try:
         if section == "qa":
@@ -180,9 +203,10 @@ async def object_audio_stream(
     guide/深度段;qa/artist_bio 仍走非流式 /audio(v1 范围)。"""
     from app.services.enrichment.streaming_audio import stream_section_audio
 
-    _require_audio_access(
-        db, credentials, qid, language=language, section=section, slug=slug
-    )
+    _require_audio_access(db, credentials, qid, language=language, section=section)
+    # 放在鉴权之后、TTS 之前:匿名对隐身馆和未知 qid 同样先吃 401,不泄漏差异
+    if _hidden(db, credentials, slug, qid):
+        raise HTTPException(status_code=404, detail={"reason": "no_published_text"})
 
     try:
         status, payload = await stream_section_audio(qid, language, section)
@@ -207,9 +231,12 @@ def list_objects(
     sort: str = "popularity",
     limit: int = 50,
     offset: int = 0,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     """分页藏品列表（A2/A3 列表页）"""
+    if _hidden(db, credentials, slug):
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     page = repo_list_objects(
         db,
         slug,
@@ -257,6 +284,7 @@ def get_museum_pack(
     slug: str,
     language: str = "zh",
     artworks: bool = True,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
     """完整馆包：馆元数据 + 按热度排序的馆藏列表。
@@ -264,7 +292,15 @@ def get_museum_pack(
     `artworks=false` 省掉藏品数组(加法参数,缺省 true 保老 App 不变)——
     列表页走分页 /objects,门面只要 cover/categories/description。
     卢浮宫实测:全量 5.0MB/5.7s → 省掉后 KB 级。"""
-    pack = repo_pack(db, slug, language, artworks=artworks)
+    if _hidden(db, credentials, slug):
+        raise HTTPException(status_code=404, detail=f"museum pack not found: {slug}")
+    pack = repo_pack(
+        db,
+        slug,
+        language,
+        artworks=artworks,
+        preview=can_preview(db, credentials),
+    )
     if pack is None:
         raise HTTPException(status_code=404, detail=f"museum pack not found: {slug}")
     return pack

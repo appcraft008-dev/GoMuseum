@@ -4,6 +4,7 @@ spec docs/superpowers/specs/2026-07-03-recognition-design.md。"""
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import logging
@@ -25,8 +26,31 @@ _CACHE_TTL_MATCH = 30 * 86400  # 命中稳定:30天
 _CACHE_TTL_MISS = 86400  # 未收录:目录会生长,只缓 1 天
 
 
-def _cache_key(slug: str | None, sha: str, language: str) -> str:
-    return f"recog3:{slug or 'global'}:{language}:{sha}"
+def _cache_key(slug: str | None, sha: str, language: str, visible=None) -> str:
+    # 可见馆集合进键:预览者的结果(可能含隐身馆藏品)不会被普通用户命中;
+    # 放出新馆后集合变了,旧键自然作废,不需要清缓存。
+    vtag = (
+        "all"
+        if visible is None
+        else hashlib.md5(
+            ",".join(sorted(str(v) for v in visible)).encode()
+        ).hexdigest()[:8]
+    )
+    return f"recog3:{slug or 'global'}:{language}:{vtag}:{sha}"
+
+
+def _drop_hidden(db, ranked: list, visible) -> list:
+    """去掉隐身馆的藏品(可见性闸)。向量索引是进程内缓存、不带可见性,在这里按
+    一份新鲜的可见集合过滤;隐身馆通常只有一家,查它的 qid 集合比回查全部命中便宜。"""
+    if visible is None or not ranked:
+        return ranked
+    hidden = {
+        r[0]
+        for r in db.query(MuseumObject.qid).filter(
+            MuseumObject.museum_id.notin_(visible)
+        )
+    }
+    return [(q, s) for q, s in ranked if q not in hidden] if hidden else ranked
 
 
 def _open_upright(image_bytes: bytes):
@@ -174,6 +198,7 @@ def recognize(
     vector_query_fn=None,
     embed_crops_fn=None,
     user_id=None,
+    visible=None,
 ) -> dict | None:
     """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
     slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
@@ -190,7 +215,7 @@ def recognize(
     phash = ImageService.generate_perceptual_hash(image_bytes)
 
     redis = redis if redis is not None else _get_redis()
-    ckey = _cache_key(slug, sha, language)
+    ckey = _cache_key(slug, sha, language, visible)
     if redis is not None:
         try:
             hit = redis.get(ckey)
@@ -241,6 +266,7 @@ def recognize(
                             if s > agg.get(qid, -2.0):
                                 agg[qid] = s
                     ranked = sorted(agg.items(), key=lambda kv: -kv[1])
+            ranked = _drop_hidden(db, ranked, visible)
             out = _vector_out(db, storage, ranked, language)
             if out is not None:
                 engine = "vector_crops" if crops_used else "vector"
@@ -270,9 +296,10 @@ def recognize(
         if not queries and not label_lines:
             out["reason"] = "no_candidates"
         else:
-            results = match(
-                build_index(db, museum_id), queries, label_lines, artist_hints
-            )
+            index = build_index(db, museum_id)
+            if visible is not None:
+                index = [e for e in index if e["museum_id"] in visible]
+            results = match(index, queries, label_lines, artist_hints)
             top = results[0] if results else None
             # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);
             # 直判只属于向量像素证据。将来 matcher 若回传"馆藏号命中"类型,可为 inv 命中恢复直判。
@@ -327,18 +354,24 @@ def recognize(
 
 
 class QuotaExceededError(Exception):
-    """识别配额用尽(端点映射 402;缓存命中也拦——付费墙语义)。"""
+    """识别配额用尽(端点映射 402;缓存命中也拦——付费墙语义)。
+    [museum] = 撞墙的那家馆(已知时),402 据此下发**该馆**该买的票。"""
+
+    def __init__(self, museum=None):
+        super().__init__()
+        self.museum = museum
 
 
-def _pass_active(db, user_id) -> bool:
+def _pass_active(db, user_id, museum=None) -> bool:
     """通票是否生效。权益真相源只有 entitlements 一处(见 entitlement_service)。
+    [museum] 给了 = 只认覆盖这家馆的票(D7);不给 = 任意一张。
     无 user_id(游客/令牌失效)一律 False —— 票挂账号,设备身份上不可能有票。
     不吞异常:resolve_state 炸了该报 500,悄悄回退成"无票"会把付费用户打回 402。"""
     if not user_id:
         return False
     from app.services import entitlement_service as es
 
-    return es.resolve_state(db, str(user_id))[0] == es.ACTIVE
+    return es.resolve_state(db, str(user_id), museum)[0] == es.ACTIVE
 
 
 def _unlock_audio(db, user_id, out: dict) -> None:
@@ -383,10 +416,14 @@ def recognize_billed(
     redis=None,
     embed_fn=None,
     vector_query_fn=None,
+    visible=None,
 ) -> dict | None:
     """带配额的识别(计费规则,用户 2026-07-04 批准 / 2026-09-20 修订):
-    match 扣 1;unrecognized 不扣(不为失败付费);缓存命中不扣(不重复扣);
+    match 扣 1;unrecognized 不扣(不为失败付费);这件已解锁未过期时重拍不扣;
     配额用尽 → QuotaExceededError(先于 GPT 调用,不烧钱)。
+
+    ⚠️ **票只在它覆盖的馆里不限次**(D7,spec 2026-09-28 §3.4,用户 2026-09-29 纠正):
+    命中别处的馆 = 免费用户同价;额度也空了 → 402 并下发**那家馆**的票。
 
     ⚠️ **candidates 在这里不扣** —— 扣费点挪到用户点选某个候选之后
     (`POST /recognize/confirm`,幂等靠 `confirmed_qid`)。原先返回候选的当场就扣,
@@ -402,14 +439,19 @@ def recognize_billed(
     `can.recognize = active or left > 0` 按 active 放行 → 前端让按快门、
     后端拦下(prod 实证 2026-09-18:通票 active 的账号连撞 402)。
     权益真相源只有 entitlements 一处,这里跟它对齐。"""
+    from app.services import entitlement_service as es
     from app.services.benefits_service import BenefitsService
 
     benefits = BenefitsService(db)
-    # 票生效期内:放行,且不动免费额度(票到期后剩余的免费次数还在)。
-    pass_active = _pass_active(db, user_id)
+    # 前置闸(先于 GPT 调用,不烧钱):馆已知 → 只认覆盖它的票;全局识别还不知道是
+    # 哪家馆 → 任意一张有效票先放行,范围在命中后判(D7)。
+    scope_museum = None
+    if slug is not None:
+        scope_museum = db.query(Museum).filter_by(slug=slug).one_or_none()
+    pass_ok = _pass_active(db, user_id, scope_museum)
     access = benefits.check_access(user_id, device_id)
-    if not pass_active and not access.get("has_access"):
-        raise QuotaExceededError()
+    if not pass_ok and not access.get("has_access"):
+        raise QuotaExceededError(scope_museum)
     out = recognize(
         db,
         slug,
@@ -423,16 +465,34 @@ def recognize_billed(
         embed_fn=embed_fn,
         vector_query_fn=vector_query_fn,
         user_id=user_id,  # 埋点顺带记足迹;device_id 不传(匿名就是匿名)
+        visible=visible,
     )
-    if out is not None and out.get("outcome") == "match":
-        cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
-        if not cached and not pass_active:
-            try:
-                benefits.consume_recognition(user_id, device_id)
-            except Exception:
-                logger.exception("consume_recognition failed")
-        _unlock_audio(db, user_id, out)
-    else:
-        if out is not None:
-            out.pop("_billed", None)
+    if out is None:
+        return out
+    cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
+    if out.get("outcome") != "match":
+        return out
+    qid = (out.get("match") or {}).get("qid")
+    museum = es.museum_of_qid(db, qid)
+    # D7:**按命中的馆**判票。覆盖它 → 不限次,不扣额度,也不写免费解锁(D8:
+    # 票本来就覆盖这件,过期自然锁)。不覆盖 → 与免费用户同价。
+    # 否则买一张最便宜的票,到别的城市见一件拍一件就能白拿全部主讲解。
+    if _pass_active(db, user_id, museum):
+        return out
+    if user_id and qid in es.free_audio_qids(
+        benefits.get_or_create_benefits(user_id=user_id)
+    ):
+        return out  # 这件已解锁且未过期:重拍不再扣(替代原先按缓存命中免扣)
+    if not user_id and cached:
+        return out  # 匿名设备:同一张照片缓存命中不重复扣(老语义)
+    try:
+        charged = benefits.consume_recognition(user_id, device_id)
+    except Exception:
+        # 与改动前同语义:结果已算出,扣费故障不把用户打回 402
+        logger.exception("consume_recognition failed")
+        charged = True
+    if not charged:
+        # 持别处的票、免费额度又用完:不给结果,弹**这家馆**的票
+        raise QuotaExceededError(museum)
+    _unlock_audio(db, user_id, out)
     return out

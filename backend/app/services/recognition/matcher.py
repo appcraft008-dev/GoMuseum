@@ -77,6 +77,7 @@ def build_index(db, museum_id) -> list[dict]:
                 "names": names - {""},
                 "artists": artist_names - {""},
                 "inv": normalize_inv(o.inventory_number) or None,
+                "museum_id": o.museum_id,  # 供查询时按可见性过滤
             }
         )
     _index_cache[museum_id] = (time.time(), index)

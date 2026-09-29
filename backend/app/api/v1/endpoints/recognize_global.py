@@ -50,10 +50,19 @@ def run_recognition(
         QuotaExceededError,
         recognize_billed,
     )
+    from app.services.visibility import (
+        can_preview,
+        museum_visible,
+        visible_museum_ids,
+    )
 
     user_id = _user_id(db, credentials)
     if not user_id and not device_id:
         raise HTTPException(status_code=401, detail={"reason": "identity_required"})
+    preview = can_preview(db, credentials)
+    # 隐身馆与未知馆同一个 404,且在扣费/调 GPT 之前
+    if slug is not None and not museum_visible(db, slug, preview):
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     data = image.file.read()
     try:
         out = recognize_billed(
@@ -64,8 +73,9 @@ def run_recognition(
             device_id=device_id,
             language=language,
             mode=mode,
+            visible=visible_museum_ids(db, preview),
         )
-    except QuotaExceededError:
+    except QuotaExceededError as e:
         # 付费漏斗的关键一环:没有它就答不出"多少人撞到额度墙"
         log_event(
             db,
@@ -74,7 +84,18 @@ def run_recognition(
             device_id=device_id,
             museum_slug=slug,
         )
-        raise HTTPException(status_code=402, detail={"reason": "quota_exceeded"})
+        from app.services.entitlement_service import pass_offer
+
+        # `pass` 加法字段:撞墙那家馆该买的票(馆未知 = 全局识别前置闸 → null)
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "reason": "quota_exceeded",
+                "pass": (
+                    pass_offer(db, e.museum, language) if e.museum is not None else None
+                ),
+            },
+        )
     if out is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     return out
@@ -128,7 +149,11 @@ def recognize_confirm(
     qid 可以任填 —— 确认过一次就能用一次额度解锁全馆。改选那件要听,走详情页
     的手动解锁确认(`/entitlements/audio/unlock`,那里明写"将用掉 1 次")。"""
     from app.services.recognition.events import confirm_event
+    from app.services.visibility import can_preview, qid_visible
 
+    # 隐身馆的藏品:什么都不做(恒 204,与未知 qid 不可区分)
+    if not qid_visible(db, body.qid, can_preview(db, credentials)):
+        return Response(status_code=204)
     first_time = confirm_event(db, body.phash, body.qid)
     user_id = _user_id(db, credentials)
     # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。
@@ -136,11 +161,14 @@ def recognize_confirm(
         from app.services import entitlement_service as es
         from app.services.benefits_service import BenefitsService
 
-        # 通票生效期内不动免费额度(不限次识别是卖给他的权益)。
-        if es.resolve_state(db, user_id)[0] != es.ACTIVE:
-            # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
-            # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
-            if not BenefitsService(db).consume_recognition(user_id=user_id):
-                return Response(status_code=204)
+        # D7/D8:覆盖**这件所在馆**的票生效中 → 不扣、也不写免费解锁(票本来就覆盖)。
+        # 只看任意一张票的话,持最便宜的票就能在别的城市逐件白拿主讲解。
+        museum = es.museum_of_qid(db, body.qid)
+        if es.resolve_state(db, user_id, museum)[0] == es.ACTIVE:
+            return Response(status_code=204)
+        # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
+        # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
+        if not BenefitsService(db).consume_recognition(user_id=user_id):
+            return Response(status_code=204)
         es.unlock_free_audio(db, user_id, [body.qid])
     return Response(status_code=204)

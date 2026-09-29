@@ -13,8 +13,12 @@ from app.services.recognition.service import QuotaExceededError
 
 
 @pytest.fixture()
-def client():
+def client(monkeypatch):
     app.dependency_overrides[get_db] = lambda: iter([object()])
+    # 假 db 查不了库:可见性闸在本层按"全可见"打桩(闸本身见 test_visibility_gate)
+    monkeypatch.setattr("app.services.visibility.can_preview", lambda db, c: False)
+    monkeypatch.setattr("app.services.visibility.museum_visible", lambda *a: True)
+    monkeypatch.setattr("app.services.visibility.visible_museum_ids", lambda *a: None)
     yield TestClient(app)
     app.dependency_overrides.pop(get_db, None)
 
@@ -128,7 +132,10 @@ def _confirm_client():
         ],
     )
     s = sessionmaker(bind=engine)()
+    from datetime import datetime
+
     m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
+    m.published_at = datetime(2026, 1, 1)  # 可见性闸:测试馆视为已放出
     upsert_object(s, m.id, {"qid": "Q1", "title_en": "A"})
     upsert_object(s, m.id, {"qid": "Q2", "title_en": "B"})
     s.commit()
