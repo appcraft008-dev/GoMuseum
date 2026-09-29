@@ -18,6 +18,7 @@ from app.services.museum_repo import (
 )
 from app.services.museum_repo import list_museums as repo_list
 from app.services.museum_repo import list_objects as repo_list_objects
+from app.services.share import share_info
 from app.services.visibility import can_preview, museum_visible, qid_visible
 
 logger = logging.getLogger(__name__)
@@ -139,6 +140,8 @@ def object_content(
     data = get_object_content(db, slug, qid, language)
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
+    # 加法字段(2026-09-29 分享):null = 这件在这个语言下不可分享,App 不显示分享键
+    data["share"] = share_info(db, slug, qid, language, data)
     return data
 
 
