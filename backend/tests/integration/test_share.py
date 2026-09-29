@@ -60,7 +60,8 @@ def db(monkeypatch):
     )
     s = sessionmaker(bind=engine)()
     s.add(SectionType(code="guide", label_zh="讲解", label_en="Guide", default_sort=1))
-    s.add(CategorySection(category="painting", section_code="guide", sort_order=1))
+    # 与 prod 同形:guide 不在 category_sections 里(它走 default_guide,不进 tabs)
+    s.add(CategorySection(category="painting", section_code="background", sort_order=1))
     # orsay 已放出:Q1 有主图+中文正文+音频;Q2 有中文正文但无图;Q3 无任何正文
     # rijks 隐身:Q9 什么都有
     for slug, qid, body, image in (
@@ -178,3 +179,69 @@ def test_share_text_per_language():
     assert share_text("夜警", "レンブラント", "ja") == "『夜警』— レンブラント"
     assert share_text("The Bolt", "Fragonard", "en") == "The Bolt — Fragonard"
     assert share_text("The Bolt", None, "en") == "The Bolt"
+
+
+ANDROID = {"User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/129 Mobile"}
+WECHAT = {"User-Agent": ANDROID["User-Agent"] + " MicroMessenger/8.0.50"}
+
+
+def test_page_renders_text(client):
+    r = client.get("/a/orsay/Q1?lang=zh&s=app")
+    assert r.status_code == 200
+    assert "TQ1" in r.text and "这是一幅画。" in r.text
+    assert 'property="og:image"' in r.text
+    assert "这件有语音讲解，在 App 里听" in r.text  # Q1 guide 有音频 → 只写一句
+
+
+def test_page_never_contains_audio(client):
+    html = client.get("/a/orsay/Q1?lang=zh").text
+    for leak in (AUDIO_KEY, "object-audio", "/audio", ".mp3", "<audio"):
+        assert leak not in html, f"网页里出现了音频痕迹: {leak}"
+
+
+def test_page_404_is_identical_for_hidden_unknown_and_empty(client):
+    hidden = client.get("/a/rijks/Q9?lang=zh")
+    unknown = client.get("/a/orsay/Q404?lang=zh")
+    empty = client.get("/a/orsay/Q3?lang=zh")
+    wrong_museum = client.get("/a/rijks/Q1?lang=zh")
+    for r in (hidden, unknown, empty, wrong_museum):
+        assert r.status_code == 404
+        assert r.headers["x-robots-tag"] == "noindex"
+        assert r.text == unknown.text
+
+
+def test_page_redirects_language_without_text(client):
+    r = client.get("/a/orsay/Q1?lang=en&s=app", follow_redirects=False)
+    assert r.status_code == 302
+    assert r.headers["location"] == "/a/orsay/Q1?lang=zh&s=app"
+
+
+def test_page_never_triggers_generation(client, monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    def boom(*a, **kw):
+        raise AssertionError("公开网页点燃了懒生成")
+
+    monkeypatch.setattr(lazy, "maybe_trigger", boom)
+    assert client.get("/a/orsay/Q1?lang=zh").status_code == 200
+
+
+def test_cta_has_no_play_link_before_launch(client, monkeypatch):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", False)
+    assert (
+        "play.google.com" not in client.get("/a/orsay/Q1?lang=zh", headers=ANDROID).text
+    )
+
+
+def test_cta_links_play_after_launch_but_not_in_wechat(client, monkeypatch):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    assert "play.google.com" in client.get("/a/orsay/Q1?lang=zh", headers=ANDROID).text
+    assert (
+        "play.google.com" not in client.get("/a/orsay/Q1?lang=zh", headers=WECHAT).text
+    )
+
+
+def test_page_view_logged_with_source(client, db):
+    client.get("/a/orsay/Q1?lang=zh&s=app")
+    ev = db.query(AppEvent).filter_by(name="share_page_view").one()
+    assert ev.props["source"] == "app"
