@@ -22,6 +22,9 @@ INK = (44, 35, 22)
 SUB = (138, 122, 95)
 LINE = (220, 210, 184)
 _FACE = {"zh": "SC", "zh-hant": "TC", "ja": "JP", "ko": "KR"}
+_NO_LINE_START = set(
+    "，。、．！？：；）」』》〉】”’…ゃゅょぁぃぅぇぉっャュョァィゥェォッー々"
+)
 
 
 @lru_cache(maxsize=32)
@@ -61,7 +64,12 @@ def _wrap(
     lines, cur = [], ""
     for t in tokens:
         trial = f"{cur}{sep}{t}" if cur else t
-        if cur and draw.textlength(trial, font=font) > width:
+        # 避头:收尾标点/小假名不许开新行,挂在上一行行尾(略超一字宽,落在右边距里)
+        if (
+            cur
+            and t not in _NO_LINE_START
+            and draw.textlength(trial, font=font) > width
+        ):
             lines.append(cur)
             cur = t
         else:

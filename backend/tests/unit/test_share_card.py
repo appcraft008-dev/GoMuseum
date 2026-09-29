@@ -101,3 +101,19 @@ def test_cjk_wraps_by_char_even_with_spaces():
     text = "这幅小画在 1777 年前后完成，画面里一对恋人在昏暗的卧室中拉扯。"
     lines = _wrap(probe, text, f, 500, 5, "zh")
     assert probe.textlength(lines[0], font=f) > 500 * 0.9
+
+
+@needs_font
+def test_closing_punctuation_never_starts_a_line():
+    """staging 实测:「…《草地上的午餐》。”」的 ” 被挤到第二行独占一行。"""
+    from PIL import ImageDraw
+
+    from app.services.share_card import _NO_LINE_START, _font, _wrap
+
+    probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    for lang, text in (
+        ("zh", "“花一点时间仔细观察一下爱德华·马奈的《草地上的午餐》。”"),
+        ("ja", "「エドゥアール・マネの「草上の昼食」をじっくり見てみましょう。」"),
+    ):
+        lines = _wrap(probe, text, _font(lang, 34), 952, 3, lang)
+        assert not any(line[0] in _NO_LINE_START for line in lines[1:]), lines

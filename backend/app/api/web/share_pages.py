@@ -195,20 +195,28 @@ def share_card(
     if img is None:
         return _not_found()
     chosen = pick_language(lang, request.headers.get("accept-language", ""), langs)
-    raw = get_object_storage().get(f"{img.image_key}_large.jpg")
+    storage = get_object_storage()
+    large = f"{img.image_key}_large.jpg"
+    raw = storage.get(large)
     data = get_object_content(db, slug, qid, chosen)
     if raw is None or data is None:
         return _not_found()
     artist = (data.get("artist") or {}).get("name")
     date = (data.get("facts") or {}).get("date")
     museum = db.query(Museum).filter_by(slug=slug).one()
+    # 署名取内容接口处理过的那份(画家本人不算署名,见 museum_repo._photo_credit),
+    # 不读 img.credit 原值 —— 否则分享图上会多出一行画家名
+    url = storage.public_url(large)
+    credit = next(
+        (i.get("credit") for i in data.get("images") or [] if i.get("url") == url), None
+    )
     png = render_card(
         raw,
         title=data.get("title") or qid,
         byline=" · ".join(x for x in (artist, date) if x),
         excerpt=first_sentence((data.get("default_guide") or {}).get("body") or ""),
         footer=f"{museum_name(museum, chosen)} · GoMuseum",
-        credit=img.credit,
+        credit=credit,
         language=chosen,
     )
     return Response(
