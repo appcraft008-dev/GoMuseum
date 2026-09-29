@@ -61,7 +61,8 @@ def test_unknown_product_covers_nothing():
 
 def test_pass_for_museum_respects_on_sale(monkeypatch):
     assert es.pass_for_museum(PARIS) == "paris_pass_7d"
-    assert es.pass_for_museum(AMSTERDAM) is None, "nl_pass_7d 演练期不在售"
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", False)
+    assert es.pass_for_museum(AMSTERDAM) is None, "不在售的票不能下发"
     monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
     assert es.pass_for_museum(AMSTERDAM) == "nl_pass_7d"
     assert es.pass_for_museum(DEN_HAAG) == "nl_pass_7d"
@@ -205,7 +206,8 @@ def test_pass_offer_lists_only_published_covered_museums(db, monkeypatch):
     assert "rijks" not in es.pass_offer(db, _m(db, "orsay"), "en")["covers"]
 
 
-def test_pass_offer_is_none_when_nothing_on_sale(db):
+def test_pass_offer_is_none_when_nothing_on_sale(db, monkeypatch):
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", False)
     assert es.pass_offer(db, _m(db, "rijks"), "zh") is None, "绝不回落到巴黎票"
 
 
@@ -416,6 +418,7 @@ def test_confirm_charges_by_the_confirmed_artworks_museum(
 
 
 def test_offers_list_every_sellable_ticket_but_never_a_hidden_one(db, monkeypatch):
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", False)
     assert [o["product_id"] for o in es.pass_offers(db, "zh")] == ["paris_pass_7d"]
     monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
     # rijks 已放出 → 荷兰票可买
