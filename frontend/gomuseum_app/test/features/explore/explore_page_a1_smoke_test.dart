@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/explore/presentation/pages/explore_page.dart';
+import 'package:gomuseum_app/features/home/data/nearby.dart';
 
 void main() {
   const fakeData = [
@@ -47,6 +48,8 @@ void main() {
   Widget _wrap() => ProviderScope(
         overrides: [
           museumsListProvider.overrideWith((_) async => fakeData),
+          nearbyProvider
+              .overrideWith((ref) async => const Nearby(NearbyMode.none, [])),
         ],
         child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -72,17 +75,18 @@ void main() {
   testWidgets('A1 smoke: 城市 chips 由数据去重生成', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
-    expect(find.text('巴黎'), findsWidgets); // chip + section header
-    expect(
-        find.text('阿姆斯特丹'), findsOneWidget); // chip only (not in current view)
+    // chip + 段标题:两座城市都各有一个 chip 和一个段标题(一条长列表)
+    expect(find.text('巴黎', skipOffstage: false), findsAtLeastNWidgets(2));
+    expect(find.text('阿姆斯特丹', skipOffstage: false), findsAtLeastNWidgets(2));
   });
 
   testWidgets('A1 smoke: 切换城市 chip 显示另一城市博物馆', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('阿姆斯特丹'));
+    await tester.tap(find.text('阿姆斯特丹').first);
     await tester.pumpAndSettle();
     expect(find.text('梵高博物馆'), findsOneWidget);
-    expect(find.text('奥赛博物馆'), findsNothing);
+    // 长列表:巴黎的馆没被过滤,只是滚到了上面
+    expect(find.text('奥赛博物馆', skipOffstage: false), findsOneWidget);
   });
 }

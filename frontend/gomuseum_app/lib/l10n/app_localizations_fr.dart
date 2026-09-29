@@ -112,6 +112,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeNearby => 'Musées à proximité';
 
   @override
+  String get homeMuseums => 'Musées';
+
+  @override
+  String get homeEnableLocation =>
+      'Activez la localisation pour voir les musées près de vous';
+
+  @override
+  String get homeContinue => 'Reprendre la visite';
+
+  @override
   String get statusOpen => 'Ouvert';
 
   @override

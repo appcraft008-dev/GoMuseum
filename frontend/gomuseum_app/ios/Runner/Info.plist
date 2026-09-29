@@ -49,6 +49,8 @@
 	<string>This app needs access to the microphone for voice questions about artworks</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>This app needs speech recognition to answer your questions about artworks</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>用于显示你身边的博物馆。位置只在手机上使用，不会上传。</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to recognize artworks</string>
 	<key>NSPhotoLibraryUsageDescription</key>

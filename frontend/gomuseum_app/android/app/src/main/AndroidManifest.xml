@@ -3,6 +3,8 @@
     <!-- Permissions for GoMuseum app -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- 首页「附近博物馆」:只要城市级粗略位置,只在手机本地算距离,不上传(spec 2026-09-29) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <!-- Android 13+ 读相册图片（photo_manager「最近图库」缩略图条） -->

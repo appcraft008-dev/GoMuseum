@@ -1,7 +1,11 @@
 /// GoMuseum 探索页 — 暖纸手册定稿（FinalExplore）
 ///
 /// 数据来源：A1 GET /api/v1/museums（museumsListProvider）。
-/// 城市 chips 由返回数据 city 去重生成；搜索为客户端 name/city 过滤。
+///
+/// **一条竖向长列表按城市分段**(spec 2026-09-29-home-nearby-explore-by-city §三):
+/// 往下滑自然从一座城市滑到下一座;顶部城市 chips 固定在上方、**跟随滚动位置高亮**,
+/// 点 chip 滚到那一段。不做"上下滑 = 切城市" —— 会和列表自身滚动冲突。
+/// 城市顺序:当前城市(与首页同一套信号)在前,其余按国家、再按城市。
 library;
 
 import 'dart:async';
@@ -12,6 +16,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -27,8 +32,54 @@ class ExplorePage extends ConsumerStatefulWidget {
 }
 
 class _ExplorePageState extends ConsumerState<ExplorePage> {
-  /// 当前选中城市；null 表示「全部」（初始未选定，由数据首城市驱动）。
-  String? _city;
+  /// 当前高亮的城市(跟随滚动位置;点 chip 也会改它)。
+  String? _active;
+
+  final _scroll = ScrollController();
+
+  /// 每个城市段标题的 key:算滚动位置、点 chip 时滚过去。
+  final Map<String, GlobalKey> _sectionKeys = {};
+
+  GlobalKey _keyFor(String city) =>
+      _sectionKeys.putIfAbsent(city, () => GlobalKey(debugLabel: city));
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_syncActive);
+  }
+
+  /// 滚动时高亮「标题已经滚到顶部附近」的最后一个城市段。
+  void _syncActive() {
+    final viewport = _scroll.position.context.storageContext.findRenderObject();
+    if (viewport is! RenderBox) return;
+    final top = viewport.localToGlobal(Offset.zero).dy;
+    String? current;
+    for (final e in _sectionKeys.entries) {
+      final box = e.value.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.attached) continue;
+      final y = box.localToGlobal(Offset.zero).dy - top;
+      if (y <= 48) current = e.key; // 按插入顺序遍历 = 城市顺序
+    }
+    current ??= _sectionKeys.keys.firstOrNull;
+    // 最后一段往往太短、标题滚不到顶(阿姆斯特丹目前只有一家馆)—— 滚到底就高亮最后一座,
+    // 否则用户滑到底也看不到它被选中
+    final pos = _scroll.position;
+    if (pos.hasContentDimensions && pos.pixels >= pos.maxScrollExtent - 1) {
+      current = _sectionKeys.keys.lastOrNull ?? current;
+    }
+    if (current != null && current != _active) {
+      setState(() => _active = current);
+    }
+  }
+
+  Future<void> _jumpTo(String city) async {
+    setState(() => _active = city);
+    final ctx = _sectionKeys[city]?.currentContext;
+    if (ctx == null) return;
+    await Scrollable.ensureVisible(ctx,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+  }
 
   /// debounce 后的搜索词（非空 → 进入服务端搜索模式，替换馆浏览区）。
   String _debounced = '';
@@ -37,6 +88,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -54,12 +106,21 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   }
 
   /// 城市去重键用中文城市名（语言无关、稳定），显示时再本地化。
-  List<String> _cities(List<MuseumSummary> all) {
-    final seen = <String>{};
-    return [
-      for (final m in all)
-        if (m.city.isNotEmpty && seen.add(m.city)) m.city,
-    ];
+  ///
+  /// 顺序:[current](当前城市)在前;其余按**国家**首次出现的顺序、国内再按城市首次出现
+  /// 的顺序(列表本身已按 yaml rank 排)。
+  List<String> _cities(List<MuseumSummary> all, String? current) {
+    final countries = <String>[];
+    final byCountry = <String, List<String>>{};
+    for (final m in all) {
+      if (m.city.isEmpty) continue;
+      if (!byCountry.containsKey(m.country)) countries.add(m.country);
+      final cs = byCountry.putIfAbsent(m.country, () => []);
+      if (!cs.contains(m.city)) cs.add(m.city);
+    }
+    final ordered = [for (final c in countries) ...byCountry[c]!];
+    if (current != null && ordered.remove(current)) ordered.insert(0, current);
+    return ordered;
   }
 
   /// cityZh → 当前语言城市名（取该城市首个馆的本地化城市名）。
@@ -68,12 +129,6 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       if (m.city == cityZh) return m.localizedCity(lang);
     }
     return cityZh;
-  }
-
-  /// 浏览态按城市过滤（搜索改走服务端 /search，不再客户端过滤馆名）。
-  List<MuseumSummary> _filtered(List<MuseumSummary> all) {
-    final city = _city;
-    return city != null ? all.where((m) => m.city == city).toList() : all;
   }
 
   @override
@@ -118,87 +173,105 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
           ),
         ),
         data: (all) {
-          final cities = _cities(all);
-          // 首次数据到达时设置默认城市
-          if (_city == null && cities.isNotEmpty) {
-            // use post-frame callback to avoid setState during build
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _city == null) {
-                setState(() => _city = cities.first);
-              }
-            });
+          final cities = _cities(all, ref.watch(nearbyProvider).value?.cityKey);
+          // 段落只保留当前还存在的城市的 key(馆列表变了不留死 key)
+          _sectionKeys.removeWhere((k, _) => !cities.contains(k));
+          for (final c in cities) {
+            _keyFor(c);
           }
-          final museums = _filtered(all);
+          final active = _active ?? cities.firstOrNull;
           return _scaffold(
             gm,
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(26, 16, 26, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── 刊头 ──────────────────────────────────────────
-                  Center(
-                    child: Column(
-                      children: [
-                        Text(
-                          l10n.exploreTitle,
-                          style: GmText.serif(
-                              size: 21,
-                              weight: FontWeight.w700,
-                              letterSpacing: context.gmLetterSpacing(4)),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── 固定区:刊头 + 搜索 + 城市 chips(不随列表滚走)──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(26, 16, 26, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              l10n.exploreTitle,
+                              style: GmText.serif(
+                                  size: 21,
+                                  weight: FontWeight.w700,
+                                  letterSpacing: context.gmLetterSpacing(4)),
+                            ),
+                            const SizedBox(height: 8),
+                            const GmDiamond(width: 110),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        const GmDiamond(width: 110),
+                      ),
+                      const SizedBox(height: 14),
+                      _searchBox(gm, l10n),
+                      if (_debounced.isEmpty) ...[
+                        const SizedBox(height: 12),
+                        _cityChips(gm, cities, all, lang, active),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _searchBox(gm, l10n),
-                  const SizedBox(height: 12),
-                  _cityChips(gm, cities, all, lang),
-                  const SizedBox(height: 22),
-                  // 有输入 → 全局搜索分区结果；空 → 正常馆浏览。
-                  if (_debounced.isNotEmpty)
-                    SearchResultsView(
-                      query: (slug: null, q: _debounced, lang: lang),
-                      showMuseums: true,
-                    )
-                  else ...[
-                    GmSectionHead(
-                      number: '01',
-                      label: _city != null
-                          ? _cityLabel(_city!, all, lang)
-                          : l10n.all,
-                      note: l10n.museumCount(museums.length),
-                    ),
-                    if (museums.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 28),
-                        child: Center(
-                          child: Text(
-                            all.isEmpty
-                                ? l10n.noMuseums
-                                : l10n.noMatchedMuseums,
-                            style: GmText.sans(size: 12.5, color: gm.sub),
-                          ),
-                        ),
-                      )
-                    else ...[
-                      // 首馆用大卡，其余用列表行
-                      const SizedBox(height: 13),
-                      _featureCard(gm, l10n, lang, museums.first),
-                      for (var i = 1; i < museums.length; i++)
-                        _listRow(gm, (i + 1).toString().padLeft(2, '0'), lang,
-                            museums[i]),
                     ],
-                  ],
-                ],
-              ),
+                  ),
+                ),
+                Expanded(
+                  child: _debounced.isNotEmpty
+                      // 有输入 → 全局搜索分区结果替换馆浏览
+                      ? SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(26, 10, 26, 12),
+                          child: SearchResultsView(
+                            query: (slug: null, q: _debounced, lang: lang),
+                            showMuseums: true,
+                          ),
+                        )
+                      : all.isEmpty
+                          ? Center(
+                              child: Text(l10n.noMuseums,
+                                  style:
+                                      GmText.sans(size: 12.5, color: gm.sub)),
+                            )
+                          : SingleChildScrollView(
+                              controller: _scroll,
+                              padding:
+                                  const EdgeInsets.fromLTRB(26, 10, 26, 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for (var ci = 0; ci < cities.length; ci++)
+                                    ..._citySection(
+                                        gm, l10n, lang, all, cities[ci], ci),
+                                ],
+                              ),
+                            ),
+                ),
+              ],
             ),
           );
         },
       ),
     );
+  }
+
+  /// 一座城市的一段:标题(编号 = 城市序号)+ 首馆大卡 + 其余列表行。
+  List<Widget> _citySection(GmPalette gm, AppLocalizations l10n, String lang,
+      List<MuseumSummary> all, String city, int index) {
+    final museums = all.where((m) => m.city == city).toList();
+    return [
+      if (index > 0) const SizedBox(height: 26),
+      KeyedSubtree(
+        key: _keyFor(city),
+        child: GmSectionHead(
+          number: (index + 1).toString().padLeft(2, '0'),
+          label: _cityLabel(city, all, lang),
+          note: l10n.museumCount(museums.length),
+        ),
+      ),
+      const SizedBox(height: 13),
+      _featureCard(gm, l10n, lang, museums.first),
+      for (var i = 1; i < museums.length; i++)
+        _listRow(gm, (i + 1).toString().padLeft(2, '0'), lang, museums[i]),
+    ];
   }
 
   Widget _scaffold(GmPalette gm, {required Widget body}) {
@@ -234,29 +307,29 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _cityChips(
-      GmPalette gm, List<String> cities, List<MuseumSummary> all, String lang) {
+  Widget _cityChips(GmPalette gm, List<String> cities, List<MuseumSummary> all,
+      String lang, String? active) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           for (final city in cities) ...[
             GestureDetector(
-              onTap: () => setState(() => _city = city),
+              onTap: () => _jumpTo(city),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
                 decoration: BoxDecoration(
-                  color: city == _city ? gm.ctaBg : Colors.transparent,
+                  color: city == active ? gm.ctaBg : Colors.transparent,
                   border: Border.all(
-                    color: city == _city ? gm.ctaBg : gm.line,
+                    color: city == active ? gm.ctaBg : gm.line,
                   ),
                 ),
                 child: Text(
                   _cityLabel(city, all, lang),
                   style: GmText.sans(
                     size: 12.5,
-                    color: city == _city ? gm.ctaInk : gm.sub,
+                    color: city == active ? gm.ctaInk : gm.sub,
                   ),
                 ),
               ),
