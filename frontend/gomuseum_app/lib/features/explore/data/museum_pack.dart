@@ -2,6 +2,8 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart'
+    show currentUserProvider;
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 
 class MuseumPackArtwork {
@@ -71,6 +73,9 @@ class MuseumPack {
 /// 按 slug 拉取馆包（自动缓存于 provider 生命周期内）
 final museumPackProvider =
     FutureProvider.family<MuseumPack, String>((ref, slug) async {
+  // 馆的可见性按账号(隐身馆只对预览账号可见,spec 2026-09-20)→ 缓存必须随账号失效。
+  // 不然预览账号看过的隐身馆,切成普通账号/游客后仍从缓存里显示(2026-09-29 真机)。
+  ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   final dio = ref.watch(dioProvider);
   final response = await dio.get('/api/v1/museums/$slug');
   return MuseumPack.fromJson(response.data as Map<String, dynamic>);
