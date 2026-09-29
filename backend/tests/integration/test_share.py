@@ -266,8 +266,37 @@ def test_card_renders_png(client, monkeypatch):
             assert key == "images/Q1/0_large.jpg"
             return b"jpeg-bytes"
 
+        def public_url(self, key):
+            return f"https://cdn.test/{key}"
+
     monkeypatch.setattr(sp, "get_object_storage", lambda: _Storage())
     r = client.get("/a/orsay/Q1/card.png?lang=zh")
     assert r.status_code == 200
     assert r.headers["content-type"] == "image/png"
     assert "max-age" in r.headers["cache-control"]
+
+
+def test_card_credit_drops_painter_name(client, db, monkeypatch):
+    """Commons 把画家填进 credit;App/网页都去重了,分享图不能多出一行画家名(staging 实测过)。"""
+    import app.api.web.share_pages as sp
+    from app.services.storage import get_object_storage
+
+    seen = {}
+    monkeypatch.setattr(
+        sp, "render_card", lambda image, **kw: seen.update(kw) or b"png"
+    )
+    real = get_object_storage()
+
+    class _Storage:
+        def get(self, key):
+            return b"jpeg-bytes"
+
+        def public_url(self, key):
+            return real.public_url(key)
+
+    monkeypatch.setattr(sp, "get_object_storage", lambda: _Storage())
+    db.query(MuseumObject).filter_by(qid="Q1").update({"artist_en": "Édouard Manet"})
+    db.query(ObjectImage).update({"credit": "Édouard Manet"})
+    db.commit()
+    assert client.get("/a/orsay/Q1/card.png?lang=zh").status_code == 200
+    assert seen["credit"] is None
