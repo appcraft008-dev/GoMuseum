@@ -36,6 +36,7 @@ FROM base AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     fonts-noto-cjk \
+    fonts-noto-core \
     && rm -rf /var/lib/apt/lists/*
 
 # 拷贝 Poetry 环境

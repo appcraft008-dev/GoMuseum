@@ -1,6 +1,6 @@
 """分享图:中日韩/波兰语不能出方框,输出是 PNG,文字过长不越界崩溃。
 
-本地 macOS 没装 Noto CJK 时跳过;CI 与 prod 镜像都装 fonts-noto-cjk,
+本地 macOS 没装 Noto 字体时跳过;CI 与 prod 镜像都装 fonts-noto-cjk + fonts-noto-core,
 CI 上字体缺失直接判红 —— 否则这组测试会在"哪里都没跑过"的状态下一直绿。
 """
 
@@ -13,17 +13,17 @@ from PIL import Image
 
 from app.core.config import settings
 
-HAS_FONT = Path(settings.SHARE_CARD_FONT).exists()
+HAS_FONT = all(
+    Path(p).exists() for p in (settings.SHARE_CARD_FONT, settings.SHARE_CARD_FONT_LATIN)
+)
 
 
 def test_font_present_in_ci():
     if os.getenv("CI"):
-        assert (
-            HAS_FONT
-        ), f"CI 缺字体 {settings.SHARE_CARD_FONT}:ci.yml 没装 fonts-noto-cjk"
+        assert HAS_FONT, "CI 缺分享图字体:ci.yml 没装 fonts-noto-cjk / fonts-noto-core"
 
 
-needs_font = pytest.mark.skipif(not HAS_FONT, reason="本机无 Noto CJK")
+needs_font = pytest.mark.skipif(not HAS_FONT, reason="本机无 Noto 字体")
 
 
 def _jpeg(w=800, h=600):
@@ -79,3 +79,25 @@ def test_first_sentence():
     assert (
         first_sentence("没有句号" * 50, limit=10) == "没有句号没有句号没…"
     )  # limit 含省略号
+
+
+@needs_font
+def test_latin_punctuation_is_not_fullwidth():
+    """CJK 字体里 ’ 是全角宽,法语 l’herbe 会裂成 l’ herbe(容器实测过)。"""
+    from app.services.share_card import _font
+
+    assert _font("fr", 40).getlength("’") < 20
+
+
+@needs_font
+def test_cjk_wraps_by_char_even_with_spaces():
+    """中文里夹空格也按字断 —— 按词断会在「1777」后面折行,第一行只剩半截。"""
+    from PIL import ImageDraw
+
+    from app.services.share_card import _font, _wrap
+
+    f = _font("zh", 34)
+    probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    text = "这幅小画在 1777 年前后完成，画面里一对恋人在昏暗的卧室中拉扯。"
+    lines = _wrap(probe, text, f, 500, 5, "zh")
+    assert probe.textlength(lines[0], font=f) > 500 * 0.9
