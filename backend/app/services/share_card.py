@@ -3,12 +3,13 @@
 字体:中日韩用 Noto Sans CJK 的 .ttc 按语言挑字面(JP/KR/SC/TC 字形不同);
 其余语种用 Noto Sans —— CJK 字体的拉丁部分缺波兰字母(ł ą ś…出方框),
 且 ’ “ · 是全角宽度(法语 l’herbe 会裂成 l’ herbe)。2026-09-29 容器实测。
-# ponytail: 每次请求现场合成;可分享集合有上限(有正文件数 × 语言),CPU 成问题再落 R2
+# ponytail: 路由层进程内 LRU 缓存合成结果(见 share_pages._card_bytes);多机部署再考虑落 R2
 """
 
 import io
 from functools import lru_cache
 
+import segno
 from PIL import Image, ImageDraw, ImageFont
 
 from app.core.config import settings
@@ -76,6 +77,24 @@ def _wrap(
     return lines
 
 
+QR = 176  # 二维码边长(px);一件作品的链接 ~60 字符 → 29-33 模块,每模块 ≥5px 手机好扫
+
+
+def _qr_image(url: str, size: int = QR) -> Image.Image:
+    """链接 → 二维码图(墨色模块、纸色底,带 2 模块静区)。模块按整数像素画,扫得稳。"""
+    m = segno.make(url, error="m").matrix
+    n = len(m) + 4
+    cell = max(1, size // n)
+    img = Image.new("RGB", (n * cell, n * cell), BG)
+    d = ImageDraw.Draw(img)
+    for r, row in enumerate(m):
+        for c, v in enumerate(row):
+            if v:
+                x, y = (c + 2) * cell, (r + 2) * cell
+                d.rectangle((x, y, x + cell - 1, y + cell - 1), fill=INK)
+    return img
+
+
 def render_card(
     image: bytes,
     *,
@@ -84,7 +103,10 @@ def render_card(
     footer: str,
     credit: str | None,
     language: str,
+    qr_url: str,
+    qr_caption: str,
 ) -> bytes:
+    """JPEG。右下角二维码:微信收图会丢掉附带的链接文字,扫码是唯一回到网页的路。"""
     art = Image.open(io.BytesIO(image)).convert("RGB")
     art.thumbnail((W, MAX_IMG_H))
     probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
@@ -93,28 +115,46 @@ def render_card(
         _font(language, 34),
         _font(language, 26),
     )
-    text_w = W - 2 * PAD
+    qr = _qr_image(qr_url)
+    text_w = W - 2 * PAD - qr.width - 32
+    foot = [footer] + ([credit] if credit else [])
     blocks = [
         (_wrap(probe, title, f_title, text_w, 2, language), f_title, INK, 66),
         (_wrap(probe, byline, f_body, text_w, 1, language), f_body, SUB, 48),
     ]
     text_h = sum(len(ls) * lh for ls, _, _, lh in blocks) + len(blocks) * 20
-    foot = [footer] + ([credit] if credit else [])
-    h = art.height + PAD + text_h + 40 + len(foot) * 38 + PAD
+    text_h += 40 + len(foot) * 38
+    qr_h = qr.height + 38
+    h = art.height + PAD + max(text_h, qr_h) + PAD
     card = Image.new("RGB", (W, h), BG)
     card.paste(art, ((W - art.width) // 2, 0))
     d = ImageDraw.Draw(card)
-    y = art.height + PAD
+    top = y = art.height + PAD
     for lines, font, color, lh in blocks:
         for line in lines:
             d.text((PAD, y), line, font=font, fill=color)
             y += lh
         y += 20
-    d.line((PAD, y, W - PAD, y), fill=LINE, width=2)
+    d.line((PAD, y, PAD + text_w, y), fill=LINE, width=2)
     y += 20
     for line in foot:
-        d.text((PAD, y), line[:80], font=f_small, fill=SUB)
+        d.text(
+            (PAD, y),
+            _wrap(probe, line, f_small, text_w, 1, language)[0],
+            font=f_small,
+            fill=SUB,
+        )
         y += 38
+    qx = W - PAD - qr.width
+    card.paste(qr, (qx, top))
+    cap_w = d.textlength(qr_caption, font=f_small)
+    d.text(
+        (qx + (qr.width - cap_w) / 2, top + qr.height + 4),
+        qr_caption,
+        font=f_small,
+        fill=SUB,
+    )
     buf = io.BytesIO()
-    card.save(buf, "PNG", optimize=True)
+    # JPEG 不是 PNG:照片为主的图 PNG 要 1.2MB、optimize 编码 0.6s;JPEG q88 ~200KB、编码 ~3ms
+    card.save(buf, "JPEG", quality=88)
     return buf.getvalue()

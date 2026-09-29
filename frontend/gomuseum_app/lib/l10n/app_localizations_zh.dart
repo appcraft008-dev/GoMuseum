@@ -708,11 +708,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String paywallPitch(String museums) {
-    return '不限次拍照识别，$museums全部语音讲解。';
+    return '不限次拍照识别，畅听$museums的语音讲解。';
   }
 
   @override
-  String get paywallPitchGeneric => '不限次拍照识别，全部语音讲解。';
+  String get paywallPitchGeneric => '不限次拍照识别，畅听语音讲解。';
 
   @override
   String get passNotOnSale => '这家馆的通票暂未开售。';
@@ -917,7 +917,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsFeatRecognition => '不限次拍照识别';
 
   @override
-  String get benefitsFeatAllAudio => '通票内各馆全部语音讲解';
+  String get benefitsFeatAllAudio => '通票内各馆的语音讲解都能听';
 
   @override
   String get benefitsFeatDeepAudio => '深度内容音频';
@@ -1817,11 +1817,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String paywallPitch(String museums) {
-    return '不限次拍照辨識，$museums全部語音導覽。';
+    return '不限次拍照辨識，暢聽$museums的語音導覽。';
   }
 
   @override
-  String get paywallPitchGeneric => '不限次拍照辨識，全部語音導覽。';
+  String get paywallPitchGeneric => '不限次拍照辨識，暢聽語音導覽。';
 
   @override
   String get passNotOnSale => '這家館的通票暫未開售。';
@@ -2026,7 +2026,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get benefitsFeatRecognition => '不限次拍照辨識';
 
   @override
-  String get benefitsFeatAllAudio => '通票內各館全部語音導覽';
+  String get benefitsFeatAllAudio => '通票內各館的語音導覽都能聽';
 
   @override
   String get benefitsFeatDeepAudio => '深度內容音訊';

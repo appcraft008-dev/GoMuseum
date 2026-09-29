@@ -6,6 +6,7 @@
 """
 
 import html as _html
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
@@ -23,6 +24,7 @@ from app.services.share import (
     copy_for,
     guide_languages,
     is_bot,
+    page_url,
     pick_language,
     primary_image,
     public_object,
@@ -55,16 +57,33 @@ def _paras(text: str) -> str:
     return "".join(f"<p>{e(p)}</p>" for p in text.split("\n\n") if p.strip())
 
 
+def _is_ios(ua: str) -> bool:
+    return "iPhone" in ua or "iPad" in ua
+
+
+def _play_ok(ua: str) -> bool:
+    """这位访客能不能点去 Play。推正式前内测轨道的 Play 链接对外人是"找不到该应用";
+    微信里打不开 Play;iPhone 没有我们的 App。"""
+    return settings.SHARE_PLAY_LIVE and "MicroMessenger" not in ua and not _is_ios(ua)
+
+
 def _cta(ua: str, copy: dict) -> str:
-    # 推正式前内测轨道的 Play 链接对外人是"找不到该应用";微信里打不开 Play → 都只给一句话
-    if not settings.SHARE_PLAY_LIVE or "MicroMessenger" in ua:
-        return f'<div class="cta">{e(copy["cta"])}</div>'
-    if "iPhone" in ua or "iPad" in ua:
+    if _play_ok(ua):
+        return f'<a class="cta" href="{e(PLAY_URL)}">{e(copy["cta"])} →</a>'
+    if settings.SHARE_PLAY_LIVE and _is_ios(ua):
         return (
             f'<div class="cta">{e(copy["cta"])}'
             f"<small>{e(copy['android_only'])}</small></div>"
         )
-    return f'<a class="cta" href="{e(PLAY_URL)}">{e(copy["cta"])} →</a>'
+    return f'<div class="cta">{e(copy["cta"])}</div>'
+
+
+def _audio_note(ua: str, copy: dict) -> str:
+    """「这件有语音讲解」—— 正是访客最想要 App 的那一刻,能去 Play 就做成入口。
+    已装 App 的人在 Play 页面上看到的是「打开」。"""
+    if _play_ok(ua):
+        return f'<a class="audio" href="{e(PLAY_URL)}">🎧 {e(copy["audio"])} →</a>'
+    return f'<div class="audio">🎧 {e(copy["audio"])}</div>'
 
 
 def _render(text: dict[str, str], raw: dict[str, str]) -> str:
@@ -168,11 +187,7 @@ def share_page(
                     if images
                     else ""
                 ),
-                "AUDIO": (
-                    f'<div class="audio">🎧 {e(copy["audio"])}</div>'
-                    if guide.get("has_audio")
-                    else ""
-                ),
+                "AUDIO": _audio_note(ua, copy) if guide.get("has_audio") else "",
                 "BODY": body,
                 "CREDITS": (
                     f"{e(copy['credits'])}: " + " · ".join(e(c) for c in credits)
@@ -185,7 +200,16 @@ def share_page(
     )
 
 
-@router.get("/a/{slug}/{qid}/card.png")
+@lru_cache(maxsize=128)
+def _card_bytes(image_key: str, **fields) -> bytes | None:
+    """同一组输入只合成一次(key = 图 + 卡面上的全部文字,内容改了自然换 key)。
+    # ponytail: 进程内 LRU,每 worker ~128×200KB;换图不换 image_key 的话要等重启才刷新
+    """
+    raw = get_object_storage().get(f"{image_key}_large.jpg")
+    return None if raw is None else render_card(raw, **fields)
+
+
+@router.get("/a/{slug}/{qid}/card.jpg")
 def share_card(
     slug: str,
     qid: str,
@@ -200,29 +224,30 @@ def share_card(
     if img is None:
         return _not_found()
     chosen = pick_language(lang, request.headers.get("accept-language", ""), langs)
-    storage = get_object_storage()
-    large = f"{img.image_key}_large.jpg"
-    raw = storage.get(large)
     data = get_object_content(db, slug, qid, chosen)
-    if raw is None or data is None:
+    if data is None:
         return _not_found()
     artist = (data.get("artist") or {}).get("name")
     date = (data.get("facts") or {}).get("date")
     museum = db.query(Museum).filter_by(slug=slug).one()
     # 署名取内容接口处理过的那份(画家本人不算署名,见 museum_repo._photo_credit),
     # 不读 img.credit 原值 —— 否则分享图上会多出一行画家名
-    url = storage.public_url(large)
+    url = get_object_storage().public_url(f"{img.image_key}_large.jpg")
     credit = next(
         (i.get("credit") for i in data.get("images") or [] if i.get("url") == url), None
     )
-    png = render_card(
-        raw,
+    jpg = _card_bytes(
+        img.image_key,
         title=data.get("title") or qid,
         byline=" · ".join(x for x in (artist, date) if x),
         footer=f"{museum_name(museum, chosen)} · GoMuseum",
         credit=credit,
         language=chosen,
+        qr_url=page_url(slug, qid, chosen, source="qr"),
+        qr_caption=copy_for(chosen)["scan"],
     )
+    if jpg is None:
+        return _not_found()
     return Response(
-        png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"}
+        jpg, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"}
     )

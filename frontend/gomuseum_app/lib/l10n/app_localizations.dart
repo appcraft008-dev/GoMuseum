@@ -1436,13 +1436,13 @@ abstract class AppLocalizations {
   /// No description provided for @paywallPitch.
   ///
   /// In en, this message translates to:
-  /// **'Unlimited photo recognition and full audio commentary at {museums}.'**
+  /// **'Unlimited photo recognition, plus the audio commentary at {museums}.'**
   String paywallPitch(String museums);
 
   /// No description provided for @paywallPitchGeneric.
   ///
   /// In en, this message translates to:
-  /// **'Unlimited photo recognition and full audio commentary.'**
+  /// **'Unlimited photo recognition, plus audio commentary.'**
   String get paywallPitchGeneric;
 
   /// No description provided for @passNotOnSale.
@@ -1790,7 +1790,7 @@ abstract class AppLocalizations {
   /// No description provided for @benefitsFeatAllAudio.
   ///
   /// In en, this message translates to:
-  /// **'Audio commentary at every museum on your pass'**
+  /// **'Audio commentary at the museums on your pass'**
   String get benefitsFeatAllAudio;
 
   /// No description provided for @benefitsFeatDeepAudio.

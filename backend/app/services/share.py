@@ -112,7 +112,7 @@ def page_url(slug: str, qid: str, language: str, source: str | None = None) -> s
 
 
 def card_url(slug: str, qid: str, language: str) -> str:
-    return f"{settings.PUBLIC_WEB_BASE_URL}/a/{slug}/{qid}/card.png?lang={language}"
+    return f"{settings.PUBLIC_WEB_BASE_URL}/a/{slug}/{qid}/card.jpg?lang={language}"
 
 
 _TITLE_MARKS = {"zh": "《》", "zh-hant": "《》", "ko": "《》", "ja": "『』"}
@@ -151,6 +151,7 @@ COPY: dict[str, dict[str, str]] = {
         "android_only": "目前只有 Android 版",
         # 链接预览描述:固定一句,不取正文开头(96% 是「花一点时间仔细观察…」开场白)
         "og": "在 GoMuseum 读这件作品的讲解",
+        "scan": "扫码看讲解",
     },
     "zh-hant": {
         "cta": "在博物館現場，拍一張就能認出它",
@@ -160,6 +161,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "圖片來源",
         "android_only": "目前只有 Android 版",
         "og": "在 GoMuseum 讀這件作品的導覽",
+        "scan": "掃碼看導覽",
     },
     "en": {
         "cta": "At the museum? Snap a photo and GoMuseum recognises it",
@@ -169,6 +171,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "Image credits",
         "android_only": "Currently Android only",
         "og": "Read the guide to this work on GoMuseum",
+        "scan": "Scan to read",
     },
     "fr": {
         "cta": "Au musée, prenez-la en photo : GoMuseum la reconnaît",
@@ -178,6 +181,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "Crédits image",
         "android_only": "Pour l'instant sur Android uniquement",
         "og": "Lisez le commentaire de cette œuvre sur GoMuseum",
+        "scan": "Scannez pour lire",
     },
     "es": {
         "cta": "En el museo, hazle una foto y GoMuseum la reconoce",
@@ -187,6 +191,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "Créditos de imagen",
         "android_only": "Por ahora solo en Android",
         "og": "Lee la guía de esta obra en GoMuseum",
+        "scan": "Escanea para leer",
     },
     "de": {
         "cta": "Im Museum: Foto machen, GoMuseum erkennt das Werk",
@@ -196,6 +201,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "Bildnachweis",
         "android_only": "Derzeit nur für Android",
         "og": "Lies die Führung zu diesem Werk auf GoMuseum",
+        "scan": "Zum Lesen scannen",
     },
     "it": {
         "cta": "Al museo, scatta una foto e GoMuseum la riconosce",
@@ -205,6 +211,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "Crediti immagine",
         "android_only": "Per ora solo su Android",
         "og": "Leggi la guida a quest'opera su GoMuseum",
+        "scan": "Scansiona per leggere",
     },
     "pl": {
         "cta": "W muzeum zrób zdjęcie, a GoMuseum rozpozna dzieło",
@@ -214,6 +221,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "Źródła zdjęć",
         "android_only": "Na razie tylko na Androida",
         "og": "Przeczytaj opis tego dzieła w GoMuseum",
+        "scan": "Zeskanuj, by czytać",
     },
     "ja": {
         "cta": "美術館で写真を撮るだけで、GoMuseum が作品を認識します",
@@ -223,6 +231,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "画像クレジット",
         "android_only": "現在は Android 版のみ",
         "og": "GoMuseum でこの作品の解説を読む",
+        "scan": "スキャンして読む",
     },
     "ko": {
         "cta": "박물관에서 사진 한 장이면 GoMuseum이 작품을 알아봅니다",
@@ -232,6 +241,7 @@ COPY: dict[str, dict[str, str]] = {
         "credits": "이미지 출처",
         "android_only": "현재 Android 전용",
         "og": "GoMuseum에서 이 작품의 해설 읽기",
+        "scan": "스캔해서 읽기",
     },
 }
 

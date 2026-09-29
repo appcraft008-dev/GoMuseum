@@ -38,10 +38,23 @@ const kLoginToUpgrade = '/login?$kUpgradeParam=1';
 /// App Links 落点前缀(spec 2026-09-20-share-web-pages-design §六)。
 const kDeepLinkPrefix = '/a/';
 
-/// 登录后可以送回去的目标:只认站内的 `/a/...` 深链接。
+/// App Links 的域名。
+const kDeepLinkHost = 'gomuseum.app';
+
+/// 登录后可以送回去的目标:只认站内的 `/a/...` 深链接,统一返回「路径+参数」。
 /// 其余受保护路由被弹去登录后照旧回首页(不改既有行为);外部/伪造的 from 一律丢弃。
-String? deepLinkReturn(String? from) =>
-    from != null && from.startsWith(kDeepLinkPrefix) ? from : null;
+///
+/// ⚠️ 两种形态都会来:安卓**冷启动**把**完整 URL** 当初始路由
+/// (FlutterActivityAndFragmentDelegate: `intent.getData().toString()`),
+/// App 内跳转则是裸路径。V42 真机只认裸路径 → 冷启动点链接落首页(2026-09-30)。
+String? deepLinkReturn(String? from) {
+  final u = from == null ? null : Uri.tryParse(from);
+  if (u == null) return null;
+  final ours = (!u.hasScheme && !u.hasAuthority) ||
+      (u.scheme == 'https' && u.host == kDeepLinkHost);
+  if (!ours || !u.path.startsWith(kDeepLinkPrefix)) return null;
+  return Uri(path: u.path, query: u.hasQuery ? u.query : null).toString();
+}
 
 String? authRedirect({
   required User? user,

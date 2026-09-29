@@ -40,7 +40,7 @@ EVENTS = (
     "guest_created",
     # 分享落地页被看(props.source=app 是 App 分享来的,direct 是其余)。
     # 回答的问题:分享这条获客渠道有没有人进来 —— ≥100 真实活跃用户前别看(spec §八)。
-    # 分享次数 ≈ card.png 的 nginx 访问量,不另设事件。
+    # 分享次数 ≈ card.jpg 的 nginx 访问量,不另设事件。
     "share_page_view",
 )
 

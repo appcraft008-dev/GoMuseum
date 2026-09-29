@@ -181,5 +181,17 @@ void main() {
       expect(deepLinkReturn(null), isNull);
       expect(deepLinkReturn('//evil.example/a/x'), isNull);
     });
+
+    // 安卓冷启动交给 App 的是完整 URL,不是路径(V42 真机就栽在这)
+    test('冷启动的完整 URL 也认,并规整成路径', () {
+      const full = 'https://gomuseum.app/a/louvre/Q1?lang=zh&s=app';
+      expect(deepLinkReturn(full), link);
+      expect(
+        authRedirect(user: null, path: '/a/louvre/Q1', location: full),
+        '/login?from=${Uri.encodeComponent(link)}',
+      );
+      expect(deepLinkReturn('https://evil.example/a/x'), isNull);
+      expect(deepLinkReturn('http://gomuseum.app/a/x'), isNull);
+    });
   });
 }

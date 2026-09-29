@@ -38,6 +38,6 @@ Future<void> shareObject(
     text: text,
     files: bytes == null
         ? null
-        : [XFile.fromData(bytes, mimeType: 'image/png', name: 'gomuseum.png')],
+        : [XFile.fromData(bytes, mimeType: 'image/jpeg', name: 'gomuseum.jpg')],
   ));
 }

@@ -367,8 +367,8 @@
       }
     }
   },
-  "paywallPitch": "Unlimited photo recognition and full audio commentary at {museums}.",
-  "paywallPitchGeneric": "Unlimited photo recognition and full audio commentary.",
+  "paywallPitch": "Unlimited photo recognition, plus the audio commentary at {museums}.",
+  "paywallPitchGeneric": "Unlimited photo recognition, plus audio commentary.",
   "passNotOnSale": "Passes for this museum aren't on sale yet.",
   "@paywallPitch": {
     "placeholders": {
@@ -510,7 +510,7 @@
   "benefitsFeatBrowse": "Browsing, search, full written commentary",
   "benefitsFeatPresetQa": "Suggested questions answered",
   "benefitsFeatRecognition": "Unlimited photo recognition",
-  "benefitsFeatAllAudio": "Audio commentary at every museum on your pass",
+  "benefitsFeatAllAudio": "Audio commentary at the museums on your pass",
   "benefitsFeatDeepAudio": "Audio for in-depth sections",
   "benefitsNeedsPass": "Pass needed",
   "benefitsNotStartedHead": "The clock hasn't started",
