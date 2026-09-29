@@ -1,4 +1,4 @@
-"""分享图:中日韩/波兰语不能出方框,输出是 PNG,文字过长不越界崩溃。
+"""分享图:中日韩/波兰语不能出方框,输出是 JPEG,文字过长不越界崩溃,二维码画对了。
 
 本地 macOS 没装 Noto 字体时跳过;CI 与 prod 镜像都装 fonts-noto-cjk + fonts-noto-core,
 CI 上字体缺失直接判红 —— 否则这组测试会在"哪里都没跑过"的状态下一直绿。
@@ -64,9 +64,11 @@ def test_render_card_png_and_long_text():
         footer="卢浮宫 · GoMuseum",
         credit="Photo: RMN",
         language="zh",
+        qr_url="https://gomuseum.app/a/louvre/Q12418?lang=zh&s=qr",
+        qr_caption="扫码看讲解",
     )
     img = Image.open(io.BytesIO(png))
-    assert img.format == "PNG"
+    assert img.format == "JPEG"
     assert img.width == 1080 and img.height <= 1600
 
 
@@ -106,3 +108,20 @@ def test_closing_punctuation_never_starts_a_line():
     ):
         lines = _wrap(probe, text, _font(lang, 34), 952, 3, lang)
         assert not any(line[0] in _NO_LINE_START for line in lines[1:]), lines
+
+
+def test_qr_modules_match_the_url():
+    """逐模块采样,与 segno 对同一链接生成的矩阵比对 —— 画错位置/画错链接都会红。
+    (不用解码库:不为一条测试引 OpenCV;真实扫码另做过一次性核验。)"""
+    import segno
+
+    from app.services.share_card import INK, _qr_image
+
+    url = "https://gomuseum.app/a/orsay/Q152509?lang=zh&s=qr"
+    img = _qr_image(url)
+    m = segno.make(url, error="m").matrix
+    cell = img.width // (len(m) + 4)
+    for r, row in enumerate(m):
+        for c, v in enumerate(row):
+            px = img.getpixel(((c + 2) * cell + cell // 2, (r + 2) * cell + cell // 2))
+            assert (px == INK) == bool(v), (r, c)

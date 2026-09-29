@@ -139,7 +139,7 @@ def test_share_field_for_shareable_object(client):
     assert share == {
         "url": "https://gomuseum.app/a/orsay/Q1?lang=zh&s=app",
         "text": "《TQ1》",
-        "image_url": "https://gomuseum.app/a/orsay/Q1/card.png?lang=zh",
+        "image_url": "https://gomuseum.app/a/orsay/Q1/card.jpg?lang=zh",
     }
 
 
@@ -251,17 +251,18 @@ def test_page_view_logged_with_source(client, db):
 
 def test_card_404_matches_page_rules(client):
     for path in (
-        "/a/rijks/Q9/card.png?lang=zh",
-        "/a/orsay/Q3/card.png?lang=zh",
-        "/a/orsay/Q2/card.png?lang=zh",
+        "/a/rijks/Q9/card.jpg?lang=zh",
+        "/a/orsay/Q3/card.jpg?lang=zh",
+        "/a/orsay/Q2/card.jpg?lang=zh",
     ):  # 隐身 / 无正文 / 无图
         assert client.get(path).status_code == 404, path
 
 
-def test_card_renders_png(client, monkeypatch):
+def test_card_renders_jpeg(client, monkeypatch):
     import app.api.web.share_pages as sp
 
-    monkeypatch.setattr(sp, "render_card", lambda image, **kw: b"\x89PNG-fake")
+    sp._card_bytes.cache_clear()
+    monkeypatch.setattr(sp, "render_card", lambda image, **kw: b"jpeg-fake")
 
     class _Storage:
         def get(self, key):
@@ -272,9 +273,9 @@ def test_card_renders_png(client, monkeypatch):
             return f"https://cdn.test/{key}"
 
     monkeypatch.setattr(sp, "get_object_storage", lambda: _Storage())
-    r = client.get("/a/orsay/Q1/card.png?lang=zh")
+    r = client.get("/a/orsay/Q1/card.jpg?lang=zh")
     assert r.status_code == 200
-    assert r.headers["content-type"] == "image/png"
+    assert r.headers["content-type"] == "image/jpeg"
     assert "max-age" in r.headers["cache-control"]
 
 
@@ -283,9 +284,10 @@ def test_card_credit_drops_painter_name(client, db, monkeypatch):
     import app.api.web.share_pages as sp
     from app.services.storage import get_object_storage
 
+    sp._card_bytes.cache_clear()
     seen = {}
     monkeypatch.setattr(
-        sp, "render_card", lambda image, **kw: seen.update(kw) or b"png"
+        sp, "render_card", lambda image, **kw: seen.update(kw) or b"jpg"
     )
     real = get_object_storage()
 
@@ -300,7 +302,7 @@ def test_card_credit_drops_painter_name(client, db, monkeypatch):
     db.query(MuseumObject).filter_by(qid="Q1").update({"artist_en": "Édouard Manet"})
     db.query(ObjectImage).update({"credit": "Édouard Manet"})
     db.commit()
-    assert client.get("/a/orsay/Q1/card.png?lang=zh").status_code == 200
+    assert client.get("/a/orsay/Q1/card.jpg?lang=zh").status_code == 200
     assert seen["credit"] is None
 
 
@@ -365,3 +367,56 @@ def test_page_view_marks_bot_and_keeps_ua(client, db):
     evs = db.query(AppEvent).filter_by(name="share_page_view").all()
     assert sorted(e.props["bot"] for e in evs) == [False, True]
     assert {e.props["ua"] for e in evs} == {BOT_UAS[0], HUMAN_UAS[0][:200]}
+
+
+def _fake_card(monkeypatch):
+    """替身:记下每次合成的参数,不真画图。"""
+    import app.api.web.share_pages as sp
+
+    sp._card_bytes.cache_clear()
+    calls = []
+    monkeypatch.setattr(
+        sp, "render_card", lambda image, **kw: calls.append(kw) or b"jpg"
+    )
+
+    class _Storage:
+        def get(self, key):
+            return b"jpeg-bytes"
+
+        def public_url(self, key):
+            return f"https://cdn.test/{key}"
+
+    monkeypatch.setattr(sp, "get_object_storage", lambda: _Storage())
+    return calls
+
+
+def test_card_qr_points_back_to_page(client, monkeypatch):
+    """微信收图会丢掉链接文字 → 分享图上的二维码是回到网页的唯一路径;s=qr 单独计数。"""
+    calls = _fake_card(monkeypatch)
+    client.get("/a/orsay/Q1/card.jpg?lang=zh")
+    assert calls[0]["qr_url"] == "https://gomuseum.app/a/orsay/Q1?lang=zh&s=qr"
+    assert calls[0]["qr_caption"] == "扫码看讲解"
+
+
+def test_card_rendered_once_per_content(client, monkeypatch):
+    """同一件同一语言第二次分享不再现场合成(原先每次 2 秒)。"""
+    calls = _fake_card(monkeypatch)
+    for _ in range(3):
+        assert client.get("/a/orsay/Q1/card.jpg?lang=zh").status_code == 200
+    assert len(calls) == 1
+
+
+def test_audio_note_is_play_entry_after_launch(client, monkeypatch):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    html = client.get("/a/orsay/Q1?lang=zh", headers=ANDROID).text
+    assert '<a class="audio" href="https://play.google.com' in html
+    # 微信里打不开 Play、iPhone 没有 App → 只是一句话
+    for ua in (WECHAT, {"User-Agent": HUMAN_UAS[1]}):
+        html = client.get("/a/orsay/Q1?lang=zh", headers=ua).text
+        assert '<div class="audio">' in html and '<a class="audio"' not in html
+
+
+def test_audio_note_plain_before_launch(client, monkeypatch):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", False)
+    html = client.get("/a/orsay/Q1?lang=zh", headers=ANDROID).text
+    assert '<div class="audio">' in html and '<a class="audio"' not in html
