@@ -132,6 +132,10 @@
 ```
 
 - `default_guide`:**默认标准讲解**(单主线·5拍·~300-600字现场导览,识别后首先呈现的"主角")。`{body, has_audio}`,无则 `null`(前端回退 tabs)。⚠️ **是 `has_audio` 布尔值,不是直链**——列表接口只告诉你"有没有",真链要播时再调 `/audio` 端点(那里才走缓存/懒生成/付费墙)。(2026-08 更正:此处曾写作 `audio_url`,与实现不符,排查音频灌入时被误判为"灌入失败"。)**不混入 tabs**。前端分层页:default_guide 置顶 → 推荐 2-3 个 suggested_questions → tabs/其余收进"更多内容"。
+- `share`(加法字段,2026-09-29):`{url, text, image_url}` 或 `null`。null = 这件在**请求语言**下不可分享
+  (该语言无已发布 guide 正文 / 所在馆未放出 —— **预览账号也是 null** / 无自存主图),App 据此不显示分享键。
+  `url` 落在公开网页 `/a/{slug}/{qid}`(只有文字,**没有任何音频**),`image_url` 是服务端合成的分享图。
+  判定唯一真相源 `app/services/share.py`,网页 / 分享图 / 本字段共用。
 - `tabs`:按类目的段落清单(`SECTIONS_BY_CATEGORY`)逐段(降级为"更多内容"深度模块;**overview 已退役**——默认讲解取代其作开场;**artist 已移出 tabs**——成独立作者卡;各模块各守互斥 lane、**不复述头条**、只会重复则返空不发布);`body` 为该语种已发布正文(无则 `null`);`audio_url` 为 R2 音频直链(未生成则 `null`,TTS 阶段)。
 - `artist`:**必选常驻作者卡**(不随空隐)。**数据来自 `artists` 一等实体**(按 artist QID 生成一次、同作者所有作品复用→一致/完整/省;artist 不再是 per-work 段)。`{name, birth, death, nationality, notable_works:[...], bio}`(**name/title 按多语显示名规则解析:i18n 权威→翻译→en**;bio 按语言取)——生卒年/国籍/代表作取自作者 Wikidata 实体(P569/P570/P27/P800);`bio`=artist 段已发布叙事(无则 null)。~~v1 局限~~ ✅2026-07-04 解除:`nationality`/`notable_works` 按 language 本地化(`nationality_i18n`/`notable_works_i18n`:P27/P800 多语权威标签→translate_name 兜底→en 列;生成与 names 回填两路都填,幂等)。
 - `facts`:**已策展+人性化的墙签事实**(只 wall_label 级):`artist/date/medium/dimensions/inventory/location`。`medium` 优先证据包干净源(Wikidata P186,多值合并人性化),回退 Joconde `medium_fr`;`dimensions` 取 Joconde 串人性化(证据包暂不抓 P2048/P2049,非法国馆无 Joconde 时为 null)。⚠️ **`provenance` 返 null、`exhibitions`/`bibliography` 返 `[]`——已移出面板**(学术噪音;参考文献彻底不展示,收藏/展览史进证据包材料级,阶段2 由 background lane 讲成流转故事)。`artist_life` 暂 null。

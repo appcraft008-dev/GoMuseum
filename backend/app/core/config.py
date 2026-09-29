@@ -108,6 +108,17 @@ class Settings(BaseSettings):
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET: str = "gomuseum-assets"
     R2_PUBLIC_BASE_URL: str = ""
+    # 分享层(spec 2026-09-20-share-web-pages-design)。链接域名 = 公开网页所在站点;
+    # staging 设成 https://staging-api.gomuseum.app(它的 nginx 把 / 整个反代到后端)。
+    PUBLIC_WEB_BASE_URL: str = "https://gomuseum.app"
+    # 推正式轨道那天改 true:网页粘底条才变成 Play 下载按钮(内测轨道的链接对外人是"找不到该应用")
+    SHARE_PLAY_LIVE: bool = False
+    # 分享图字体(镜像装 fonts-noto-cjk;标题有中日韩文,没字体就是一排方框)
+    SHARE_CARD_FONT: str = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+    SHARE_CARD_FONT_BOLD: str = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+    # 非中日韩语种(fonts-noto-core):CJK 字体缺波兰字母、拉丁标点是全角宽
+    SHARE_CARD_FONT_LATIN: str = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"
+    SHARE_CARD_FONT_LATIN_BOLD: str = "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf"
 
     # ── 发信(找回密码 / 邮箱验证)────────────────────────────────────────
     # 用 SMTP 而不是某一家的 HTTP API:Resend / SendGrid / Mailgun / Postmark
