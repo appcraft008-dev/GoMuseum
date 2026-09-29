@@ -310,3 +310,58 @@ def test_copy_has_same_keys_in_every_language():
 
     keys = set(COPY["en"])
     assert {lang: set(c) for lang, c in COPY.items() if set(c) != keys} == {}
+
+
+# 机器访问标记:只打标记不丢数据,统计时过滤。正负样本都要有 ——
+# 应用内浏览器(微信/Facebook/Instagram)背后是真人,手机型号里也可能带 bot(CUBOT)。
+BOT_UAS = [
+    "WhatsApp/2.23.20.0 A",  # 发链接时生成预览卡片
+    "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+    "TelegramBot (like TwitterBot)",
+    "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
+    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+    "Twitterbot/1.0",
+    "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2)",
+    "curl/8.4.0",
+    "python-requests/2.31.0",
+    "",
+]
+HUMAN_UAS = [
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/129.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 13; V2227A) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/111.0 Mobile Safari/537.36 XWEB/1160065 MMWEBSDK/20231202 "
+    "MicroMessenger/8.0.47.2560(0x28002F35) WeChat/arm64 Weixin NetType/WIFI",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Mobile/15E148 [FBAN/FBIOS;FBAV/470.0.0.40.97;FBBV/620000000]",
+    "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/129.0 Mobile Safari/537.36 Instagram 350.0.0.0 Android",
+    "Mozilla/5.0 (Linux; Android 10; CUBOT X30 Build/QP1A) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36",
+]
+
+
+@pytest.mark.parametrize("ua", BOT_UAS)
+def test_is_bot_catches_previewers_and_crawlers(ua):
+    from app.services.share import is_bot
+
+    assert is_bot(ua), ua
+
+
+@pytest.mark.parametrize("ua", HUMAN_UAS)
+def test_is_bot_spares_real_people(ua):
+    from app.services.share import is_bot
+
+    assert not is_bot(ua), ua
+
+
+def test_page_view_marks_bot_and_keeps_ua(client, db):
+    client.get("/a/orsay/Q1?lang=zh&s=app", headers={"User-Agent": BOT_UAS[0]})
+    client.get("/a/orsay/Q1?lang=zh&s=app", headers={"User-Agent": HUMAN_UAS[0]})
+    evs = db.query(AppEvent).filter_by(name="share_page_view").all()
+    assert sorted(e.props["bot"] for e in evs) == [False, True]
+    assert {e.props["ua"] for e in evs} == {BOT_UAS[0], HUMAN_UAS[0][:200]}

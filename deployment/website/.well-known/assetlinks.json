@@ -5,7 +5,7 @@
       "namespace": "android_app",
       "package_name": "com.gomuseum.app",
       "sha256_cert_fingerprints": [
-        "PLAY_APP_SIGNING_SHA256_FROM_CONSOLE",
+        "85:87:62:44:A6:DF:B2:77:F0:3E:4A:BE:5F:A4:D0:5B:43:DB:16:75:14:A5:63:3B:9D:21:6E:A0:85:5E:57:E6",
         "EC:57:9A:0E:3F:5F:5B:D4:99:1A:E1:42:5A:C9:6A:B9:A5:E4:6E:68:C6:CC:C1:64:B4:D1:32:A6:F1:41:31:C1"
       ]
     }
