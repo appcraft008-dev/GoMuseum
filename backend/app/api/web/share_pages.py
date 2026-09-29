@@ -22,6 +22,7 @@ from app.services.share import (
     card_url,
     copy_for,
     guide_languages,
+    is_bot,
     pick_language,
     primary_image,
     public_object,
@@ -130,6 +131,7 @@ def share_page(
         for l in langs
     )
 
+    ua = request.headers.get("user-agent", "")
     log_event(
         db,
         "share_page_view",
@@ -137,6 +139,10 @@ def share_page(
         qid=qid,
         lang=chosen,
         source=s or "direct",
+        # 发链接时聊天软件会先抓一次生成预览卡片,搜索引擎也会来爬 —— 都不是真人点击。
+        # 只打标记不丢:统计真实点击时 bot=false;ua 留着以后校准判定。
+        bot=is_bot(ua),
+        ua=ua[:200],
     )
     db.commit()
 
@@ -173,7 +179,7 @@ def share_page(
                     if credits
                     else ""
                 ),
-                "CTA": _cta(request.headers.get("user-agent", ""), copy),
+                "CTA": _cta(ua, copy),
             },
         )
     )
