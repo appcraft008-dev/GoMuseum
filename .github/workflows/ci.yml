@@ -162,6 +162,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      # 分享图要中日韩字体(与 prod 镜像同一个 apt 包);缺了 test_font_present_in_ci 判红
+      - name: Install CJK fonts (share card)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+
       # 按 poetry.lock 装,与 prod 镜像(backend/Dockerfile)同一套版本。
       # 此前 `pip install -e ".[dev,test]"` 按 pyproject 的宽松范围现解依赖:
       # 2026-09-29 CI 装到 FastAPI 0.141,lock/prod 是 0.118 —— CI 测的不是线上那套。

@@ -245,3 +245,29 @@ def test_page_view_logged_with_source(client, db):
     client.get("/a/orsay/Q1?lang=zh&s=app")
     ev = db.query(AppEvent).filter_by(name="share_page_view").one()
     assert ev.props["source"] == "app"
+
+
+def test_card_404_matches_page_rules(client):
+    for path in (
+        "/a/rijks/Q9/card.png?lang=zh",
+        "/a/orsay/Q3/card.png?lang=zh",
+        "/a/orsay/Q2/card.png?lang=zh",
+    ):  # 隐身 / 无正文 / 无图
+        assert client.get(path).status_code == 404, path
+
+
+def test_card_renders_png(client, monkeypatch):
+    import app.api.web.share_pages as sp
+
+    monkeypatch.setattr(sp, "render_card", lambda image, **kw: b"\x89PNG-fake")
+
+    class _Storage:
+        def get(self, key):
+            assert key == "images/Q1/0_large.jpg"
+            return b"jpeg-bytes"
+
+    monkeypatch.setattr(sp, "get_object_storage", lambda: _Storage())
+    r = client.get("/a/orsay/Q1/card.png?lang=zh")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+    assert "max-age" in r.headers["cache-control"]

@@ -9,21 +9,25 @@ import html as _html
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.models.museum import Museum
 from app.services.event_log import log_event
-from app.services.museum_repo import get_object_content
+from app.services.museum_repo import get_object_content, museum_name
 from app.services.share import (
     PLAY_URL,
     card_url,
     copy_for,
     guide_languages,
     pick_language,
+    primary_image,
     public_object,
 )
+from app.services.share_card import first_sentence, render_card
+from app.services.storage import get_object_storage
 
 router = APIRouter(tags=["share-web"])
 
@@ -173,4 +177,40 @@ def share_page(
                 "CTA": _cta(request.headers.get("user-agent", ""), copy),
             },
         )
+    )
+
+
+@router.get("/a/{slug}/{qid}/card.png")
+def share_card(
+    slug: str,
+    qid: str,
+    request: Request,
+    lang: str = "",
+    db: Session = Depends(get_db),
+):
+    """分享图。判定规则与网页完全一致(同一组函数)。"""
+    obj = public_object(db, slug, qid)
+    langs = guide_languages(db, obj) if obj else []
+    img = primary_image(db, obj) if langs else None
+    if img is None:
+        return _not_found()
+    chosen = pick_language(lang, request.headers.get("accept-language", ""), langs)
+    raw = get_object_storage().get(f"{img.image_key}_large.jpg")
+    data = get_object_content(db, slug, qid, chosen)
+    if raw is None or data is None:
+        return _not_found()
+    artist = (data.get("artist") or {}).get("name")
+    date = (data.get("facts") or {}).get("date")
+    museum = db.query(Museum).filter_by(slug=slug).one()
+    png = render_card(
+        raw,
+        title=data.get("title") or qid,
+        byline=" · ".join(x for x in (artist, date) if x),
+        excerpt=first_sentence((data.get("default_guide") or {}).get("body") or ""),
+        footer=f"{museum_name(museum, chosen)} · GoMuseum",
+        credit=img.credit,
+        language=chosen,
+    )
+    return Response(
+        png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"}
     )
