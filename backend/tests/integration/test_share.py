@@ -191,6 +191,8 @@ def test_page_renders_text(client):
     assert "TQ1" in r.text and "这是一幅画。" in r.text
     assert 'property="og:image"' in r.text
     assert "这件有语音讲解，在 App 里听" in r.text  # Q1 guide 有音频 → 只写一句
+    # 预览描述是固定一句,不是正文开头(正文开头 96% 是开场白套话)
+    assert 'property="og:description" content="在 GoMuseum 读这件作品的讲解"' in r.text
 
 
 def test_page_never_contains_audio(client):
@@ -300,3 +302,11 @@ def test_card_credit_drops_painter_name(client, db, monkeypatch):
     db.commit()
     assert client.get("/a/orsay/Q1/card.png?lang=zh").status_code == 200
     assert seen["credit"] is None
+
+
+def test_copy_has_same_keys_in_every_language():
+    """网页按 copy[key] 取文案,某语言漏一个键 = 该语言网页 500。"""
+    from app.services.share import COPY
+
+    keys = set(COPY["en"])
+    assert {lang: set(c) for lang, c in COPY.items() if set(c) != keys} == {}
