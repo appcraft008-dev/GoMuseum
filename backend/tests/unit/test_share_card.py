@@ -61,7 +61,6 @@ def test_render_card_png_and_long_text():
         _jpeg(600, 1400),  # 竖长图要被限高
         title="很长的标题" * 20,
         byline="作者 · 1777",
-        excerpt="一句很长的摘要" * 30,
         footer="卢浮宫 · GoMuseum",
         credit="Photo: RMN",
         language="zh",
@@ -69,16 +68,6 @@ def test_render_card_png_and_long_text():
     img = Image.open(io.BytesIO(png))
     assert img.format == "PNG"
     assert img.width == 1080 and img.height <= 1600
-
-
-def test_first_sentence():
-    from app.services.share_card import first_sentence
-
-    assert first_sentence("这是一幅画。它画于 1863 年。") == "这是一幅画。"
-    assert first_sentence("One. Two.") == "One."
-    assert (
-        first_sentence("没有句号" * 50, limit=10) == "没有句号没有句号没…"
-    )  # limit 含省略号
 
 
 @needs_font

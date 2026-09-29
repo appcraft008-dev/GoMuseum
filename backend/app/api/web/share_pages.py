@@ -26,7 +26,7 @@ from app.services.share import (
     primary_image,
     public_object,
 )
-from app.services.share_card import first_sentence, render_card
+from app.services.share_card import render_card
 from app.services.storage import get_object_storage
 
 router = APIRouter(tags=["share-web"])
@@ -129,7 +129,6 @@ def share_page(
         f'<link rel="alternate" hreflang="{l}" href="{e(f"{base}/a/{slug}/{qid}?lang={l}")}" />'
         for l in langs
     )
-    desc = (guide.get("body") or "").replace("\n", " ")[:120]
 
     log_event(
         db,
@@ -149,7 +148,7 @@ def share_page(
                 "OGTITLE": (
                     f"{title} — {artist['name']}" if artist.get("name") else title
                 ),
-                "OGDESC": desc,
+                "OGDESC": copy["og"],
                 "OGIMAGE": images[0]["url"] if images else card_url(slug, qid, chosen),
                 "CANONICAL": f"{base}/a/{slug}/{qid}?lang={chosen}",
                 "BYLINE": " · ".join(
@@ -214,7 +213,6 @@ def share_card(
         raw,
         title=data.get("title") or qid,
         byline=" · ".join(x for x in (artist, date) if x),
-        excerpt=first_sentence((data.get("default_guide") or {}).get("body") or ""),
         footer=f"{museum_name(museum, chosen)} · GoMuseum",
         credit=credit,
         language=chosen,

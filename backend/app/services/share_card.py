@@ -7,7 +7,6 @@
 """
 
 import io
-import re
 from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageFont
@@ -48,11 +47,6 @@ def _font(language: str, size: int, bold: bool = False) -> ImageFont.FreeTypeFon
     return ImageFont.truetype(path, size)
 
 
-def first_sentence(text: str, limit: int = 80) -> str:
-    s = re.split(r"(?<=[。！？.!?])\s*", text.strip(), maxsplit=1)[0]
-    return s if len(s) <= limit else s[: limit - 1] + "…"
-
-
 def _wrap(
     draw, text: str, font, width: int, max_lines: int, language: str
 ) -> list[str]:
@@ -87,7 +81,6 @@ def render_card(
     *,
     title: str,
     byline: str,
-    excerpt: str,
     footer: str,
     credit: str | None,
     language: str,
@@ -101,13 +94,11 @@ def render_card(
         _font(language, 26),
     )
     text_w = W - 2 * PAD
-    quoted = f"「{excerpt}」" if language == "ja" else f"“{excerpt}”"
     blocks = [
         (_wrap(probe, title, f_title, text_w, 2, language), f_title, INK, 66),
         (_wrap(probe, byline, f_body, text_w, 1, language), f_body, SUB, 48),
-        (_wrap(probe, quoted, f_body, text_w, 3, language), f_body, INK, 50),
     ]
-    text_h = sum(len(ls) * lh for ls, _, _, lh in blocks) + 3 * 20
+    text_h = sum(len(ls) * lh for ls, _, _, lh in blocks) + len(blocks) * 20
     foot = [footer] + ([credit] if credit else [])
     h = art.height + PAD + text_h + 40 + len(foot) * 38 + PAD
     card = Image.new("RGB", (W, h), BG)
