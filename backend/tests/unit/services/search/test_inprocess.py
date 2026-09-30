@@ -202,6 +202,23 @@ def test_museum_search_by_name(session):
     assert any(m["slug"] == "orsay" and m["city"] == "巴黎" for m in museums)
 
 
+@pytest.mark.parametrize(
+    "language,city", [("ja", "パリ"), ("ko", "파리"), ("it", "Parigi"), ("pl", "Paryż")]
+)
+def test_museum_city_follows_all_ten_languages(session, language, city):
+    """城市名曾只有中英两套:ja/ko/it/pl 界面看到的是 "Paris"(2026-09-30 补齐)。"""
+    museums, _ = search(
+        session, _FakeStorage(), "orsay", museum_id=None, language=language
+    )
+    assert [m["city"] for m in museums if m["slug"] == "orsay"] == [city]
+
+
+def test_museum_found_by_city_in_users_language(session):
+    """用自己语言的城市名搜也要搜得到馆(与十语馆名进匹配面同理)。"""
+    museums, _ = search(session, _FakeStorage(), "パリ", museum_id=None, language="ja")
+    assert [m["slug"] for m in museums] == ["orsay"]
+
+
 def test_scoped_search_has_no_museum_segment(session):
     museums, objects = search(
         session, _FakeStorage(), "奥赛", museum_id=_mid(session), language="zh"
