@@ -18,7 +18,6 @@
 | 推正式当天:prod env `SHARE_PLAY_LIVE=true` + 重启后端 | ⏳ 你,推正式当天做 | share-feature |
 | 定价终值:Console 里的 €7.99 是税前基准，西班牙实付 €9.49。建议保持税外，只改终值(例如 €9.99) | ⏳ 你定(9-19 说后续处理) | monetization-plan |
 | 出 V44 包：带 #718 设置页铅笔图标、#723 识别缺馆名不跳奥赛 +「暂无该语言讲解」文案、#727 找回密码发 zh-hant | 等你说出包 | #718/#723/#727 |
-| staging→main 合一次(后端):FastAPI/Starlette 升级 #724、Python 3.13 #726、找回密码繁体 #727 | ⏳ 你合;合前我先查 prod 有无长跑任务。全是加法，不依赖 V44 | 9-30 |
 | 商店条目其余 7 种语言 | 触发条件:en/fr/zh 有效果数据后再做 | monetization-plan |
 
 ## 二、等你拍板
@@ -33,8 +32,6 @@
 
 | 事项 | 说明 | 出处 |
 |---|---|---|
-| FastAPI 升级已合 staging,**随下次 staging→main 上 prod** | 0.118→0.142.1 / Starlette 0.48→1.7.0(修 6 个已知漏洞，最高要 1.3.1)。上 prod 后从这里删掉 | 9-30 |
-| Python 3.11→3.13 已合 staging,**随下次 staging→main 上 prod** | 依赖版本零变化(lock 未动);识别特征新旧环境对照见 PR。上 prod 后从这里删掉 | 9-30 |
 | R2 孤儿音频 GC 的 `--grace-days` 保护失效 | 现在按 R2 mtime 判年龄，但 9-06 全桶重写过一次，所有 mtime 都被刷平了。应改为用 DB 行的 `updated_at` 判断 | 9-08 |
 | 游客令牌谁都能领，能批量调接口点燃懒生成 | 老风险。目前靠 10r/s 限流、只放出已上线馆、懒生成每日上限挡着 | share-feature |
 | 数据源探活失败只写日志、不发告警 | `probe-sources.sh` 每 3 天在 prod 跑(Joconde 文本+目录两个接入点都探),但失败只进 `/var/log/gomuseum-probe.log`,没人会看。可复用每日音频盘点的邮件告警 | 9-30 核实时发现 |
@@ -48,9 +45,9 @@
 | 音频待办(塞尚日语简介待试听 P0 / 4 条人名重译 / 7 条问答重译 / 缺口 A / 待校验 B) | 另一个 session 处理,见 [`audio-followups.md`](audio-followups.md) | — |
 | 小皇宫音频为零 | 用 VoxCPM2 整体生成,另一个 session 负责 | 9-30 |
 | 980 段新露出内容没有音频(含 Q724954 的 20 条) | 同上 | 9-13 |
-| 小皇宫 guide 存量 29 件以「现藏于/捐给小皇宫」收尾 | ⏳ 你在 prod 跑(代码已合 staging、需先上 prod):`fix_guide_museum_ending.py --museum petit_palais --apply`,再 `onboard translate --target prod --langs fr,de,es,it,ja,ko,pl,zh,zh-hant`。作废音频 0 条。国立博物馆 2 件不修(Q167605 中文 guide 有音频) | 9-30 |
+| 小皇宫 guide 存量 29 件以「现藏于/捐给小皇宫」收尾 | ⏳ 你在 prod 跑:`fix_guide_museum_ending.py --museum petit_palais --apply`,再用 `/tmp/retranslate_guides.py petit_palais` **只重翻这 29 件被降级的 guide 译文**。⛔ 别跑全馆 `onboard translate`:会把另外 14 件按「宁缺毋滥」不补的 309 段也重翻。作废音频 0 条 | 9-30 |
 | zh/zh-hant 本作品标题「」→《》 | ⏳ 你在 prod 跑(脚本已合 staging,不依赖新代码):`fix_zh_title_quotes.py --apply --backup /tmp/zh_quotes_backup.json`。dry-run:zh 正文 672 / 问答 174,zh-hant 正文 1697 / 问答 441,**作废音频 0**(引号不发音,audio_key 保留) | 9-30 |
-| 标题「Name:」标签(it「Nome:」663 条等约 750 条 + 4 位作者名)与维基消歧后缀(约 27 条) | ⏳ 根因(`strip_name` 剥标签)随 staging→main;存量上 prod 后你跑 `fix_title_i18n.py --apply --backup /tmp/title_fix_backup.json`(先 dry-run 看数)。有音频的正文不改 | 9-30 |
+| 标题「Name:」标签(it「Nome:」663 条等约 750 条 + 4 位作者名)与维基消歧后缀(约 27 条) | ⏳ 根因已上 prod;存量你跑 `fix_title_i18n.py --apply --backup /tmp/title_fix_backup.json`(先 dry-run 看数)。有音频的正文不改 | 9-30 |
 | 标题里混进馆藏编号「Paysage (226616)」「勝利 (ADUT280)」 | 新发现，没修：判据要和「(1875.)」「(1741-1790年)」这类正式标题里的年份分开，需单独做 | 9-30 |
 | 43 个空标题(""),2280 条 needs_review | 需要判断，其中有真实的内容缺口 | product-backlog |
 | 冷门件有 1-2 段译文没过闸(ko/de/ja 比其他语言少 1-2 段) | 按「宁缺毋滥」不补 | 9-26 |
@@ -80,6 +77,7 @@
 
 - 2026-09-30 核实已完成(清单里误列):《塔利安夫人的舞会》9-28 已恢复成 10 语各 3 段 + 30 条问答;小皇宫 TOP50 问答 9-28 已按新出题法重跑(79→121 条);中文展签法语材质已进材质表;Joconde 探活已上 prod cron(文本+目录);国立博物馆数据走 Wikidata,官方旧 key API 已停服、新 Linked Art 接口无需 key;两张票在荷兰只激活 nl 已在 V41 真机验过
 - 2026-09-30 核实隐私政策已含删号步骤(第 4 节「设置 → 删除账号」+ 删除后果 + 邮件渠道),线上 gomuseum.app/privacy 与仓库一致
+- 2026-09-30 #735 上 prod:FastAPI 0.142.1 / Starlette 1.7.0 / Python 3.13.15、lifespan、找回密码繁体、城市名十语、guide 结尾与「Name:」标签根因;prod 冒烟通过
 - 2026-09-30 guide 结尾「现藏于本馆」根因修复:生成后整句删除(重写/改写两种 A/B 均无效,见 `drop_museum_ending`),只作用于新生成
 - 2026-09-30 启动钩子 `@app.on_event` 迁到 lifespan(弃用警告消除)
 - 2026-09-30 搜索结果城市名补齐十语(复用 `museum_cities`,也能用本语言城市名搜到馆)
