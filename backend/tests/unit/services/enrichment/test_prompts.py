@@ -141,6 +141,16 @@ def test_translation_prompt_preserves_tone():
     assert "faithful" in blob  # 仍忠实
 
 
+def test_translation_prompt_keeps_by_names_inside_the_name_rule():
+    # 「Seneca the Younger」曾被译成「年轻的塞内卡」、Charles the Bold→「查理·布尔德」。
+    # 这条必须长在人名那一拍 (2) 里 —— 挪到末尾管不住(见 prompt-structural-instructions)。
+    from app.services.enrichment.prompts import build_translation_prompt
+
+    system, _ = build_translation_prompt("x", "zh")
+    rule2 = system[system.index("(2)") : system.index("(3)")]
+    assert "the Younger" in rule2 and "never transliterate" in rule2
+
+
 def test_grounding_prompt_is_three_class():
     system, user = build_entailment_prompt("MAT", ["s1", "s2"])
     blob = (system + user).lower()
