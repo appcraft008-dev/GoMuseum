@@ -101,4 +101,7 @@ def glossary(text: str, lang: str) -> dict[str, str]:
             continue
         if hit:
             out[hit[0]] = hit[1]
-    return out
+    # 两个人拿到同一个译名(ja 老/小勃鲁盖尔都是「ピーテル・ブリューゲル」)→ 注入会把
+    # 两人写成一个人,不如不给,让模型自己区分。
+    labels = list(out.values())
+    return {en: loc for en, loc in out.items() if labels.count(loc) == 1}

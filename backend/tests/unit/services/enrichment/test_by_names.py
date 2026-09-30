@@ -42,6 +42,14 @@ def test_glossary_only_for_cjk_and_fails_soft(monkeypatch):
     assert by_names.glossary(SENECA, "fr") == {}  # 欧洲语言模型本就译对,不注入
 
 
+def test_glossary_drops_names_that_collide(monkeypatch):
+    monkeypatch.setattr(
+        by_names, "resolve", lambda name, lang: (name, "ピーテル・ブリューゲル")
+    )
+    text = "Pieter Brueghel the Younger copied Pieter Bruegel the Elder."
+    assert by_names.glossary(text, "ja") == {}
+
+
 def test_translate_section_injects_people_and_strips_tag():
     prompts = []
 
@@ -65,3 +73,10 @@ def test_translate_section_without_people_is_unchanged():
     t = ContentTranslator(lambda s, u: prompts.append(s) or "x")
     t.translate_section("Charles the Bold lost it.", "zh")
     assert "canonical_person" not in prompts[0]
+
+
+def test_production_translator_is_wired_to_glossary():
+    # 所有翻译路径(正文/问答/简介/懒翻译)都经 build_translator 构造;漏接这一处就全失效
+    from app.services.enrichment.factory import build_translator
+
+    assert build_translator()._people is by_names.glossary
