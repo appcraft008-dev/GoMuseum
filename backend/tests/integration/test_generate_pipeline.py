@@ -1608,7 +1608,9 @@ def test_guide_ending_on_where_it_is_housed_drops_that_sentence(session):
         "Monet painted it at dawn. It was shown in 1874. "
         "It was donated to the Musée d'Orsay in 1986."
     )
-    row, n = _guide_run(session, [draft, "unused"], lambda user: [True] * 4)
+    # 判定给足量:闸对**没拿到判定的句子**一律删除,给少了会让闸替我们删掉最后一句,
+    # 测试就测不到修复本身(2026-09-30 破坏验证时踩到)。
+    row, n = _guide_run(session, [draft, "unused"], lambda user: [True] * 10)
     assert n == 1  # 不重写
     assert row.body == (
         "Boats rest in the harbour. The water is still.\n\n"
@@ -1619,5 +1621,5 @@ def test_guide_ending_on_where_it_is_housed_drops_that_sentence(session):
 def test_museum_named_mid_guide_is_kept(session):
     """对照组:只看**最后一句**;正文中间提到本馆不动。"""
     draft = "Orsay bought it in 1901. The harbour is calm. Boats rest. Gulls cry."
-    row, n = _guide_run(session, [draft, "unused"], lambda user: [True] * 4)
+    row, n = _guide_run(session, [draft, "unused"], lambda user: [True] * 10)
     assert row.body == draft
