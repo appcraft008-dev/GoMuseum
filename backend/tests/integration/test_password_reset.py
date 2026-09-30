@@ -588,10 +588,12 @@ def test_page_language_follows_the_language_the_mail_was_sent_in(client, outbox)
     """
     c, _ = client
     expected = {
-        "zh": ("重设密码", ["Set a new password", "Définir un nouveau"]),
+        "zh": ("重设密码", ["Set a new password", "Définir un nouveau", "重設密碼"]),
+        "zh-hant": ("重設密碼", ["重设密码", "Set a new password"]),
         "en": ("Set a new password", ["重设密码", "Définir un nouveau"]),
         "fr": ("Définir un nouveau mot de passe", ["重设密码", "Set a new password"]),
     }
+    html_lang = {"zh": "zh-CN", "zh-hant": "zh-Hant"}
     for i, (lang, (want, must_not)) in enumerate(expected.items()):
         email = f"u{i}@test.com"
         _register(c, email=email)
@@ -604,7 +606,43 @@ def test_page_language_follows_the_language_the_mail_was_sent_in(client, outbox)
         assert want in html, f"{lang}:页面上没有该语言的标题"
         for other in must_not:
             assert other not in html, f"{lang}:页面上混进了别的语言「{other}」"
-        assert f'<html lang="{ "zh-CN" if lang == "zh" else lang }"' in html
+        assert f'<html lang="{html_lang.get(lang, lang)}"' in html
+
+
+@pytest.mark.parametrize(
+    "code,want",
+    [
+        # App 发的(apiLanguage)与链接里带的
+        ("zh-hant", "zh-hant"),
+        ("zh", "zh"),
+        # 浏览器 Accept-Language 的各种繁体写法:脚本码优先,其次按地区
+        ("zh-Hant", "zh-hant"),
+        ("zh-Hant-TW", "zh-hant"),
+        ("zh-TW", "zh-hant"),
+        ("zh_HK", "zh-hant"),
+        ("zh-MO", "zh-hant"),
+        ("zh-TW,zh;q=0.9,en;q=0.8", "zh-hant"),
+        # 简体
+        ("zh-CN", "zh"),
+        ("zh-Hans", "zh"),
+        ("zh-Hans-HK", "zh"),  # 在香港用简体:脚本码说了算
+        ("zh-SG", "zh"),
+    ],
+)
+def test_traditional_chinese_is_told_apart_from_simplified(code, want):
+    """2026-09-30:繁体用户曾拿到简体信 —— 归一时只取了 `-` 前的主语言码。"""
+    assert account_recovery.resolve_lang(code) == want
+
+
+def test_every_language_has_the_same_page_and_mail_keys():
+    """加一种语言漏一个键 = 那种语言的用户在某一页上 KeyError(500)。"""
+    langs = set(account_recovery.SUPPORTED_LANGS)
+    assert set(account_recovery._PAGE_COPY) == langs
+    assert set(account_recovery._RESET_MAIL) == langs
+    assert set(account_recovery._VERIFY_MAIL) == langs
+    keys = set(account_recovery._PAGE_COPY["en"])
+    for lang in langs:
+        assert set(account_recovery._PAGE_COPY[lang]) == keys, lang
 
 
 def test_expired_link_notice_follows_the_language_too(client, outbox):

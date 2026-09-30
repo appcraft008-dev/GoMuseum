@@ -47,7 +47,8 @@ class _FakeRepo extends AuthRepository {
   }
 }
 
-Future<AppLocalizations> _pump(WidgetTester tester, _FakeRepo repo) async {
+Future<AppLocalizations> _pump(WidgetTester tester, _FakeRepo repo,
+    {Locale locale = const Locale('zh')}) async {
   tester.view.physicalSize = const Size(400, 1200);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -62,7 +63,7 @@ Future<AppLocalizations> _pump(WidgetTester tester, _FakeRepo repo) async {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        locale: const Locale('zh'),
+        locale: locale,
         supportedLocales: AppLocalizations.supportedLocales,
         home: const LoginPage(),
       ),
@@ -160,6 +161,16 @@ void main() {
     final l10n = await _pump(t, repo);
     await _submit(t, l10n, 'someone@example.com');
     expect(repo.language, 'zh');
+  });
+
+  testWidgets('⭐ 繁体界面发 zh-hant,不能和简体一样发 zh', (t) async {
+    // 只取 languageCode 时繁体也是 'zh' → 繁体用户收到简体信(2026-09-30)。
+    final repo = _FakeRepo();
+    final l10n = await _pump(t, repo,
+        locale:
+            const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'));
+    await _submit(t, l10n, 'someone@example.com');
+    expect(repo.language, 'zh-hant');
   });
 
   testWidgets('⭐ 成功提示不许承诺「已发到你的邮箱」', (t) async {
