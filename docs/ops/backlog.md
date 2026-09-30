@@ -49,7 +49,9 @@
 | 小皇宫音频为零 | 用 VoxCPM2 整体生成,另一个 session 负责 | 9-30 |
 | 980 段新露出内容没有音频(含 Q724954 的 20 条) | 同上 | 9-13 |
 | 小皇宫 guide 存量 29 件以「现藏于/捐给小皇宫」收尾 | ⏳ 你在 prod 跑(代码已合 staging、需先上 prod):`fix_guide_museum_ending.py --museum petit_palais --apply`,再 `onboard translate --target prod --langs fr,de,es,it,ja,ko,pl,zh,zh-hant`。作废音频 0 条。国立博物馆 2 件不修(Q167605 中文 guide 有音频) | 9-30 |
-| zh 704 段 / zh-hant 1804 段标题用「」(应为《》);241 段标题带维基消歧后缀 | 你定过以后再做;改法用纯 SQL 替换，不重翻 | 9-14 |
+| zh/zh-hant 本作品标题「」→《》 | ⏳ 你在 prod 跑(脚本已合 staging,不依赖新代码):`fix_zh_title_quotes.py --apply --backup /tmp/zh_quotes_backup.json`。dry-run:zh 正文 672 / 问答 174,zh-hant 正文 1697 / 问答 441,**作废音频 0**(引号不发音,audio_key 保留) | 9-30 |
+| 标题「Name:」标签(it「Nome:」663 条等约 750 条 + 4 位作者名)与维基消歧后缀(约 27 条) | ⏳ 根因(`strip_name` 剥标签)随 staging→main;存量上 prod 后你跑 `fix_title_i18n.py --apply --backup /tmp/title_fix_backup.json`(先 dry-run 看数)。有音频的正文不改 | 9-30 |
+| 标题里混进馆藏编号「Paysage (226616)」「勝利 (ADUT280)」 | 新发现，没修：判据要和「(1875.)」「(1741-1790年)」这类正式标题里的年份分开，需单独做 | 9-30 |
 | 43 个空标题(""),2280 条 needs_review | 需要判断，其中有真实的内容缺口 | product-backlog |
 | 冷门件有 1-2 段译文没过闸(ko/de/ja 比其他语言少 1-2 段) | 按「宁缺毋滥」不补 | 9-26 |
 
