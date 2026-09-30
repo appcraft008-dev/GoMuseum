@@ -16,7 +16,7 @@
 |---|---|---|
 | 从内测轨道推到正式轨道(这一步才算发版) | ⏳ 你 | monetization-plan |
 | 推正式当天:prod env `SHARE_PLAY_LIVE=true` + 重启后端 | ⏳ 你,推正式当天做 | share-feature |
-| 出 V44 包：带 #718 设置页铅笔图标、#723 识别缺馆名不跳奥赛 +「暂无该语言讲解」文案、#727 找回密码发 zh-hant | ✅ 9-30 已出包(#741,桌面 `gomuseum-v44.aab`,已验签名 UPLOAD.RSA / versionCode 44 / 连 api.gomuseum.app)。⏳ 你传内测 + 真机验三处改动 | #718/#723/#727/#741 |
+| 出 V45 包(V44 内容 + #745 移除 geolocator 带入的 `FOREGROUND_SERVICE_LOCATION`:推正式版被「前台服务权限声明」拦下,我们只取一次定位不起前台服务)。V44 带 #718 设置页铅笔、#723 识别缺馆名不跳奥赛 +「暂无该语言讲解」、#727 找回密码 zh-hant | ✅ 9-30 已出包(桌面 `gomuseum-v45.aab`,已验签名 UPLOAD.RSA / versionCode 45 / 连 api.gomuseum.app / 清单无 FOREGROUND_SERVICE)。⏳ 你传内测 + 真机验 + 正式版草稿换成 45(前台服务声明页选「舍弃」不填) | #718/#723/#727/#741/#745 |
 | 商店条目其余 7 种语言 | 触发条件:en/fr/zh 有效果数据后再做 | monetization-plan |
 
 ## 二、等你拍板
