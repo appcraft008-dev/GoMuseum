@@ -16,8 +16,7 @@
 |---|---|---|
 | 从内测轨道推到正式轨道(这一步才算发版) | ⏳ 你 | monetization-plan |
 | 推正式当天:prod env `SHARE_PLAY_LIVE=true` + 重启后端 | ⏳ 你,推正式当天做 | share-feature |
-| 出 V45 包(V44 内容 + #745 移除 geolocator 带入的 `FOREGROUND_SERVICE_LOCATION`:推正式版被「前台服务权限声明」拦下,我们只取一次定位不起前台服务)。V44 带 #718 设置页铅笔、#723 识别缺馆名不跳奥赛 +「暂无该语言讲解」、#727 找回密码 zh-hant | ✅ 9-30 已出包(桌面 `gomuseum-v45.aab`,已验签名 UPLOAD.RSA / versionCode 45 / 连 api.gomuseum.app / 清单无 FOREGROUND_SERVICE)。⏳ 你传内测 + 真机验 + 正式版草稿换成 45(前台服务声明页选「舍弃」不填) | #718/#723/#727/#741/#745 |
-| 首页通票提示写明票名(「巴黎 7 日通票生效中」)+ 票名改由后端 `title` 下发(#747,已合 staging) | ⏳ 你:先 staging→main 上后端,再随下一个包(V46)发前端。V45 不含这项 | #747 |
+| 出 V46 包 = V45(#745 移除 geolocator 带入的 `FOREGROUND_SERVICE_LOCATION`,推正式版被「前台服务权限声明」拦下)+ #747/#749 首页通票写明票名、多张报张数(后端 `title` 9-30 已上 prod)。V44 起还带 #718 设置页铅笔、#723 识别缺馆名不跳奥赛 +「暂无该语言讲解」、#727 找回密码 zh-hant | ✅ 9-30 已出包(桌面 `gomuseum-v46.aab`,sha256 `400f4cac…`,已验签名 UPLOAD.RSA / versionCode 46 / 连 api.gomuseum.app / 清单无 FOREGROUND_SERVICE / 新文案在包里)。⏳ 你传内测 + 真机验 + 正式版草稿换成 46(前台服务声明页选「舍弃」不填)。V45 作废不用传 | #718/#723/#727/#745/#747/#749/#752 |
 | 商店条目其余 7 种语言 | 触发条件:en/fr/zh 有效果数据后再做 | monetization-plan |
 
 ## 二、等你拍板
