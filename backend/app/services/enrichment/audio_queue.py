@@ -22,7 +22,8 @@
 popularity 在小馆会失真(橘园睡莲 pop=0,按热度排最后)。改用真实行为:
   1. 用户真正播放过的作品(付费用户的足迹 = 现场热点)
   2. 识别命中过的作品
-  3. 兜底才用 popularity
+  3. 馆方必看清单(`must_see.py`)
+  4. 兜底才用 popularity
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from sqlalchemy.orm import Session
 from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
+from app.services.must_see import ALL_MUST_SEE
 
 # 自动播的那一段:必须全覆盖
 HERO_SECTION = "guide"
@@ -128,7 +130,8 @@ def build_queue(
     if not objs:
         return []
 
-    hot = _played_qids(db) | _recognized_qids(db)
+    # 馆方必看清单也算热点:零真实用户时前两个信号是空的,头部只剩内容量排序
+    hot = _played_qids(db) | _recognized_qids(db) | ALL_MUST_SEE
 
     # 头部:热点优先,其次按已有内容量(有内容=被认真做过),最后按 qid 定序。
     # ⚠️ 第二档曾**漏写**,直接拿 qid 当第二关键字 —— 注释说的是"内容量",
