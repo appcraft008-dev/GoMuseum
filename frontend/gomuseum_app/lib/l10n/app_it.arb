@@ -32,6 +32,8 @@
   "homeFreeLeft": "{count} scansioni gratuite rimaste · Passa all'accesso completo",
   "homePassActive": "Pass attivo · accesso completo sbloccato",
   "homePassPending": "Pass acquistato · tocca per attivare",
+  "homePassActiveNamed": "{name} attivo",
+  "homePassPendingNamed": "{name} acquistato · tocca per attivare",
   "homeNearby": "Musei nelle vicinanze",
   "homeMuseums": "Musei",
   "homeEnableLocation": "Attiva la posizione per vedere i musei vicino a te",

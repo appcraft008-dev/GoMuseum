@@ -461,7 +461,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       torn: p.isActive ? 1 : 0,
       stub: stub,
       child: GmTicketFace(
-        title: passTitle(l10n, p.label, p.days),
+        title: passTitle(l10n, p.label, p.days, title: p.title),
         pitch: passPitch(context, _coversOf(pid: p.productId)),
         paidLabel: l10n.ticketPaid,
       ),
@@ -618,7 +618,8 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           ),
           child: GmTicketFace(
             title: passTitle(
-                l10n, _conflictOffer?.label ?? '', _conflictOffer?.days ?? 7),
+                l10n, _conflictOffer?.label ?? '', _conflictOffer?.days ?? 7,
+                title: _conflictOffer?.title),
             paidLabel: l10n.ticketPaid,
           ),
         ),
@@ -744,7 +745,12 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
 
   String _titleFor(
           AppLocalizations l10n, Entitlements ent, String pid, int days) =>
-      passTitle(l10n, _labelFor(ent, pid), days);
+      passTitle(l10n, _labelFor(ent, pid), days,
+          title: ent.passes
+                  .where((p) => p.productId == pid)
+                  .firstOrNull
+                  ?.title ??
+              ent.offers.where((o) => o.productId == pid).firstOrNull?.title);
 
   /// 一张历史票管几天:有起止就按起止算,算不出退回 7。
   int _daysOf(PassRecord r) {

@@ -45,7 +45,7 @@ GmTicketFace saleTicketFace(
 }) {
   final l10n = AppLocalizations.of(context)!;
   return GmTicketFace(
-    title: passTitle(l10n, offer.label, offer.days),
+    title: passTitle(l10n, offer.label, offer.days, title: offer.title),
     pitch: passPitch(context, offer.covers),
     price:
         showPrice ? ref.watch(passPriceProvider(offer.productId)).value : '—',
@@ -53,13 +53,18 @@ GmTicketFace saleTicketFace(
   );
 }
 
-/// 票名「<范围> <天数> 日通票」。范围名来自后端;认不出是哪张票时(老后端、
-/// 历史票)留空,标题退化成「7 日通票」—— 宁可不写地名,也不编一个(巴黎)出来。
-String passTitle(AppLocalizations l10n, String label, int days) => l10n
-    .paywallTitle(label, '$days')
-    .replaceAll(RegExp(r'\s+'), ' ')
-    .replaceAll(RegExp(r'^[\s–-]+|[\s–-]+$'), '')
-    .trim();
+/// 票名。优先用后端拼好的 [title](新票种改名不发版);老后端没给时按
+/// 「<范围> <天数> 日通票」自己拼。认不出是哪张票时(历史票)范围留空,
+/// 标题退化成「7 日通票」—— 宁可不写地名,也不编一个(巴黎)出来。
+String passTitle(AppLocalizations l10n, String label, int days,
+        {String? title}) =>
+    (title != null && title.isNotEmpty)
+        ? title
+        : l10n
+            .paywallTitle(label, '$days')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .replaceAll(RegExp(r'^[\s–-]+|[\s–-]+$'), '')
+            .trim();
 
 /// 卖点:「不限次识别,<这张票覆盖的馆>全部语音讲解」。馆名来自后端,
 /// 上新馆自动变长;拿不到馆名时用不点名的通用版,绝不回落到写死的四馆。
@@ -362,6 +367,7 @@ Future<bool> ensurePassActivated(
     builder: (_) => ActivatePassSheet(
       museum: museum,
       label: target?.label ?? offer?.label ?? '',
+      title: target?.title ?? offer?.title,
       days: target?.days ?? offer?.days ?? 7,
     ),
   );
@@ -380,6 +386,7 @@ class ActivatePassSheet extends ConsumerStatefulWidget {
     super.key,
     this.museum,
     required this.label,
+    this.title,
     required this.days,
   });
 
@@ -388,6 +395,7 @@ class ActivatePassSheet extends ConsumerStatefulWidget {
 
   /// 要激活的那张票的范围名与天数(来自后端,不写死)。
   final String label;
+  final String? title;
   final int days;
 
   @override
@@ -447,7 +455,8 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
               dim: _step == ActivateStep.activating,
               stub: _stub(gm, l10n),
               child: GmTicketFace(
-                title: passTitle(l10n, widget.label, widget.days),
+                title: passTitle(l10n, widget.label, widget.days,
+                    title: widget.title),
                 paidLabel: l10n.ticketPaid,
               ),
             ),

@@ -107,6 +107,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePassPending => '通票已购 · 点击激活';
 
   @override
+  String homePassActiveNamed(String name) {
+    return '$name生效中';
+  }
+
+  @override
+  String homePassPendingNamed(String name) {
+    return '$name已购 · 点击激活';
+  }
+
+  @override
   String get homeNearby => '附近博物馆';
 
   @override
@@ -1214,6 +1224,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homePassPending => '通票已購 · 點擊啟用';
+
+  @override
+  String homePassActiveNamed(String name) {
+    return '$name生效中';
+  }
+
+  @override
+  String homePassPendingNamed(String name) {
+    return '$name已購 · 點擊啟用';
+  }
 
   @override
   String get homeNearby => '附近博物館';

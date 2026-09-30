@@ -32,6 +32,8 @@
   "homeFreeLeft": "免費識別還剩 {count} 次 · 升級暢聽全館",
   "homePassActive": "通票生效中 · 暢聽全館",
   "homePassPending": "通票已購 · 點擊啟用",
+  "homePassActiveNamed": "{name}生效中",
+  "homePassPendingNamed": "{name}已購 · 點擊啟用",
   "homeNearby": "附近博物館",
   "homeMuseums": "博物館",
   "homeEnableLocation": "開啟定位，顯示你身邊的館",

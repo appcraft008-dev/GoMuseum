@@ -108,6 +108,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePassPending => 'Pass purchased · tap to activate';
 
   @override
+  String homePassActiveNamed(String name) {
+    return '$name active';
+  }
+
+  @override
+  String homePassPendingNamed(String name) {
+    return '$name purchased · tap to activate';
+  }
+
+  @override
   String get homeNearby => 'Nearby Museums';
 
   @override

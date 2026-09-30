@@ -32,6 +32,8 @@
   "homeFreeLeft": "無料スキャン残り{count}回 · アップグレードで全機能",
   "homePassActive": "パス利用中 · 全機能が使えます",
   "homePassPending": "パス購入済み · タップして開始",
+  "homePassActiveNamed": "{name}利用中",
+  "homePassPendingNamed": "{name}購入済み · タップして開始",
   "homeNearby": "近くの美術館",
   "homeMuseums": "美術館・博物館",
   "homeEnableLocation": "位置情報をオンにすると近くの館を表示します",

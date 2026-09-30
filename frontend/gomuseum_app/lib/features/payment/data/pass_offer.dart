@@ -14,6 +14,7 @@ class PassOffer {
     required this.productId,
     required this.days,
     required this.label,
+    this.title,
     this.covers = const [],
     this.stamp,
   });
@@ -24,6 +25,10 @@ class PassOffer {
 
   /// 范围名,已按请求语言本地化(「巴黎」「オランダ」)。
   final String label;
+
+  /// 完整票名(「巴黎 7 日通票」),后端按语言拼好。新票种改名不用发版;
+  /// 老后端没有 → null,退回前端按 [label]+[days] 拼(见 passTitle)。
+  final String? title;
 
   /// 这张票能用的馆(已按语言本地化的馆名)。卖点文案用它,不再写死四馆名。
   final List<String> covers;
@@ -44,6 +49,7 @@ class PassOffer {
       productId: id,
       days: json['days'] as int? ?? 7,
       label: json['label'] as String? ?? '',
+      title: json['title'] as String?,
       covers:
           (json['covers'] as List?)?.whereType<String>().toList() ?? const [],
       stamp: json['stamp'] as String?,
@@ -60,6 +66,7 @@ class OwnedPass {
   const OwnedPass({
     required this.productId,
     required this.label,
+    this.title,
     required this.days,
     required this.state,
     this.expiresAt,
@@ -68,6 +75,9 @@ class OwnedPass {
 
   final String productId;
   final String label;
+
+  /// 同 [PassOffer.title]。
+  final String? title;
   final int days;
   final String state;
   final DateTime? expiresAt;
@@ -88,6 +98,7 @@ class OwnedPass {
     return OwnedPass(
       productId: id,
       label: json['label'] as String? ?? '',
+      title: json['title'] as String?,
       days: json['days'] as int? ?? 7,
       state: json['state'] as String? ?? 'active',
       expiresAt: t('expires_at'),
