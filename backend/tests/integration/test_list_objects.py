@@ -186,3 +186,37 @@ def test_list_thumbnail_uses_thumb_tier_when_materialized(session):
         i["qid"]: i for i in list_objects(session, "orsay", language="zh")["items"]
     }
     assert items["Q1"]["thumbnail"].endswith("images/Q1/0_thumb.jpg")
+
+
+def test_list_objects_puts_must_see_first(session, monkeypatch):
+    """馆方必看清单排最前(按清单顺序),其余照旧 popularity 降序 —— 分页不重不漏。"""
+    from app.services import must_see
+
+    monkeypatch.setitem(must_see.MUST_SEE, "orsay", ["Q3", "Q4"])
+    first = list_objects(session, "orsay", limit=2)
+    rest = list_objects(session, "orsay", limit=2, offset=2)
+    assert [i["qid"] for i in first["items"]] == ["Q3", "Q4"]  # pop 10,30 但是必看
+    assert [i["qid"] for i in rest["items"]] == ["Q1", "Q2"]
+    # 没清单的馆:排序照旧
+    monkeypatch.delitem(must_see.MUST_SEE, "orsay")
+    assert [i["qid"] for i in list_objects(session, "orsay")["items"]] == [
+        "Q1",
+        "Q2",
+        "Q4",
+        "Q3",
+    ]
+
+
+def test_top_objects_shares_must_see_order(session, monkeypatch):
+    from app.services import must_see
+    from app.services.enrichment.pipeline import top_objects
+
+    monkeypatch.setitem(must_see.MUST_SEE, "orsay", ["Q3"])
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    assert [o.qid for o in top_objects(session, m.id, 2)] == ["Q3", "Q1"]
+
+
+def test_must_see_lists_have_no_duplicates():
+    from app.services.must_see import ALL_MUST_SEE, MUST_SEE
+
+    assert sum(len(v) for v in MUST_SEE.values()) == len(ALL_MUST_SEE)

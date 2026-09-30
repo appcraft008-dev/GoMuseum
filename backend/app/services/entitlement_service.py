@@ -154,6 +154,34 @@ def pass_label(product_id: str, language: str) -> str | None:
     return label.get(language) or label.get("en")
 
 
+# 票名「<范围> <天数> 日通票」的十语拼法。票名放后端:出单馆票/年票这类新票种时
+# 在 PASSES 里写 `title`(十语)覆盖公式即可,前端不用发版。
+_TITLE_FMT = {
+    "zh": "{label} {days} 日通票",
+    "zh-hant": "{label} {days} 日通票",
+    "en": "{label} {days}-Day Pass",
+    "fr": "Pass {label} {days} jours",
+    "de": "{label}-Pass für {days} Tage",
+    "es": "Pase de {label} de {days} días",
+    "it": "Pass {label} {days} giorni",
+    "ja": "{label} {days}日間パス",
+    "ko": "{label} {days}일 패스",
+    "pl": "Karnet na {days} dni – {label}",
+}
+
+
+def pass_title(product_id: str, language: str) -> str | None:
+    """完整票名。认不出的票 → None(前端退回通用文案,不编地名)。"""
+    p = PASSES.get(product_id)
+    if p is None:
+        return None
+    own = p.get("title") or {}
+    if own.get(language) or own.get("en"):
+        return own.get(language) or own.get("en")
+    fmt = _TITLE_FMT.get(language) or _TITLE_FMT["en"]
+    return fmt.format(label=pass_label(product_id, language), days=p["days"])
+
+
 def pass_offer(db, museum, language: str = "zh", *, preview: bool = False):
     """下发给前端的通票形状(馆包 / 402 共用)。没有在售商品 → None,
     前端显示「暂未开售」,**绝不回落到巴黎票**。
@@ -199,6 +227,7 @@ def _offer(pid: str, museums: list, language: str) -> dict:
         "product_id": pid,
         "days": PASSES[pid]["days"],
         "label": pass_label(pid, language),
+        "title": pass_title(pid, language),
         "covers": [
             museum_name(m, language) for m in museums if covers_museum(scope, m)
         ],
@@ -463,6 +492,7 @@ def _passes(db, user_id: str, language: str) -> list[dict]:
             {
                 "product_id": r.entitlement_type,
                 "label": pass_label(r.entitlement_type, language),
+                "title": pass_title(r.entitlement_type, language),
                 "days": pass_duration(r.entitlement_type).days,
                 "state": state,
                 "expires_at": _iso(r.expires_at),

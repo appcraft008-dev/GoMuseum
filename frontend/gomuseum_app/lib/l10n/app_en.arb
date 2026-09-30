@@ -42,6 +42,38 @@
   },
   "homePassActive": "Pass active · full access unlocked",
   "homePassPending": "Pass purchased · tap to activate",
+  "homePassActiveNamed": "{name} active",
+  "@homePassActiveNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homePassPendingNamed": "{name} purchased · tap to activate",
+  "@homePassPendingNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homePassActiveCount": "{count} passes active",
+  "@homePassActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homePassPendingCount": "{count} passes purchased · tap to activate",
+  "@homePassPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeNearby": "Nearby Museums",
   "homeMuseums": "Museums",
   "homeEnableLocation": "Turn on location to see museums near you",

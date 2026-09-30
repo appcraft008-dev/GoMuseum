@@ -107,6 +107,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homePassPending => '패스 구매 완료 · 탭하여 활성화';
 
   @override
+  String homePassActiveNamed(String name) {
+    return '$name 이용 중';
+  }
+
+  @override
+  String homePassPendingNamed(String name) {
+    return '$name 구매 완료 · 탭하여 활성화';
+  }
+
+  @override
+  String homePassActiveCount(int count) {
+    return '패스 $count개 이용 중';
+  }
+
+  @override
+  String homePassPendingCount(int count) {
+    return '패스 $count개 구매 완료 · 탭하여 활성화';
+  }
+
+  @override
   String get homeNearby => '근처 미술관';
 
   @override

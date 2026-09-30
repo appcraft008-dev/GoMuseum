@@ -18,6 +18,7 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
 from app.services.entitlement_service import pass_offer
+from app.services.must_see import must_see_order
 from app.services.storage import get_object_storage
 
 _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
@@ -975,9 +976,12 @@ def list_objects(
     if category and category != "all":
         q = q.filter(MuseumObject.category == category)
     total = q.count()
-    # 同分按 id:与生成用的 top_objects 同一规则(列表前 N 件 = 已生成的 TOP-N),
-    # 且分页 LIMIT/OFFSET 需要全序,否则同分件跨页重复/漏掉(小皇宫 97% 热度为 0)
-    q = q.order_by(MuseumObject.popularity.desc(), MuseumObject.id)
+    # 与生成用的 top_objects 同一规则(列表前 N 件 = 已生成的 TOP-N):必看在前,
+    # 其余 popularity、同分按 id —— 分页 LIMIT/OFFSET 需要全序,否则同分件跨页
+    # 重复/漏掉(小皇宫 97% 热度为 0)
+    q = q.order_by(
+        *must_see_order(slug), MuseumObject.popularity.desc(), MuseumObject.id
+    )
     objs = q.limit(limit).offset(offset).all()
 
     obj_ids = [o.id for o in objs]

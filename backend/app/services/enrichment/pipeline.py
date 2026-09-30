@@ -15,6 +15,7 @@ from app.services.content_repo import (
 from app.services.enrichment.category_config import guide_target_chars, sections_for
 from app.services.enrichment.content_enricher import build_material
 from app.services.enrichment.material import fetch_object_material
+from app.services.must_see import must_see_order
 
 logger = logging.getLogger(__name__)
 
@@ -534,15 +535,19 @@ def generate_object(
 
 
 def top_objects(db, museum_id, limit=None):
-    """馆内 TOP-N:popularity 降序、同分按 id —— 生成与质量报告共用这一个定义。
+    """馆内 TOP-N:馆方必看清单在前(见 must_see),其余 popularity 降序、同分按 id
+    —— 生成、上新馆、质量报告与 App 馆藏列表共用这一个排序。
 
     同分裁决不能省:小皇宫 97% 的件热度为 0,不带 id 时「前 20」取到哪几件
     由 DB 扫表顺序决定,生成的那批和报告看的那批可能不是同一批。
     """
+    slug = db.query(Museum.slug).filter_by(id=museum_id).scalar()
     q = (
         db.query(MuseumObject)
         .filter_by(museum_id=museum_id)
-        .order_by(MuseumObject.popularity.desc(), MuseumObject.id)
+        .order_by(
+            *must_see_order(slug), MuseumObject.popularity.desc(), MuseumObject.id
+        )
     )
     return q.limit(limit) if limit else q
 

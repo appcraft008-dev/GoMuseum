@@ -107,6 +107,26 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homePassPending => 'パス購入済み · タップして開始';
 
   @override
+  String homePassActiveNamed(String name) {
+    return '$name利用中';
+  }
+
+  @override
+  String homePassPendingNamed(String name) {
+    return '$name購入済み · タップして開始';
+  }
+
+  @override
+  String homePassActiveCount(int count) {
+    return '$count枚のパス利用中';
+  }
+
+  @override
+  String homePassPendingCount(int count) {
+    return '$count枚のパス購入済み · タップして開始';
+  }
+
+  @override
   String get homeNearby => '近くの美術館';
 
   @override
