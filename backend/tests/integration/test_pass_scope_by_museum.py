@@ -73,6 +73,18 @@ def test_pass_labels_cover_all_ten_languages():
     langs = {"zh", "zh-hant", "en", "fr", "de", "es", "it", "ja", "ko", "pl"}
     for pid, p in es.PASSES.items():
         assert set(p["label"]) == langs, pid
+        for lang in langs:
+            assert es.pass_title(pid, lang), (pid, lang)
+
+
+def test_pass_title_formula_and_override(monkeypatch):
+    assert es.pass_title("paris_pass_7d", "zh") == "巴黎 7 日通票"
+    assert es.pass_title("nl_pass_7d", "en") == "Netherlands 7-Day Pass"
+    assert es.pass_title("paris_pass_7d", "xx") == "Paris 7-Day Pass"
+    assert es.pass_title("legacy_day_pass", "zh") is None, "认不出的票不编名字"
+    # 新票种:配置里写 title 就不走公式
+    monkeypatch.setitem(es.PASSES["paris_pass_7d"], "title", {"zh": "卢浮宫单馆票"})
+    assert es.pass_title("paris_pass_7d", "zh") == "卢浮宫单馆票"
 
 
 # ---- 库级:resolve / activate / audio ---------------------------------------
@@ -185,6 +197,7 @@ def test_summary_is_per_museum_and_lists_every_ticket(db):
     assert passes["paris_pass_7d"]["label"] == "巴黎"
     assert passes["paris_pass_7d"]["state"] == es.ACTIVE
     assert passes["nl_pass_7d"]["label"] == "荷兰"
+    assert passes["nl_pass_7d"]["title"] == "荷兰 7 日通票"
     assert passes["nl_pass_7d"]["activate_by"] is not None
 
 
@@ -198,6 +211,7 @@ def test_pass_offer_lists_only_published_covered_museums(db, monkeypatch):
     offer = es.pass_offer(db, _m(db, "rijks"), "en")
     assert offer["product_id"] == "nl_pass_7d" and offer["days"] == 7
     assert offer["label"] == "Netherlands"
+    assert offer["title"] == "Netherlands 7-Day Pass"
     assert offer["covers"] == ["rijks"], "隐身馆不能从卖点文案里泄漏"
     assert es.pass_offer(db, _m(db, "rijks"), "en", preview=True)["covers"] == [
         "Mauritshuis",

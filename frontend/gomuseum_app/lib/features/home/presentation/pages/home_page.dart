@@ -13,6 +13,9 @@ import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart'
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
+import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart'
+    show passTitle;
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -240,14 +243,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   // 整行做成可点击入口，跳去权益页——这也是免费用户了解"升级"具体是什么的路径。
   Widget _quotaLine(BuildContext context, GmPalette gm, AppLocalizations l10n,
       Entitlements? ent) {
-    final String text;
-    if (ent != null && ent.known && ent.isActive) {
-      text = l10n.homePassActive;
-    } else if (ent != null && ent.known && ent.isPurchasedNotActivated) {
-      text = l10n.homePassPending;
-    } else {
-      text = l10n.homeFreeLeft(ent?.freeRecognitionsLeft?.toString() ?? '—');
-    }
+    final text = quotaLineText(l10n, ent, Localizations.localeOf(context));
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => context.push('/benefits'),
@@ -456,4 +452,30 @@ class _MuseumCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 首页通票提示。写明**是哪张票**(「巴黎 7 日通票生效中」)—— 同时持巴黎/荷兰票时,
+/// 只说「通票生效中」用户分不清;「畅听全馆」也会让人以为荷兰的馆也能听。
+/// 票名来自后端 `title`(新票种不发版);老后端没给 passes 时退回不点名的通用文案。
+String quotaLineText(AppLocalizations l10n, Entitlements? ent, Locale locale) {
+  if (ent == null || !ent.known) {
+    return l10n.homeFreeLeft(ent?.freeRecognitionsLeft?.toString() ?? '—');
+  }
+  String? names(bool Function(OwnedPass) pick) {
+    final t = ent.passes
+        .where(pick)
+        .map((p) => passTitle(l10n, p.label, p.days, title: p.title))
+        .toList();
+    return t.isEmpty ? null : joinMuseums(t, locale.languageCode);
+  }
+
+  if (ent.isActive) {
+    final n = names((p) => p.isActive);
+    return n == null ? l10n.homePassActive : l10n.homePassActiveNamed(n);
+  }
+  if (ent.isPurchasedNotActivated) {
+    final n = names((p) => p.isPurchasedNotActivated);
+    return n == null ? l10n.homePassPending : l10n.homePassPendingNamed(n);
+  }
+  return l10n.homeFreeLeft(ent.freeRecognitionsLeft?.toString() ?? '—');
 }
