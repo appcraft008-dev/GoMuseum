@@ -46,9 +46,18 @@ def _de_numbers_to_digits(text: str) -> str:
     )
 
 
+# 名字翻译 prompt 的 user 是 `Name:\n{name}`,模型会把标签也翻译了回贴(it「Nome:」
+# 663 条、fr「Nom :」38 条…,prod 2026-09-30)。只剥「名字」这个词的各语种写法,
+# 不剥任意「X:」—— 标题本身常带冒号(「Sketch: The Flowers」)。
+_NAME_LABEL = re.compile(
+    r"^\s*(?:name|nome|nom|nombre|nazwa|imię|名前|이름|名称|名稱|名字)\s*[:：]\s*",
+    re.IGNORECASE,
+)
+
+
 def strip_name(text: str) -> str:
-    """剥模型套上的书名号/引号(translate_name 与 batch 回填共用)。"""
-    return (text or "").strip().strip(_NAME_QUOTES)
+    """剥模型套上的书名号/引号与回贴的「Name:」标签(translate_name 与 batch 回填共用)。"""
+    return _NAME_LABEL.sub("", (text or "").strip()).strip().strip(_NAME_QUOTES)
 
 
 def _parse():
