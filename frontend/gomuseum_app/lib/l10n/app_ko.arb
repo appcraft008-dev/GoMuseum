@@ -191,7 +191,7 @@
   "camAllAlbums": "모든 앨범",
   "camGallery": "갤러리",
   "camSearch": "검색",
-  "guideUnavailable": "이 작품은 가이드를 만들 자료가 부족합니다",
+  "guideUnavailable": "이 작품은 아직 이 언어로 된 가이드가 없습니다",
   "guideNotGenerated": "아직 가이드가 생성되지 않았습니다",
   "audioNotReady": "해설 생성 후 들을 수 있습니다",
   "audioFailed": "오디오를 사용할 수 없습니다. 다시 시도하세요",

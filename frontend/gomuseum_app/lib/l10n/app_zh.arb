@@ -191,7 +191,7 @@
   "camAllAlbums": "全部相册",
   "camGallery": "图库",
   "camSearch": "搜索",
-  "guideUnavailable": "该藏品资料不足，暂无讲解",
+  "guideUnavailable": "这件作品暂时还没有这个语言的讲解",
   "guideNotGenerated": "讲解暂未生成",
   "audioNotReady": "讲解生成后可听",
   "audioFailed": "音频暂不可用，请重试",

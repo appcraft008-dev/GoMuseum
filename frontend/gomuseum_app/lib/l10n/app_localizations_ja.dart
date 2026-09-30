@@ -621,7 +621,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get camSearch => '検索';
 
   @override
-  String get guideUnavailable => 'この作品はガイド用の資料が不足しています';
+  String get guideUnavailable => 'この作品にはまだこの言語のガイドがありません';
 
   @override
   String get guideNotGenerated => 'ガイドはまだ生成されていません';

@@ -690,7 +690,9 @@ class _A5ErrorScaffold extends StatelessWidget {
   }
 }
 
-/// 资料不足（generating=false 且 status=empty）：诚实告知，不转圈、无重试。
+/// 该语言暂无讲解（generating=false 且 status=empty）：不转圈、无重试。
+/// empty 既可能是资料真不够，也可能只是这门语言还没翻(懒翻译日额度用尽/匿名不触发)
+/// —— 文案只说「这个语言还没有」,两种都成立;原先写「资料不足」对后者是假话。
 class _A5UnavailableScaffold extends StatelessWidget {
   const _A5UnavailableScaffold({required this.gm, required this.onBack});
   final dynamic gm;

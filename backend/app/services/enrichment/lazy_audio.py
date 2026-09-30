@@ -1,4 +1,5 @@
-"""guide 音频懒生成(点播放触发):有 audio_key 秒返,否则生成+落库+返 URL。仅 guide(Phase1)。"""
+"""音频懒生成(点播放触发):有 audio_key 秒返,否则生成+落库+返 URL。
+覆盖正文各段(guide 与深度模块)、问答、作者简介。"""
 
 import asyncio
 from datetime import datetime, timedelta, timezone

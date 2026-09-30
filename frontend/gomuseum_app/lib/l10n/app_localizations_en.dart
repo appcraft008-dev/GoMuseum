@@ -633,7 +633,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideUnavailable =>
-      'This artwork has too little material for a guide';
+      'No guide for this artwork in this language yet';
 
   @override
   String get guideNotGenerated => 'Guide not generated yet';
