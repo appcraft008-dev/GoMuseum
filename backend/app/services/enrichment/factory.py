@@ -15,6 +15,7 @@ def build_translator(channel: str = "translate"):
     onboard names、onboard translate)照旧用 temperature=0.3 判定,而单测全绿。
     构造分散 = 下次加参数还会漏,所以收敛成一个函数,不是补三个补丁。
     """
+    from app.services.enrichment import by_names
     from app.services.enrichment.content_enricher import default_complete
     from app.services.enrichment.translator import ContentTranslator
 
@@ -29,6 +30,7 @@ def build_translator(channel: str = "translate"):
         complete_judge=lambda s, u, model="gpt-4o-mini": default_complete(
             s, u, model, channel=channel, temperature=0
         ),
+        people=by_names.glossary,
     )
 
 

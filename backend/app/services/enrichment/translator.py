@@ -19,7 +19,9 @@ _NAME_QUOTES = "《》\"'“”‘’«»"
 # 原文用 <source_text> 包裹(prompts.build_translation_prompt),模型偶尔照样给译文
 # 套 <target_text> / <translated_text>(名字是它自己编的,故通配 *_text):
 # 2026-09-28 prod 有 2 段已发布法语、14 条已发布问答带着它。
-_CANONICAL_TAG = re.compile(r"</?(?:canonical_(?:title|artist|museum)|[a-z]+_text)>")
+_CANONICAL_TAG = re.compile(
+    r"</?(?:canonical_(?:title|artist|museum|person)|[a-z]+_text)>"
+)
 
 
 # 德语复合数字词「个位在前」,判定模型读错:sechsundsiebzig(76)读成 67、
@@ -80,7 +82,9 @@ def _lang_ok(text, lang):
 
 
 class ContentTranslator:
-    def __init__(self, complete, complete_strong=None, complete_judge=None):
+    def __init__(
+        self, complete, complete_strong=None, complete_judge=None, people=None
+    ):
         self._complete = complete  # complete(system, user) -> str (默认 gpt-4o-mini)
         # 闸失败时的强模型重译(gpt-4o);语言无关,靠闸信号触发(不硬编语言名单)
         self._complete_strong = complete_strong
@@ -88,6 +92,8 @@ class ContentTranslator:
         # complete 会把判定也带上随机性 —— 同一条译文重跑给不同结论,存量因此
         # 积压误判(2026-09-02 实测)。缺省回退 _complete,老调用方行为不变。
         self._complete_judge = complete_judge or complete
+        # (en_body, lang) -> {英文人名: 规范译名};生产注入 by_names.glossary,单测不联网
+        self._people = people
 
     def translate_section(
         self,
@@ -100,8 +106,15 @@ class ContentTranslator:
         museum=None,
         artist_en=None,
     ) -> str:
+        people = self._people(en_body, target_lang) if self._people else None
         system, user = build_translation_prompt(
-            en_body, target_lang, title, artist, museum, artist_en=artist_en
+            en_body,
+            target_lang,
+            title,
+            artist,
+            museum,
+            artist_en=artist_en,
+            people=people,
         )
         fn = (
             self._complete_strong

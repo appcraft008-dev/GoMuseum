@@ -170,6 +170,7 @@ def build_translation_prompt(
     artist: str | None = None,
     museum: str | None = None,
     artist_en: str | None = None,
+    people: dict | None = None,
 ):
     lang = LANG_NAMES.get(target_lang, target_lang)
     system = _TRANSLATION_SYSTEM.format(lang=lang)
@@ -221,6 +222,18 @@ def build_translation_prompt(
             f"<canonical_museum>{museum}</canonical_museum> — whenever the text "
             f"refers to the museum by name, use EXACTLY this name, do not translate "
             f"it literally or invent an alternative. Never copy the tags themselves."
+        )
+    if people:
+        # 带称号的人名(by_names.py):模型不认识规范译法,只会直译/音译/猜错人
+        # (「年轻的塞内卡」「查理·布尔德」);译名取自 Wikidata 官方标签。
+        pairs = "; ".join(
+            f"{en} = <canonical_person>{loc}</canonical_person>"
+            for en, loc in people.items()
+        )
+        system += (
+            f" IMPORTANT: these people in the text have established {lang} names: "
+            f"{pairs} — whenever the text refers to them, use EXACTLY these names. "
+            f"Never copy the tags themselves."
         )
     # ⚠️ 别写成 `English:\n{en_body}` —— 那是「语言名: 内容」的格式示范,
     # 模型会照猫画虎在译文前回贴目标语言名(实测 prod 存量 1088 段带
