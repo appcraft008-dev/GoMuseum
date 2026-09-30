@@ -48,7 +48,7 @@
 | 音频待办(塞尚日语简介待试听 P0 / 4 条人名重译 / 7 条问答重译 / 缺口 A / 待校验 B) | 另一个 session 处理,见 [`audio-followups.md`](audio-followups.md) | — |
 | 小皇宫音频为零 | 用 VoxCPM2 整体生成,另一个 session 负责 | 9-30 |
 | 980 段新露出内容没有音频(含 Q724954 的 20 条) | 同上 | 9-13 |
-| 小皇宫 guide 约 1/3 以「现藏于巴黎的小宫」收尾 | 你还没要求修 | petit-palais |
+| 小皇宫 guide 存量 29 件以「现藏于/捐给小皇宫」收尾 | ⏳ 你在 prod 跑(代码已合 staging、需先上 prod):`fix_guide_museum_ending.py --museum petit_palais --apply`,再 `onboard translate --target prod --langs fr,de,es,it,ja,ko,pl,zh,zh-hant`。作废音频 0 条。国立博物馆 2 件不修(Q167605 中文 guide 有音频) | 9-30 |
 | zh 704 段 / zh-hant 1804 段标题用「」(应为《》);241 段标题带维基消歧后缀 | 你定过以后再做;改法用纯 SQL 替换，不重翻 | 9-14 |
 | 43 个空标题(""),2280 条 needs_review | 需要判断，其中有真实的内容缺口 | product-backlog |
 | 冷门件有 1-2 段译文没过闸(ko/de/ja 比其他语言少 1-2 段) | 按「宁缺毋滥」不补 | 9-26 |
@@ -78,6 +78,7 @@
 
 - 2026-09-30 核实已完成(清单里误列):《塔利安夫人的舞会》9-28 已恢复成 10 语各 3 段 + 30 条问答;小皇宫 TOP50 问答 9-28 已按新出题法重跑(79→121 条);中文展签法语材质已进材质表;Joconde 探活已上 prod cron(文本+目录);国立博物馆数据走 Wikidata,官方旧 key API 已停服、新 Linked Art 接口无需 key;两张票在荷兰只激活 nl 已在 V41 真机验过
 - 2026-09-30 核实隐私政策已含删号步骤(第 4 节「设置 → 删除账号」+ 删除后果 + 邮件渠道),线上 gomuseum.app/privacy 与仓库一致
+- 2026-09-30 guide 结尾「现藏于本馆」根因修复:生成后整句删除(重写/改写两种 A/B 均无效,见 `drop_museum_ending`),只作用于新生成
 - 2026-09-30 启动钩子 `@app.on_event` 迁到 lifespan(弃用警告消除)
 - 2026-09-30 搜索结果城市名补齐十语(复用 `museum_cities`,也能用本语言城市名搜到馆)
 - 2026-09-30 找回密码/邮箱验证补繁体:后端邮件+落地页加 zh-hant(也认浏览器的 zh-TW/HK/MO);前端改走 `apiLanguage`(原先只发 `languageCode`,繁体发成 zh)。后端随 staging→main,前端随 V44。其余 6 种语言仍回落英文，开新商店语言时再补
