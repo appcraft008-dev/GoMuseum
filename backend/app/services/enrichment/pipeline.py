@@ -371,6 +371,16 @@ def generate_object(
         else None
     )
 
+    # 结尾交代「现藏于本馆」→ 删掉那一句(为什么不重写/不改写:见 drop_museum_ending)。
+    if guide_text:
+        from app.services.enrichment.quality import drop_museum_ending
+        from app.services.museum_repo import museum_name
+
+        _m = db.get(Museum, o.museum_id)
+        guide_text = drop_museum_ending(
+            guide_text, museum_name(_m, "en") if _m else None
+        )
+
     en_published: dict = {}
     # 流式先出:guide 先 gate+落库(先于深度模块),前端轮询中途即可显示主讲解。
     if guide_text:

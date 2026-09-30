@@ -128,6 +128,31 @@ def _pronoun_lacks_antecedent(body: str) -> bool:
     return True
 
 
+# 馆名里的通用词:剩下的就是正文里真会出现的叫法(Orsay / Louvre / Petit Palais)。
+_MUSEUM_GENERIC = re.compile(r"\b(?:mus[ée]e|museum|de|du|the)\b|\b[dl]['’]", re.I)
+
+
+def drop_museum_ending(text: str | None, museum_name: str | None) -> str | None:
+    """guide 最后一句在讲本馆(「现藏于小皇宫」「1908 年捐给小皇宫」)→ 删掉这一句。
+
+    观众就站在这个馆里,这句零信息;prompt 第(5)拍早已禁止以编目信息(收藏地、如何入藏)
+    收尾,v8 仍有小皇宫 29/82 段这样收(2026-09-30 prod 实测,命中 32 条逐条读过全是此类)。
+    根因:guide 按时间讲背景、以最后一个背景点收住,而维基材料里时间线的最后一件事
+    就是「进了这个馆」。试过而不用的(A/B,31 件):
+      - 重写一次:命中 23 → 20,这些件本身就把模型往这里拉,不是抽样运气;
+      - 让模型改写这一句:编出原句没有的事实(「由不知名画家创作」)、留残句、删不干净;
+      - v9 在禁令里点名「where it is housed」:更差(禁令里的名词就是种子)。
+    整句删除不引入任何新文字;48 份命中稿的倒数第二句都是完整陈述、无一再提本馆。
+    代价:少数混合句连带丢掉别的信息(如模特是谁),接受。删完不足 3 句则不删。
+    """
+    kw = " ".join(_MUSEUM_GENERIC.sub(" ", museum_name or "").split()).lower()
+    body = (text or "").strip()
+    sents = [x for x in re.split(r"(?<=[.!?])\s+", body) if x.strip()]
+    if not kw or len(sents) < 4 or kw not in sents[-1].lower():
+        return text
+    return body[: body.rindex(sents[-1])].rstrip()
+
+
 def _opening_is_orphaned(body: str | None) -> bool:
     """正文是不是悬空的(开头语法残缺,或指人代词找不到先行词)。"""
     if not body:
