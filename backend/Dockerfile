@@ -1,5 +1,5 @@
 # ========= 基础镜像 =========
-FROM python:3.11-slim AS base
+FROM python:3.13-slim AS base
 
 # 设置环境变量
 ENV PYTHONDONTWRITEBYTECODE=1 \
