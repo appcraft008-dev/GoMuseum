@@ -111,15 +111,13 @@ class TestMainApplication:
     @patch("app.main.init_db")
     def test_startup_event_success(self, mock_init_db):
         """Test successful startup event"""
-        from app.main import startup_event
+        from app.main import _startup
 
         # Mock successful database initialization
         mock_init_db.return_value = None
 
-        # Test the startup event
-        import asyncio
-
-        asyncio.run(startup_event())
+        # Test the startup hook (lifespan 调它)
+        _startup()
 
         # Verify init_db was called
         mock_init_db.assert_called_once()
@@ -128,15 +126,13 @@ class TestMainApplication:
     @patch("app.main.logger")
     def test_startup_event_database_failure(self, mock_logger, mock_init_db):
         """Test startup event with database initialization failure"""
-        from app.main import startup_event
+        from app.main import _startup
 
         # Mock database initialization failure
         mock_init_db.side_effect = Exception("Database connection failed")
 
-        # Test the startup event
-        import asyncio
-
-        asyncio.run(startup_event())
+        # Test the startup hook (lifespan 调它)
+        _startup()
 
         # Verify error was logged
         mock_logger.error.assert_called_once()
