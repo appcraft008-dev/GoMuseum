@@ -37,6 +37,31 @@ void main() {
     });
   });
 
+  group('没有馆的识别结果不可用(不再写死回落奥赛)', () {
+    test('match 缺 museum → isValid=false', () {
+      final ok = RecognizedItem.fromJson(
+          const {'qid': 'Q1', 'museum': 'rijksmuseum', 'confidence': 0.9});
+      final noMuseum =
+          RecognizedItem.fromJson(const {'qid': 'Q1', 'confidence': 0.9});
+      final emptyMuseum = RecognizedItem.fromJson(
+          const {'qid': 'Q1', 'museum': '', 'confidence': 0.9});
+      expect(ok.isValid, isTrue);
+      expect(noMuseum.isValid, isFalse);
+      expect(emptyMuseum.isValid, isFalse);
+    });
+
+    test('候选里缺 museum 的被剔掉', () {
+      final r = RecognizeResponse.fromJson(const {
+        'outcome': 'candidates',
+        'candidates': [
+          {'qid': 'Q1', 'museum': 'louvre', 'score': 0.5},
+          {'qid': 'Q2', 'score': 0.4},
+        ],
+      });
+      expect(r.candidates.map((c) => c.qid), ['Q1']);
+    });
+  });
+
   group('RecognizeResponse.fromJson phash field', () {
     test('parses phash when present', () {
       final r = RecognizeResponse.fromJson(const {
