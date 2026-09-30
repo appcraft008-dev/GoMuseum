@@ -317,6 +317,18 @@ abstract class AppLocalizations {
   /// **'{name} purchased · tap to activate'**
   String homePassPendingNamed(String name);
 
+  /// No description provided for @homePassActiveCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} passes active'**
+  String homePassActiveCount(int count);
+
+  /// No description provided for @homePassPendingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} passes purchased · tap to activate'**
+  String homePassPendingCount(int count);
+
   /// No description provided for @homeNearby.
   ///
   /// In en, this message translates to:

@@ -34,6 +34,8 @@
   "homePassPending": "Pass acquistato · tocca per attivare",
   "homePassActiveNamed": "{name} attivo",
   "homePassPendingNamed": "{name} acquistato · tocca per attivare",
+  "homePassActiveCount": "{count} pass attivi",
+  "homePassPendingCount": "{count} pass acquistati · tocca per attivare",
   "homeNearby": "Musei nelle vicinanze",
   "homeMuseums": "Musei",
   "homeEnableLocation": "Attiva la posizione per vedere i musei vicino a te",

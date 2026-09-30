@@ -34,6 +34,8 @@
   "homePassPending": "Pass acheté · appuyez pour activer",
   "homePassActiveNamed": "{name} actif",
   "homePassPendingNamed": "{name} acheté · appuyez pour activer",
+  "homePassActiveCount": "{count} pass actifs",
+  "homePassPendingCount": "{count} pass achetés · appuyez pour activer",
   "homeNearby": "Musées à proximité",
   "homeMuseums": "Musées",
   "homeEnableLocation": "Activez la localisation pour voir les musées près de vous",

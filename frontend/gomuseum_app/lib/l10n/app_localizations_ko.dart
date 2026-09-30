@@ -117,6 +117,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String homePassActiveCount(int count) {
+    return '패스 $count개 이용 중';
+  }
+
+  @override
+  String homePassPendingCount(int count) {
+    return '패스 $count개 구매 완료 · 탭하여 활성화';
+  }
+
+  @override
   String get homeNearby => '근처 미술관';
 
   @override

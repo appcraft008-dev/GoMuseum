@@ -34,6 +34,8 @@
   "homePassPending": "通票已購 · 點擊啟用",
   "homePassActiveNamed": "{name}生效中",
   "homePassPendingNamed": "{name}已購 · 點擊啟用",
+  "homePassActiveCount": "{count} 張通票生效中",
+  "homePassPendingCount": "{count} 張通票已購 · 點擊啟用",
   "homeNearby": "附近博物館",
   "homeMuseums": "博物館",
   "homeEnableLocation": "開啟定位，顯示你身邊的館",

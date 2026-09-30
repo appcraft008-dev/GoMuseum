@@ -34,6 +34,8 @@
   "homePassPending": "Karnet kupiony · dotknij, aby aktywować",
   "homePassActiveNamed": "{name} aktywny",
   "homePassPendingNamed": "{name} kupiony · dotknij, aby aktywować",
+  "homePassActiveCount": "Aktywne karnety: {count}",
+  "homePassPendingCount": "Kupione karnety: {count} · dotknij, aby aktywować",
   "homeNearby": "Muzea w pobliżu",
   "homeMuseums": "Muzea",
   "homeEnableLocation": "Włącz lokalizację, aby zobaczyć muzea w pobliżu",

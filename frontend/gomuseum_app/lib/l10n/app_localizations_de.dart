@@ -118,6 +118,16 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String homePassActiveCount(int count) {
+    return '$count Pässe aktiv';
+  }
+
+  @override
+  String homePassPendingCount(int count) {
+    return '$count Pässe gekauft · zum Aktivieren tippen';
+  }
+
+  @override
   String get homeNearby => 'Museen in der Nähe';
 
   @override

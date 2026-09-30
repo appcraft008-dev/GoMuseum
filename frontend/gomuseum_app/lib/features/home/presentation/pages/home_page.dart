@@ -13,7 +13,8 @@ import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart'
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
-import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
+import 'package:gomuseum_app/features/payment/data/pass_offer.dart'
+    show OwnedPass;
 import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart'
     show passTitle;
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -243,7 +244,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   // 整行做成可点击入口，跳去权益页——这也是免费用户了解"升级"具体是什么的路径。
   Widget _quotaLine(BuildContext context, GmPalette gm, AppLocalizations l10n,
       Entitlements? ent) {
-    final text = quotaLineText(l10n, ent, Localizations.localeOf(context));
+    final text = quotaLineText(l10n, ent);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => context.push('/benefits'),
@@ -454,28 +455,31 @@ class _MuseumCard extends StatelessWidget {
   }
 }
 
-/// 首页通票提示。写明**是哪张票**(「巴黎 7 日通票生效中」)—— 同时持巴黎/荷兰票时,
-/// 只说「通票生效中」用户分不清;「畅听全馆」也会让人以为荷兰的馆也能听。
+/// 首页通票提示。只有一张时写明**是哪张票**(「巴黎 7 日通票生效中」)——
+/// 同时持巴黎/荷兰票时只说「通票生效中」用户分不清;多张只报张数(「2 张通票生效中」),
+/// 列全票名在德语/波兰语里会被 FittedBox 缩到看不清。有票生效时只报在用的,
+/// 未激活的去权益页看(用户 2026-09-30 定)。
 /// 票名来自后端 `title`(新票种不发版);老后端没给 passes 时退回不点名的通用文案。
-String quotaLineText(AppLocalizations l10n, Entitlements? ent, Locale locale) {
+String quotaLineText(AppLocalizations l10n, Entitlements? ent) {
   if (ent == null || !ent.known) {
     return l10n.homeFreeLeft(ent?.freeRecognitionsLeft?.toString() ?? '—');
   }
-  String? names(bool Function(OwnedPass) pick) {
-    final t = ent.passes
-        .where(pick)
-        .map((p) => passTitle(l10n, p.label, p.days, title: p.title))
-        .toList();
-    return t.isEmpty ? null : joinMuseums(t, locale.languageCode);
+  String line(bool Function(OwnedPass) pick, String generic,
+      String Function(String) named, String Function(int) counted) {
+    final ps = ent.passes.where(pick).toList();
+    if (ps.isEmpty) return generic;
+    if (ps.length > 1) return counted(ps.length);
+    final p = ps.single;
+    return named(passTitle(l10n, p.label, p.days, title: p.title));
   }
 
   if (ent.isActive) {
-    final n = names((p) => p.isActive);
-    return n == null ? l10n.homePassActive : l10n.homePassActiveNamed(n);
+    return line((p) => p.isActive, l10n.homePassActive,
+        l10n.homePassActiveNamed, l10n.homePassActiveCount);
   }
   if (ent.isPurchasedNotActivated) {
-    final n = names((p) => p.isPurchasedNotActivated);
-    return n == null ? l10n.homePassPending : l10n.homePassPendingNamed(n);
+    return line((p) => p.isPurchasedNotActivated, l10n.homePassPending,
+        l10n.homePassPendingNamed, l10n.homePassPendingCount);
   }
   return l10n.homeFreeLeft(ent.freeRecognitionsLeft?.toString() ?? '—');
 }
