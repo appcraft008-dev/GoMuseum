@@ -45,9 +45,6 @@
 | 音频待办(塞尚日语简介待试听 P0 / 4 条人名重译 / 7 条问答重译 / 缺口 A / 待校验 B) | 另一个 session 处理,见 [`audio-followups.md`](audio-followups.md) | — |
 | 小皇宫音频为零 | 用 VoxCPM2 整体生成,另一个 session 负责 | 9-30 |
 | 980 段新露出内容没有音频(含 Q724954 的 20 条) | 同上 | 9-13 |
-| 小皇宫 guide 存量 29 件以「现藏于/捐给小皇宫」收尾 | ⏳ 你在 prod 跑:`fix_guide_museum_ending.py --museum petit_palais --apply`,再用 `/tmp/retranslate_guides.py petit_palais` **只重翻这 29 件被降级的 guide 译文**。⛔ 别跑全馆 `onboard translate`:会把另外 14 件按「宁缺毋滥」不补的 309 段也重翻。作废音频 0 条 | 9-30 |
-| zh/zh-hant 本作品标题「」→《》 | ⏳ 你在 prod 跑(脚本已合 staging,不依赖新代码):`fix_zh_title_quotes.py --apply --backup /tmp/zh_quotes_backup.json`。dry-run:zh 正文 672 / 问答 174,zh-hant 正文 1697 / 问答 441,**作废音频 0**(引号不发音,audio_key 保留) | 9-30 |
-| 标题「Name:」标签(it「Nome:」663 条等约 750 条 + 4 位作者名)与维基消歧后缀(约 27 条) | ⏳ 根因已上 prod;存量你跑 `fix_title_i18n.py --apply --backup /tmp/title_fix_backup.json`(先 dry-run 看数)。有音频的正文不改 | 9-30 |
 | 标题里混进馆藏编号「Paysage (226616)」「勝利 (ADUT280)」 | 新发现，没修：判据要和「(1875.)」「(1741-1790年)」这类正式标题里的年份分开，需单独做 | 9-30 |
 | 43 个空标题(""),2280 条 needs_review | 需要判断，其中有真实的内容缺口 | product-backlog |
 | 冷门件有 1-2 段译文没过闸(ko/de/ja 比其他语言少 1-2 段) | 按「宁缺毋滥」不补 | 9-26 |
@@ -77,6 +74,10 @@
 
 - 2026-09-30 核实已完成(清单里误列):《塔利安夫人的舞会》9-28 已恢复成 10 语各 3 段 + 30 条问答;小皇宫 TOP50 问答 9-28 已按新出题法重跑(79→121 条);中文展签法语材质已进材质表;Joconde 探活已上 prod cron(文本+目录);国立博物馆数据走 Wikidata,官方旧 key API 已停服、新 Linked Art 接口无需 key;两张票在荷兰只激活 nl 已在 V41 真机验过
 - 2026-09-30 核实隐私政策已含删号步骤(第 4 节「设置 → 删除账号」+ 删除后果 + 邮件渠道),线上 gomuseum.app/privacy 与仓库一致
+- 2026-09-30 prod 存量修复已执行(用户授权由我跑,每步 dry-run→apply→复扫残留 0,音频计数前后一致 6301/2317/480;原文备份在 `/opt/gomuseum/backups/manual/`):
+  - 中文标题「」→《》:2984 行(正文 2369 + 问答 615)
+  - 标题「Name:」标签 + 维基消歧后缀:751 件 791 条标题(消歧 43 条逐条审过)+ 4 位作者名 + 正文/问答 30 行
+  - 小皇宫 guide 结尾:英文 29 段删句 + 定向重翻 261 条(260 过闸;Q104445794 ja 未过，待懒翻译重试)。复扫 10 语结尾提本馆 28-30 → 0,残留 zh 1 段(Q104443881,英文用的是正式全称「Musée des Beaux-Arts de la Ville de Paris」,判据只认 Petit Palais;无音频，未处理)
 - 2026-09-30 #735 上 prod:FastAPI 0.142.1 / Starlette 1.7.0 / Python 3.13.15、lifespan、找回密码繁体、城市名十语、guide 结尾与「Name:」标签根因;prod 冒烟通过
 - 2026-09-30 guide 结尾「现藏于本馆」根因修复:生成后整句删除(重写/改写两种 A/B 均无效,见 `drop_museum_ending`),只作用于新生成
 - 2026-09-30 启动钩子 `@app.on_event` 迁到 lifespan(弃用警告消除)
