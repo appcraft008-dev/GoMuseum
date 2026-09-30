@@ -1,5 +1,6 @@
 # backend/app/main.py
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,7 +41,34 @@ from app.services.audio_guard import set_record_only  # noqa: E402
 
 set_record_only()
 
+
+def _startup() -> None:
+    """Initialize database on startup"""
+    logger.info("Starting up GoMuseum API...")
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {str(e)}")
+    try:
+        # 搜索索引预热(后台线程,不阻塞启动):构建随藏品量涨,prod 实测 24k 条目
+        # 7.2s——不预热则进程内第一个搜索用户要等这 7 秒。
+        from app.services.search.inprocess import warm_search_index
+
+        warm_search_index()
+        logger.info("Search index warm-up started")
+    except Exception:
+        logger.exception("Search index warm-up failed (will build on first query)")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _startup()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="GoMuseum API",
     description="Backend API service for GoMuseum project - Artwork Recognition",
     version="0.1.0",
@@ -96,26 +124,6 @@ app.include_router(api_router, prefix="/api/v1")
 from app.api.web.share_pages import router as share_web_router  # noqa: E402
 
 app.include_router(share_web_router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup"""
-    logger.info("Starting up GoMuseum API...")
-    try:
-        init_db()
-        logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {str(e)}")
-    try:
-        # 搜索索引预热(后台线程,不阻塞启动):构建随藏品量涨,prod 实测 24k 条目
-        # 7.2s——不预热则进程内第一个搜索用户要等这 7 秒。
-        from app.services.search.inprocess import warm_search_index
-
-        warm_search_index()
-        logger.info("Search index warm-up started")
-    except Exception:
-        logger.exception("Search index warm-up failed (will build on first query)")
 
 
 @app.get("/")
