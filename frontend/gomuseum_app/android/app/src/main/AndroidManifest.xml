@@ -18,6 +18,10 @@
     <!-- 不使用广告 ID（与 Play Console 广告 ID 声明保持一致），移除 Firebase 库引入的权限 -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
 
+    <!-- geolocator_android 为「后台持续定位」前台服务声明;我们只在首页附近博物馆
+         取一次 getCurrentPosition,不起前台服务。留着 Play 推正式版要填前台服务声明。 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" tools:node="remove"/>
+
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
