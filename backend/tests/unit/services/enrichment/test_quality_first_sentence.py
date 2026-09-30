@@ -170,3 +170,34 @@ def test_single_sentence_body_whose_only_sentence_is_dropped():
     r = _gate([False]).check_section("material", "facts", "Manet invented photography.")
     assert r.body is None
     assert r.status == "needs_review"
+
+
+_BODY = "One. Two. Three. "
+
+
+@pytest.mark.parametrize(
+    "name,last,dropped",
+    [
+        ("Petit Palais", "It is now housed in the Petit Palais in Paris.", True),
+        ("Louvre Museum", "What would she say, here in the heart of the Louvre?", True),
+        ("Musée d'Orsay", "It was gifted to the Musée d’Orsay in 1986.", True),
+        ("Musée de l'Orangerie", "It hangs in the Orangerie today.", True),
+        ("Rijksmuseum", "Now housed in the Rijksmuseum in Amsterdam.", True),
+        ("Musée d'Orsay", "The river Seine glitters.", False),
+        ("", "It is housed in a museum.", False),  # 馆名缺失不误判
+    ],
+)
+def test_drop_museum_ending(name, last, dropped):
+    from app.services.enrichment.quality import drop_museum_ending
+
+    out = drop_museum_ending(_BODY + last, name)
+    assert out == (_BODY.strip() if dropped else _BODY + last)
+
+
+def test_drop_museum_ending_keeps_short_guides_and_mid_mentions():
+    from app.services.enrichment.quality import drop_museum_ending
+
+    short = "One. Two. It is housed in the Petit Palais."
+    assert drop_museum_ending(short, "Petit Palais") == short  # 删完不足 3 句
+    mid = "The Petit Palais bought it. Two. Three. Four."
+    assert drop_museum_ending(mid, "Petit Palais") == mid

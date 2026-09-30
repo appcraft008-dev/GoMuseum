@@ -641,7 +641,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get guideUnavailable =>
-      'To dzieło ma zbyt mało materiału na przewodnik';
+      'To dzieło nie ma jeszcze przewodnika w tym języku';
 
   @override
   String get guideNotGenerated => 'Przewodnik jeszcze nie wygenerowany';

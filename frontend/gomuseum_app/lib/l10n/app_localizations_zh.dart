@@ -618,7 +618,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get camSearch => '搜索';
 
   @override
-  String get guideUnavailable => '该藏品资料不足，暂无讲解';
+  String get guideUnavailable => '这件作品暂时还没有这个语言的讲解';
 
   @override
   String get guideNotGenerated => '讲解暂未生成';
@@ -1727,7 +1727,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get camSearch => '搜尋';
 
   @override
-  String get guideUnavailable => '該藏品資料不足，暫無講解';
+  String get guideUnavailable => '這件作品暫時還沒有這個語言的講解';
 
   @override
   String get guideNotGenerated => '講解暫未生成';

@@ -330,7 +330,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       unawaited(benefits.refresh());
     }
     if (st is RecognitionMatched && mounted) {
-      _goGuide(st.match.museum ?? 'orsay', st.match.qid);
+      _goGuide(st.match.museum!, st.match.qid); // isValid 已保证有馆
     }
   }
 
@@ -846,7 +846,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 埋点接口 P2 提供,现只保证跳转畅通。
     // 跳转用该候选归属馆;老后端无 museum 字段 → 回退 orsay(契约容错)。
     return GestureDetector(
-      onTap: () => _goGuide(c.museum ?? 'orsay', c.qid),
+      onTap: () => _goGuide(c.museum!, c.qid), // 候选已按 isValid 过滤
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(9),

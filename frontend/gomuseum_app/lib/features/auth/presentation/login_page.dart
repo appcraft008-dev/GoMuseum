@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -363,7 +364,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     try {
       await ref.read(authRepositoryProvider).requestPasswordReset(
             email,
-            language: Localizations.localeOf(context).languageCode,
+            // 走 apiLanguage:只取 languageCode 会把繁体发成 zh,繁体用户拿到简体信。
+            language: apiLanguage(Localizations.localeOf(context)),
           );
       return true;
     } catch (_) {

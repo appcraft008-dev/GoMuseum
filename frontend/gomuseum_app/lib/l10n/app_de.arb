@@ -191,7 +191,7 @@
   "camAllAlbums": "Alle Alben",
   "camGallery": "Galerie",
   "camSearch": "Suche",
-  "guideUnavailable": "Zu wenig Material für einen Guide zu diesem Werk",
+  "guideUnavailable": "Für dieses Werk gibt es noch keinen Guide in dieser Sprache",
   "guideNotGenerated": "Guide noch nicht erstellt",
   "audioNotReady": "Audio verfügbar, sobald der Guide bereit ist",
   "audioFailed": "Audio nicht verfügbar, bitte erneut versuchen",

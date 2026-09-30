@@ -621,7 +621,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get camSearch => '검색';
 
   @override
-  String get guideUnavailable => '이 작품은 가이드를 만들 자료가 부족합니다';
+  String get guideUnavailable => '이 작품은 아직 이 언어로 된 가이드가 없습니다';
 
   @override
   String get guideNotGenerated => '아직 가이드가 생성되지 않았습니다';

@@ -191,7 +191,7 @@
   "camAllAlbums": "全部相簿",
   "camGallery": "相簿",
   "camSearch": "搜尋",
-  "guideUnavailable": "該藏品資料不足，暫無講解",
+  "guideUnavailable": "這件作品暫時還沒有這個語言的講解",
   "guideNotGenerated": "講解暫未生成",
   "audioNotReady": "講解生成後可聽",
   "audioFailed": "音訊暫不可用，請重試",

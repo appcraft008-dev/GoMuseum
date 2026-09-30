@@ -38,7 +38,8 @@ class RecognizedItem extends Equatable {
   /// match 用 confidence、candidates 用 score，统一到此。
   final double score;
 
-  /// 归属馆 slug（全局识别端点返回）；老后端无此字段 → null，跳转侧回退。
+  /// 归属馆 slug（全局识别端点返回；后端 museum_id 非空）。缺了就判无效（见 isValid）
+  /// —— 原先回落写死的 'orsay'，跨城后等于把人带进错的馆。
   final String? museum;
 
   factory RecognizedItem.fromJson(Map<String, dynamic> j) {
@@ -53,7 +54,7 @@ class RecognizedItem extends Equatable {
     );
   }
 
-  bool get isValid => qid.isNotEmpty;
+  bool get isValid => qid.isNotEmpty && (museum?.isNotEmpty ?? false);
 
   @override
   List<Object?> get props => [qid, title, artist, thumbnail, score, museum];
