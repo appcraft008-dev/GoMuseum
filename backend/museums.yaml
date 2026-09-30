@@ -97,6 +97,9 @@ museums:
     country_lang: fr
     sources: [joconde, wikipedia]   # 每馆补充源；Wikidata 是脊柱不在此列
     joconde_museum: "musée d'Orsay"   # JocondeCatalog 补纸上作品(Wikidata 覆盖偏科)
+    # Localisation 实际写法,2026-09-30 拿 80 件已有权威 P347 的件查上游实测:
+    # 74 件 "Paris ; musée d'Orsay"、1 件带尾随空格,其余 5 件寄存外地馆(按判据不收)。
+    joconde_locations: ["Paris ; musée d'Orsay", "Paris ; musée d'Orsay "]
     fetch_limit: 12000              # 全条目5353+多P31重复行(P18已OPTIONAL,无图件也收)
     sample_size: 30
     sample_qids: []
