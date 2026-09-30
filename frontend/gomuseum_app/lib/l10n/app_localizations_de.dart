@@ -643,7 +643,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get guideUnavailable =>
-      'Zu wenig Material für einen Guide zu diesem Werk';
+      'Für dieses Werk gibt es noch keinen Guide in dieser Sprache';
 
   @override
   String get guideNotGenerated => 'Guide noch nicht erstellt';

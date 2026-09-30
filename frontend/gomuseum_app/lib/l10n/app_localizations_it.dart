@@ -638,7 +638,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get guideUnavailable =>
-      'Materiale insufficiente per una guida su quest\'opera';
+      'Quest\'opera non ha ancora una guida in questa lingua';
 
   @override
   String get guideNotGenerated => 'Guida non ancora generata';

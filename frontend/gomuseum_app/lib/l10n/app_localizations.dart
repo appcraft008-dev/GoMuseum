@@ -1262,7 +1262,7 @@ abstract class AppLocalizations {
   /// No description provided for @guideUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'This artwork has too little material for a guide'**
+  /// **'No guide for this artwork in this language yet'**
   String get guideUnavailable;
 
   /// No description provided for @guideNotGenerated.

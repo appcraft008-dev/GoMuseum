@@ -191,7 +191,7 @@
   "camAllAlbums": "Wszystkie albumy",
   "camGallery": "Galeria",
   "camSearch": "Szukaj",
-  "guideUnavailable": "To dzieło ma zbyt mało materiału na przewodnik",
+  "guideUnavailable": "To dzieło nie ma jeszcze przewodnika w tym języku",
   "guideNotGenerated": "Przewodnik jeszcze nie wygenerowany",
   "audioNotReady": "Audio dostępne po przygotowaniu przewodnika",
   "audioFailed": "Audio niedostępne, spróbuj ponownie",

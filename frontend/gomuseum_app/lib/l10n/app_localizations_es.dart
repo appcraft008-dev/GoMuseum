@@ -641,7 +641,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get camSearch => 'Buscar';
 
   @override
-  String get guideUnavailable => 'Esta obra tiene poco material para una guía';
+  String get guideUnavailable => 'Esta obra aún no tiene guía en este idioma';
 
   @override
   String get guideNotGenerated => 'Guía aún no generada';
