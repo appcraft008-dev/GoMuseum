@@ -33,7 +33,8 @@
 
 | 事项 | 说明 | 出处 |
 |---|---|---|
-| **FastAPI 升级 0.118 → 最新** | 单独开 PR:先查已知漏洞，再 `poetry update fastapi`(连带 starlette),然后跑 CI 全量，再做 staging 冒烟。CI 按 lock 安装的问题已由 #680 修掉 | 会话 9-28,product-backlog |
+| FastAPI 升级已合 staging,**随下次 staging→main 上 prod** | 0.118→0.142.1 / Starlette 0.48→1.7.0(修 6 个已知漏洞，最高要 1.3.1)。上 prod 后从这里删掉 | 9-30 |
+| `@app.on_event("startup")` 已弃用(仍能用) | 改成 lifespan。等 FastAPI 真删掉它之前做完即可，不急 | 9-30 升级时 |
 | R2 孤儿音频 GC 的 `--grace-days` 保护失效 | 现在按 R2 mtime 判年龄，但 9-06 全桶重写过一次，所有 mtime 都被刷平了。应改为用 DB 行的 `updated_at` 判断 | 9-08 |
 | 标题里罕见地名/机构名被逐字直译(Goutte de Lait → 《滴乳之作》) | ⏳ 你定方向。9-30 四轮 A/B:往提示词里加作者/年代/法文原标题，修好 1-2 件就弄坏 1-2 件(语序变别扭),Goutte de Lait 所有版本都没修好 → 已撤回，不上线。能靠构造的路:注入作品在 Wikidata 上关联条目(描绘 P180 等)的官方译名，能覆盖 Moret/Poissy/Knokke 这类，覆盖不了 Goutte de Lait(无中文标签)。存量有音频的不动 | 会话 9-28 / 9-30 |
 | 后端搜索结果里的城市名只有中英两种语言 | `_search_museums` | multi-city 9-29 |
