@@ -58,6 +58,22 @@
       }
     }
   },
+  "homePassActiveCount": "{count} passes active",
+  "@homePassActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homePassPendingCount": "{count} passes purchased · tap to activate",
+  "@homePassPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeNearby": "Nearby Museums",
   "homeMuseums": "Museums",
   "homeEnableLocation": "Turn on location to see museums near you",

@@ -34,6 +34,8 @@
   "homePassPending": "패스 구매 완료 · 탭하여 활성화",
   "homePassActiveNamed": "{name} 이용 중",
   "homePassPendingNamed": "{name} 구매 완료 · 탭하여 활성화",
+  "homePassActiveCount": "패스 {count}개 이용 중",
+  "homePassPendingCount": "패스 {count}개 구매 완료 · 탭하여 활성화",
   "homeNearby": "근처 미술관",
   "homeMuseums": "박물관·미술관",
   "homeEnableLocation": "위치를 켜면 가까운 미술관을 보여 드려요",
