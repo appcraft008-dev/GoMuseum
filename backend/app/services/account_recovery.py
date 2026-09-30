@@ -42,10 +42,12 @@ from app.services import mailer
 
 logger = logging.getLogger(__name__)
 
-# 邮件正文只有三种语言:商店条目就是 en/fr/zh,内容也只有这三种。
 # 认不出的语言一律回落英文 —— 宁可给一封看得懂的英文信,不给一封空的。
+# zh-hant 与 App 的 apiLanguage() 同一个写法(2026-09-30 补:繁体用户曾拿到简体信)。
 DEFAULT_LANG = "en"
-SUPPORTED_LANGS = ("en", "fr", "zh")
+SUPPORTED_LANGS = ("en", "fr", "zh", "zh-hant")
+# 浏览器 Accept-Language 常只带地区不带脚本码(zh-TW);脚本码优先于地区。
+_HANT_REGIONS = ("tw", "hk", "mo")
 
 _RESET_MAIL = {
     "en": (
@@ -68,6 +70,12 @@ _RESET_MAIL = {
         "链接 {minutes} 分钟内有效，只能用一次。\n"
         "如果不是你本人操作，忽略这封邮件即可，密码不会有任何变化。",
     ),
+    "zh-hant": (
+        "重設 GoMuseum 密碼",
+        "開啟這個連結設定新密碼：\n\n{link}\n\n"
+        "連結 {minutes} 分鐘內有效，只能使用一次。\n"
+        "如果不是你本人操作，忽略這封郵件即可，密碼不會有任何變更。",
+    ),
 }
 
 _VERIFY_MAIL = {
@@ -89,6 +97,12 @@ _VERIFY_MAIL = {
         "打开这个链接确认这个邮箱地址：\n\n{link}\n\n"
         "链接 {minutes} 分钟内有效。\n"
         "确认之后，万一将来需要找回密码才走得通。",
+    ),
+    "zh-hant": (
+        "確認你的 GoMuseum 電子郵件",
+        "開啟這個連結確認這個電子郵件地址：\n\n{link}\n\n"
+        "連結 {minutes} 分鐘內有效。\n"
+        "確認之後，萬一將來需要找回密碼才走得通。",
     ),
 }
 
@@ -175,6 +189,29 @@ _PAGE_COPY = {
         "notice_verify_expired_body": "这个确认链接已经过期或用过了。\n"
         "可以在 App 的设置里重新发送。",
     },
+    "zh-hant": {
+        "html_lang": "zh-Hant",
+        "title": "重設密碼 · GoMuseum",
+        "h1": "重設密碼",
+        "sub": "為你的 GoMuseum 帳號設定一個新密碼。",
+        "label_new": "新密碼",
+        "hint_min": "至少 8 個字元",
+        "label_repeat": "再輸入一次",
+        "button": "確認",
+        "msg_mismatch": "兩次輸入不一致。",
+        "msg_short": "至少 8 個字元。",
+        "msg_ok": "密碼已更新，回到 App 用新密碼登入即可。",
+        "msg_expired": "連結已失效或已使用過，請回到 App 重新申請。",
+        "msg_error": "發生了一點問題，請稍後再試。",
+        "msg_network": "網路錯誤。",
+        "notice_expired_title": "連結已失效",
+        "notice_expired_body": "這個重設連結已經過期或使用過了。\n請回到 App 重新申請一次。",
+        "notice_verified_title": "電子郵件已確認",
+        "notice_verified_body": "你的電子郵件地址已確認。\n可以關閉這個頁面了。",
+        "notice_verify_expired_title": "連結已失效",
+        "notice_verify_expired_body": "這個確認連結已經過期或使用過了。\n"
+        "可以在 App 的設定裡重新傳送。",
+    },
 }
 
 
@@ -199,7 +236,7 @@ def _digest(token: str) -> str:
 
 
 def resolve_lang(code: Optional[str]) -> str:
-    """把 `zh-Hans` / `fr_FR` / `zh-CN,zh;q=0.9` 这类归一到我们有文案的三种之一。
+    """把 `zh-Hans` / `fr_FR` / `zh-TW,zh;q=0.9` 这类归一到 SUPPORTED_LANGS 之一。
 
     也吃 `Accept-Language` 整个头(逗号分隔、带 q 值),取第一项即可 ——
     没带 `lang` 的老链接就靠它兜底。
@@ -207,7 +244,14 @@ def resolve_lang(code: Optional[str]) -> str:
     if not code:
         return DEFAULT_LANG
     first = code.split(",")[0].split(";")[0].strip()
-    base = first.replace("_", "-").split("-")[0].lower()
+    parts = first.replace("_", "-").lower().split("-")
+    base = parts[0]
+    if base == "zh":
+        rest = parts[1:]
+        if "hant" in rest or (
+            "hans" not in rest and any(r in _HANT_REGIONS for r in rest)
+        ):
+            return "zh-hant"
     return base if base in SUPPORTED_LANGS else DEFAULT_LANG
 
 
