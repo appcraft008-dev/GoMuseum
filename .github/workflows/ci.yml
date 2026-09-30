@@ -157,10 +157,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       # 分享图字体(与 prod 镜像同样两个 apt 包);缺了 test_font_present_in_ci 判红
       - name: Install CJK fonts (share card)
