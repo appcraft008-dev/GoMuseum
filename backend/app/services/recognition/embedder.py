@@ -18,11 +18,32 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "dinov2-vits14"
+# 可选引擎(RECOG_MODEL 切换;向量按 model 名分开落库,换引擎=先 backfill 新向量再切,切回即回退)。
+# v3 选型依据:2026-10-01 线上图库 1.47 万张同库对照——库外画作直判误认 23→1/158,
+# 真实照直接认对持平(104/142),小红书 9 张 2→4。ONNX 取自 onnx-community(只留 pooler_output)。
+MODELS = {
+    "dinov2-vits14": {
+        "key": "models/dinov2_vits14.onnx",
+        "preset": "dinov2",
+        "sha256": "47578985a20aadc6e4fe399567a5ffef6b3d77748c75300b62fbd24dd8b44aa9",
+    },
+    "dinov3-vits16": {
+        "key": "models/dinov3_vits16.onnx",
+        "preset": "dinov3",
+        "sha256": "1053c247c4c9626f35207d71f90b24fc3d6ba9a80ac463fa9837986db44784db",
+    },
+}
+MODEL_NAME = settings.RECOG_MODEL
 
 PRESETS = {
     "dinov2": {
         "resize": 256,
+        "mean": [0.485, 0.456, 0.406],
+        "std": [0.229, 0.224, 0.225],
+    },
+    # 官方预处理:直接缩放到 224×224(不裁边)。对照里比「短边256→中裁224」略好。
+    "dinov3": {
+        "squash": True,
         "mean": [0.485, 0.456, 0.406],
         "std": [0.229, 0.224, 0.225],
     },
@@ -60,12 +81,15 @@ def crop_pyramid(img: Image.Image) -> list[Image.Image]:
 def preprocess(img: Image.Image, preset: str) -> np.ndarray:
     cfg = PRESETS[preset]
     img = img.convert("RGB")
-    w, h = img.size
-    scale = cfg["resize"] / min(w, h)
-    img = img.resize((round(w * scale), round(h * scale)), Image.BICUBIC)
-    w, h = img.size
-    left, top = (w - 224) // 2, (h - 224) // 2
-    img = img.crop((left, top, left + 224, top + 224))
+    if cfg.get("squash"):
+        img = img.resize((224, 224), Image.BICUBIC)
+    else:
+        w, h = img.size
+        scale = cfg["resize"] / min(w, h)
+        img = img.resize((round(w * scale), round(h * scale)), Image.BICUBIC)
+        w, h = img.size
+        left, top = (w - 224) // 2, (h - 224) // 2
+        img = img.crop((left, top, left + 224, top + 224))
     x = np.asarray(img, dtype=np.float32) / 255.0
     x = (x - np.array(cfg["mean"], dtype=np.float32)) / np.array(
         cfg["std"], dtype=np.float32
@@ -123,22 +147,21 @@ def get_embedder():
         if time.time() < _retry_after:  # 并发冷启动:首个失败后其余不重试
             return None
         try:
+            cfg = MODELS[MODEL_NAME]
             cache = Path(settings.RECOG_MODEL_CACHE)
-            local = cache / Path(settings.RECOG_MODEL_KEY).name
+            local = cache / Path(cfg["key"]).name
             if not local.exists():
-                data = _get_storage().get(settings.RECOG_MODEL_KEY)
+                data = _get_storage().get(cfg["key"])
                 if not data:
-                    raise RuntimeError(
-                        f"model missing in storage: {settings.RECOG_MODEL_KEY}"
-                    )
-                want = settings.RECOG_MODEL_SHA256
+                    raise RuntimeError(f"model missing in storage: {cfg['key']}")
+                want = cfg["sha256"]
                 if want and hashlib.sha256(data).hexdigest() != want:
                     raise RuntimeError("model sha256 mismatch")
                 cache.mkdir(parents=True, exist_ok=True)
                 tmp = local.with_suffix(".tmp")
                 tmp.write_bytes(data)
                 os.replace(tmp, local)  # 原子替换:防半写文件被当有效缓存
-            _engine = OnnxEmbedder(str(local), "dinov2")
+            _engine = OnnxEmbedder(str(local), cfg["preset"])
             logger.info("recognition embedder ready: %s", local)
             return _engine
         except Exception:

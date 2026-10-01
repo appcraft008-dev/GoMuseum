@@ -167,8 +167,8 @@ class Settings(BaseSettings):
     # Recognition (向量引擎)
     RECOG_HIGH: float = 0.85
     RECOG_LOW: float = 0.72
-    RECOG_MODEL_KEY: str = "models/dinov2_vits14.onnx"
-    RECOG_MODEL_SHA256: str = ""
+    # 引擎选择(见 recognition/embedder.MODELS;文件键与 sha256 随模型写死在那里)
+    RECOG_MODEL: str = "dinov2-vits14"
     RECOG_MODEL_CACHE: str = "/tmp/gomuseum_models"
 
     # Cache
