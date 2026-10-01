@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 _UNSET = object()  # 区分"未传"(回退 get_embedder)与"显式 None"(不回退)
 
 
-def embed_image_row(db, row, image_bytes: bytes, embedder=_UNSET) -> bool:
+def embed_image_row(
+    db, row, image_bytes: bytes, embedder=_UNSET, vet: bool = True
+) -> bool:
+    """vet=False:跳过 view 入库闸(给已被别的模型收录的图补新模型向量时用——
+    闸的门槛按当时模型标定,换模型重跑会误删/误隔离已治理好的图)。"""
     if embedder is _UNSET:
         embedder = get_embedder()
     if embedder is None:
@@ -32,7 +36,7 @@ def embed_image_row(db, row, image_bytes: bytes, embedder=_UNSET) -> bool:
         # view 入库闸:primary 已有向量时先算相似度再决定 删/隔离/入库。
         # 纯自动无人审(spec ④);错杀极端角度由照片飞轮补回。
         # primary 向量尚不存在 → 照常嵌入(后续 vet CLI 兜底)。
-        if row.role == "view":
+        if vet and row.role == "view":
             import numpy as np
 
             from app.models.museum_object import ObjectImage

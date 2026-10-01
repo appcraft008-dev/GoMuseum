@@ -138,3 +138,16 @@ def test_view_gate_no_primary_embedding_embeds_normally(session):
     assert embed_image_row(s, view, _tiny_png_bytes(), embedder=_fake(0.1)) is True
     s.commit()
     assert s.query(ObjectEmbedding).filter_by(image_id=view.id).first() is not None
+
+
+def test_vet_false_mirrors_without_touching_row(session):
+    # 换引擎补向量:旧引擎已收录的 view 原样补新向量——新模型分数再低也不删不隔离
+    s, o, img = session
+    _add_primary_embedding(s, o, img)
+    view = _add_view(s, o)
+    out = embed_image_row(s, view, _tiny_png_bytes(), embedder=_fake(0.1), vet=False)
+    assert out is True
+    s.commit()
+    row = s.query(ObjectImage).filter_by(id=view.id).first()
+    assert row is not None and row.role == "view"
+    assert s.query(ObjectEmbedding).filter_by(image_id=view.id).first() is not None
