@@ -26,7 +26,8 @@ class RecognitionEvent(Base):
     top_score = Column(Float, nullable=True)
     confirmed_qid = Column(String(32), nullable=True)  # 用户确认回填
     language = Column(String(8), nullable=True)
-    engine = Column(String(16), nullable=False)  # vector|vector_crops|text|cache|none
+    # vector|vector_canvas|vector_crops|text|cache|none
+    engine = Column(String(16), nullable=False)
     # 是谁拍的。令牌解析得出才填;只有 device_id 的匿名请求留 NULL(那是真匿名,
     # 不能靠 device_id 反查账号 —— 那正是 2026-07 串号计费事故的形态)。
     # 删足迹 = 把这一列清成 NULL:KPI/展陈证据行留下,与账号的关联断掉。
