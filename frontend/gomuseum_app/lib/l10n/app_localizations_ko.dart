@@ -540,9 +540,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authCreateAccount => '계정 만들기';
 
   @override
-  String get authOrWithEmail => '또는 이메일로';
-
-  @override
   String get authGoogleLogin => 'Google로 로그인';
 
   @override
@@ -1139,4 +1136,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get guideShare => '공유';
+
+  @override
+  String get authUseEmail => '이메일로 로그인 / 가입';
+
+  @override
+  String authConsent(String terms, String privacy) {
+    return '계속하면 $terms 및 $privacy에 동의하는 것으로 간주됩니다';
+  }
+
+  @override
+  String get authTermsOfService => '서비스 약관';
+
+  @override
+  String get authConsentPrivacy => '개인정보 처리방침';
 }

@@ -70,7 +70,11 @@ Future<AppLocalizations> _pump(WidgetTester tester, _FakeRepo repo,
     ),
   );
   await tester.pumpAndSettle();
-  return AppLocalizations.of(tester.element(find.byType(LoginPage)))!;
+  final l10n = AppLocalizations.of(tester.element(find.byType(LoginPage)))!;
+  // 邮箱表单默认收起,忘记密码在表单里
+  await tester.tap(find.text(l10n.authUseEmail));
+  await tester.pumpAndSettle();
+  return l10n;
 }
 
 /// 打开弹窗、填邮箱、点发送。

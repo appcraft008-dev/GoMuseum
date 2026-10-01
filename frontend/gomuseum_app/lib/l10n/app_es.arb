@@ -162,7 +162,6 @@
   "authNoAccount": "¿No tienes cuenta? Regístrate",
   "authHaveAccount": "¿Ya tienes cuenta? Inicia sesión",
   "authCreateAccount": "Crear cuenta",
-  "authOrWithEmail": "O con correo electrónico",
   "authGoogleLogin": "Iniciar sesión con Google",
   "authAppleLogin": "Iniciar sesión con Apple",
   "authOr": "O",
@@ -353,5 +352,9 @@
     }
   },
   "unlockAudioCta": "Desbloquear y escuchar",
-  "guideShare": "Compartir"
+  "guideShare": "Compartir",
+  "authUseEmail": "Continuar con correo electrónico",
+  "authConsent": "Al continuar, aceptas los {terms} y la {privacy}",
+  "authTermsOfService": "Términos del servicio",
+  "authConsentPrivacy": "Política de privacidad"
 }

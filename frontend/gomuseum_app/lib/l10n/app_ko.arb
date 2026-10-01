@@ -162,7 +162,6 @@
   "authNoAccount": "계정이 없나요? 가입",
   "authHaveAccount": "계정이 있나요? 로그인",
   "authCreateAccount": "계정 만들기",
-  "authOrWithEmail": "또는 이메일로",
   "authGoogleLogin": "Google로 로그인",
   "authAppleLogin": "Apple로 로그인",
   "authOr": "또는",
@@ -353,5 +352,9 @@
     }
   },
   "unlockAudioCta": "잠금 해제하고 재생",
-  "guideShare": "공유"
+  "guideShare": "공유",
+  "authUseEmail": "이메일로 로그인 / 가입",
+  "authConsent": "계속하면 {terms} 및 {privacy}에 동의하는 것으로 간주됩니다",
+  "authTermsOfService": "서비스 약관",
+  "authConsentPrivacy": "개인정보 처리방침"
 }
