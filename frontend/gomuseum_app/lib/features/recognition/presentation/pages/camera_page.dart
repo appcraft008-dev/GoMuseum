@@ -857,11 +857,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 竖长比例(非正方形)：画作多为竖构图，方形裁切会切掉大半画面，
-            // 与刚拍的照片难以比对(真机反馈)。候选恒 ≤3 个(后端 cands[:3])，
+            // 正方形、裁剪铺满(2026-10-01 用户定):三张一致，画面放得够大,
+            // 一眼对得上刚拍的画。考虑过「完整显示不裁」,但横竖幅混排时
+            // 留白忽上下忽左右，用户否了。候选恒 ≤3 个(后端 cands[:3]),
             // 放大不会撑爆底部面板(非滚动 Column)。
             SizedBox(
-              width: 72,
+              width: 92,
               height: 92,
               child: c.thumbnail != null
                   ? Image.network(sizedImageUrl(c.thumbnail!, 280),
