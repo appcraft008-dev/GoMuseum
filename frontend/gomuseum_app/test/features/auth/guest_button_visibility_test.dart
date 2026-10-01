@@ -85,10 +85,12 @@ void main() {
     final l10n = await _pump(tester, _user(isGuest: true), upgrading: true);
 
     // 游客来这里就是为了转正，把路堵死比多一个按钮糟得多
-    expect(find.text(l10n.authLoginButton), findsOneWidget);
     expect(find.text(l10n.authGoogleLogin), findsOneWidget);
+    // 邮箱默认收起,但入口在、点开后登录与注册都在
+    await tester.tap(find.text(l10n.authUseEmail));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.authLoginButton), findsOneWidget);
     expect(find.text(l10n.authNoAccount), findsOneWidget); // 去注册
-    expect(find.text(l10n.authOrWithEmail), findsOneWidget); // 邮箱那条分隔线还在
   });
 
   testWidgets('没有 upgrade 意图时页面不变形 —— 游客也照常看到游客入口', (tester) async {

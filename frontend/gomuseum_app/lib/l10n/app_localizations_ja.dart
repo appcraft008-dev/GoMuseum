@@ -540,9 +540,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authCreateAccount => 'アカウント作成';
 
   @override
-  String get authOrWithEmail => 'またはメールで';
-
-  @override
   String get authGoogleLogin => 'Googleでログイン';
 
   @override
@@ -1138,4 +1135,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guideShare => '共有';
+
+  @override
+  String get authUseEmail => 'メールアドレスでログイン / 登録';
+
+  @override
+  String authConsent(String terms, String privacy) {
+    return '続行すると、$termsと$privacyに同意したことになります';
+  }
+
+  @override
+  String get authTermsOfService => '利用規約';
+
+  @override
+  String get authConsentPrivacy => 'プライバシーポリシー';
 }

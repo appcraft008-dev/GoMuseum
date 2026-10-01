@@ -312,6 +312,57 @@ def test_crop_pyramid_failure_falls_to_gpt(session):
     assert out["outcome"] == "candidates"
 
 
+def test_candidate_band_canvas_lifts_to_match(session):
+    # 画框挤占:全帧只到候选档(0.80)→ 画布候选重查命中 HIGH → match;已 ≥LOW 不跑金字塔
+    canvas, crops = _Counter(_one_crop), _Counter(_one_crop)
+    vq = _FakeVQ([("Q334138", 0.80)], [("Q334138", 0.90)])
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_canvas_fn=canvas,
+        embed_crops_fn=crops,
+        vector_query_fn=vq,
+    )
+    assert canvas.n == 1 and crops.n == 0
+    assert out["outcome"] == "match"
+    assert out["match"]["confidence"] == 0.9
+    assert session.query(RecognitionEvent).one().engine == "vector_canvas"
+
+
+def test_fullframe_high_skips_canvas(session):
+    canvas = _Counter(_one_crop)
+    vq = _FakeVQ([("Q334138", 0.90)])
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_canvas_fn=canvas,
+        vector_query_fn=vq,
+    )
+    assert canvas.n == 0  # 直判快路径不多算
+    assert out["outcome"] == "match"
+
+
+def test_canvas_still_low_runs_crop_pyramid(session):
+    # 画布候选仍 < LOW → 照旧跑金字塔,三路取 MAX
+    vq = _FakeVQ([("Q334138", 0.50)], [("Q334138", 0.60)], [("Q334138", 0.90)])
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_canvas_fn=_one_crop,
+        embed_crops_fn=_one_crop,
+        vector_query_fn=vq,
+    )
+    assert len(vq.calls) == 3
+    assert out["outcome"] == "match"
+    assert session.query(RecognitionEvent).one().engine == "vector_crops"
+
+
 def test_label_mode_skips_vector(session):
     embed = _Counter(lambda b: "V")
     identify = _Counter(_vision(label="The Origin of the World\nGustave Courbet"))

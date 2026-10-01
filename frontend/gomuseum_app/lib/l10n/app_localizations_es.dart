@@ -549,9 +549,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authCreateAccount => 'Crear cuenta';
 
   @override
-  String get authOrWithEmail => 'O con correo electrónico';
-
-  @override
   String get authGoogleLogin => 'Iniciar sesión con Google';
 
   @override
@@ -1182,4 +1179,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get guideShare => 'Compartir';
+
+  @override
+  String get authUseEmail => 'Continuar con correo electrónico';
+
+  @override
+  String authConsent(String terms, String privacy) {
+    return 'Al continuar, aceptas los $terms y la $privacy';
+  }
+
+  @override
+  String get authTermsOfService => 'Términos del servicio';
+
+  @override
+  String get authConsentPrivacy => 'Política de privacidad';
 }

@@ -92,6 +92,25 @@ def _default_embed_crops(image_bytes: bytes):
         return None
 
 
+def _default_embed_canvas(image_bytes: bytes):
+    """默认 embed_canvas_fn:找画布四边形→拉正→批量 embedding。无框/引擎不可用/异常 → None。
+    先找框再取引擎:无框(纯色图、雕塑常见)时不碰引擎。"""
+    from app.services.recognition.canvas import canvas_quads
+    from app.services.recognition.embedder import get_embedder
+
+    try:
+        quads = canvas_quads(_open_upright(image_bytes))
+        if not quads:
+            return None
+        engine = get_embedder()
+        if engine is None:
+            return None
+        return engine.embed_batch(quads)
+    except Exception:
+        logger.exception("embed_canvas failed, continuing without canvas crops")
+        return None
+
+
 def _get_redis():
     try:
         from app.services.cache_service import get_cache_service
@@ -197,6 +216,7 @@ def recognize(
     embed_fn=None,
     vector_query_fn=None,
     embed_crops_fn=None,
+    embed_canvas_fn=None,
     user_id=None,
     visible=None,
 ) -> dict | None:
@@ -253,23 +273,38 @@ def recognize(
         if vec is not None:
             vquery = vector_query_fn or query_index
             ranked = vquery(db, vec, museum_id)
-            crops_used = False
+
+            def _merge(ranked, vecs):  # 跨全帧+补查按 qid 取 MAX,重定档
+                agg = dict(ranked)
+                for cv in vecs:
+                    for qid, s in vquery(db, cv, museum_id):
+                        if s > agg.get(qid, -2.0):
+                            agg[qid] = s
+                return sorted(agg.items(), key=lambda kv: -kv[1])
+
+            canvas_used = crops_used = False
+            # 画框+墙挤占画面的对症药(蒙娜丽莎正面照 第46名→第1名);斜拍梯形顺带拉正。
+            # 全帧未到 HIGH 就跑:候选档(0.72-0.85)的照片也能升到直判。
+            if not ranked or ranked[0][1] < settings.RECOG_HIGH:
+                canvas = (embed_canvas_fn or _default_embed_canvas)(image_bytes)
+                if canvas is not None:
+                    canvas_used = True
+                    ranked = _merge(ranked, canvas)
             # 全景式拍法(画占画面小)的对症药——实测 0.509→0.847;怼拍照片不受影响(快路径)。
-            # 全帧已 ≥ LOW → 不跑金字塔;否则裁剪重查,跨全帧+裁剪按 qid 取 MAX,重定档。
+            # 已 ≥ LOW → 不跑金字塔。
             if not ranked or ranked[0][1] < settings.RECOG_LOW:
                 crops = (embed_crops_fn or _default_embed_crops)(image_bytes)
                 if crops is not None:
                     crops_used = True
-                    agg = dict(ranked)
-                    for cv in crops:
-                        for qid, s in vquery(db, cv, museum_id):
-                            if s > agg.get(qid, -2.0):
-                                agg[qid] = s
-                    ranked = sorted(agg.items(), key=lambda kv: -kv[1])
+                    ranked = _merge(ranked, crops)
             ranked = _drop_hidden(db, ranked, visible)
             out = _vector_out(db, storage, ranked, language)
             if out is not None:
-                engine = "vector_crops" if crops_used else "vector"
+                engine = (
+                    "vector_crops"
+                    if crops_used
+                    else "vector_canvas" if canvas_used else "vector"
+                )
             # 馆域调用不回退全局:老端点已部署 App 不读 museum 字段,跨馆命中会拿他馆
             # qid 撞 /{slug}/objects/{qid}/content 404 死胡同(前向兼容硬约束)。
             # 将来带馆提示的新调用方要全局回退时,加显式参数再开;slug=None 首查即全局。
