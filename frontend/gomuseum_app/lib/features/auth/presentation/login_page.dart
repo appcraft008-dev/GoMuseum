@@ -2,11 +2,16 @@
 import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.dart'
+    show kPrivacyPolicyUrl;
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -14,6 +19,8 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'auth_provider.dart';
+
+const kTermsUrl = 'https://gomuseum.app/terms.html';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key, this.upgrading = false, this.returnTo});
@@ -48,6 +55,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   // "A TextEditingController was used after being disposed"。
   final _resetEmailController = TextEditingController();
   bool _isLoading = false;
+  bool _emailOpen = false;
+  late final _termsTap = TapGestureRecognizer()
+    ..onTap = () => _copyLink(kTermsUrl);
+  late final _privacyTap = TapGestureRecognizer()
+    ..onTap = () => _copyLink(kPrivacyPolicyUrl);
 
   // Google Sign-In instance
   // serverClientId is required for backend token verification
@@ -99,82 +111,102 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 // 游客按钮**故意不跟着上移**:它最省事,但游客不能购买,
                 // 提上来是拿收入换点击率。"最常用的放最显眼"在这里不成立 ——
                 // 判据是"最省事 **且** 不把人带进死路"。
+                //
+                // 2026-10-01 起邮箱表单**默认收起**:欧美用户主要走 Google/Apple,
+                // 而展开的两个输入框+大按钮会把视觉重心抢过去。表单原样保留,
+                // 点「用邮箱登录 / 注册」就地展开(不另开页面,意图参数不用再传一道)。
+                _googleButton(l10n.authGoogleLogin),
                 if (_appleLoginSupported) ...[
-                  _socialButton(gm, l10n.authAppleLogin, _handleAppleLogin),
                   const SizedBox(height: 10),
+                  _socialButton(gm, l10n.authAppleLogin, _handleAppleLogin,
+                      icon: Icons.apple),
                 ],
-                _socialButton(gm, l10n.authGoogleLogin, _handleGoogleLogin),
-                const SizedBox(height: 24),
-                _divider(l10n.authOrWithEmail),
-                const SizedBox(height: 18),
-                _gmField(
-                  gm: gm,
-                  controller: _emailController,
-                  hint: l10n.authEmailHint,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) =>
-                      v?.isEmpty == true ? l10n.authEmailRequired : null,
-                ),
-                const SizedBox(height: 14),
-                _gmField(
-                  gm: gm,
-                  controller: _passwordController,
-                  hint: l10n.authPasswordHint,
-                  obscure: true,
-                  validator: (v) =>
-                      v?.isEmpty == true ? l10n.authPasswordRequired : null,
-                ),
-                const SizedBox(height: 8),
-                // 忘记密码。贴在密码框的右下角：会点它的人此刻正卡在密码上，
-                // 视线和手指都在这个位置，放到登录按钮下面等于让他先扫一遍全页。
-                // 右对齐是为了不跟下面居中的按钮/注册链接抢中轴。
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: _showForgotPasswordSheet,
-                    // 文字本身只有 ~17px 高，光靠它做点击区太小。
+                const SizedBox(height: 22),
+                if (!_emailOpen)
+                  GestureDetector(
+                    onTap: () => setState(() => _emailOpen = true),
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        l10n.authForgotPassword,
-                        style: GmText.sans(size: 12.5, color: gm.sub),
+                        l10n.authUseEmail,
+                        textAlign: TextAlign.center,
+                        style: GmText.sans(size: 13, color: gm.sub).copyWith(
+                            decoration: TextDecoration.underline,
+                            decorationColor: gm.sub),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                _isLoading
-                    ? const Center(
-                        child: SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
-                        ),
-                      )
-                    : GmTicketButton(
-                        label: l10n.authLoginButton,
-                        icon: GmIcons.ticket,
-                        onTap: _handleLogin,
-                      ),
-                const SizedBox(height: 14),
-                GestureDetector(
-                  // 意图要跟着走：从「转正登录页」点进注册，如果不带 upgrade，
-                  // 守卫会把已登录的游客从注册页弹回首页 —— 转正这条路又断了。
-                  // 深链接目标同理要带过去,否则从注册页登录成功就回了首页。
-                  onTap: () => context.push(Uri(
-                    path: '/register',
-                    queryParameters: {
-                      if (upgrading) kUpgradeParam: '1',
-                      if (widget.returnTo != null) 'from': widget.returnTo!,
-                    },
-                  ).toString()),
-                  child: Text(
-                    l10n.authNoAccount,
-                    textAlign: TextAlign.center,
-                    style: GmText.sans(size: 12.5, color: gm.accent),
+                if (_emailOpen) ...[
+                  _gmField(
+                    gm: gm,
+                    controller: _emailController,
+                    hint: l10n.authEmailHint,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) =>
+                        v?.isEmpty == true ? l10n.authEmailRequired : null,
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  _gmField(
+                    gm: gm,
+                    controller: _passwordController,
+                    hint: l10n.authPasswordHint,
+                    obscure: true,
+                    validator: (v) =>
+                        v?.isEmpty == true ? l10n.authPasswordRequired : null,
+                  ),
+                  const SizedBox(height: 8),
+                  // 忘记密码。贴在密码框的右下角：会点它的人此刻正卡在密码上，
+                  // 视线和手指都在这个位置，放到登录按钮下面等于让他先扫一遍全页。
+                  // 右对齐是为了不跟下面居中的按钮/注册链接抢中轴。
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: _showForgotPasswordSheet,
+                      // 文字本身只有 ~17px 高，光靠它做点击区太小。
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          l10n.authForgotPassword,
+                          style: GmText.sans(size: 12.5, color: gm.sub),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _isLoading
+                      ? const Center(
+                          child: SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          ),
+                        )
+                      : GmTicketButton(
+                          label: l10n.authLoginButton,
+                          icon: GmIcons.ticket,
+                          onTap: _handleLogin,
+                        ),
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    // 意图要跟着走：从「转正登录页」点进注册，如果不带 upgrade，
+                    // 守卫会把已登录的游客从注册页弹回首页 —— 转正这条路又断了。
+                    // 深链接目标同理要带过去,否则从注册页登录成功就回了首页。
+                    onTap: () => context.push(Uri(
+                      path: '/register',
+                      queryParameters: {
+                        if (upgrading) kUpgradeParam: '1',
+                        if (widget.returnTo != null) 'from': widget.returnTo!,
+                      },
+                    ).toString()),
+                    child: Text(
+                      l10n.authNoAccount,
+                      textAlign: TextAlign.center,
+                      style: GmText.sans(size: 12.5, color: gm.accent),
+                    ),
+                  ),
+                ],
                 // 游客入口：**主动来换身份的人不该再看到它**。
                 //
                 // 他点的是「登录后购买」（通票挂账号，游客不许直接买）或收据冲突的
@@ -190,6 +222,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   _socialButton(gm, l10n.authGuestLogin, _handleGuestLogin,
                       emphasized: true),
                 ],
+                const SizedBox(height: 32),
+                _consentLine(gm, l10n),
               ],
             ),
           ),
@@ -254,7 +288,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Widget _socialButton(GmPalette gm, String label, VoidCallback onTap,
-      {bool emphasized = false}) {
+      {bool emphasized = false, IconData? icon}) {
     return GestureDetector(
       onTap: _isLoading ? null : onTap,
       child: Container(
@@ -264,16 +298,104 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           color: emphasized ? gm.chipBg : gm.surface,
           border: Border.all(color: gm.line),
         ),
-        child: Text(
-          label,
-          style: GmText.sans(
-            size: 13.5,
-            color: gm.ink,
-            weight: emphasized ? FontWeight.w600 : FontWeight.w400,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 20, color: gm.ink),
+              const SizedBox(width: 10),
+            ],
+            Text(
+              label,
+              style: GmText.sans(
+                size: 13.5,
+                color: gm.ink,
+                weight: emphasized ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// Google 按钮按 Google 品牌规范画(官方 G 标 + 规定的底色/描边/字色),
+  /// 不套暖纸配色:用户靠这个外观一眼认出「一键登录」,这正是把它放最显眼处的用意。
+  /// 颜色取自 Google Identity 的 Android 按钮规范(亮/暗两套)。
+  Widget _googleButton(String label) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: _isLoading ? null : _handleGoogleLogin,
+      child: Container(
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF131314) : Colors.white,
+          border: Border.all(
+              color: dark ? const Color(0xFF8E918F) : const Color(0xFF747775)),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset('assets/brand/google_g.svg',
+                width: 20, height: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GmText.sans(
+                size: 14,
+                weight: FontWeight.w500,
+                color: dark ? const Color(0xFFE3E3E3) : const Color(0xFF1F1F1F),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 底部「继续即表示同意服务条款和隐私政策」。社交登录一键就建了账号,
+  /// 这句话必须在按钮那一屏上。
+  ///
+  /// 点条款词 = 复制链接(同设置页):不引入 url_launcher,理由见 [kPrivacyPolicyUrl]。
+  /// 词序各语言不同,所以用带 {terms}/{privacy} 的整句模板,再按占位拆出可点的两段。
+  Widget _consentLine(GmPalette gm, AppLocalizations l10n) {
+    const t = '\u0000T\u0000', p = '\u0000P\u0000';
+    final base = GmText.sans(size: 11.5, color: gm.faint, height: 1.6);
+    final link = base.copyWith(
+        color: gm.sub,
+        decoration: TextDecoration.underline,
+        decorationColor: gm.sub);
+    final spans = <InlineSpan>[];
+    for (final part in l10n.authConsent(t, p).split('\u0000')) {
+      if (part == 'T') {
+        spans.add(TextSpan(
+            text: l10n.authTermsOfService, style: link, recognizer: _termsTap));
+      } else if (part == 'P') {
+        spans.add(TextSpan(
+            text: l10n.authConsentPrivacy,
+            style: link,
+            recognizer: _privacyTap));
+      } else if (part.isNotEmpty) {
+        spans.add(TextSpan(text: part));
+      }
+    }
+    return Text.rich(TextSpan(style: base, children: spans),
+        textAlign: TextAlign.center);
+  }
+
+  Future<void> _copyLink(String url) async {
+    await Clipboard.setData(ClipboardData(text: url));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(
+        content:
+            Text('${AppLocalizations.of(context)!.privacyLinkCopied}: $url'),
+        duration: const Duration(seconds: 3),
+        persist: false,
+      ));
   }
 
   /// 「忘记密码」：填邮箱 → 后端发一条一次性链接 → 用户在浏览器里改完，回来登录。
@@ -606,6 +728,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _resetEmailController.dispose();
+    _termsTap.dispose();
+    _privacyTap.dispose();
     super.dispose();
   }
 }

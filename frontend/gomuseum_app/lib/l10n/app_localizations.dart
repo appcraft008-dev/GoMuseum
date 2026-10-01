@@ -1085,12 +1085,6 @@ abstract class AppLocalizations {
   /// **'Create account'**
   String get authCreateAccount;
 
-  /// No description provided for @authOrWithEmail.
-  ///
-  /// In en, this message translates to:
-  /// **'Or with email'**
-  String get authOrWithEmail;
-
   /// No description provided for @authGoogleLogin.
   ///
   /// In en, this message translates to:
@@ -2146,6 +2140,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share'**
   String get guideShare;
+
+  /// 登录页把邮箱表单收起后的展开链接
+  ///
+  /// In en, this message translates to:
+  /// **'Use email instead'**
+  String get authUseEmail;
+
+  /// 登录页底部同意声明;{terms}/{privacy} 会渲染成可点的词
+  ///
+  /// In en, this message translates to:
+  /// **'By continuing you agree to the {terms} and {privacy}'**
+  String authConsent(String terms, String privacy);
+
+  /// No description provided for @authTermsOfService.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of Service'**
+  String get authTermsOfService;
+
+  /// 同意声明里的「隐私政策」;单独一个键是因为有的语言要变格(pl 宾格 Politykę)
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get authConsentPrivacy;
 }
 
 class _AppLocalizationsDelegate

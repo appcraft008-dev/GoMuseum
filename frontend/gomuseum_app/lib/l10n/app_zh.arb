@@ -162,7 +162,6 @@
   "authNoAccount": "还没有账号？注册",
   "authHaveAccount": "已有账号？登录",
   "authCreateAccount": "创建账号",
-  "authOrWithEmail": "或使用邮箱",
   "authGoogleLogin": "使用 Google 登录",
   "authAppleLogin": "使用 Apple 登录",
   "authOr": "或",
@@ -353,5 +352,9 @@
     }
   },
   "unlockAudioCta": "解锁并播放",
-  "guideShare": "分享"
+  "guideShare": "分享",
+  "authUseEmail": "用邮箱登录 / 注册",
+  "authConsent": "继续即表示你同意{terms}和{privacy}",
+  "authTermsOfService": "服务条款",
+  "authConsentPrivacy": "隐私政策"
 }

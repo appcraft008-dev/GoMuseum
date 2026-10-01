@@ -537,9 +537,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authCreateAccount => '创建账号';
 
   @override
-  String get authOrWithEmail => '或使用邮箱';
-
-  @override
   String get authGoogleLogin => '使用 Google 登录';
 
   @override
@@ -1131,6 +1128,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get guideShare => '分享';
+
+  @override
+  String get authUseEmail => '用邮箱登录 / 注册';
+
+  @override
+  String authConsent(String terms, String privacy) {
+    return '继续即表示你同意$terms和$privacy';
+  }
+
+  @override
+  String get authTermsOfService => '服务条款';
+
+  @override
+  String get authConsentPrivacy => '隐私政策';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1664,9 +1675,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authCreateAccount => '建立賬號';
-
-  @override
-  String get authOrWithEmail => '或使用電子郵件';
 
   @override
   String get authGoogleLogin => '使用 Google 登入';
@@ -2260,4 +2268,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get guideShare => '分享';
+
+  @override
+  String get authUseEmail => '用電子郵件登入 / 註冊';
+
+  @override
+  String authConsent(String terms, String privacy) {
+    return '繼續即表示你同意$terms和$privacy';
+  }
+
+  @override
+  String get authTermsOfService => '服務條款';
+
+  @override
+  String get authConsentPrivacy => '隱私政策';
 }
