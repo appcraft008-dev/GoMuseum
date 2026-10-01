@@ -17,6 +17,7 @@
 | 从内测轨道推到正式轨道(这一步才算发版) | ⏳ 你 | monetization-plan |
 | 推正式当天:prod env `SHARE_PLAY_LIVE=true` + 重启后端 | ⏳ 你,推正式当天做 | share-feature |
 | 出 V46 包 = V45(#745 移除 geolocator 带入的 `FOREGROUND_SERVICE_LOCATION`,推正式版被「前台服务权限声明」拦下)+ #747/#749 首页通票写明票名、多张报张数(后端 `title` 9-30 已上 prod)。V44 起还带 #718 设置页铅笔、#723 识别缺馆名不跳奥赛 +「暂无该语言讲解」、#727 找回密码 zh-hant | ✅ 9-30 已出包(桌面 `gomuseum-v46.aab`,sha256 `400f4cac…`,已验签名 UPLOAD.RSA / versionCode 46 / 连 api.gomuseum.app / 清单无 FOREGROUND_SERVICE / 新文案在包里)。✅ 10-01 已传内测并真机验过。⏳ 你:正式版草稿换成 46(前台服务声明页选「舍弃」不填)。V45 作废不用传 | #718/#723/#727/#745/#747/#749/#752 |
+| 出 V47 包 = V46 + #759 登录页以 Google/Apple 为主(邮箱默认收起、条款同意声明)+ #760 识别候选缩略图改正方形裁剪铺满。识别 v3/找画布是纯后端,已在 prod,不随包 | ✅ 10-01 已出包(桌面 `gomuseum-v47.aab`,sha256 `595af3b6…`,已验 UPLOAD 签名 / versionCode 47 / 只连 api.gomuseum.app / 清单无 FOREGROUND_SERVICE / 新登录页文案与 Google 图标在包里)。⏳ 你:传内测 + 真机验:暗色模式 Google 按钮、邮箱展开、条款行排版、候选方图 | #759/#760 |
 | 商店条目其余 7 种语言 | 触发条件:en/fr/zh 有效果数据后再做 | monetization-plan |
 
 ## 二、等你拍板
