@@ -1130,6 +1130,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => '隐私政策';
+
+  @override
+  String get updateReady => '新版本已下载';
+
+  @override
+  String get updateRestart => '重启';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2258,4 +2264,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get authConsentPrivacy => '隱私政策';
+
+  @override
+  String get updateReady => '新版本已下載';
+
+  @override
+  String get updateRestart => '重新啟動';
 }

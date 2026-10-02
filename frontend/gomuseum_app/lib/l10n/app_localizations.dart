@@ -2140,6 +2140,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy Policy'**
   String get authConsentPrivacy;
+
+  /// 应用内更新下载完成后的底部提示
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is ready'**
+  String get updateReady;
+
+  /// No description provided for @updateRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get updateRestart;
 }
 
 class _AppLocalizationsDelegate

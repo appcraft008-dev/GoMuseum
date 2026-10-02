@@ -1184,4 +1184,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => 'Datenschutzerklärung';
+
+  @override
+  String get updateReady => 'Eine neue Version ist bereit';
+
+  @override
+  String get updateRestart => 'Neu starten';
 }

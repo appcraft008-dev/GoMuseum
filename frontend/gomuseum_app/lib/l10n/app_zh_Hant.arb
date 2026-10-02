@@ -352,5 +352,7 @@
   "authUseEmail": "用電子郵件登入 / 註冊",
   "authConsent": "繼續即表示你同意{terms}和{privacy}",
   "authTermsOfService": "服務條款",
-  "authConsentPrivacy": "隱私政策"
+  "authConsentPrivacy": "隱私政策",
+  "updateReady": "新版本已下載",
+  "updateRestart": "重新啟動"
 }

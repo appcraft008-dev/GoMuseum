@@ -352,5 +352,7 @@
   "authUseEmail": "Mit E-Mail fortfahren",
   "authConsent": "Mit dem Fortfahren akzeptierst du die {terms} und die {privacy}",
   "authTermsOfService": "Nutzungsbedingungen",
-  "authConsentPrivacy": "Datenschutzerklärung"
+  "authConsentPrivacy": "Datenschutzerklärung",
+  "updateReady": "Eine neue Version ist bereit",
+  "updateRestart": "Neu starten"
 }

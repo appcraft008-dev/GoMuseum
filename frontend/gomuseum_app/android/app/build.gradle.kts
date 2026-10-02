@@ -82,3 +82,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Play 应用内更新。Gradle 依赖而非 Flutter 插件:插件树不变(#434 那类缝),通道在 MainActivity
+    implementation("com.google.android.play:app-update:2.1.0")
+}

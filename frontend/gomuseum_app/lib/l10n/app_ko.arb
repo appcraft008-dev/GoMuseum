@@ -352,5 +352,7 @@
   "authUseEmail": "이메일로 로그인 / 가입",
   "authConsent": "계속하면 {terms} 및 {privacy}에 동의하는 것으로 간주됩니다",
   "authTermsOfService": "서비스 약관",
-  "authConsentPrivacy": "개인정보 처리방침"
+  "authConsentPrivacy": "개인정보 처리방침",
+  "updateReady": "새 버전이 준비되었습니다",
+  "updateRestart": "다시 시작"
 }
