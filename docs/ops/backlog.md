@@ -18,6 +18,7 @@
 | 推正式当天:prod env `SHARE_PLAY_LIVE=true` + 重启后端 | ⏳ 你,推正式当天做 | share-feature |
 | 出 V46 包 = V45(#745 移除 geolocator 带入的 `FOREGROUND_SERVICE_LOCATION`,推正式版被「前台服务权限声明」拦下)+ #747/#749 首页通票写明票名、多张报张数(后端 `title` 9-30 已上 prod)。V44 起还带 #718 设置页铅笔、#723 识别缺馆名不跳奥赛 +「暂无该语言讲解」、#727 找回密码 zh-hant | ✅ 9-30 已出包(桌面 `gomuseum-v46.aab`,sha256 `400f4cac…`,已验签名 UPLOAD.RSA / versionCode 46 / 连 api.gomuseum.app / 清单无 FOREGROUND_SERVICE / 新文案在包里)。✅ 10-01 已传内测并真机验过。⏳ 你:正式版草稿换成 46(前台服务声明页选「舍弃」不填)。V45 作废不用传 | #718/#723/#727/#745/#747/#749/#752 |
 | 出 V47 包 = V46 + #759 登录页以 Google/Apple 为主(邮箱默认收起、条款同意声明)+ #760 识别候选缩略图改正方形裁剪铺满。识别 v3/找画布是纯后端,已在 prod,不随包 | ✅ 10-01 已出包(桌面 `gomuseum-v47.aab`,sha256 `595af3b6…`,已验 UPLOAD 签名 / versionCode 47 / 只连 api.gomuseum.app / 清单无 FOREGROUND_SERVICE / 新登录页文案与 Google 图标在包里)。⏳ 你:传内测 + 真机验:暗色模式 Google 按钮、邮箱展开、条款行排版、候选方图 | #759/#760 |
+| 下个包(V48)带上:服务条款/隐私政策点击直接用浏览器打开(登录页 + 设置页),设置页新增「服务条款」行 | ⏳ 已合 staging 待出包;真机验:点开浏览器、返回 App 状态不丢 | 10-02 用户真机反馈 |
 | 商店条目其余 7 种语言 | 触发条件:en/fr/zh 有效果数据后再做 | monetization-plan |
 
 ## 二、等你拍板
@@ -35,7 +36,7 @@
 | R2 孤儿音频 GC 的 `--grace-days` 保护失效 | 现在按 R2 mtime 判年龄，但 9-06 全桶重写过一次，所有 mtime 都被刷平了。应改为用 DB 行的 `updated_at` 判断 | 9-08 |
 | 游客令牌谁都能领，能批量调接口点燃懒生成 | 老风险。目前靠 10r/s 限流、只放出已上线馆、懒生成每日上限挡着 | share-feature |
 | 数据源探活失败只写日志、不发告警 | `probe-sources.sh` 每 3 天在 prod 跑(Joconde 文本+目录两个接入点都探),但失败只进 `/var/log/gomuseum-probe.log`,没人会看。可复用每日音频盘点的邮件告警 | 9-30 核实时发现 |
-| 确认 OpenAI 何时下线 gpt-4o / gpt-4o-mini | 全项目都在用:识别兜底(`recognition/vision.py`)、内容生成/翻译/闸(gpt-4o-mini)、看图描述(gpt-4o)。第三方文章称 4o 一代已/将淘汰、推荐 GPT-5 mini,未见官方公告;10-01 prod 调用仍正常。先查 OpenAI 官方 deprecations 页拿日期,再定迁移(换模型要重跑闸的 A/B,不是改名) | 10-01 |
+| **12 月前换掉 tts-1(OpenAI 2027-01-06 关停 tts-1 / tts-1-hd / gpt-4o-mini-tts)** | 只影响懒生成兜底:prod 存量 8622 条音频里 tts-1 仅 22 段,其余是 VoxCPM2;懒生成 7-10 月共 3.2 万字 ≈ $0.5,成本可忽略,**判据是逐字朗读不改写**。官方替代 `gpt-realtime-2.1-mini` 是对话模型(Realtime API/WebSocket、按音频计费),可能改写原文 → 违背接地。11 月做半天实验:10 语×3 段,`gpt-realtime-2.1-mini` / `gpt-audio-mini` 跑 `tools/tts/reading_check`(whisper 逐字一致率)+ 实际花费 + 首包延迟;一致率 ≥ tts-1 就切(只改 `tts_service.py`),会改写就换 Google Cloud / Azure 这类纯 TTS(多接一家供应商)。官方 deprecations 页未列 gpt-4o / gpt-4o-mini(10-02 核实) | 10-02 OpenAI 邮件 |
 | 卢浮宫雕塑几乎没有多视角参考图 | prod 卢浮 1 万多张参考图里 view 只有 80 张(奥赛 353)。10-01 实测《丘比特与普赛克》第 4 名、《汉谟拉比法典》第 8 名,找画布救不了(无框)。修法=对卢浮跑现成的 `onboard views` + `vet_view_images`(prod 数据操作,要你点头)。⚠️ 主引擎已切 v3,view 闸门槛 0.25/0.4 是按 v2 标定的,跑之前先按 v3 重标。10-01 切 v3 后汉谟拉比已升到候选第 1 | 10-01 |
 | 暗画的参考图是修复提亮版,和现场看到的对不上 | 《岩间圣母》参考图明亮清晰,现场很暗且隔玻璃反光:游客照线上第 3371 名,裁到画布也只到第 96 名。修法=给这类件补一张现场实拍图作 view;先查有几件(暗、带玻璃的老画) | 10-01 |
 | 库外图大多落进候选档 | bench 52 张库外图 42 张最高分 ≥0.72 会弹候选卡(直判档 0 张,没有认错风险,但候选卡会给出不相干的作品)。要用真实拍照数据重标 LOW,别凭感觉调 | 10-01 bench |
