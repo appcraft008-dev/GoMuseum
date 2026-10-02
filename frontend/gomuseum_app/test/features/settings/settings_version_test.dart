@@ -42,5 +42,8 @@ void main() {
     expect(kPrivacyPolicyUrl, startsWith('https://'));
     expect(kPrivacyPolicyUrl, contains('gomuseum.app'));
     expect(kPrivacyPolicyUrl, contains('privacy'));
+    // 原生通道只放行 https(MainActivity),写成 http 会静默落到复制兜底
+    expect(kTermsUrl, startsWith('https://gomuseum.app/'));
+    expect(kTermsUrl, contains('terms'));
   });
 }

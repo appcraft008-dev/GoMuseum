@@ -69,9 +69,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get confirm => 'Bestätigen';
 
   @override
-  String get gotIt => 'Verstanden';
-
-  @override
   String get loadFailed => 'Laden fehlgeschlagen';
 
   @override
@@ -445,16 +442,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String featureComingSoon(String feature) {
     return '$feature kommt bald';
   }
-
-  @override
-  String get privacyBody =>
-      'Originalfotos werden standardmäßig nicht hochgeladen, Erkennungsdaten nur vorübergehend verarbeitet. Konto und Daten können Sie jederzeit unter Einstellungen → Konto löschen löschen.';
-
-  @override
-  String get privacyFullPolicy => 'Vollständige Datenschutzerklärung';
-
-  @override
-  String get privacyCopyLink => 'Link kopieren';
 
   @override
   String get privacyLinkCopied => 'Link kopiert';
