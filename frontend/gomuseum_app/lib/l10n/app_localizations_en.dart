@@ -69,9 +69,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirm => 'Confirm';
 
   @override
-  String get gotIt => 'Got it';
-
-  @override
   String get loadFailed => 'Failed to load';
 
   @override
@@ -442,16 +439,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String featureComingSoon(String feature) {
     return '$feature is coming soon';
   }
-
-  @override
-  String get privacyBody =>
-      'Original photos are not uploaded by default and recognition data is processed temporarily only. You can delete your account and data any time under Settings → Delete account.';
-
-  @override
-  String get privacyFullPolicy => 'Full privacy policy';
-
-  @override
-  String get privacyCopyLink => 'Copy link';
 
   @override
   String get privacyLinkCopied => 'Link copied';

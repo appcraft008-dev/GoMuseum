@@ -70,9 +70,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get confirm => 'Conferma';
 
   @override
-  String get gotIt => 'Capito';
-
-  @override
   String get loadFailed => 'Caricamento non riuscito';
 
   @override
@@ -444,16 +441,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String featureComingSoon(String feature) {
     return '$feature arriva presto';
   }
-
-  @override
-  String get privacyBody =>
-      'Le foto originali non vengono caricate per impostazione predefinita e i dati di riconoscimento sono elaborati solo temporaneamente. Puoi eliminare account e dati in qualsiasi momento da Impostazioni → Elimina account.';
-
-  @override
-  String get privacyFullPolicy => 'Informativa sulla privacy completa';
-
-  @override
-  String get privacyCopyLink => 'Copia link';
 
   @override
   String get privacyLinkCopied => 'Link copiato';

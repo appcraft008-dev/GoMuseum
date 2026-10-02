@@ -69,9 +69,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirm => '确定';
 
   @override
-  String get gotIt => '知道了';
-
-  @override
   String get loadFailed => '加载失败';
 
   @override
@@ -439,15 +436,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String featureComingSoon(String feature) {
     return '$feature即将开放';
   }
-
-  @override
-  String get privacyBody => '照片默认不上传原图，识别数据仅作临时处理；你可以随时在「设置 → 删除账号」删除账号与数据。';
-
-  @override
-  String get privacyFullPolicy => '完整隐私政策';
-
-  @override
-  String get privacyCopyLink => '复制链接';
 
   @override
   String get privacyLinkCopied => '已复制链接';
@@ -1209,9 +1197,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get confirm => '確定';
 
   @override
-  String get gotIt => '知道了';
-
-  @override
   String get loadFailed => '載入失敗';
 
   @override
@@ -1579,15 +1564,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String featureComingSoon(String feature) {
     return '$feature即將開放';
   }
-
-  @override
-  String get privacyBody => '照片預設不上傳原圖，識別資料僅作暫時處理；你可以隨時在「設置 → 刪除賬號」刪除賬號與資料。';
-
-  @override
-  String get privacyFullPolicy => '完整隱私政策';
-
-  @override
-  String get privacyCopyLink => '複製連結';
 
   @override
   String get privacyLinkCopied => '已複製連結';
