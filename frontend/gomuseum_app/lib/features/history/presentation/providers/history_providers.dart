@@ -122,7 +122,8 @@ class History extends _$History {
     final useCase = ref.read(getRecentHistoryUseCaseProvider);
     final all = <HistoryItem>[];
     var got = page;
-    while (got == page) {
+    // 页数封顶:后端分页一旦不前进(offset 被忽略),无上限会无限请求
+    for (var p = 0; p < 20 && got == page; p++) {
       final result = await useCase(
         limit: page,
         offset: all.length,
