@@ -28,7 +28,7 @@ dependencies:
 
   # 图片处理
   image_picker: ^1.0.5
-  camera: ^0.10.5
+  camera: ^0.12.0 # 0.11+ 安卓走 CameraX:快门不再每张都重新对焦+测光(旧 Camera2 实现在小米上按下要等一会儿)
   cross_file: ^0.3.3
   photo_manager: ^3.0.0 # 取景页「最近图库」缩略图条
 
