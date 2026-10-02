@@ -352,5 +352,7 @@
   "authUseEmail": "Continuar con correo electrónico",
   "authConsent": "Al continuar, aceptas los {terms} y la {privacy}",
   "authTermsOfService": "Términos del servicio",
-  "authConsentPrivacy": "Política de privacidad"
+  "authConsentPrivacy": "Política de privacidad",
+  "updateReady": "Hay una nueva versión lista",
+  "updateRestart": "Reiniciar"
 }

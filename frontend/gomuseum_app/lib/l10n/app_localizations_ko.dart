@@ -1137,4 +1137,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => '개인정보 처리방침';
+
+  @override
+  String get updateReady => '새 버전이 준비되었습니다';
+
+  @override
+  String get updateRestart => '다시 시작';
 }

@@ -352,5 +352,7 @@
   "authUseEmail": "メールアドレスでログイン / 登録",
   "authConsent": "続行すると、{terms}と{privacy}に同意したことになります",
   "authTermsOfService": "利用規約",
-  "authConsentPrivacy": "プライバシーポリシー"
+  "authConsentPrivacy": "プライバシーポリシー",
+  "updateReady": "新しいバージョンの準備ができました",
+  "updateRestart": "再起動"
 }

@@ -1170,4 +1170,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => 'Privacy Policy';
+
+  @override
+  String get updateReady => 'A new version is ready';
+
+  @override
+  String get updateRestart => 'Restart';
 }

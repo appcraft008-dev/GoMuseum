@@ -352,5 +352,7 @@
   "authUseEmail": "用邮箱登录 / 注册",
   "authConsent": "继续即表示你同意{terms}和{privacy}",
   "authTermsOfService": "服务条款",
-  "authConsentPrivacy": "隐私政策"
+  "authConsentPrivacy": "隐私政策",
+  "updateReady": "新版本已下载",
+  "updateRestart": "重启"
 }

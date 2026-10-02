@@ -1136,4 +1136,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => 'プライバシーポリシー';
+
+  @override
+  String get updateReady => '新しいバージョンの準備ができました';
+
+  @override
+  String get updateRestart => '再起動';
 }

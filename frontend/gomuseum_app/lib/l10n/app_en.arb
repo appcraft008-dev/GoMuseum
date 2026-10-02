@@ -682,5 +682,8 @@
   "authConsentPrivacy": "Privacy Policy",
   "@authConsentPrivacy": {
     "description": "同意声明里的「隐私政策」;单独一个键是因为有的语言要变格(pl 宾格 Politykę)"
-  }
+  },
+  "updateReady": "A new version is ready",
+  "@updateReady": {"description": "应用内更新下载完成后的底部提示"},
+  "updateRestart": "Restart"
 }

@@ -1180,4 +1180,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => 'Politykę prywatności';
+
+  @override
+  String get updateReady => 'Nowa wersja jest gotowa';
+
+  @override
+  String get updateRestart => 'Uruchom ponownie';
 }
