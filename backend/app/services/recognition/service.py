@@ -131,12 +131,56 @@ def _summary(db, storage, o: MuseumObject, language: str) -> dict:
         .order_by(ObjectImage.sort)
         .first()
     )
+    mus = db.query(Museum).filter_by(id=o.museum_id).first()
+    return _summary_of(storage, o, art, img, mus, language)
+
+
+def _summaries(db, storage, objs: list, language: str) -> dict:
+    """批量版 [_summary]:{qid: summary}。作者/主图/馆各一次查询,不随件数增长
+    (足迹逐件调 _summary 时 191 件 = 567 条 SQL,prod 实测约 1 秒)。
+    字段拼法只在 [_summary_of] 一处,两条路径不会漂开。"""
+    if not objs:
+        return {}
+    aqids = {(o.attributes or {}).get("artist_qid") for o in objs} - {None}
+    arts = (
+        {a.qid: a for a in db.query(Artist).filter(Artist.qid.in_(aqids))}
+        if aqids
+        else {}
+    )
+    imgs: dict = {}
+    for im in (
+        db.query(ObjectImage)
+        .filter(
+            ObjectImage.object_id.in_([o.id for o in objs]),
+            ObjectImage.role == "primary",
+        )
+        .order_by(ObjectImage.object_id, ObjectImage.sort)
+    ):
+        imgs.setdefault(im.object_id, im)  # 每件 sort 最小那张,同 _summary
+    muss = {
+        m.id: m
+        for m in db.query(Museum).filter(Museum.id.in_({o.museum_id for o in objs}))
+    }
+    return {
+        o.qid: _summary_of(
+            storage,
+            o,
+            arts.get((o.attributes or {}).get("artist_qid")),
+            imgs.get(o.id),
+            muss.get(o.museum_id),
+            language,
+        )
+        for o in objs
+    }
+
+
+def _summary_of(storage, o: MuseumObject, art, img, mus, language: str) -> dict:
+    attrs = o.attributes or {}
     thumbnail = None
     if img and img.image_key:
         thumbnail = _sized(storage, img.image_key, "thumb")
     elif img:
         thumbnail = img.source_url
-    mus = db.query(Museum).filter_by(id=o.museum_id).first()
     return {
         "qid": o.qid,
         "museum": mus.slug if mus else None,
