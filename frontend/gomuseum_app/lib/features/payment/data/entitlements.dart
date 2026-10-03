@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 
 /// 免费语音覆盖的段。与后端 `entitlement_service.FREE_AUDIO_SECTION` 一一对应 ——
 /// 一件作品有讲解/背景/分析/问答/作者介绍多段,每段独立 TTS,
@@ -179,8 +180,12 @@ final entitlementsProvider = FutureProvider<Entitlements>((ref) async {
   // 他也放不出声,两头堵死。
   ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   final dio = ref.watch(dioProvider);
+  // 票名/范围名/馆名由后端按语言给;不带 → 后端默认 zh,英法界面整页中文
+  // (2026-10-03 真机)。watch 而非 read:切语言要重拉。
+  final lang = apiLanguage(ref.watch(resolvedLocaleProvider));
   try {
-    final res = await dio.get('/api/v1/entitlements/me');
+    final res = await dio
+        .get('/api/v1/entitlements/me', queryParameters: {'language': lang});
     return Entitlements.fromJson(res.data as Map<String, dynamic>);
   } on DioException {
     // 离线/后端抖动不该把界面打死,按免费层展示(次数显示 "—")
@@ -199,9 +204,10 @@ final museumEntitlementsProvider =
     FutureProvider.autoDispose.family<Entitlements, String>((ref, slug) async {
   ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
   final dio = ref.watch(dioProvider);
+  final lang = apiLanguage(ref.watch(resolvedLocaleProvider));
   try {
-    final res = await dio
-        .get('/api/v1/entitlements/me', queryParameters: {'museum': slug});
+    final res = await dio.get('/api/v1/entitlements/me',
+        queryParameters: {'museum': slug, 'language': lang});
     return Entitlements.fromJson(res.data as Map<String, dynamic>);
   } on DioException {
     return Entitlements.unknown;
@@ -226,9 +232,13 @@ void invalidateEntitlements(WidgetRef ref) {
 /// 在荷兰点激活绝不能烧掉巴黎那张。
 Future<Entitlements?> activatePass(WidgetRef ref, {String? museum}) async {
   final dio = ref.read(dioProvider);
+  final lang = apiLanguage(ref.read(resolvedLocaleProvider));
   try {
     final res = await dio.post('/api/v1/entitlements/activate',
-        queryParameters: {if (museum != null) 'museum': museum});
+        queryParameters: {
+          if (museum != null) 'museum': museum,
+          'language': lang
+        });
     return Entitlements.fromJson(res.data as Map<String, dynamic>);
   } on DioException {
     return null;

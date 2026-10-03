@@ -9,12 +9,14 @@
 library;
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/auth/data/auth_repository.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 
 User _user(String id) => User(
       id: id,
@@ -54,6 +56,8 @@ void main() {
     final dio = _countingDio(() => calls++);
     final container = ProviderContainer(overrides: [
       dioProvider.overrideWithValue(dio),
+      // 权益请求带界面语言;测试环境无设备 locale,固定一个
+      resolvedLocaleProvider.overrideWithValue(const Locale('en')),
       currentUserProvider
           .overrideWith((ref) => AuthNotifier(_Repo(_user('userA')))),
     ]);
