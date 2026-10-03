@@ -151,3 +151,24 @@ def test_vet_false_mirrors_without_touching_row(session):
     row = s.query(ObjectImage).filter_by(id=view.id).first()
     assert row is not None and row.role == "view"
     assert s.query(ObjectEmbedding).filter_by(image_id=view.id).first() is not None
+
+
+def test_view_gate_uses_current_model_thresholds(session, monkeypatch):
+    """门槛随引擎走:v3 下 0.36 应入库(若误用 v2 的 0.4 会被隔离)。"""
+    import app.services.recognition.embeddings as emb
+
+    monkeypatch.setattr(emb, "MODEL_NAME", "dinov3-vits16")
+    s, o, img = session
+    s.add(
+        ObjectEmbedding(
+            object_id=o.id,
+            image_id=img.id,
+            model="dinov3-vits16",
+            vec=_unit_vec(1.0).tobytes(),
+        )
+    )
+    s.commit()
+    view = _add_view(s, o)
+    assert embed_image_row(s, view, _tiny_png_bytes(), embedder=_fake(0.36)) is True
+    s.commit()
+    assert s.query(ObjectImage).filter_by(id=view.id).first().role == "view"

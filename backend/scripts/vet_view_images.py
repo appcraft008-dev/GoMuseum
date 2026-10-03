@@ -17,14 +17,14 @@ import numpy as np
 from app.core.database import SessionLocal
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.models.object_embedding import ObjectEmbedding
-from app.services.recognition.embedder import MODEL_NAME
+from app.services.recognition.embedder import MODEL_NAME, MODELS
 
 
 def vet_views(
     db,
     *,
-    delete_below: float = 0.25,
-    quarantine_below: float = 0.4,
+    delete_below: float = MODELS[MODEL_NAME]["view_gate"][0],
+    quarantine_below: float = MODELS[MODEL_NAME]["view_gate"][1],
     dry_run: bool = False,
 ) -> dict:
     """→ {"checked", "deleted", "quarantined"}。checked=有 primary+view 双向量、可判定的 view 数。"""
@@ -86,8 +86,9 @@ def vet_views(
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--delete-below", type=float, default=0.25)
-    ap.add_argument("--quarantine-below", type=float, default=0.4)
+    gate = MODELS[MODEL_NAME]["view_gate"]
+    ap.add_argument("--delete-below", type=float, default=gate[0])
+    ap.add_argument("--quarantine-below", type=float, default=gate[1])
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     db = SessionLocal()
