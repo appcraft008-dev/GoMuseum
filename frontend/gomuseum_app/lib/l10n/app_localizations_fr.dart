@@ -871,7 +871,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String ticketDaysLeft(int days) {
-    return '$days j restants';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days j restants',
+      one: '1 j restant',
+    );
+    return '$_temp0';
   }
 
   @override

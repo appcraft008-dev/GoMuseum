@@ -260,7 +260,7 @@
   "ticketStubUntorn": "non staccato",
   "ticketValidUntil": "Valido fino al",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "{days} giorni rimasti",
+  "ticketDaysLeft": "{days, plural, =1{1 giorno rimasto} other{{days} giorni rimasti}}",
   "activateSheetTitle": "Avviare ora i {days} giorni?",
   "activateSheetBody": "Alla conferma il conteggio parte e termina il {date} alle {time}. L'operazione è irreversibile.",
   "activateTear": "Stacca e avvia",

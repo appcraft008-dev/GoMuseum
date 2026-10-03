@@ -478,7 +478,7 @@
       }
     }
   },
-  "ticketDaysLeft": "{days} days left",
+  "ticketDaysLeft": "{days, plural, =1{1 day left} other{{days} days left}}",
   "@ticketDaysLeft": {
     "placeholders": {
       "days": {

@@ -28,6 +28,7 @@ class GmTicket extends StatelessWidget {
     this.dim = false,
     this.faded = false,
     this.voidStamp,
+    this.paidLabel,
   });
 
   /// 票面主体,通常是 [GmTicketFace]。
@@ -67,6 +68,16 @@ class GmTicket extends StatelessWidget {
   /// 减法减不出来就得用加法 —— 一个明确说"作废"的正向标记。纸质票据本来
   /// 就有这个词汇:用过的票会被盖戳。
   final String? voidStamp;
+
+  /// 已购后的付款标记(「已付」),画在票头最右侧的一枚**不带数字**的描边徽章。
+  ///
+  /// ⚠️ **已购之后绝不显示金额**。曾经这里画过「已付 €7.99」,而那个数字来自
+  /// 商店的**当前售价** —— 涨一次价,老用户的票面就在宣称他付了一个他没付过的
+  /// 金额。真实已付金额后端没落库(`purchases.amount` 恒 NULL)。
+  ///
+  /// 为什么在票头而不在标题旁:原先和标题同一行,徽章占掉右侧一块,西文标题
+  /// 只能在单词间断行 → 德语真机出现「Paris-Pass für 7 / Tage」。
+  final String? paidLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -171,29 +182,46 @@ class GmTicket extends StatelessWidget {
           children: [
             Text('◆', style: GmText.sans(size: 9, color: gm.accent)),
             const SizedBox(width: 8),
-            Text(
-              'GOMUSEUM · $stamp',
-              style: GmText.sans(
-                  size: 9.5,
-                  letterSpacing: 2.5,
-                  color: gm.sub,
-                  weight: FontWeight.w600),
-            ),
-            // Spacer 换成「弹簧 + FittedBox」:十种语言里意大利语 `7 GIORNI`
-            // 最长,360 宽(最窄主流安卓)上比法语原文多 5.3px 就会撑破票头。
-            // 缩的是次要信息那半,品牌刻印保持原大小。
-            const SizedBox(width: 8),
-            Flexible(
+            // 刻印 + 有效期一起放进「弹簧 + FittedBox」:最长的刻印 NIEDERLANDE、
+            // 意大利语 `7 GIORNI`、右侧再加「已付」徽章,在 360 宽和放大的系统字号
+            // 下会撑破票头。放得下时原大小;放不下时这两段一起等比缩,徽章保持原样。
+            Expanded(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  AppLocalizations.of(context)!.ticketDurationDays('$days'),
-                  style:
-                      GmText.sans(size: 9.5, letterSpacing: 1, color: gm.faint),
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'GOMUSEUM · $stamp',
+                      style: GmText.sans(
+                          size: 9.5,
+                          letterSpacing: 2.5,
+                          color: gm.sub,
+                          weight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppLocalizations.of(context)!.ticketDurationDays('$days'),
+                      style: GmText.sans(
+                          size: 9.5, letterSpacing: 1, color: gm.faint),
+                    ),
+                  ],
                 ),
               ),
             ),
+            if (paidLabel != null) ...[
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(border: Border.all(color: gm.line)),
+                child: Text(
+                  paidLabel!,
+                  style:
+                      GmText.sans(size: 9.5, color: gm.faint, letterSpacing: 1),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -292,7 +320,6 @@ class GmTicketFace extends StatelessWidget {
     this.pitch,
     this.price,
     this.priceNote,
-    this.paidLabel,
   });
 
   final String title;
@@ -308,16 +335,6 @@ class GmTicketFace extends StatelessWidget {
 
   /// 未购时的价格注解(「一次性 · 非订阅」)。
   final String? priceNote;
-
-  /// 已购后的付款标记(「已付」),渲染成一枚**不带数字**的描边徽章。
-  ///
-  /// ⚠️ **已购之后绝不显示金额**。曾经这里画过「已付 €7.99」,而那个数字来自
-  /// 商店的**当前售价** —— 涨一次价,老用户的票面就在宣称他付了一个他没付过的
-  /// 金额。真实已付金额后端没落库(`purchases.amount` 恒 NULL)。
-  ///
-  /// 但也不能什么都不显示:用户需要看到"这张票付过钱了"。所以留字不留数 ——
-  /// 价格只出现在**购买前**(那时是商店实时价,真实)。
-  final String? paidLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -340,18 +357,7 @@ class GmTicketFace extends StatelessWidget {
                 ),
               ),
             ),
-            if (paidLabel != null) ...[
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(border: Border.all(color: gm.line)),
-                child: Text(
-                  paidLabel!,
-                  style: GmText.sans(
-                      size: 11, color: gm.faint, letterSpacing: 1.5),
-                ),
-              ),
-            ] else if (price != null) ...[
+            if (price != null) ...[
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

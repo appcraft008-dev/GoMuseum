@@ -260,7 +260,7 @@
   "ticketStubUntorn": "nicht abgerissen",
   "ticketValidUntil": "Gültig bis",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "noch {days} Tage",
+  "ticketDaysLeft": "{days, plural, =1{noch 1 Tag} other{noch {days} Tage}}",
   "activateSheetTitle": "Die {days} Tage jetzt starten?",
   "activateSheetBody": "Mit dem Bestätigen läuft die Zeit und endet am {date} um {time}. Das lässt sich nicht rückgängig machen.",
   "activateTear": "Abreißen und starten",
