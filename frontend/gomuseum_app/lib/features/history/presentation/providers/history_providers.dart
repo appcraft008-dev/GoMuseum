@@ -11,6 +11,7 @@ import '../../domain/usecases/get_recent_history.dart';
 import '../../domain/usecases/search_history.dart';
 import '../../domain/usecases/delete_history_item.dart';
 import '../../domain/entities/history_item.dart';
+import '../footprint_visit.dart';
 
 part 'history_providers.g.dart';
 
@@ -171,21 +172,25 @@ class History extends _$History {
     );
   }
 
+  /// 删一条足迹。列表按「一次参观内同一件只列一次」去重显示,所以要连带删掉
+  /// 被藏起来的同参观重复条 —— 否则旧的那条立刻顶上来,看起来像没删掉。
   Future<void> deleteItem(String id) async {
     final useCase = ref.read(deleteHistoryItemUseCaseProvider);
-    final result = await useCase(id);
+    final target = state.items.where((i) => i.id == id).firstOrNull;
+    final ids = target == null
+        ? [id]
+        : sameVisitDuplicates(state.items, target).map((i) => i.id).toList();
 
-    result.fold(
-      (failure) {
+    for (final one in ids) {
+      final result = await useCase(one);
+      final failure = result.fold((f) => f, (_) => null);
+      if (failure != null) {
         state = state.copyWith(error: failure.message);
-      },
-      (_) {
-        // Remove item from list
-        final updatedItems =
-            state.items.where((item) => item.id != id).toList();
-        state = state.copyWith(items: updatedItems);
-      },
-    );
+        return;
+      }
+      state = state.copyWith(
+          items: state.items.where((item) => item.id != one).toList());
+    }
   }
 
   Future<void> refresh() async {

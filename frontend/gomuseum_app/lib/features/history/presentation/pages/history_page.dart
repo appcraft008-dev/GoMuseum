@@ -76,7 +76,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             '${i.timestamp.year}-${i.timestamp.month}-${i.timestamp.day}')
         .toSet()
         .length;
-    return l10n.footprintStat(items.length, days);
+    // 件数与下面列出来的一致:一次参观内同一件只算一次
+    final works = groupFootprintsByVisit(items)
+        .fold<int>(0, (n, v) => n + v.items.length);
+    return l10n.footprintStat(works, days);
   }
 
   List<Widget> _content(GmPalette gm, HistoryState history) {

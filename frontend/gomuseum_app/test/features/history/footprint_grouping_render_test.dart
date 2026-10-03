@@ -66,7 +66,8 @@ MuseumSummary _museum(String slug, String name, String city) => MuseumSummary(
       artworkCount: 1,
     );
 
-HistoryItem _item(String name, DateTime t, {String? slug}) => HistoryItem(
+HistoryItem _item(String name, DateTime t, {String? slug, String? qid}) =>
+    HistoryItem(
       id: '$name@$t',
       artworkName: name,
       artist: '',
@@ -75,7 +76,7 @@ HistoryItem _item(String name, DateTime t, {String? slug}) => HistoryItem(
       confidence: 0.9,
       timestamp: t,
       museumSlug: slug,
-      qid: 'Q1',
+      qid: qid ?? 'Q-$name', // 每件不同;同一件会被一次参观内去重
     );
 
 Future<void> _pump(
@@ -136,6 +137,24 @@ void main() {
 
     expect(_sectionLabels(t), ['橘园美术馆', '奥赛博物馆'], reason: '应按时间倒序，且显示馆名');
     expect(find.text('orsay'), findsNothing, reason: 'slug 漏到界面上了');
+  });
+
+  testWidgets('同一件拍三次:列表只一行,顶部统计与小节都按 1 件算', (t) async {
+    final today = DateTime.now();
+    DateTime at(int h) => DateTime(today.year, today.month, today.day, h);
+    await _pump(
+      t,
+      [
+        _item('睡莲', at(10), slug: 'orsay', qid: 'Q1'),
+        _item('睡莲', at(11), slug: 'orsay', qid: 'Q1'),
+        _item('睡莲', at(12), slug: 'orsay', qid: 'Q1'),
+      ],
+      museums: paris,
+    );
+    expect(find.text('睡莲'), findsOneWidget);
+    expect(find.textContaining('1 件作品'), findsOneWidget);
+    final note = t.widget<GmSectionHead>(find.byType(GmSectionHead)).note ?? '';
+    expect(note, contains('1 件'));
   });
 
   testWidgets('小节备注带日期和件数 —— 「什么时候看了几件」', (t) async {
