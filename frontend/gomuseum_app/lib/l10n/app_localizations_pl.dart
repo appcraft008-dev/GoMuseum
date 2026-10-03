@@ -1186,4 +1186,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get updateRestart => 'Uruchom ponownie';
+
+  @override
+  String get collectionViewGrid => 'Pokaż jako duże obrazy';
+
+  @override
+  String get collectionViewList => 'Pokaż jako listę';
 }

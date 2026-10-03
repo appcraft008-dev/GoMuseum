@@ -233,7 +233,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             GmThumb(
               image:
                   item.thumbnail == null ? null : NetworkImage(item.thumbnail!),
-              size: 46,
+              // 放大到 68:人记得的是画面不是标题(2026-10-03 用户定,足迹不做网格)
+              size: 68,
             ),
             const SizedBox(width: 13),
             Expanded(

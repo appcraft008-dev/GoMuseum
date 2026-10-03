@@ -685,5 +685,9 @@
   },
   "updateReady": "A new version is ready",
   "@updateReady": {"description": "应用内更新下载完成后的底部提示"},
-  "updateRestart": "Restart"
+  "updateRestart": "Restart",
+  "collectionViewGrid": "Show as large images",
+  "@collectionViewGrid": {"description": "馆藏目录视图切换按钮的无障碍标签(切到大图网格)"},
+  "collectionViewList": "Show as list",
+  "@collectionViewList": {"description": "馆藏目录视图切换按钮的无障碍标签(切到列表)"}
 }

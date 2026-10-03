@@ -2152,6 +2152,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restart'**
   String get updateRestart;
+
+  /// 馆藏目录视图切换按钮的无障碍标签(切到大图网格)
+  ///
+  /// In en, this message translates to:
+  /// **'Show as large images'**
+  String get collectionViewGrid;
+
+  /// 馆藏目录视图切换按钮的无障碍标签(切到列表)
+  ///
+  /// In en, this message translates to:
+  /// **'Show as list'**
+  String get collectionViewList;
 }
 
 class _AppLocalizationsDelegate

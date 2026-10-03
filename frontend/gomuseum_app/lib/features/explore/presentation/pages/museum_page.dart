@@ -20,6 +20,7 @@ import 'package:gomuseum_app/features/content/data/models/museum_detail_model.da
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
+import 'package:gomuseum_app/features/explore/presentation/providers/collection_view_provider.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
@@ -377,20 +378,51 @@ class _CategoryTabs extends StatelessWidget {
           bottom: BorderSide(color: gm.line, width: 1.5),
         ),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final cat in tabs)
-              GestureDetector(
-                onTap: () => onSelect(cat.code),
-                behavior: HitTestBehavior.opaque,
-                child: _TabItem(
-                  cat: cat,
-                  active: cat.code == selected,
-                ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final cat in tabs)
+                    GestureDetector(
+                      onTap: () => onSelect(cat.code),
+                      behavior: HitTestBehavior.opaque,
+                      child: _TabItem(
+                        cat: cat,
+                        active: cat.code == selected,
+                      ),
+                    ),
+                ],
               ),
-          ],
+            ),
+          ),
+          const _ViewToggle(),
+        ],
+      ),
+    );
+  }
+}
+
+/// 大图 / 列表切换。图标画的是「点了会变成什么」。
+class _ViewToggle extends ConsumerWidget {
+  const _ViewToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    final grid = ref.watch(collectionGridViewProvider);
+    return Semantics(
+      button: true,
+      label: grid ? l10n.collectionViewList : l10n.collectionViewGrid,
+      child: InkWell(
+        onTap: () => ref.read(collectionGridViewProvider.notifier).toggle(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: GmIcon(grid ? GmIcons.list : GmIcons.grid,
+              size: 18, color: gm.sub),
         ),
       ),
     );
@@ -597,6 +629,16 @@ class _ObjectGrid extends ConsumerWidget {
   final String category;
   final ScrollController scrollController;
 
+  void _open(BuildContext context, ObjectListItem item) => context.push(
+        '/guide',
+        extra: GuideArgs(
+          slug: slug,
+          qid: item.qid,
+          // 缩略图作生成中 hero 兜底（content 无图的冷门件）。
+          imageUrl: item.thumbnail,
+        ),
+      );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final gm = context.gm;
@@ -605,6 +647,7 @@ class _ObjectGrid extends ConsumerWidget {
     final state = ref.watch(
         objectListProvider((slug: slug, category: category, language: lang)));
     final items = state.items;
+    final grid = ref.watch(collectionGridViewProvider);
 
     if (items.isEmpty && state.loading) {
       return Center(
@@ -659,28 +702,100 @@ class _ObjectGrid extends ConsumerWidget {
     return CustomScrollView(
       controller: scrollController,
       slivers: [
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, i) => _ObjectRow(
-              number: (i + 1).toString().padLeft(2, '0'),
-              item: items[i],
-              onTap: () => context.push(
-                '/guide',
-                extra: GuideArgs(
-                  slug: slug,
-                  qid: items[i].qid,
-                  // 缩略图作生成中 hero 兜底（content 无图的冷门件）。
-                  imageUrl: items[i].thumbnail,
+        if (grid)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.66,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _ObjectTile(
+                  item: items[i],
+                  onTap: () => _open(context, items[i]),
                 ),
+                childCount: items.length,
               ),
             ),
-            childCount: items.length,
+          )
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => _ObjectRow(
+                number: (i + 1).toString().padLeft(2, '0'),
+                item: items[i],
+                onTap: () => _open(context, items[i]),
+              ),
+              childCount: items.length,
+            ),
           ),
-        ),
         SliverToBoxAdapter(
           child: _BottomState(state: state),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 目录大图格：图 + 标题 + 作者·年代；stub → 图上「待完善」角标
+// ---------------------------------------------------------------------------
+class _ObjectTile extends StatelessWidget {
+  const _ObjectTile({required this.item, required this.onTap});
+
+  final ObjectListItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final meta = [
+      if (item.artist.isNotEmpty) item.artist,
+      if (item.year != null && item.year!.isNotEmpty)
+        formatYear(item.year!, AppLocalizations.of(context)!),
+    ].join(' · ');
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                LayoutBuilder(
+                  builder: (_, c) => _Thumbnail(
+                    url: item.thumbnail,
+                    size: c.maxWidth,
+                    height: c.maxHeight,
+                    px: 480, // 后端 thumb 档就是 480 宽
+                  ),
+                ),
+                if (item.isStub)
+                  const Positioned(top: 6, right: 6, child: _StubBadge()),
+              ],
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            item.title,
+            style: GmText.serif(size: 13.5, weight: FontWeight.w600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (meta.isNotEmpty)
+            Text(
+              meta,
+              style: GmText.sans(size: 11, color: gm.sub),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
+      ),
     );
   }
 }
@@ -780,50 +895,57 @@ class _ObjectRow extends StatelessWidget {
 }
 
 class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.url, this.size = 52});
+  const _Thumbnail(
+      {required this.url, this.size = 52, this.height, this.px = 200});
 
   final String? url;
   final double size;
+  final double? height;
+  final int px;
 
   @override
   Widget build(BuildContext context) {
     if (url != null) {
       return SizedBox(
-        height: size,
+        height: height ?? size,
         width: size,
         child: Image.network(
           // 列表缩略图仅 52dp：取 ?width=200 缩略图(~14KB,生成更快、更易命中
           // Wikimedia CDN 缓存)而非数十 MB 原图；带合规 UA。
-          sizedImageUrl(url!, 200),
-          height: size,
+          sizedImageUrl(url!, px),
+          height: height ?? size,
           width: size,
           fit: BoxFit.cover,
-          cacheWidth: 200,
+          cacheWidth: px,
           headers: kImageRequestHeaders,
-          loadingBuilder: (_, child, progress) =>
-              progress == null ? child : _Placeholder(size: size),
-          errorBuilder: (_, __, ___) => _Placeholder(size: size),
+          loadingBuilder: (_, child, progress) => progress == null
+              ? child
+              : _Placeholder(size: size, height: height),
+          errorBuilder: (_, __, ___) =>
+              _Placeholder(size: size, height: height),
         ),
       );
     }
-    return _Placeholder(size: size);
+    return _Placeholder(size: size, height: height);
   }
 }
 
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({this.size = 52});
+  const _Placeholder({this.size = 52, this.height});
 
   final double size;
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
     return Container(
-      height: size,
+      height: height ?? size,
       width: size,
       color: gm.chipBg,
       child: Center(
-        child: GmIcon(GmIcons.photo, size: size * 0.42, color: gm.faint),
+        child: GmIcon(GmIcons.photo,
+            size: (size * 0.42).clamp(0, 36).toDouble(), color: gm.faint),
       ),
     );
   }

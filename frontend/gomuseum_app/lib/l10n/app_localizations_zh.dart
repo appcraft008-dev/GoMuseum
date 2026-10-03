@@ -1136,6 +1136,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateRestart => '重启';
+
+  @override
+  String get collectionViewGrid => '大图显示';
+
+  @override
+  String get collectionViewList => '列表显示';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2270,4 +2276,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get updateRestart => '重新啟動';
+
+  @override
+  String get collectionViewGrid => '大圖顯示';
+
+  @override
+  String get collectionViewList => '列表顯示';
 }

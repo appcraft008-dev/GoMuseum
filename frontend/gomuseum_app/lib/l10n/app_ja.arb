@@ -354,5 +354,7 @@
   "authTermsOfService": "利用規約",
   "authConsentPrivacy": "プライバシーポリシー",
   "updateReady": "新しいバージョンの準備ができました",
-  "updateRestart": "再起動"
+  "updateRestart": "再起動",
+  "collectionViewGrid": "大きな画像で表示",
+  "collectionViewList": "リストで表示"
 }

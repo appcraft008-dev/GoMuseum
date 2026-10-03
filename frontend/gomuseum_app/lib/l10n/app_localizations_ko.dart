@@ -1143,4 +1143,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateRestart => '다시 시작';
+
+  @override
+  String get collectionViewGrid => '큰 이미지로 보기';
+
+  @override
+  String get collectionViewList => '목록으로 보기';
 }

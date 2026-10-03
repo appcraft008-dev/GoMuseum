@@ -354,5 +354,7 @@
   "authTermsOfService": "서비스 약관",
   "authConsentPrivacy": "개인정보 처리방침",
   "updateReady": "새 버전이 준비되었습니다",
-  "updateRestart": "다시 시작"
+  "updateRestart": "다시 시작",
+  "collectionViewGrid": "큰 이미지로 보기",
+  "collectionViewList": "목록으로 보기"
 }

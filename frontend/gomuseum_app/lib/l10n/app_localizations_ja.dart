@@ -1142,4 +1142,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get updateRestart => '再起動';
+
+  @override
+  String get collectionViewGrid => '大きな画像で表示';
+
+  @override
+  String get collectionViewList => 'リストで表示';
 }
