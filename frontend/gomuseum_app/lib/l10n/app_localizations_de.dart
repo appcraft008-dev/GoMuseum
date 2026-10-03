@@ -1190,4 +1190,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get updateRestart => 'Neu starten';
+
+  @override
+  String get collectionViewGrid => 'Als große Bilder anzeigen';
+
+  @override
+  String get collectionViewList => 'Als Liste anzeigen';
 }

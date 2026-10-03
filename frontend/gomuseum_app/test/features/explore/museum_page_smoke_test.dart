@@ -15,6 +15,7 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/explore/presentation/pages/museum_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Fake datasource
@@ -127,6 +128,36 @@ Widget _wrap({bool withIntro = true}) => ProviderScope(
 // Tests
 // ---------------------------------------------------------------------------
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('藏品目录：默认大图网格，点切换 → 列表并记在本机', (tester) async {
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(SliverGrid), findsOneWidget);
+    expect(find.text('01'), findsNothing); // 序号只在列表行里
+    expect(find.text('待完善'), findsOneWidget); // 网格里 stub 角标照样在
+
+    await tester.tap(find.bySemanticsLabel('列表显示'));
+    await tester.pump();
+    expect(find.byType(SliverGrid), findsNothing);
+    expect(find.text('01'), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('collection_grid_view'), isFalse);
+  });
+
+  testWidgets('藏品目录：本机记过「列表」→ 进馆直接是列表', (tester) async {
+    SharedPreferences.setMockInitialValues({'collection_grid_view': false});
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(SliverGrid), findsNothing);
+    expect(find.text('01'), findsOneWidget);
+    expect(find.bySemanticsLabel('大图显示'), findsOneWidget);
+  });
+
   testWidgets('MuseumPage：默认停在「藏品」tab，切到「封面」才见介绍', (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pump();

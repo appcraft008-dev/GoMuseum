@@ -1176,4 +1176,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateRestart => 'Restart';
+
+  @override
+  String get collectionViewGrid => 'Show as large images';
+
+  @override
+  String get collectionViewList => 'Show as list';
 }

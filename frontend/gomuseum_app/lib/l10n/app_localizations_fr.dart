@@ -1192,4 +1192,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get updateRestart => 'Redémarrer';
+
+  @override
+  String get collectionViewGrid => 'Afficher en grandes images';
+
+  @override
+  String get collectionViewList => 'Afficher en liste';
 }

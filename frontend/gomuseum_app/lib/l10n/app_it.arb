@@ -354,5 +354,7 @@
   "authTermsOfService": "Termini di servizio",
   "authConsentPrivacy": "Informativa sulla privacy",
   "updateReady": "Una nuova versione è pronta",
-  "updateRestart": "Riavvia"
+  "updateRestart": "Riavvia",
+  "collectionViewGrid": "Mostra come immagini grandi",
+  "collectionViewList": "Mostra come elenco"
 }

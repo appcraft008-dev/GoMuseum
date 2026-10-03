@@ -354,5 +354,7 @@
   "authTermsOfService": "服务条款",
   "authConsentPrivacy": "隐私政策",
   "updateReady": "新版本已下载",
-  "updateRestart": "重启"
+  "updateRestart": "重启",
+  "collectionViewGrid": "大图显示",
+  "collectionViewList": "列表显示"
 }
