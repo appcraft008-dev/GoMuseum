@@ -6,7 +6,7 @@ import io
 import logging
 
 from app.models.object_embedding import ObjectEmbedding
-from app.services.recognition.embedder import MODEL_NAME, get_embedder
+from app.services.recognition.embedder import MODEL_NAME, MODELS, get_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +61,11 @@ def embed_image_row(
                         np.frombuffer(pemb.vec, dtype="float32"),
                     )
                 )
-                if sim < 0.25:
+                delete_below, quarantine_below = MODELS[MODEL_NAME]["view_gate"]
+                if sim < delete_below:
                     db.delete(row)
                     return False
-                if sim < 0.4:
+                if sim < quarantine_below:
                     row.role = "view_quarantine"
                     return False
         db.add(

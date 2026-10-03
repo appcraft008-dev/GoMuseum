@@ -47,6 +47,10 @@ enum GmIcons {
 
   /// 铅笔 = 「反馈」(讲解页纠错、设置页意见反馈)。2026-09-30 用户定,替掉原先的旗标。
   edit,
+
+  /// 馆藏目录视图切换:大图网格 / 列表。
+  grid,
+  list,
 }
 
 const Map<GmIcons, List<String>> _iconPaths = {
@@ -133,6 +137,13 @@ const Map<GmIcons, List<String>> _iconPaths = {
     'M16 9a4.3 4.3 0 0 1 0 6 M18.3 7a7.4 7.4 0 0 1 0 10',
   ],
   GmIcons.lock: ['M7 11h10v8.5H7Z', 'M9 11V8a3 3 0 0 1 6 0v3'],
+  GmIcons.grid: [
+    'M4.5 4.5h6v6h-6Z M13.5 4.5h6v6h-6Z M4.5 13.5h6v6h-6Z M13.5 13.5h6v6h-6Z'
+  ],
+  GmIcons.list: [
+    'M9 6.5h11 M9 12h11 M9 17.5h11',
+    'M4.5 6.5h.01 M4.5 12h.01 M4.5 17.5h.01'
+  ],
   GmIcons.filter: ['M5 7h14 M8 12h8 M10.5 17h3'],
   GmIcons.qr: [
     'M4.5 4.5h5v5h-5Z M14.5 4.5h5v5h-5Z M4.5 14.5h5v5h-5Z',

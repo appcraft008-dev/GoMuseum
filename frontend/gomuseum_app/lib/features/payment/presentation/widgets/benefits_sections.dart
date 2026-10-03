@@ -236,27 +236,31 @@ class BenStubDate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
+    // 两行:标签(+剩余天数)一行,日期独占一行。挤在一行时西文日期
+    // 「3. Okt. 2026 23:10」会被折成两截(德语真机,系统字号 1.3 倍)。
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: GmText.sans(size: 10, color: gm.faint)),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            value,
-            style: GmText.serif(
-              size: muted ? 14 : 15,
-              weight: FontWeight.w700,
-              color: muted ? gm.sub : gm.accentDeep,
-              letterSpacing: 0.5,
-            ),
+        Row(
+          children: [
+            Expanded(
+                child:
+                    Text(label, style: GmText.sans(size: 10, color: gm.faint))),
+            if (trailing != null)
+              Text(trailing!, style: GmText.sans(size: 10.5, color: gm.faint)),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: GmText.serif(
+            size: muted ? 14 : 15,
+            weight: FontWeight.w700,
+            color: muted ? gm.sub : gm.accentDeep,
+            letterSpacing: 0.5,
           ),
         ),
-        if (trailing != null) ...[
-          const SizedBox(width: 10),
-          Text(trailing!, style: GmText.sans(size: 10.5, color: gm.faint)),
-        ],
       ],
     );
   }

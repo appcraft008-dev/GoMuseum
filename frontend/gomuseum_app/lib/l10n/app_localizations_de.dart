@@ -69,9 +69,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get confirm => 'Bestätigen';
 
   @override
-  String get gotIt => 'Verstanden';
-
-  @override
   String get loadFailed => 'Laden fehlgeschlagen';
 
   @override
@@ -445,16 +442,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String featureComingSoon(String feature) {
     return '$feature kommt bald';
   }
-
-  @override
-  String get privacyBody =>
-      'Originalfotos werden standardmäßig nicht hochgeladen, Erkennungsdaten nur vorübergehend verarbeitet. Konto und Daten können Sie jederzeit unter Einstellungen → Konto löschen löschen.';
-
-  @override
-  String get privacyFullPolicy => 'Vollständige Datenschutzerklärung';
-
-  @override
-  String get privacyCopyLink => 'Link kopieren';
 
   @override
   String get privacyLinkCopied => 'Link kopiert';
@@ -882,7 +869,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String ticketDaysLeft(int days) {
-    return 'noch $days Tage';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'noch $days Tage',
+      one: 'noch 1 Tag',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1197,4 +1190,16 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => 'Datenschutzerklärung';
+
+  @override
+  String get updateReady => 'Eine neue Version ist bereit';
+
+  @override
+  String get updateRestart => 'Neu starten';
+
+  @override
+  String get collectionViewGrid => 'Als große Bilder anzeigen';
+
+  @override
+  String get collectionViewList => 'Als Liste anzeigen';
 }

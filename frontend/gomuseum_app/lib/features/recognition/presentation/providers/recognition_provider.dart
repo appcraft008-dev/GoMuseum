@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:cross_file/cross_file.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:gomuseum_app/core/error/exceptions.dart';
+import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
@@ -99,6 +102,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
               phash: resp.phash),
         _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug),
       };
+      if (state is RecognitionMatched) _refreshFootprints();
     } on QuotaExceededException catch (e) {
       state = RecognitionQuotaExceeded(passId: e.passId);
     } catch (_) {
@@ -120,11 +124,19 @@ class RecognitionNotifier extends _$RecognitionNotifier {
     await ref
         .read(recognitionRemoteDataSourceProvider)
         .confirm(phash: phash, qid: qid);
+    _refreshFootprints(); // 放在权益刷新之前:那边抛了不该连带足迹
     // 确认扣掉了 1 次额度，权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
     ref.invalidate(entitlementsProvider);
     ref.invalidate(museumEntitlementsProvider);
     await ref.read(benefitsStateProvider.notifier).refresh();
   }
+
+  /// 命中 / 点选确认 = 后端多了一条足迹。足迹列表(足迹 tab + 首页「继续游览」)
+  /// 是常驻缓存,不在这里刷的话一直停在打开 App 那一刻(2026-10-02 真机报告:
+  /// 连拍几十件,两处都看不到)。用 refresh 而不是 invalidate:后者会先清空列表,
+  /// 首页那节闪没再出现。
+  void _refreshFootprints() =>
+      unawaited(ref.read(historyProvider.notifier).refresh());
 
   /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字）。
   void rejectCandidates() {

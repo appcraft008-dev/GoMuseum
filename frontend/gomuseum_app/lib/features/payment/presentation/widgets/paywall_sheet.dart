@@ -449,6 +449,7 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
             tween: Tween(begin: 0, end: done ? 1 : 0),
             duration: const Duration(milliseconds: 200),
             builder: (_, torn, __) => GmTicket(
+              paidLabel: l10n.ticketPaid,
               stamp: widget.label.toUpperCase(),
               days: widget.days,
               torn: torn,
@@ -457,7 +458,6 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
               child: GmTicketFace(
                 title: passTitle(l10n, widget.label, widget.days,
                     title: widget.title),
-                paidLabel: l10n.ticketPaid,
               ),
             ),
           ),
@@ -523,25 +523,10 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
         }
         final daysLeft =
             (exp.difference(DateTime.now()).inHours / 24).ceil().clamp(0, 999);
-        return Row(
-          children: [
-            Text(l10n.ticketValidUntil,
-                style: GmText.sans(size: 10, color: gm.faint)),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                l10n.ticketDateTime(exp, exp),
-                style: GmText.serif(
-                    size: 15,
-                    weight: FontWeight.w700,
-                    color: gm.accentDeep,
-                    letterSpacing: 0.5),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(l10n.ticketDaysLeft(daysLeft),
-                style: GmText.sans(size: 10.5, color: gm.faint)),
-          ],
+        return BenStubDate(
+          label: l10n.ticketValidUntil,
+          value: l10n.ticketDateTime(exp, exp),
+          trailing: l10n.ticketDaysLeft(daysLeft),
         );
     }
   }

@@ -4,14 +4,14 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:gomuseum_app/core/utils/open_url.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.dart'
-    show kPrivacyPolicyUrl;
+    show kPrivacyPolicyUrl, kTermsUrl;
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -19,8 +19,6 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'auth_provider.dart';
-
-const kTermsUrl = 'https://gomuseum.app/terms.html';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key, this.upgrading = false, this.returnTo});
@@ -57,9 +55,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isLoading = false;
   bool _emailOpen = false;
   late final _termsTap = TapGestureRecognizer()
-    ..onTap = () => _copyLink(kTermsUrl);
+    ..onTap = () => openUrlOrCopy(context, kTermsUrl);
   late final _privacyTap = TapGestureRecognizer()
-    ..onTap = () => _copyLink(kPrivacyPolicyUrl);
+    ..onTap = () => openUrlOrCopy(context, kPrivacyPolicyUrl);
 
   // Google Sign-In instance
   // serverClientId is required for backend token verification
@@ -358,7 +356,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   /// 底部「继续即表示同意服务条款和隐私政策」。社交登录一键就建了账号,
   /// 这句话必须在按钮那一屏上。
   ///
-  /// 点条款词 = 复制链接(同设置页):不引入 url_launcher,理由见 [kPrivacyPolicyUrl]。
+  /// 点条款词 = 用浏览器打开(打不开才复制链接),见 [openUrlOrCopy]。
   /// 词序各语言不同,所以用带 {terms}/{privacy} 的整句模板,再按占位拆出可点的两段。
   Widget _consentLine(GmPalette gm, AppLocalizations l10n) {
     const t = '\u0000T\u0000', p = '\u0000P\u0000';
@@ -383,19 +381,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
     return Text.rich(TextSpan(style: base, children: spans),
         textAlign: TextAlign.center);
-  }
-
-  Future<void> _copyLink(String url) async {
-    await Clipboard.setData(ClipboardData(text: url));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content:
-            Text('${AppLocalizations.of(context)!.privacyLinkCopied}: $url'),
-        duration: const Duration(seconds: 3),
-        persist: false,
-      ));
   }
 
   /// 「忘记密码」：填邮箱 → 后端发一条一次性链接 → 用户在浏览器里改完，回来登录。

@@ -20,7 +20,6 @@
   "cancel": "キャンセル",
   "delete": "削除",
   "confirm": "確認",
-  "gotIt": "OK",
   "loadFailed": "読み込みに失敗しました",
   "loadFailedRetry": "読み込みに失敗しました。再試行してください",
   "toBeRefined": "準備中",
@@ -130,9 +129,6 @@
   "themeDark": "ダーク",
   "themeSystem": "システム",
   "featureComingSoon": "{feature}は近日公開",
-  "privacyBody": "元の写真はデフォルトでアップロードされず、認識データは一時的にのみ処理されます。アカウントとデータは「設定 → アカウント削除」からいつでも削除できます。",
-  "privacyFullPolicy": "プライバシーポリシー全文",
-  "privacyCopyLink": "リンクをコピー",
   "privacyLinkCopied": "リンクをコピーしました",
   "deleteAccountQ": "アカウントを完全に削除しますか？",
   "deleteAccountBody": "アカウントのプロフィールと残りの枠が削除されます。この操作は取り消せません。",
@@ -356,5 +352,9 @@
   "authUseEmail": "メールアドレスでログイン / 登録",
   "authConsent": "続行すると、{terms}と{privacy}に同意したことになります",
   "authTermsOfService": "利用規約",
-  "authConsentPrivacy": "プライバシーポリシー"
+  "authConsentPrivacy": "プライバシーポリシー",
+  "updateReady": "新しいバージョンの準備ができました",
+  "updateRestart": "再起動",
+  "collectionViewGrid": "大きな画像で表示",
+  "collectionViewList": "リストで表示"
 }

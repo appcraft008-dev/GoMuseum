@@ -23,7 +23,6 @@
   "cancel": "Cancel",
   "delete": "Delete",
   "confirm": "Confirm",
-  "gotIt": "Got it",
   "loadFailed": "Failed to load",
   "loadFailedRetry": "Failed to load, please retry",
   "toBeRefined": "In progress",
@@ -288,9 +287,6 @@
       }
     }
   },
-  "privacyBody": "Original photos are not uploaded by default and recognition data is processed temporarily only. You can delete your account and data any time under Settings → Delete account.",
-  "privacyFullPolicy": "Full privacy policy",
-  "privacyCopyLink": "Copy link",
   "privacyLinkCopied": "Link copied",
   "deleteAccountQ": "Permanently delete account?",
   "deleteAccountBody": "This will delete your account profile and remaining quota. This action cannot be undone.",
@@ -482,7 +478,7 @@
       }
     }
   },
-  "ticketDaysLeft": "{days} days left",
+  "ticketDaysLeft": "{days, plural, =1{1 day left} other{{days} days left}}",
   "@ticketDaysLeft": {
     "placeholders": {
       "days": {
@@ -686,5 +682,12 @@
   "authConsentPrivacy": "Privacy Policy",
   "@authConsentPrivacy": {
     "description": "同意声明里的「隐私政策」;单独一个键是因为有的语言要变格(pl 宾格 Politykę)"
-  }
+  },
+  "updateReady": "A new version is ready",
+  "@updateReady": {"description": "应用内更新下载完成后的底部提示"},
+  "updateRestart": "Restart",
+  "collectionViewGrid": "Show as large images",
+  "@collectionViewGrid": {"description": "馆藏目录视图切换按钮的无障碍标签(切到大图网格)"},
+  "collectionViewList": "Show as list",
+  "@collectionViewList": {"description": "馆藏目录视图切换按钮的无障碍标签(切到列表)"}
 }

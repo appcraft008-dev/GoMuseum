@@ -18,6 +18,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# view_gate=(删除线, 隔离线):view 与正面图余弦低于前者删、低于后者隔离;分数尺度随模型变,换引擎必须重标。
 # 可选引擎(RECOG_MODEL 切换;向量按 model 名分开落库,换引擎=先 backfill 新向量再切,切回即回退)。
 # v3 选型依据:2026-10-01 线上图库 1.47 万张同库对照——库外画作直判误认 23→1/158,
 # 真实照直接认对持平(104/142),小红书 9 张 2→4。ONNX 取自 onnx-community(只留 pooler_output)。
@@ -26,11 +27,16 @@ MODELS = {
         "key": "models/dinov2_vits14.onnx",
         "preset": "dinov2",
         "sha256": "47578985a20aadc6e4fe399567a5ffef6b3d77748c75300b62fbd24dd8b44aa9",
+        "view_gate": (0.25, 0.4),
     },
     "dinov3-vits16": {
         "key": "models/dinov3_vits16.onnx",
         "preset": "dinov3",
         "sha256": "1053c247c4c9626f35207d71f90b24fc3d6ba9a80ac463fa9837986db44784db",
+        # 2026-10-03 按 v2 门槛等效重标:prod 483 对 view↔正面图(两代向量都有)里,
+        # v2 留 451 张、v3@0.33 留 453 张;1500 对不同雕塑正面图(负对照)v2@0.4 放过 38.7%、
+        # v3@0.33 放过 31.9%。v2 的 0.25 不删任何已留 view,v3@0.20 只删 4 张(都是 v2 隔离过的)。
+        "view_gate": (0.20, 0.33),
     },
 }
 MODEL_NAME = settings.RECOG_MODEL

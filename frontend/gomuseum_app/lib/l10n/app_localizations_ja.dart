@@ -69,9 +69,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get confirm => '確認';
 
   @override
-  String get gotIt => 'OK';
-
-  @override
   String get loadFailed => '読み込みに失敗しました';
 
   @override
@@ -439,16 +436,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String featureComingSoon(String feature) {
     return '$featureは近日公開';
   }
-
-  @override
-  String get privacyBody =>
-      '元の写真はデフォルトでアップロードされず、認識データは一時的にのみ処理されます。アカウントとデータは「設定 → アカウント削除」からいつでも削除できます。';
-
-  @override
-  String get privacyFullPolicy => 'プライバシーポリシー全文';
-
-  @override
-  String get privacyCopyLink => 'リンクをコピー';
 
   @override
   String get privacyLinkCopied => 'リンクをコピーしました';
@@ -1149,4 +1136,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => 'プライバシーポリシー';
+
+  @override
+  String get updateReady => '新しいバージョンの準備ができました';
+
+  @override
+  String get updateRestart => '再起動';
+
+  @override
+  String get collectionViewGrid => '大きな画像で表示';
+
+  @override
+  String get collectionViewList => 'リストで表示';
 }

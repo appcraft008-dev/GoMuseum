@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/history/domain/entities/history_item.dart';
 import 'package:gomuseum_app/features/history/presentation/footprint_visit.dart';
 
-HistoryItem item(String name, DateTime t, {String? slug}) => HistoryItem(
+HistoryItem item(String name, DateTime t, {String? slug, String? qid}) =>
+    HistoryItem(
       id: '$name@${t.toIso8601String()}',
       artworkName: name,
       artist: '',
@@ -13,11 +14,52 @@ HistoryItem item(String name, DateTime t, {String? slug}) => HistoryItem(
       confidence: 0.9,
       timestamp: t,
       museumSlug: slug,
-      qid: 'Q1',
+      qid: qid ?? 'Q-$name', // 默认每件不同;要测"同一件拍多次"时显式传
     );
 
 void main() {
   group('groupFootprintsByVisit', () {
+    test('同一次参观里同一件拍了多次 → 只列一次,留最近那次', () {
+      // 2026-10-02 真机:164 条足迹只有 90 件不同作品,同一幅画连列三遍。
+      final visits = groupFootprintsByVisit([
+        item('睡莲-1', DateTime(2026, 9, 18, 10), slug: 'orsay', qid: 'Q1'),
+        item('舞女', DateTime(2026, 9, 18, 11), slug: 'orsay', qid: 'Q2'),
+        item('睡莲-2', DateTime(2026, 9, 18, 12), slug: 'orsay', qid: 'Q1'),
+      ]);
+      expect(visits.single.items.map((i) => i.artworkName), ['睡莲-2', '舞女']);
+    });
+
+    test('同一件在不同天 / 不同馆各算一次(去重只在一次参观内)', () {
+      final visits = groupFootprintsByVisit([
+        item('今天', DateTime(2026, 9, 19, 10), slug: 'orsay', qid: 'Q1'),
+        item('昨天', DateTime(2026, 9, 18, 10), slug: 'orsay', qid: 'Q1'),
+      ]);
+      expect(visits.length, 2);
+      expect(visits.every((v) => v.items.length == 1), isTrue);
+    });
+
+    test('没有 qid 的老事件不去重(认不出是不是同一件)', () {
+      final visits = groupFootprintsByVisit([
+        HistoryItem(
+            id: 'a',
+            artworkName: 'x',
+            artist: '',
+            period: '',
+            description: '',
+            confidence: 1,
+            timestamp: DateTime(2026, 9, 18, 10)),
+        HistoryItem(
+            id: 'b',
+            artworkName: 'x',
+            artist: '',
+            period: '',
+            description: '',
+            confidence: 1,
+            timestamp: DateTime(2026, 9, 18, 11)),
+      ]);
+      expect(visits.single.items.length, 2);
+    });
+
     test('🔴 跨年的同月同日不合并', () {
       // 改版前用格式化出来的 "9月18日" 当分组键，而全仓库日期文案都不含年份，
       // 于是这两条会并成一组。"过了很长时间再回头看"正是它发作的条件。

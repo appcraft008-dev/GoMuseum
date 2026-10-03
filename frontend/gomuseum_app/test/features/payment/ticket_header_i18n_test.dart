@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gomuseum_app/features/payment/presentation/widgets/benefits_sections.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/gm_ticket.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 
@@ -43,6 +44,59 @@ void main() {
           reason: '$locale 的票头应显示本语言的有效期');
       expect(tester_exceptions(t), isEmpty, reason: '$locale 的票头在 360 宽上溢出了');
     }
+  });
+
+  // 2026-10-03 德语真机(系统字号约 1.3 倍):「已付」挤窄标题、有效期日期折成两截。
+  // 取最长的刻印 NIEDERLANDE + 已付徽章 + 两行存根,十种语言都不许溢出。
+  testWidgets('已购票在 1.3 倍字号、360 宽上十种语言都不溢出', (t) async {
+    t.view.physicalSize = _narrow;
+    t.view.devicePixelRatio = 1.0;
+    addTearDown(t.view.reset);
+    final exp = DateTime(2026, 10, 3, 23, 10);
+
+    for (final locale in AppLocalizations.supportedLocales) {
+      final l10n = await AppLocalizations.delegate.load(locale);
+      await t.pumpWidget(MaterialApp(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (c, child) => MediaQuery(
+          data: MediaQuery.of(c)
+              .copyWith(textScaler: const TextScaler.linear(1.3)),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: GmTicket(
+              stamp: 'NIEDERLANDE',
+              days: 7,
+              paidLabel: l10n.ticketPaid,
+              stub: BenStubDate(
+                label: l10n.ticketValidUntil,
+                value: l10n.ticketDateTime(exp, exp),
+                trailing: l10n.ticketDaysLeft(1),
+              ),
+              child: const GmTicketFace(title: 'Niederlande-Pass für 7 Tage'),
+            ),
+          ),
+        ),
+      ));
+      await t.pumpAndSettle();
+      expect(find.text(l10n.ticketPaid), findsOneWidget);
+      expect(tester_exceptions(t), isEmpty, reason: '$locale 已购票溢出了');
+    }
+  });
+
+  test('剩余天数按单复数取词', () async {
+    final de = await AppLocalizations.delegate.load(const Locale('de'));
+    final en = await AppLocalizations.delegate.load(const Locale('en'));
+    final pl = await AppLocalizations.delegate.load(const Locale('pl'));
+    expect(de.ticketDaysLeft(1), 'noch 1 Tag');
+    expect(de.ticketDaysLeft(3), 'noch 3 Tage');
+    expect(en.ticketDaysLeft(1), '1 day left');
+    expect(pl.ticketDaysLeft(3), 'pozostały 3 dni');
+    expect(pl.ticketDaysLeft(5), 'pozostało 5 dni');
   });
 
   testWidgets('有效期不再写死法语:中文票头上没有 7 JOURS', (t) async {

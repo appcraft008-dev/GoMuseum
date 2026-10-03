@@ -233,12 +233,6 @@ abstract class AppLocalizations {
   /// **'Confirm'**
   String get confirm;
 
-  /// No description provided for @gotIt.
-  ///
-  /// In en, this message translates to:
-  /// **'Got it'**
-  String get gotIt;
-
   /// No description provided for @loadFailed.
   ///
   /// In en, this message translates to:
@@ -892,24 +886,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{feature} is coming soon'**
   String featureComingSoon(String feature);
-
-  /// No description provided for @privacyBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Original photos are not uploaded by default and recognition data is processed temporarily only. You can delete your account and data any time under Settings → Delete account.'**
-  String get privacyBody;
-
-  /// No description provided for @privacyFullPolicy.
-  ///
-  /// In en, this message translates to:
-  /// **'Full privacy policy'**
-  String get privacyFullPolicy;
-
-  /// No description provided for @privacyCopyLink.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy link'**
-  String get privacyCopyLink;
 
   /// No description provided for @privacyLinkCopied.
   ///
@@ -1652,7 +1628,7 @@ abstract class AppLocalizations {
   /// No description provided for @ticketDaysLeft.
   ///
   /// In en, this message translates to:
-  /// **'{days} days left'**
+  /// **'{days, plural, =1{1 day left} other{{days} days left}}'**
   String ticketDaysLeft(int days);
 
   /// No description provided for @activateSheetTitle.
@@ -2164,6 +2140,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy Policy'**
   String get authConsentPrivacy;
+
+  /// 应用内更新下载完成后的底部提示
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is ready'**
+  String get updateReady;
+
+  /// No description provided for @updateRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get updateRestart;
+
+  /// 馆藏目录视图切换按钮的无障碍标签(切到大图网格)
+  ///
+  /// In en, this message translates to:
+  /// **'Show as large images'**
+  String get collectionViewGrid;
+
+  /// 馆藏目录视图切换按钮的无障碍标签(切到列表)
+  ///
+  /// In en, this message translates to:
+  /// **'Show as list'**
+  String get collectionViewList;
 }
 
 class _AppLocalizationsDelegate

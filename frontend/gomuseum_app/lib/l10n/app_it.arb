@@ -20,7 +20,6 @@
   "cancel": "Annulla",
   "delete": "Elimina",
   "confirm": "Conferma",
-  "gotIt": "Capito",
   "loadFailed": "Caricamento non riuscito",
   "loadFailedRetry": "Caricamento non riuscito, riprova",
   "toBeRefined": "In corso",
@@ -130,9 +129,6 @@
   "themeDark": "Scuro",
   "themeSystem": "Sistema",
   "featureComingSoon": "{feature} arriva presto",
-  "privacyBody": "Le foto originali non vengono caricate per impostazione predefinita e i dati di riconoscimento sono elaborati solo temporaneamente. Puoi eliminare account e dati in qualsiasi momento da Impostazioni → Elimina account.",
-  "privacyFullPolicy": "Informativa sulla privacy completa",
-  "privacyCopyLink": "Copia link",
   "privacyLinkCopied": "Link copiato",
   "deleteAccountQ": "Eliminare definitivamente l'account?",
   "deleteAccountBody": "Questa operazione eliminerà il profilo del tuo account e la quota rimanente. L'azione è irreversibile.",
@@ -264,7 +260,7 @@
   "ticketStubUntorn": "non staccato",
   "ticketValidUntil": "Valido fino al",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "{days} giorni rimasti",
+  "ticketDaysLeft": "{days, plural, =1{1 giorno rimasto} other{{days} giorni rimasti}}",
   "activateSheetTitle": "Avviare ora i {days} giorni?",
   "activateSheetBody": "Alla conferma il conteggio parte e termina il {date} alle {time}. L'operazione è irreversibile.",
   "activateTear": "Stacca e avvia",
@@ -356,5 +352,9 @@
   "authUseEmail": "Continua con l'e-mail",
   "authConsent": "Continuando accetti i {terms} e l'{privacy}",
   "authTermsOfService": "Termini di servizio",
-  "authConsentPrivacy": "Informativa sulla privacy"
+  "authConsentPrivacy": "Informativa sulla privacy",
+  "updateReady": "Una nuova versione è pronta",
+  "updateRestart": "Riavvia",
+  "collectionViewGrid": "Mostra come immagini grandi",
+  "collectionViewList": "Mostra come elenco"
 }

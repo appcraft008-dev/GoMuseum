@@ -69,9 +69,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get confirm => '확인';
 
   @override
-  String get gotIt => '확인';
-
-  @override
   String get loadFailed => '불러오기 실패';
 
   @override
@@ -439,16 +436,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String featureComingSoon(String feature) {
     return '$feature 곧 제공';
   }
-
-  @override
-  String get privacyBody =>
-      '원본 사진은 기본적으로 업로드되지 않으며 인식 데이터는 일시적으로만 처리됩니다. 계정과 데이터는 설정 → 계정 삭제에서 언제든지 삭제할 수 있습니다.';
-
-  @override
-  String get privacyFullPolicy => '개인정보처리방침 전문';
-
-  @override
-  String get privacyCopyLink => '링크 복사';
 
   @override
   String get privacyLinkCopied => '링크가 복사되었습니다';
@@ -1150,4 +1137,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get authConsentPrivacy => '개인정보 처리방침';
+
+  @override
+  String get updateReady => '새 버전이 준비되었습니다';
+
+  @override
+  String get updateRestart => '다시 시작';
+
+  @override
+  String get collectionViewGrid => '큰 이미지로 보기';
+
+  @override
+  String get collectionViewList => '목록으로 보기';
 }

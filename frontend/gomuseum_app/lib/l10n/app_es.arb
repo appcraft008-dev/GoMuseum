@@ -20,7 +20,6 @@
   "cancel": "Cancelar",
   "delete": "Eliminar",
   "confirm": "Confirmar",
-  "gotIt": "Entendido",
   "loadFailed": "Error al cargar",
   "loadFailedRetry": "Error al cargar, inténtalo de nuevo",
   "toBeRefined": "En progreso",
@@ -130,9 +129,6 @@
   "themeDark": "Oscuro",
   "themeSystem": "Sistema",
   "featureComingSoon": "{feature} llega pronto",
-  "privacyBody": "Las fotos originales no se suben de forma predeterminada y los datos de reconocimiento se procesan solo temporalmente. Puedes eliminar tu cuenta y tus datos en cualquier momento en Ajustes → Eliminar cuenta.",
-  "privacyFullPolicy": "Política de privacidad completa",
-  "privacyCopyLink": "Copiar enlace",
   "privacyLinkCopied": "Enlace copiado",
   "deleteAccountQ": "¿Eliminar la cuenta permanentemente?",
   "deleteAccountBody": "Esto eliminará tu perfil de cuenta y la cuota restante. Esta acción no se puede deshacer.",
@@ -264,7 +260,7 @@
   "ticketStubUntorn": "sin desprender",
   "ticketValidUntil": "Válido hasta",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "quedan {days} días",
+  "ticketDaysLeft": "{days, plural, =1{queda 1 día} other{quedan {days} días}}",
   "activateSheetTitle": "¿Empezar tus {days} días ahora?",
   "activateSheetBody": "Al confirmar empieza el tiempo y termina el {date} a las {time}. Esto no se puede deshacer.",
   "activateTear": "Desprender y empezar",
@@ -356,5 +352,9 @@
   "authUseEmail": "Continuar con correo electrónico",
   "authConsent": "Al continuar, aceptas los {terms} y la {privacy}",
   "authTermsOfService": "Términos del servicio",
-  "authConsentPrivacy": "Política de privacidad"
+  "authConsentPrivacy": "Política de privacidad",
+  "updateReady": "Hay una nueva versión lista",
+  "updateRestart": "Reiniciar",
+  "collectionViewGrid": "Ver como imágenes grandes",
+  "collectionViewList": "Ver como lista"
 }

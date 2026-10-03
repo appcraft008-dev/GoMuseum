@@ -20,7 +20,6 @@
   "cancel": "Annuler",
   "delete": "Supprimer",
   "confirm": "Confirmer",
-  "gotIt": "Compris",
   "loadFailed": "Échec du chargement",
   "loadFailedRetry": "Échec du chargement, veuillez réessayer",
   "toBeRefined": "À compléter",
@@ -130,9 +129,6 @@
   "themeDark": "Sombre",
   "themeSystem": "Système",
   "featureComingSoon": "{feature} arrive bientôt",
-  "privacyBody": "Les photos originales ne sont pas envoyées par défaut et les données de reconnaissance sont traitées de manière temporaire uniquement. Vous pouvez supprimer votre compte et vos données à tout moment dans Paramètres → Supprimer le compte.",
-  "privacyFullPolicy": "Politique de confidentialité complète",
-  "privacyCopyLink": "Copier le lien",
   "privacyLinkCopied": "Lien copié",
   "deleteAccountQ": "Supprimer définitivement le compte ?",
   "deleteAccountBody": "Cela supprimera votre profil et le quota restant. Cette action est irréversible.",
@@ -264,7 +260,7 @@
   "ticketStubUntorn": "non détaché",
   "ticketValidUntil": "Valable jusqu'au",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "{days} j restants",
+  "ticketDaysLeft": "{days, plural, =1{1 j restant} other{{days} j restants}}",
   "activateSheetTitle": "Démarrer vos {days} jours ?",
   "activateSheetBody": "Le décompte démarre à la confirmation et se termine le {date} à {time}. Cette étape est irréversible.",
   "activateTear": "Détacher et démarrer",
@@ -356,5 +352,9 @@
   "authUseEmail": "Continuer avec un e-mail",
   "authConsent": "En continuant, vous acceptez les {terms} et la {privacy}",
   "authTermsOfService": "Conditions d'utilisation",
-  "authConsentPrivacy": "Politique de confidentialité"
+  "authConsentPrivacy": "Politique de confidentialité",
+  "updateReady": "Une nouvelle version est prête",
+  "updateRestart": "Redémarrer",
+  "collectionViewGrid": "Afficher en grandes images",
+  "collectionViewList": "Afficher en liste"
 }

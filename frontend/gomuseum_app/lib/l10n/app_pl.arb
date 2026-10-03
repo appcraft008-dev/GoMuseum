@@ -20,7 +20,6 @@
   "cancel": "Anuluj",
   "delete": "Usuń",
   "confirm": "Potwierdź",
-  "gotIt": "Rozumiem",
   "loadFailed": "Nie udało się załadować",
   "loadFailedRetry": "Nie udało się załadować, spróbuj ponownie",
   "toBeRefined": "W toku",
@@ -130,9 +129,6 @@
   "themeDark": "Ciemny",
   "themeSystem": "Systemowy",
   "featureComingSoon": "{feature} już wkrótce",
-  "privacyBody": "Oryginalne zdjęcia nie są domyślnie przesyłane, a dane rozpoznawania są przetwarzane wyłącznie tymczasowo. Konto i dane możesz usunąć w każdej chwili w Ustawienia → Usuń konto.",
-  "privacyFullPolicy": "Pełna polityka prywatności",
-  "privacyCopyLink": "Kopiuj link",
   "privacyLinkCopied": "Skopiowano link",
   "deleteAccountQ": "Trwale usunąć konto?",
   "deleteAccountBody": "Spowoduje to usunięcie profilu konta i pozostałego limitu. Tej operacji nie można cofnąć.",
@@ -264,7 +260,7 @@
   "ticketStubUntorn": "nieoderwany",
   "ticketValidUntil": "Ważny do",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "pozostało {days} dni",
+  "ticketDaysLeft": "{days, plural, =1{pozostał 1 dzień} few{pozostały {days} dni} other{pozostało {days} dni}}",
   "activateSheetTitle": "Rozpocząć {days} dni teraz?",
   "activateSheetBody": "Po potwierdzeniu czas rusza i kończy się {date} o {time}. Tego nie da się cofnąć.",
   "activateTear": "Oderwij i zacznij",
@@ -356,5 +352,9 @@
   "authUseEmail": "Kontynuuj przez e-mail",
   "authConsent": "Kontynuując, akceptujesz {terms} i {privacy}",
   "authTermsOfService": "Warunki korzystania",
-  "authConsentPrivacy": "Politykę prywatności"
+  "authConsentPrivacy": "Politykę prywatności",
+  "updateReady": "Nowa wersja jest gotowa",
+  "updateRestart": "Uruchom ponownie",
+  "collectionViewGrid": "Pokaż jako duże obrazy",
+  "collectionViewList": "Pokaż jako listę"
 }

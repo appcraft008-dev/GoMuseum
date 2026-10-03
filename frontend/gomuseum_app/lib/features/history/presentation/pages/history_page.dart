@@ -76,7 +76,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             '${i.timestamp.year}-${i.timestamp.month}-${i.timestamp.day}')
         .toSet()
         .length;
-    return l10n.footprintStat(items.length, days);
+    // 件数与下面列出来的一致:一次参观内同一件只算一次
+    final works = groupFootprintsByVisit(items)
+        .fold<int>(0, (n, v) => n + v.items.length);
+    return l10n.footprintStat(works, days);
   }
 
   List<Widget> _content(GmPalette gm, HistoryState history) {
@@ -230,7 +233,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             GmThumb(
               image:
                   item.thumbnail == null ? null : NetworkImage(item.thumbnail!),
-              size: 46,
+              // 放大到 68:人记得的是画面不是标题(2026-10-03 用户定,足迹不做网格)
+              size: 68,
             ),
             const SizedBox(width: 13),
             Expanded(

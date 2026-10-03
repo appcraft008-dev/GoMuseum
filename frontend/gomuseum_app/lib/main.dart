@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'theme/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'core/services/app_update_service.dart';
 import 'core/theme/theme_mode_provider.dart';
 import 'features/settings/presentation/providers/language_provider.dart';
 import 'l10n/app_localizations.dart';
@@ -36,6 +37,8 @@ Future<void> main() async {
       child: GoMuseumApp(),
     ),
   );
+  // 首帧后再查:Google 的更新小窗要盖在已渲染的界面上
+  WidgetsBinding.instance.addPostFrameCallback((_) => checkForAppUpdate());
 }
 
 class GoMuseumApp extends ConsumerWidget {
@@ -55,6 +58,7 @@ class GoMuseumApp extends ConsumerWidget {
 
       // 路由配置 - 带认证守卫
       routerConfig: router,
+      scaffoldMessengerKey: appMessengerKey,
 
       // 国际化配置 —— UI 语言跟随设置页选择（languageProvider 持久化）。
       // **null = 跟随系统**（未选过的用户的默认值）：Flutter 拿设备语言匹配
