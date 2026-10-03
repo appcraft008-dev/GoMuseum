@@ -11,7 +11,7 @@ import '../../domain/usecases/get_recent_history.dart';
 import '../../domain/usecases/search_history.dart';
 import '../../domain/usecases/delete_history_item.dart';
 import '../../domain/entities/history_item.dart';
-import '../footprint_visit.dart';
+import 'package:gomuseum_app/features/history/presentation/footprint_visit.dart';
 
 part 'history_providers.g.dart';
 
