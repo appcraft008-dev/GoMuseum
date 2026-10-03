@@ -260,7 +260,7 @@
   "ticketStubUntorn": "nieoderwany",
   "ticketValidUntil": "Ważny do",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "pozostało {days} dni",
+  "ticketDaysLeft": "{days, plural, =1{pozostał 1 dzień} few{pozostały {days} dni} other{pozostało {days} dni}}",
   "activateSheetTitle": "Rozpocząć {days} dni teraz?",
   "activateSheetBody": "Po potwierdzeniu czas rusza i kończy się {date} o {time}. Tego nie da się cofnąć.",
   "activateTear": "Oderwij i zacznij",

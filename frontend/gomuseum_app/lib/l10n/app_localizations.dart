@@ -1628,7 +1628,7 @@ abstract class AppLocalizations {
   /// No description provided for @ticketDaysLeft.
   ///
   /// In en, this message translates to:
-  /// **'{days} days left'**
+  /// **'{days, plural, =1{1 day left} other{{days} days left}}'**
   String ticketDaysLeft(int days);
 
   /// No description provided for @activateSheetTitle.

@@ -455,6 +455,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       );
     }
     return GmTicket(
+      paidLabel: l10n.ticketPaid,
       stamp: p.label.toUpperCase(),
       days: p.days,
       // 撕开 = 开始用了;未激活的票保持完整
@@ -463,7 +464,6 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       child: GmTicketFace(
         title: passTitle(l10n, p.label, p.days, title: p.title),
         pitch: passPitch(context, _coversOf(pid: p.productId)),
-        paidLabel: l10n.ticketPaid,
       ),
     );
   }
@@ -481,6 +481,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     return [
       const SizedBox(height: 14),
       GmTicket(
+        paidLabel: l10n.ticketPaid,
         stamp: _stampFor(ent, lapsed.productId),
         days: _daysOf(lapsed),
         // 不撕:撕开的语义是"用过了"。这张没被用过,只是作废了 —— 戳说明一切。
@@ -496,7 +497,6 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
           title: _titleFor(l10n, ent, lapsed.productId, _daysOf(lapsed)),
-          paidLabel: l10n.ticketPaid,
         ),
       ),
       Padding(
@@ -531,6 +531,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
     return [
       const SizedBox(height: 14),
       GmTicket(
+        paidLabel: l10n.ticketPaid,
         stamp: _stampFor(ent, used.productId),
         days: _daysOf(used),
         torn: 1,
@@ -546,7 +547,6 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         // 不写 pitch:见 GmTicketFace.pitch
         child: GmTicketFace(
           title: _titleFor(l10n, ent, used.productId, _daysOf(used)),
-          paidLabel: l10n.ticketPaid,
         ),
       ),
       Padding(
@@ -606,6 +606,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         ),
         const SizedBox(height: 15),
         GmTicket(
+          paidLabel: l10n.ticketPaid,
           stamp: _conflictOffer?.stampText ?? '',
           days: _conflictOffer?.days ?? 7,
           faded: true,
@@ -620,7 +621,6 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
             title: passTitle(
                 l10n, _conflictOffer?.label ?? '', _conflictOffer?.days ?? 7,
                 title: _conflictOffer?.title),
-            paidLabel: l10n.ticketPaid,
           ),
         ),
         Padding(

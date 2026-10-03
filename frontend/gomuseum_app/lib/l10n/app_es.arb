@@ -260,7 +260,7 @@
   "ticketStubUntorn": "sin desprender",
   "ticketValidUntil": "Válido hasta",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "quedan {days} días",
+  "ticketDaysLeft": "{days, plural, =1{queda 1 día} other{quedan {days} días}}",
   "activateSheetTitle": "¿Empezar tus {days} días ahora?",
   "activateSheetBody": "Al confirmar empieza el tiempo y termina el {date} a las {time}. Esto no se puede deshacer.",
   "activateTear": "Desprender y empezar",

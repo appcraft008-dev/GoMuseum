@@ -107,7 +107,8 @@ Widget _voidedTicket(String stamp, String date) => GmTicket(
       faded: true,
       voidStamp: stamp,
       stub: BenStubDate(label: '结束于', value: date, muted: true),
-      child: const GmTicketFace(title: '巴黎 7 日通票', paidLabel: '已付'),
+      paidLabel: '已付',
+      child: const GmTicketFace(title: '巴黎 7 日通票'),
     );
 
 void main() {

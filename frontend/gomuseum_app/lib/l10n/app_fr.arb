@@ -260,7 +260,7 @@
   "ticketStubUntorn": "non détaché",
   "ticketValidUntil": "Valable jusqu'au",
   "ticketDateTime": "{date} {time}",
-  "ticketDaysLeft": "{days} j restants",
+  "ticketDaysLeft": "{days, plural, =1{1 j restant} other{{days} j restants}}",
   "activateSheetTitle": "Démarrer vos {days} jours ?",
   "activateSheetBody": "Le décompte démarre à la confirmation et se termine le {date} à {time}. Cette étape est irréversible.",
   "activateTear": "Détacher et démarrer",
