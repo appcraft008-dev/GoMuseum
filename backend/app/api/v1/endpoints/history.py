@@ -87,11 +87,10 @@ def _mine(db: Session, user_id: str, *, since=None) -> List[RecognitionEvent]:
 
 
 def _render(
-    db,
-    storage,
     ev: RecognitionEvent,
     obj: MuseumObject,
-    language: Optional[str] = None,
+    s: dict,
+    lang: str,
 ) -> dict:
     """一条足迹 → 响应体。四个字符串字段的回退在这里兜死(见模块 docstring 纪律 2)。
 
@@ -104,11 +103,8 @@ def _render(
     `language` 为 None 时回退 `ev.language`,**这是前向兼容的关键**:
     老 App(含 v35 及更早)不传这个参数,回退后行为与修复前逐字节一致。
     `ev.language` 这一列本身保留 —— 它是识别当时的事实记录。
+    (取哪种语言在 [_hydrate] 里定,`s` 是按 `lang` 渲染好的摘要。)
     """
-    from app.services.recognition.service import _summary
-
-    lang = language or ev.language or "zh"
-    s = _summary(db, storage, obj, lang)
     period = (obj.period_zh if lang.startswith("zh") else obj.period_en) or (
         obj.period_en or obj.period_zh
     )
@@ -132,13 +128,20 @@ def _render(
 
 
 def _hydrate(
-    db: Session, events: List[RecognitionEvent], language: Optional[str] = None
+    db: Session,
+    events: List[RecognitionEvent],
+    language: Optional[str] = None,
+    *,
+    offset: int = 0,
+    limit: Optional[int] = None,
 ) -> List[dict]:
     """批量把事件渲染成足迹,顺带丢掉目录里已查无此物的 qid。
 
-    ponytail: qid→object 一次查回来(避免 N+1);`_summary` 内部每件仍会各查
-    artist/image/museum 三次 —— 一页 20 条约 60 次轻查询,现在够用。真慢了
-    再把 `_summary` 批量化,别提前造抽象。"""
+    **先筛、再切片、最后只渲染这一页**:够不够格算足迹、藏品还在不在目录,
+    一次 qid 查询就能判,不必渲染;渲染(作者/主图/馆)走 `_summaries` 批量查,
+    查询次数不随条数增长。原先逐件 `_summary`,prod 191 条 = 567 条 SQL 约 1 秒,
+    而 App 按页拉到底时每页都把全部足迹渲染一遍(2026-10-03)。"""
+    from app.services.recognition.service import _summaries
     from app.services.storage import get_object_storage
 
     pairs = [(ev, _footprint_qid(ev)) for ev in events]
@@ -149,12 +152,22 @@ def _hydrate(
         o.qid: o
         for o in db.query(MuseumObject).filter(MuseumObject.qid.in_(qids)).all()
     }
+    kept = [(ev, objs[q]) for ev, q in pairs if q and q in objs]
+    page = kept[offset : None if limit is None else offset + limit]
     storage = get_object_storage()
-    return [
-        _render(db, storage, ev, objs[q], language)
-        for ev, q in pairs
-        if q and q in objs
-    ]
+    # 一次渲染按语言分组:不传 language 时各条回退自己识别时的语言(老 App 行为)
+    by_lang: dict = {}
+    for ev, o in page:
+        by_lang.setdefault(language or ev.language or "zh", {})[o.qid] = o
+    rendered = {
+        lang: _summaries(db, storage, list(group.values()), lang)
+        for lang, group in by_lang.items()
+    }
+    out = []
+    for ev, o in page:
+        lang = language or ev.language or "zh"
+        out.append(_render(ev, o, rendered[lang][o.qid], lang))
+    return out
 
 
 @router.get("/recent")
@@ -175,11 +188,11 @@ def get_recent_history(
     """
     user_id = _me(db, credentials)
     since = datetime.utcnow() - timedelta(days=days) if days else None
-    # 先渲染再切片:够不够格算足迹、藏品还在不在目录,都是 SQL 里判不了的,
-    # 在 SQL 层分页会让每页少几条(甚至整页空)。足迹是几十到几百条量级,
-    # ponytail: 上千条了再谈游标分页。
-    items = _hydrate(db, _mine(db, user_id, since=since), language)
-    return items[offset : offset + limit]
+    # 够不够格算足迹、藏品还在不在目录 SQL 里判不了,所以在 _hydrate 里先筛再切片,
+    # 只渲染这一页。ponytail: 事件仍是全量取回再筛,上千条了再谈游标分页。
+    return _hydrate(
+        db, _mine(db, user_id, since=since), language, offset=offset, limit=limit
+    )
 
 
 @router.get("/search")

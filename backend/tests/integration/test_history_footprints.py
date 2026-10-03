@@ -347,3 +347,105 @@ def test_cannot_delete_someone_elses(client, db):
 def test_delete_garbage_id_is_404_not_500(client, db):
     a = _register(client, "a@test.com")
     assert client.delete("/api/v1/history/not-a-uuid", headers=a).status_code == 404
+
+
+# ---------------------------------------------------------------- 批量渲染(10-03)
+# 原先每条足迹各查一次作者/主图/馆(prod 191 条 = 567 条 SQL,约 1 秒,且 App
+# 按页拉到底时每页都把全部足迹渲染一遍)。改成批量后必须与逐件 `_summary`
+# 输出逐字段一致,且查询次数不随条数增长。
+
+
+def _sql_count(session_factory, fn):
+    from sqlalchemy import event
+
+    engine = session_factory.kw["bind"]
+    n = [0]
+
+    def _count(*_a, **_k):
+        n[0] += 1
+
+    event.listen(engine, "before_cursor_execute", _count)
+    try:
+        fn()
+    finally:
+        event.remove(engine, "before_cursor_execute", _count)
+    return n[0]
+
+
+def _rich_objects(db):
+    """覆盖 _summary 的各条分支:有作者/无作者、R2 图/外链图/无图、多张主图取 sort 最小。"""
+    db.add(Artist(qid="QA", name_zh="达芬奇", name_en="Leonardo"))
+    a = _obj(db, "Q1", title_zh="蒙娜丽莎", attributes={"artist_qid": "QA"})
+    b = _obj(db, "Q2", title_en="Liberty", artist_en="Delacroix")
+    _obj(db, "Q3", title_zh="无图")
+    db.add_all(
+        [
+            ObjectImage(object_id=a.id, role="primary", image_key="k/a.jpg", sort=0),
+            ObjectImage(object_id=a.id, role="detail", image_key="k/x.jpg", sort=-1),
+            ObjectImage(object_id=b.id, role="primary", source_url="http://b2", sort=2),
+            ObjectImage(object_id=b.id, role="primary", source_url="http://b1", sort=1),
+        ]
+    )
+    db.commit()
+
+
+@pytest.mark.parametrize("lang", ["zh", "en"])
+def test_batch_render_matches_per_item_summary(client, db, lang):
+    from app.services.recognition.service import _summary
+    from app.services.storage import get_object_storage
+
+    _rich_objects(db)
+    a = _register(client, "a@test.com")
+    me = _uid(db, "a@test.com")
+    for i, q in enumerate(["Q1", "Q2", "Q3"]):
+        _event(db, me, q, minutes=i)
+
+    got = client.get(f"/api/v1/history/recent?language={lang}", headers=a).json()
+    storage = get_object_storage()
+    for item in got:
+        o = db.query(MuseumObject).filter_by(qid=item["qid"]).one()
+        want = _summary(db, storage, o, lang)
+        assert item["artwork_name"] == want["title"]
+        assert item["artist"] == (want["artist"] or "")
+        assert item["thumbnail"] == want["thumbnail"]
+        assert item["museum_slug"] == want["museum"]
+    assert [i["qid"] for i in got] == ["Q1", "Q2", "Q3"]
+    assert got[1]["thumbnail"] == "http://b1", "多张主图取 sort 最小的"
+
+
+def test_query_count_does_not_grow_with_footprints(client, session_factory, db):
+    a = _register(client, "a@test.com")
+    me = _uid(db, "a@test.com")
+
+    def add(n, start):
+        for i in range(start, start + n):
+            o = _obj(db, f"Q{i}", title_zh=f"作品{i}", attributes={"artist_qid": "QA"})
+            db.add(ObjectImage(object_id=o.id, role="primary", image_key=f"k{i}"))
+            _event(db, me, f"Q{i}", minutes=i)
+        db.commit()
+
+    db.add(Artist(qid="QA", name_zh="某人"))
+    add(3, 0)
+    few = _sql_count(
+        session_factory, lambda: client.get("/api/v1/history/recent", headers=a)
+    )
+    add(30, 100)
+    many = _sql_count(
+        session_factory,
+        lambda: client.get("/api/v1/history/recent?limit=100", headers=a),
+    )
+    assert many == few, f"3 条 {few} 次查询 → 33 条 {many} 次:又回到逐条查询了"
+
+
+def test_recent_paginates_after_filtering(client, db):
+    """先按「算不算足迹」筛,再分页:不算足迹的事件不能占掉页里的位置。"""
+    for i in range(5):
+        _obj(db, f"Q{i}", title_zh=f"作品{i}")
+    a = _register(client, "a@test.com")
+    me = _uid(db, "a@test.com")
+    for i in range(5):
+        _event(db, me, f"Q{i}", minutes=i * 2)
+        _event(db, me, f"Q{i}", outcome="candidates", minutes=i * 2 + 1)  # 不算
+
+    page = client.get("/api/v1/history/recent?offset=2&limit=2", headers=a).json()
+    assert [p["artwork_name"] for p in page] == ["作品2", "作品3"]
