@@ -38,12 +38,20 @@ class FootprintVisit {
 /// 当 map 的键，而全仓库的日期文案都不含年份 —— 于是 2025-09-18 和 2026-09-18
 /// 同键，去年今天会被并进今年今天那一组。零真实用户时没人撞上，
 /// 但"过了很长时间再回头看"正是它发作的条件。
+///
+/// **一次参观内同一件只列一次**(留最近那次):拍不清重拍、换角度再拍都很常见,
+/// 2026-10-02 真机 164 条足迹只有 90 件。跨参观不去重 —— 隔天再看是另一次经历。
+/// 没有 qid 的老事件认不出是不是同一件,不去重。删除要连带删掉被藏起来的那几条,
+/// 见 [sameVisitDuplicates]。
 List<FootprintVisit> groupFootprintsByVisit(List<HistoryItem> items) {
   final sorted = [...items]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   final groups = <(DateTime, String?), FootprintVisit>{};
+  final seen = <(DateTime, String?, String)>{};
   for (final item in sorted) {
     final t = item.timestamp;
     final day = DateTime(t.year, t.month, t.day);
+    final qid = item.qid;
+    if (qid != null && !seen.add((day, item.museumSlug, qid))) continue;
     // 按键归拢而不是按"相邻游程"：一天里奥赛→橘园→奥赛这么逛完全可能，
     // 游程分组会把它切成三次参观，而用户记忆里那天只去过两个馆。
     groups
@@ -57,6 +65,24 @@ List<FootprintVisit> groupFootprintsByVisit(List<HistoryItem> items) {
   }
   // 输入已按时间倒序，Map 保留插入顺序 → 参观序列天然也是倒序。
   return groups.values.toList();
+}
+
+/// [item] 在同一次参观里被去重藏起来的那些条(含它自己)。删足迹要整组删,
+/// 只删显示的那条的话,藏在后面的旧记录会立刻顶上来,看起来像没删掉。
+List<HistoryItem> sameVisitDuplicates(
+    List<HistoryItem> items, HistoryItem item) {
+  final t = item.timestamp;
+  final qid = item.qid;
+  if (qid == null) return [item];
+  return [
+    for (final i in items)
+      if (i.qid == qid &&
+          i.museumSlug == item.museumSlug &&
+          i.timestamp.year == t.year &&
+          i.timestamp.month == t.month &&
+          i.timestamp.day == t.day)
+        i,
+  ];
 }
 
 /// 城市这一层要不要出现。
