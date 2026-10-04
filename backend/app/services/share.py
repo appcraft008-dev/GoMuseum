@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.services.recognition.tiles import HIDDEN_ROLES
 from app.services.visibility import museum_visible
 
 PLAY_URL = (
@@ -73,7 +74,7 @@ def primary_image(db, obj: MuseumObject) -> ObjectImage | None:
         db.query(ObjectImage)
         .filter(
             ObjectImage.object_id == obj.id,
-            ObjectImage.role != "view_quarantine",
+            ObjectImage.role.notin_(HIDDEN_ROLES),
             ObjectImage.image_key.isnot(None),
         )
         .order_by(ObjectImage.sort)

@@ -73,13 +73,15 @@ def test_pack_double_numbers_live_compute(session):
     assert pack["archive_count"] == 2  # 总件数
 
 
-def test_pack_double_numbers_from_stats(session):
+def test_pack_double_numbers_ignore_stale_stats(session):
+    # 2026-10-04 橘园补图后馆页仍显「在线图录 15 件」:stats 是覆盖率报告写的快照,
+    # 补图/上新不会刷新它。门面数字必须现场算。
     s, m = session
     m.stats = {"catalog_count": 10, "archive_count": 20}
     s.commit()
     pack = museum_repo.get_museum_pack(s, "orsay")
-    assert pack["catalog_count"] == 10
-    assert pack["archive_count"] == 20
+    assert pack["catalog_count"] == 1
+    assert pack["archive_count"] == 2
 
 
 def test_quarantined_only_counts_as_imageless(session):

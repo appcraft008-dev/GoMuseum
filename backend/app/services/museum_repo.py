@@ -19,6 +19,7 @@ from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
 from app.services.entitlement_service import pass_offer
 from app.services.must_see import must_see_order
+from app.services.recognition.tiles import HIDDEN_ROLES
 from app.services.storage import get_object_storage
 
 _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
@@ -720,21 +721,16 @@ def get_museum_pack(
     ]
 
     # 双数字(加法字段):catalog_count=有图件数, archive_count=总件数。
-    # 优先读 museum.stats(Task 7 回写),缺失键现场 count 兜底(保证语义即时正确)。
-    stats = m.stats or {}
-    archive_count = stats.get("archive_count")
-    if archive_count is None:
-        archive_count = (
-            db.query(func.count(MuseumObject.id)).filter_by(museum_id=m.id).scalar()
-        )
-    catalog_count = stats.get("catalog_count")
-    if catalog_count is None:
-        catalog_count = (
-            db.query(func.count(MuseumObject.id))
-            .filter_by(museum_id=m.id)
-            .filter(_has_image_clause())
-            .scalar()
-        )
+    # 一律现场 count——不读 museum.stats 快照(补图/上新不刷新它,2026-10-04 橘园显旧值 15)
+    archive_count = (
+        db.query(func.count(MuseumObject.id)).filter_by(museum_id=m.id).scalar()
+    )
+    catalog_count = (
+        db.query(func.count(MuseumObject.id))
+        .filter_by(museum_id=m.id)
+        .filter(_has_image_clause())
+        .scalar()
+    )
 
     pack = {f: getattr(m, f) for f in _PACK_FIELDS}
     pack.update(
@@ -857,7 +853,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         for i in db.query(ObjectImage)
         .filter(
             ObjectImage.object_id == obj.id,
-            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
+            ObjectImage.role.notin_(HIDDEN_ROLES),  # 隔离图/识别切块不进图集
         )
         .order_by(ObjectImage.sort)
         .all()
