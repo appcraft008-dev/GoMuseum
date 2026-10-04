@@ -167,6 +167,10 @@ class Settings(BaseSettings):
     # Recognition (向量引擎)
     RECOG_HIGH: float = 0.85
     RECOG_LOW: float = 0.72
+    # 首二名分差 < 此值 → 即使过 HIGH 也不直判,出候选让用户挑(姊妹作/重复条目)。
+    # 2026-10-04 校准:view 留一 7275 张,0.04 拦下错直判 96/261、正确直判降候选 105/4578;
+    # 橘园睡莲实拍错直判 2→0。
+    RECOG_MARGIN: float = 0.04
     # 引擎选择(见 recognition/embedder.MODELS;文件键与 sha256 随模型写死在那里)
     RECOG_MODEL: str = "dinov2-vits14"
     RECOG_MODEL_CACHE: str = "/tmp/gomuseum_models"
