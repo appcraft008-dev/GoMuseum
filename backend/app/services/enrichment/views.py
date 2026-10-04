@@ -103,6 +103,13 @@ def add_view_images(db, obj, *, max_total: int = 5, fetch=None) -> int:
     )
     if len(existing) >= 3:
         return 0
+    # 没有正面图的件不补:入库闸要拿 view 和正面图比,没有就全收(小皇宫
+    # Regnault 纪念像收进三张公园落成典礼老照片)。非 Wikidata qid(joconde-…)
+    # 查不到 Commons 分类,wbgetentities 返回错误体 → KeyError 炸掉整轮(奥赛)。
+    if not (obj.qid or "").startswith("Q") or not any(
+        img.role == "primary" for img in existing
+    ):
+        return 0
 
     fetch = fetch or (lambda qid, max_n: fetch_view_urls(qid, max_n=max_n))
     have = {img.source_url for img in existing}
