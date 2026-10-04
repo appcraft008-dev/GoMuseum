@@ -55,6 +55,14 @@ def test_non_sculpture_no_action(session):
     assert n == 0 and calls == [] and _n_images(s, o) == 1
 
 
+def test_artifact_gets_views(session):
+    """汉谟拉比法典石碑归 artifact,同样是立体作品。"""
+    s, m = session
+    o = _make_obj(s, m, "artifact", 1)
+    n = add_view_images(s, o, fetch=lambda qid, max_n: ["https://c/a.jpg"])
+    assert n == 1
+
+
 def test_sculpture_with_enough_images_no_action(session):
     s, m = session
     o = _make_obj(s, m, "sculpture", 3)
