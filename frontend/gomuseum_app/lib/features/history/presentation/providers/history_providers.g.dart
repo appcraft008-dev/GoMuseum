@@ -114,14 +114,18 @@ final deleteHistoryItemUseCaseProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DeleteHistoryItemUseCaseRef = AutoDisposeProviderRef<DeleteHistoryItem>;
-String _$historyHash() => r'568b05a2c68b05a0f7e99625ee0304549bfa5c33';
+String _$historyHash() => r'c73792ab8d3c57c3ef7d5d77abd10e3313447eac';
 
 /// History provider
 ///
+/// **常驻(keepAlive)**:底部 tab 是普通 ShellRoute,切走页面就卸载;autoDispose 时
+/// 整份足迹跟着扔掉,切回来从空列表串行重拉全部页、全程转圈约 2 秒(2026-10-05 真机)。
+/// 常驻不会变旧:识别完成会主动 refresh(recognition_provider)、删除就地改 state、
+/// 换账号/切语言靠 build 里的 watch 重建,下拉仍可手动刷新。
+///
 /// Copied from [History].
 @ProviderFor(History)
-final historyProvider =
-    AutoDisposeNotifierProvider<History, HistoryState>.internal(
+final historyProvider = NotifierProvider<History, HistoryState>.internal(
   History.new,
   name: r'historyProvider',
   debugGetCreateSourceHash:
@@ -130,6 +134,6 @@ final historyProvider =
   allTransitiveDependencies: null,
 );
 
-typedef _$History = AutoDisposeNotifier<HistoryState>;
+typedef _$History = Notifier<HistoryState>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

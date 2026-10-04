@@ -85,7 +85,12 @@ class HistoryState {
 }
 
 /// History provider
-@riverpod
+///
+/// **常驻(keepAlive)**:底部 tab 是普通 ShellRoute,切走页面就卸载;autoDispose 时
+/// 整份足迹跟着扔掉,切回来从空列表串行重拉全部页、全程转圈约 2 秒(2026-10-05 真机)。
+/// 常驻不会变旧:识别完成会主动 refresh(recognition_provider)、删除就地改 state、
+/// 换账号/切语言靠 build 里的 watch 重建,下拉仍可手动刷新。
+@Riverpod(keepAlive: true)
 class History extends _$History {
   /// 发给后端的界面语言。
   ///
