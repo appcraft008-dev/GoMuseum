@@ -4,7 +4,6 @@ SQLAlchemy model for user subscription and recognition benefits
 """
 
 import uuid
-from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -116,31 +115,10 @@ class UserBenefits(Base):
         }
 
     def has_access(self) -> bool:
-        """Check if user has recognition access"""
-        now = datetime.utcnow()
-
-        # Check day pass
-        if (
-            self.day_pass_active
-            and self.day_pass_expires_at
-            and self.day_pass_expires_at > now
-        ):
-            return True
-
-        # Check premium subscription
-        if (
-            self.is_premium
-            and self.premium_expires_at
-            and self.premium_expires_at > now
-        ):
-            return True
-
-        # Check quota (including referral bonus)
-        total_quota = self.recognition_quota + self.referral_bonus_quota
-        if total_quota > 0:
-            return True
-
-        return False
+        """还有没有免费识别次数。通票不在这里判(见 entitlement_service);
+        退役的 is_premium / day_pass_* 也**不读** —— 读了就是第二套真相源,
+        2026-10-05 测试账号靠它在通票过期后仍无限识别。"""
+        return self.recognition_quota + self.referral_bonus_quota > 0
 
     def consume_recognition(self) -> bool:
         """
@@ -149,21 +127,6 @@ class UserBenefits(Base):
         Returns:
             True if successfully consumed, False if no quota available
         """
-        now = datetime.utcnow()
-
-        # Day pass or premium: unlimited recognitions
-        if (
-            self.day_pass_active
-            and self.day_pass_expires_at
-            and self.day_pass_expires_at > now
-        ) or (
-            self.is_premium
-            and self.premium_expires_at
-            and self.premium_expires_at > now
-        ):
-            self.total_recognitions_used += 1
-            return True
-
         # Use referral bonus quota first
         if self.referral_bonus_quota > 0:
             self.referral_bonus_quota -= 1
