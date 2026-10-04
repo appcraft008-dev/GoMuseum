@@ -407,6 +407,10 @@ def cmd_images(slug: str, limit: int | None, target: str) -> None:
     finally:
         db.close()
     print(f"✓ images 物化完成: {out}")
+    # 宽幅作品识别切块(契约 §识别):主图物化完就切,新馆/新件不靠人记得
+    from scripts.tile_wide_images import tile_museum
+
+    tile_museum(slug)
 
 
 def cmd_views(museum: str, max_n: int) -> None:
