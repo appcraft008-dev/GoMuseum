@@ -80,4 +80,28 @@ void main() {
     expect(s.items.length, 100);
     expect(ds.calls, lessThanOrEqualTo(2));
   });
+
+  /// 切 tab = 页面卸载、没人再 listen。原先 autoDispose 会把整份足迹扔掉,
+  /// 切回来从空列表重拉三页、全程转圈约 2 秒(2026-10-05 真机)。
+  test('切走再切回不重拉', () async {
+    final ds = _PagedDs(164);
+    final c = ProviderContainer(overrides: [
+      historyRemoteDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ]);
+    addTearDown(c.dispose);
+    final sub = c.listen(historyProvider, (_, __) {});
+    for (var i = 0; i < 20 && c.read(historyProvider).isLoading; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    final calls = ds.calls;
+    sub.close();
+    for (var i = 0; i < 5; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    c.listen(historyProvider, (_, __) {});
+    await Future<void>.delayed(Duration.zero);
+    expect(c.read(historyProvider).items.length, 164);
+    expect(ds.calls, calls);
+  });
 }
