@@ -412,7 +412,11 @@ def cmd_images(slug: str, limit: int | None, target: str) -> None:
 def cmd_views(museum: str, max_n: int) -> None:
     from app.models.museum import Museum
     from app.models.museum_object import MuseumObject
-    from app.services.enrichment.views import add_view_images, fetch_view_urls
+    from app.services.enrichment.views import (
+        VIEW_CATEGORIES,
+        add_view_images,
+        fetch_view_urls,
+    )
 
     db = SessionLocal()
     try:
@@ -421,7 +425,10 @@ def cmd_views(museum: str, max_n: int) -> None:
             raise SystemExit(f"❌ 未知博物馆 slug: {museum}")
         objs = (
             db.query(MuseumObject)
-            .filter_by(museum_id=m.id, category="sculpture")
+            .filter(
+                MuseumObject.museum_id == m.id,
+                MuseumObject.category.in_(VIEW_CATEGORIES),
+            )
             .order_by(MuseumObject.popularity.desc())
             .all()
         )
@@ -434,7 +441,7 @@ def cmd_views(museum: str, max_n: int) -> None:
             total += n
             if n:
                 print(f"  {o.qid}: +{n} view(s)")
-        print(f"✓ views 补图完成: {len(objs)} 件雕塑, 共新增 {total} 行")
+        print(f"✓ views 补图完成: {len(objs)} 件立体作品, 共新增 {total} 行")
         print(
             "↳ 下一步跑 `images` 物化(下载→R2→自动嵌入): "
             f"python scripts/onboard.py {museum} images --target <env>"

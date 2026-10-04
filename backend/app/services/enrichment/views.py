@@ -85,10 +85,15 @@ def fetch_view_urls(qid: str, *, max_n: int = 4, http_get=None) -> list[str]:
     return urls
 
 
+# 立体作品:游客拍的角度与官方正面图不同,需要多视角。卢浮的汉谟拉比法典石碑、
+# 人首翼牛归在 artifact,只补 sculpture 时一张没补上(2026-10-04)。
+VIEW_CATEGORIES = frozenset({"sculpture", "artifact", "decorative_arts"})
+
+
 def add_view_images(db, obj, *, max_total: int = 5, fetch=None) -> int:
-    """sculpture 且现有图 <3 时,补 role="view" 参考图至总数 ≤ max_total。
+    """立体作品(VIEW_CATEGORIES)且现有图 <3 时,补 role="view" 参考图至总数 ≤ max_total。
     已有同 source_url 跳过(幂等);不 commit(调用方管事务);返回新插行数。"""
-    if obj.category != "sculpture":
+    if obj.category not in VIEW_CATEGORIES:
         return 0
     existing = (
         db.query(ObjectImage)
