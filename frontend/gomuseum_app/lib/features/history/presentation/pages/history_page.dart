@@ -40,11 +40,12 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       child: RefreshIndicator(
         color: gm.accent,
         onRefresh: () => ref.read(historyProvider.notifier).refresh(),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(26, 16, 26, 12),
-          child: Column(
-            children: [
+        // 惰性列表:只建屏幕内的行。原先 SingleChildScrollView+Column 一次建全部
+        // ~300 行 → 300 张缩略图同时下载+解码,屏幕顶上那几张排在队里,首屏慢
+        // (2026-10-05 真机)。
+        child: Builder(builder: (context) {
+          final rows = [
+            Column(children: [
               Text(
                 AppLocalizations.of(context)!.footprintTitle,
                 style: GmText.serif(
@@ -60,10 +61,16 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                 style: GmText.sans(size: 11.5, letterSpacing: 1, color: gm.sub),
               ),
               const SizedBox(height: 4),
-              ..._content(gm, history),
-            ],
-          ),
-        ),
+            ]),
+            ..._content(gm, history),
+          ];
+          return ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(26, 16, 26, 12),
+            itemCount: rows.length,
+            itemBuilder: (_, i) => rows[i],
+          );
+        }),
       ),
     );
   }
@@ -88,7 +95,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
       return const [
         Padding(
           padding: EdgeInsets.symmetric(vertical: 60),
-          child: CircularProgressIndicator(),
+          child: Center(child: CircularProgressIndicator()),
         ),
       ];
     }
@@ -231,8 +238,13 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         child: Row(
           children: [
             GmThumb(
-              image:
-                  item.thumbnail == null ? null : NetworkImage(item.thumbnail!),
+              // 按显示尺寸解码:原图 392×480,显示 68dp,全尺寸解码白费 4 倍
+              image: item.thumbnail == null
+                  ? null
+                  : ResizeImage(NetworkImage(item.thumbnail!),
+                      width:
+                          (68 * MediaQuery.devicePixelRatioOf(context)).round(),
+                      policy: ResizeImagePolicy.fit),
               // 放大到 68:人记得的是画面不是标题(2026-10-03 用户定,足迹不做网格)
               size: 68,
             ),

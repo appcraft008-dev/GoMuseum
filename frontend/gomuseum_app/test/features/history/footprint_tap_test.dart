@@ -177,8 +177,35 @@ void main() {
     await tester.pump();
 
     final thumb = tester.widget<GmThumb>(find.byType(GmThumb));
-    expect(thumb.image, isA<NetworkImage>());
-    expect((thumb.image! as NetworkImage).url, 'https://cdn.example/thumb.jpg');
+    // 按显示尺寸解码(ResizeImage 包一层),底下仍是那张网络图
+    final img = thumb.image! as ResizeImage;
+    expect((img.imageProvider as NetworkImage).url,
+        'https://cdn.example/thumb.jpg');
+    expect(img.width, isNotNull);
     tester.takeException(); // 测试环境没有网络,图片加载失败与本用例无关
+  });
+
+  testWidgets('几百条足迹只建屏幕内的行,不一次拉全部缩略图', (tester) async {
+    // 原先 Column 一次建全部 → ~300 张缩略图同时下载解码,首屏慢(2026-10-05)
+    await _pump(tester, [
+      for (var i = 0; i < 300; i++)
+        HistoryItem(
+          id: 'ev-$i',
+          artworkName: '作品$i',
+          artist: '',
+          period: '',
+          description: '',
+          confidence: 0.9,
+          timestamp: DateTime(2026, 9, 5, 10, 30),
+          thumbnail: 'https://cdn.example/$i.jpg',
+          museumSlug: 'louvre',
+          qid: 'Q$i',
+        ),
+    ]);
+    await tester.pump();
+    final built = find.byType(GmThumb).evaluate().length;
+    expect(built, greaterThan(0));
+    expect(built, lessThan(50));
+    tester.takeException();
   });
 }

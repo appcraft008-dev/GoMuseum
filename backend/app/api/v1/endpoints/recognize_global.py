@@ -87,6 +87,9 @@ def run_recognition(
         from app.services.entitlement_service import pass_offer
 
         # `pass` 加法字段:撞墙那家馆该买的票(馆未知 = 全局识别前置闸 → null)
+        # `museum` 加法字段:撞墙那家馆的 slug。前端据此按馆查权益 —— 持荷兰(生效)+
+        # 巴黎(未激活)两张票时,全局 state 是 active,不按馆查就认不出该弹激活
+        # 而不是付费墙(2026-10-05 真机)。
         raise HTTPException(
             status_code=402,
             detail={
@@ -94,6 +97,7 @@ def run_recognition(
                 "pass": (
                     pass_offer(db, e.museum, language) if e.museum is not None else None
                 ),
+                "museum": e.museum.slug if e.museum is not None else None,
             },
         )
     if out is None:

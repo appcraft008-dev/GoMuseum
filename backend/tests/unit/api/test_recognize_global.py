@@ -73,6 +73,25 @@ def test_quota_exceeded_returns_402(client, monkeypatch):
     r = client.post("/api/v1/recognize?device_id=dev-1", files=_img())
     assert r.status_code == 402
     assert r.json()["detail"]["reason"] == "quota_exceeded"
+    assert r.json()["detail"]["museum"] is None
+
+
+def test_quota_exceeded_after_match_names_the_museum(client, monkeypatch):
+    """命中后撞墙 → 402 带那家馆的 slug,前端据此按馆判「已购未激活」弹激活。"""
+    from types import SimpleNamespace
+
+    def fake(db, slug, data, **kw):
+        raise QuotaExceededError(SimpleNamespace(slug="louvre"))
+
+    monkeypatch.setattr("app.services.recognition.service.recognize_billed", fake)
+    monkeypatch.setattr(
+        "app.services.entitlement_service.pass_offer",
+        lambda db, m, lang: {"product_id": "paris_pass_7d"},
+    )
+    r = client.post("/api/v1/recognize?device_id=dev-1", files=_img())
+    assert r.status_code == 402
+    assert r.json()["detail"]["museum"] == "louvre"
+    assert r.json()["detail"]["pass"]["product_id"] == "paris_pass_7d"
 
 
 def test_identity_required_when_anonymous(client, monkeypatch):

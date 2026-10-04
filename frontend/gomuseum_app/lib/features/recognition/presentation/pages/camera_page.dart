@@ -310,7 +310,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       _retake();
       // 顺序要紧:先用当前权益判"已购未激活",再 invalidate ——
       // 反过来会把 `.value` 清成 null,那个分支永远命不中。
-      if (await _passActivatedIfPurchased()) return;
+      if (await _passActivatedIfPurchased(museum: st.museum)) return;
       ref.invalidate(entitlementsProvider); // 客户端闸与后端不一致,重拉一次
       if (mounted) _showQuotaExhaustedSheet(passId: st.passId);
       return;
@@ -402,10 +402,20 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   /// 拦下之前先看是不是"已购未激活"——他付过钱了,该弹激活确认而不是购买页。
   /// 返回 true 表示现在可以识别了。
-  Future<bool> _passActivatedIfPurchased() async {
-    final ent = ref.read(entitlementsProvider).value;
+  ///
+  /// [museum]:402 告诉了撞墙的是哪家馆 → **按馆**查。全局 state 只取"最相关的一张",
+  /// 持荷兰(生效)+巴黎(未激活)时它是 active,在卢浮宫撞墙就认不出该撕巴黎那张,
+  /// 直接弹了「免费次数已用尽」(2026-10-05 真机)。
+  Future<bool> _passActivatedIfPurchased({String? museum}) async {
+    final Entitlements? ent;
+    if (museum != null) {
+      ent = await ref.read(museumEntitlementsProvider(museum).future);
+      if (!mounted) return false;
+    } else {
+      ent = ref.read(entitlementsProvider).value;
+    }
     if (ent == null || !ent.isPurchasedNotActivated) return false;
-    return ensurePassActivated(context, ref, ent);
+    return ensurePassActivated(context, ref, ent, museum: museum);
   }
 
   /// [passId]:402 告诉了是哪家馆的票就只卖那张;不知道 → 权益页列出全部可买的票。
