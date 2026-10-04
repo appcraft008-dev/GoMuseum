@@ -206,7 +206,9 @@ def _vector_out(db, storage, ranked: list, language: str) -> dict | None:
     if not ranked:
         return None
     top_score = ranked[0][1]
-    if top_score >= settings.RECOG_HIGH:
+    # 第二名紧咬(姊妹作、同图挂两个条目)→ 不直判,落到下面的候选档让用户挑
+    close = len(ranked) > 1 and top_score - ranked[1][1] < settings.RECOG_MARGIN
+    if top_score >= settings.RECOG_HIGH and not close:
         o = db.query(MuseumObject).filter_by(qid=ranked[0][0]).one()
         return {
             "outcome": "match",
