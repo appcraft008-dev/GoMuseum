@@ -19,6 +19,7 @@ from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
 from app.services.entitlement_service import pass_offer
 from app.services.must_see import must_see_order
+from app.services.recognition.tiles import HIDDEN_ROLES
 from app.services.storage import get_object_storage
 
 _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
@@ -852,7 +853,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         for i in db.query(ObjectImage)
         .filter(
             ObjectImage.object_id == obj.id,
-            ObjectImage.role != "view_quarantine",  # 隔离图不进图集
+            ObjectImage.role.notin_(HIDDEN_ROLES),  # 隔离图/识别切块不进图集
         )
         .order_by(ObjectImage.sort)
         .all()

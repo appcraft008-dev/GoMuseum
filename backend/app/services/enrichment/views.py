@@ -11,6 +11,7 @@ import time
 from urllib.parse import quote
 
 from app.models.museum_object import ObjectImage
+from app.services.recognition.tiles import TILE_ROLE
 
 _UA = "GoMuseumEnrichment/1.0 (appcraft008@gmail.com)"
 _WD_API = "https://www.wikidata.org/w/api.php"
@@ -98,6 +99,7 @@ def add_view_images(db, obj, *, max_total: int = 5, fetch=None) -> int:
     existing = (
         db.query(ObjectImage)
         .filter_by(object_id=obj.id)
+        .filter(ObjectImage.role != TILE_ROLE)  # 识别切块不算参考图张数
         .order_by(ObjectImage.sort)
         .all()
     )
