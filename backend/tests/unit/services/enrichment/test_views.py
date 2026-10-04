@@ -63,6 +63,23 @@ def test_artifact_gets_views(session):
     assert n == 1
 
 
+def test_no_primary_no_action(session):
+    s, m = session
+    o = _make_obj(s, m, "sculpture", 0)
+    n = add_view_images(s, o, fetch=lambda qid, max_n: ["https://c/a.jpg"])
+    assert n == 0 and _n_images(s, o) == 0
+
+
+def test_non_wikidata_qid_no_fetch(session):
+    s, m = session
+    o = upsert_object(s, m.id, {"qid": "joconde-000001", "category": "sculpture"})
+    s.add(ObjectImage(object_id=o.id, role="primary", source_url="http://x/j.jpg"))
+    s.commit()
+    calls = []
+    n = add_view_images(s, o, fetch=lambda qid, max_n: calls.append(qid) or [])
+    assert n == 0 and calls == []
+
+
 def test_sculpture_with_enough_images_no_action(session):
     s, m = session
     o = _make_obj(s, m, "sculpture", 3)
