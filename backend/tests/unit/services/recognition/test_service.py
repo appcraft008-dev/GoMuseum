@@ -141,6 +141,24 @@ def test_vector_mid_returns_candidates(session):
     assert out["match"] is None
 
 
+def test_close_runner_up_downgrades_match_to_candidates(session):
+    # 2026-10-04 橘园《晨与柳树》被姊妹作《晴晨与柳树》以 0.875 直判:第二名紧咬时不直判
+    vq = _FakeVQ([("Q334138", 0.88), ("Q152509", 0.86)])
+    out = recognize(
+        session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq
+    )
+    assert out["outcome"] == "candidates"
+    assert [c["qid"] for c in out["candidates"]] == ["Q334138", "Q152509"]
+
+
+def test_clear_runner_up_gap_still_matches(session):
+    vq = _FakeVQ([("Q334138", 0.88), ("Q152509", 0.80)])
+    out = recognize(
+        session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq
+    )
+    assert out["outcome"] == "match"
+
+
 def test_museum_low_no_global_fallback(session):
     # 馆域调用向量 miss → 不回退全局(老 App 前向兼容:跨馆 qid = 404 死胡同),直落 GPT 链
     identify = _Counter(

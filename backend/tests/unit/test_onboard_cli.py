@@ -26,3 +26,22 @@ def test_names_parser_accepts_all_flags():
     assert ns.command == "names"
     assert ns.retranslate_langs == "zh"
     assert ns.refresh_langs == "zh"
+
+
+def test_images_step_tiles_wide_artworks(monkeypatch):
+    """契约:宽幅作品切块挂在 images 物化之后,新馆/新件不靠人记得单独跑。"""
+    import app.services.enrichment.materializer as mat
+    import scripts.onboard as onboard
+    import scripts.tile_wide_images as tw
+
+    calls = []
+    monkeypatch.setattr(onboard.settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(
+        onboard, "SessionLocal", lambda: type("S", (), {"close": lambda s: None})()
+    )
+    monkeypatch.setattr(mat, "materialize_images", lambda db, slug, limit=None: {})
+    monkeypatch.setattr(
+        tw, "tile_museum", lambda slug, dry_run=False: calls.append(slug)
+    )
+    onboard.cmd_images("orangerie", None, "staging")
+    assert calls == ["orangerie"]

@@ -3,6 +3,7 @@
   python scripts/tile_wide_images.py orangerie --dry-run   # 只列会切哪些件
   python scripts/tile_wide_images.py orangerie
 
+`onboard <slug> images` 物化完成后会自动调 tile_museum,新馆/新件无需单独跑。
 写入面:object_images(新 tile 行)、object_embeddings(新向量)、R2 images/{qid}/tile-*。
 不碰已有行,不动音频。
 """
@@ -41,21 +42,18 @@ def _hires(row: ObjectImage, storage) -> Image.Image:
     return Image.open(io.BytesIO(storage.get(f"{row.image_key}_large.jpg")))
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("slug")
-    ap.add_argument("--dry-run", action="store_true")
-    args = ap.parse_args()
+def tile_museum(slug: str, dry_run: bool = False) -> int:
+    """给该馆尚未切块的宽幅作品切块,返回新增块数。onboard images 物化后自动调用。"""
     db, storage = SessionLocal(), get_object_storage()
-    embedder = None if args.dry_run else get_embedder()
-    if not args.dry_run and embedder is None:
+    embedder = None if dry_run else get_embedder()
+    if not dry_run and embedder is None:
         raise SystemExit("embedder unavailable (model not in R2?)")
     rows = (
         db.query(MuseumObject, ObjectImage)
         .join(Museum, Museum.id == MuseumObject.museum_id)
         .join(ObjectImage, ObjectImage.object_id == MuseumObject.id)
         .filter(
-            Museum.slug == args.slug,
+            Museum.slug == slug,
             MuseumObject.qid.isnot(None),
             ObjectImage.role == "primary",
             ObjectImage.image_key.isnot(None),
@@ -68,35 +66,47 @@ def main():
         for (oid,) in db.query(ObjectImage.object_id).filter_by(role=TILE_ROLE).all()
     }
     seen, total = set(), 0
-    for obj, img in rows:
-        if obj.id in seen or obj.id in tiled:
-            continue
-        seen.add(obj.id)
-        thumb = storage.get(f"{img.image_key}_thumb.jpg")
-        if not thumb:
-            continue
-        w, h = Image.open(io.BytesIO(thumb)).size
-        if not tile_boxes(w, h):
-            continue
-        print(f"{obj.qid} {w}x{h} {max(w, h) / min(w, h):.1f}:1 {obj.title_en}")
-        if args.dry_run:
-            continue
-        try:
-            n = add_tiles(
-                db,
-                storage,
-                obj,
-                _hires(img, storage),
-                img,
-                lambda db_, row, data: embed_image_row(db_, row, data, embedder),
-            )
-            db.commit()
-            total += n
-            print(f"  +{n} tiles", flush=True)
-        except Exception as e:  # 单件失败不阻断,重跑会补
-            db.rollback()
-            print(f"  FAIL {e}", flush=True)
+    try:
+        for obj, img in rows:
+            if obj.id in seen or obj.id in tiled:
+                continue
+            seen.add(obj.id)
+            thumb = storage.get(f"{img.image_key}_thumb.jpg")
+            if not thumb:
+                continue
+            w, h = Image.open(io.BytesIO(thumb)).size
+            if not tile_boxes(w, h):
+                continue
+            print(f"{obj.qid} {w}x{h} {max(w, h) / min(w, h):.1f}:1 {obj.title_en}")
+            if dry_run:
+                continue
+            try:
+                n = add_tiles(
+                    db,
+                    storage,
+                    obj,
+                    _hires(img, storage),
+                    img,
+                    lambda db_, row, data: embed_image_row(db_, row, data, embedder),
+                )
+                db.commit()
+                total += n
+                print(f"  +{n} tiles", flush=True)
+            except Exception as e:  # 单件失败不阻断,重跑会补
+                db.rollback()
+                print(f"  FAIL {e}", flush=True)
+    finally:
+        db.close()
     print(f"DONE scanned={len(seen)} tiles={total}")
+    return total
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("slug")
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args()
+    tile_museum(args.slug, args.dry_run)
 
 
 if __name__ == "__main__":
