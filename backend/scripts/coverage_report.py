@@ -1,5 +1,5 @@
 """覆盖率报告 CLI：汇总某馆档案/在线图录/物化/多视角/展陈/识别 KPI 现状，写回
-museum.stats["coverage"]（含冗余顶层 catalog_count/archive_count，供 museum_repo pack 读）。
+museum.stats["coverage"]（含冗余顶层 catalog_count/archive_count；pack 不读它们，现场 count）。
 
 报告 = 展陈状态重算的触发点（spec 定"不做实时"）：build_report 先调
 display_state.recompute_display 刷新该馆全部对象的 attributes["display"]，再统计。

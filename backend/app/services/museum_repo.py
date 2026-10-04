@@ -720,21 +720,16 @@ def get_museum_pack(
     ]
 
     # 双数字(加法字段):catalog_count=有图件数, archive_count=总件数。
-    # 优先读 museum.stats(Task 7 回写),缺失键现场 count 兜底(保证语义即时正确)。
-    stats = m.stats or {}
-    archive_count = stats.get("archive_count")
-    if archive_count is None:
-        archive_count = (
-            db.query(func.count(MuseumObject.id)).filter_by(museum_id=m.id).scalar()
-        )
-    catalog_count = stats.get("catalog_count")
-    if catalog_count is None:
-        catalog_count = (
-            db.query(func.count(MuseumObject.id))
-            .filter_by(museum_id=m.id)
-            .filter(_has_image_clause())
-            .scalar()
-        )
+    # 一律现场 count——不读 museum.stats 快照(补图/上新不刷新它,2026-10-04 橘园显旧值 15)
+    archive_count = (
+        db.query(func.count(MuseumObject.id)).filter_by(museum_id=m.id).scalar()
+    )
+    catalog_count = (
+        db.query(func.count(MuseumObject.id))
+        .filter_by(museum_id=m.id)
+        .filter(_has_image_clause())
+        .scalar()
+    )
 
     pack = {f: getattr(m, f) for f in _PACK_FIELDS}
     pack.update(
