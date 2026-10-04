@@ -12,6 +12,8 @@
 ///      那个已修的真机 bug。
 library;
 
+import 'dart:ui' show Locale;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/content/data/datasources/catalog_remote_datasource.dart';
@@ -21,12 +23,16 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
+import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 
 /// 头 [failFirst] 次调用抛异常,之后成功。模拟"一次瞬时网络抖动"。
 class _FlakyDs implements CatalogRemoteDataSource {
-  _FlakyDs({this.failFirst = 0});
+  _FlakyDs({this.failFirst = 0, this.generatingCalls = 0});
 
   final int failFirst;
+
+  /// 讲解:头 [generatingCalls] 次返回「生成中」(后端还在写),之后返回生成完。
+  final int generatingCalls;
   int calls = 0;
 
   void _tick() {
@@ -65,10 +71,23 @@ class _FlakyDs implements CatalogRemoteDataSource {
 
   @override
   Future<ObjectContent> getObjectContent(
-          {required String slug,
-          required String qid,
-          String language = 'zh'}) async =>
-      throw UnimplementedError();
+      {required String slug,
+      required String qid,
+      String language = 'zh'}) async {
+    _tick();
+    return ObjectContent(
+      qid: qid,
+      category: 'painting',
+      language: language,
+      status: ContentStatus.ready,
+      generating: calls <= generatingCalls,
+      title: '安东尼娅',
+      images: const [],
+      facts: const ObjectFacts(),
+      tabs: const [],
+      suggestedQuestions: const [],
+    );
+  }
 
   @override
   Future<GuideAudioResult> getGuideAudio(
@@ -89,8 +108,10 @@ class _FlakyDs implements CatalogRemoteDataSource {
 }
 
 ProviderContainer _container(_FlakyDs ds) {
-  final c = ProviderContainer(
-      overrides: [catalogDataSourceProvider.overrideWithValue(ds)]);
+  final c = ProviderContainer(overrides: [
+    catalogDataSourceProvider.overrideWithValue(ds),
+    resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+  ]);
   addTearDown(c.dispose);
   return c;
 }
@@ -169,6 +190,59 @@ void main() {
       sub = c.listen(objectListProvider(key), (_, __) {});
       await Future<void>.delayed(Duration.zero);
       expect(ds.calls, 1, reason: '成功列表必须 keepAlive,否则每次进馆都重拉');
+      sub.close();
+    });
+  });
+
+  /// 2026-10-04 真机:识别「安东尼娅」时讲解正在懒生成,App 缓存了生成中的空壳;
+  /// 服务器 19 秒后就有了中文讲解,可再进这件作品一直转圈、一个请求都不发
+  /// (nginx 日志实证),杀进程重开才有内容。生成中 = 未完成,跟错误态一样不许驻留。
+  group('objectContentProvider', () {
+    final key = (slug: 'orangerie', qid: 'joconde-00000089487');
+
+    test('① 生成中的结果 → 重进页面必须重新请求', () async {
+      final ds = _FlakyDs(generatingCalls: 1);
+      final c = _container(ds);
+
+      var sub = c.listen(objectContentProvider(key), (_, __) {});
+      expect(
+          (await c.read(objectContentProvider(key).future)).generating, isTrue);
+      expect(ds.calls, 1);
+      await _leavePage(sub);
+
+      sub = c.listen(objectContentProvider(key), (_, __) {});
+      final content = await c.read(objectContentProvider(key).future);
+      expect(ds.calls, 2, reason: '生成中的空壳驻留的话这里还是 1 —— 永远转圈');
+      expect(content.generating, isFalse);
+      sub.close();
+    });
+
+    test('② 首次失败 → 重进页面必须重试', () async {
+      final ds = _FlakyDs(failFirst: 1);
+      final c = _container(ds);
+
+      var sub = c.listen(objectContentProvider(key), (_, __) {});
+      await expectLater(
+          c.read(objectContentProvider(key).future), throwsA(isA<Exception>()));
+      await _leavePage(sub);
+
+      sub = c.listen(objectContentProvider(key), (_, __) {});
+      await c.read(objectContentProvider(key).future);
+      expect(ds.calls, 2);
+      sub.close();
+    });
+
+    test('③ 生成完的结果仍永久缓存', () async {
+      final ds = _FlakyDs();
+      final c = _container(ds);
+
+      var sub = c.listen(objectContentProvider(key), (_, __) {});
+      await c.read(objectContentProvider(key).future);
+      await _leavePage(sub);
+
+      sub = c.listen(objectContentProvider(key), (_, __) {});
+      await c.read(objectContentProvider(key).future);
+      expect(ds.calls, 1, reason: '已完成的讲解必须 keepAlive,否则每次进作品都重拉');
       sub.close();
     });
   });

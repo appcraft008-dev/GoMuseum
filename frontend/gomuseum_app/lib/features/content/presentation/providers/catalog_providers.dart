@@ -37,12 +37,18 @@ final museumDetailProvider = FutureProvider.autoDispose
   return detail;
 });
 
-final objectContentProvider =
-    FutureProvider.family<ObjectContent, ({String slug, String qid})>((ref, a) {
+/// ⚠️ **只缓存生成完的结果**(同 [museumDetailProvider] 的错误态教训)。
+/// 生成中(`generating=true`)的空壳也是「未完成」:原先永久驻留,2026-10-04 真机
+/// 「安东尼娅」——服务器 19 秒后已有讲解,再进这件作品却一直转圈、一个请求都不发,
+/// 杀进程重开才好。生成中/错误 → 页面退出即释放,下次进来重拉。
+final objectContentProvider = FutureProvider.autoDispose
+    .family<ObjectContent, ({String slug, String qid})>((ref, a) async {
   final lang = apiLanguage(ref.watch(resolvedLocaleProvider));
-  return ref
+  final content = await ref
       .watch(catalogDataSourceProvider)
       .getObjectContent(slug: a.slug, qid: a.qid, language: lang);
+  if (!content.generating) ref.keepAlive();
+  return content;
 });
 
 /// A1 GET /api/v1/museums → flat list of all museums.
