@@ -32,8 +32,11 @@ class QuotaExceededException implements Exception {
 
   /// 402 `detail.pass.product_id`:撞墙那家馆该买的票(后端下发;可缺)。
   final String? passId;
+
+  /// 402 `detail.museum`:撞墙那家馆的 slug(命中后才撞墙时有;可缺)。
+  final String? museum;
   const QuotaExceededException(
-      [this.message = 'Recognition quota exceeded', this.passId]);
+      [this.message = 'Recognition quota exceeded', this.passId, this.museum]);
 
   @override
   String toString() => 'QuotaExceededException: $message';

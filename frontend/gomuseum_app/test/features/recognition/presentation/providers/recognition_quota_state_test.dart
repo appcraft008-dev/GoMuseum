@@ -53,6 +53,16 @@ void main() {
         isA<RecognitionQuotaExceeded>());
   });
 
+  test('402 carries the museum it hit (so the camera checks that pass)',
+      () async {
+    final st = await stateAfter(
+        const QuotaExceededException('q', 'paris_pass_7d', 'louvre'));
+    expect(st, isA<RecognitionQuotaExceeded>());
+    st as RecognitionQuotaExceeded;
+    expect(st.museum, 'louvre');
+    expect(st.passId, 'paris_pass_7d');
+  });
+
   test('other errors still land in RecognitionError', () async {
     expect(await stateAfter(const ServerException('boom')),
         isA<RecognitionError>());

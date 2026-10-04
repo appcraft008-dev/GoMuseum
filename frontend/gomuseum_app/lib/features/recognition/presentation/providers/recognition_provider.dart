@@ -51,7 +51,10 @@ class RecognitionUnrecognized extends RecognitionState {
 
 /// 免费额度用尽(后端 402)：不是失败，是该弹付费墙。
 class RecognitionQuotaExceeded extends RecognitionState {
-  const RecognitionQuotaExceeded({this.passId});
+  const RecognitionQuotaExceeded({this.passId, this.museum});
+
+  /// 402 带回的撞墙那家馆(slug;前置闸撞墙时 null)。
+  final String? museum;
 
   /// 402 带回的「这家馆该买的票」(命中后才撞墙时有;前置闸撞墙时还不知道馆 → null,
   /// 权益页列出全部可买的票)。
@@ -104,7 +107,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
       };
       if (state is RecognitionMatched) _refreshFootprints();
     } on QuotaExceededException catch (e) {
-      state = RecognitionQuotaExceeded(passId: e.passId);
+      state = RecognitionQuotaExceeded(passId: e.passId, museum: e.museum);
     } catch (_) {
       state = const RecognitionError('recognize_failed');
     }

@@ -148,8 +148,10 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
             ? (e.response!.data as Map)['detail']
             : null;
         final pass = detail is Map ? detail['pass'] : null;
-        throw QuotaExceededException('Recognition quota exceeded',
-            pass is Map ? pass['product_id'] as String? : null);
+        throw QuotaExceededException(
+            'Recognition quota exceeded',
+            pass is Map ? pass['product_id'] as String? : null,
+            detail is Map ? detail['museum'] as String? : null);
       }
       throw ServerException('Server error: ${e.message}');
     } catch (e) {
