@@ -99,6 +99,23 @@ void main() {
         throwsA(isA<ServerException>()));
   });
 
+  // 部署重启时 nginx 回 502:与断网同类,交给上层重发(S2)。500 是真错误,仍是失败。
+  test('recognize maps 502 to NetworkException (retryable)', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'),
+            queryParameters: any(named: 'queryParameters'),
+            options: any(named: 'options')))
+        .thenThrow(DioException(
+            requestOptions: RequestOptions(path: '/api/v1/recognize'),
+            type: DioExceptionType.badResponse,
+            response: Response(
+                requestOptions: RequestOptions(path: '/api/v1/recognize'),
+                statusCode: 502)));
+
+    await expectLater(ds.recognize(slug: null, image: image(), language: 'en'),
+        throwsA(isA<NetworkException>()));
+  });
+
   test('confirm posts phash+qid to /api/v1/recognize/confirm', () async {
     when(() => dio.post(any(),
             data: any(named: 'data'), options: any(named: 'options')))

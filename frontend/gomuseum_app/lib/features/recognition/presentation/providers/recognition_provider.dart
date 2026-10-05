@@ -1,6 +1,7 @@
-import 'dart:async';
+import 'dart:async' hide TimeoutException;
 
 import 'package:cross_file/cross_file.dart';
+import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
@@ -66,6 +67,25 @@ class RecognitionError extends RecognitionState {
   final String message;
 }
 
+/// 等到 App 回到前台(S2:后台里失败的请求,切回来再重发)。测试里覆盖成立即返回。
+final foregroundWaiterProvider =
+    Provider<Future<void> Function()>((ref) => untilAppResumed);
+
+Future<void> untilAppResumed() {
+  final s = WidgetsBinding.instance.lifecycleState;
+  if (s == null || s == AppLifecycleState.resumed) return Future.value();
+  final done = Completer<void>();
+  late final AppLifecycleListener listener;
+  listener = AppLifecycleListener(onResume: () {
+    listener.dispose();
+    done.complete();
+  });
+  return done.future;
+}
+
+/// 值得用同一张照片重发的失败:超时、断连、网关 5xx(数据源已映射成 NetworkException)。
+bool _isTransient(Object e) => e is TimeoutException || e is NetworkException;
+
 /// 识别状态管理 Provider。
 @riverpod
 class RecognitionNotifier extends _$RecognitionNotifier {
@@ -91,12 +111,24 @@ class RecognitionNotifier extends _$RecognitionNotifier {
       } catch (_) {
         deviceId = null;
       }
-      final resp = await ds.recognize(
+      final waitForeground = ref.read(foregroundWaiterProvider);
+      Future<RecognizeResponse> send() => ds.recognize(
           slug: slug,
           image: image,
           language: language,
           mode: mode,
           deviceId: deviceId);
+      RecognizeResponse resp;
+      try {
+        resp = await send();
+      } catch (e) {
+        if (!_isTransient(e)) rethrow;
+        // S2 失败即重发:锁屏/切后台时系统会不会断连,代码里判断不了、各厂商也不同,
+        // 两种情况都兜住。同一张照片 → 服务端同键在途合并或缓存命中,不重算不重复扣。
+        // 只重发一次;后台失败先等回前台(后台网络多半还不通)。
+        await waitForeground();
+        resp = await send();
+      }
       state = switch (resp.outcome) {
         RecognizeOutcome.match when resp.match?.isValid == true =>
           RecognitionMatched(resp.match!, slug),

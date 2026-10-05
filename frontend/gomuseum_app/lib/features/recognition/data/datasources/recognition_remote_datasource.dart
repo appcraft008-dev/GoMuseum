@@ -153,6 +153,12 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
             pass is Map ? pass['product_id'] as String? : null,
             detail is Map ? detail['museum'] as String? : null);
       }
+      // 网关类 5xx(部署重启时 nginx 502 等)= 服务暂时不可用,与断网同类:交给上层重发(S2)。
+      // 500 是服务端真错误,重发也没用,仍按失败处理。
+      const gateway = {502, 503, 504};
+      if (gateway.contains(e.response?.statusCode)) {
+        throw const NetworkException('Server temporarily unavailable');
+      }
       throw ServerException('Server error: ${e.message}');
     } catch (e) {
       if (e is ServerException || e is TimeoutException) rethrow;
