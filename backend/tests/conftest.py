@@ -16,6 +16,23 @@ class NetworkUseInTest(RuntimeError):
     """测试摸到了外网。注入那个 fetch_*，别让用例去问 Wikidata。"""
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "real_recog_redis: 不打桩识别缓存的 Redis 客户端(只给它自己的单测用)"
+    )
+
+
+@pytest.fixture(autouse=True)
+def _no_recognition_redis(request, monkeypatch):
+    """识别缓存默认关:CI 有真 Redis,不关的话同一张测试图会跨用例命中缓存,
+    用例结果取决于执行顺序。要测缓存的用例显式传 `redis=` 假对象。"""
+    if request.node.get_closest_marker("real_recog_redis"):
+        return
+    from app.services.recognition import service
+
+    monkeypatch.setattr(service, "_get_redis", lambda: None)
+
+
 @pytest.fixture(autouse=True)
 def _no_outbound_network(monkeypatch):
     """测试期间禁止连外网。
