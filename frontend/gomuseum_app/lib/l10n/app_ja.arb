@@ -178,6 +178,7 @@
   "authGuestError": "ゲストログインエラー",
   "recCandidatesTitle": "これですか？",
   "recNoneOfThese": "どれも違う",
+  "recThisIsIt": "これです",
   "recNotRecognized": "この作品を認識できませんでした",
   "recLabelSeen": "ラベルには「{text}」とあります — まだ完全なガイドはありませんが、ご要望を記録しました ✅",
   "recShootLabelBtn": "解説プレートを撮影",

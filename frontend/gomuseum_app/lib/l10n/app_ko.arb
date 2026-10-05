@@ -178,6 +178,7 @@
   "authGuestError": "게스트 로그인 오류",
   "recCandidatesTitle": "이 작품인가요?",
   "recNoneOfThese": "모두 아님",
+  "recThisIsIt": "이 작품이에요",
   "recNotRecognized": "이 작품을 인식하지 못했습니다",
   "recLabelSeen": "라벨에 \"{text}\"라고 적혀 있습니다 — 아직 전체 가이드는 없지만 요청을 기록했습니다 ✅",
   "recShootLabelBtn": "설명판 촬영",

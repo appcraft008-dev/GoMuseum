@@ -606,6 +606,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recNoneOfThese => 'Keines davon';
 
   @override
+  String get recThisIsIt => 'Das ist es';
+
+  @override
   String get recNotRecognized => 'Werk nicht erkannt';
 
   @override

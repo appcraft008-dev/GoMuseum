@@ -178,6 +178,7 @@
   "authGuestError": "Error de inicio de sesión como invitado",
   "recCandidatesTitle": "¿Es esta obra?",
   "recNoneOfThese": "Ninguna de estas",
+  "recThisIsIt": "Es esta",
   "recNotRecognized": "No se reconoció esta obra",
   "recLabelSeen": "La etiqueta dice «{text}» — aún no tenemos su guía completa, pero hemos anotado tu solicitud ✅",
   "recShootLabelBtn": "Fotografía la cartela",

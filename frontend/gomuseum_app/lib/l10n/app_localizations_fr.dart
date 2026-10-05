@@ -607,6 +607,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recNoneOfThese => 'Aucune de celles-ci';
 
   @override
+  String get recThisIsIt => 'C\'est celle-ci';
+
+  @override
   String get recNotRecognized => 'Œuvre non reconnue';
 
   @override

@@ -585,6 +585,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recNoneOfThese => '都不是';
 
   @override
+  String get recThisIsIt => '就是这件';
+
+  @override
   String get recNotRecognized => '没认出来这件作品';
 
   @override
@@ -1729,6 +1732,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get recNoneOfThese => '都不是';
+
+  @override
+  String get recThisIsIt => '就是這件';
 
   @override
   String get recNotRecognized => '沒認出來這件作品';

@@ -178,6 +178,7 @@
   "authGuestError": "Erreur de connexion invité",
   "recCandidatesTitle": "Est-ce cette œuvre ?",
   "recNoneOfThese": "Aucune de celles-ci",
+  "recThisIsIt": "C'est celle-ci",
   "recNotRecognized": "Œuvre non reconnue",
   "recLabelSeen": "L'étiquette indique « {text} » — nous n'avons pas encore son guide complet, mais votre demande est notée ✅",
   "recShootLabelBtn": "Photographier le cartel",
