@@ -10,6 +10,8 @@ import json
 import logging
 import time
 
+import redis as redis_lib
+
 from app.core.config import settings
 from app.models.artist import Artist
 from app.models.museum import Museum
@@ -37,7 +39,8 @@ def _cache_key(slug: str | None, sha: str, language: str, visible=None) -> str:
             ",".join(sorted(str(v) for v in visible)).encode()
         ).hexdigest()[:8]
     )
-    return f"recog3:{slug or 'global'}:{language}:{vtag}:{sha}"
+    # 引擎进键:换模型(v2→v3 那种)后旧引擎的结果不能再被命中。
+    return f"recog3:{slug or 'global'}:{settings.RECOG_MODEL}:{language}:{vtag}:{sha}"
 
 
 def _drop_hidden(db, ranked: list, visible) -> list:
@@ -112,13 +115,41 @@ def _default_embed_canvas(image_bytes: bytes):
         return None
 
 
-def _get_redis():
-    try:
-        from app.services.cache_service import get_cache_service
+# 进程内单例 + 失败冷却。🔴 2026-10-05 前这里 import 一个不存在的
+# `get_cache_service`,ImportError 被下面的 except 吞掉 → 恒 None → prod 识别缓存
+# 从上线起一次都没命中过(0 条 engine=cache):同图重发=重算、匿名同图重拍=再扣次。
+_redis_state: dict = {"client": None, "failed_at": None}
+_REDIS_RETRY_S = 60
 
-        return get_cache_service().redis_client
+
+def _get_redis():
+    st = _redis_state
+    if st["client"] is not None:
+        return st["client"]
+    if (
+        st["failed_at"] is not None
+        and time.monotonic() - st["failed_at"] < _REDIS_RETRY_S
+    ):
+        return None  # 冷却期:Redis 挂了不让每次识别都等一次连接超时
+    try:
+        client = redis_lib.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            password=settings.REDIS_PASSWORD,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,  # 缓存是加速件,抖动时宁可算一遍也不卡 5 秒
+        )
+        client.ping()
     except Exception:
+        logger.warning(
+            "recognition cache: redis unavailable, retry in %ss", _REDIS_RETRY_S
+        )
+        st["failed_at"] = time.monotonic()
         return None
+    st["client"], st["failed_at"] = client, None
+    return client
 
 
 def _summary(db, storage, o: MuseumObject, language: str) -> dict:

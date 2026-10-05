@@ -659,3 +659,33 @@ def test_event_timing_redis_timeout_attributed_to_cache_get(session):
     ev = session.query(RecognitionEvent).one()
     assert ev.timings["cache_get"] >= 40
     assert ev.timings["embed"] < 40
+
+
+@pytest.mark.real_recog_redis
+def test_default_redis_cache_actually_hits(session):
+    """回归:prod 缓存曾因 _get_redis 恒 None 从未命中。走**默认**客户端(不传 redis=),
+    同一张图第二次必须是 engine=cache。本机/CI 没 Redis 就跳过。"""
+    from app.services.recognition import service
+
+    service._redis_state.update(client=None, failed_at=None)
+    r = service._get_redis()
+    if r is None:
+        pytest.skip("no local redis")
+    img = _jpeg()
+    keys = []
+    try:
+        for _ in range(2):
+            out = recognize(
+                session,
+                "orsay",
+                img,
+                embed_fn=lambda b: "V",
+                vector_query_fn=lambda db, v, m: [("Q334138", 0.95)],
+            )
+        keys = r.keys("recog3:orsay:*")
+        assert out["outcome"] == "match"
+        engines = [e.engine for e in session.query(RecognitionEvent).all()]
+        assert engines == ["vector", "cache"]
+    finally:
+        for k in keys or r.keys("recog3:orsay:*"):
+            r.delete(k)
