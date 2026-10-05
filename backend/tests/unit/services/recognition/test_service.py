@@ -534,3 +534,43 @@ def test_open_upright_no_exif_passthrough():
     buf = _io.BytesIO()
     img.save(buf, format="JPEG")
     assert _open_upright(buf.getvalue()).size == (400, 200)
+
+
+# --- 识别耗时(S1):record_event 收计时 + recognize() 各阶段打点 ---
+
+
+def test_record_event_stores_timing(session):
+    from app.services.recognition.events import record_event
+
+    record_event(
+        session,
+        museum_slug="orsay",
+        phash="p1",
+        outcome="match",
+        top_qid="Q334138",
+        top_score=0.9,
+        language="en",
+        engine="vector",
+        duration_ms=1234,
+        timings={"prep": 10, "embed": 1200},
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.duration_ms == 1234
+    assert ev.timings == {"prep": 10, "embed": 1200}
+
+
+def test_record_event_without_timing(session):
+    from app.services.recognition.events import record_event
+
+    record_event(
+        session,
+        museum_slug="orsay",
+        phash="p2",
+        outcome="match",
+        top_qid="Q334138",
+        top_score=0.9,
+        language="en",
+        engine="vector",
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.duration_ms is None and ev.timings is None

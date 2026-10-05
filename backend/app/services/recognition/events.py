@@ -23,6 +23,8 @@ def record_event(
     language,
     engine,
     user_id=None,
+    duration_ms=None,
+    timings=None,
 ) -> None:
     """记一次识别事件。独立小事务,失败回滚不影响主流程。
 
@@ -39,6 +41,8 @@ def record_event(
                 language=language,
                 engine=engine,
                 user_id=user_id,
+                duration_ms=duration_ms,
+                timings=timings,
             )
         )
         db.commit()

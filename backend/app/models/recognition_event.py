@@ -9,8 +9,8 @@ confirmed_qid 由前端确认回填(/recognize/confirm);同 phash 允许多行(�
 
 import uuid
 
-from sqlalchemy import Column, DateTime, Float, Index, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import JSON, Column, DateTime, Float, Index, Integer, String, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.core.database import Base
 
@@ -32,6 +32,10 @@ class RecognitionEvent(Base):
     # 不能靠 device_id 反查账号 —— 那正是 2026-07 串号计费事故的形态)。
     # 删足迹 = 把这一列清成 NULL:KPI/展陈证据行留下,与账号的关联断掉。
     user_id = Column(String(64), nullable=True)
+    # 识别耗时(S1,2026-10-05):总毫秒 + 各阶段毫秒 {"prep":..,"embed":..,"gpt":..}。
+    # 只记**跑了的**阶段;从进入 recognize() 起算,不含上传(上传看 nginx rt=)。
+    duration_ms = Column(Integer, nullable=True)
+    timings = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     __table_args__ = (
