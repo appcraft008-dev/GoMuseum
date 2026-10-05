@@ -24,7 +24,7 @@
 | App 中途放弃 | 作品识别 499(客户端断开)96 次 vs 200 共 424 次 ≈ 1/5 | nginx access.log(两周) |
 | 放弃后服务器照样算完并落事件 | 10-03:200×5 + 499×8 = 事件 13;两周合计请求 520 ≈ 事件 510 | nginx × `recognition_events` |
 | App 放弃时机 | 仅 `receiveTimeout` 60s;切后台**不**取消请求 | `recognition_remote_datasource.dart` |
-| 同一张照片重发 | 命中 Redis 缓存(按图片字节 sha,match 30 天)立刻返回,不重复扣次 | `service.py` `_cache_key` / `recognize_billed` |
+| 同一张照片重发 | ~~命中 Redis 缓存立刻返回~~ **更正(S1 评审)**:缓存代码存在,但 `_get_redis()` 导入失败恒返回 None,prod 从未命中过(0 条 `engine=cache`)。重发=重算;匿名同图重拍会再扣次 | `service.py` `_get_redis` |
 | 正在算的同一张图 | **不合并**,重发会再算一遍 | `service.py` |
 | 「都不是」 | 纯前端切态,后端无记录 | `recognition_provider.dart` `rejectCandidates` |
 | 候选点进详情页 | `pushReplacement`,返回回不到候选 | `camera_page.dart` `_goGuide` |
@@ -174,6 +174,10 @@ S5 后端 + 私有存储 ─▶ 隐私政策上线 ─▶ S5 前端(再下一班
 - 维持现状:卢浮宫 3744 件官网图灰区;奥赛无免费图源。
 - 待 S1 数据:30s–60s 等待的根因与优化方案。
 - 待 S7 核实:小皇宫 766 件能补多少。
+
+## 九、S1 实施评审更正(2026-10-05)
+
+识别缓存在 prod 从未生效(见第二节更正)。S2 的「重发命中缓存秒回、不重复扣次」前提不成立;S2 开工前须先由用户决定是否修复缓存(会改变计费与识别行为)。已记入 `docs/ops/backlog.md`「等你拍板」。
 
 ## 八、独立评审记录(2026-10-05,Fable)
 

@@ -326,7 +326,8 @@ def recognize(
                 )
                 return cached_out
         except Exception:
-            pass  # 缓存不可用不阻断识别
+            # 缓存不可用不阻断识别;超时那段也记在 cache_get,别算到下一阶段头上
+            clock.mark("cache_get")
 
     from app.services.storage import get_object_storage
 

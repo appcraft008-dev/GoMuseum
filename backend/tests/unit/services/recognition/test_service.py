@@ -633,3 +633,29 @@ def test_event_timing_cache_hit(session):
     assert {"prep", "cache_get"} <= set(ev.timings)
     assert "embed" not in ev.timings
     assert isinstance(ev.duration_ms, int)
+
+
+def test_event_timing_redis_timeout_attributed_to_cache_get(session):
+    # Redis 超时(prod socket_timeout=5s)那段必须记在 cache_get,不能算到 embed 头上
+    import time
+
+    class _SlowBrokenRedis:
+        def get(self, k):
+            time.sleep(0.05)
+            raise TimeoutError("redis timeout")
+
+        def setex(self, k, ttl, v):
+            pass
+
+    vq = _FakeVQ([("Q334138", 0.95)])
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        vector_query_fn=vq,
+        redis=_SlowBrokenRedis(),
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.timings["cache_get"] >= 40
+    assert ev.timings["embed"] < 40
