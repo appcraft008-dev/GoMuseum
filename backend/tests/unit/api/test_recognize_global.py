@@ -442,3 +442,37 @@ def test_reject_rejects_oversized_payload():
         assert _row(s, "ph-big").rejected_qids is None
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+def test_rejected_and_confirmed_consistent_across_rows_of_same_photo():
+    """同一张照片重拍会多出事件行(缓存命中/S2 重发)。分析口径按 phash 分组:
+    答案 = 组内 confirmed − 组内 rejected 的并集。旧行上「都不是」过的那件,
+    重拍后被选中,必须从所有行的 rejected 里拿掉,否则口径会把真答案排除。"""
+    from datetime import datetime, timedelta
+
+    from app.models.recognition_event import RecognitionEvent
+
+    client, s = _confirm_client()
+    try:
+        old = RecognitionEvent(
+            museum_slug="orsay",
+            phash="ph-rows",
+            outcome="candidates",
+            top_qid="Q1",
+            engine="text",
+            created_at=datetime.utcnow() - timedelta(minutes=5),
+        )
+        s.add(old)
+        s.commit()
+        client.post(
+            "/api/v1/recognize/reject", json={"phash": "ph-rows", "qids": ["Q1"]}
+        )
+        _event(s, "ph-rows")  # 重拍:新行
+        client.post("/api/v1/recognize/confirm", json={"phash": "ph-rows", "qid": "Q1"})
+        s.expire_all()
+        rows = s.query(RecognitionEvent).filter_by(phash="ph-rows").all()
+        confirmed = {r.confirmed_qid for r in rows} - {None}
+        rejected = {q for r in rows for q in (r.rejected_qids or [])}
+        assert confirmed - rejected == {"Q1"}
+    finally:
+        app.dependency_overrides.pop(get_db, None)

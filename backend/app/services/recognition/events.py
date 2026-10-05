@@ -85,6 +85,10 @@ def confirm_event(db, phash: str, qid: str) -> bool:
             return False
         prev = next((r.confirmed_qid for r in rows if r.confirmed_qid), None)
         first_time = prev is None
+        # 选中的这件不能还挂在任何一行的 rejected 里(旧行上「都不是」过、重拍后选中它)
+        for r in rows[1:]:
+            if r.rejected_qids and qid in r.rejected_qids:
+                r.rejected_qids = [q for q in r.rejected_qids if q != qid] or None
         row = rows[0]
         # S3 改选:上一次确认的那件就是「第一次选错」。服务端自己知道,不收客户端的 previous。
         rejected = [q for q in (row.rejected_qids or []) if q != qid]
