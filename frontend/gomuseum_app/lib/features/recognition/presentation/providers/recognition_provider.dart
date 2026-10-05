@@ -173,10 +173,16 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   void _refreshFootprints() =>
       unawaited(ref.read(historyProvider.notifier).refresh());
 
-  /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字）。
+  /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字），并把这组候选上报为被否定(S3)。
   void rejectCandidates() {
     final s = state;
     if (s is RecognitionCandidates) {
+      final phash = s.phash;
+      if (phash != null) {
+        unawaited(ref
+            .read(recognitionRemoteDataSourceProvider)
+            .reject(phash: phash, qids: [for (final c in s.candidates) c.qid]));
+      }
       state = RecognitionUnrecognized(s.labelText, 'rejected', s.slug);
     }
   }

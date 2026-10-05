@@ -25,6 +25,12 @@ class RecognitionEvent(Base):
     top_qid = Column(String(32), nullable=True)
     top_score = Column(Float, nullable=True)
     confirmed_qid = Column(String(32), nullable=True)  # 用户确认回填
+    # S3:用户否定过的候选(改选时服务端把上一次确认记进来;「都不是」时整组记进来)。
+    # 分析口径**按 phash 分组**(同一张照片重拍/重发会多出行):
+    #   答案 = 组内 confirmed_qid 集合 − 组内 rejected_qids 并集。
+    # confirmed 不清,因为它兼做 24h 计费幂等(confirm_event)与足迹;
+    # confirm_event 选中某件时会把它从组内所有行的 rejected 里拿掉,保证上式成立。
+    rejected_qids = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     language = Column(String(8), nullable=True)
     # vector|vector_canvas|vector_crops|text|cache|none
     engine = Column(String(16), nullable=False)

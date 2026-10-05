@@ -13,25 +13,32 @@ import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 
 /// 拉起全屏画廊。[images] 非空；[initialIndex] 为进入时定位的图。
+///
+/// [footerBuilder]:调用方的底部插槽(候选比对放标题 +「就是这件」),按当前页渲染。
 Future<void> showImageGallery(
   BuildContext context, {
   required List<ObjectImage> images,
   int initialIndex = 0,
+  Widget Function(BuildContext context, int index)? footerBuilder,
 }) {
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
       opaque: false,
       barrierColor: Colors.black,
-      pageBuilder: (_, __, ___) =>
-          _ImageGallery(images: images, initialIndex: initialIndex),
+      pageBuilder: (_, __, ___) => _ImageGallery(
+          images: images,
+          initialIndex: initialIndex,
+          footerBuilder: footerBuilder),
     ),
   );
 }
 
 class _ImageGallery extends StatefulWidget {
-  const _ImageGallery({required this.images, required this.initialIndex});
+  const _ImageGallery(
+      {required this.images, required this.initialIndex, this.footerBuilder});
   final List<ObjectImage> images;
   final int initialIndex;
+  final Widget Function(BuildContext context, int index)? footerBuilder;
 
   @override
   State<_ImageGallery> createState() => _ImageGalleryState();
@@ -59,6 +66,18 @@ class _ImageGalleryState extends State<_ImageGallery> {
     final images = widget.images;
     final credit = images[_i].credit;
     final multi = images.length > 1;
+    final creditWidget = credit != null && credit.trim().isNotEmpty
+        ? Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              credit,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GmText.sans(size: 10, color: Colors.white54),
+            ),
+          )
+        : null;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -133,20 +152,33 @@ class _ImageGalleryState extends State<_ImageGallery> {
             ),
 
           // credit 署名（合规项；null 不显示）
-          if (credit != null && credit.trim().isNotEmpty)
+          if (creditWidget != null && widget.footerBuilder == null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 0,
+              child: SafeArea(child: creditWidget),
+            ),
+
+          // 调用方底部插槽:与署名同一列(footer 在上、署名在下),署名两行也不压线
+          if (widget.footerBuilder != null)
             Positioned(
               left: 16,
               right: 16,
               bottom: 0,
               child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    credit,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GmText.sans(size: 10, color: Colors.white54),
+                top: false,
+                // 吞掉 footer 空白处的点击:否则透传到下层「未放大时点任意处关闭」,
+                // 用户想看标题、没点准按钮,整个比对视图就关了
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      widget.footerBuilder!(context, _i),
+                      if (creditWidget != null) creditWidget,
+                    ],
                   ),
                 ),
               ),

@@ -604,6 +604,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recNoneOfThese => 'Żadne z nich';
 
   @override
+  String get recThisIsIt => 'To ta';
+
+  @override
   String get recNotRecognized => 'Nie rozpoznano tego dzieła';
 
   @override

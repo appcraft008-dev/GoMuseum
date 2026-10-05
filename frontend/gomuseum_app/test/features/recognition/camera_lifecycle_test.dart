@@ -31,5 +31,14 @@ void main() {
             reason: '$s 不该重建相机');
       }
     });
+
+    // S3:候选进详情页改 push,相机页还在栈里。详情页在上时切后台再回来,
+    // 不能在详情页底下把相机重新打开(占相机、亮隐私指示灯)。
+    test('相机页不在栈顶 → 回前台也不重建', () {
+      expect(
+          shouldRestartCamera(AppLifecycleState.resumed,
+              hasController: false, isTopRoute: false),
+          isFalse);
+    });
   });
 }

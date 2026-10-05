@@ -336,6 +336,8 @@
   "authGuestError": "Guest sign-in error",
   "recCandidatesTitle": "Is this the one?",
   "recNoneOfThese": "None of these",
+  "recThisIsIt": "This is it",
+  "@recThisIsIt": {"description": "Button in the full-screen candidate viewer: pick this candidate"},
   "recNotRecognized": "Couldn't recognize this work",
   "recLabelSeen": "The label reads \"{text}\" — we haven't added its full guide yet, but we've noted your request ✅",
   "@recLabelSeen": {

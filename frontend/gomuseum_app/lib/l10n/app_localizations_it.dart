@@ -601,6 +601,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recNoneOfThese => 'Nessuna di queste';
 
   @override
+  String get recThisIsIt => 'È questa';
+
+  @override
   String get recNotRecognized => 'Opera non riconosciuta';
 
   @override

@@ -178,6 +178,7 @@
   "authGuestError": "游客登录错误",
   "recCandidatesTitle": "是这件吗？",
   "recNoneOfThese": "都不是",
+  "recThisIsIt": "就是这件",
   "recNotRecognized": "没认出来这件作品",
   "recLabelSeen": "标签上写着 \"{text}\"——我们还没收录它的完整讲解，已记下你的需求 ✅",
   "recShootLabelBtn": "拍下作品旁的说明牌",

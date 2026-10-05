@@ -178,6 +178,7 @@
   "authGuestError": "Gast-Anmeldefehler",
   "recCandidatesTitle": "Ist es dieses Werk?",
   "recNoneOfThese": "Keines davon",
+  "recThisIsIt": "Das ist es",
   "recNotRecognized": "Werk nicht erkannt",
   "recLabelSeen": "Auf dem Schild steht „{text}\" — wir haben noch keinen vollständigen Guide dazu, aber Ihre Anfrage ist notiert ✅",
   "recShootLabelBtn": "Wandschild fotografieren",

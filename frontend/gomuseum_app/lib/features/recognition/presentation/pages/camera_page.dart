@@ -19,6 +19,8 @@ import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
+import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
 import 'package:gomuseum_app/features/recognition/presentation/widgets/recognition_wait_hint.dart';
 import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
@@ -62,8 +64,8 @@ double computeZoomLevel({
 /// 快门也按不动。
 @visibleForTesting
 bool shouldRestartCamera(AppLifecycleState state,
-        {required bool hasController}) =>
-    state == AppLifecycleState.resumed && !hasController;
+        {required bool hasController, bool isTopRoute = true}) =>
+    state == AppLifecycleState.resumed && !hasController && isTopRoute;
 
 class _CameraPageState extends ConsumerState<CameraPage>
     with WidgetsBindingObserver {
@@ -192,16 +194,26 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = _controller;
     if (state == AppLifecycleState.inactive) {
-      if (controller == null) return;
-      // 先置 null 再 dispose：build 里会读它，不能让重建期撞上已释放的 controller。
-      _controller = null;
-      if (mounted) setState(() {}); // 不重建的话 CameraPreview 还挂着死纹理
-      controller.dispose();
-    } else if (shouldRestartCamera(state, hasController: controller != null)) {
+      _releaseCamera();
+    } else if (shouldRestartCamera(state,
+        hasController: _controller != null,
+        // S3:候选进详情页是 push,相机页还在栈里;详情页在上时回前台不能在底下重开相机。
+        // 前提:/camera 与 /guide 同在根 Navigator(ShellRoute 外)——相机挪进
+        // shell/嵌套 Navigator 时这个判断要重查。
+        isTopRoute: ModalRoute.of(context)?.isCurrent ?? true)) {
       _initCamera();
     }
+  }
+
+  /// 放掉相机(切后台 / 进详情页前)。
+  void _releaseCamera() {
+    final controller = _controller;
+    if (controller == null) return;
+    // 先置 null 再 dispose：build 里会读它，不能让重建期撞上已释放的 controller。
+    _controller = null;
+    if (mounted) setState(() {}); // 不重建的话 CameraPreview 还挂着死纹理
+    controller.dispose();
   }
 
   @override
@@ -352,10 +364,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ref.read(recognitionNotifierProvider.notifier).resetState();
   }
 
-  void _goGuide(String slug, String qid) {
+  Future<void> _goGuide(String slug, String qid,
+      {bool fromCandidates = false}) async {
     // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」
     if (_lastShotLive) {
-      // 这个页马上 pushReplacement 被销毁:写完存储时 ref 已不能用,所以先拿容器
+      // 这个页可能马上被销毁(命中走 pushReplacement):写完存储时 ref 已不能用,所以先拿容器
       final container = ProviderScope.containerOf(context, listen: false);
       unawaited(recordLiveMatch(slug)
           .then((_) => container.invalidate(nearbyProvider))
@@ -366,15 +379,55 @@ class _CameraPageState extends ConsumerState<CameraPage>
     unawaited(
         ref.read(recognitionNotifierProvider.notifier).confirmRecognition(qid));
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
-    context.pushReplacement(
-      '/guide',
-      extra: GuideArgs(
-        slug: slug,
-        qid: qid,
-        imagePath: _captured?.path,
-        // 识别成功即自动播讲解:这是"保证送达的首体验",
-        // 也是现场"边看边听"的产品形态
-        autoPlayAudio: true,
+    final args = GuideArgs(
+      slug: slug,
+      qid: qid,
+      imagePath: _captured?.path,
+      // 识别成功即自动播讲解:这是"保证送达的首体验",
+      // 也是现场"边看边听"的产品形态
+      autoPlayAudio: true,
+    );
+    if (!fromCandidates) {
+      context.pushReplacement('/guide', extra: args);
+      return;
+    }
+    // S3:候选点进详情页用 push —— 用户常在详情页点开大图才发现选错,返回要回到候选列表
+    // (识别状态还在,不用重拍)。进去前放掉相机(否则详情页底下一直占着相机),回来再开。
+    _releaseCamera();
+    await context.push('/guide', extra: args);
+    if (mounted && _controller == null) _initCamera();
+  }
+
+  /// 候选全屏比对(S3):复用详情页画廊,左右切换候选,底部给标题和「就是这件」。
+  void _openCandidateViewer(RecognizedItem tapped) {
+    final st = ref.read(recognitionNotifierProvider);
+    if (st is! RecognitionCandidates) return;
+    final cands = st.candidates;
+    final l10n = AppLocalizations.of(context)!;
+    showImageGallery(
+      context,
+      images: [
+        for (final c in cands)
+          ObjectImage(url: c.image ?? c.thumbnail ?? '', credit: c.credit),
+      ],
+      initialIndex: cands.indexOf(tapped).clamp(0, cands.length - 1),
+      footerBuilder: (ctx, i) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(cands[i].title,
+              textAlign: TextAlign.center,
+              style: GmText.serif(
+                  size: 16, weight: FontWeight.w600, color: Colors.white)),
+          const SizedBox(height: 10),
+          GmTicketButton(
+            label: l10n.recThisIsIt,
+            icon: GmIcons.chevR,
+            onTap: () {
+              Navigator.of(ctx).pop();
+              _goGuide(cands[i].museum!, cands[i].qid, fromCandidates: true);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -857,7 +910,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 埋点接口 P2 提供,现只保证跳转畅通。
     // 跳转用该候选归属馆;老后端无 museum 字段 → 回退 orsay(契约容错)。
     return GestureDetector(
-      onTap: () => _goGuide(c.museum!, c.qid), // 候选已按 isValid 过滤
+      // 候选已按 isValid 过滤
+      onTap: () => _goGuide(c.museum!, c.qid, fromCandidates: true),
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(9),
@@ -872,19 +926,37 @@ class _CameraPageState extends ConsumerState<CameraPage>
             // 一眼对得上刚拍的画。考虑过「完整显示不裁」,但横竖幅混排时
             // 留白忽上下忽左右，用户否了。候选恒 ≤3 个(后端 cands[:3]),
             // 放大不会撑爆底部面板(非滚动 Column)。
-            SizedBox(
-              width: 92,
-              height: 92,
-              child: c.thumbnail != null
-                  ? Image.network(sizedImageUrl(c.thumbnail!, 280),
-                      fit: BoxFit.cover,
-                      headers: kImageRequestHeaders,
-                      errorBuilder: (_, __, ___) => ColoredBox(
-                          color: gm.chipBg,
-                          child: Center(
-                              child: GmIcon(GmIcons.photo,
-                                  size: 26, color: gm.faint))))
-                  : ColoredBox(color: gm.chipBg),
+            GestureDetector(
+              // 缩略图单独可点:全屏放大比对(S3),整行点击仍是直接选
+              // 没图(无图作品)不开:打开也只是一张坏图;null 时点击落到整行=直接选
+              onTap: c.image == null ? null : () => _openCandidateViewer(c),
+              child: Stack(children: [
+                SizedBox(
+                  width: 92,
+                  height: 92,
+                  child: c.thumbnail != null
+                      ? Image.network(sizedImageUrl(c.thumbnail!, 280),
+                          fit: BoxFit.cover,
+                          headers: kImageRequestHeaders,
+                          errorBuilder: (_, __, ___) => ColoredBox(
+                              color: gm.chipBg,
+                              child: Center(
+                                  child: GmIcon(GmIcons.photo,
+                                      size: 26, color: gm.faint))))
+                      : ColoredBox(color: gm.chipBg),
+                ),
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                        color: Colors.black45, shape: BoxShape.circle),
+                    child: const GmIcon(GmIcons.search,
+                        size: 12, color: Colors.white),
+                  ),
+                ),
+              ]),
             ),
             const SizedBox(width: 14),
             Expanded(

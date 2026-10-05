@@ -178,6 +178,7 @@
   "authGuestError": "Błąd logowania jako gość",
   "recCandidatesTitle": "Czy to jest to dzieło?",
   "recNoneOfThese": "Żadne z nich",
+  "recThisIsIt": "To ta",
   "recNotRecognized": "Nie rozpoznano tego dzieła",
   "recLabelSeen": "Na etykiecie widnieje „{text}” — nie mamy jeszcze pełnego przewodnika, ale odnotowaliśmy Twoją prośbę ✅",
   "recShootLabelBtn": "Sfotografuj tabliczkę",

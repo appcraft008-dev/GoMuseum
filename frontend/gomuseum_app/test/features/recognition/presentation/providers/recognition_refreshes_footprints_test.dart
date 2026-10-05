@@ -38,6 +38,10 @@ class _Ds implements RecognitionRemoteDataSource {
   Future<void> confirm({required String phash, required String qid}) async {}
 
   @override
+  Future<void> reject(
+      {required String phash, required List<String> qids}) async {}
+
+  @override
   Future<Never> recognizeArtwork(XFile imageFile) async =>
       throw UnimplementedError();
 }

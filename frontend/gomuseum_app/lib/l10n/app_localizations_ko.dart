@@ -587,6 +587,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recNoneOfThese => '모두 아님';
 
   @override
+  String get recThisIsIt => '이 작품이에요';
+
+  @override
   String get recNotRecognized => '이 작품을 인식하지 못했습니다';
 
   @override

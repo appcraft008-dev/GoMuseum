@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
-from app.services.museum_repo import _resolve_name, _sized
+from app.services.museum_repo import _photo_credit, _resolve_name, _sized
 from app.services.recognition.demands import record_demand
 from app.services.recognition.events import record_event
 from app.services.recognition.matcher import LOW, build_index, match
@@ -235,11 +235,23 @@ def _summaries(db, storage, objs: list, language: str) -> dict:
 
 def _summary_of(storage, o: MuseumObject, art, img, mus, language: str) -> dict:
     attrs = o.attributes or {}
-    thumbnail = None
+    thumbnail = image = credit = None
     if img and img.image_key:
         thumbnail = _sized(storage, img.image_key, "thumb")
+        image = _sized(storage, img.image_key, "large")
     elif img:
-        thumbnail = img.source_url
+        thumbnail = image = img.source_url
+    if img:
+        # 同详情页图集:CC 署名要留,作者本人不算署名(见 _photo_credit)
+        credit = _photo_credit(
+            img.credit,
+            {
+                *((art.name_i18n or {}).values() if art else ()),
+                *((art.name_zh, art.name_en) if art else ()),
+                o.artist_zh,
+                o.artist_en,
+            },
+        )
     return {
         "qid": o.qid,
         "museum": mus.slug if mus else None,
@@ -256,6 +268,9 @@ def _summary_of(storage, o: MuseumObject, art, img, mus, language: str) -> dict:
             o.artist_en or o.artist_zh,
         ),
         "thumbnail": thumbnail,
+        # S3 加法字段:候选全屏比对用大图 + 署名(老 App 不读)
+        "image": image,
+        "credit": credit,
     }
 
 

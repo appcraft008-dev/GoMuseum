@@ -587,6 +587,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recNoneOfThese => 'どれも違う';
 
   @override
+  String get recThisIsIt => 'これです';
+
+  @override
   String get recNotRecognized => 'この作品を認識できませんでした';
 
   @override

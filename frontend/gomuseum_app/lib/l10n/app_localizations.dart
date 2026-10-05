@@ -1181,6 +1181,12 @@ abstract class AppLocalizations {
   /// **'None of these'**
   String get recNoneOfThese;
 
+  /// Button in the full-screen candidate viewer: pick this candidate
+  ///
+  /// In en, this message translates to:
+  /// **'This is it'**
+  String get recThisIsIt;
+
   /// No description provided for @recNotRecognized.
   ///
   /// In en, this message translates to:
