@@ -24,6 +24,7 @@ class SearchResultsView extends ConsumerWidget {
     this.showMuseums = true,
     this.fallbackSlug,
     this.onNavigate,
+    this.onPickObject,
   });
 
   final SearchQuery query;
@@ -34,6 +35,9 @@ class SearchResultsView extends ConsumerWidget {
 
   /// 点击结果跳转前的回调（如识别兜底 sheet 里先关闭 sheet）。
   final VoidCallback? onNavigate;
+
+  /// 调用方接管藏品点选(S4 识别选择页:带本机照片进详情、回传答案)。给了就不走默认跳转。
+  final void Function(SearchObject obj)? onPickObject;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +66,13 @@ class SearchResultsView extends ConsumerWidget {
               if (showMuseums) _label(gm, l10n.searchArtworksSection),
               for (final o in res.objects)
                 _ObjectHitRow(
-                    obj: o, fallbackSlug: fallbackSlug, onNavigate: onNavigate),
+                  obj: o,
+                  fallbackSlug: fallbackSlug,
+                  onNavigate: onNavigate,
+                  onPick: onPickObject,
+                  // 用户在按编号找时把完整编号露出来对照说明牌;按名字搜时不加噪音
+                  showInventory: query.q.contains(RegExp(r'\d')),
+                ),
             ],
           ],
         );
@@ -129,11 +139,19 @@ class _MuseumHitRow extends StatelessWidget {
 }
 
 class _ObjectHitRow extends StatelessWidget {
-  const _ObjectHitRow({required this.obj, this.fallbackSlug, this.onNavigate});
+  const _ObjectHitRow({
+    required this.obj,
+    this.fallbackSlug,
+    this.onNavigate,
+    this.onPick,
+    this.showInventory = false,
+  });
 
   final SearchObject obj;
   final String? fallbackSlug;
   final VoidCallback? onNavigate;
+  final void Function(SearchObject)? onPick;
+  final bool showInventory;
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +162,10 @@ class _ObjectHitRow extends StatelessWidget {
           ? null
           : () {
               onNavigate?.call();
+              if (onPick != null) {
+                onPick!(obj);
+                return;
+              }
               context.push('/guide',
                   extra: GuideArgs(slug: slug, qid: obj.qid));
             },
@@ -175,6 +197,8 @@ class _ObjectHitRow extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     [
+                      if (showInventory && obj.inventory != null)
+                        obj.inventory!,
                       obj.artist,
                       if (obj.year != null)
                         formatYear(obj.year!, AppLocalizations.of(context)!)

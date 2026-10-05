@@ -182,6 +182,7 @@
   "recNotRecognized": "没认出来这件作品",
   "recLabelSeen": "标签上写着 \"{text}\"——我们还没收录它的完整讲解，已记下你的需求 ✅",
   "recShootLabelBtn": "拍下作品旁的说明牌",
+  "recTypeNumberOrName": "输入编号或名称",
   "recSearchWithLabel": "用这段文字搜索",
   "recShootLabelHint": "博物馆的小标牌上有作品名和作者，拍它我们就能认出来",
   "recViewfinderLabelHint": "对准标签文字，占满画面",

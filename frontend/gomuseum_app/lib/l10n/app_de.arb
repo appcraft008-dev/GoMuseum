@@ -182,6 +182,7 @@
   "recNotRecognized": "Werk nicht erkannt",
   "recLabelSeen": "Auf dem Schild steht „{text}\" — wir haben noch keinen vollständigen Guide dazu, aber Ihre Anfrage ist notiert ✅",
   "recShootLabelBtn": "Wandschild fotografieren",
+  "recTypeNumberOrName": "Nummer oder Titel eingeben",
   "recSearchWithLabel": "Mit diesem Text suchen",
   "recShootLabelHint": "Museumsschilder zeigen Titel und Künstler — fotografieren Sie es und wir erkennen das Werk",
   "recViewfinderLabelHint": "Auf den Schildtext zielen, Rahmen ausfüllen",

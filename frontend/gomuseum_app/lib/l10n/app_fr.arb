@@ -182,6 +182,7 @@
   "recNotRecognized": "Œuvre non reconnue",
   "recLabelSeen": "L'étiquette indique « {text} » — nous n'avons pas encore son guide complet, mais votre demande est notée ✅",
   "recShootLabelBtn": "Photographier le cartel",
+  "recTypeNumberOrName": "Saisir le numéro ou le titre",
   "recSearchWithLabel": "Rechercher avec ce texte",
   "recShootLabelHint": "Le cartel du musée indique le titre et l'artiste — photographiez-le et nous pourrons identifier l'œuvre",
   "recViewfinderLabelHint": "Visez le texte du cartel, remplissez le cadre",

@@ -24,6 +24,7 @@ import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.d
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
 import 'package:gomuseum_app/features/recognition/presentation/widgets/recognition_wait_hint.dart';
 import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
+import 'package:gomuseum_app/features/search/data/search_api.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
@@ -365,9 +366,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Future<void> _goGuide(String slug, String qid,
-      {bool fromCandidates = false}) async {
-    // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」
-    if (_lastShotLive) {
+      {bool fromCandidates = false, bool fromSearch = false}) async {
+    // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」。
+    // 搜索路径不记:取景器上的搜索按钮拍照前就能用,_lastShotLive 可能是上一张的残值(S4)
+    if (_lastShotLive && !fromSearch) {
       // 这个页可能马上被销毁(命中走 pushReplacement):写完存储时 ref 已不能用,所以先拿容器
       final container = ProviderScope.containerOf(context, listen: false);
       unawaited(recordLiveMatch(slug)
@@ -376,18 +378,20 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
-    unawaited(
-        ref.read(recognitionNotifierProvider.notifier).confirmRecognition(qid));
+    unawaited(ref
+        .read(recognitionNotifierProvider.notifier)
+        .confirmRecognition(qid, fromSearch: fromSearch));
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     final args = GuideArgs(
       slug: slug,
       qid: qid,
       imagePath: _captured?.path,
       // 识别成功即自动播讲解:这是"保证送达的首体验",
-      // 也是现场"边看边听"的产品形态
-      autoPlayAudio: true,
+      // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
+      autoPlayAudio: !fromSearch,
     );
-    if (!fromCandidates) {
+    // 候选/搜索路径都 push:返回回到候选列表/选择页(S3/S4)
+    if (!fromCandidates && !fromSearch) {
       context.pushReplacement('/guide', extra: args);
       return;
     }
@@ -444,6 +448,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
       builder: (_) => _TagSearchSheet(
         lang: apiLanguage(ref.read(resolvedLocaleProvider)),
         initialQuery: initialQuery,
+        // S4:点选走相机页自己的跳转(带本机照片、回传答案、返回仍回这里)。
+        // **不要再 pop**:SearchResultsView 的 onNavigate 已经关过 sheet,
+        // 这里再 pop 会把相机页本身弹掉。museum 由结果行 slug==null→不可点 保证非空。
+        onPick: (obj) => _goGuide(obj.museum!, obj.qid, fromSearch: true),
       ),
     );
   }
@@ -983,48 +991,41 @@ class _CameraPageState extends ConsumerState<CameraPage>
     );
   }
 
-  /// 未收录卡——绝不显示 AI 猜测的名字（契约 R1）。
-  /// 有 label_text：诚实告知已记需求；无：引导拍墙签。
+  /// 「没认出来」与「都不是」共用的选择卡(S4,用户 2026-10-05 定):
+  /// 「拍说明牌」「输入编号/名称」两个并列主按钮 —— 说明牌上的馆藏号唯一、名称比 AI
+  /// 猜的准;拍不了(禁拍/反光/太远)就手输。「重新拍作品」降为小字。
+  /// 绝不显示 AI 猜测的名字(契约 R1)。
   List<Widget> _unrecognizedContent(
       GmPalette gm, RecognitionUnrecognized state) {
     final l10n = AppLocalizations.of(context)!;
     final label = state.labelText;
-    if (label != null) {
-      // 墙签已拍、OCR 出了文字、目录仍没匹配上——此前这里只有"重拍",是死胡同:
-      // 用户手上已有 OCR 文本,却要退出去自己找搜索再手打一遍。给一跳直达搜索。
-      return [
-        Text(l10n.recLabelSeen(label),
-            style: GmText.sans(size: 13, height: 1.5)),
-        const SizedBox(height: 16),
-        GmTicketButton(
-          label: l10n.recSearchWithLabel,
-          icon: GmIcons.search,
-          onTap: () =>
-              _showTagSearchSheet(initialQuery: labelSearchQuery(label)),
-        ),
-        const SizedBox(height: 12),
-        Center(
-          child: GestureDetector(
-            onTap: _retake,
-            child: Text(l10n.camRetake,
-                style: GmText.sans(size: 12.5, color: gm.accent)),
-          ),
-        ),
-      ];
-    }
     return [
-      Text(l10n.recNotRecognized,
-          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      if (label != null)
+        Text(l10n.recLabelSeen(label),
+            style: GmText.sans(size: 13, height: 1.5))
+      else
+        Text(l10n.recNotRecognized,
+            style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 14),
       GmTicketButton(
         label: l10n.recShootLabelBtn,
         icon: GmIcons.camera,
         onTap: _startLabelCapture,
       ),
-      const SizedBox(height: 8),
-      Text(l10n.recShootLabelHint,
-          textAlign: TextAlign.center,
-          style: GmText.sans(size: 11.5, color: gm.sub)),
+      const SizedBox(height: 10),
+      GmTicketButton(
+        label: l10n.recTypeNumberOrName,
+        icon: GmIcons.search,
+        // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
+        onTap: () => _showTagSearchSheet(
+            initialQuery: label == null ? null : labelSearchQuery(label)),
+      ),
+      if (label == null) ...[
+        const SizedBox(height: 8),
+        Text(l10n.recShootLabelHint,
+            textAlign: TextAlign.center,
+            style: GmText.sans(size: 11.5, color: gm.sub)),
+      ],
       const SizedBox(height: 12),
       Center(
         child: GestureDetector(
@@ -1053,9 +1054,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
 /// 识别兜底 → 搜索闭环：无图区/未收录时按编号/名称查找（全局即时搜索）。
 /// 命中点击 → 关闭 sheet 后跳讲解页（与识别 match 同款导航）。
 class _TagSearchSheet extends ConsumerStatefulWidget {
-  const _TagSearchSheet({required this.lang, this.initialQuery});
+  const _TagSearchSheet({required this.lang, this.initialQuery, this.onPick});
 
   final String lang;
+
+  /// 藏品点选交给相机页(S4)。
+  final void Function(SearchObject obj)? onPick;
 
   /// 预填查询词(墙签 OCR 文本):可编辑,用户可改可清——OCR 常含馆名/年代等噪音。
   final String? initialQuery;
@@ -1139,6 +1143,7 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
                   query: (slug: null, q: _q, lang: widget.lang),
                   showMuseums: true,
                   onNavigate: () => Navigator.of(context).pop(),
+                  onPickObject: widget.onPick,
                 ),
               ),
             ),

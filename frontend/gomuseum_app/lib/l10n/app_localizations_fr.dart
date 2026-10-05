@@ -621,6 +621,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recShootLabelBtn => 'Photographier le cartel';
 
   @override
+  String get recTypeNumberOrName => 'Saisir le numéro ou le titre';
+
+  @override
   String get recSearchWithLabel => 'Rechercher avec ce texte';
 
   @override

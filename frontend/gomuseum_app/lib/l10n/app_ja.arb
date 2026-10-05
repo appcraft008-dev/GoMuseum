@@ -182,6 +182,7 @@
   "recNotRecognized": "この作品を認識できませんでした",
   "recLabelSeen": "ラベルには「{text}」とあります — まだ完全なガイドはありませんが、ご要望を記録しました ✅",
   "recShootLabelBtn": "解説プレートを撮影",
+  "recTypeNumberOrName": "番号か作品名を入力",
   "recSearchWithLabel": "このテキストで検索",
   "recShootLabelHint": "美術館のプレートには題名と作家が書かれています。撮影すれば作品を特定できます",
   "recViewfinderLabelHint": "プレートの文字を画面いっぱいに写してください",

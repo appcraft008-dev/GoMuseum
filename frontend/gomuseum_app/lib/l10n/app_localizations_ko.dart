@@ -601,6 +601,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recShootLabelBtn => '설명판 촬영';
 
   @override
+  String get recTypeNumberOrName => '번호나 작품명 입력';
+
+  @override
   String get recSearchWithLabel => '이 텍스트로 검색';
 
   @override

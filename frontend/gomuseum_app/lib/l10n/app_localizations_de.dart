@@ -620,6 +620,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recShootLabelBtn => 'Wandschild fotografieren';
 
   @override
+  String get recTypeNumberOrName => 'Nummer oder Titel eingeben';
+
+  @override
   String get recSearchWithLabel => 'Mit diesem Text suchen';
 
   @override
