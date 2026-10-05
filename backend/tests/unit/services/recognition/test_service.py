@@ -848,3 +848,56 @@ def test_inflight_wait_redis_drop_keeps_timing_attribution(session, fast_poll):
     t = session.query(RecognitionEvent).one().timings
     assert "inflight_wait" in t
     assert t["cache_get"] < 1000
+
+
+def test_summary_has_large_image_and_credit(session):
+    """S3 候选放大:缩略图放大是糊的 → 摘要给 large 档;署名按 _photo_credit(作者本人不算)。"""
+    from app.services.recognition.service import _summary
+
+    o = session.query(MuseumObject).filter_by(qid="Q334138").one()
+    session.add_all(
+        [
+            ObjectImage(
+                object_id=o.id,
+                sort=0,
+                role="primary",
+                source_url="https://commons/x.jpg",
+                image_key="images/Q334138/0",
+                credit="Photo Studio X",
+            ),
+        ]
+    )
+    session.commit()
+
+    class _S:
+        def public_url(self, key):
+            return f"https://r2/{key}"
+
+    s = _summary(session, _S(), o, "en")
+    assert s["thumbnail"] == "https://r2/images/Q334138/0_thumb.jpg"
+    assert s["image"] == "https://r2/images/Q334138/0_large.jpg"
+    assert s["credit"] == "Photo Studio X"
+
+
+def test_summary_credit_hidden_when_it_is_the_artist(session):
+    from app.services.recognition.service import _summary
+
+    o = session.query(MuseumObject).filter_by(qid="Q334138").one()
+    session.add(
+        ObjectImage(
+            object_id=o.id,
+            sort=0,
+            role="primary",
+            source_url="https://commons/x.jpg",
+            credit="Gustave Courbet",
+        )
+    )
+    session.commit()
+
+    class _S:
+        def public_url(self, key):
+            return f"https://r2/{key}"
+
+    s = _summary(session, _S(), o, "en")
+    assert s["image"] == "https://commons/x.jpg"  # 无 R2 → 原链
+    assert s["credit"] is None
