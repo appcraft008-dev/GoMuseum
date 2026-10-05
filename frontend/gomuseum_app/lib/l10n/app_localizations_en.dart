@@ -691,6 +691,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'AI is comparing with collections and public art databases';
 
   @override
+  String get recWaitSlow => 'Taking a bit longer than usual — still looking';
+
+  @override
+  String get recWaitSwitchApp =>
+      'You can switch to another app — the result will be here when you come back';
+
+  @override
   String get camConfirmPrompt => 'Recognition done, please confirm the work';
 
   @override

@@ -676,6 +676,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get camComparing => 'AIがコレクションと公開美術データベースと照合中';
 
   @override
+  String get recWaitSlow => 'いつもより少し時間がかかっています。検索を続けています';
+
+  @override
+  String get recWaitSwitchApp => 'ほかのアプリに切り替えても大丈夫です。戻ったときに結果が表示されます';
+
+  @override
   String get camConfirmPrompt => '認識完了。作品を確認してください';
 
   @override

@@ -207,6 +207,8 @@
   "camCantPhoto": "不能拍照？輸入展籤編號",
   "camRecognizing": "正在識別…",
   "camComparing": "AI 正在比對館藏與公開藝術資料庫",
+  "recWaitSlow": "比平時多花了點時間，還在找",
+  "recWaitSwitchApp": "可以先切到其他應用程式，回來時結果還在",
   "camConfirmPrompt": "識別完成，請確認展品",
   "camConfidence": "置信度",
   "camConfirmStart": "確認，開始講解",

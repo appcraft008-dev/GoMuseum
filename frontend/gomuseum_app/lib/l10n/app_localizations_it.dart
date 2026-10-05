@@ -698,6 +698,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'L\'IA confronta con collezioni e banche dati d\'arte pubbliche';
 
   @override
+  String get recWaitSlow =>
+      'Ci vuole un po\' più del solito, stiamo ancora cercando';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Puoi passare a un\'altra app: il risultato sarà qui al tuo ritorno';
+
+  @override
   String get camConfirmPrompt => 'Riconoscimento completato, conferma l\'opera';
 
   @override

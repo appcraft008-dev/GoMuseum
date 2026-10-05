@@ -207,6 +207,8 @@
   "camCantPhoto": "Impossible de photographier ? Saisissez le numéro de cartel",
   "camRecognizing": "Reconnaissance…",
   "camComparing": "L'IA compare avec les collections et les bases d'art publiques",
+  "recWaitSlow": "Un peu plus long que d'habitude — on cherche encore",
+  "recWaitSwitchApp": "Vous pouvez passer à une autre app : le résultat sera là à votre retour",
   "camConfirmPrompt": "Reconnaissance terminée, veuillez confirmer l'œuvre",
   "camConfidence": "Confiance",
   "camConfirmStart": "Confirmer & démarrer le guide",

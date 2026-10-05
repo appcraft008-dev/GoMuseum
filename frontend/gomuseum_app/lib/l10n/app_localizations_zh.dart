@@ -674,6 +674,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get camComparing => 'AI 正在比对馆藏与公开艺术数据库';
 
   @override
+  String get recWaitSlow => '比平时多花了点时间，还在找';
+
+  @override
+  String get recWaitSwitchApp => '可以先切到其他应用，回来时结果还在';
+
+  @override
   String get camConfirmPrompt => '识别完成，请确认展品';
 
   @override
@@ -1812,6 +1818,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get camComparing => 'AI 正在比對館藏與公開藝術資料庫';
+
+  @override
+  String get recWaitSlow => '比平時多花了點時間，還在找';
+
+  @override
+  String get recWaitSwitchApp => '可以先切到其他應用程式，回來時結果還在';
 
   @override
   String get camConfirmPrompt => '識別完成，請確認展品';

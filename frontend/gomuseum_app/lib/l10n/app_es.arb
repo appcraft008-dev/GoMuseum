@@ -207,6 +207,8 @@
   "camCantPhoto": "¿No puedes hacer foto? Introduce el número de cartela",
   "camRecognizing": "Reconociendo…",
   "camComparing": "La IA compara con colecciones y bases de datos de arte públicas",
+  "recWaitSlow": "Está tardando un poco más de lo normal; seguimos buscando",
+  "recWaitSwitchApp": "Puedes cambiar a otra app: el resultado seguirá aquí cuando vuelvas",
   "camConfirmPrompt": "Reconocimiento completado, confirma la obra",
   "camConfidence": "Confianza",
   "camConfirmStart": "Confirmar e iniciar guía",

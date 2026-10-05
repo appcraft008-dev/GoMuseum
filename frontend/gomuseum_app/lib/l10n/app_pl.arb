@@ -207,6 +207,8 @@
   "camCantPhoto": "Nie możesz zrobić zdjęcia? Wpisz numer tabliczki",
   "camRecognizing": "Rozpoznawanie…",
   "camComparing": "AI porównuje z kolekcjami i publicznymi bazami dzieł sztuki",
+  "recWaitSlow": "Trwa to trochę dłużej niż zwykle — wciąż szukamy",
+  "recWaitSwitchApp": "Możesz przełączyć się na inną aplikację — wynik będzie czekał po powrocie",
   "camConfirmPrompt": "Rozpoznano, potwierdź dzieło",
   "camConfidence": "Pewność",
   "camConfirmStart": "Potwierdź i rozpocznij przewodnik",

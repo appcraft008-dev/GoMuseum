@@ -699,6 +699,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'AI porównuje z kolekcjami i publicznymi bazami dzieł sztuki';
 
   @override
+  String get recWaitSlow => 'Trwa to trochę dłużej niż zwykle — wciąż szukamy';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Możesz przełączyć się na inną aplikację — wynik będzie czekał po powrocie';
+
+  @override
   String get camConfirmPrompt => 'Rozpoznano, potwierdź dzieło';
 
   @override

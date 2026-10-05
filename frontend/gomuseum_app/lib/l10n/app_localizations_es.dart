@@ -701,6 +701,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'La IA compara con colecciones y bases de datos de arte públicas';
 
   @override
+  String get recWaitSlow =>
+      'Está tardando un poco más de lo normal; seguimos buscando';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Puedes cambiar a otra app: el resultado seguirá aquí cuando vuelvas';
+
+  @override
   String get camConfirmPrompt => 'Reconocimiento completado, confirma la obra';
 
   @override

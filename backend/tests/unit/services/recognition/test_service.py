@@ -2,7 +2,11 @@
 既有 GPT 链语义见 tests/integration/test_recognize_flow.py(原样全过);此处专测向量路径。"""
 
 import io
+import json
+import threading
+import time
 
+import fakeredis
 import numpy as np
 import pytest
 from sqlalchemy import create_engine
@@ -15,8 +19,10 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.models.recognition_demand import RecognitionDemand
 from app.models.recognition_event import RecognitionEvent
+from app.services.image_service import ImageService
 from app.services.object_importer import upsert_museum, upsert_object
 from app.services.recognition import matcher
+from app.services.recognition import service as svc
 from app.services.recognition.service import recognize
 
 
@@ -702,3 +708,143 @@ def test_default_redis_cache_actually_hits(session):
     finally:
         for k in keys or r.keys("recog3:orsay:*"):
             r.delete(k)
+
+
+# ---------- S2 同键在途合并 ----------
+def _ckey(img, slug="orsay", language="zh"):
+    return svc._cache_key(slug, ImageService.generate_hash(img), language, None)
+
+
+@pytest.fixture()
+def fast_poll(monkeypatch):
+    monkeypatch.setattr(svc, "_WAIT_POLL_S", 0.02)
+
+
+def test_first_request_takes_and_releases_lock(session):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    img = _jpeg()
+    vq = _FakeVQ([("Q334138", 0.95)])
+    recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    assert r.get(_ckey(img)) is not None
+    assert not r.exists(svc._inflight_key(_ckey(img)))
+
+
+def test_inflight_waiter_reuses_first_result(session, fast_poll):
+    """同键已在算:第二个请求不重算,拿首请求写进缓存的结果。"""
+    r = fakeredis.FakeRedis(decode_responses=True)
+    img = _jpeg()
+    ck = _ckey(img)
+    first_out = {
+        "outcome": "unrecognized",
+        "match": None,
+        "candidates": [],
+        "label_text": None,
+        "reason": "no_candidates",
+        "phash": "x",
+    }
+    r.set(svc._inflight_key(ck), "1")
+
+    def finish_first():
+        r.setex(ck, 60, json.dumps(first_out))
+        r.delete(svc._inflight_key(ck))
+
+    threading.Timer(0.1, finish_first).start()
+    embed = _Counter(lambda b: "V")
+    out = recognize(
+        session, "orsay", img, embed_fn=embed, redis=r, identify_fn=_vision()
+    )
+    assert embed.n == 0  # 没重算
+    assert out["outcome"] == "unrecognized"
+    assert out["_billed"] == "inflight"
+    ev = session.query(RecognitionEvent).one()
+    assert ev.engine == "cache"
+    assert "inflight_wait" in ev.timings
+
+
+def test_inflight_lock_gone_without_cache_waiter_computes(
+    session, fast_poll, monkeypatch
+):
+    """首请求结束但缓存没写上(写缓存异常被吞):等待者看到锁消失就自己算,不等满上限。"""
+    monkeypatch.setattr(svc, "_WAIT_CAP_S", 5)
+    r = fakeredis.FakeRedis(decode_responses=True)
+    img = _jpeg()
+    ck = _ckey(img)
+    r.set(svc._inflight_key(ck), "1")
+    threading.Timer(0.1, lambda: r.delete(svc._inflight_key(ck))).start()
+    vq = _FakeVQ([("Q334138", 0.95)])
+    embed = _Counter(lambda b: "V")
+    t0 = time.monotonic()
+    out = recognize(session, "orsay", img, embed_fn=embed, vector_query_fn=vq, redis=r)
+    assert time.monotonic() - t0 < 2  # 锁一消失就收敛,不是等满上限才自算
+    assert embed.n == 1
+    assert out["outcome"] == "match"
+    assert session.query(RecognitionEvent).one().engine == "vector"
+
+
+def test_inflight_wait_cap_then_computes(session, fast_poll, monkeypatch):
+    """首请求一直不结束(进程卡死):等到上限后自己算。"""
+    monkeypatch.setattr(svc, "_WAIT_CAP_S", 0.2)
+    r = fakeredis.FakeRedis(decode_responses=True)
+    img = _jpeg()
+    r.set(svc._inflight_key(_ckey(img)), "1")
+    vq = _FakeVQ([("Q334138", 0.95)])
+    embed = _Counter(lambda b: "V")
+    out = recognize(session, "orsay", img, embed_fn=embed, vector_query_fn=vq, redis=r)
+    assert embed.n == 1
+    assert out["outcome"] == "match"
+
+
+def test_lock_released_when_compute_raises(session):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    img = _jpeg()
+
+    def boom(db, vec, museum_id):
+        raise RuntimeError("vector index down")
+
+    with pytest.raises(RuntimeError):
+        recognize(
+            session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=boom, redis=r
+        )
+    assert not r.exists(svc._inflight_key(_ckey(img)))
+
+
+def test_lock_released_when_cache_write_fails(session):
+    class _NoWrite(fakeredis.FakeRedis):
+        def setex(self, *a, **k):
+            raise ConnectionError("write failed")
+
+    r = _NoWrite(decode_responses=True)
+    img = _jpeg()
+    vq = _FakeVQ([("Q334138", 0.95)])
+    out = recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    assert out["outcome"] == "match"  # 写缓存失败不影响首请求
+    assert not r.exists(svc._inflight_key(_ckey(img)))
+
+
+def test_inflight_wait_redis_drop_keeps_timing_attribution(session, fast_poll):
+    """等待途中 Redis 掉线:等待耗时记在 inflight_wait,不能覆盖 cache_get(污染 S1 分位数)。"""
+
+    class _DropsDuringWait(fakeredis.FakeRedis):
+        gets = 0
+
+        def get(self, k):
+            self.gets += 1
+            if self.gets >= 2:  # 第 1 次是查缓存,之后是等待轮询
+                raise ConnectionError("redis gone")
+            return super().get(k)
+
+    r = _DropsDuringWait(decode_responses=True)
+    img = _jpeg()
+    r.set(svc._inflight_key(_ckey(img)), "1")  # 别人在算
+    vq = _FakeVQ([("Q334138", 0.95)])
+    out = recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    assert out["outcome"] == "match"  # Redis 掉线不阻断识别
+    t = session.query(RecognitionEvent).one().timings
+    assert "inflight_wait" in t
+    assert t["cache_get"] < 1000

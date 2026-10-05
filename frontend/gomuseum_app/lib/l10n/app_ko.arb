@@ -207,6 +207,8 @@
   "camCantPhoto": "촬영할 수 없나요? 설명판 번호를 입력하세요",
   "camRecognizing": "인식 중…",
   "camComparing": "AI가 컬렉션 및 공개 미술 데이터베이스와 대조 중",
+  "recWaitSlow": "평소보다 조금 오래 걸리고 있어요. 계속 찾는 중입니다",
+  "recWaitSwitchApp": "다른 앱으로 전환해도 괜찮아요. 돌아오면 결과가 그대로 있어요",
   "camConfirmPrompt": "인식 완료, 작품을 확인하세요",
   "camConfidence": "신뢰도",
   "camConfirmStart": "확인하고 가이드 시작",
