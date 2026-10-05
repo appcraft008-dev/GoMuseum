@@ -28,6 +28,8 @@ class RecognizedItem extends Equatable {
     required this.thumbnail,
     required this.score,
     this.museum,
+    this.image,
+    this.credit,
   });
 
   final String qid;
@@ -42,13 +44,22 @@ class RecognizedItem extends Equatable {
   /// —— 原先回落写死的 'orsay'，跨城后等于把人带进错的馆。
   final String? museum;
 
+  /// 候选全屏比对用的大图(S3 加法字段;老后端/老缓存没有 → 回落 thumbnail)。
+  final String? image;
+
+  /// 图片署名(CC 协议要求;作者本人已由后端剔除)。
+  final String? credit;
+
   factory RecognizedItem.fromJson(Map<String, dynamic> j) {
     final rawScore = j['confidence'] ?? j['score'];
+    final thumb = j['thumbnail'] as String?;
     return RecognizedItem(
       qid: j['qid'] as String? ?? '',
       title: j['title'] as String? ?? '',
       artist: j['artist'] as String? ?? '',
-      thumbnail: j['thumbnail'] as String?,
+      thumbnail: thumb,
+      image: j['image'] as String? ?? thumb,
+      credit: j['credit'] as String?,
       score: rawScore is num ? rawScore.toDouble() : 0.0,
       museum: j['museum'] as String?,
     );
@@ -57,7 +68,8 @@ class RecognizedItem extends Equatable {
   bool get isValid => qid.isNotEmpty && (museum?.isNotEmpty ?? false);
 
   @override
-  List<Object?> get props => [qid, title, artist, thumbnail, score, museum];
+  List<Object?> get props =>
+      [qid, title, artist, thumbnail, score, museum, image, credit];
 }
 
 class RecognizeResponse extends Equatable {

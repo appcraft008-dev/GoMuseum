@@ -145,4 +145,29 @@ void main() {
 
     await expectLater(ds.confirm(phash: 'abc123', qid: 'Q1'), completes);
   });
+
+  test('reject posts phash+qids to /api/v1/recognize/reject', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'), options: any(named: 'options')))
+        .thenAnswer((_) async => Response(
+            requestOptions: RequestOptions(path: '/api/v1/recognize/reject'),
+            statusCode: 204));
+
+    await ds.reject(phash: 'ph', qids: const ['Q1', 'Q2']);
+
+    final v = verify(() => dio.post(captureAny(),
+        data: captureAny(named: 'data'), options: any(named: 'options')));
+    expect(v.captured[0], '/api/v1/recognize/reject');
+    expect(v.captured[1], {
+      'phash': 'ph',
+      'qids': ['Q1', 'Q2']
+    });
+  });
+
+  test('reject swallows all exceptions (fire-and-forget)', () async {
+    when(() => dio.post(any(),
+        data: any(named: 'data'),
+        options: any(named: 'options'))).thenThrow(Exception('boom'));
+    await ds.reject(phash: 'ph', qids: const ['Q1']);
+  });
 }
