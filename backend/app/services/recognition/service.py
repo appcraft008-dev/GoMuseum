@@ -531,8 +531,10 @@ def recognize(
                     redis.set(_inflight_key(ckey), "1", nx=True, ex=_INFLIGHT_TTL_S)
                 )
                 if not owns_lock:
-                    hit = _wait_inflight(redis, ckey)
-                    clock.mark("inflight_wait")
+                    try:
+                        hit = _wait_inflight(redis, ckey)
+                    finally:  # 轮询中途 Redis 掉线,等待耗时也记在这里
+                        clock.mark("inflight_wait")
             if hit:
                 cached_out = json.loads(hit)
                 # 缓存命中:计费层据此不扣次。等来的是在途首请求的结果 → "inflight",
@@ -557,8 +559,10 @@ def recognize(
                 )
                 return cached_out
         except Exception:
-            # 缓存不可用不阻断识别;超时那段也记在 cache_get,别算到下一阶段头上
-            clock.mark("cache_get")
+            # 缓存不可用不阻断识别;超时那段也记在 cache_get,别算到下一阶段头上。
+            # 已记过(get 成功、之后加锁/等待才出错)就别覆盖:同名 mark 是覆盖语义
+            if "cache_get" not in clock.stages:
+                clock.mark("cache_get")
 
     try:
         return _compute(

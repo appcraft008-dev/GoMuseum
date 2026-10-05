@@ -823,3 +823,28 @@ def test_lock_released_when_cache_write_fails(session):
     )
     assert out["outcome"] == "match"  # 写缓存失败不影响首请求
     assert not r.exists(svc._inflight_key(_ckey(img)))
+
+
+def test_inflight_wait_redis_drop_keeps_timing_attribution(session, fast_poll):
+    """等待途中 Redis 掉线:等待耗时记在 inflight_wait,不能覆盖 cache_get(污染 S1 分位数)。"""
+
+    class _DropsDuringWait(fakeredis.FakeRedis):
+        gets = 0
+
+        def get(self, k):
+            self.gets += 1
+            if self.gets >= 2:  # 第 1 次是查缓存,之后是等待轮询
+                raise ConnectionError("redis gone")
+            return super().get(k)
+
+    r = _DropsDuringWait(decode_responses=True)
+    img = _jpeg()
+    r.set(svc._inflight_key(_ckey(img)), "1")  # 别人在算
+    vq = _FakeVQ([("Q334138", 0.95)])
+    out = recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    assert out["outcome"] == "match"  # Redis 掉线不阻断识别
+    t = session.query(RecognitionEvent).one().timings
+    assert "inflight_wait" in t
+    assert t["cache_get"] < 1000
