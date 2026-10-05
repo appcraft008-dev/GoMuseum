@@ -83,8 +83,15 @@ def confirm_event(db, phash: str, qid: str) -> bool:
         )
         if not rows:
             return False
-        first_time = not any(r.confirmed_qid for r in rows)
-        rows[0].confirmed_qid = qid
+        prev = next((r.confirmed_qid for r in rows if r.confirmed_qid), None)
+        first_time = prev is None
+        row = rows[0]
+        # S3 改选:上一次确认的那件就是「第一次选错」。服务端自己知道,不收客户端的 previous。
+        rejected = [q for q in (row.rejected_qids or []) if q != qid]
+        if prev and prev != qid and prev not in rejected:
+            rejected.append(prev)
+        row.rejected_qids = rejected or None
+        row.confirmed_qid = qid
         db.commit()
         return first_time
     except Exception:
@@ -94,3 +101,37 @@ def confirm_event(db, phash: str, qid: str) -> bool:
         except Exception:
             pass
         return False
+
+
+def reject_event(db, phash: str, qids: list[str]) -> None:
+    """「都不是」:把这组候选并进最近 24h 该 phash 最新一条事件的 rejected_qids。
+    无匹配事件静默返回;任何异常吞掉(fire-and-forget)。"""
+    try:
+        cutoff = datetime.utcnow() - timedelta(hours=24)
+        row = (
+            db.query(RecognitionEvent)
+            .filter(
+                RecognitionEvent.phash == phash,
+                RecognitionEvent.created_at >= cutoff,
+            )
+            .order_by(RecognitionEvent.created_at.desc())
+            .first()
+        )
+        if row is None:
+            return
+        from app.models.museum_object import MuseumObject
+
+        # 匿名可调:只收目录里真有的 qid(同 confirm_event),防垃圾数据污染分析
+        known = {
+            q for (q,) in db.query(MuseumObject.qid).filter(MuseumObject.qid.in_(qids))
+        }
+        merged = list(row.rejected_qids or [])
+        merged += [q for q in qids if q in known and q not in merged]
+        row.rejected_qids = merged
+        db.commit()
+    except Exception:
+        logger.exception("reject_event failed")
+        try:
+            db.rollback()
+        except Exception:
+            pass

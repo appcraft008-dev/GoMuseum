@@ -6,10 +6,11 @@ run_recognition,共享身份解析/计费/错误映射,行为零变化。契约�
 """
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -133,6 +134,12 @@ class ConfirmRequest(BaseModel):
     qid: str
 
 
+class RejectRequest(BaseModel):
+    phash: str = Field(max_length=64)
+    # 候选恒 ≤3;上限放宽到 10 防客户端变化,qid 长度同列宽 32
+    qids: list[Annotated[str, Field(max_length=32)]] = Field(max_length=10)
+
+
 @router.post("/recognize/confirm", status_code=204)
 def recognize_confirm(
     body: ConfirmRequest,
@@ -175,4 +182,14 @@ def recognize_confirm(
         if not BenefitsService(db).consume_recognition(user_id=user_id):
             return Response(status_code=204)
         es.unlock_free_audio(db, user_id, [body.qid])
+    return Response(status_code=204)
+
+
+@router.post("/recognize/reject", status_code=204)
+def recognize_reject(body: RejectRequest, db: Session = Depends(get_db)) -> Response:
+    """候选卡「都不是」(S3):记下被否定的候选,喂识别质量分析。fire-and-forget 恒 204。
+    不计费、不需身份 —— 只写作品 qid,不含用户信息。"""
+    from app.services.recognition.events import reject_event
+
+    reject_event(db, body.phash, body.qids)
     return Response(status_code=204)
