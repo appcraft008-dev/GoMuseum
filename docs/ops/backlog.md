@@ -68,6 +68,7 @@
 
 | 事项 | 触发条件 |
 |---|---|
+| **S1 识别耗时一周报告**(计划 `docs/superpowers/plans/2026-10-05-s1-recognition-stage-timing.md` Task 4 的两段 SQL:按 engine 总耗时分位数 + 各阶段分位数;注明 duration_ms 不含上传/扣费,差额看 nginx `rt=`) | 2026-10-12 后(S1 10-05 上 prod 满一周);nginx 加 `rt=$request_time` 待用户在宿主机执行(命令见会话 10-05/spec S2 被动数据) |
 | 离线馆包 | 收到第一条「馆内没信号打不开」的反馈，或有了真实的分馆使用分布 |
 | 退款后收回权益的链路 | 只有第一笔真实退款才能验证 |
 | nginx 限流阈值 | 观察项:有真实流量后看 error.log 的 excess 值 |
