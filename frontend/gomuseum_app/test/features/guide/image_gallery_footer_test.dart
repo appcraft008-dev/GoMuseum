@@ -38,8 +38,15 @@ void main() {
           onPressed: () => showImageGallery(
             ctx,
             images: const [ObjectImage(url: 'a.jpg', credit: null)],
-            footerBuilder: (_, i) => const SizedBox(
-                width: 300, height: 80, child: Text('title here')),
+            // 文字下面一块**没有内容**的空白区:点它才测得出透传
+            // (SizedBox 包 Text 时 Text 会被撑满整个框,点哪都是点在文字上)
+            footerBuilder: (_, i) => const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('title here'),
+                SizedBox(key: Key('gap'), width: 300, height: 60),
+              ],
+            ),
           ),
           child: const Text('open'),
         ),
@@ -47,7 +54,7 @@ void main() {
     ));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('title here'));
+    await tester.tap(find.byKey(const Key('gap')), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('title here'), findsOneWidget); // 画廊还开着
   });
