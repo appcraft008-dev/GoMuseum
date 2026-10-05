@@ -170,4 +170,21 @@ void main() {
         options: any(named: 'options'))).thenThrow(Exception('boom'));
     await ds.reject(phash: 'ph', qids: const ['Q1']);
   });
+
+  test('confirm sends source only when given (search path)', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'), options: any(named: 'options')))
+        .thenAnswer((_) async => Response(
+            requestOptions: RequestOptions(path: '/api/v1/recognize/confirm'),
+            statusCode: 204));
+
+    await ds.confirm(phash: 'ph', qid: 'Q1', source: 'search');
+    await ds.confirm(phash: 'ph', qid: 'Q2');
+
+    final data = verify(() => dio.post(any(),
+        data: captureAny(named: 'data'),
+        options: any(named: 'options'))).captured;
+    expect(data[0], {'phash': 'ph', 'qid': 'Q1', 'source': 'search'});
+    expect(data[1], {'phash': 'ph', 'qid': 'Q2'}); // 缺省不带,老语义
+  });
 }

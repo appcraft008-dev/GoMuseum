@@ -30,7 +30,8 @@ class _Ds implements RecognitionRemoteDataSource {
       });
 
   @override
-  Future<void> confirm({required String phash, required String qid}) async {}
+  Future<void> confirm(
+      {required String phash, required String qid, String? source}) async {}
 
   @override
   Future<void> reject(
