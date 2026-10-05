@@ -207,6 +207,8 @@
   "camCantPhoto": "撮影できない？プレート番号を入力",
   "camRecognizing": "認識中…",
   "camComparing": "AIがコレクションと公開美術データベースと照合中",
+  "recWaitSlow": "いつもより少し時間がかかっています。検索を続けています",
+  "recWaitSwitchApp": "ほかのアプリに切り替えても大丈夫です。戻ったときに結果が表示されます",
   "camConfirmPrompt": "認識完了。作品を確認してください",
   "camConfidence": "信頼度",
   "camConfirmStart": "確認してガイド開始",

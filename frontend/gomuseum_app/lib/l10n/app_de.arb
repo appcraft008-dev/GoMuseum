@@ -207,6 +207,8 @@
   "camCantPhoto": "Kein Foto möglich? Schildnummer eingeben",
   "camRecognizing": "Erkenne…",
   "camComparing": "KI vergleicht mit Sammlungen und öffentlichen Kunstdatenbanken",
+  "recWaitSlow": "Dauert etwas länger als sonst – wir suchen noch",
+  "recWaitSwitchApp": "Sie können zu einer anderen App wechseln – das Ergebnis ist da, wenn Sie zurückkommen",
   "camConfirmPrompt": "Erkennung abgeschlossen, bitte Werk bestätigen",
   "camConfidence": "Sicherheit",
   "camConfirmStart": "Bestätigen & Führung starten",

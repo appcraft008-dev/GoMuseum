@@ -207,6 +207,8 @@
   "camCantPhoto": "不能拍照？输入展签编号",
   "camRecognizing": "正在识别…",
   "camComparing": "AI 正在比对馆藏与公开艺术数据库",
+  "recWaitSlow": "比平时多花了点时间，还在找",
+  "recWaitSwitchApp": "可以先切到其他应用，回来时结果还在",
   "camConfirmPrompt": "识别完成，请确认展品",
   "camConfidence": "置信度",
   "camConfirmStart": "确认，开始讲解",

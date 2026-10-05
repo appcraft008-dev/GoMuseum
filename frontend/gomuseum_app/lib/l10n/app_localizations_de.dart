@@ -701,6 +701,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'KI vergleicht mit Sammlungen und öffentlichen Kunstdatenbanken';
 
   @override
+  String get recWaitSlow => 'Dauert etwas länger als sonst – wir suchen noch';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Sie können zu einer anderen App wechseln – das Ergebnis ist da, wenn Sie zurückkommen';
+
+  @override
   String get camConfirmPrompt =>
       'Erkennung abgeschlossen, bitte Werk bestätigen';
 

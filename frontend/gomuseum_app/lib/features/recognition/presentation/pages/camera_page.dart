@@ -20,6 +20,7 @@ import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
+import 'package:gomuseum_app/features/recognition/presentation/widgets/recognition_wait_hint.dart';
 import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
@@ -823,7 +824,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
         ],
       ),
       const SizedBox(height: 8),
-      Text(l10n.camComparing, style: GmText.sans(size: 12, color: gm.sub)),
+      RecognitionWaitHint(style: GmText.sans(size: 12, color: gm.sub)),
       const SizedBox(height: 10),
     ];
   }

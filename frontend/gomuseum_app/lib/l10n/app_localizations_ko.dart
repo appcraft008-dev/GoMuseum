@@ -676,6 +676,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get camComparing => 'AI가 컬렉션 및 공개 미술 데이터베이스와 대조 중';
 
   @override
+  String get recWaitSlow => '평소보다 조금 오래 걸리고 있어요. 계속 찾는 중입니다';
+
+  @override
+  String get recWaitSwitchApp => '다른 앱으로 전환해도 괜찮아요. 돌아오면 결과가 그대로 있어요';
+
+  @override
   String get camConfirmPrompt => '인식 완료, 작품을 확인하세요';
 
   @override

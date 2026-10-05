@@ -1355,6 +1355,18 @@ abstract class AppLocalizations {
   /// **'AI is comparing with collections and public art databases'**
   String get camComparing;
 
+  /// Recognition loading hint shown after ~10s
+  ///
+  /// In en, this message translates to:
+  /// **'Taking a bit longer than usual — still looking'**
+  String get recWaitSlow;
+
+  /// Recognition loading hint shown after ~20s; promises only switching apps, not leaving the page
+  ///
+  /// In en, this message translates to:
+  /// **'You can switch to another app — the result will be here when you come back'**
+  String get recWaitSwitchApp;
+
   /// No description provided for @camConfirmPrompt.
   ///
   /// In en, this message translates to:
