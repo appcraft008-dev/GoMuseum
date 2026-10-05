@@ -2,7 +2,11 @@
 既有 GPT 链语义见 tests/integration/test_recognize_flow.py(原样全过);此处专测向量路径。"""
 
 import io
+import json
+import threading
+import time
 
+import fakeredis
 import numpy as np
 import pytest
 from sqlalchemy import create_engine
@@ -15,8 +19,10 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.models.recognition_demand import RecognitionDemand
 from app.models.recognition_event import RecognitionEvent
+from app.services.image_service import ImageService
 from app.services.object_importer import upsert_museum, upsert_object
 from app.services.recognition import matcher
+from app.services.recognition import service as svc
 from app.services.recognition.service import recognize
 
 
@@ -705,15 +711,6 @@ def test_default_redis_cache_actually_hits(session):
 
 
 # ---------- S2 同键在途合并 ----------
-import json
-import threading
-
-import fakeredis
-
-from app.services.image_service import ImageService
-from app.services.recognition import service as svc
-
-
 def _ckey(img, slug="orsay", language="zh"):
     return svc._cache_key(slug, ImageService.generate_hash(img), language, None)
 
@@ -766,8 +763,11 @@ def test_inflight_waiter_reuses_first_result(session, fast_poll):
     assert "inflight_wait" in ev.timings
 
 
-def test_inflight_lock_gone_without_cache_waiter_computes(session, fast_poll):
+def test_inflight_lock_gone_without_cache_waiter_computes(
+    session, fast_poll, monkeypatch
+):
     """首请求结束但缓存没写上(写缓存异常被吞):等待者看到锁消失就自己算,不等满上限。"""
+    monkeypatch.setattr(svc, "_WAIT_CAP_S", 5)
     r = fakeredis.FakeRedis(decode_responses=True)
     img = _jpeg()
     ck = _ckey(img)
@@ -775,7 +775,9 @@ def test_inflight_lock_gone_without_cache_waiter_computes(session, fast_poll):
     threading.Timer(0.1, lambda: r.delete(svc._inflight_key(ck))).start()
     vq = _FakeVQ([("Q334138", 0.95)])
     embed = _Counter(lambda b: "V")
+    t0 = time.monotonic()
     out = recognize(session, "orsay", img, embed_fn=embed, vector_query_fn=vq, redis=r)
+    assert time.monotonic() - t0 < 2  # 锁一消失就收敛,不是等满上限才自算
     assert embed.n == 1
     assert out["outcome"] == "match"
     assert session.query(RecognitionEvent).one().engine == "vector"
