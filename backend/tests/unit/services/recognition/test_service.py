@@ -534,3 +534,171 @@ def test_open_upright_no_exif_passthrough():
     buf = _io.BytesIO()
     img.save(buf, format="JPEG")
     assert _open_upright(buf.getvalue()).size == (400, 200)
+
+
+# --- 识别耗时(S1):record_event 收计时 + recognize() 各阶段打点 ---
+
+
+def test_record_event_stores_timing(session):
+    from app.services.recognition.events import record_event
+
+    record_event(
+        session,
+        museum_slug="orsay",
+        phash="p1",
+        outcome="match",
+        top_qid="Q334138",
+        top_score=0.9,
+        language="en",
+        engine="vector",
+        duration_ms=1234,
+        timings={"prep": 10, "embed": 1200},
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.duration_ms == 1234
+    assert ev.timings == {"prep": 10, "embed": 1200}
+
+
+def test_record_event_without_timing(session):
+    from app.services.recognition.events import record_event
+
+    record_event(
+        session,
+        museum_slug="orsay",
+        phash="p2",
+        outcome="match",
+        top_qid="Q334138",
+        top_score=0.9,
+        language="en",
+        engine="vector",
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.duration_ms is None and ev.timings is None
+
+
+def test_event_timing_vector_hit(session):
+    vq = _FakeVQ([("Q334138", 0.95)])
+    recognize(session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq)
+    ev = session.query(RecognitionEvent).one()
+    assert isinstance(ev.duration_ms, int) and ev.duration_ms >= 0
+    assert {"prep", "embed", "vq", "vector_out"} <= set(ev.timings)
+    # 没跑的阶段不出现(否则分位数被 0 稀释)
+    assert not {"gpt", "canvas", "crops", "cache_get"} & set(ev.timings)
+    assert all(isinstance(v, int) and v >= 0 for v in ev.timings.values())
+
+
+def test_event_timing_attributes_slow_gpt(session):
+    import time
+
+    slow = _vision([{"title": "Nope", "artist": "X"}])
+
+    def slow_identify(*a, **k):
+        time.sleep(0.05)
+        return slow(*a, **k)
+
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: None,  # 引擎不可用 → GPT 链
+        identify_fn=slow_identify,
+    )
+    ev = session.query(RecognitionEvent).filter_by(engine="text").one()
+    assert ev.timings["gpt"] >= 40
+    assert ev.duration_ms >= ev.timings["gpt"]
+    assert "match" in ev.timings
+
+
+def test_event_timing_cache_hit(session):
+    class _FakeRedis:
+        def __init__(self):
+            self.store = {}
+
+        def get(self, k):
+            return self.store.get(k)
+
+        def setex(self, k, ttl, v):
+            self.store[k] = v
+
+    r = _FakeRedis()
+    vq = _FakeVQ([("Q334138", 0.95)])
+    img = _jpeg()
+    recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    ev = session.query(RecognitionEvent).filter_by(engine="cache").one()
+    assert {"prep", "cache_get"} <= set(ev.timings)
+    assert "embed" not in ev.timings
+    assert isinstance(ev.duration_ms, int)
+
+
+def test_event_timing_redis_timeout_attributed_to_cache_get(session):
+    # Redis 超时(prod socket_timeout=5s)那段必须记在 cache_get,不能算到 embed 头上
+    import time
+
+    class _SlowBrokenRedis:
+        def get(self, k):
+            time.sleep(0.05)
+            raise TimeoutError("redis timeout")
+
+        def setex(self, k, ttl, v):
+            pass
+
+    vq = _FakeVQ([("Q334138", 0.95)])
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        vector_query_fn=vq,
+        redis=_SlowBrokenRedis(),
+    )
+    ev = session.query(RecognitionEvent).one()
+    assert ev.timings["cache_get"] >= 40
+    assert ev.timings["embed"] < 40
+
+
+@pytest.mark.real_recog_redis
+def test_default_redis_cache_actually_hits(session):
+    """回归:prod 缓存曾因 _get_redis 恒 None 从未命中。走**默认**客户端(不传 redis=),
+    同一张图第二次必须是 engine=cache。本机/CI 没 Redis 就跳过。"""
+    import redis as redis_lib
+
+    from app.core.config import settings
+    from app.services.recognition import service
+
+    # 有没有 Redis 要**独立**判断:用被测的 _get_redis 判,bug 本身就会让用例 skip 而不是红
+    r = redis_lib.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        password=settings.REDIS_PASSWORD,
+        socket_connect_timeout=1,
+    )
+    try:
+        r.ping()
+    except Exception:
+        pytest.skip("no local redis")
+    if hasattr(service, "_redis_state"):
+        service._redis_state.update(client=None, failed_at=None)
+    img = _jpeg()
+    keys = []
+    try:
+        for _ in range(2):
+            out = recognize(
+                session,
+                "orsay",
+                img,
+                embed_fn=lambda b: "V",
+                vector_query_fn=lambda db, v, m: [("Q334138", 0.95)],
+            )
+        keys = r.keys("recog3:orsay:*")
+        assert out["outcome"] == "match"
+        engines = [e.engine for e in session.query(RecognitionEvent).all()]
+        assert engines == ["vector", "cache"]
+    finally:
+        for k in keys or r.keys("recog3:orsay:*"):
+            r.delete(k)
