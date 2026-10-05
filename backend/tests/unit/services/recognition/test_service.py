@@ -665,12 +665,25 @@ def test_event_timing_redis_timeout_attributed_to_cache_get(session):
 def test_default_redis_cache_actually_hits(session):
     """回归:prod 缓存曾因 _get_redis 恒 None 从未命中。走**默认**客户端(不传 redis=),
     同一张图第二次必须是 engine=cache。本机/CI 没 Redis 就跳过。"""
+    import redis as redis_lib
+
+    from app.core.config import settings
     from app.services.recognition import service
 
-    service._redis_state.update(client=None, failed_at=None)
-    r = service._get_redis()
-    if r is None:
+    # 有没有 Redis 要**独立**判断:用被测的 _get_redis 判,bug 本身就会让用例 skip 而不是红
+    r = redis_lib.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        password=settings.REDIS_PASSWORD,
+        socket_connect_timeout=1,
+    )
+    try:
+        r.ping()
+    except Exception:
         pytest.skip("no local redis")
+    if hasattr(service, "_redis_state"):
+        service._redis_state.update(client=None, failed_at=None)
     img = _jpeg()
     keys = []
     try:
