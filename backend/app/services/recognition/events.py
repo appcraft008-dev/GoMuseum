@@ -54,7 +54,7 @@ def record_event(
             pass
 
 
-def confirm_event(db, phash: str, qid: str) -> bool:
+def confirm_event(db, phash: str, qid: str, source: str = "candidates") -> bool:
     """回填最近 24h 内该 phash 最新一条事件的 confirmed_qid。
     qid 须存在于目录否则忽略;无匹配事件也静默返回(fire-and-forget)。
 
@@ -84,7 +84,10 @@ def confirm_event(db, phash: str, qid: str) -> bool:
         if not rows:
             return False
         prev = next((r.confirmed_qid for r in rows if r.confirmed_qid), None)
-        first_time = prev is None
+        # 「一次拍照只扣一次」只认计过费的确认:search 来源只记答案,不占这把锁(S4)
+        first_time = not any(
+            r.confirmed_qid and r.confirm_source != "search" for r in rows
+        )
         # 选中的这件不能还挂在任何一行的 rejected 里(旧行上「都不是」过、重拍后选中它)
         for r in rows[1:]:
             if r.rejected_qids and qid in r.rejected_qids:
@@ -96,6 +99,7 @@ def confirm_event(db, phash: str, qid: str) -> bool:
             rejected.append(prev)
         row.rejected_qids = rejected or None
         row.confirmed_qid = qid
+        row.confirm_source = source
         db.commit()
         return first_time
     except Exception:

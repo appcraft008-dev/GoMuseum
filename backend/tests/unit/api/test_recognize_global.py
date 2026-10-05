@@ -476,3 +476,65 @@ def test_rejected_and_confirmed_consistent_across_rows_of_same_photo():
         assert confirmed - rejected == {"Q1"}
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_from_search_records_but_never_charges(monkeypatch):
+    """S4:选择页搜到作品 = 记下「这张照片是这件」,但搜索免费:不扣次、不解锁。"""
+    from app.core.config import settings
+    from app.models.user_benefits import UserBenefits
+    from app.services import entitlement_service as es
+
+    headers = _as_user(monkeypatch, "u-search")
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-search")
+        r = client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-search", "qid": "Q1", "source": "search"},
+            headers=headers,
+        )
+        assert r.status_code == 204
+        assert _row(s, "ph-search").confirmed_qid == "Q1"
+        ub = s.query(UserBenefits).filter_by(user_id="u-search").one_or_none()
+        assert ub is None or ub.recognition_quota == settings.FREE_RECOGNITION_QUOTA
+        assert es.audio_access(s, "u-search", "Q1") != "allowed"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_search_confirm_does_not_spend_the_first_time_lock(monkeypatch):
+    """评审 P0:search 确认写了 confirmed_qid,之后同一张照片的候选确认仍要正常扣 1 次并解锁
+    (「一次拍照只扣一次」的锁只能被**计过费的**确认占用)。"""
+    from app.core.config import settings
+    from app.models.user_benefits import UserBenefits
+
+    headers = _as_user(monkeypatch, "u-mix")
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-mix")
+        client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-mix", "qid": "Q1", "source": "search"},
+            headers=headers,
+        )
+        client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-mix", "qid": "Q2"},
+            headers=headers,
+        )
+        ub = s.query(UserBenefits).filter_by(user_id="u-mix").one()
+        assert ub.recognition_quota == settings.FREE_RECOGNITION_QUOTA - 1
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_unknown_source_rejected():
+    client, s = _confirm_client()
+    try:
+        r = client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "x", "qid": "Q1", "source": "hack"},
+        )
+        assert r.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_db, None)
