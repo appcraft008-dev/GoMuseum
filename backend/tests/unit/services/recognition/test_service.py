@@ -574,3 +574,62 @@ def test_record_event_without_timing(session):
     )
     ev = session.query(RecognitionEvent).one()
     assert ev.duration_ms is None and ev.timings is None
+
+
+def test_event_timing_vector_hit(session):
+    vq = _FakeVQ([("Q334138", 0.95)])
+    recognize(session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq)
+    ev = session.query(RecognitionEvent).one()
+    assert isinstance(ev.duration_ms, int) and ev.duration_ms >= 0
+    assert {"prep", "embed", "vq", "vector_out"} <= set(ev.timings)
+    # 没跑的阶段不出现(否则分位数被 0 稀释)
+    assert not {"gpt", "canvas", "crops", "cache_get"} & set(ev.timings)
+    assert all(isinstance(v, int) and v >= 0 for v in ev.timings.values())
+
+
+def test_event_timing_attributes_slow_gpt(session):
+    import time
+
+    slow = _vision([{"title": "Nope", "artist": "X"}])
+
+    def slow_identify(*a, **k):
+        time.sleep(0.05)
+        return slow(*a, **k)
+
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: None,  # 引擎不可用 → GPT 链
+        identify_fn=slow_identify,
+    )
+    ev = session.query(RecognitionEvent).filter_by(engine="text").one()
+    assert ev.timings["gpt"] >= 40
+    assert ev.duration_ms >= ev.timings["gpt"]
+    assert "match" in ev.timings
+
+
+def test_event_timing_cache_hit(session):
+    class _FakeRedis:
+        def __init__(self):
+            self.store = {}
+
+        def get(self, k):
+            return self.store.get(k)
+
+        def setex(self, k, ttl, v):
+            self.store[k] = v
+
+    r = _FakeRedis()
+    vq = _FakeVQ([("Q334138", 0.95)])
+    img = _jpeg()
+    recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    ev = session.query(RecognitionEvent).filter_by(engine="cache").one()
+    assert {"prep", "cache_get"} <= set(ev.timings)
+    assert "embed" not in ev.timings
+    assert isinstance(ev.duration_ms, int)

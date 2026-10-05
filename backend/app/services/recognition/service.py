@@ -8,6 +8,7 @@ import hashlib
 import io
 import json
 import logging
+import time
 
 from app.core.config import settings
 from app.models.artist import Artist
@@ -239,6 +240,23 @@ def _vector_out(db, storage, ranked: list, language: str) -> dict | None:
     return None
 
 
+class _StageClock:
+    """识别分步计时(S1)。mark(name) 记「上一个打点到现在」的毫秒数。
+    ponytail: 只记跑了的阶段,同名重复 mark 会覆盖——recognize() 里每个阶段只 mark 一次。"""
+
+    def __init__(self):
+        self._t0 = self._last = time.perf_counter()
+        self.stages: dict[str, int] = {}
+
+    def mark(self, name: str) -> None:
+        now = time.perf_counter()
+        self.stages[name] = round((now - self._last) * 1000)
+        self._last = now
+
+    def total_ms(self) -> int:
+        return round((time.perf_counter() - self._t0) * 1000)
+
+
 def _top_of(out: dict) -> tuple:
     """从响应 dict 取 (top_qid, top_score) 供埋点;三档统一。"""
     m = out.get("match")
@@ -269,6 +287,7 @@ def recognize(
     """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
     slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
     响应形状见 spec(outcome/reason 机器码)。"""
+    clock = _StageClock()
     museum = None
     if slug is not None:
         museum = db.query(Museum).filter_by(slug=slug).one_or_none()
@@ -279,12 +298,14 @@ def recognize(
     ImageService.validate_image(image_bytes)
     sha = ImageService.generate_hash(image_bytes)
     phash = ImageService.generate_perceptual_hash(image_bytes)
+    clock.mark("prep")
 
     redis = redis if redis is not None else _get_redis()
     ckey = _cache_key(slug, sha, language, visible)
     if redis is not None:
         try:
             hit = redis.get(ckey)
+            clock.mark("cache_get")
             if hit:
                 cached_out = json.loads(hit)
                 cached_out["_billed"] = True  # 缓存命中:计费层据此不扣次
@@ -300,6 +321,8 @@ def recognize(
                     language=language,
                     engine="cache",
                     user_id=user_id,
+                    duration_ms=clock.total_ms(),
+                    timings=clock.stages,
                 )
                 return cached_out
         except Exception:
@@ -316,9 +339,11 @@ def recognize(
     # --- 向量前置(仅 artwork;label 纯转写直走 GPT 链) ---
     if mode == "artwork":
         vec = (embed_fn or _default_embed)(image_bytes)
+        clock.mark("embed")
         if vec is not None:
             vquery = vector_query_fn or query_index
             ranked = vquery(db, vec, museum_id)
+            clock.mark("vq")
 
             def _merge(ranked, vecs):  # 跨全帧+补查按 qid 取 MAX,重定档
                 agg = dict(ranked)
@@ -336,6 +361,7 @@ def recognize(
                 if canvas is not None:
                     canvas_used = True
                     ranked = _merge(ranked, canvas)
+                clock.mark("canvas")
             # 全景式拍法(画占画面小)的对症药——实测 0.509→0.847;怼拍照片不受影响(快路径)。
             # 已 ≥ LOW → 不跑金字塔。
             if not ranked or ranked[0][1] < settings.RECOG_LOW:
@@ -343,8 +369,10 @@ def recognize(
                 if crops is not None:
                     crops_used = True
                     ranked = _merge(ranked, crops)
+                clock.mark("crops")
             ranked = _drop_hidden(db, ranked, visible)
             out = _vector_out(db, storage, ranked, language)
+            clock.mark("vector_out")
             if out is not None:
                 engine = (
                     "vector_crops"
@@ -361,6 +389,7 @@ def recognize(
 
         identify_fn = identify_fn or identify
         vis = identify_fn(ImageService.to_base64(_shrink(image_bytes)), mode=mode)
+        clock.mark("gpt")
         queries = [c["title"] for c in vis["candidates"] if c.get("title")]
         # 作者名只作加分线索,绝不当标题探针(肖像画劫持教训,见 matcher.match)
         artist_hints = [c["artist"] for c in vis["candidates"] if c.get("artist")]
@@ -397,6 +426,7 @@ def recognize(
                 out["reason"] = "not_in_catalog"
             else:
                 out["reason"] = "low_confidence"
+        clock.mark("match")
 
     if out["outcome"] == "unrecognized":  # 仅 GPT 链会到此,vis 必有值
         try:
@@ -410,6 +440,7 @@ def recognize(
             )
         except Exception:
             logger.exception("record_demand failed")
+        clock.mark("demand")
 
     out["phash"] = phash  # 三档都带;缓存写入前放进 out,缓存命中的响应体也有
     tq, ts = _top_of(out)
@@ -423,6 +454,8 @@ def recognize(
         language=language,
         engine=engine,
         user_id=user_id,
+        duration_ms=clock.total_ms(),
+        timings=clock.stages,
     )
 
     if redis is not None:
