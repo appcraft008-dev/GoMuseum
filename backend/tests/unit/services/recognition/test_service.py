@@ -21,9 +21,9 @@ from app.models.recognition_demand import RecognitionDemand
 from app.models.recognition_event import RecognitionEvent
 from app.services.image_service import ImageService
 from app.services.object_importer import upsert_museum, upsert_object
-from app.services.recognition import matcher
 from app.services.recognition import service as svc
 from app.services.recognition.service import recognize
+from app.services.search import inprocess
 
 
 def _jpeg():
@@ -75,9 +75,9 @@ def session():
         },
     )
     s.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     yield s
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
 
 
 class _Counter:
@@ -901,3 +901,35 @@ def test_summary_credit_hidden_when_it_is_the_artist(session):
     s = _summary(session, _S(), o, "en")
     assert s["image"] == "https://commons/x.jpg"  # 无 R2 → 原链
     assert s["credit"] is None
+
+
+def test_text_path_event_keeps_vision_and_match_trace(session):
+    """AI 读出的作品名与匹配结果此前从不落库(需求表只记「什么都没读出」),
+    文字链认错/认不出时无从复盘。事件上留一份 text_trace,做匹配层评测集用。"""
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: None,
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Courbet"}],
+            label="Gustave Courbet\nL'Origine du monde",
+        ),
+    )
+    ev = session.query(RecognitionEvent).filter_by(engine="text").one()
+    tr = ev.text_trace
+    assert tr["vision"]["candidates"][0]["title"] == "The Origin of the World"
+    assert tr["vision"]["label_text"].startswith("Gustave Courbet")
+    assert tr["matched"][0][0] == "Q334138"
+    assert len(tr["matched"]) <= 5
+
+
+def test_vector_path_event_has_no_text_trace(session):
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        vector_query_fn=_FakeVQ([("Q334138", 0.95)]),
+    )
+    assert session.query(RecognitionEvent).one().text_trace is None

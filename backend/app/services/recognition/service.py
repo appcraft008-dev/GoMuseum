@@ -418,12 +418,14 @@ def _compute(
             # qid 撞 /{slug}/objects/{qid}/content 404 死胡同(前向兼容硬约束)。
             # 将来带馆提示的新调用方要全局回退时,加显式参数再开;slug=None 首查即全局。
 
+    text_trace = None  # 文字链复盘用:AI 读出了什么、匹配给了什么(向量路径为 None)
     if out is None:  # --- GPT + OCR 兜底链(原样) ---
         engine = "text"
         from app.services.recognition.vision import _shrink
 
         identify_fn = identify_fn or identify
         vis = identify_fn(ImageService.to_base64(_shrink(image_bytes)), mode=mode)
+        text_trace = {"vision": vis, "matched": []}
         clock.mark("gpt")
         queries = [c["title"] for c in vis["candidates"] if c.get("title")]
         # 作者名只作加分线索,绝不当标题探针(肖像画劫持教训,见 matcher.match)
@@ -445,6 +447,7 @@ def _compute(
             if visible is not None:
                 index = [e for e in index if e["museum_id"] in visible]
             results = match(index, queries, label_lines, artist_hints)
+            text_trace["matched"] = [[q, round(sc, 3)] for q, sc in results[:5]]
             top = results[0] if results else None
             # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);
             # 直判只属于向量像素证据。将来 matcher 若回传"馆藏号命中"类型,可为 inv 命中恢复直判。
@@ -491,6 +494,7 @@ def _compute(
         user_id=user_id,
         duration_ms=clock.total_ms(),
         timings=clock.stages,
+        text_trace=text_trace,
     )
 
     if redis is not None:

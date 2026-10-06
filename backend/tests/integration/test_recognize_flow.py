@@ -14,8 +14,8 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.models.purchase import Entitlement
 from app.models.recognition_demand import RecognitionDemand
 from app.services.object_importer import upsert_museum, upsert_object
-from app.services.recognition import matcher
 from app.services.recognition.service import recognize
+from app.services.search import inprocess
 
 # 断言相对起始额度,不写死数字——免费额度是可调配置(见 config.py)
 FREE = settings.FREE_RECOGNITION_QUOTA
@@ -86,9 +86,9 @@ def session():
         },
     )
     s.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     yield s
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
 
 
 def _vision(candidates=None, label=None):
@@ -201,7 +201,7 @@ def test_artist_name_does_not_hijack_portrait_titles(session):
         },
     )
     session.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     out = recognize(
         session,
         "orsay",

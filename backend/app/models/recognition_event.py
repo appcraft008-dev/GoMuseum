@@ -45,6 +45,9 @@ class RecognitionEvent(Base):
     # 只记**跑了的**阶段;从进入 recognize() 起算,不含上传(上传看 nginx rt=)。
     duration_ms = Column(Integer, nullable=True)
     timings = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    # 文字链复盘(2026-10-06):AI 读出的候选名/作者/说明牌文字 + 匹配前 5 名及分数。
+    # 只有作品名和说明牌文字,无个人信息;向量路径为 NULL。匹配层评测集的原始材料。
+    text_trace = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     __table_args__ = (
