@@ -65,6 +65,32 @@ double computeZoomLevel({
 /// 重建。曾经在生命周期回调开头写 `if (_controller == null) return;`，把
 /// `resumed` 一起吞了——开过图库/授权弹窗回来后相机永不重启，取景器停在转圈、
 /// 快门也按不动。
+/// S5:点选作品进详情页前,要不要问用户要照片、以哪个时刻(spec ⑦⑧⑨)。
+/// **先判换选再判找到了**:返回候选后改选另一件 → corrected(答案变了,允许再问);
+/// 走过选择页之后找到作品 → found(同一张照片只问一次);其余(直接命中、首次就选
+/// 第 2/3 名候选)→ null 不问。抽成纯函数:这段是隐私敏感的判定核心,相机页只喂状态。
+@visibleForTesting
+String? photoFeedbackTriggerOnPick({
+  required bool fromCandidates,
+  required bool fromSearch,
+  required bool reachedChoice,
+  required bool foundAsked,
+  required String? candidateOpened,
+  required String qid,
+}) {
+  if (fromCandidates && candidateOpened != null && candidateOpened != qid) {
+    return 'corrected';
+  }
+  if ((fromSearch || reachedChoice) && !foundAsked) return 'found';
+  return null;
+}
+
+/// S5:点「重新拍摄」时 —— 只有在选择页上放弃这张照片才算「最终没找到」。
+@visibleForTesting
+String? photoFeedbackTriggerOnRetake(
+        {required bool reachedChoice, required bool onChoicePage}) =>
+    reachedChoice && onChoicePage ? 'not_found' : null;
+
 @visibleForTesting
 bool shouldRestartCamera(AppLifecycleState state,
         {required bool hasController, bool isTopRoute = true}) =>
@@ -383,9 +409,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   Future<void> _retake() async {
     // 选择页上放弃这张照片 = 「最终没找到」(S5 触发 ②)
-    if (_reachedChoice &&
-        ref.read(recognitionNotifierProvider) is RecognitionUnrecognized) {
-      await _maybeAskPhoto('not_found');
+    final trigger = photoFeedbackTriggerOnRetake(
+        reachedChoice: _reachedChoice,
+        onChoicePage:
+            ref.read(recognitionNotifierProvider) is RecognitionUnrecognized);
+    if (trigger != null) {
+      await _maybeAskPhoto(trigger);
       if (!mounted) return;
     }
     setState(() {
@@ -454,17 +483,21 @@ class _CameraPageState extends ConsumerState<CameraPage>
       {bool fromCandidates = false,
       bool fromSearch = false,
       String? queryText}) async {
-    // S5 照片反馈(进详情页前问;先判「换选」再判「找到了」)
-    final corrected =
-        fromCandidates && _candidateOpened != null && _candidateOpened != qid;
-    if (corrected) {
-      // 返回后改选另一件(含说明牌出的候选):答案变了,允许再问一次
-      await _maybeAskPhoto('corrected', answerQid: qid, museum: slug);
-    } else if ((fromSearch || _reachedChoice) && !_foundAsked) {
-      // 走过选择页之后找到了作品(搜索 / 说明牌直接认出 / 说明牌候选);同一张照片只问一次
-      _foundAsked = true;
-      await _maybeAskPhoto('found',
-          answerQid: qid, museum: slug, queryText: queryText);
+    // S5 照片反馈(进详情页前问;判定见 photoFeedbackTriggerOnPick)
+    final trigger = photoFeedbackTriggerOnPick(
+      fromCandidates: fromCandidates,
+      fromSearch: fromSearch,
+      reachedChoice: _reachedChoice,
+      foundAsked: _foundAsked,
+      candidateOpened: _candidateOpened,
+      qid: qid,
+    );
+    if (trigger == 'found') _foundAsked = true;
+    if (trigger != null) {
+      await _maybeAskPhoto(trigger,
+          answerQid: qid,
+          museum: slug,
+          queryText: trigger == 'found' ? queryText : null);
     }
     if (fromCandidates) _candidateOpened = qid;
     if (!mounted) return;
