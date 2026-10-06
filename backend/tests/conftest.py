@@ -73,6 +73,7 @@ def account_tables():
     from app.models.feedback import Feedback
     from app.models.purchase import Entitlement, Purchase
     from app.models.recognition_event import RecognitionEvent
+    from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
     from app.models.user import User
     from app.models.user_benefits import UserBenefits
 
@@ -83,5 +84,6 @@ def account_tables():
         Purchase.__table__,
         Entitlement.__table__,
         RecognitionEvent.__table__,
+        RecognitionPhotoFeedback.__table__,
         Feedback.__table__,
     ]

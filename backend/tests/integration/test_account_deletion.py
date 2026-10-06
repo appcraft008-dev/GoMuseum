@@ -297,3 +297,97 @@ def test_export_includes_footprints(client_db):
     assert fp["qid"] == "Q3937645"
     assert fp["museum"] == "orangerie"
     assert fp["language"] == "fr"
+
+
+def _leave_photo(db, uid, key="recognition-feedback/a.jpg"):
+    from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
+
+    db.add(
+        RecognitionPhotoFeedback(
+            user_id=uid,
+            device_id="dev-p",
+            phash="p",
+            trigger="found",
+            answer_qid="Q1",
+            query_text="INV 779",
+            label_text="Portrait",
+            text="右下角",
+            image_key=key,
+        )
+    )
+    db.commit()
+
+
+def test_delete_account_removes_photos_and_free_text(client_db, monkeypatch):
+    from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
+    from app.services.storage import photo_feedback as pf
+
+    deleted = []
+
+    class _S:
+        def delete(self, key):
+            deleted.append(key)
+
+    monkeypatch.setattr(pf, "get_photo_feedback_storage", lambda: _S())
+    client, db = client_db
+    t = _register(client, "photo-del@test.com")
+    _leave_photo(db, t["user"]["id"])
+    assert (
+        client.delete(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {t['access_token']}"}
+        ).status_code
+        == 204
+    )
+    db.expire_all()
+    row = db.query(RecognitionPhotoFeedback).one()
+    assert deleted == ["recognition-feedback/a.jpg"]
+    assert row.image_key is None
+    assert row.text is None and row.query_text is None and row.label_text is None
+    assert row.user_id is None and row.device_id is None
+    assert row.answer_qid == "Q1"  # 不含个人信息的答案保留
+
+
+def test_delete_account_survives_storage_error(client_db, monkeypatch):
+    from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
+    from app.services.storage import photo_feedback as pf
+
+    class _S:
+        def delete(self, key):
+            raise ConnectionError("r2 down")
+
+    monkeypatch.setattr(pf, "get_photo_feedback_storage", lambda: _S())
+    client, db = client_db
+    t = _register(client, "photo-del2@test.com")
+    _leave_photo(db, t["user"]["id"])
+    r = client.delete(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {t['access_token']}"}
+    )
+    assert r.status_code == 204
+    db.expire_all()
+    row = db.query(RecognitionPhotoFeedback).one()
+    assert row.user_id is None and row.text is None
+    # 对象没删掉:image_key 保留,交给每日清理(断链后它不指向任何人,≤90 天必删)
+    assert row.image_key == "recognition-feedback/a.jpg"
+
+
+def test_export_includes_photo_metadata_and_link(client_db, monkeypatch):
+    """数据可携:仍在保存期的照片给 1 小时签名链接;图片 key 不外泄。"""
+    from app.services.storage import photo_feedback as pf
+
+    class _S:
+        def presigned_url(self, key, expires=3600):
+            return f"https://signed/{key}?e={expires}"
+
+    monkeypatch.setattr(pf, "get_photo_feedback_storage", lambda: _S())
+    client, db = client_db
+    t = _register(client, "photo-exp@test.com")
+    _leave_photo(db, t["user"]["id"])
+    data = client.get(
+        "/api/v1/auth/me/export",
+        headers={"Authorization": f"Bearer {t['access_token']}"},
+    ).json()
+    [p] = data["recognition_photos"]
+    assert p["answer_qid"] == "Q1" and p["text"] == "右下角"
+    assert p["photo_stored"] is True
+    assert p["photo_url"] == "https://signed/recognition-feedback/a.jpg?e=3600"
+    assert "image_key" not in p
