@@ -991,3 +991,19 @@ def test_vector_path_event_has_no_text_trace(session):
         vector_query_fn=_FakeVQ([("Q334138", 0.95)]),
     )
     assert session.query(RecognitionEvent).one().text_trace is None
+
+
+def test_same_photo_label_mode_not_served_artwork_cache(session):
+    """缓存键要含 mode:同一张图先当作品认过,再当墙签选,不能拿到作品模式的结果
+    (墙签模式不走向量、prompt 也不同)。真机拿相册图测试时极易踩到(2026-10-06)。"""
+    r = fakeredis.FakeRedis(decode_responses=True)
+    img = _jpeg()
+    vq = _FakeVQ([("Q334138", 0.95)])
+    first = recognize(
+        session, "orsay", img, embed_fn=lambda b: "V", vector_query_fn=vq, redis=r
+    )
+    assert first["outcome"] == "match"
+    identify = _Counter(_vision(label="The Origin of the World\nGustave Courbet"))
+    out = recognize(session, "orsay", img, mode="label", identify_fn=identify, redis=r)
+    assert identify.n == 1  # 真跑了墙签链,没吃作品模式的缓存
+    assert out["outcome"] == "candidates"

@@ -29,7 +29,9 @@ _CACHE_TTL_MATCH = 30 * 86400  # 命中稳定:30天
 _CACHE_TTL_MISS = 86400  # 未收录:目录会生长,只缓 1 天
 
 
-def _cache_key(slug: str | None, sha: str, language: str, visible=None) -> str:
+def _cache_key(
+    slug: str | None, sha: str, language: str, visible=None, mode: str = "artwork"
+) -> str:
     # 可见馆集合进键:预览者的结果(可能含隐身馆藏品)不会被普通用户命中;
     # 放出新馆后集合变了,旧键自然作废,不需要清缓存。
     vtag = (
@@ -40,7 +42,10 @@ def _cache_key(slug: str | None, sha: str, language: str, visible=None) -> str:
         ).hexdigest()[:8]
     )
     # 引擎进键:换模型(v2→v3 那种)后旧引擎的结果不能再被命中。
-    return f"recog3:{slug or 'global'}:{settings.RECOG_MODEL}:{language}:{vtag}:{sha}"
+    key = f"recog3:{slug or 'global'}:{settings.RECOG_MODEL}:{language}:{vtag}:{sha}"
+    # mode 进键:同一张图当作品认过、再当墙签选,不能吃作品模式的结果(墙签不走向量、
+    # prompt 不同)。作品模式键形不变 → 上线不让已有缓存作废。
+    return key + ":label" if mode == "label" else key
 
 
 def _drop_hidden(db, ranked: list, visible) -> list:
@@ -557,7 +562,7 @@ def recognize(
     clock.mark("prep")
 
     redis = redis if redis is not None else _get_redis()
-    ckey = _cache_key(slug, sha, language, visible)
+    ckey = _cache_key(slug, sha, language, visible, mode)
     owns_lock = False
     if redis is not None:
         try:
