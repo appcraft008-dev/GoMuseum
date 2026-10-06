@@ -73,6 +73,42 @@ def _sim_above(a: str, b: str, floor: float) -> float:
     return r if r > floor else 0.0
 
 
+def _inv_probes(raw_probes: list[str]) -> set[str]:
+    """馆藏号精确匹配探针(候选名+墙签行,不含 artist_hints;归一化后长度≥3 才算)。"""
+    inv = {i for i in (normalize_inv(q) for q in raw_probes) if len(i) >= _INV_MIN}
+    # 脏 OCR 补抽:整行归一化抠不出号时,从全文正则抽馆藏号 token(先剥尺寸防污染)
+    for tok in _INV_TOKEN.findall(_DIM.sub(" ", " ".join(raw_probes))):
+        t = normalize_inv(tok)
+        if len(t) >= _INV_MIN:
+            inv.add(t)
+    return inv
+
+
+def inv_artist_hit(
+    index: list[dict], texts: list[str], artist_hints: list[str] | None = None
+) -> str | None:
+    """馆藏号精确命中 + 该件作者也对上(出现在原文里或 AI 摘出的作者)→ 唯一 qid,否则 None。
+    文字链本不直判(同名撞车);编号+作者双重吻合足以排除。作者只认原文/AI 摘出两路——
+    AI 会张冠李戴(10-06 把 Cross 写成 Signac),原文里印着的名字更可靠。
+    同号多件(RF 编号跨馆共用,prod 765 组)→ 不直判。"""
+    raw = [t for t in texts if t]
+    inv = _inv_probes(raw)
+    if not inv:
+        return None
+    text_norm = normalize(" ".join(raw))
+    hints = [normalize(a) for a in (artist_hints or []) if a]
+    hits = set()
+    for e in index:
+        if not (e.get("inv") and e["inv"] in inv):
+            continue
+        if any(
+            an and (an in text_norm or any(_sim(h, an) >= 0.8 for h in hints if h))
+            for an in e["artists"]
+        ):
+            hits.add(e["qid"])
+    return hits.pop() if len(hits) == 1 else None
+
+
 def match(
     index: list[dict],
     queries: list[str],
@@ -94,16 +130,7 @@ def match(
     hint_probes = probes + [
         normalize(a) for a in (artist_hints or []) if a and normalize(a)
     ]
-    # 馆藏号精确匹配探针(候选名+墙签行,不含 artist_hints;归一化后长度≥3 才算)
-    inv_probes = {
-        i for i in (normalize_inv(q) for q in raw_probes) if len(i) >= _INV_MIN
-    }
-    # 脏 OCR 补抽:整行归一化抠不出号时,从全文正则抽馆藏号 token(先剥尺寸防污染)
-    joined = " ".join(raw_probes)
-    for tok in _INV_TOKEN.findall(_DIM.sub(" ", joined)):
-        t = normalize_inv(tok)
-        if len(t) >= _INV_MIN:
-            inv_probes.add(t)
+    inv_probes = _inv_probes(raw_probes)
     # 反向子串:目录标题是否"出现在"整段 OCR 里
     ocr_norm = normalize(" ".join(fuzzy_src))
     if not probes:

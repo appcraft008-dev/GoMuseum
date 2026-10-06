@@ -16,6 +16,7 @@ from app.services.recognition.matcher import (
     HIGH,
     LOW,
     build_index,
+    inv_artist_hit,
     match,
     normalize,
     normalize_inv,
@@ -323,3 +324,57 @@ def test_inv_only_lines_still_hit_inventory(session):
         idx, ["Nothing"], ["Don 1976", "RF 1976 215"], label_lines_inv_only=True
     )
     assert out[0] == ("Q_INV4", 1.0)
+
+
+def _add_inv(session, qid, inv, title, artist):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": qid,
+            "inventory_number": inv,
+            "title_en": title,
+            "artist_en": artist,
+            "category": "painting",
+        },
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    return build_index(session, _mid(session))
+
+
+def test_inv_artist_hit_when_inv_and_artist_agree(session):
+    # 墙签上的馆藏号精确对上 + 作者也对上 → 可直判(编号+作者双重吻合排除同名撞车)
+    idx = _add_inv(
+        session, "Q_AIR", "RF 1976 81", "L'air du soir", "Henri-Edmond Cross"
+    )
+    lines = ["Henri-Edmond Cross", "L'Air du soir", "RF 1976 81"]
+    assert inv_artist_hit(idx, lines, []) == "Q_AIR"  # 作者名出现在墙签原文
+    assert inv_artist_hit(idx, ["RF 1976 81"], ["Henri Edmond Cross"]) == "Q_AIR"
+
+
+def test_inv_artist_hit_requires_artist(session):
+    idx = _add_inv(
+        session, "Q_AIR", "RF 1976 81", "L'air du soir", "Henri-Edmond Cross"
+    )
+    assert inv_artist_hit(idx, ["RF 1976 81", "Paul Signac"], ["Paul Signac"]) is None
+
+
+def test_inv_artist_hit_none_when_ambiguous(session):
+    # 同号两件(RF 编号跨馆共用,prod 765 组)且作者都对上 → 不直判
+    louvre = upsert_museum(session, {"slug": "louvre", "name_en": "Louvre"})
+    upsert_object(
+        session,
+        louvre.id,
+        {
+            "qid": "Q_A",
+            "inventory_number": "RF 818",
+            "title_en": "A",
+            "artist_en": "Claude Monet",
+            "category": "painting",
+        },
+    )
+    _add_inv(session, "Q_B", "RF 818", "B", "Claude Monet")
+    idx = build_index(session, None)
+    assert inv_artist_hit(idx, ["Claude Monet", "RF 818"], []) is None
