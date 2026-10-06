@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cross_file/cross_file.dart';
@@ -186,5 +187,43 @@ void main() {
         options: any(named: 'options'))).captured;
     expect(data[0], {'phash': 'ph', 'qid': 'Q1', 'source': 'search'});
     expect(data[1], {'phash': 'ph', 'qid': 'Q2'}); // 缺省不带,老语义
+  });
+
+  // 真机 V53(2026-10-06):识别中切到别的 App,系统在**等响应阶段**掐断连接。
+  // Dio 只把「建立连接阶段」的 SocketException 归为 connectionError;等响应时断开
+  // 抛 SocketException/HttpException → DioExceptionType.unknown(io_adapter.dart)。
+  // 原先映射成 ServerException → 不重发 → 服务器算完的结果永远拿不到。
+  for (final cause in <Object>[
+    const SocketException('Software caused connection abort'),
+    const HttpException('Connection closed before full header was received'),
+  ]) {
+    test('recognize maps no-response ${cause.runtimeType} to NetworkException',
+        () async {
+      when(() => dio.post(any(),
+              data: any(named: 'data'),
+              queryParameters: any(named: 'queryParameters'),
+              options: any(named: 'options')))
+          .thenThrow(DioException(
+              requestOptions: RequestOptions(path: '/api/v1/recognize'),
+              error: cause));
+
+      await expectLater(
+          ds.recognize(slug: null, image: image(), language: 'en'),
+          throwsA(isA<NetworkException>()));
+    });
+  }
+
+  test('recognize: user cancel is not retryable (stays ServerException)',
+      () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'),
+            queryParameters: any(named: 'queryParameters'),
+            options: any(named: 'options')))
+        .thenThrow(DioException(
+            requestOptions: RequestOptions(path: '/api/v1/recognize'),
+            type: DioExceptionType.cancel));
+
+    await expectLater(ds.recognize(slug: null, image: image(), language: 'en'),
+        throwsA(isA<ServerException>()));
   });
 }

@@ -88,10 +88,19 @@ Future<void> untilAppResumed() {
   late final AppLifecycleListener listener;
   listener = AppLifecycleListener(onResume: () {
     listener.dispose();
-    done.complete();
+    // 刚回前台时系统网络常常还没恢复(真机 V53 实测重发要发出去):等一下再发。
+    // ponytail: 固定 1s;仍常见回前台即失败时改成「等连通性就绪」。
+    Future<void>.delayed(resumeSettleDelay).then((_) => done.complete());
   });
   return done.future;
 }
+
+/// 回前台后等网络恢复的时间(测试可调)。
+@visibleForTesting
+Duration resumeSettleDelay = const Duration(seconds: 1);
+
+/// 网络类失败时用同一张照片最多重发几次(总共发 1 + 3 次)。
+const _maxResends = 3;
 
 /// 值得用同一张照片重发的失败:超时、断连、网关 5xx(数据源已映射成 NetworkException)。
 bool _isTransient(Object e) => e is TimeoutException || e is NetworkException;
@@ -128,16 +137,19 @@ class RecognitionNotifier extends _$RecognitionNotifier {
           language: language,
           mode: mode,
           deviceId: deviceId);
+      // S2 失败即重发:锁屏/切后台时系统会不会断连,代码里判断不了、各厂商也不同,
+      // 两种情况都兜住。同一张照片 → 服务端同键在途合并或缓存命中,不重算不重复扣。
+      // 最多重发 [_maxResends] 次(V54 真机:切回来那一刻 Wi‑Fi ↔ 运营商网络切换,
+      // 第一次重发途中又被掐断);每次先等回前台(后台网络多半还不通)。
       RecognizeResponse resp;
-      try {
-        resp = await send();
-      } catch (e) {
-        if (!_isTransient(e)) rethrow;
-        // S2 失败即重发:锁屏/切后台时系统会不会断连,代码里判断不了、各厂商也不同,
-        // 两种情况都兜住。同一张照片 → 服务端同键在途合并或缓存命中,不重算不重复扣。
-        // 只重发一次;后台失败先等回前台(后台网络多半还不通)。
-        await waitForeground();
-        resp = await send();
+      for (var attempt = 0;; attempt++) {
+        try {
+          resp = await send();
+          break;
+        } catch (e) {
+          if (!_isTransient(e) || attempt >= _maxResends) rethrow;
+          await waitForeground();
+        }
       }
       state = switch (resp.outcome) {
         RecognizeOutcome.match when resp.match?.isValid == true =>
