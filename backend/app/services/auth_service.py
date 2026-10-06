@@ -1,5 +1,6 @@
 """Authentication service"""
 
+import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -19,6 +20,8 @@ from app.core.security import (
 from app.models.user import User
 from app.schemas.auth import LoginRequest, OAuthRequest, RegisterRequest, TokenResponse
 from app.schemas.user import UserResponse
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -614,6 +617,26 @@ class AuthService:
             .order_by(Feedback.created_at.desc())
             .all()
         )
+        from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
+
+        photos = (
+            db.query(RecognitionPhotoFeedback)
+            .filter(RecognitionPhotoFeedback.user_id == uid)
+            .order_by(RecognitionPhotoFeedback.created_at.desc())
+            .all()
+        )
+        from app.services.storage.photo_feedback import get_photo_feedback_storage
+
+        store = get_photo_feedback_storage()
+
+        def _photo_url(key):
+            if not key or store is None:
+                return None
+            try:
+                return store.presigned_url(key, expires=3600)
+            except Exception:
+                return None
+
         return {
             "user": {
                 "id": str(user.id),
@@ -656,6 +679,23 @@ class AuthService:
                     "created_at": f.created_at.isoformat() if f.created_at else None,
                 }
                 for f in feedback
+            ],
+            "recognition_photos": [
+                {
+                    "trigger": p.trigger,
+                    "answer_qid": p.answer_qid,
+                    "museum": p.museum_slug,
+                    "language": p.language,
+                    "query_text": p.query_text,
+                    "label_text": p.label_text,
+                    "text": p.text,
+                    "status": p.status,
+                    "photo_stored": p.image_key is not None,
+                    # 数据可携:仍在保存期 → 给 1 小时有效的签名链接;取不到给 None
+                    "photo_url": _photo_url(p.image_key),
+                    "created_at": p.created_at.isoformat() if p.created_at else None,
+                }
+                for p in photos
             ],
             "purchases": [
                 {
@@ -732,6 +772,29 @@ class AuthService:
             {"user_id": None, "device_id": None, "text": None},
             synchronize_session=False,
         )
+
+        # S5 识别照片:**图片真删**(私有桶),自由文本真删,断链;答案/分数元数据保留。
+        # 桶删失败不让删号整体失败:断链后这行不指向任何人,每日清理 ≤90 天内必删。
+        from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
+        from app.services.storage.photo_feedback import get_photo_feedback_storage
+
+        store = get_photo_feedback_storage()
+        for r in db.query(RecognitionPhotoFeedback).filter(
+            RecognitionPhotoFeedback.user_id == uid
+        ):
+            if r.image_key and store is not None:
+                try:
+                    store.delete(r.image_key)
+                    r.image_key = None
+                except Exception:
+                    logger.exception(
+                        "delete account: photo delete failed %s", r.image_key
+                    )
+            r.user_id = None
+            r.device_id = None
+            r.text = None
+            r.query_text = None
+            r.label_text = None
 
         for ent in db.query(Entitlement).filter(Entitlement.user_id == uid):
             ent.status = "revoked"

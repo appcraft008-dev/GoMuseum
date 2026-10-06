@@ -23,6 +23,8 @@ import 'package:gomuseum_app/features/content/data/models/object_content_model.d
 import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
 import 'package:gomuseum_app/features/recognition/presentation/widgets/recognition_wait_hint.dart';
+import 'package:gomuseum_app/features/recognition/presentation/widgets/photo_feedback_dialog.dart';
+import 'package:gomuseum_app/features/recognition/data/photo_feedback_repository.dart';
 import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
 import 'package:gomuseum_app/features/search/data/search_api.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
@@ -63,6 +65,33 @@ double computeZoomLevel({
 /// 重建。曾经在生命周期回调开头写 `if (_controller == null) return;`，把
 /// `resumed` 一起吞了——开过图库/授权弹窗回来后相机永不重启，取景器停在转圈、
 /// 快门也按不动。
+/// S5:点选作品进详情页前,要不要问用户要照片、以哪个时刻(spec ⑦⑧⑨)。
+/// 走过选择页之后找到作品 → found(同一张照片只问一次);返回候选后改选另一件 →
+/// corrected(答案变了,允许再问);其余(直接命中、首次就选第 2/3 名候选)→ null 不问。
+/// found 先判:作品候选选过 A → 都不是 → 说明牌候选选 B,这是「经选择页找到」,
+/// 不是在同一组候选里改主意。抽成纯函数:这段是隐私敏感的判定核心,相机页只喂状态。
+@visibleForTesting
+String? photoFeedbackTriggerOnPick({
+  required bool fromCandidates,
+  required bool fromSearch,
+  required bool reachedChoice,
+  required bool foundAsked,
+  required String? candidateOpened,
+  required String qid,
+}) {
+  if ((fromSearch || reachedChoice) && !foundAsked) return 'found';
+  if (fromCandidates && candidateOpened != null && candidateOpened != qid) {
+    return 'corrected';
+  }
+  return null;
+}
+
+/// S5:点「重新拍摄」时 —— 只有在选择页上放弃这张照片才算「最终没找到」。
+@visibleForTesting
+String? photoFeedbackTriggerOnRetake(
+        {required bool reachedChoice, required bool onChoicePage}) =>
+    reachedChoice && onChoicePage ? 'not_found' : null;
+
 @visibleForTesting
 bool shouldRestartCamera(AppLifecycleState state,
         {required bool hasController, bool isTopRoute = true}) =>
@@ -76,6 +105,23 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   /// 引导拍墙签模式：下一张照片以 `mode=label` 提交。
   bool _labelMode = false;
+
+  /// 用户拍的**作品**照片及其 phash。拍说明牌会覆盖 `_captured`,而「照片=这件」的答案、
+  /// 照片反馈、无图作品详情页的 hero 要的都是作品照片,不是说明牌(S5 修 S4 遗留)。
+  XFile? _artworkShot;
+  String? _artworkPhash;
+
+  /// S5 服务端开关值,取自**作品**那次识别(拍说明牌后状态换了,开关要从作品那次带过来)。
+  bool _photoFeedbackEnabled = false;
+
+  /// 这张作品照片走到过选择页(「没认出来」或「都不是」)——之后找到作品 = 触发「找到了」。
+  bool _reachedChoice = false;
+
+  /// 同一张作品照片「找到了」只问一次(换选另算)。
+  bool _foundAsked = false;
+
+  /// 候选路径上用户已进过详情页的那件 —— 返回后改选另一件 = 触发「换选」。
+  String? _candidateOpened;
 
   /// 「最近图库」缩略图条的最近图片资产（相册权限拿到后填充）。
   List<AssetEntity> _recentAssets = const [];
@@ -318,10 +364,24 @@ class _CameraPageState extends ConsumerState<CameraPage>
         .recognize(slug: null, image: shot, language: lang, mode: mode);
     if (!mounted) return;
     final st = ref.read(recognitionNotifierProvider);
+    if (mode == 'artwork') {
+      _artworkShot = shot;
+      _artworkPhash = switch (st) {
+        RecognitionCandidates() => st.phash,
+        RecognitionUnrecognized() => st.phash,
+        _ => null, // 直接命中就进详情了,用不到
+      };
+      _photoFeedbackEnabled = switch (st) {
+        RecognitionCandidates() => st.photoFeedback,
+        RecognitionUnrecognized() => st.photoFeedback,
+        _ => false,
+      };
+      if (st is RecognitionUnrecognized) _reachedChoice = true;
+    }
     // 后端才是付费墙的执行点:客户端闸放行了但后端拒了(权益缓存过期/还没加载完)。
     // 退回取景器再弹付费墙 —— 停在"识别失败"会让用户以为 App 坏了。
     if (st is RecognitionQuotaExceeded) {
-      _retake();
+      unawaited(_retake());
       // 顺序要紧:先用当前权益判"已购未激活",再 invalidate ——
       // 反过来会把 `.value` 清成 null,那个分支永远命不中。
       if (await _passActivatedIfPurchased(museum: st.museum)) return;
@@ -348,12 +408,67 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
   }
 
-  void _retake() {
+  Future<void> _retake() async {
+    // 选择页上放弃这张照片 = 「最终没找到」(S5 触发 ②)
+    final trigger = photoFeedbackTriggerOnRetake(
+        reachedChoice: _reachedChoice,
+        onChoicePage:
+            ref.read(recognitionNotifierProvider) is RecognitionUnrecognized);
+    if (trigger != null) {
+      await _maybeAskPhoto(trigger);
+      if (!mounted) return;
+    }
     setState(() {
       _captured = null;
       _labelMode = false;
+      _artworkShot = null; // 新的一张作品
+      _artworkPhash = null;
+      _photoFeedbackEnabled = false;
+      _reachedChoice = false;
+      _foundAsked = false;
+      _candidateOpened = null;
     });
     ref.read(recognitionNotifierProvider.notifier).resetState();
+  }
+
+  /// S5 照片反馈。服务端开关关着、本进程已拒绝过、没有作品照片 → 不弹,直接返回。
+  /// 不勾不分叉:无论选什么,调用方之后的流程完全一样;上传在后台,不 await。
+  Future<void> _maybeAskPhoto(String trigger,
+      {String? answerQid, String? museum, String? queryText}) async {
+    final st = ref.read(recognitionNotifierProvider);
+    final shot = _artworkShot;
+    final phash = _artworkPhash;
+    if (!_photoFeedbackEnabled ||
+        photoFeedbackDeclinedThisSession ||
+        shot == null ||
+        phash == null) {
+      return;
+    }
+    final choice = await showPhotoFeedbackDialog(context, photo: shot);
+    if (choice == null || !choice.send) {
+      photoFeedbackDeclinedThisSession = true;
+      return;
+    }
+    final labelText = st is RecognitionUnrecognized ? st.labelText : null;
+    // 照 recognition_provider 的写法:Future<String> 上 catchError 返回 null 会运行时抛
+    String? deviceId;
+    try {
+      deviceId = await ref.read(deviceIdProvider.future);
+    } catch (_) {
+      deviceId = null;
+    }
+    unawaited(ref.read(photoFeedbackRepositoryProvider).send(
+          image: shot,
+          trigger: trigger,
+          phash: phash,
+          answerQid: answerQid,
+          museumSlug: museum,
+          language: apiLanguage(ref.read(resolvedLocaleProvider)),
+          queryText: queryText,
+          labelText: labelText,
+          text: choice.text,
+          deviceId: deviceId,
+        ));
   }
 
   /// 进入引导拍墙签：回取景器，下一张以 `mode=label` 提交。
@@ -366,7 +481,27 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Future<void> _goGuide(String slug, String qid,
-      {bool fromCandidates = false, bool fromSearch = false}) async {
+      {bool fromCandidates = false,
+      bool fromSearch = false,
+      String? queryText}) async {
+    // S5 照片反馈(进详情页前问;判定见 photoFeedbackTriggerOnPick)
+    final trigger = photoFeedbackTriggerOnPick(
+      fromCandidates: fromCandidates,
+      fromSearch: fromSearch,
+      reachedChoice: _reachedChoice,
+      foundAsked: _foundAsked,
+      candidateOpened: _candidateOpened,
+      qid: qid,
+    );
+    if (trigger == 'found') _foundAsked = true;
+    if (trigger != null) {
+      await _maybeAskPhoto(trigger,
+          answerQid: qid,
+          museum: slug,
+          queryText: trigger == 'found' ? queryText : null);
+    }
+    if (fromCandidates) _candidateOpened = qid;
+    if (!mounted) return;
     // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」。
     // 搜索路径不记:取景器上的搜索按钮拍照前就能用,_lastShotLive 可能是上一张的残值(S4)
     if (_lastShotLive && !fromSearch) {
@@ -378,14 +513,16 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
-    unawaited(ref
-        .read(recognitionNotifierProvider.notifier)
-        .confirmRecognition(qid, fromSearch: fromSearch));
+    unawaited(ref.read(recognitionNotifierProvider.notifier).confirmRecognition(
+        qid,
+        fromSearch: fromSearch,
+        phashOverride: _artworkPhash));
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     final args = GuideArgs(
       slug: slug,
       qid: qid,
-      imagePath: _captured?.path,
+      // 拍过说明牌时 _captured 是说明牌,hero 要的是作品照片(S5)
+      imagePath: (_artworkShot ?? _captured)?.path,
       // 识别成功即自动播讲解:这是"保证送达的首体验",
       // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
       autoPlayAudio: !fromSearch,
@@ -451,7 +588,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
         // S4:点选走相机页自己的跳转(带本机照片、回传答案、返回仍回这里)。
         // **不要再 pop**:SearchResultsView 的 onNavigate 已经关过 sheet,
         // 这里再 pop 会把相机页本身弹掉。museum 由结果行 slug==null→不可点 保证非空。
-        onPick: (obj) => _goGuide(obj.museum!, obj.qid, fromSearch: true),
+        onPick: (obj, query) =>
+            _goGuide(obj.museum!, obj.qid, fromSearch: true, queryText: query),
       ),
     );
   }
@@ -904,8 +1042,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
       const SizedBox(height: 4),
       Center(
         child: GestureDetector(
-          onTap: () =>
-              ref.read(recognitionNotifierProvider.notifier).rejectCandidates(),
+          onTap: () {
+            ref.read(recognitionNotifierProvider.notifier).rejectCandidates();
+            _reachedChoice = true; // 「都不是」= 走到选择页(S5)
+          },
           child: Text(l10n.recNoneOfThese,
               style: GmText.sans(size: 12.5, color: gm.accent)),
         ),
@@ -1059,7 +1199,7 @@ class _TagSearchSheet extends ConsumerStatefulWidget {
   final String lang;
 
   /// 藏品点选交给相机页(S4)。
-  final void Function(SearchObject obj)? onPick;
+  final void Function(SearchObject obj, String query)? onPick;
 
   /// 预填查询词(墙签 OCR 文本):可编辑,用户可改可清——OCR 常含馆名/年代等噪音。
   final String? initialQuery;
@@ -1143,7 +1283,9 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
                   query: (slug: null, q: _q, lang: widget.lang),
                   showMuseums: true,
                   onNavigate: () => Navigator.of(context).pop(),
-                  onPickObject: widget.onPick,
+                  onPickObject: widget.onPick == null
+                      ? null
+                      : (o) => widget.onPick!(o, _q),
                 ),
               ),
             ),

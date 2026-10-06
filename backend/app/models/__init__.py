@@ -5,6 +5,7 @@ from app.models.content import CategorySection, ObjectContentSection, SectionTyp
 from app.models.feedback import Feedback
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
 from app.models.recognition_result import RecognitionResult
 from app.models.recognition_stats import RecognitionStats
 from app.models.user import User
@@ -25,4 +26,4 @@ __all__ += [
     "CategorySection",
     "ObjectContentSection",
 ]
-__all__ += ["Feedback"]
+__all__ += ["Feedback", "RecognitionPhotoFeedback"]

@@ -1211,6 +1211,36 @@ abstract class AppLocalizations {
   /// **'Type the number or title'**
   String get recTypeNumberOrName;
 
+  /// Photo feedback dialog title (S5): ask the user whether to send the artwork photo
+  ///
+  /// In en, this message translates to:
+  /// **'Send us this photo?'**
+  String get photoFbTitle;
+
+  /// Photo feedback dialog purpose line. Must keep both promises: kept at most 90 days, never shown publicly
+  ///
+  /// In en, this message translates to:
+  /// **'Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.'**
+  String get photoFbBody;
+
+  /// Checkbox label, unchecked by default
+  ///
+  /// In en, this message translates to:
+  /// **'Send this photo'**
+  String get photoFbConsent;
+
+  /// Optional note field hint
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note (optional)'**
+  String get photoFbNoteHint;
+
+  /// The only button: continue regardless of the checkbox
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get photoFbContinue;
+
   /// No description provided for @recSearchWithLabel.
   ///
   /// In en, this message translates to:

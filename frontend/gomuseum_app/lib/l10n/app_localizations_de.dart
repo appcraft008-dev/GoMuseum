@@ -623,6 +623,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recTypeNumberOrName => 'Nummer oder Titel eingeben';
 
   @override
+  String get photoFbTitle => 'Uns dieses Foto senden?';
+
+  @override
+  String get photoFbBody =>
+      'Wird nur genutzt, um fehlende Werke zu ergänzen und die Erkennung zu verbessern. Höchstens 90 Tage gespeichert, niemandem gezeigt.';
+
+  @override
+  String get photoFbConsent => 'Dieses Foto senden';
+
+  @override
+  String get photoFbNoteHint => 'Anmerkung hinzufügen (optional)';
+
+  @override
+  String get photoFbContinue => 'Weiter';
+
+  @override
   String get recSearchWithLabel => 'Mit diesem Text suchen';
 
   @override

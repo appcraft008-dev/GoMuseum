@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     museums,
     payment,
     recognition,
+    recognition_photo_feedback,
     recognize_global,
     search,
 )
@@ -49,6 +50,8 @@ api_router.include_router(recognize_global.router, tags=["recognition"])
 
 # Include feedback endpoint (用户反馈:内容质量的兜底环;加法契约)
 api_router.include_router(feedback.router, tags=["feedback"])
+# S5 识别照片反馈(私有桶;服务端开关 PHOTO_FEEDBACK_ENABLED)
+api_router.include_router(recognition_photo_feedback.router, tags=["feedback"])
 
 # Include search endpoints (全局 /search + 馆域 /museums/{slug}/search;加法契约)
 api_router.include_router(search.router, tags=["search"])
