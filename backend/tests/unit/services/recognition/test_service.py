@@ -403,6 +403,32 @@ def test_label_mode_skips_vector(session):
     assert out["outcome"] == "candidates"  # 文字链(含 label)不直判,一律确认卡
 
 
+def test_label_mode_matches_extracted_title_not_every_line(session):
+    """墙签模式:AI 摘出的标题当探针,整段墙签行不做模糊(否则作者行劫持同名肖像)。"""
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q_PORTRAIT", "title_en": "Gustave Courbet", "category": "painting"},
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        mode="label",
+        embed_fn=lambda b: "V",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+            label="Gustave Courbet\nThe Origin of the World\n1866",
+        ),
+    )
+    qids = [c["qid"] for c in out["candidates"]]
+    assert qids[0] == "Q334138"
+    assert "Q_PORTRAIT" not in qids
+
+
 # --- 埋点(recognition_events)+ 响应 phash ---
 
 
