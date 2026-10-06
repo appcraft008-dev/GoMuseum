@@ -25,4 +25,18 @@ void main() {
     expect(choices, contains('recShootLabelBtn'));
     expect(choices, contains('recTypeNumberOrName'));
   });
+
+  // 真机 10-06:网络两分钟里连断 4 次,服务端早算好了结果却没送到。「重拍」=新照片从头算
+  // (一分多钟);「重试」重发同一张 → 服务端缓存命中,秒出且不重复扣。
+  test('失败页有「重试」,重发的是同一张照片', () {
+    final src =
+        File('lib/features/recognition/presentation/pages/camera_page.dart')
+            .readAsStringSync();
+    final err = src.substring(src.indexOf('List<Widget> _errorContent('));
+    expect(
+        err.substring(0, err.indexOf('\n  }\n')), contains('_retryLastShot'));
+    final retry = src.substring(src.indexOf('void _retryLastShot('));
+    expect(retry.substring(0, retry.indexOf('\n  }\n')),
+        contains('_recognizeImage(shot, live: _lastShotLive)'));
+  });
 }
