@@ -145,6 +145,14 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
       } else if (e.type == DioExceptionType.connectionError) {
         throw const NetworkException('Network connection failed');
       }
+      // 没拿到任何 HTTP 响应就断了(不是用户取消)= 网络层失败,可重发(S2)。
+      // 真机 V53:识别中切到别的 App,系统在**等响应阶段**掐断连接,Dio 只把「建连阶段」
+      // 的 SocketException 归为 connectionError,等响应时断开是 type=unknown
+      // (error 为 SocketException/HttpException)。当成 ServerException 就不重发,
+      // 服务器算完的结果(已进缓存)永远拿不到。
+      if (e.response == null && e.type != DioExceptionType.cancel) {
+        throw const NetworkException('Connection dropped before response');
+      }
       // 402 = 免费额度用尽(后端是付费墙唯一执行点);别落进 ServerException
       // 被当成"识别失败",那样用户只会以为 App 坏了。
       if (e.response?.statusCode == 402) {
