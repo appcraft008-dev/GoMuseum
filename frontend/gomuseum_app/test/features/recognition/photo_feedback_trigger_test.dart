@@ -39,6 +39,12 @@ void main() {
         'corrected');
   });
 
+  test('作品候选选过 A → 都不是 → 说明牌候选选 B = found(经选择页找到)', () {
+    expect(
+        trig(fromCandidates: true, reachedChoice: true, candidateOpened: 'Q1'),
+        'found');
+  });
+
   test('d) 作品候选首次就选第 2 名 = 不问(⑨)', () {
     expect(trig(fromCandidates: true), isNull);
   });

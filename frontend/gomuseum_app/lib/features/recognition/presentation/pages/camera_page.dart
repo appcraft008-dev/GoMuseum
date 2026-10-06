@@ -66,9 +66,10 @@ double computeZoomLevel({
 /// `resumed` 一起吞了——开过图库/授权弹窗回来后相机永不重启，取景器停在转圈、
 /// 快门也按不动。
 /// S5:点选作品进详情页前,要不要问用户要照片、以哪个时刻(spec ⑦⑧⑨)。
-/// **先判换选再判找到了**:返回候选后改选另一件 → corrected(答案变了,允许再问);
-/// 走过选择页之后找到作品 → found(同一张照片只问一次);其余(直接命中、首次就选
-/// 第 2/3 名候选)→ null 不问。抽成纯函数:这段是隐私敏感的判定核心,相机页只喂状态。
+/// 走过选择页之后找到作品 → found(同一张照片只问一次);返回候选后改选另一件 →
+/// corrected(答案变了,允许再问);其余(直接命中、首次就选第 2/3 名候选)→ null 不问。
+/// found 先判:作品候选选过 A → 都不是 → 说明牌候选选 B,这是「经选择页找到」,
+/// 不是在同一组候选里改主意。抽成纯函数:这段是隐私敏感的判定核心,相机页只喂状态。
 @visibleForTesting
 String? photoFeedbackTriggerOnPick({
   required bool fromCandidates,
@@ -78,10 +79,10 @@ String? photoFeedbackTriggerOnPick({
   required String? candidateOpened,
   required String qid,
 }) {
+  if ((fromSearch || reachedChoice) && !foundAsked) return 'found';
   if (fromCandidates && candidateOpened != null && candidateOpened != qid) {
     return 'corrected';
   }
-  if ((fromSearch || reachedChoice) && !foundAsked) return 'found';
   return null;
 }
 
