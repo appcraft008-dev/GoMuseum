@@ -1147,6 +1147,24 @@ class _CameraPageState extends ConsumerState<CameraPage>
         Text(l10n.recNotRecognized,
             style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 14),
+      ..._fallbackChoices(gm, label),
+    ];
+  }
+
+  /// 失败(超时/断网/服务端错)也给同一套出口 —— 失败时最需要绕路(真机 2026-10-06)。
+  List<Widget> _errorContent(GmPalette gm) {
+    final l10n = AppLocalizations.of(context)!;
+    return [
+      Text(l10n.camRecognizeFailed,
+          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      const SizedBox(height: 14),
+      ..._fallbackChoices(gm, null),
+    ];
+  }
+
+  List<Widget> _fallbackChoices(GmPalette gm, String? label) {
+    final l10n = AppLocalizations.of(context)!;
+    return [
       GmTicketButton(
         label: l10n.recShootLabelBtn,
         icon: GmIcons.camera,
@@ -1174,19 +1192,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
               style: GmText.sans(size: 12.5, color: gm.accent)),
         ),
       ),
-    ];
-  }
-
-  List<Widget> _errorContent(GmPalette gm) {
-    final l10n = AppLocalizations.of(context)!;
-    return [
-      Text(l10n.camRecognizeFailed,
-          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
-      const SizedBox(height: 6),
-      Text(l10n.camComparing, style: GmText.sans(size: 12, color: gm.sub)),
-      const SizedBox(height: 14),
-      GmTicketButton(
-          label: l10n.camRetake, icon: GmIcons.camera, onTap: _retake),
     ];
   }
 }
