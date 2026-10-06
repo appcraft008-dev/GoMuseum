@@ -20,6 +20,7 @@ from app.services.recognition.matcher import (
     normalize,
     normalize_inv,
 )
+from app.services.search import inprocess
 
 
 @pytest.fixture()
@@ -73,9 +74,9 @@ def session():
         },
     )
     s.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     yield s
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
 
 
 def _mid(s):
@@ -151,7 +152,7 @@ def test_inv_exact_match_scores_full(session):
         },
     )
     session.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     idx = build_index(session, _mid(session))
     out = match(idx, [], ["RF 1668"])
     assert out[0][0] == "Q_INV1" and out[0][1] == 1.0
@@ -171,7 +172,7 @@ def test_inv_extracted_from_messy_single_line(session):
         },
     )
     session.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     idx = build_index(session, _mid(session))
     # 一行里不含标题,只能靠抽出的馆藏号命中
     out = match(idx, [], ["blah 1890 huile sur toile RF 1951 42 74x94cm"])
@@ -198,7 +199,7 @@ def test_reverse_substring_ignores_short_names(session):
         {"qid": "Q_SHORT", "title_en": "Rain", "category": "painting"},
     )
     session.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     idx = build_index(session, _mid(session))
     out = dict(match(idx, [], ["a walk in the rain on a cold day near the river"]))
     assert out.get("Q_SHORT", 0.0) < LOW  # "rain"(4字)<8 不触发反向子串
@@ -217,7 +218,7 @@ def test_inv_beats_fuzzy_take_max(session):
         },
     )
     session.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     idx = build_index(session, _mid(session))
     # 墙签同时含编号(命中 Q_INV2)与近似题名(命中 Q334138 模糊)
     out = match(idx, ["Origin of the World"], ["RF 1668"])
@@ -238,7 +239,7 @@ def test_short_probe_never_triggers_inv(session):
         },
     )
     session.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     idx = build_index(session, _mid(session))
     out = match(idx, [], ["12"])
     # 短探针(<3)不触发编号满分;不应把 Q_INV3 以 1.0 顶到第一
@@ -257,8 +258,24 @@ def test_museum_id_none_indexes_all_museums(session):
         },
     )
     session.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     idx = build_index(session, None)
     qids = {e["qid"] for e in idx}
     assert "Q334138" in qids  # orsay 件
     assert "Q_LOUVRE" in qids  # louvre 件
+
+
+def test_build_index_reuses_warm_search_index(monkeypatch):
+    """识别文字链复用搜索的全局索引(只读必要列、过期后台重建、启动预热)。
+    prod 10-06 实测:原先自建索引冷建 13s,且每 600s 过期后在用户请求里同步重建。"""
+    from app.services.search import inprocess
+
+    sentinel = [
+        {"qid": "Q1", "names": {"a"}, "artists": set(), "inv": None, "museum_id": 7}
+    ]
+    monkeypatch.setitem(
+        inprocess._index_cache, None, (__import__("time").time(), sentinel)
+    )
+    assert matcher.build_index(None, None) is sentinel
+    assert matcher.build_index(None, 7) == sentinel
+    assert matcher.build_index(None, 8) == []

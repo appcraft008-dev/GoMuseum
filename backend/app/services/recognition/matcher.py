@@ -1,23 +1,17 @@
 """匹配层(识别的不变核心;P2 换 CLIP 引擎也不动它):
 候选名/墙签行 → 该馆目录多语模糊匹配 → [(qid, score)] 降序。
 R1 接地:身份只可能来自这里匹配到的真实目录记录。
-stdlib difflib(~2000 件毫秒级,零新依赖);索引进程内缓存 TTL 600s。"""
+stdlib difflib;索引复用搜索的全局索引(见 build_index)。"""
 
 from __future__ import annotations
 
 import re
-import time
 import unicodedata
 from difflib import SequenceMatcher
-
-from app.models.artist import Artist
-from app.models.museum_object import MuseumObject
 
 HIGH = 0.85  # ≥ 直开讲解页;真实数据校准前的初值
 LOW = 0.5  # < 未收录;[LOW, HIGH) 出确认卡
 
-_INDEX_TTL = 600  # 秒
-_index_cache: dict = {}  # museum_id -> (ts, index)
 
 _PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
 _WS = re.compile(r"[\s_]+")
@@ -46,42 +40,16 @@ def normalize_inv(s: str) -> str:
 
 
 def build_index(db, museum_id) -> list[dict]:
-    """馆目录 → [{"qid","names","artists","inv"}](归一化;进程内缓存)。
-    museum_id=None → 全部馆(去 filter,None 为全局索引的缓存键)。"""
-    hit = _index_cache.get(museum_id)
-    if hit and time.time() - hit[0] < _INDEX_TTL:
-        return hit[1]
-    artists_by_qid = {}
-    for a in db.query(Artist).all():
-        names = {normalize(v) for v in (a.name_i18n or {}).values() if v}
-        if a.name_en:
-            names.add(normalize(a.name_en))
-        artists_by_qid[a.qid] = names
-    q = db.query(MuseumObject)
-    if museum_id is not None:
-        q = q.filter_by(museum_id=museum_id)
-    index = []
-    for o in q.all():
-        attrs = o.attributes or {}
-        names = {normalize(v) for v in (attrs.get("title_i18n") or {}).values() if v}
-        for col in (o.title_en, o.title_zh):
-            if col:
-                names.add(normalize(col))
-        artist_names = set(artists_by_qid.get(attrs.get("artist_qid"), set()))
-        for col in (o.artist_en, o.artist_zh):
-            if col:
-                artist_names.add(normalize(col))
-        index.append(
-            {
-                "qid": o.qid,
-                "names": names - {""},
-                "artists": artist_names - {""},
-                "inv": normalize_inv(o.inventory_number) or None,
-                "museum_id": o.museum_id,  # 供查询时按可见性过滤
-            }
-        )
-    _index_cache[museum_id] = (time.time(), index)
-    return index
+    """馆目录 → [{"qid","names","artists","inv","museum_id",...}](归一化)。
+    museum_id=None → 全部馆。
+
+    直接复用搜索的全局索引(`search.inprocess.build_search_index`):两边要的字段完全一样
+    (多语标题/作者名/馆藏号,同一套 normalize),而搜索那份已经只读必要列、过期后台重建、
+    启动时预热。原先这里自建一份:全列加载 2.7 万件冷建 13s,每 600s 过期在用户请求里
+    同步重建(prod 2026-10-06 实测)。"""
+    from app.services.search.inprocess import build_search_index
+
+    return build_search_index(db, museum_id)
 
 
 def _sim(a: str, b: str) -> float:

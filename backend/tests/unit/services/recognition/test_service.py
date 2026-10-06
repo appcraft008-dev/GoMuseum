@@ -21,9 +21,9 @@ from app.models.recognition_demand import RecognitionDemand
 from app.models.recognition_event import RecognitionEvent
 from app.services.image_service import ImageService
 from app.services.object_importer import upsert_museum, upsert_object
-from app.services.recognition import matcher
 from app.services.recognition import service as svc
 from app.services.recognition.service import recognize
+from app.services.search import inprocess
 
 
 def _jpeg():
@@ -75,9 +75,9 @@ def session():
         },
     )
     s.commit()
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
     yield s
-    matcher._index_cache.clear()
+    inprocess._index_cache.clear()
 
 
 class _Counter:
