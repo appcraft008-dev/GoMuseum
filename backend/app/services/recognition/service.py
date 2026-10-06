@@ -19,7 +19,7 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import _photo_credit, _resolve_name, _sized
 from app.services.recognition.demands import record_demand
 from app.services.recognition.events import record_event
-from app.services.recognition.matcher import LOW, build_index, match
+from app.services.recognition.matcher import LOW, build_index, inv_artist_hit, match
 from app.services.recognition.vector_index import query_index
 from app.services.recognition.vision import identify
 
@@ -446,12 +446,30 @@ def _compute(
             index = build_index(db, museum_id)
             if visible is not None:
                 index = [e for e in index if e["museum_id"] in visible]
-            results = match(index, queries, label_lines, artist_hints)
+            # 馆藏号 + 作者双重吻合 → 直判,模糊匹配不用跑(编号是墙签上最准的线索)
+            inv_hit = inv_artist_hit(index, queries + label_lines, artist_hints)
+            text_trace["inv_hit"] = inv_hit
+            # 墙签模式:AI 已摘出印着的标题 → 只拿它匹配;整段墙签行只用来抽馆藏号
+            results = (
+                [(inv_hit, 1.0)]
+                if inv_hit
+                else match(
+                    index,
+                    queries,
+                    label_lines,
+                    artist_hints,
+                    label_lines_inv_only=mode == "label" and bool(queries),
+                )
+            )
             text_trace["matched"] = [[q, round(sc, 3)] for q, sc in results[:5]]
             top = results[0] if results else None
             # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);
-            # 直判只属于向量像素证据。将来 matcher 若回传"馆藏号命中"类型,可为 inv 命中恢复直判。
-            if top and top[1] >= LOW:
+            # 直判只属于向量像素证据,唯一例外是馆藏号+作者双重吻合(inv_hit)。
+            if inv_hit:
+                o = db.query(MuseumObject).filter_by(qid=inv_hit).one()
+                out["outcome"] = "match"
+                out["match"] = {**_summary(db, storage, o, language), "confidence": 1.0}
+            elif top and top[1] >= LOW:
                 out["outcome"] = "candidates"
                 for qid, score in results[:3]:
                     if score < LOW:

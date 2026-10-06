@@ -1,5 +1,6 @@
 """识别器:一次 GPT-4o-mini 视觉调用 → 候选名(R1:只当查询,绝不当答案展示)
-+ 顺带转写取景框内可见文字(墙签白赚);mode=label 纯转写(引导补拍说明牌)。
++ 顺带转写取景框内可见文字(墙签白赚);mode=label 转写 + 摘出墙签上印着的标题/作者
+(引导补拍说明牌;匹配只拿摘出的标题当探针,整段几十行逐行模糊太慢)。
 complete 注入离线可测;异常/坏 JSON 返回空结构不抛(服务层按 no_candidates 处理)。
 spec docs/superpowers/specs/2026-07-03-recognition-design.md。"""
 
@@ -42,9 +43,11 @@ _ARTWORK_SYSTEM = (
 
 _LABEL_SYSTEM = (
     "You are an OCR assistant. Transcribe ALL visible text in this photo of a museum "
-    "wall label verbatim, preserving line breaks. Do NOT guess or add anything that is "
-    "not printed. Return STRICT JSON: "
-    '{"candidates": [], "label_text": "verbatim text or null", '
+    "wall label verbatim, preserving line breaks. Also extract the artwork title(s) "
+    "and artist name(s) exactly as printed on the label (main artwork first, at most 3). "
+    "Do NOT guess or add anything that is not printed. Return STRICT JSON: "
+    '{"candidates": [{"title": "as printed", "artist": "as printed or null"}], '
+    '"label_text": "verbatim text or null", '
     '"self_confidence": "high|medium|low"}. No commentary.'
 )
 

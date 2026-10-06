@@ -16,6 +16,7 @@ from app.services.recognition.matcher import (
     HIGH,
     LOW,
     build_index,
+    inv_artist_hit,
     match,
     normalize,
     normalize_inv,
@@ -279,3 +280,101 @@ def test_build_index_reuses_warm_search_index(monkeypatch):
     assert matcher.build_index(None, None) is sentinel
     assert matcher.build_index(None, 7) == sentinel
     assert matcher.build_index(None, 8) == []
+
+
+def test_label_lines_not_fuzzy_when_title_extracted(session):
+    # 墙签的作者行会把「以画家为题」的肖像模糊打满分(10-06:《Henri Edmond Cross》像
+    # 与《晚风》并列 1.0)。已摘出标题时,墙签行只用来抽馆藏号。
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q_PORTRAIT", "title_en": "Gustave Courbet", "category": "painting"},
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    lines = ["Gustave Courbet", "L'Origine du monde", "1866"]
+    out = dict(match(idx, ["L'Origine du monde"], lines, label_lines_inv_only=True))
+    assert out.get("Q334138", 0.0) >= HIGH
+    assert "Q_PORTRAIT" not in out
+
+
+def test_returns_at_most_limit(session):
+    idx = build_index(session, _mid(session))
+    assert len(match(idx, ["the"], [], limit=1)) <= 1
+
+
+def test_inv_only_lines_still_hit_inventory(session):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q_INV4",
+            "inventory_number": "RF 1976 215",
+            "title_en": "Evening Air",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    out = match(
+        idx, ["Nothing"], ["Don 1976", "RF 1976 215"], label_lines_inv_only=True
+    )
+    assert out[0] == ("Q_INV4", 1.0)
+
+
+def _add_inv(session, qid, inv, title, artist):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": qid,
+            "inventory_number": inv,
+            "title_en": title,
+            "artist_en": artist,
+            "category": "painting",
+        },
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    return build_index(session, _mid(session))
+
+
+def test_inv_artist_hit_when_inv_and_artist_agree(session):
+    # 墙签上的馆藏号精确对上 + 作者也对上 → 可直判(编号+作者双重吻合排除同名撞车)
+    idx = _add_inv(
+        session, "Q_AIR", "RF 1976 81", "L'air du soir", "Henri-Edmond Cross"
+    )
+    lines = ["Henri-Edmond Cross", "L'Air du soir", "RF 1976 81"]
+    assert inv_artist_hit(idx, lines, []) == "Q_AIR"  # 作者名出现在墙签原文
+    assert inv_artist_hit(idx, ["RF 1976 81"], ["Henri Edmond Cross"]) == "Q_AIR"
+
+
+def test_inv_artist_hit_requires_artist(session):
+    idx = _add_inv(
+        session, "Q_AIR", "RF 1976 81", "L'air du soir", "Henri-Edmond Cross"
+    )
+    assert inv_artist_hit(idx, ["RF 1976 81", "Paul Signac"], ["Paul Signac"]) is None
+
+
+def test_inv_artist_hit_none_when_ambiguous(session):
+    # 同号两件(RF 编号跨馆共用,prod 765 组)且作者都对上 → 不直判
+    louvre = upsert_museum(session, {"slug": "louvre", "name_en": "Louvre"})
+    upsert_object(
+        session,
+        louvre.id,
+        {
+            "qid": "Q_A",
+            "inventory_number": "RF 818",
+            "title_en": "A",
+            "artist_en": "Claude Monet",
+            "category": "painting",
+        },
+    )
+    _add_inv(session, "Q_B", "RF 818", "B", "Claude Monet")
+    idx = build_index(session, None)
+    assert inv_artist_hit(idx, ["Claude Monet", "RF 818"], []) is None
