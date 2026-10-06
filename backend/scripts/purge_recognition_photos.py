@@ -59,6 +59,10 @@ def purge(db, store, now=None) -> int:
     try:
         listing = list(store.list_keys(KEY_PREFIX))
     except (AttributeError, NotImplementedError):
+        listing = []  # 存储不支持枚举(测试替身/本地存储)
+    except Exception:
+        # 枚举失败(R2 抖动/限流):按行清理已提交,孤儿扫描今天跳过,明天再来
+        logger.exception("orphan sweep listing failed; skipped this run")
         listing = []
     for key, _size, mtime in listing:
         if key in referenced:

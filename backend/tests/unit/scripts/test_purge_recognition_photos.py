@@ -105,3 +105,18 @@ def test_purge_continues_after_one_delete_fails(db):
     db.expire_all()
     assert a.image_key == "k-a"  # 删失败的留着,下次再删
     assert b.image_key is None
+
+
+def test_purge_survives_listing_network_error(db):
+    """孤儿扫描时 R2 抖动(boto3 抛 ClientError 等):按行清理照常提交,脚本不崩。"""
+    old = _row(db, "k-old", 100)
+
+    class _ListBoom(_Store):
+        def list_keys(self, prefix):
+            raise ConnectionError("r2 throttled")
+            yield  # pragma: no cover  (generator)
+
+    store = _ListBoom({"k-old"})
+    assert purge(db, store, now=NOW) == 1
+    db.expire_all()
+    assert old.image_key is None
