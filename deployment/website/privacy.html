@@ -52,10 +52,10 @@
     <li>识别与讲解由 AI 服务提供商（OpenAI）按我们的指示处理：照片与作品名称会传输给其 API 用于生成结果，不用于其模型训练（依据 OpenAI API 数据政策）。</li>
     <li>Google 登录由 Google 提供。<strong>崩溃报告与使用统计由 Google Firebase 提供</strong>（Firebase Crashlytics 与 Firebase Analytics）：我们只使用其默认的自动统计事件（应用打开、页面浏览、会话），<strong>没有自定义埋点，也移除了广告标识符权限</strong>，不用于广告或跨应用追踪。</li>
     <li><strong>应用内购买由 Google Play 结算处理。</strong>我们<strong>不接触也不存储你的支付方式</strong>（银行卡号等）——付款全程在 Google Play 内完成。我们仅从 Google 收到一份购买凭据用于核验并发放通票，并保存订单号、商品、金额与时间。</li>
-    <li><strong>你主动发送的照片</strong>存放在 Cloudflare R2 的<strong>私有</strong>存储中：不绑定任何公开网址，只有我们凭专用密钥才能访问。</li>
+    <li><strong>你主动发送的照片</strong>存放在 Cloudflare R2 的<strong>私有</strong>存储中，<strong>数据限定保存在欧盟境内</strong>（R2 欧盟管辖区）；不绑定任何公开网址，只有我们凭专用密钥才能访问。</li>
     <li>我们不向任何第三方出售你的个人数据，也不用于广告。</li>
   </ul>
-  <p class="en">Recognition/narration is processed by OpenAI per our instructions (not used for training per OpenAI API policy). Sign-in by Google; crash reporting and default usage analytics by Google Firebase (no custom events, advertising-ID permission removed). Photos you choose to send us are kept in <strong>private</strong> Cloudflare R2 storage with no public address, accessible only to us with a dedicated key. In-app purchases are processed by Google Play Billing — we never see or store your payment method; we receive only a purchase receipt to verify and grant your pass. We never sell your data; no advertising.</p>
+  <p class="en">Recognition/narration is processed by OpenAI per our instructions (not used for training per OpenAI API policy). Sign-in by Google; crash reporting and default usage analytics by Google Firebase (no custom events, advertising-ID permission removed). Photos you choose to send us are kept in <strong>private</strong> Cloudflare R2 storage <strong>restricted to the EU</strong> (R2 EU jurisdiction), with no public address, accessible only to us with a dedicated key. In-app purchases are processed by Google Play Billing — we never see or store your payment method; we receive only a purchase receipt to verify and grant your pass. We never sell your data; no advertising.</p>
 
   <h2>4. 你的权利（GDPR/CCPA）</h2>
   <ul>
@@ -76,8 +76,8 @@
   <p class="en">Delete your account in-app at <strong>Settings → Delete account</strong>. This permanently deletes your profile and quota records, and unlinks your footprints — the account identifier is stripped from recognition events, which then point to no one; the de-identified statistics are kept for recognition-accuracy analysis. <strong>Photos you chose to send us are deleted</strong>, together with your notes and search text. <strong>Free text you wrote in feedback is permanently deleted</strong>; what that feedback pointed at (museum, artwork, language, issue type) is kept with account and device identifiers stripped, so the reported content error can still be fixed. <strong>Any purchased pass is voided immediately and cannot be recovered</strong> — passes are consumable products, already consumed on Google Play's side, so "Restore purchases" will not bring them back; re-registering does not restore them either. Transaction records (order ID, item, amount, date) are retained to meet accounting and tax obligations, but are unlinked from your identity and stripped of personal data. To export your data, email appcraft008@gmail.com; we respond within 30 days.</p>
 
   <h2>5. 数据安全与存储位置</h2>
-  <p>数据通过 TLS 加密传输；<strong>账号与交易等个人数据存储在位于欧盟（法国）的服务器</strong>，密码以 bcrypt 加密存储。藏品图片与语音等内容资产存放在 Cloudflare R2 对象存储（不含个人数据）；你主动发送的照片存放在另一个 Cloudflare R2 <strong>私有</strong>存储中，不可公开访问。我们采取访问控制、速率限制与每日备份等措施保护数据。</p>
-  <p class="en">Data is encrypted in transit (TLS). Personal data (accounts, transactions) is stored on servers located in the EU (France); passwords are bcrypt-hashed. Media assets (artwork images, audio) are served from Cloudflare R2 and contain no personal data; photos you choose to send us are kept in a separate, private Cloudflare R2 storage that is not publicly accessible.</p>
+  <p>数据通过 TLS 加密传输；<strong>账号与交易等个人数据存储在位于欧盟（法国）的服务器</strong>，密码以 bcrypt 加密存储。藏品图片与语音等内容资产存放在 Cloudflare R2 对象存储（不含个人数据）；你主动发送的照片存放在另一个 Cloudflare R2 <strong>私有</strong>存储中，<strong>限定在欧盟境内</strong>，不可公开访问。我们采取访问控制、速率限制与每日备份等措施保护数据。</p>
+  <p class="en">Data is encrypted in transit (TLS). Personal data (accounts, transactions) is stored on servers located in the EU (France); passwords are bcrypt-hashed. Media assets (artwork images, audio) are served from Cloudflare R2 and contain no personal data; photos you choose to send us are kept in a separate, private Cloudflare R2 storage restricted to the EU and not publicly accessible.</p>
 
   <h2>6. 儿童隐私</h2>
   <p>本应用不面向 13 岁以下儿童设计，我们不会有意收集儿童个人信息。如你认为我们无意中收集了儿童数据，请联系 appcraft008@gmail.com，我们将予以删除。</p>
