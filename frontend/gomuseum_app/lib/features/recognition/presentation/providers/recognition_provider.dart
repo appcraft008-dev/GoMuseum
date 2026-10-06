@@ -44,10 +44,14 @@ class RecognitionCandidates extends RecognitionState {
 
 /// 未收录：诚实文案 + 引导拍墙签（绝不显示 AI 猜测的名字）。
 class RecognitionUnrecognized extends RecognitionState {
-  const RecognitionUnrecognized(this.labelText, this.reason, this.slug);
+  const RecognitionUnrecognized(this.labelText, this.reason, this.slug,
+      {this.phash});
   final String? labelText;
   final String? reason;
   final String? slug;
+
+  /// 这张照片的感知哈希(S4:选择页搜到作品时用它回传「照片=这件」)。老后端没有 → null。
+  final String? phash;
 }
 
 /// 免费额度用尽(后端 402)：不是失败，是该弹付费墙。
@@ -135,7 +139,8 @@ class RecognitionNotifier extends _$RecognitionNotifier {
         RecognizeOutcome.candidates when resp.candidates.isNotEmpty =>
           RecognitionCandidates(resp.candidates, resp.labelText, slug,
               phash: resp.phash),
-        _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug),
+        _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug,
+            phash: resp.phash),
       };
       if (state is RecognitionMatched) _refreshFootprints();
     } on QuotaExceededException catch (e) {
@@ -152,13 +157,21 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   ///
   /// ⚠️ 刷新权益放在 notifier 里而不是调用方：调用方（相机页）确认完立刻
   /// pushReplacement 走人，await 回来时它的 ref 已经 dispose 了。
-  Future<void> confirmRecognition(String qid) async {
+  ///
+  /// [fromSearch](S4):选择页搜到的作品 = 用户告诉我们「这张照片是这件」。
+  /// 只记答案,后端不计费(`source=search`),所以也不用刷权益。
+  Future<void> confirmRecognition(String qid, {bool fromSearch = false}) async {
     final s = state;
-    final phash = s is RecognitionCandidates ? s.phash : null;
+    final phash = switch (s) {
+      RecognitionCandidates() => s.phash,
+      RecognitionUnrecognized() when fromSearch => s.phash,
+      _ => null,
+    };
     if (phash == null) return;
     await ref
         .read(recognitionRemoteDataSourceProvider)
-        .confirm(phash: phash, qid: qid);
+        .confirm(phash: phash, qid: qid, source: fromSearch ? 'search' : null);
+    if (fromSearch) return; // 没扣次:不用刷权益;足迹下次刷新时自然带上
     _refreshFootprints(); // 放在权益刷新之前:那边抛了不该连带足迹
     // 确认扣掉了 1 次额度，权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
     ref.invalidate(entitlementsProvider);
@@ -183,7 +196,8 @@ class RecognitionNotifier extends _$RecognitionNotifier {
             .read(recognitionRemoteDataSourceProvider)
             .reject(phash: phash, qids: [for (final c in s.candidates) c.qid]));
       }
-      state = RecognitionUnrecognized(s.labelText, 'rejected', s.slug);
+      state = RecognitionUnrecognized(s.labelText, 'rejected', s.slug,
+          phash: s.phash);
     }
   }
 

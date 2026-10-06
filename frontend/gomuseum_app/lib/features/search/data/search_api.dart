@@ -22,6 +22,7 @@ class SearchObject {
     this.thumbnail,
     this.museum,
     this.hasImage = false,
+    this.inventory,
   });
 
   final String qid;
@@ -34,6 +35,9 @@ class SearchObject {
   final String? museum;
   final bool hasImage;
 
+  /// 完整馆藏号(S4;用户拿它对照说明牌)。老后端没有 → null。
+  final String? inventory;
+
   factory SearchObject.fromJson(Map<String, dynamic> j) => SearchObject(
         qid: j['qid'] as String? ?? '',
         title: j['title'] as String? ?? (j['qid'] as String? ?? ''),
@@ -42,6 +46,7 @@ class SearchObject {
         thumbnail: j['thumbnail'] as String?,
         museum: j['museum'] as String?,
         hasImage: j['has_image'] as bool? ?? false,
+        inventory: j['inventory'] as String?,
       );
 }
 

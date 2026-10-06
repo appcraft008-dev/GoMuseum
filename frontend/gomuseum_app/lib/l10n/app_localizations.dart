@@ -1205,6 +1205,12 @@ abstract class AppLocalizations {
   /// **'Photograph the wall label'**
   String get recShootLabelBtn;
 
+  /// Primary button on the not-recognized choice card: type the inventory number or the title from the wall label
+  ///
+  /// In en, this message translates to:
+  /// **'Type the number or title'**
+  String get recTypeNumberOrName;
+
   /// No description provided for @recSearchWithLabel.
   ///
   /// In en, this message translates to:

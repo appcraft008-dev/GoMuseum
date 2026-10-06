@@ -182,6 +182,7 @@
   "recNotRecognized": "Opera non riconosciuta",
   "recLabelSeen": "L'etichetta dice «{text}» — non abbiamo ancora la sua guida completa, ma la tua richiesta è stata registrata ✅",
   "recShootLabelBtn": "Fotografa il cartellino",
+  "recTypeNumberOrName": "Inserisci numero o titolo",
   "recSearchWithLabel": "Cerca con questo testo",
   "recShootLabelHint": "I cartellini del museo mostrano titolo e artista — fotografalo e potremo identificare l'opera",
   "recViewfinderLabelHint": "Inquadra il testo del cartellino, riempi lo schermo",

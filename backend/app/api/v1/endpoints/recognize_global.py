@@ -6,7 +6,7 @@ run_recognition,共享身份解析/计费/错误映射,行为零变化。契约�
 """
 
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -132,6 +132,9 @@ def recognize_global(
 class ConfirmRequest(BaseModel):
     phash: str
     qid: str
+    # S4:"search" = 用户在选择页搜到这件(识别没认出来)。只记答案,不计费 ——
+    # 搜索一直是免费的,听讲解走详情页手动解锁。缺省=候选确认(现行计费语义)。
+    source: Literal["candidates", "search"] = "candidates"
 
 
 class RejectRequest(BaseModel):
@@ -165,7 +168,9 @@ def recognize_confirm(
     # 隐身馆的藏品:什么都不做(恒 204,与未知 qid 不可区分)
     if not qid_visible(db, body.qid, can_preview(db, credentials)):
         return Response(status_code=204)
-    first_time = confirm_event(db, body.phash, body.qid)
+    first_time = confirm_event(db, body.phash, body.qid, body.source)
+    if body.source == "search":
+        return Response(status_code=204)
     user_id = _user_id(db, credentials)
     # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。
     if first_time and user_id:

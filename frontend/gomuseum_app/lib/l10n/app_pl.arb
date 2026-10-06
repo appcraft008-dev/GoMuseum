@@ -182,6 +182,7 @@
   "recNotRecognized": "Nie rozpoznano tego dzieła",
   "recLabelSeen": "Na etykiecie widnieje „{text}” — nie mamy jeszcze pełnego przewodnika, ale odnotowaliśmy Twoją prośbę ✅",
   "recShootLabelBtn": "Sfotografuj tabliczkę",
+  "recTypeNumberOrName": "Wpisz numer lub tytuł",
   "recSearchWithLabel": "Szukaj tym tekstem",
   "recShootLabelHint": "Muzealne tabliczki podają tytuł i artystę — sfotografuj ją, a rozpoznamy dzieło",
   "recViewfinderLabelHint": "Wyceluj w tekst tabliczki, wypełnij kadr",

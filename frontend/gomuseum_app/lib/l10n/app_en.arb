@@ -348,6 +348,8 @@
     }
   },
   "recShootLabelBtn": "Photograph the wall label",
+  "recTypeNumberOrName": "Type the number or title",
+  "@recTypeNumberOrName": {"description": "Primary button on the not-recognized choice card: type the inventory number or the title from the wall label"},
   "recSearchWithLabel": "Search using this text",
   "recShootLabelHint": "Museum labels show the title and artist — snap it and we can identify the work",
   "recViewfinderLabelHint": "Aim at the label text, fill the frame",

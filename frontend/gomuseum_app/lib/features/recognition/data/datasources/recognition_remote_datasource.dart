@@ -25,7 +25,9 @@ abstract class RecognitionRemoteDataSource {
 
   /// 确认卡点选「这一件」→ 上报「照片(phash)→qid」标注（喂后端 CLIP 校准）。
   /// fire-and-forget：吞掉所有异常，绝不打扰识别→讲解的跳转体验。
-  Future<void> confirm({required String phash, required String qid});
+  /// [source]:`search`(S4,选择页搜到,后端只记答案不计费);缺省不发=候选确认。
+  Future<void> confirm(
+      {required String phash, required String qid, String? source});
 
   /// 候选卡「都不是」→ 上报被否定的这组候选(S3)。fire-and-forget:吞掉所有异常。
   Future<void> reject({required String phash, required List<String> qids});
@@ -170,11 +172,16 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
   }
 
   @override
-  Future<void> confirm({required String phash, required String qid}) async {
+  Future<void> confirm(
+      {required String phash, required String qid, String? source}) async {
     try {
       await dio.post(
         '/api/v1/recognize/confirm',
-        data: {'phash': phash, 'qid': qid},
+        data: {
+          'phash': phash,
+          'qid': qid,
+          if (source != null) 'source': source,
+        },
         options: Options(headers: {'Accept': 'application/json'}),
       );
     } catch (_) {

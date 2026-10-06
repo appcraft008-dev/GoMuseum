@@ -611,6 +611,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recShootLabelBtn => 'Photograph the wall label';
 
   @override
+  String get recTypeNumberOrName => 'Type the number or title';
+
+  @override
   String get recSearchWithLabel => 'Search using this text';
 
   @override

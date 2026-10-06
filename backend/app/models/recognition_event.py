@@ -25,6 +25,9 @@ class RecognitionEvent(Base):
     top_qid = Column(String(32), nullable=True)
     top_score = Column(Float, nullable=True)
     confirmed_qid = Column(String(32), nullable=True)  # 用户确认回填
+    # S4:这次确认从哪来。"candidates"(计过费)/ "search"(选择页搜到,不计费)。
+    # 老行 NULL = 候选确认(计过费)。confirm_event 的「一次拍照只扣一次」只认计过费的确认。
+    confirm_source = Column(String(16), nullable=True)
     # S3:用户否定过的候选(改选时服务端把上一次确认记进来;「都不是」时整组记进来)。
     # 分析口径**按 phash 分组**(同一张照片重拍/重发会多出行):
     #   答案 = 组内 confirmed_qid 集合 − 组内 rejected_qids 并集。

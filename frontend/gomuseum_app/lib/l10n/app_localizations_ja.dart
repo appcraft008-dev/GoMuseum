@@ -601,6 +601,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recShootLabelBtn => '解説プレートを撮影';
 
   @override
+  String get recTypeNumberOrName => '番号か作品名を入力';
+
+  @override
   String get recSearchWithLabel => 'このテキストで検索';
 
   @override

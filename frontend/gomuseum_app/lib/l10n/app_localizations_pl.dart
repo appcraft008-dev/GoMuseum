@@ -618,6 +618,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recShootLabelBtn => 'Sfotografuj tabliczkę';
 
   @override
+  String get recTypeNumberOrName => 'Wpisz numer lub tytuł';
+
+  @override
   String get recSearchWithLabel => 'Szukaj tym tekstem';
 
   @override
