@@ -83,11 +83,30 @@ void main() {
     expect(ds.calls, 2);
   });
 
-  test('transient twice → error, exactly two sends (only one retry)', () async {
-    final (st, ds) = await run(
-        [const NetworkException(), const NetworkException(), _unrecognized]);
+  // V54 真机:切回来那一刻 Wi‑Fi ↔ 运营商网络切换,第一次重发途中又被掐断。
+  // 重发便宜(服务端同键在途合并/缓存命中,不重算不重复扣),所以多给几次。
+  test('transient three times then success → result (up to 3 resends)',
+      () async {
+    final (st, ds) = await run([
+      const NetworkException(),
+      const NetworkException(),
+      const TimeoutException(),
+      _unrecognized,
+    ]);
+    expect(st, isA<RecognitionUnrecognized>());
+    expect(ds.calls, 4);
+  });
+
+  test('transient four times → error, exactly four sends (bounded)', () async {
+    final (st, ds) = await run([
+      const NetworkException(),
+      const NetworkException(),
+      const NetworkException(),
+      const NetworkException(),
+      _unrecognized,
+    ]);
     expect(st, isA<RecognitionError>());
-    expect(ds.calls, 2);
+    expect(ds.calls, 4);
   });
 
   test('waits for foreground before resending', () async {
