@@ -144,3 +144,28 @@ def test_recognize_flag_off_when_unconfigured(monkeypatch):
     assert pf.photo_feedback_available() is True
     monkeypatch.setattr(settings, "PHOTO_FEEDBACK_ENABLED", False)
     assert pf.photo_feedback_available() is False
+
+
+def test_private_storage_uses_its_own_endpoint(monkeypatch):
+    """EU 管辖权桶只能走 `<账号>.eu.r2.cloudflarestorage.com`(公开桶的普通地址对它 AccessDenied,
+    2026-10-06 实测)。私有桶必须用自己的 endpoint,不能借公开桶的。"""
+    captured = {}
+
+    class _R2:
+        def __init__(self, endpoint_url, *a):
+            captured["endpoint"] = endpoint_url
+
+    import app.services.storage.r2 as r2
+
+    monkeypatch.setattr(r2, "R2ObjectStorage", _R2)
+    monkeypatch.setattr(pf, "_instance", None)
+    monkeypatch.setattr(settings, "R2_ENDPOINT_URL", "https://acct.r2.example")
+    monkeypatch.setattr(
+        settings, "PHOTO_FEEDBACK_R2_ENDPOINT_URL", "https://acct.eu.r2.example"
+    )
+    monkeypatch.setattr(settings, "PHOTO_FEEDBACK_R2_BUCKET", "b")
+    monkeypatch.setattr(settings, "PHOTO_FEEDBACK_R2_ACCESS_KEY_ID", "k")
+    monkeypatch.setattr(settings, "PHOTO_FEEDBACK_R2_SECRET_ACCESS_KEY", "s")
+    assert pf.get_photo_feedback_storage() is not None
+    assert captured["endpoint"] == "https://acct.eu.r2.example"
+    monkeypatch.setattr(pf, "_instance", None)

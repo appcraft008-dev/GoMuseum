@@ -12,17 +12,18 @@ def get_photo_feedback_storage():
     """未配齐 → None(功能关闭)。"""
     global _instance
     if _instance is None:
+        endpoint = settings.PHOTO_FEEDBACK_R2_ENDPOINT_URL or settings.R2_ENDPOINT_URL
         if not (
             settings.PHOTO_FEEDBACK_R2_BUCKET
             and settings.PHOTO_FEEDBACK_R2_ACCESS_KEY_ID
             and settings.PHOTO_FEEDBACK_R2_SECRET_ACCESS_KEY
-            and settings.R2_ENDPOINT_URL
+            and endpoint
         ):
             return None
         from app.services.storage.r2 import R2ObjectStorage
 
         _instance = R2ObjectStorage(
-            settings.R2_ENDPOINT_URL,
+            endpoint,
             settings.PHOTO_FEEDBACK_R2_ACCESS_KEY_ID,
             settings.PHOTO_FEEDBACK_R2_SECRET_ACCESS_KEY,
             settings.PHOTO_FEEDBACK_R2_BUCKET,
