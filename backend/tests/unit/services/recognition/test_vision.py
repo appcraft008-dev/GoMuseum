@@ -108,3 +108,27 @@ def test_shrink_reduces_large_image_to_1024():
 
 def test_shrink_garbage_returns_unchanged():
     assert _shrink(b"not an image") == b"not an image"
+
+
+def test_label_mode_extracts_printed_title_and_artist():
+    """墙签动辄几十行(双语说明),整段逐行模糊匹配 prod 要十几分钟(2026-10-06 真机)。
+    转写时顺手摘出墙签上**印着的**标题/作者,匹配只拿它们当探针;不许猜。"""
+    seen = {}
+
+    def fake(system, user_content):
+        seen["system"] = system
+        return json.dumps(
+            {
+                "candidates": [
+                    {"title": "L'Air du soir", "artist": "Henri-Edmond Cross"}
+                ],
+                "label_text": "Henri-Edmond Cross\nL'Air du soir\nVers 1893",
+            }
+        )
+
+    out = identify("b64data", mode="label", complete=fake)
+    s = seen["system"].lower()
+    assert "title" in s and "printed" in s and "not guess" in s
+    assert out["candidates"] == [
+        {"title": "L'Air du soir", "artist": "Henri-Edmond Cross"}
+    ]

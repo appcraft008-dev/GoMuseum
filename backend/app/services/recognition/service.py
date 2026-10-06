@@ -446,7 +446,14 @@ def _compute(
             index = build_index(db, museum_id)
             if visible is not None:
                 index = [e for e in index if e["museum_id"] in visible]
-            results = match(index, queries, label_lines, artist_hints)
+            # 墙签模式:AI 已摘出印着的标题 → 只拿它匹配;整段墙签行只用来抽馆藏号
+            results = match(
+                index,
+                queries,
+                label_lines,
+                artist_hints,
+                label_lines_inv_only=mode == "label" and bool(queries),
+            )
             text_trace["matched"] = [[q, round(sc, 3)] for q, sc in results[:5]]
             top = results[0] if results else None
             # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);

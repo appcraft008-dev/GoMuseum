@@ -279,3 +279,47 @@ def test_build_index_reuses_warm_search_index(monkeypatch):
     assert matcher.build_index(None, None) is sentinel
     assert matcher.build_index(None, 7) == sentinel
     assert matcher.build_index(None, 8) == []
+
+
+def test_label_lines_not_fuzzy_when_title_extracted(session):
+    # 墙签的作者行会把「以画家为题」的肖像模糊打满分(10-06:《Henri Edmond Cross》像
+    # 与《晚风》并列 1.0)。已摘出标题时,墙签行只用来抽馆藏号。
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q_PORTRAIT", "title_en": "Gustave Courbet", "category": "painting"},
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    lines = ["Gustave Courbet", "L'Origine du monde", "1866"]
+    out = dict(match(idx, ["L'Origine du monde"], lines, label_lines_inv_only=True))
+    assert out.get("Q334138", 0.0) >= HIGH
+    assert "Q_PORTRAIT" not in out
+
+
+def test_returns_at_most_limit(session):
+    idx = build_index(session, _mid(session))
+    assert len(match(idx, ["the"], [], limit=1)) <= 1
+
+
+def test_inv_only_lines_still_hit_inventory(session):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q_INV4",
+            "inventory_number": "RF 1976 215",
+            "title_en": "Evening Air",
+            "category": "painting",
+        },
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    idx = build_index(session, _mid(session))
+    out = match(
+        idx, ["Nothing"], ["Don 1976", "RF 1976 215"], label_lines_inv_only=True
+    )
+    assert out[0] == ("Q_INV4", 1.0)
