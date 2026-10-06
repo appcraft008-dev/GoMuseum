@@ -1181,6 +1181,12 @@ abstract class AppLocalizations {
   /// **'None of these'**
   String get recNoneOfThese;
 
+  /// Button in the full-screen candidate viewer: pick this candidate
+  ///
+  /// In en, this message translates to:
+  /// **'This is it'**
+  String get recThisIsIt;
+
   /// No description provided for @recNotRecognized.
   ///
   /// In en, this message translates to:
@@ -1198,6 +1204,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Photograph the wall label'**
   String get recShootLabelBtn;
+
+  /// Primary button on the not-recognized choice card: type the inventory number or the title from the wall label
+  ///
+  /// In en, this message translates to:
+  /// **'Type the number or title'**
+  String get recTypeNumberOrName;
+
+  /// Photo feedback dialog title (S5): ask the user whether to send the artwork photo
+  ///
+  /// In en, this message translates to:
+  /// **'Send us this photo?'**
+  String get photoFbTitle;
+
+  /// Photo feedback dialog purpose line. Must keep both promises: kept at most 90 days, never shown publicly
+  ///
+  /// In en, this message translates to:
+  /// **'Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.'**
+  String get photoFbBody;
+
+  /// Checkbox label, unchecked by default
+  ///
+  /// In en, this message translates to:
+  /// **'Send this photo'**
+  String get photoFbConsent;
+
+  /// Optional note field hint
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note (optional)'**
+  String get photoFbNoteHint;
+
+  /// The only button: continue regardless of the checkbox
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get photoFbContinue;
 
   /// No description provided for @recSearchWithLabel.
   ///
@@ -1354,6 +1396,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AI is comparing with collections and public art databases'**
   String get camComparing;
+
+  /// Recognition loading hint shown after ~10s
+  ///
+  /// In en, this message translates to:
+  /// **'Taking a bit longer than usual — still looking'**
+  String get recWaitSlow;
+
+  /// Recognition loading hint shown after ~20s; promises only switching apps, not leaving the page
+  ///
+  /// In en, this message translates to:
+  /// **'You can switch to another app — the result will be here when you come back'**
+  String get recWaitSwitchApp;
 
   /// No description provided for @camConfirmPrompt.
   ///

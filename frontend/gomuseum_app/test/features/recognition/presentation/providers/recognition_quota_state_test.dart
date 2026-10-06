@@ -26,7 +26,12 @@ class _ThrowingDs implements RecognitionRemoteDataSource {
       throw error;
 
   @override
-  Future<void> confirm({required String phash, required String qid}) async {}
+  Future<void> confirm(
+      {required String phash, required String qid, String? source}) async {}
+
+  @override
+  Future<void> reject(
+      {required String phash, required List<String> qids}) async {}
 
   @override
   Future<Never> recognizeArtwork(XFile imageFile) async => throw error;

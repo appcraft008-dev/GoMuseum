@@ -1,6 +1,7 @@
-import 'dart:async';
+import 'dart:async' hide TimeoutException;
 
 import 'package:cross_file/cross_file.dart';
+import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
@@ -34,19 +35,29 @@ class RecognitionMatched extends RecognitionState {
 /// 多候选：确认卡「是这件吗？」。
 class RecognitionCandidates extends RecognitionState {
   const RecognitionCandidates(this.candidates, this.labelText, this.slug,
-      {this.phash});
+      {this.phash, this.photoFeedback = false});
   final List<RecognizedItem> candidates;
   final String? labelText;
   final String? slug;
   final String? phash;
+
+  /// S5 服务端开关(见 RecognizeResponse.photoFeedback)。
+  final bool photoFeedback;
 }
 
 /// 未收录：诚实文案 + 引导拍墙签（绝不显示 AI 猜测的名字）。
 class RecognitionUnrecognized extends RecognitionState {
-  const RecognitionUnrecognized(this.labelText, this.reason, this.slug);
+  const RecognitionUnrecognized(this.labelText, this.reason, this.slug,
+      {this.phash, this.photoFeedback = false});
   final String? labelText;
   final String? reason;
   final String? slug;
+
+  /// 这张照片的感知哈希(S4:选择页搜到作品时用它回传「照片=这件」)。老后端没有 → null。
+  final String? phash;
+
+  /// S5 服务端开关(见 RecognizeResponse.photoFeedback)。
+  final bool photoFeedback;
 }
 
 /// 免费额度用尽(后端 402)：不是失败，是该弹付费墙。
@@ -65,6 +76,25 @@ class RecognitionError extends RecognitionState {
   const RecognitionError(this.message);
   final String message;
 }
+
+/// 等到 App 回到前台(S2:后台里失败的请求,切回来再重发)。测试里覆盖成立即返回。
+final foregroundWaiterProvider =
+    Provider<Future<void> Function()>((ref) => untilAppResumed);
+
+Future<void> untilAppResumed() {
+  final s = WidgetsBinding.instance.lifecycleState;
+  if (s == null || s == AppLifecycleState.resumed) return Future.value();
+  final done = Completer<void>();
+  late final AppLifecycleListener listener;
+  listener = AppLifecycleListener(onResume: () {
+    listener.dispose();
+    done.complete();
+  });
+  return done.future;
+}
+
+/// 值得用同一张照片重发的失败:超时、断连、网关 5xx(数据源已映射成 NetworkException)。
+bool _isTransient(Object e) => e is TimeoutException || e is NetworkException;
 
 /// 识别状态管理 Provider。
 @riverpod
@@ -91,19 +121,32 @@ class RecognitionNotifier extends _$RecognitionNotifier {
       } catch (_) {
         deviceId = null;
       }
-      final resp = await ds.recognize(
+      final waitForeground = ref.read(foregroundWaiterProvider);
+      Future<RecognizeResponse> send() => ds.recognize(
           slug: slug,
           image: image,
           language: language,
           mode: mode,
           deviceId: deviceId);
+      RecognizeResponse resp;
+      try {
+        resp = await send();
+      } catch (e) {
+        if (!_isTransient(e)) rethrow;
+        // S2 失败即重发:锁屏/切后台时系统会不会断连,代码里判断不了、各厂商也不同,
+        // 两种情况都兜住。同一张照片 → 服务端同键在途合并或缓存命中,不重算不重复扣。
+        // 只重发一次;后台失败先等回前台(后台网络多半还不通)。
+        await waitForeground();
+        resp = await send();
+      }
       state = switch (resp.outcome) {
         RecognizeOutcome.match when resp.match?.isValid == true =>
           RecognitionMatched(resp.match!, slug),
         RecognizeOutcome.candidates when resp.candidates.isNotEmpty =>
           RecognitionCandidates(resp.candidates, resp.labelText, slug,
-              phash: resp.phash),
-        _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug),
+              phash: resp.phash, photoFeedback: resp.photoFeedback),
+        _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug,
+            phash: resp.phash, photoFeedback: resp.photoFeedback),
       };
       if (state is RecognitionMatched) _refreshFootprints();
     } on QuotaExceededException catch (e) {
@@ -120,13 +163,25 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   ///
   /// ⚠️ 刷新权益放在 notifier 里而不是调用方：调用方（相机页）确认完立刻
   /// pushReplacement 走人，await 回来时它的 ref 已经 dispose 了。
-  Future<void> confirmRecognition(String qid) async {
+  ///
+  /// [fromSearch](S4):选择页搜到的作品 = 用户告诉我们「这张照片是这件」。
+  /// 只记答案,后端不计费(`source=search`),所以也不用刷权益。
+  ///
+  /// [phashOverride](S5):拍过说明牌时,答案属于先前那张**作品照片**,不是说明牌照片。
+  Future<void> confirmRecognition(String qid,
+      {bool fromSearch = false, String? phashOverride}) async {
     final s = state;
-    final phash = s is RecognitionCandidates ? s.phash : null;
+    final phash = phashOverride ??
+        switch (s) {
+          RecognitionCandidates() => s.phash,
+          RecognitionUnrecognized() when fromSearch => s.phash,
+          _ => null,
+        };
     if (phash == null) return;
     await ref
         .read(recognitionRemoteDataSourceProvider)
-        .confirm(phash: phash, qid: qid);
+        .confirm(phash: phash, qid: qid, source: fromSearch ? 'search' : null);
+    if (fromSearch) return; // 没扣次:不用刷权益;足迹下次刷新时自然带上
     _refreshFootprints(); // 放在权益刷新之前:那边抛了不该连带足迹
     // 确认扣掉了 1 次额度，权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
     ref.invalidate(entitlementsProvider);
@@ -141,11 +196,18 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   void _refreshFootprints() =>
       unawaited(ref.read(historyProvider.notifier).refresh());
 
-  /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字）。
+  /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字），并把这组候选上报为被否定(S3)。
   void rejectCandidates() {
     final s = state;
     if (s is RecognitionCandidates) {
-      state = RecognitionUnrecognized(s.labelText, 'rejected', s.slug);
+      final phash = s.phash;
+      if (phash != null) {
+        unawaited(ref
+            .read(recognitionRemoteDataSourceProvider)
+            .reject(phash: phash, qids: [for (final c in s.candidates) c.qid]));
+      }
+      state = RecognitionUnrecognized(s.labelText, 'rejected', s.slug,
+          phash: s.phash, photoFeedback: s.photoFeedback);
     }
   }
 

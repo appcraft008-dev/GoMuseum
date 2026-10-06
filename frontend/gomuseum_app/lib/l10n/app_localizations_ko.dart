@@ -587,6 +587,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recNoneOfThese => '모두 아님';
 
   @override
+  String get recThisIsIt => '이 작품이에요';
+
+  @override
   String get recNotRecognized => '이 작품을 인식하지 못했습니다';
 
   @override
@@ -596,6 +599,25 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get recShootLabelBtn => '설명판 촬영';
+
+  @override
+  String get recTypeNumberOrName => '번호나 작품명 입력';
+
+  @override
+  String get photoFbTitle => '이 사진을 보내 주시겠어요?';
+
+  @override
+  String get photoFbBody =>
+      '빠진 작품을 추가하고 인식을 개선하는 데만 사용합니다. 최대 90일 보관하며 누구에게도 공개하지 않습니다.';
+
+  @override
+  String get photoFbConsent => '이 사진 보내기';
+
+  @override
+  String get photoFbNoteHint => '메모 추가(선택)';
+
+  @override
+  String get photoFbContinue => '계속';
 
   @override
   String get recSearchWithLabel => '이 텍스트로 검색';
@@ -674,6 +696,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get camComparing => 'AI가 컬렉션 및 공개 미술 데이터베이스와 대조 중';
+
+  @override
+  String get recWaitSlow => '평소보다 조금 오래 걸리고 있어요. 계속 찾는 중입니다';
+
+  @override
+  String get recWaitSwitchApp => '다른 앱으로 전환해도 괜찮아요. 돌아오면 결과가 그대로 있어요';
 
   @override
   String get camConfirmPrompt => '인식 완료, 작품을 확인하세요';

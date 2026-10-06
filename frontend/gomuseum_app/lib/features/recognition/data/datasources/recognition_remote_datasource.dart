@@ -25,7 +25,12 @@ abstract class RecognitionRemoteDataSource {
 
   /// 确认卡点选「这一件」→ 上报「照片(phash)→qid」标注（喂后端 CLIP 校准）。
   /// fire-and-forget：吞掉所有异常，绝不打扰识别→讲解的跳转体验。
-  Future<void> confirm({required String phash, required String qid});
+  /// [source]:`search`(S4,选择页搜到,后端只记答案不计费);缺省不发=候选确认。
+  Future<void> confirm(
+      {required String phash, required String qid, String? source});
+
+  /// 候选卡「都不是」→ 上报被否定的这组候选(S3)。fire-and-forget:吞掉所有异常。
+  Future<void> reject({required String phash, required List<String> qids});
 }
 
 /// 远程数据源实现
@@ -153,6 +158,12 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
             pass is Map ? pass['product_id'] as String? : null,
             detail is Map ? detail['museum'] as String? : null);
       }
+      // 网关类 5xx(部署重启时 nginx 502 等)= 服务暂时不可用,与断网同类:交给上层重发(S2)。
+      // 500 是服务端真错误,重发也没用,仍按失败处理。
+      const gateway = {502, 503, 504};
+      if (gateway.contains(e.response?.statusCode)) {
+        throw const NetworkException('Server temporarily unavailable');
+      }
       throw ServerException('Server error: ${e.message}');
     } catch (e) {
       if (e is ServerException || e is TimeoutException) rethrow;
@@ -161,15 +172,34 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
   }
 
   @override
-  Future<void> confirm({required String phash, required String qid}) async {
+  Future<void> confirm(
+      {required String phash, required String qid, String? source}) async {
     try {
       await dio.post(
         '/api/v1/recognize/confirm',
-        data: {'phash': phash, 'qid': qid},
+        data: {
+          'phash': phash,
+          'qid': qid,
+          if (source != null) 'source': source,
+        },
         options: Options(headers: {'Accept': 'application/json'}),
       );
     } catch (_) {
       // fire-and-forget：任何失败都吞掉，绝不打扰 UX。
+    }
+  }
+
+  @override
+  Future<void> reject(
+      {required String phash, required List<String> qids}) async {
+    try {
+      await dio.post(
+        '/api/v1/recognize/reject',
+        data: {'phash': phash, 'qids': qids},
+        options: Options(headers: {'Accept': 'application/json'}),
+      );
+    } catch (_) {
+      // fire-and-forget:任何失败都吞掉,绝不打扰 UX。
     }
   }
 

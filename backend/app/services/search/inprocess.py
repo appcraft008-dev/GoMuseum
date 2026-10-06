@@ -16,8 +16,10 @@
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
+import unicodedata
 
 from app.models.artist import Artist
 from app.models.museum import Museum
@@ -41,6 +43,8 @@ _INV_MIN = 3  # 归一化编号 <3 位不做精确匹配(防误伤)
 
 # 匹配分档(排序权重;换引擎后能搜到什么一致,唯排序权重可有细微差别)
 _S_INV = 1.0  # 编号精确
+_S_INV_DIGITS = 0.9  # 只输数字时按馆藏号数字匹配(S4):高于标题前缀,低于整串精确
+_NONDIGIT = re.compile(r"\D")
 _S_PREFIX = 0.8  # 标题前缀
 _S_SUBSTR = 0.6  # 标题子串
 _S_ARTIST = 0.4  # 作者子串
@@ -100,6 +104,8 @@ def _build_global(db) -> list[dict]:
                 "names": names - {""},
                 "artists": artist_names - {""},
                 "inv": normalize_inv(inv) or None,
+                "inv_digits": _NONDIGIT.sub("", inv or "") or None,
+                "inventory": inv,  # 原样展示,用户拿它对照说明牌
                 "popularity": pop or 0,
                 # 展示字段自带 → search() 零回表
                 "title_i18n": title_i18n,
@@ -182,14 +188,31 @@ def _score(entry: dict, qn: str, qinv: str) -> float:
 
 
 def rank(index: list[dict], query: str, limit: int = 20) -> list[tuple[dict, float]]:
-    """[(entry, score)] 降序,同分按 popularity 降序,取 top limit。空 query → []。"""
+    """[(entry, score)] 降序,同分按 popularity 降序,取 top limit。空 query → []。
+
+    两段式(S4):先走常规打分;query 为纯数字(≥3 位)且**没有任何条目拿到整串精确档**时,
+    再按「馆藏号只留数字」整串相等补一档 0.9 —— 说明牌上 `INV 779`,用户只敲了 `779`。
+    ⚠️ 「数字退路全部列出」靠调用方 limit 够大:前端 searchProvider 传 60(search_api.dart),
+    prod 已知同数字最多 23 件;0.9 档整体排在低档之前,截断只会先砍低档。"""
+    # 全角→半角(中日韩输入法常切成全角数字/字母)
+    query = unicodedata.normalize("NFKC", query)
     qn = normalize(query)
     if not qn:
         return []
     qinv = normalize_inv(query)
-    scored = [(e, s) for e in index if (s := _score(e, qn, qinv)) > 0]
-    scored.sort(key=lambda es: (-es[1], -es[0]["popularity"]))
-    return scored[:limit]
+    scored = {e["id"]: (e, s) for e in index if (s := _score(e, qn, qinv)) > 0}
+    qd = query.strip()
+    if (
+        qd.isdigit()
+        and len(qd) >= _INV_MIN
+        and not any(s == _S_INV for _, s in scored.values())
+    ):
+        for e in index:
+            if e["inv_digits"] == qd:
+                prev = scored.get(e["id"], (e, 0.0))[1]
+                scored[e["id"]] = (e, max(prev, _S_INV_DIGITS))
+    out = sorted(scored.values(), key=lambda es: (-es[1], -es[0]["popularity"]))
+    return out[:limit]
 
 
 def _search_museums(db, query: str, language: str, visible=None) -> list[dict]:
@@ -268,6 +291,7 @@ def search(
                     "thumbnail": thumbnail,
                     "year": entry["year"],
                     "has_image": thumbnail is not None,
+                    "inventory": entry["inventory"],
                 }
             )
     museums = []

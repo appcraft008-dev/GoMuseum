@@ -604,6 +604,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recNoneOfThese => 'Żadne z nich';
 
   @override
+  String get recThisIsIt => 'To ta';
+
+  @override
   String get recNotRecognized => 'Nie rozpoznano tego dzieła';
 
   @override
@@ -613,6 +616,25 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get recShootLabelBtn => 'Sfotografuj tabliczkę';
+
+  @override
+  String get recTypeNumberOrName => 'Wpisz numer lub tytuł';
+
+  @override
+  String get photoFbTitle => 'Wysłać nam to zdjęcie?';
+
+  @override
+  String get photoFbBody =>
+      'Służy wyłącznie do uzupełniania brakujących dzieł i poprawy rozpoznawania. Przechowujemy je najwyżej 90 dni i nikomu nie pokazujemy.';
+
+  @override
+  String get photoFbConsent => 'Wyślij to zdjęcie';
+
+  @override
+  String get photoFbNoteHint => 'Dodaj uwagę (opcjonalnie)';
+
+  @override
+  String get photoFbContinue => 'Dalej';
 
   @override
   String get recSearchWithLabel => 'Szukaj tym tekstem';
@@ -697,6 +719,13 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get camComparing =>
       'AI porównuje z kolekcjami i publicznymi bazami dzieł sztuki';
+
+  @override
+  String get recWaitSlow => 'Trwa to trochę dłużej niż zwykle — wciąż szukamy';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Możesz przełączyć się na inną aplikację — wynik będzie czekał po powrocie';
 
   @override
   String get camConfirmPrompt => 'Rozpoznano, potwierdź dzieło';

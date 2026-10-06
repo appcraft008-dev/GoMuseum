@@ -371,3 +371,84 @@ def test_museum_findable_and_named_in_the_user_s_own_language(session):
     assert [m["slug"] for m in museums] == ["orsay"]
     # 搜得到还不够:显示名也得是日语的,而不是回退英文
     assert museums[0]["name"] == "オルセー美術館"
+
+
+# --- S4:只输数字按馆藏号找 ---
+
+
+@pytest.fixture()
+def inv_session(session):
+    """在基础夹具上加几件带馆藏号的作品。"""
+    mid = _mid(session)
+    for qid, title, inv, pop in [
+        ("Q_INV779", "Portrait of a Man", "INV 779", 5),
+        ("Q_RF779", "Landscape", "RF 779", 5),
+        ("Q_INV7790", "Still Life", "INV 7790", 5),
+        ("Q_T779", "Salon 779", None, 50),  # 标题子串含 779,高人气
+    ]:
+        upsert_object(
+            session,
+            mid,
+            {"qid": qid, "title_en": title, "inventory_number": inv, "popularity": pop},
+        )
+    session.commit()
+    inprocess._index_cache.clear()
+    return session
+
+
+def test_digit_query_finds_inventories(inv_session):
+    idx = build_search_index(inv_session, _mid(inv_session))
+    out = {e["qid"]: s for e, s in rank(idx, "779")}
+    assert out["Q_INV779"] == 0.9 and out["Q_RF779"] == 0.9
+    assert "Q_INV7790" not in out  # 数字整串相等,不是子串
+
+
+def test_digit_fallback_tier_order(inv_session):
+    """数字退路 0.9 排在标题子串(0.6,且人气更高)之前。"""
+    idx = build_search_index(inv_session, _mid(inv_session))
+    qids = [e["qid"] for e, _ in rank(idx, "779")]
+    assert qids.index("Q_INV779") < qids.index("Q_T779")
+    assert qids.index("Q_RF779") < qids.index("Q_T779")
+
+
+def test_full_inventory_query_returns_one(inv_session):
+    idx = build_search_index(inv_session, _mid(inv_session))
+    out = rank(idx, "INV 779")
+    assert [(e["qid"], s) for e, s in out] == [("Q_INV779", 1.0)]
+
+
+def test_alnum_query_no_digit_fallback(inv_session):
+    idx = build_search_index(inv_session, _mid(inv_session))
+    assert not any(s == 0.9 for _, s in rank(idx, "A779X"))
+
+
+def test_exact_digit_inventory_suppresses_fallback(inv_session):
+    """有件馆藏号就是 "779" → 它拿 1.0,数字退路不启用,RF 779 不被拉进来。"""
+    upsert_object(
+        inv_session,
+        _mid(inv_session),
+        {"qid": "Q_BARE", "title_en": "Bare", "inventory_number": "779"},
+    )
+    inv_session.commit()
+    inprocess._index_cache.clear()
+    idx = build_search_index(inv_session, _mid(inv_session))
+    out = {e["qid"]: s for e, s in rank(idx, "779")}
+    assert out["Q_BARE"] == 1.0
+    assert "Q_RF779" not in out
+
+
+def test_short_digit_query_no_fallback(inv_session):
+    idx = build_search_index(inv_session, _mid(inv_session))
+    assert not any(s == 0.9 for _, s in rank(idx, "77"))
+
+
+def test_fullwidth_digits(inv_session):
+    """中日韩输入法常切成全角数字:「７７９」也要按馆藏号找到。"""
+    idx = build_search_index(inv_session, _mid(inv_session))
+    out = {e["qid"]: s for e, s in rank(idx, "７７９")}
+    assert out.get("Q_INV779") == 0.9
+
+
+def test_search_result_carries_inventory(inv_session):
+    _, objs = search(inv_session, _FakeStorage(), "INV 779", language="en")
+    assert objs[0]["inventory"] == "INV 779"

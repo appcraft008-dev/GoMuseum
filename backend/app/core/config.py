@@ -108,6 +108,18 @@ class Settings(BaseSettings):
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET: str = "gomuseum-assets"
     R2_PUBLIC_BASE_URL: str = ""
+    # S5 识别照片反馈:**独立私有桶 + 独立凭据**,不绑任何公开域名;未配齐 = 功能关闭。
+    # 隐私政策上线前保持 PHOTO_FEEDBACK_ENABLED=False(App 据识别响应的 photo_feedback 字段决定弹不弹)。
+    PHOTO_FEEDBACK_ENABLED: bool = False
+    PHOTO_FEEDBACK_R2_BUCKET: str = ""
+    # EU 管辖权桶只能走 https://<账号>.eu.r2.cloudflarestorage.com(普通地址 AccessDenied,
+    # 2026-10-06 实测);空 = 沿用 R2_ENDPOINT_URL
+    PHOTO_FEEDBACK_R2_ENDPOINT_URL: str = ""
+    PHOTO_FEEDBACK_R2_ACCESS_KEY_ID: str = ""
+    PHOTO_FEEDBACK_R2_SECRET_ACCESS_KEY: str = ""
+    # ⚠️ ImageService.validate_image 内部另有 MAX_IMAGE_SIZE_MB 上限;调大这个值时要同步,
+    # 否则超过后者的图会被当成「不是图片」返回 422 而不是 413。
+    PHOTO_FEEDBACK_MAX_BYTES: int = 10 * 1024 * 1024
     # 分享层(spec 2026-09-20-share-web-pages-design)。链接域名 = 公开网页所在站点;
     # staging 设成 https://staging-api.gomuseum.app(它的 nginx 把 / 整个反代到后端)。
     PUBLIC_WEB_BASE_URL: str = "https://gomuseum.app"

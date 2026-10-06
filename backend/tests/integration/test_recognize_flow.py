@@ -530,3 +530,59 @@ def test_anonymous_recognition_leaves_no_footprint(session):
     )
 
     assert session.query(RecognitionEvent).one().user_id is None
+
+
+def test_billing_inflight_waiter_not_charged(session, monkeypatch):
+    """⭐ S2:已登录用户超时后重发同一张照片,首请求还在服务端算 → 重发变成等待者。
+    首请求自己会扣次+解锁;等待者若按普通缓存命中走计费,此刻首请求的解锁还没提交
+    → `free_audio_qids` 里没有这件 → 再扣一次 = 一张照片扣两次。"""
+    import threading
+
+    import fakeredis
+
+    from app.services.image_service import ImageService
+    from app.services.recognition import service as svc
+    from app.services.recognition.service import recognize_billed
+
+    monkeypatch.setattr(svc, "_WAIT_POLL_S", 0.02)
+    UB = _benefits_tables(session)
+    img = _jpeg()
+    r = fakeredis.FakeRedis(decode_responses=True)
+    # 先造一份首请求的 match 结果(不经计费),再把它挪成「首请求还在算」的现场
+    recognize(session, "orsay", img, redis=r, **_match_kw())
+    ck = svc._cache_key("orsay", ImageService.generate_hash(img), "zh", None)
+    first_json = r.get(ck)
+    r.delete(ck)
+    r.set(svc._inflight_key(ck), "1")
+
+    def finish_first():
+        r.setex(ck, 60, first_json)
+        r.delete(svc._inflight_key(ck))
+
+    threading.Timer(0.1, finish_first).start()
+    out = recognize_billed(
+        session,
+        "orsay",
+        img,
+        user_id="u-resend",
+        device_id="dev1",
+        redis=r,
+        **_match_kw(),
+    )
+    assert out["outcome"] == "match"
+    assert "_billed" not in out  # 内部字段不进响应
+    ub = session.query(UB).filter_by(user_id="u-resend").one_or_none()
+    assert ub is None or ub.recognition_quota == FREE  # 没扣
+
+
+def test_recognize_response_carries_photo_feedback_flag(session, monkeypatch):
+    """S5 服务端开关:App 只在识别响应说 true 时才弹「发照片」确认框。"""
+    from app.services.recognition.service import recognize_billed
+    from app.services.storage import photo_feedback as pf
+
+    _benefits_tables(session)
+    kw = dict(user_id=None, device_id="dev1", **_match_kw())
+    monkeypatch.setattr(pf, "photo_feedback_available", lambda: False)
+    assert recognize_billed(session, "orsay", _jpeg(), **kw)["photo_feedback"] is False
+    monkeypatch.setattr(pf, "photo_feedback_available", lambda: True)
+    assert recognize_billed(session, "orsay", _jpeg(), **kw)["photo_feedback"] is True

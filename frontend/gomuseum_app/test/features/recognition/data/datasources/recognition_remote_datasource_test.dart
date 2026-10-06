@@ -99,6 +99,23 @@ void main() {
         throwsA(isA<ServerException>()));
   });
 
+  // 部署重启时 nginx 回 502:与断网同类,交给上层重发(S2)。500 是真错误,仍是失败。
+  test('recognize maps 502 to NetworkException (retryable)', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'),
+            queryParameters: any(named: 'queryParameters'),
+            options: any(named: 'options')))
+        .thenThrow(DioException(
+            requestOptions: RequestOptions(path: '/api/v1/recognize'),
+            type: DioExceptionType.badResponse,
+            response: Response(
+                requestOptions: RequestOptions(path: '/api/v1/recognize'),
+                statusCode: 502)));
+
+    await expectLater(ds.recognize(slug: null, image: image(), language: 'en'),
+        throwsA(isA<NetworkException>()));
+  });
+
   test('confirm posts phash+qid to /api/v1/recognize/confirm', () async {
     when(() => dio.post(any(),
             data: any(named: 'data'), options: any(named: 'options')))
@@ -127,5 +144,47 @@ void main() {
             type: DioExceptionType.connectionError));
 
     await expectLater(ds.confirm(phash: 'abc123', qid: 'Q1'), completes);
+  });
+
+  test('reject posts phash+qids to /api/v1/recognize/reject', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'), options: any(named: 'options')))
+        .thenAnswer((_) async => Response(
+            requestOptions: RequestOptions(path: '/api/v1/recognize/reject'),
+            statusCode: 204));
+
+    await ds.reject(phash: 'ph', qids: const ['Q1', 'Q2']);
+
+    final v = verify(() => dio.post(captureAny(),
+        data: captureAny(named: 'data'), options: any(named: 'options')));
+    expect(v.captured[0], '/api/v1/recognize/reject');
+    expect(v.captured[1], {
+      'phash': 'ph',
+      'qids': ['Q1', 'Q2']
+    });
+  });
+
+  test('reject swallows all exceptions (fire-and-forget)', () async {
+    when(() => dio.post(any(),
+        data: any(named: 'data'),
+        options: any(named: 'options'))).thenThrow(Exception('boom'));
+    await ds.reject(phash: 'ph', qids: const ['Q1']);
+  });
+
+  test('confirm sends source only when given (search path)', () async {
+    when(() => dio.post(any(),
+            data: any(named: 'data'), options: any(named: 'options')))
+        .thenAnswer((_) async => Response(
+            requestOptions: RequestOptions(path: '/api/v1/recognize/confirm'),
+            statusCode: 204));
+
+    await ds.confirm(phash: 'ph', qid: 'Q1', source: 'search');
+    await ds.confirm(phash: 'ph', qid: 'Q2');
+
+    final data = verify(() => dio.post(any(),
+        data: captureAny(named: 'data'),
+        options: any(named: 'options'))).captured;
+    expect(data[0], {'phash': 'ph', 'qid': 'Q1', 'source': 'search'});
+    expect(data[1], {'phash': 'ph', 'qid': 'Q2'}); // 缺省不带,老语义
   });
 }

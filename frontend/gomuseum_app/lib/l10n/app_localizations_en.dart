@@ -597,6 +597,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recNoneOfThese => 'None of these';
 
   @override
+  String get recThisIsIt => 'This is it';
+
+  @override
   String get recNotRecognized => 'Couldn\'t recognize this work';
 
   @override
@@ -606,6 +609,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recShootLabelBtn => 'Photograph the wall label';
+
+  @override
+  String get recTypeNumberOrName => 'Type the number or title';
+
+  @override
+  String get photoFbTitle => 'Send us this photo?';
+
+  @override
+  String get photoFbBody =>
+      'Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.';
+
+  @override
+  String get photoFbConsent => 'Send this photo';
+
+  @override
+  String get photoFbNoteHint => 'Add a note (optional)';
+
+  @override
+  String get photoFbContinue => 'Continue';
 
   @override
   String get recSearchWithLabel => 'Search using this text';
@@ -689,6 +711,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get camComparing =>
       'AI is comparing with collections and public art databases';
+
+  @override
+  String get recWaitSlow => 'Taking a bit longer than usual — still looking';
+
+  @override
+  String get recWaitSwitchApp =>
+      'You can switch to another app — the result will be here when you come back';
 
   @override
   String get camConfirmPrompt => 'Recognition done, please confirm the work';

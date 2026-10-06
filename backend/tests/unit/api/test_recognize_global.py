@@ -332,3 +332,209 @@ def test_confirm_unknown_qid_ignored_but_204():
         assert row.confirmed_qid is None
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+# --- S3:改选与「都不是」记录(rejected_qids) ---
+
+
+def _row(s, phash):
+    from app.models.recognition_event import RecognitionEvent
+
+    s.expire_all()
+    return s.query(RecognitionEvent).filter_by(phash=phash).one()
+
+
+def test_reselect_records_previous_as_rejected():
+    """选了 A、返回、改选 B:A 进 rejected_qids,答案是 B。previous 由服务端推出,不靠客户端。"""
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-re")
+        client.post("/api/v1/recognize/confirm", json={"phash": "ph-re", "qid": "Q1"})
+        client.post("/api/v1/recognize/confirm", json={"phash": "ph-re", "qid": "Q2"})
+        row = _row(s, "ph-re")
+        assert row.confirmed_qid == "Q2"
+        assert row.rejected_qids == ["Q1"]
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_reselect_back_removes_from_rejected():
+    """A→B→A:最终答案 A 不能还挂在 rejected 里。"""
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-aba")
+        for q in ("Q1", "Q2", "Q1"):
+            client.post("/api/v1/recognize/confirm", json={"phash": "ph-aba", "qid": q})
+        row = _row(s, "ph-aba")
+        assert row.confirmed_qid == "Q1"
+        assert row.rejected_qids == ["Q2"]
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_reject_records_candidates():
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-none")
+        r = client.post(
+            "/api/v1/recognize/reject", json={"phash": "ph-none", "qids": ["Q1", "Q2"]}
+        )
+        assert r.status_code == 204
+        assert _row(s, "ph-none").rejected_qids == ["Q1", "Q2"]
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_reject_after_confirm_records_all():
+    """先选 A 进详情、返回点「都不是」:A 也进 rejected;confirmed 不清(保计费幂等/足迹),
+    分析时 rejected 覆盖 confirmed。"""
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-ac")
+        client.post("/api/v1/recognize/confirm", json={"phash": "ph-ac", "qid": "Q1"})
+        client.post(
+            "/api/v1/recognize/reject", json={"phash": "ph-ac", "qids": ["Q1", "Q2"]}
+        )
+        row = _row(s, "ph-ac")
+        assert row.rejected_qids == ["Q1", "Q2"]
+        assert row.confirmed_qid == "Q1"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_reject_drops_unknown_qids():
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-junk")
+        client.post(
+            "/api/v1/recognize/reject",
+            json={"phash": "ph-junk", "qids": ["Q1", "Qnope"]},
+        )
+        assert _row(s, "ph-junk").rejected_qids == ["Q1"]
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_reject_garbage_phash_still_204():
+    client, s = _confirm_client()
+    try:
+        r = client.post(
+            "/api/v1/recognize/reject", json={"phash": "nope", "qids": ["Q1"]}
+        )
+        assert r.status_code == 204
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_reject_rejects_oversized_payload():
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-big")
+        too_many = client.post(
+            "/api/v1/recognize/reject",
+            json={"phash": "ph-big", "qids": [f"Q{i}" for i in range(11)]},
+        )
+        too_long = client.post(
+            "/api/v1/recognize/reject", json={"phash": "ph-big", "qids": ["Q" * 40]}
+        )
+        assert too_many.status_code == 422
+        assert too_long.status_code == 422
+        assert _row(s, "ph-big").rejected_qids is None
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_rejected_and_confirmed_consistent_across_rows_of_same_photo():
+    """同一张照片重拍会多出事件行(缓存命中/S2 重发)。分析口径按 phash 分组:
+    答案 = 组内 confirmed − 组内 rejected 的并集。旧行上「都不是」过的那件,
+    重拍后被选中,必须从所有行的 rejected 里拿掉,否则口径会把真答案排除。"""
+    from datetime import datetime, timedelta
+
+    from app.models.recognition_event import RecognitionEvent
+
+    client, s = _confirm_client()
+    try:
+        old = RecognitionEvent(
+            museum_slug="orsay",
+            phash="ph-rows",
+            outcome="candidates",
+            top_qid="Q1",
+            engine="text",
+            created_at=datetime.utcnow() - timedelta(minutes=5),
+        )
+        s.add(old)
+        s.commit()
+        client.post(
+            "/api/v1/recognize/reject", json={"phash": "ph-rows", "qids": ["Q1"]}
+        )
+        _event(s, "ph-rows")  # 重拍:新行
+        client.post("/api/v1/recognize/confirm", json={"phash": "ph-rows", "qid": "Q1"})
+        s.expire_all()
+        rows = s.query(RecognitionEvent).filter_by(phash="ph-rows").all()
+        confirmed = {r.confirmed_qid for r in rows} - {None}
+        rejected = {q for r in rows for q in (r.rejected_qids or [])}
+        assert confirmed - rejected == {"Q1"}
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_from_search_records_but_never_charges(monkeypatch):
+    """S4:选择页搜到作品 = 记下「这张照片是这件」,但搜索免费:不扣次、不解锁。"""
+    from app.core.config import settings
+    from app.models.user_benefits import UserBenefits
+    from app.services import entitlement_service as es
+
+    headers = _as_user(monkeypatch, "u-search")
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-search")
+        r = client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-search", "qid": "Q1", "source": "search"},
+            headers=headers,
+        )
+        assert r.status_code == 204
+        assert _row(s, "ph-search").confirmed_qid == "Q1"
+        ub = s.query(UserBenefits).filter_by(user_id="u-search").one_or_none()
+        assert ub is None or ub.recognition_quota == settings.FREE_RECOGNITION_QUOTA
+        assert es.audio_access(s, "u-search", "Q1") != "allowed"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_search_confirm_does_not_spend_the_first_time_lock(monkeypatch):
+    """评审 P0:search 确认写了 confirmed_qid,之后同一张照片的候选确认仍要正常扣 1 次并解锁
+    (「一次拍照只扣一次」的锁只能被**计过费的**确认占用)。"""
+    from app.core.config import settings
+    from app.models.user_benefits import UserBenefits
+
+    headers = _as_user(monkeypatch, "u-mix")
+    client, s = _confirm_client()
+    try:
+        _event(s, "ph-mix")
+        client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-mix", "qid": "Q1", "source": "search"},
+            headers=headers,
+        )
+        client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-mix", "qid": "Q2"},
+            headers=headers,
+        )
+        ub = s.query(UserBenefits).filter_by(user_id="u-mix").one()
+        assert ub.recognition_quota == settings.FREE_RECOGNITION_QUOTA - 1
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_unknown_source_rejected():
+    client, s = _confirm_client()
+    try:
+        r = client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "x", "qid": "Q1", "source": "hack"},
+        )
+        assert r.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_db, None)

@@ -19,8 +19,14 @@ import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
+import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
+import 'package:gomuseum_app/features/recognition/presentation/widgets/recognition_wait_hint.dart';
+import 'package:gomuseum_app/features/recognition/presentation/widgets/photo_feedback_dialog.dart';
+import 'package:gomuseum_app/features/recognition/data/photo_feedback_repository.dart';
 import 'package:gomuseum_app/features/recognition/domain/label_search_query.dart';
+import 'package:gomuseum_app/features/search/data/search_api.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
@@ -59,10 +65,37 @@ double computeZoomLevel({
 /// 重建。曾经在生命周期回调开头写 `if (_controller == null) return;`，把
 /// `resumed` 一起吞了——开过图库/授权弹窗回来后相机永不重启，取景器停在转圈、
 /// 快门也按不动。
+/// S5:点选作品进详情页前,要不要问用户要照片、以哪个时刻(spec ⑦⑧⑨)。
+/// 走过选择页之后找到作品 → found(同一张照片只问一次);返回候选后改选另一件 →
+/// corrected(答案变了,允许再问);其余(直接命中、首次就选第 2/3 名候选)→ null 不问。
+/// found 先判:作品候选选过 A → 都不是 → 说明牌候选选 B,这是「经选择页找到」,
+/// 不是在同一组候选里改主意。抽成纯函数:这段是隐私敏感的判定核心,相机页只喂状态。
+@visibleForTesting
+String? photoFeedbackTriggerOnPick({
+  required bool fromCandidates,
+  required bool fromSearch,
+  required bool reachedChoice,
+  required bool foundAsked,
+  required String? candidateOpened,
+  required String qid,
+}) {
+  if ((fromSearch || reachedChoice) && !foundAsked) return 'found';
+  if (fromCandidates && candidateOpened != null && candidateOpened != qid) {
+    return 'corrected';
+  }
+  return null;
+}
+
+/// S5:点「重新拍摄」时 —— 只有在选择页上放弃这张照片才算「最终没找到」。
+@visibleForTesting
+String? photoFeedbackTriggerOnRetake(
+        {required bool reachedChoice, required bool onChoicePage}) =>
+    reachedChoice && onChoicePage ? 'not_found' : null;
+
 @visibleForTesting
 bool shouldRestartCamera(AppLifecycleState state,
-        {required bool hasController}) =>
-    state == AppLifecycleState.resumed && !hasController;
+        {required bool hasController, bool isTopRoute = true}) =>
+    state == AppLifecycleState.resumed && !hasController && isTopRoute;
 
 class _CameraPageState extends ConsumerState<CameraPage>
     with WidgetsBindingObserver {
@@ -72,6 +105,23 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   /// 引导拍墙签模式：下一张照片以 `mode=label` 提交。
   bool _labelMode = false;
+
+  /// 用户拍的**作品**照片及其 phash。拍说明牌会覆盖 `_captured`,而「照片=这件」的答案、
+  /// 照片反馈、无图作品详情页的 hero 要的都是作品照片,不是说明牌(S5 修 S4 遗留)。
+  XFile? _artworkShot;
+  String? _artworkPhash;
+
+  /// S5 服务端开关值,取自**作品**那次识别(拍说明牌后状态换了,开关要从作品那次带过来)。
+  bool _photoFeedbackEnabled = false;
+
+  /// 这张作品照片走到过选择页(「没认出来」或「都不是」)——之后找到作品 = 触发「找到了」。
+  bool _reachedChoice = false;
+
+  /// 同一张作品照片「找到了」只问一次(换选另算)。
+  bool _foundAsked = false;
+
+  /// 候选路径上用户已进过详情页的那件 —— 返回后改选另一件 = 触发「换选」。
+  String? _candidateOpened;
 
   /// 「最近图库」缩略图条的最近图片资产（相册权限拿到后填充）。
   List<AssetEntity> _recentAssets = const [];
@@ -191,16 +241,26 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = _controller;
     if (state == AppLifecycleState.inactive) {
-      if (controller == null) return;
-      // 先置 null 再 dispose：build 里会读它，不能让重建期撞上已释放的 controller。
-      _controller = null;
-      if (mounted) setState(() {}); // 不重建的话 CameraPreview 还挂着死纹理
-      controller.dispose();
-    } else if (shouldRestartCamera(state, hasController: controller != null)) {
+      _releaseCamera();
+    } else if (shouldRestartCamera(state,
+        hasController: _controller != null,
+        // S3:候选进详情页是 push,相机页还在栈里;详情页在上时回前台不能在底下重开相机。
+        // 前提:/camera 与 /guide 同在根 Navigator(ShellRoute 外)——相机挪进
+        // shell/嵌套 Navigator 时这个判断要重查。
+        isTopRoute: ModalRoute.of(context)?.isCurrent ?? true)) {
       _initCamera();
     }
+  }
+
+  /// 放掉相机(切后台 / 进详情页前)。
+  void _releaseCamera() {
+    final controller = _controller;
+    if (controller == null) return;
+    // 先置 null 再 dispose：build 里会读它，不能让重建期撞上已释放的 controller。
+    _controller = null;
+    if (mounted) setState(() {}); // 不重建的话 CameraPreview 还挂着死纹理
+    controller.dispose();
   }
 
   @override
@@ -304,10 +364,24 @@ class _CameraPageState extends ConsumerState<CameraPage>
         .recognize(slug: null, image: shot, language: lang, mode: mode);
     if (!mounted) return;
     final st = ref.read(recognitionNotifierProvider);
+    if (mode == 'artwork') {
+      _artworkShot = shot;
+      _artworkPhash = switch (st) {
+        RecognitionCandidates() => st.phash,
+        RecognitionUnrecognized() => st.phash,
+        _ => null, // 直接命中就进详情了,用不到
+      };
+      _photoFeedbackEnabled = switch (st) {
+        RecognitionCandidates() => st.photoFeedback,
+        RecognitionUnrecognized() => st.photoFeedback,
+        _ => false,
+      };
+      if (st is RecognitionUnrecognized) _reachedChoice = true;
+    }
     // 后端才是付费墙的执行点:客户端闸放行了但后端拒了(权益缓存过期/还没加载完)。
     // 退回取景器再弹付费墙 —— 停在"识别失败"会让用户以为 App 坏了。
     if (st is RecognitionQuotaExceeded) {
-      _retake();
+      unawaited(_retake());
       // 顺序要紧:先用当前权益判"已购未激活",再 invalidate ——
       // 反过来会把 `.value` 清成 null,那个分支永远命不中。
       if (await _passActivatedIfPurchased(museum: st.museum)) return;
@@ -334,12 +408,67 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
   }
 
-  void _retake() {
+  Future<void> _retake() async {
+    // 选择页上放弃这张照片 = 「最终没找到」(S5 触发 ②)
+    final trigger = photoFeedbackTriggerOnRetake(
+        reachedChoice: _reachedChoice,
+        onChoicePage:
+            ref.read(recognitionNotifierProvider) is RecognitionUnrecognized);
+    if (trigger != null) {
+      await _maybeAskPhoto(trigger);
+      if (!mounted) return;
+    }
     setState(() {
       _captured = null;
       _labelMode = false;
+      _artworkShot = null; // 新的一张作品
+      _artworkPhash = null;
+      _photoFeedbackEnabled = false;
+      _reachedChoice = false;
+      _foundAsked = false;
+      _candidateOpened = null;
     });
     ref.read(recognitionNotifierProvider.notifier).resetState();
+  }
+
+  /// S5 照片反馈。服务端开关关着、本进程已拒绝过、没有作品照片 → 不弹,直接返回。
+  /// 不勾不分叉:无论选什么,调用方之后的流程完全一样;上传在后台,不 await。
+  Future<void> _maybeAskPhoto(String trigger,
+      {String? answerQid, String? museum, String? queryText}) async {
+    final st = ref.read(recognitionNotifierProvider);
+    final shot = _artworkShot;
+    final phash = _artworkPhash;
+    if (!_photoFeedbackEnabled ||
+        photoFeedbackDeclinedThisSession ||
+        shot == null ||
+        phash == null) {
+      return;
+    }
+    final choice = await showPhotoFeedbackDialog(context, photo: shot);
+    if (choice == null || !choice.send) {
+      photoFeedbackDeclinedThisSession = true;
+      return;
+    }
+    final labelText = st is RecognitionUnrecognized ? st.labelText : null;
+    // 照 recognition_provider 的写法:Future<String> 上 catchError 返回 null 会运行时抛
+    String? deviceId;
+    try {
+      deviceId = await ref.read(deviceIdProvider.future);
+    } catch (_) {
+      deviceId = null;
+    }
+    unawaited(ref.read(photoFeedbackRepositoryProvider).send(
+          image: shot,
+          trigger: trigger,
+          phash: phash,
+          answerQid: answerQid,
+          museumSlug: museum,
+          language: apiLanguage(ref.read(resolvedLocaleProvider)),
+          queryText: queryText,
+          labelText: labelText,
+          text: choice.text,
+          deviceId: deviceId,
+        ));
   }
 
   /// 进入引导拍墙签：回取景器，下一张以 `mode=label` 提交。
@@ -351,10 +480,32 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ref.read(recognitionNotifierProvider.notifier).resetState();
   }
 
-  void _goGuide(String slug, String qid) {
-    // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」
-    if (_lastShotLive) {
-      // 这个页马上 pushReplacement 被销毁:写完存储时 ref 已不能用,所以先拿容器
+  Future<void> _goGuide(String slug, String qid,
+      {bool fromCandidates = false,
+      bool fromSearch = false,
+      String? queryText}) async {
+    // S5 照片反馈(进详情页前问;判定见 photoFeedbackTriggerOnPick)
+    final trigger = photoFeedbackTriggerOnPick(
+      fromCandidates: fromCandidates,
+      fromSearch: fromSearch,
+      reachedChoice: _reachedChoice,
+      foundAsked: _foundAsked,
+      candidateOpened: _candidateOpened,
+      qid: qid,
+    );
+    if (trigger == 'found') _foundAsked = true;
+    if (trigger != null) {
+      await _maybeAskPhoto(trigger,
+          answerQid: qid,
+          museum: slug,
+          queryText: trigger == 'found' ? queryText : null);
+    }
+    if (fromCandidates) _candidateOpened = qid;
+    if (!mounted) return;
+    // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」。
+    // 搜索路径不记:取景器上的搜索按钮拍照前就能用,_lastShotLive 可能是上一张的残值(S4)
+    if (_lastShotLive && !fromSearch) {
+      // 这个页可能马上被销毁(命中走 pushReplacement):写完存储时 ref 已不能用,所以先拿容器
       final container = ProviderScope.containerOf(context, listen: false);
       unawaited(recordLiveMatch(slug)
           .then((_) => container.invalidate(nearbyProvider))
@@ -362,18 +513,62 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
-    unawaited(
-        ref.read(recognitionNotifierProvider.notifier).confirmRecognition(qid));
+    unawaited(ref.read(recognitionNotifierProvider.notifier).confirmRecognition(
+        qid,
+        fromSearch: fromSearch,
+        phashOverride: _artworkPhash));
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
-    context.pushReplacement(
-      '/guide',
-      extra: GuideArgs(
-        slug: slug,
-        qid: qid,
-        imagePath: _captured?.path,
-        // 识别成功即自动播讲解:这是"保证送达的首体验",
-        // 也是现场"边看边听"的产品形态
-        autoPlayAudio: true,
+    final args = GuideArgs(
+      slug: slug,
+      qid: qid,
+      // 拍过说明牌时 _captured 是说明牌,hero 要的是作品照片(S5)
+      imagePath: (_artworkShot ?? _captured)?.path,
+      // 识别成功即自动播讲解:这是"保证送达的首体验",
+      // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
+      autoPlayAudio: !fromSearch,
+    );
+    // 候选/搜索路径都 push:返回回到候选列表/选择页(S3/S4)
+    if (!fromCandidates && !fromSearch) {
+      context.pushReplacement('/guide', extra: args);
+      return;
+    }
+    // S3:候选点进详情页用 push —— 用户常在详情页点开大图才发现选错,返回要回到候选列表
+    // (识别状态还在,不用重拍)。进去前放掉相机(否则详情页底下一直占着相机),回来再开。
+    _releaseCamera();
+    await context.push('/guide', extra: args);
+    if (mounted && _controller == null) _initCamera();
+  }
+
+  /// 候选全屏比对(S3):复用详情页画廊,左右切换候选,底部给标题和「就是这件」。
+  void _openCandidateViewer(RecognizedItem tapped) {
+    final st = ref.read(recognitionNotifierProvider);
+    if (st is! RecognitionCandidates) return;
+    final cands = st.candidates;
+    final l10n = AppLocalizations.of(context)!;
+    showImageGallery(
+      context,
+      images: [
+        for (final c in cands)
+          ObjectImage(url: c.image ?? c.thumbnail ?? '', credit: c.credit),
+      ],
+      initialIndex: cands.indexOf(tapped).clamp(0, cands.length - 1),
+      footerBuilder: (ctx, i) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(cands[i].title,
+              textAlign: TextAlign.center,
+              style: GmText.serif(
+                  size: 16, weight: FontWeight.w600, color: Colors.white)),
+          const SizedBox(height: 10),
+          GmTicketButton(
+            label: l10n.recThisIsIt,
+            icon: GmIcons.chevR,
+            onTap: () {
+              Navigator.of(ctx).pop();
+              _goGuide(cands[i].museum!, cands[i].qid, fromCandidates: true);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -390,6 +585,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
       builder: (_) => _TagSearchSheet(
         lang: apiLanguage(ref.read(resolvedLocaleProvider)),
         initialQuery: initialQuery,
+        // S4:点选走相机页自己的跳转(带本机照片、回传答案、返回仍回这里)。
+        // **不要再 pop**:SearchResultsView 的 onNavigate 已经关过 sheet,
+        // 这里再 pop 会把相机页本身弹掉。museum 由结果行 slug==null→不可点 保证非空。
+        onPick: (obj, query) =>
+            _goGuide(obj.museum!, obj.qid, fromSearch: true, queryText: query),
       ),
     );
   }
@@ -823,7 +1023,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
         ],
       ),
       const SizedBox(height: 8),
-      Text(l10n.camComparing, style: GmText.sans(size: 12, color: gm.sub)),
+      RecognitionWaitHint(style: GmText.sans(size: 12, color: gm.sub)),
       const SizedBox(height: 10),
     ];
   }
@@ -842,8 +1042,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
       const SizedBox(height: 4),
       Center(
         child: GestureDetector(
-          onTap: () =>
-              ref.read(recognitionNotifierProvider.notifier).rejectCandidates(),
+          onTap: () {
+            ref.read(recognitionNotifierProvider.notifier).rejectCandidates();
+            _reachedChoice = true; // 「都不是」= 走到选择页(S5)
+          },
           child: Text(l10n.recNoneOfThese,
               style: GmText.sans(size: 12.5, color: gm.accent)),
         ),
@@ -856,7 +1058,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 埋点接口 P2 提供,现只保证跳转畅通。
     // 跳转用该候选归属馆;老后端无 museum 字段 → 回退 orsay(契约容错)。
     return GestureDetector(
-      onTap: () => _goGuide(c.museum!, c.qid), // 候选已按 isValid 过滤
+      // 候选已按 isValid 过滤
+      onTap: () => _goGuide(c.museum!, c.qid, fromCandidates: true),
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(9),
@@ -871,19 +1074,37 @@ class _CameraPageState extends ConsumerState<CameraPage>
             // 一眼对得上刚拍的画。考虑过「完整显示不裁」,但横竖幅混排时
             // 留白忽上下忽左右，用户否了。候选恒 ≤3 个(后端 cands[:3]),
             // 放大不会撑爆底部面板(非滚动 Column)。
-            SizedBox(
-              width: 92,
-              height: 92,
-              child: c.thumbnail != null
-                  ? Image.network(sizedImageUrl(c.thumbnail!, 280),
-                      fit: BoxFit.cover,
-                      headers: kImageRequestHeaders,
-                      errorBuilder: (_, __, ___) => ColoredBox(
-                          color: gm.chipBg,
-                          child: Center(
-                              child: GmIcon(GmIcons.photo,
-                                  size: 26, color: gm.faint))))
-                  : ColoredBox(color: gm.chipBg),
+            GestureDetector(
+              // 缩略图单独可点:全屏放大比对(S3),整行点击仍是直接选
+              // 没图(无图作品)不开:打开也只是一张坏图;null 时点击落到整行=直接选
+              onTap: c.image == null ? null : () => _openCandidateViewer(c),
+              child: Stack(children: [
+                SizedBox(
+                  width: 92,
+                  height: 92,
+                  child: c.thumbnail != null
+                      ? Image.network(sizedImageUrl(c.thumbnail!, 280),
+                          fit: BoxFit.cover,
+                          headers: kImageRequestHeaders,
+                          errorBuilder: (_, __, ___) => ColoredBox(
+                              color: gm.chipBg,
+                              child: Center(
+                                  child: GmIcon(GmIcons.photo,
+                                      size: 26, color: gm.faint))))
+                      : ColoredBox(color: gm.chipBg),
+                ),
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                        color: Colors.black45, shape: BoxShape.circle),
+                    child: const GmIcon(GmIcons.search,
+                        size: 12, color: Colors.white),
+                  ),
+                ),
+              ]),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -910,48 +1131,41 @@ class _CameraPageState extends ConsumerState<CameraPage>
     );
   }
 
-  /// 未收录卡——绝不显示 AI 猜测的名字（契约 R1）。
-  /// 有 label_text：诚实告知已记需求；无：引导拍墙签。
+  /// 「没认出来」与「都不是」共用的选择卡(S4,用户 2026-10-05 定):
+  /// 「拍说明牌」「输入编号/名称」两个并列主按钮 —— 说明牌上的馆藏号唯一、名称比 AI
+  /// 猜的准;拍不了(禁拍/反光/太远)就手输。「重新拍作品」降为小字。
+  /// 绝不显示 AI 猜测的名字(契约 R1)。
   List<Widget> _unrecognizedContent(
       GmPalette gm, RecognitionUnrecognized state) {
     final l10n = AppLocalizations.of(context)!;
     final label = state.labelText;
-    if (label != null) {
-      // 墙签已拍、OCR 出了文字、目录仍没匹配上——此前这里只有"重拍",是死胡同:
-      // 用户手上已有 OCR 文本,却要退出去自己找搜索再手打一遍。给一跳直达搜索。
-      return [
-        Text(l10n.recLabelSeen(label),
-            style: GmText.sans(size: 13, height: 1.5)),
-        const SizedBox(height: 16),
-        GmTicketButton(
-          label: l10n.recSearchWithLabel,
-          icon: GmIcons.search,
-          onTap: () =>
-              _showTagSearchSheet(initialQuery: labelSearchQuery(label)),
-        ),
-        const SizedBox(height: 12),
-        Center(
-          child: GestureDetector(
-            onTap: _retake,
-            child: Text(l10n.camRetake,
-                style: GmText.sans(size: 12.5, color: gm.accent)),
-          ),
-        ),
-      ];
-    }
     return [
-      Text(l10n.recNotRecognized,
-          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      if (label != null)
+        Text(l10n.recLabelSeen(label),
+            style: GmText.sans(size: 13, height: 1.5))
+      else
+        Text(l10n.recNotRecognized,
+            style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 14),
       GmTicketButton(
         label: l10n.recShootLabelBtn,
         icon: GmIcons.camera,
         onTap: _startLabelCapture,
       ),
-      const SizedBox(height: 8),
-      Text(l10n.recShootLabelHint,
-          textAlign: TextAlign.center,
-          style: GmText.sans(size: 11.5, color: gm.sub)),
+      const SizedBox(height: 10),
+      GmTicketButton(
+        label: l10n.recTypeNumberOrName,
+        icon: GmIcons.search,
+        // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
+        onTap: () => _showTagSearchSheet(
+            initialQuery: label == null ? null : labelSearchQuery(label)),
+      ),
+      if (label == null) ...[
+        const SizedBox(height: 8),
+        Text(l10n.recShootLabelHint,
+            textAlign: TextAlign.center,
+            style: GmText.sans(size: 11.5, color: gm.sub)),
+      ],
       const SizedBox(height: 12),
       Center(
         child: GestureDetector(
@@ -980,9 +1194,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
 /// 识别兜底 → 搜索闭环：无图区/未收录时按编号/名称查找（全局即时搜索）。
 /// 命中点击 → 关闭 sheet 后跳讲解页（与识别 match 同款导航）。
 class _TagSearchSheet extends ConsumerStatefulWidget {
-  const _TagSearchSheet({required this.lang, this.initialQuery});
+  const _TagSearchSheet({required this.lang, this.initialQuery, this.onPick});
 
   final String lang;
+
+  /// 藏品点选交给相机页(S4)。
+  final void Function(SearchObject obj, String query)? onPick;
 
   /// 预填查询词(墙签 OCR 文本):可编辑,用户可改可清——OCR 常含馆名/年代等噪音。
   final String? initialQuery;
@@ -1066,6 +1283,9 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
                   query: (slug: null, q: _q, lang: widget.lang),
                   showMuseums: true,
                   onNavigate: () => Navigator.of(context).pop(),
+                  onPickObject: widget.onPick == null
+                      ? null
+                      : (o) => widget.onPick!(o, _q),
                 ),
               ),
             ),

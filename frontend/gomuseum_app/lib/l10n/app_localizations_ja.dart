@@ -587,6 +587,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recNoneOfThese => 'どれも違う';
 
   @override
+  String get recThisIsIt => 'これです';
+
+  @override
   String get recNotRecognized => 'この作品を認識できませんでした';
 
   @override
@@ -596,6 +599,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recShootLabelBtn => '解説プレートを撮影';
+
+  @override
+  String get recTypeNumberOrName => '番号か作品名を入力';
+
+  @override
+  String get photoFbTitle => 'この写真を送りますか?';
+
+  @override
+  String get photoFbBody => '未収録の作品の追加と認識の改善にのみ使います。保存は最長 90 日で、誰にも公開しません。';
+
+  @override
+  String get photoFbConsent => 'この写真を送る';
+
+  @override
+  String get photoFbNoteHint => '補足(任意)';
+
+  @override
+  String get photoFbContinue => '続ける';
 
   @override
   String get recSearchWithLabel => 'このテキストで検索';
@@ -674,6 +695,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get camComparing => 'AIがコレクションと公開美術データベースと照合中';
+
+  @override
+  String get recWaitSlow => 'いつもより少し時間がかかっています。検索を続けています';
+
+  @override
+  String get recWaitSwitchApp => 'ほかのアプリに切り替えても大丈夫です。戻ったときに結果が表示されます';
 
   @override
   String get camConfirmPrompt => '認識完了。作品を確認してください';

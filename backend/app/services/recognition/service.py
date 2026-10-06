@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
-from app.services.museum_repo import _resolve_name, _sized
+from app.services.museum_repo import _photo_credit, _resolve_name, _sized
 from app.services.recognition.demands import record_demand
 from app.services.recognition.events import record_event
 from app.services.recognition.matcher import LOW, build_index, match
@@ -152,6 +152,33 @@ def _get_redis():
     return client
 
 
+# S2 同键在途合并:App 超时后用同一张照片重发时,首请求在服务端往往还在算
+# (同步端点不随客户端断开而停)。第二个同键请求不重算,等首请求的结果。
+_INFLIGHT_TTL_S = 150  # 锁自身过期:进程被杀也不留死锁;须长于最慢一次识别
+_WAIT_CAP_S = 90  # 等待者上限:短于 nginx proxy_read_timeout 120s
+_WAIT_POLL_S = 0.5
+
+
+def _inflight_key(ckey: str) -> str:
+    return ckey + ":inflight"
+
+
+def _wait_inflight(redis, ckey: str) -> str | None:
+    """轮询等首请求写缓存。锁消失(首请求已结束)仍无缓存、或到上限 → None,调用方自己算。
+    不靠「缓存里出现值」判完成:写缓存失败被吞时首请求照常返回,缓存永远不会出现。
+    ponytail: 等待占一个线程池线程(同步端点),最多 90s;并发重发多到占满线程池时改异步等待。
+    """
+    deadline = time.monotonic() + _WAIT_CAP_S
+    while time.monotonic() < deadline:
+        time.sleep(_WAIT_POLL_S)
+        hit = redis.get(ckey)
+        if hit:
+            return hit
+        if not redis.exists(_inflight_key(ckey)):
+            return redis.get(ckey)  # 两次读之间首请求恰好写完缓存并释放锁
+    return None
+
+
 def _summary(db, storage, o: MuseumObject, language: str) -> dict:
     attrs = o.attributes or {}
     art = None
@@ -208,11 +235,23 @@ def _summaries(db, storage, objs: list, language: str) -> dict:
 
 def _summary_of(storage, o: MuseumObject, art, img, mus, language: str) -> dict:
     attrs = o.attributes or {}
-    thumbnail = None
+    thumbnail = image = credit = None
     if img and img.image_key:
         thumbnail = _sized(storage, img.image_key, "thumb")
+        image = _sized(storage, img.image_key, "large")
     elif img:
-        thumbnail = img.source_url
+        thumbnail = image = img.source_url
+    if img:
+        # 同详情页图集:CC 署名要留,作者本人不算署名(见 _photo_credit)
+        credit = _photo_credit(
+            img.credit,
+            {
+                *((art.name_i18n or {}).values() if art else ()),
+                *((art.name_zh, art.name_en) if art else ()),
+                o.artist_zh,
+                o.artist_en,
+            },
+        )
     return {
         "qid": o.qid,
         "museum": mus.slug if mus else None,
@@ -229,6 +268,9 @@ def _summary_of(storage, o: MuseumObject, art, img, mus, language: str) -> dict:
             o.artist_en or o.artist_zh,
         ),
         "thumbnail": thumbnail,
+        # S3 加法字段:候选全屏比对用大图 + 署名(老 App 不读)
+        "image": image,
+        "credit": credit,
     }
 
 
@@ -299,67 +341,28 @@ def _top_of(out: dict) -> tuple:
     return None, None
 
 
-def recognize(
+def _compute(
     db,
-    slug: str | None,
+    slug,
+    museum,
     image_bytes: bytes,
     *,
-    language: str = "zh",
-    mode: str = "artwork",
-    identify_fn=None,
-    redis=None,
-    embed_fn=None,
-    vector_query_fn=None,
-    embed_crops_fn=None,
-    embed_canvas_fn=None,
-    user_id=None,
-    visible=None,
-) -> dict | None:
-    """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
-    slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
-    响应形状见 spec(outcome/reason 机器码)。"""
-    clock = _StageClock()
-    museum = None
-    if slug is not None:
-        museum = db.query(Museum).filter_by(slug=slug).one_or_none()
-        if museum is None:
-            return None
+    phash,
+    language,
+    mode,
+    identify_fn,
+    embed_fn,
+    vector_query_fn,
+    embed_crops_fn,
+    embed_canvas_fn,
+    user_id,
+    visible,
+    redis,
+    ckey,
+    clock,
+) -> dict:
+    """缓存未命中后的真识别:向量三档 → GPT+文字兜底 → 记事件 → 写缓存。"""
     from app.services.image_service import ImageService
-
-    ImageService.validate_image(image_bytes)
-    sha = ImageService.generate_hash(image_bytes)
-    phash = ImageService.generate_perceptual_hash(image_bytes)
-    clock.mark("prep")
-
-    redis = redis if redis is not None else _get_redis()
-    ckey = _cache_key(slug, sha, language, visible)
-    if redis is not None:
-        try:
-            hit = redis.get(ckey)
-            clock.mark("cache_get")
-            if hit:
-                cached_out = json.loads(hit)
-                cached_out["_billed"] = True  # 缓存命中:计费层据此不扣次
-                cached_out["phash"] = phash  # 升级前旧缓存条目无 phash,命中时补齐
-                tq, ts = _top_of(cached_out)
-                record_event(
-                    db,
-                    museum_slug=slug,
-                    phash=phash,
-                    outcome=cached_out.get("outcome"),
-                    top_qid=tq,
-                    top_score=ts,
-                    language=language,
-                    engine="cache",
-                    user_id=user_id,
-                    duration_ms=clock.total_ms(),
-                    timings=clock.stages,
-                )
-                return cached_out
-        except Exception:
-            # 缓存不可用不阻断识别;超时那段也记在 cache_get,别算到下一阶段头上
-            clock.mark("cache_get")
-
     from app.services.storage import get_object_storage
 
     storage = get_object_storage()
@@ -499,6 +502,112 @@ def recognize(
     return out
 
 
+def recognize(
+    db,
+    slug: str | None,
+    image_bytes: bytes,
+    *,
+    language: str = "zh",
+    mode: str = "artwork",
+    identify_fn=None,
+    redis=None,
+    embed_fn=None,
+    vector_query_fn=None,
+    embed_crops_fn=None,
+    embed_canvas_fn=None,
+    user_id=None,
+    visible=None,
+) -> dict | None:
+    """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
+    slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
+    响应形状见 spec(outcome/reason 机器码)。"""
+    clock = _StageClock()
+    museum = None
+    if slug is not None:
+        museum = db.query(Museum).filter_by(slug=slug).one_or_none()
+        if museum is None:
+            return None
+    from app.services.image_service import ImageService
+
+    ImageService.validate_image(image_bytes)
+    sha = ImageService.generate_hash(image_bytes)
+    phash = ImageService.generate_perceptual_hash(image_bytes)
+    clock.mark("prep")
+
+    redis = redis if redis is not None else _get_redis()
+    ckey = _cache_key(slug, sha, language, visible)
+    owns_lock = False
+    if redis is not None:
+        try:
+            hit = redis.get(ckey)
+            clock.mark("cache_get")
+            if not hit:
+                owns_lock = bool(
+                    redis.set(_inflight_key(ckey), "1", nx=True, ex=_INFLIGHT_TTL_S)
+                )
+                if not owns_lock:
+                    try:
+                        hit = _wait_inflight(redis, ckey)
+                    finally:  # 轮询中途 Redis 掉线,等待耗时也记在这里
+                        clock.mark("inflight_wait")
+            if hit:
+                cached_out = json.loads(hit)
+                # 缓存命中:计费层据此不扣次。等来的是在途首请求的结果 → "inflight",
+                # 计费层对它一律不扣(首请求自己会扣/解锁,见 recognize_billed)
+                cached_out["_billed"] = (
+                    "inflight" if "inflight_wait" in clock.stages else True
+                )
+                cached_out["phash"] = phash  # 升级前旧缓存条目无 phash,命中时补齐
+                tq, ts = _top_of(cached_out)
+                record_event(
+                    db,
+                    museum_slug=slug,
+                    phash=phash,
+                    outcome=cached_out.get("outcome"),
+                    top_qid=tq,
+                    top_score=ts,
+                    language=language,
+                    engine="cache",
+                    user_id=user_id,
+                    duration_ms=clock.total_ms(),
+                    timings=clock.stages,
+                )
+                return cached_out
+        except Exception:
+            # 缓存不可用不阻断识别;超时那段也记在 cache_get,别算到下一阶段头上。
+            # 已记过(get 成功、之后加锁/等待才出错)就别覆盖:同名 mark 是覆盖语义
+            if "cache_get" not in clock.stages:
+                clock.mark("cache_get")
+
+    try:
+        return _compute(
+            db,
+            slug,
+            museum,
+            image_bytes,
+            phash=phash,
+            language=language,
+            mode=mode,
+            identify_fn=identify_fn,
+            embed_fn=embed_fn,
+            vector_query_fn=vector_query_fn,
+            embed_crops_fn=embed_crops_fn,
+            embed_canvas_fn=embed_canvas_fn,
+            user_id=user_id,
+            visible=visible,
+            redis=redis,
+            ckey=ckey,
+            clock=clock,
+        )
+    finally:
+        # 独立 finally:首请求成功、异常、写缓存失败,锁都必须放掉(等待者靠它判结束)
+        if owns_lock:
+            try:
+                redis.delete(_inflight_key(ckey))
+            except Exception:
+                logger.warning("recognition inflight lock release failed: %s", ckey)
+
+
 class QuotaExceededError(Exception):
     """识别配额用尽(端点映射 402;缓存命中也拦——付费墙语义)。
     [museum] = 撞墙的那家馆(已知时),402 据此下发**该馆**该买的票。"""
@@ -616,7 +725,18 @@ def recognize_billed(
     if out is None:
         return out
     cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
+    # S5 服务端开关(加法字段):App 只在它为 true 时才弹「发照片」确认框。
+    # 隐私政策上线前 PHOTO_FEEDBACK_ENABLED=False → 恒 false,前端代码可以先发版。
+    from app.services.storage import photo_feedback as pf
+
+    out["photo_feedback"] = pf.photo_feedback_available()
     if out.get("outcome") != "match":
+        return out
+    if cached == "inflight":
+        # S2:等来的是同一张照片在途首请求的结果,首请求自己会按规则扣次/解锁。
+        # 这里再判就会撞上「首请求的解锁还没提交」→ 一张照片扣两次。
+        # ponytail: 不区分首请求是不是同一个人(不同人同一时刻传同一份字节≈不存在);
+        # 真要区分时把 user_id/device_id 写进锁值再比对。
         return out
     qid = (out.get("match") or {}).get("qid")
     museum = es.museum_of_qid(db, qid)

@@ -607,6 +607,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recNoneOfThese => 'Aucune de celles-ci';
 
   @override
+  String get recThisIsIt => 'C\'est celle-ci';
+
+  @override
   String get recNotRecognized => 'Œuvre non reconnue';
 
   @override
@@ -616,6 +619,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get recShootLabelBtn => 'Photographier le cartel';
+
+  @override
+  String get recTypeNumberOrName => 'Saisir le numéro ou le titre';
+
+  @override
+  String get photoFbTitle => 'Nous envoyer cette photo ?';
+
+  @override
+  String get photoFbBody =>
+      'Utilisée uniquement pour ajouter les œuvres manquantes et améliorer la reconnaissance. Conservée 90 jours au maximum, jamais montrée à personne.';
+
+  @override
+  String get photoFbConsent => 'Envoyer cette photo';
+
+  @override
+  String get photoFbNoteHint => 'Ajouter une remarque (facultatif)';
+
+  @override
+  String get photoFbContinue => 'Continuer';
 
   @override
   String get recSearchWithLabel => 'Rechercher avec ce texte';
@@ -702,6 +724,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get camComparing =>
       'L\'IA compare avec les collections et les bases d\'art publiques';
+
+  @override
+  String get recWaitSlow =>
+      'Un peu plus long que d\'habitude — on cherche encore';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Vous pouvez passer à une autre app : le résultat sera là à votre retour';
 
   @override
   String get camConfirmPrompt =>

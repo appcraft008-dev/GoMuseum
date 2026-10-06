@@ -606,6 +606,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recNoneOfThese => 'Keines davon';
 
   @override
+  String get recThisIsIt => 'Das ist es';
+
+  @override
   String get recNotRecognized => 'Werk nicht erkannt';
 
   @override
@@ -615,6 +618,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recShootLabelBtn => 'Wandschild fotografieren';
+
+  @override
+  String get recTypeNumberOrName => 'Nummer oder Titel eingeben';
+
+  @override
+  String get photoFbTitle => 'Uns dieses Foto senden?';
+
+  @override
+  String get photoFbBody =>
+      'Wird nur genutzt, um fehlende Werke zu ergänzen und die Erkennung zu verbessern. Höchstens 90 Tage gespeichert, niemandem gezeigt.';
+
+  @override
+  String get photoFbConsent => 'Dieses Foto senden';
+
+  @override
+  String get photoFbNoteHint => 'Anmerkung hinzufügen (optional)';
+
+  @override
+  String get photoFbContinue => 'Weiter';
 
   @override
   String get recSearchWithLabel => 'Mit diesem Text suchen';
@@ -699,6 +721,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get camComparing =>
       'KI vergleicht mit Sammlungen und öffentlichen Kunstdatenbanken';
+
+  @override
+  String get recWaitSlow => 'Dauert etwas länger als sonst – wir suchen noch';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Sie können zu einer anderen App wechseln – das Ergebnis ist da, wenn Sie zurückkommen';
 
   @override
   String get camConfirmPrompt =>

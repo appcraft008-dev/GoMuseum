@@ -601,6 +601,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recNoneOfThese => 'Nessuna di queste';
 
   @override
+  String get recThisIsIt => 'È questa';
+
+  @override
   String get recNotRecognized => 'Opera non riconosciuta';
 
   @override
@@ -610,6 +613,25 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get recShootLabelBtn => 'Fotografa il cartellino';
+
+  @override
+  String get recTypeNumberOrName => 'Inserisci numero o titolo';
+
+  @override
+  String get photoFbTitle => 'Ci invii questa foto?';
+
+  @override
+  String get photoFbBody =>
+      'Usata solo per aggiungere opere mancanti e migliorare il riconoscimento. Conservata al massimo 90 giorni, mai mostrata a nessuno.';
+
+  @override
+  String get photoFbConsent => 'Invia questa foto';
+
+  @override
+  String get photoFbNoteHint => 'Aggiungi una nota (facoltativa)';
+
+  @override
+  String get photoFbContinue => 'Continua';
 
   @override
   String get recSearchWithLabel => 'Cerca con questo testo';
@@ -696,6 +718,14 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get camComparing =>
       'L\'IA confronta con collezioni e banche dati d\'arte pubbliche';
+
+  @override
+  String get recWaitSlow =>
+      'Ci vuole un po\' più del solito, stiamo ancora cercando';
+
+  @override
+  String get recWaitSwitchApp =>
+      'Puoi passare a un\'altra app: il risultato sarà qui al tuo ritorno';
 
   @override
   String get camConfirmPrompt => 'Riconoscimento completato, conferma l\'opera';
