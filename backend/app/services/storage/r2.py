@@ -84,3 +84,11 @@ class R2ObjectStorage(ObjectStorage):
 
     def public_url(self, key: str) -> str:
         return f"{self._base}/{key}"
+
+    def presigned_url(self, key: str, expires: int = 3600) -> str:
+        """带时效签名的读链接(私有桶看图用,如分诊报告)。"""
+        return self._s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": self._bucket, "Key": key},
+            ExpiresIn=expires,
+        )

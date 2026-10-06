@@ -725,6 +725,11 @@ def recognize_billed(
     if out is None:
         return out
     cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
+    # S5 服务端开关(加法字段):App 只在它为 true 时才弹「发照片」确认框。
+    # 隐私政策上线前 PHOTO_FEEDBACK_ENABLED=False → 恒 false,前端代码可以先发版。
+    from app.services.storage import photo_feedback as pf
+
+    out["photo_feedback"] = pf.photo_feedback_available()
     if out.get("outcome") != "match":
         return out
     if cached == "inflight":
