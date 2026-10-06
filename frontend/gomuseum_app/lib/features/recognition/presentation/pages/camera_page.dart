@@ -77,6 +77,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
   /// 引导拍墙签模式：下一张照片以 `mode=label` 提交。
   bool _labelMode = false;
 
+  /// 用户拍的**作品**照片及其 phash。拍说明牌会覆盖 `_captured`,而「照片=这件」的答案、
+  /// 照片反馈、无图作品详情页的 hero 要的都是作品照片,不是说明牌(S5 修 S4 遗留)。
+  XFile? _artworkShot;
+  String? _artworkPhash;
+
   /// 「最近图库」缩略图条的最近图片资产（相册权限拿到后填充）。
   List<AssetEntity> _recentAssets = const [];
 
@@ -318,6 +323,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
         .recognize(slug: null, image: shot, language: lang, mode: mode);
     if (!mounted) return;
     final st = ref.read(recognitionNotifierProvider);
+    if (mode == 'artwork') {
+      _artworkShot = shot;
+      _artworkPhash = switch (st) {
+        RecognitionCandidates() => st.phash,
+        RecognitionUnrecognized() => st.phash,
+        _ => null, // 直接命中就进详情了,用不到
+      };
+    }
     // 后端才是付费墙的执行点:客户端闸放行了但后端拒了(权益缓存过期/还没加载完)。
     // 退回取景器再弹付费墙 —— 停在"识别失败"会让用户以为 App 坏了。
     if (st is RecognitionQuotaExceeded) {
@@ -352,6 +365,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
     setState(() {
       _captured = null;
       _labelMode = false;
+      _artworkShot = null; // 新的一张作品
+      _artworkPhash = null;
     });
     ref.read(recognitionNotifierProvider.notifier).resetState();
   }
@@ -378,14 +393,16 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
-    unawaited(ref
-        .read(recognitionNotifierProvider.notifier)
-        .confirmRecognition(qid, fromSearch: fromSearch));
+    unawaited(ref.read(recognitionNotifierProvider.notifier).confirmRecognition(
+        qid,
+        fromSearch: fromSearch,
+        phashOverride: _artworkPhash));
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     final args = GuideArgs(
       slug: slug,
       qid: qid,
-      imagePath: _captured?.path,
+      // 拍过说明牌时 _captured 是说明牌,hero 要的是作品照片(S5)
+      imagePath: (_artworkShot ?? _captured)?.path,
       // 识别成功即自动播讲解:这是"保证送达的首体验",
       // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
       autoPlayAudio: !fromSearch,

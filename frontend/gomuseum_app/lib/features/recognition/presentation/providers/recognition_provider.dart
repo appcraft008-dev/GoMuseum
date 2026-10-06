@@ -160,13 +160,17 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   ///
   /// [fromSearch](S4):选择页搜到的作品 = 用户告诉我们「这张照片是这件」。
   /// 只记答案,后端不计费(`source=search`),所以也不用刷权益。
-  Future<void> confirmRecognition(String qid, {bool fromSearch = false}) async {
+  ///
+  /// [phashOverride](S5):拍过说明牌时,答案属于先前那张**作品照片**,不是说明牌照片。
+  Future<void> confirmRecognition(String qid,
+      {bool fromSearch = false, String? phashOverride}) async {
     final s = state;
-    final phash = switch (s) {
-      RecognitionCandidates() => s.phash,
-      RecognitionUnrecognized() when fromSearch => s.phash,
-      _ => null,
-    };
+    final phash = phashOverride ??
+        switch (s) {
+          RecognitionCandidates() => s.phash,
+          RecognitionUnrecognized() when fromSearch => s.phash,
+          _ => null,
+        };
     if (phash == null) return;
     await ref
         .read(recognitionRemoteDataSourceProvider)

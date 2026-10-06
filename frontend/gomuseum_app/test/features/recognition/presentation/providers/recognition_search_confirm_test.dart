@@ -96,4 +96,15 @@ void main() {
         .confirmRecognition('Q9', fromSearch: true);
     expect(ds.confirms, isEmpty);
   });
+
+  test('phashOverride wins (label path confirms the ARTWORK photo)', () async {
+    final (c, ds) =
+        await _run(const {'outcome': 'unrecognized', 'phash': 'ph-label'});
+    addTearDown(c.dispose);
+    await c.read(recognitionNotifierProvider.notifier).confirmRecognition('Q9',
+        fromSearch: true, phashOverride: 'ph-artwork');
+    expect(ds.confirms, [
+      ['ph-artwork', 'Q9', 'search']
+    ]);
+  });
 }
