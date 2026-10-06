@@ -129,6 +129,8 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
+    expect(done, isFalse); // 回前台后先等网络恢复
+    await tester.pump(resumeSettleDelay);
     expect(done, isTrue);
   });
 }

@@ -88,10 +88,16 @@ Future<void> untilAppResumed() {
   late final AppLifecycleListener listener;
   listener = AppLifecycleListener(onResume: () {
     listener.dispose();
-    done.complete();
+    // 刚回前台时系统网络常常还没恢复(真机 V53 实测重发要发出去):等一下再发。
+    // ponytail: 固定 1s;仍常见回前台即失败时改成「等连通性就绪」。
+    Future<void>.delayed(resumeSettleDelay).then((_) => done.complete());
   });
   return done.future;
 }
+
+/// 回前台后等网络恢复的时间(测试可调)。
+@visibleForTesting
+Duration resumeSettleDelay = const Duration(seconds: 1);
 
 /// 值得用同一张照片重发的失败:超时、断连、网关 5xx(数据源已映射成 NetworkException)。
 bool _isTransient(Object e) => e is TimeoutException || e is NetworkException;
