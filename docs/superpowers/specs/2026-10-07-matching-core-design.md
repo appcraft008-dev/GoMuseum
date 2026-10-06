@@ -31,6 +31,10 @@
 | 耗时（本地 p50） | 3.8s | 0.047s |
 | 耗时（prod 主机 p50 / p90 / max） | 15–300s（10-06 trace） | **0.23s / 0.39s / 0.57s** |
 
+**门槛与指标同源的复验**（评审意见 1）：上表「原型」列的门槛是在这批用例上选的。另把用例按奇偶对半切：在一半上重新网格搜门槛（得 0.6/0.96），在**另一半（留出）**上报数——0.75/0.9 在留出集：标题对 97%/100%、半标题 89%/94%、拼错 88%/100%、垃圾 0%、库外名作弹出 20%；与调参那一半基本一致，未见过拟合塌陷。负样本每半只有 15+3~4 个，数量小，所以「垃圾 0%」以 10-06 真实 trace 为准，上线后继续看真机。
+
+**评测没覆盖的真实失败形态**（评审意见 7）：10-06 真实 trace 里占多数的不是「猜了个库外名作」，而是「画家猜对、作品猜错」（Monet：The Morning / Water Lilies）。这类输入本身就错，匹配层救不回来；能做的是别把它们打成一排 1.0 的候选（原型：作者加分不封顶 + 标题常见度）。这一形态没有标准答案可构造，**以用户同步实测的真机记录为评测**，每个 PR 上线后对照。Cross 墙签（L'Air du soir / The Evening Air 双标题）固化为回归用例。
+
 现状两个根因：
 1. **分数分不开对错**：误报最高分 0.71–0.97，正确命中的 10% 分位 0.85，阈值切不开。
 2. **作者加分被 `min(…, 1.0)` 封顶吃掉**：标题完全相同时作者对不对不影响排序（「标题完全对」的失败全是 1.0 并列，如《圣母子》）。
@@ -47,14 +51,18 @@
 | 跳一个词（164） | 1% | **61%** |
 | 耗时（本地 p50） | 42ms | ~50ms（含兜底） |
 
+**高频词的同档排序**（评审意见 5）：「portrait」「Bust of」这类查询新旧都命中几百件同档作品，取前 60 是在并列里任意挑——旧算法并列按 popularity（77% 为 0＝噪声），原型按词权重，同样没有意义；评测里 14 例「旧在前 20、新不在前 20」全是这种并列。修法：**同档内按整名与查询的相似度排（越短越像越前）**，并把高频词查询集（portrait / vierge / paysage / Bust of 等 16 个）放进回归，断言「整名等于/以查询开头的作品」排在前面。
+
 ### 2.3 署名判同（prod 全部 26,075 条图片署名）
 
 - 现在判「作者本人」8,771 条；新规则（含保留的旧整串相等一路）9,342 条：**新增 571 条**，抽 25 条全是作者署名变体（`Desportes, Alexandre-François`、`Workshop of François Clouet`、`Carpeaux, Jean-Baptiste (1827–1875), sculpteur`、`Filippino Lippi / Sandro Botticelli`），零摄影师。
 - 5 条「Master of 1518」类名字带年份会回退 → 保留旧的整串相等作为一路，任一命中即判作者。
+- **全量 571 条读完后（评审意见 3）**：有 2 条是真摄影师被连带隐藏——`Michel Corneille l'ancien (reproduced by : musée des Beaux-Arts de Dijon - François Jay)`、`Eustache Le Sueur (reproduced by : RMN-Grand Palais (musée du Louvre) / Franck Raux`：括号剥除把摄影归属吃掉了。CC 署名是法律要求，→ 规则加一条（见 §3.5）。
+- **同名两代（评审意见 2）**：目录里有 8 对 QID 不同的「the Elder / the Younger」（Teniers、Brueghel、Le Gros、Coustou、Pourbus 等），修饰词一剥就判成同一人 → 规则加一条（见 §3.5）。
 
 ### 2.4 真缺口：英文标题其实是法语
 
-**3,504 件（13%）的 `title_en` / `title_i18n.en` 与法语标题归一化后相同**——Wikidata 无英文标签时回退成了法语。奥赛 2,231 件（33%），橘园 116/141 件（82%），恰是游客最常拍的印象派。AI 看图说英文名（「The Evening Air」），库里只有「L'Air du soir」，任何字符串算法都对不上。§5 用数据补。
+**3,504 件（13%）的 `title_i18n.en` 与 `title_i18n.fr` 归一化后相同**（顶层 `title_en` 口径为 2,816 件；索引两者都收，以 `title_i18n` 为准）——Wikidata 无英文标签时回退成了法语。奥赛 2,231 件（33%），橘园 116/141 件（82%），恰是游客最常拍的印象派。AI 看图说英文名（「The Evening Air」），库里只有「L'Air du soir」，任何字符串算法都对不上。§5 用数据补。其中约 38%（粗估，评审启发式）是人名/单词/借词（Sarah Bernhardt、Crucifixion），英法本就同形，真缺口比 3,504 小；这部分译出来与原文相同就不写（§5）。
 
 ## 3. 架构
 
@@ -90,7 +98,8 @@ matching/
 2. 标题相似度：对该件每个名字取 `rapidfuzz.fuzz.ratio`；**查询比库名短**（且 ≥ 库名长度 40%）时另取 `0.95 × partial_ratio`，两者取大。只单向——反过来会让短库名（「Composition」）吃进长查询（原型实测的误报来源）。
 3. 作者是否对上：`same_person(AI 给的作者, 该件作者任一写法)`。
 4. **排序** = 标题分 + 0.1 × 作者对上（不封顶）；对外 `score` 仍 `min(…, 1.0)`。
-5. **判定（新）**：作者对上的要标题分 ≥ 0.75，作者没对上的要 ≥ 0.9，否则不进结果。全都不够 → 空列表 → 调用方现有逻辑判「未收录」。门槛从评测集取，放在 `matching/core.py` 常量里，注释写明来源。
+5. **判定（新）**：作者对上的要标题分 ≥ 0.75，作者没对上的要 ≥ 0.9，否则不进结果。门槛放在 `matching/core.py` 常量里，注释写明来源与留出集复验数。
+   - **保住 `reason` 的两种诊断**（评审意见 4）：现在 `service.py` 按「有结果但 <LOW」→ `low_confidence`、「完全没结果」→ `not_in_catalog`。判定若藏进 `match()` 只返回空，前者永远走不到。→ 新增 `match_with_trace()` 返回 `(accepted, raw_top5)`：`accepted` 决定候选；`raw_top5` 非空但 `accepted` 为空 → `low_confidence`，都空 → `not_in_catalog`；`text_trace.matched` 记 `raw_top5`（附作者是否对上），诊断不丢。`match()` 保留为 `match_with_trace()[0]` 的薄包装。
 6. 墙签模式 `label_lines_inv_only`、馆藏号精确命中给 1.0、`inv_artist_hit` 语义全保留；`inv_artist_hit` 的作者比对改用 `same_person`。
 
 ### 3.4 搜索：`rank(index, query, limit)`
@@ -99,7 +108,7 @@ matching/
 
 1. 馆藏号整串精确 / 纯数字馆藏号两档：原逻辑原样保留，排最前。
 2. **每个查询词都要命中**（标题或作者，允许拼错，末词前缀）。
-3. 排序键：（档位：整名相等 3 / 整名前缀 2 / 整名子串 1 / 其它 0，加权分）。不用 popularity（§7）。
+3. 排序键：（档位：整名相等 3 / 整名前缀 2 / 整名子串 1 / 其它 0，**同档内整名与查询的相似度**，加权分）。不用 popularity（§8）。
 4. **兜底**：结果不足 `limit` 时，用现行 `_score` 分档补齐、去重——现在能搜到的一条不丢（原型里中文前 4 字因此 89%→98%）。
 
 ### 3.5 署名：`same_person(a, b)` 与 `_photo_credit`
@@ -107,6 +116,9 @@ matching/
 - 去括号内容（生卒年、出生地）；按 `/`、`;`、换行、`&`/`&amp;`、` and `、` et ` 拆成多人。
 - 每人归一化后取词集合，剔除修饰词（probably / possibly / attributed / after / copy / workshop / circle / school / follower / manner / studio / atelier / d'après / attribué / sculpteur / peintre / the younger / elder / le jeune …）和纯数字。
 - 判同：任一人的词集合 = 作者任一写法的词集合，或整串词集合相等；**另保留旧的整串大小写不敏感相等**作为一路。
+- **两条否决**（先于判同）：
+  - 署名含摄影/复制归属标记（`reproduced by`、`photo`、`cliché`、`©`、`RMN`、`uploaded by` 等，括号内外都查）→ 不是作者本人，原样显示。
+  - 两边带了**不同**的代际修饰（elder/younger、l'ancien/le jeune、père/fils、I/II）→ 不是同一人。识别里的作者加分同样适用。
 - `_photo_credit` 改为调用它；签名不变。
 
 ## 4. 识别提示词：同时给原文标题
@@ -121,7 +133,7 @@ matching/
 ## 5. 数据：一次性补英文匹配别名
 
 - **范围**：英文标题归一化后与法语标题相同的件（10-07 计 3,504 件）。
-- **做法**：gpt-4o-mini 把法语标题译成英文（批量，每次几十条），写进该件 `attributes.match_aliases`（字符串列表）。**只用于匹配，不显示**——不改 `title_en` / `title_i18n`，不涉及 AI 内容展示原则。
+- **做法**：gpt-4o-mini 把法语标题译成英文（译文归一化后与原文相同则不写）（批量，每次几十条），写进该件 `attributes.match_aliases`（字符串列表）。**只用于匹配，不显示**——不改 `title_en` / `title_i18n`，不涉及 AI 内容展示原则。
 - **成本**：按 3,504 个短标题估 < $1；生成一次永久落库，记入 `llm_usage`。
 - **写入面（纪律 37）**：只写 `museum_objects.attributes` 这 3,504 行的一个新键；不碰 `artists` 等共享实体、不碰 sections/qa 的 `audio_key`。跑前 dry-run 打印件数与样例、备份这些行的 `attributes`，并由音频损失闸确认作废音频 = 0。
 - **幂等**：已有 `match_aliases` 的件跳过；重跑只补缺。
@@ -141,7 +153,8 @@ matching/
 ## 7. 测试与验收
 
 - **评测集进仓库**：构造脚本 + 固定种子 + 用例 JSON 放 `backend/tests/eval/matching/`；目录快照太大不进仓库，改由测试 fixture 生成一个缩小但同分布的目录（几百件，含同名作、跨馆同号、法语英文标题等难例），断言 §2 的各项指标「不低于原型数」，作为回归门槛。
-- **单测**：每条规则一个反向样本——封顶 bug（作者对上必须能打破 1.0 并列）、单向 partial（短库名不得吃进长查询）、垃圾输入返回空、搜索兜底不丢旧结果、署名 Mbzt/Shonagon 照常显示、「Master of 1518」仍隐藏。
+- **单测**：每条规则一个反向样本——封顶 bug（作者对上必须能打破 1.0 并列）、单向 partial（短库名不得吃进长查询）、垃圾输入返回空、`low_confidence`/`not_in_catalog` 两种 reason 都可达、搜索兜底不丢旧结果、高频词同档整名前缀在前、署名 Mbzt/Shonagon 照常显示、「Master of 1518」仍隐藏、两条 `reproduced by` 照常显示、Teniers the Elder ≠ the Younger。
+- **评测集留出**：门槛只在调参半边上定，CI 门槛断言用留出半边的数。
 - **现有测试全绿**（识别 129 个 + 搜索 + museum_repo）。
 - **prod 实测**：每个 PR 上 prod 后拉 `recognition_events`（含用户同步实测的真机记录）对照前后；文字链 prod p50 < 0.5s。
 - **署名**：实现时 571 条新增隐藏逐条读完，不只看抽样。
