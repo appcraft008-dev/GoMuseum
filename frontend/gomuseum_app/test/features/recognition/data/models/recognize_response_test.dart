@@ -79,4 +79,17 @@ void main() {
       expect(r.phash, isNull);
     });
   });
+
+  test('photo_feedback defaults to false, true when server says so (S5 switch)',
+      () {
+    expect(
+        RecognizeResponse.fromJson(const {'outcome': 'unrecognized'})
+            .photoFeedback,
+        isFalse);
+    expect(
+        RecognizeResponse.fromJson(
+                const {'outcome': 'unrecognized', 'photo_feedback': true})
+            .photoFeedback,
+        isTrue);
+  });
 }

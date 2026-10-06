@@ -602,6 +602,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recTypeNumberOrName => '输入编号或名称';
 
   @override
+  String get photoFbTitle => '把这张照片发给我们?';
+
+  @override
+  String get photoFbBody => '只用来补录作品、改进识别,最多保存 90 天,不对外展示。';
+
+  @override
+  String get photoFbConsent => '发送这张照片';
+
+  @override
+  String get photoFbNoteHint => '补充说明(选填)';
+
+  @override
+  String get photoFbContinue => '继续';
+
+  @override
   String get recSearchWithLabel => '用这段文字搜索';
 
   @override
@@ -1752,6 +1767,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get recTypeNumberOrName => '輸入編號或名稱';
+
+  @override
+  String get photoFbTitle => '把這張照片發給我們?';
+
+  @override
+  String get photoFbBody => '只用來補錄作品、改進辨識,最多保存 90 天,不對外展示。';
+
+  @override
+  String get photoFbConsent => '發送這張照片';
+
+  @override
+  String get photoFbNoteHint => '補充說明(選填)';
+
+  @override
+  String get photoFbContinue => '繼續';
 
   @override
   String get recSearchWithLabel => '用這段文字搜尋';

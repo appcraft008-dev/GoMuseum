@@ -35,23 +35,29 @@ class RecognitionMatched extends RecognitionState {
 /// 多候选：确认卡「是这件吗？」。
 class RecognitionCandidates extends RecognitionState {
   const RecognitionCandidates(this.candidates, this.labelText, this.slug,
-      {this.phash});
+      {this.phash, this.photoFeedback = false});
   final List<RecognizedItem> candidates;
   final String? labelText;
   final String? slug;
   final String? phash;
+
+  /// S5 服务端开关(见 RecognizeResponse.photoFeedback)。
+  final bool photoFeedback;
 }
 
 /// 未收录：诚实文案 + 引导拍墙签（绝不显示 AI 猜测的名字）。
 class RecognitionUnrecognized extends RecognitionState {
   const RecognitionUnrecognized(this.labelText, this.reason, this.slug,
-      {this.phash});
+      {this.phash, this.photoFeedback = false});
   final String? labelText;
   final String? reason;
   final String? slug;
 
   /// 这张照片的感知哈希(S4:选择页搜到作品时用它回传「照片=这件」)。老后端没有 → null。
   final String? phash;
+
+  /// S5 服务端开关(见 RecognizeResponse.photoFeedback)。
+  final bool photoFeedback;
 }
 
 /// 免费额度用尽(后端 402)：不是失败，是该弹付费墙。
@@ -138,9 +144,9 @@ class RecognitionNotifier extends _$RecognitionNotifier {
           RecognitionMatched(resp.match!, slug),
         RecognizeOutcome.candidates when resp.candidates.isNotEmpty =>
           RecognitionCandidates(resp.candidates, resp.labelText, slug,
-              phash: resp.phash),
+              phash: resp.phash, photoFeedback: resp.photoFeedback),
         _ => RecognitionUnrecognized(resp.labelText, resp.reason, slug,
-            phash: resp.phash),
+            phash: resp.phash, photoFeedback: resp.photoFeedback),
       };
       if (state is RecognitionMatched) _refreshFootprints();
     } on QuotaExceededException catch (e) {
@@ -201,7 +207,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
             .reject(phash: phash, qids: [for (final c in s.candidates) c.qid]));
       }
       state = RecognitionUnrecognized(s.labelText, 'rejected', s.slug,
-          phash: s.phash);
+          phash: s.phash, photoFeedback: s.photoFeedback);
     }
   }
 

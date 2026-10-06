@@ -604,6 +604,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recTypeNumberOrName => '번호나 작품명 입력';
 
   @override
+  String get photoFbTitle => '이 사진을 보내 주시겠어요?';
+
+  @override
+  String get photoFbBody =>
+      '빠진 작품을 추가하고 인식을 개선하는 데만 사용합니다. 최대 90일 보관하며 누구에게도 공개하지 않습니다.';
+
+  @override
+  String get photoFbConsent => '이 사진 보내기';
+
+  @override
+  String get photoFbNoteHint => '메모 추가(선택)';
+
+  @override
+  String get photoFbContinue => '계속';
+
+  @override
   String get recSearchWithLabel => '이 텍스트로 검색';
 
   @override

@@ -80,6 +80,7 @@ class RecognizeResponse extends Equatable {
     required this.labelText,
     required this.reason,
     this.phash,
+    this.photoFeedback = false,
   });
 
   final RecognizeOutcome outcome;
@@ -90,6 +91,9 @@ class RecognizeResponse extends Equatable {
 
   /// 本次照片的感知哈希；确认卡点选时回传后端做 CLIP 校准。老后端无此字段 → null。
   final String? phash;
+
+  /// S5 服务端开关:true 才弹「把这张照片发给我们?」(隐私政策上线前后端恒给 false)。
+  final bool photoFeedback;
 
   factory RecognizeResponse.fromJson(Map<String, dynamic> j) {
     final matchJson = j['match'];
@@ -109,10 +113,11 @@ class RecognizeResponse extends Equatable {
           : null,
       reason: j['reason'] as String?,
       phash: j['phash'] as String?,
+      photoFeedback: j['photo_feedback'] as bool? ?? false,
     );
   }
 
   @override
   List<Object?> get props =>
-      [outcome, match, candidates, labelText, reason, phash];
+      [outcome, match, candidates, labelText, reason, phash, photoFeedback];
 }
