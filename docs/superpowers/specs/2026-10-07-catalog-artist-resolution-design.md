@@ -45,19 +45,40 @@ _DATES = re.compile(r"\s*\([^)]*\)\s*$")  # 作者尾部"(1844-1926)"
 
 这个正则**不看括号里是什么**，只要是字符串末尾的括号就删——"(1844-1926)"是生卒年，"(atelier)"/"(d'après)"/"(attribué à)"是**限定词**（说明这件不是作者本人画的），两种一起被删掉，下游（包括这次要加的新解析函数）从清洗后的 `artist_en` 永远看不到限定词存在过。
 
-修法：把正则收紧成只匹配**日期形态**的括号内容（数字、`siècle`、`vers`、`?` 这类年代标记），非日期内容的括号保留：
+修法：把正则收紧成只匹配**日期形态**的括号内容，非日期内容的括号保留。这不是猜的——直接拉了 Joconde Tabular API 的奥赛+橘园真实 `Auteur` 字段全量数据（两馆合计 8355 条记录，1161 个不同署名字符串，331 个带尾部括号），把尾部括号内容分了类：
+
+- **120 个是生卒年**，无一例外全部是严格的 `\d{3,4}-\d{3,4}` 形态（如 `1858-1927`），没有 `siècle`/`vers` 这类模糊年代标记混进来（那些出现在别的字段，不是这个字段的真实形态）。
+- **211 个是真正的限定词/角色词**（`atelier`、`d'après`、`attribué à`、`entourage`、`imitation`、`inspiré par`、`attribution incertaine`、裸 `?`，以及 `dit`/`dite`/`née`/`patronyme` 这类别名标记、`fondeur`/`orfèvre`/`céramiste`/`éditeur`/`mouleur`/`praticien`/`exécutant` 这类工匠角色词），零例外地不匹配 `\d{3,4}-\d{3,4}`。
+
+两类之间没有一个模糊地带，所以正则可以写得很简单：
 
 ```python
-_DATES = re.compile(r"\s*\((?:\d[\d\s?.,\-–—]*|[^)]*si[eè]cle[^)]*)\)\s*$")
+_DATES = re.compile(r"\s*\(\d{3,4}-\d{3,4}\)\s*$")
 ```
 
-（具体字符类在实现时跑一遍奥赛+橘园全量 `Auteur` 字段核对——这两个馆是真正配了 `joconde_museum`、走 `JocondeCatalog` 入库的馆，不是凑出来的，上面只是方向）。这是 `joconde_catalog.py` 里**一行正则**的改动，不新增字段、不动 schema、不需要迁移——新入库的件从此 `artist_en` 会带着"(atelier)"之类的限定词；已入库的历史数据不受影响（见 §2 非目标）。
+（原始数据见本次调查留下的 `/tmp/auteur_parens.json`，实现时重新跑一遍核对，不要直接相信这份 spec 里的数字——数据集每天更新。）
+
+**已知的小局限**：真实数据里有 19 条（约 1.6%）同时带生卒年**和**限定词、且是两个独立的尾部括号，如 `"Cézanne Paul (1839-1906) (attribué à)"`。新正则只匹配字符串末尾那一个括号，这种情况末尾是限定词不是日期，整串（包括生卒年）都不会被清洗掉——结果是 `artist_en` 里多留了一截没清理的生卒年，不美观，但不影响正确性：§3.3 步骤 0 的限定词扫描是子串匹配，"attribué à" 不管前面夹着什么都能扫到，照样正确弃权。不为这 1.6% 的美观问题写迭代剥离的逻辑（YAGNI）。
+
+这是 `joconde_catalog.py` 里**一行正则**的改动，不新增字段、不动 schema、不需要迁移——新入库的件从此 `artist_en` 会带着"(atelier)"之类的限定词；已入库的历史数据不受影响（见 §2 非目标）。
 
 ### 3.2 解析算法：`resolve_creator_by_name(name, category)`
 
 新函数，放 `app/services/enrichment/material.py`（与 `resolve_creator_qid` 并列，同属"作者解析"职责）。
 
-**步骤 0：限定词前置扫描（弃权闸）**。整串（`;` 拆分之前）扫一遍关键词（大小写不敏感，子串匹配即可）：`d'après`、`d'apres`、`atelier`、`école de`、`ecole de`、`entourage`、`suiveur`、`manner of`、`circle of`、`copie`、`copy after`、`attribué à`、`attribue a`、`attributed to`、`anonyme`、`anonymous`。命中任意一条 → 直接返回 `None`，不进入下面的拆分/查询流程。这一步堵住的是最接近本仓库历史事故形态的风险：仿作/工作室作品被错误关联到大师本人的简介（实测复现路径：`anonyme;Boucher François (d'après)` 清洗前如果限定词被保留，这一步就能在拆分之前直接弃权；§3.1 的正则修正是这一步生效的前提）。
+**步骤 0：限定词前置扫描（弃权闸）**。整串（`;` 拆分之前）扫一遍关键词（大小写不敏感，子串匹配即可）。**Joconde 的 `Auteur` 字段是法语**，关键词必须是法语——原稿这里写过一版混了"manner of"/"circle of"/"copy after"/"attributed to"这类英文术语，这些在法语字段里永远不会命中，是真实的 bug，已核对真实数据改成法语：
+
+```python
+_QUALIFIER_MARKERS = (
+    "d'après", "d'apres", "atelier", "entourage", "attribué à", "attribue a",
+    "attribué", "attribue", "attribution incertaine", "imitation",
+    "inspiré par", "inspire par", "genre de", "anonyme", "anonymous",
+)
+```
+
+这份清单是从奥赛+橘园真实 `Auteur` 字段（见 §3.1 的数据调查）里逐个核对出来的，覆盖了实测遇到的全部"这不是作者本人画的"类表述；不包括 `dit`/`dite`/`née`/`patronyme`（这些是**别名标记**，不是弃权信号，留给拆分+解析步骤正常处理）、也不包括 `fondeur`/`orfèvre`/`céramiste`/`éditeur`/`mouleur`/`praticien`/`exécutant`（这些是工匠**角色词**，描述真实存在的另一个人做了什么工序，不是"这不是他画的"——交给 §3.3 步骤 3 的职业过滤自然处理：铸造厂/工坊这类机构名在 Wikidata 搜不出 human 候选，该段自然解析失败，不需要在这里特殊处理）。
+
+命中任意一条弃权关键词 → 直接返回 `None`，不进入下面的拆分/查询流程。这一步堵住的是最接近本仓库历史事故形态的风险：仿作/工作室作品被错误关联到大师本人的简介——真实数据里就有现成的例子：`"anonyme;VAN GOGH Vincent (d'après)"`（一件"仿梵高"的无名氏作品，§3.1 的正则修正是这一步能看到"d'après"的前提）。
 
 **步骤 1：按 `;`/`/`/`&`/`and`/`et` 拆分**（复用 `app/services/matching/people.py` 里已有的 `_SPLIT` 正则，不重写一份）。Joconde 的 `;` 两侧经常是"正式署名 + 绰号"（同一人），偶尔才是真正的联合署名（两个人）——拆开逐段解析，靠后面的"裁决"步骤区分这两种情况。
 
@@ -118,10 +139,11 @@ if not aqid and o.artist_en and not o.qid.startswith("Q"):
 2. **反例（必须弃权）**，全部是实测验证过的真实歧义/陷阱，不是构造出来的假想场景：
    - `Cézanne Paul`：Wikidata 上同名同职业的父子两人（Q35548 父 1839–1906、Q17277915 子 1872–1947，P106 都含 painter），职业过滤排不掉，必须返回 `None`。
    - `LEON Paul`：会前缀匹配到 Q599801 Léon-Paul Fargue（法国诗人，P106 碰巧也挂了 painter）——验证 §3.2 步骤 2 的词集合精确匹配能把这个候选滤掉，不依赖"唯一候选"兜底。
-   - `anonyme;Boucher François (d'après)`（假设 §3.1 的正则修正已生效、限定词没被清洗掉）：验证步骤 0 的前置扫描直接弃权，不会拆分后把 "Boucher François" 这一段单独解析成功再误采信。
+   - `"anonyme;VAN GOGH Vincent (d'après)"`：**真实的 Joconde 署名**（奥赛/橘园 `Auteur` 字段原样抓到的，一件"仿梵高"的无名氏作品，不是编出来的），假设 §3.1 的正则修正已生效、`(d'après)` 没被清洗掉——验证步骤 0 的前置扫描看到 "d'après" 直接整串弃权，不会拆分后把 "VAN GOGH Vincent" 这一段单独解析成功再误采信。
    - 裸姓氏 `"ROUSSEAU"`：`limit=5` 下真实能搜出 2 个画家（Henri、Théodore Rousseau，P106 都过得了职业过滤）——数字订正为 2（原稿写的"4 个"是 `limit≥8` 才出现的，已核实订正），2 个已经足够验证"≥2 个合法候选 → 弃权"这条规则，不用追加 limit。Joconde 真实数据里几乎不会出现裸姓氏输入，这条测试是防御性的边界覆盖，不代表预期会被真实数据触发。
-3. **真实数据抽查**：改完后在橘园全馆（141 件，不只 TOP50）+ 奥赛全馆（1628 件 joconde 件，覆盖更多限定词/多段署名形态，样本量也大得多）各跑一次 dry-run（只打印会解析出什么 qid，不落库），人工过一遍输出名单，确认没有明显张冠李戴，再正式跑写库。
-4. 现有 `tests/unit/services/enrichment/` 下的 material/pipeline 相关测试跑一遍确认不回归。
+3. **正样本：真实多段署名（验证跨段裁决，不是构造的）**：`"BENJAMIN-CONSTANT (dit);CONSTANT Jean Joseph Benjamin"`（奥赛真实数据，画家 Jean-Joseph Benjamin-Constant 的艺名+本名两段署名）。实测过这个真实案例：第一段 `"BENJAMIN-CONSTANT (dit)"` 整段去查（带着"(dit)"文本）直接 0 结果，两种词序/重排都救不回来，这段算解析失败；第二段 `"CONSTANT Jean Joseph Benjamin"` 原始词序 0 结果，但重排成 `"Jean Joseph Benjamin CONSTANT"`（把第一个词挪到末尾，n-1 种切法里的其中一种）命中唯一候选 Q968357（职业过滤后依然唯一）。跨段裁决：一段失败（忽略）+ 一段成功 → 集合 `{Q968357}` 大小为 1 → 采信。这条测试确认"允许部分段落失败,只看成功段落是否一致"这条规则在真实数据上成立,不只是理论上成立。
+4. **真实数据抽查**：改完后在橘园全馆（141 件，不只 TOP50）+ 奥赛全馆（1628 件 joconde 件，覆盖更多限定词/多段署名形态，样本量也大得多）各跑一次 dry-run（只打印会解析出什么 qid，不落库），人工过一遍输出名单，确认没有明显张冠李戴，再正式跑写库。
+5. 现有 `tests/unit/services/enrichment/` 下的 material/pipeline 相关测试跑一遍确认不回归。
 
 ## 4. 实施范围
 
