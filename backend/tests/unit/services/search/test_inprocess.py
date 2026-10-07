@@ -512,3 +512,21 @@ def test_scoped_search_uses_global_core(session, monkeypatch):
     monkeypatch.setattr(mindex, "Core", lambda ix: built.append(1) or orig(ix))
     rank(build_search_index(session, _mid(session)), "gogh rhone")
     assert built == []  # 馆域子集不重建倒排
+
+
+def test_match_aliases_searchable(session):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q_AIR",
+            "title_en": "L'air du soir",
+            "category": "painting",
+            "attributes": {"match_aliases": ["The Evening Air"]},
+        },
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    idx = build_search_index(session, _mid(session))
+    assert "Q_AIR" in {e["qid"] for e, _ in rank(idx, "evening air")}

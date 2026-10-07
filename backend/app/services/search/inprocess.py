@@ -89,6 +89,8 @@ def _build_global(db) -> list[dict]:
         attrs = attrs or {}
         title_i18n = attrs.get("title_i18n") or {}
         names = {normalize(v) for v in title_i18n.values() if v}
+        # 匹配别名:只用于匹配,不显示(spec §5,英文标题其实是法语的 3504 件)
+        names |= {normalize(v) for v in attrs.get("match_aliases") or [] if v}
         for col in (t_en, t_zh):
             if col:
                 names.add(normalize(col))
