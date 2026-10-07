@@ -102,12 +102,13 @@ def test_approximate_en_query_hits(session):
 
 
 def test_label_lines_match_with_artist_bonus(session):
-    # 近似题名(精确匹配会打满 1.0,加分无从体现)+ 作者行 → 分数应高于无作者行
+    # 标题够近(无作者也能出) + 作者行 → 分数更高;只有跳词标题且无作者 → 不出(spec §3.3)
     idx = build_index(session, _mid(session))
-    plain = match(idx, [], ["Radeau Méduse"])
-    boosted = match(idx, [], ["Radeau Méduse", "Théodore Géricault", "1819"])
+    plain = match(idx, [], ["Radeau de la Méduse"])
+    boosted = match(idx, [], ["Radeau de la Méduse", "Théodore Géricault", "1819"])
     assert boosted[0][0] == "Q778242"
     assert boosted[0][1] > plain[0][1]  # 作者行加分
+    assert match(idx, [], ["Radeau Méduse"]) == []
 
 
 def test_unrelated_query_scores_below_low(session):

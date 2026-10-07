@@ -34,9 +34,11 @@ def _shrink(image_bytes: bytes, max_px: int = 1024) -> bytes:
 _ARTWORK_SYSTEM = (
     "You are a museum artwork recognizer. Look at the photo and try to identify the "
     "artwork. Your guesses are CANDIDATE QUERIES for a catalog search, not final answers "
-    "— include up to 3 candidates even if unsure. Also transcribe any visible text in "
-    "the frame (wall label, plaque) verbatim. Return STRICT JSON: "
-    '{"candidates": [{"title": "...", "artist": "..."}], '
+    "— include up to 3 candidates even if unsure. For each candidate, if you know the "
+    "artwork's title in its original language (e.g. the French title of a French "
+    "painting), give it as original_title; otherwise null. Also transcribe any visible "
+    "text in the frame (wall label, plaque) verbatim. Return STRICT JSON: "
+    '{"candidates": [{"title": "...", "original_title": "... or null", "artist": "..."}], '
     '"label_text": "verbatim text or null", "self_confidence": "high|medium|low"}. '
     "No commentary."
 )
@@ -44,16 +46,19 @@ _ARTWORK_SYSTEM = (
 _LABEL_SYSTEM = (
     "You are an OCR assistant. Transcribe ALL visible text in this photo of a museum "
     "wall label verbatim, preserving line breaks. Also extract the artwork title(s) "
-    "and artist name(s) exactly as printed on the label (main artwork first, at most 3). "
-    "Do NOT guess or add anything that is not printed. Return STRICT JSON: "
-    '{"candidates": [{"title": "as printed", "artist": "as printed or null"}], '
+    "and artist name(s) exactly as printed on the label (main artwork first, at most 3); "
+    "if the label prints the same title in two languages, put the original-language one "
+    "in original_title. Do NOT guess or add anything that is not printed. "
+    "Return STRICT JSON: "
+    '{"candidates": [{"title": "as printed", "original_title": "as printed or null", '
+    '"artist": "as printed or null"}], '
     '"label_text": "verbatim text or null", '
     '"self_confidence": "high|medium|low"}. No commentary.'
 )
 
 
-def _default_complete(system: str, user_content) -> str:
-    """真实 GPT-4o-mini 视觉调用(30s 超时)。客户端是 AsyncOpenAI——必须 asyncio.run
+def _default_complete(system: str, user_content, model: str = "gpt-4o-mini") -> str:
+    """真实视觉调用(30s 超时)。客户端是 AsyncOpenAI——必须 asyncio.run
     (staging 教训:漏 await 时 create() 返回协程,identify 静默空结果)。"""
     import asyncio
 
@@ -65,7 +70,7 @@ def _default_complete(system: str, user_content) -> str:
 
     async def _run():
         resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_content},
@@ -79,14 +84,20 @@ def _default_complete(system: str, user_content) -> str:
 
 def identify(image_b64: str, mode: str = "artwork", complete=None) -> dict:
     """照片 → {"candidates": [{title, artist}], "label_text", "self_confidence"}。"""
-    complete = complete or _default_complete
-    system = _LABEL_SYSTEM if mode == "label" else _ARTWORK_SYSTEM
-    user_content = [
-        {
-            "type": "image_url",
-            "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
-        }
-    ]
+    label = mode == "label"
+    if complete is None:
+        # 墙签用 gpt-4o + 高清:10-07 staging A/B 同一张双语墙签各 5 次,mini 5/5 把说明文字里
+        # 提到的另一幅画当主标题,gpt-4o 0/5;单价几乎相同(mini 图片按 33 倍计 token)
+        model = "gpt-4o" if label else "gpt-4o-mini"
+
+        def complete(system, user_content):
+            return _default_complete(system, user_content, model=model)
+
+    system = _LABEL_SYSTEM if label else _ARTWORK_SYSTEM
+    image_url = {"url": f"data:image/jpeg;base64,{image_b64}"}
+    if label:
+        image_url["detail"] = "high"  # 小字多,低清会读错
+    user_content = [{"type": "image_url", "image_url": image_url}]
     try:
         from app.services.enrichment.content_enricher import _parse_json
 
@@ -97,7 +108,13 @@ def identify(image_b64: str, mode: str = "artwork", complete=None) -> dict:
     cands = []
     for c in data.get("candidates") or []:
         if isinstance(c, dict) and c.get("title"):
-            cands.append({"title": c["title"], "artist": c.get("artist")})
+            cands.append(
+                {
+                    "title": c["title"],
+                    "original_title": c.get("original_title") or None,
+                    "artist": c.get("artist"),
+                }
+            )
     return {
         "candidates": cands[:3],
         "label_text": data.get("label_text") or None,

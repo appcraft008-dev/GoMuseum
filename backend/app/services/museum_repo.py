@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timezone
 from functools import lru_cache
 
-from sqlalchemy import and_, exists, func, or_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.content import (
@@ -18,6 +18,7 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
 from app.services.entitlement_service import pass_offer
+from app.services.must_see import has_image_clause as _has_image_clause
 from app.services.must_see import must_see_order
 from app.services.recognition.tiles import HIDDEN_ROLES
 from app.services.storage import get_object_storage
@@ -25,21 +26,6 @@ from app.services.storage import get_object_storage
 _PACK_FIELDS = ("slug", "name_zh", "name_en", "city_zh", "city_en", "country")
 
 _LEGACY_SOURCE = "Wikidata/Wikimedia Commons (public data)"
-
-
-def _has_image_clause():
-    """有图过滤:对象至少有一张可展示图(image_key 或 source_url 非空,且非隔离图)。
-    供 list_objects 与分类计数复用,让浏览面不显示无图 stub(qid 直达不受影响)。"""
-    return exists().where(
-        and_(
-            ObjectImage.object_id == MuseumObject.id,
-            or_(
-                ObjectImage.image_key.isnot(None),
-                ObjectImage.source_url.isnot(None),
-            ),
-            ObjectImage.role != "view_quarantine",
-        )
-    )
 
 
 # 通用分类法 8 大类(契约§收录策略),全馆共用;奥赛启用前 4 类。
@@ -200,15 +186,13 @@ def _photo_credit(credit: str | None, artist_aliases) -> str | None:
 
     判据:credit 命中该件作者任一语言的写法 → 是画家,不显示;否则原样留着。
     prod 65 件实测:57 判隐藏、8 判保留,保留的全是真摄影师,零误杀。
+    判同规则(词序/生卒年/修饰词、摄影归属与代际否决)见 matching.people。
     """
     if not credit:
         return None
-    norm = credit.strip().casefold()
-    return (
-        None
-        if any(norm == a.strip().casefold() for a in artist_aliases if a)
-        else credit
-    )
+    from app.services.matching.people import is_artist_credit
+
+    return None if is_artist_credit(credit, artist_aliases) else credit
 
 
 def _sized(storage, key, size):

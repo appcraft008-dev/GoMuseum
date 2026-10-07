@@ -71,8 +71,11 @@ def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
     # category 只在显式提供时覆盖；新行由模型默认 "painting" 填充（避免把已有 sculpture 改回 painting）
     if art.get("category"):
         obj.category = art["category"]
+    # 匹配别名是离线一次性生成的(scripts/add_match_aliases.py),重导入不能冲掉
+    keep = {k: v for k, v in (obj.attributes or {}).items() if k == "match_aliases"}
     obj.attributes = {
-        k: v for k, v in (art.get("attributes") or {}).items() if v is not None
+        **keep,
+        **{k: v for k, v in (art.get("attributes") or {}).items() if v is not None},
     }
     db.add(obj)
     db.flush()

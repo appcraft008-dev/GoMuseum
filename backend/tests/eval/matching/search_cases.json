@@ -1,0 +1,4607 @@
+[
+{
+"kind": "prefix2",
+"target": "Q115669189",
+"q": "Flight into"
+},
+{
+"kind": "typo",
+"target": "Q115669189",
+"q": "Filght into Egypt"
+},
+{
+"kind": "middle_word",
+"target": "Q115669189",
+"q": "Egypt"
+},
+{
+"kind": "words_skip",
+"target": "Q115669189",
+"q": "Flight Egypt"
+},
+{
+"kind": "artist+word",
+"target": "Q115669189",
+"q": "Lorrain Egypt"
+},
+{
+"kind": "prefix2",
+"target": "Q115669650",
+"q": "Ustensiles de"
+},
+{
+"kind": "typo",
+"target": "Q115669650",
+"q": "Ustensiles de cusiine"
+},
+{
+"kind": "middle_word",
+"target": "Q115669650",
+"q": "cuisine"
+},
+{
+"kind": "words_skip",
+"target": "Q115669650",
+"q": "Ustensiles cuisine"
+},
+{
+"kind": "artist+word",
+"target": "Q115669650",
+"q": "III cuisine"
+},
+{
+"kind": "prefix2",
+"target": "Q115670835",
+"q": "Saint Laurent"
+},
+{
+"kind": "typo",
+"target": "Q115670835",
+"q": "Siant Laurent (à"
+},
+{
+"kind": "middle_word",
+"target": "Q115670835",
+"q": "trésor"
+},
+{
+"kind": "words_skip",
+"target": "Q115670835",
+"q": "Saint (à"
+},
+{
+"kind": "artist+word",
+"target": "Q115670835",
+"q": "Tedesco distribuant"
+},
+{
+"kind": "prefix2",
+"target": "Q115669902",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q115669902",
+"q": "Protrait of Henri"
+},
+{
+"kind": "middle_word",
+"target": "Q115669902",
+"q": "Gérard,"
+},
+{
+"kind": "words_skip",
+"target": "Q115669902",
+"q": "Portrait Henri"
+},
+{
+"kind": "artist+word",
+"target": "Q115669902",
+"q": "Gérard artist's"
+},
+{
+"kind": "prefix2",
+"target": "Q115572749",
+"q": "Fragment de"
+},
+{
+"kind": "typo",
+"target": "Q115572749",
+"q": "Fragment de dlale"
+},
+{
+"kind": "middle_word",
+"target": "Q115572749",
+"q": "d'une"
+},
+{
+"kind": "words_skip",
+"target": "Q115572749",
+"q": "Fragment dalle"
+},
+{
+"kind": "prefix2",
+"target": "Q29649709",
+"q": "L'Archange Gabriel"
+},
+{
+"kind": "typo",
+"target": "Q29649709",
+"q": "L'Arcahnge Gabriel"
+},
+{
+"kind": "middle_word",
+"target": "Q29649709",
+"q": "Gabriel"
+},
+{
+"kind": "prefix2",
+"target": "Q18627401",
+"q": "Descent from"
+},
+{
+"kind": "typo",
+"target": "Q18627401",
+"q": "Descent rfom the"
+},
+{
+"kind": "middle_word",
+"target": "Q18627401",
+"q": "Cross"
+},
+{
+"kind": "words_skip",
+"target": "Q18627401",
+"q": "Descent the"
+},
+{
+"kind": "artist+word",
+"target": "Q18627401",
+"q": "Rimini Cross"
+},
+{
+"kind": "prefix2",
+"target": "Q45322145",
+"q": "Solitude, ruines"
+},
+{
+"kind": "typo",
+"target": "Q45322145",
+"q": "Soiltude, ruines près"
+},
+{
+"kind": "middle_word",
+"target": "Q45322145",
+"q": "d'une"
+},
+{
+"kind": "words_skip",
+"target": "Q45322145",
+"q": "Solitude, près"
+},
+{
+"kind": "artist+word",
+"target": "Q45322145",
+"q": "Kessel ruines"
+},
+{
+"kind": "prefix2",
+"target": "Q29656118",
+"q": "The Apothecary"
+},
+{
+"kind": "typo",
+"target": "Q29656118",
+"q": "The Apotheacry"
+},
+{
+"kind": "middle_word",
+"target": "Q29656118",
+"q": "Apothecary"
+},
+{
+"kind": "artist+word",
+"target": "Q29656118",
+"q": "Metsu Apothecary"
+},
+{
+"kind": "prefix2",
+"target": "Q18572432",
+"q": "Coronation of"
+},
+{
+"kind": "typo",
+"target": "Q18572432",
+"q": "Croonation of the"
+},
+{
+"kind": "middle_word",
+"target": "Q18572432",
+"q": "Virgin"
+},
+{
+"kind": "words_skip",
+"target": "Q18572432",
+"q": "Coronation the"
+},
+{
+"kind": "artist+word",
+"target": "Q18572432",
+"q": "Lanfranco Aquitaine"
+},
+{
+"kind": "zh_part",
+"target": "Q18572432",
+"q": "圣母加冕"
+},
+{
+"kind": "prefix2",
+"target": "Q18572464",
+"q": "Landscape with"
+},
+{
+"kind": "typo",
+"target": "Q18572464",
+"q": "Ladnscape with a"
+},
+{
+"kind": "middle_word",
+"target": "Q18572464",
+"q": "Hermit"
+},
+{
+"kind": "words_skip",
+"target": "Q18572464",
+"q": "Landscape a"
+},
+{
+"kind": "artist+word",
+"target": "Q18572464",
+"q": "Domenichino Hermit"
+},
+{
+"kind": "prefix2",
+"target": "Q112210735",
+"q": "Plaque fragment:"
+},
+{
+"kind": "typo",
+"target": "Q112210735",
+"q": "Plaque fragment: Egyptain-style"
+},
+{
+"kind": "middle_word",
+"target": "Q112210735",
+"q": "Egyptian-style"
+},
+{
+"kind": "words_skip",
+"target": "Q112210735",
+"q": "Plaque Egyptian-style"
+},
+{
+"kind": "prefix2",
+"target": "Q15965385",
+"q": "Marius at"
+},
+{
+"kind": "typo",
+"target": "Q15965385",
+"q": "Marius at Mniturnae"
+},
+{
+"kind": "middle_word",
+"target": "Q15965385",
+"q": "Minturnae"
+},
+{
+"kind": "words_skip",
+"target": "Q15965385",
+"q": "Marius Minturnae"
+},
+{
+"kind": "artist+word",
+"target": "Q15965385",
+"q": "Drouais Minturnae"
+},
+{
+"kind": "prefix2",
+"target": "Q5795669",
+"q": "Calice et"
+},
+{
+"kind": "typo",
+"target": "Q5795669",
+"q": "Calice et Patnèe"
+},
+{
+"kind": "middle_word",
+"target": "Q5795669",
+"q": "l'abbé"
+},
+{
+"kind": "words_skip",
+"target": "Q5795669",
+"q": "Calice Patène"
+},
+{
+"kind": "prefix2",
+"target": "Q123765767",
+"q": "Amphore d'Andokidès"
+},
+{
+"kind": "typo",
+"target": "Q123765767",
+"q": "Apmhore d'Andokidès"
+},
+{
+"kind": "middle_word",
+"target": "Q123765767",
+"q": "d'Andokidès"
+},
+{
+"kind": "artist+word",
+"target": "Q123765767",
+"q": "Painter d'Andokidès"
+},
+{
+"kind": "prefix2",
+"target": "Q57934209",
+"q": "Goddess-DUT 276"
+},
+{
+"kind": "typo",
+"target": "Q57934209",
+"q": "Goddess-DTU 276"
+},
+{
+"kind": "prefix2",
+"target": "Q115498298",
+"q": "Brûle-parfum sphérique"
+},
+{
+"kind": "typo",
+"target": "Q115498298",
+"q": "Brûle-parfum shpérique à"
+},
+{
+"kind": "middle_word",
+"target": "Q115498298",
+"q": "chauffe-mains"
+},
+{
+"kind": "words_skip",
+"target": "Q115498298",
+"q": "Brûle-parfum à"
+},
+{
+"kind": "prefix2",
+"target": "Q18177777",
+"q": "The Sin"
+},
+{
+"kind": "typo",
+"target": "Q18177777",
+"q": "The Sni le"
+},
+{
+"kind": "middle_word",
+"target": "Q18177777",
+"q": "Noble"
+},
+{
+"kind": "words_skip",
+"target": "Q18177777",
+"q": "The le"
+},
+{
+"kind": "artist+word",
+"target": "Q18177777",
+"q": "Corot Douai"
+},
+{
+"kind": "prefix2",
+"target": "Q19404716",
+"q": "Le Génie"
+},
+{
+"kind": "typo",
+"target": "Q19404716",
+"q": "Le Gnéie du"
+},
+{
+"kind": "middle_word",
+"target": "Q19404716",
+"q": "Monot"
+},
+{
+"kind": "words_skip",
+"target": "Q19404716",
+"q": "Le du"
+},
+{
+"kind": "artist+word",
+"target": "Q19404716",
+"q": "Monot Monot"
+},
+{
+"kind": "prefix2",
+"target": "Q115676416",
+"q": "peinture murale"
+},
+{
+"kind": "typo",
+"target": "Q115676416",
+"q": "pienture murale"
+},
+{
+"kind": "middle_word",
+"target": "Q115676416",
+"q": "murale"
+},
+{
+"kind": "prefix2",
+"target": "Q29656148",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q29656148",
+"q": "Portrait of Mihcel"
+},
+{
+"kind": "middle_word",
+"target": "Q29656148",
+"q": "Michel"
+},
+{
+"kind": "words_skip",
+"target": "Q29656148",
+"q": "Portrait Michel"
+},
+{
+"kind": "artist+word",
+"target": "Q29656148",
+"q": "Loo Corneille"
+},
+{
+"kind": "prefix2",
+"target": "Q115497028",
+"q": "Flacon à"
+},
+{
+"kind": "typo",
+"target": "Q115497028",
+"q": "Flacno à blason"
+},
+{
+"kind": "middle_word",
+"target": "Q115497028",
+"q": "figurant"
+},
+{
+"kind": "words_skip",
+"target": "Q115497028",
+"q": "Flacon blason"
+},
+{
+"kind": "prefix2",
+"target": "Q115674629",
+"q": "La chute"
+},
+{
+"kind": "typo",
+"target": "Q115674629",
+"q": "La chut edes"
+},
+{
+"kind": "middle_word",
+"target": "Q115674629",
+"q": "rebelles"
+},
+{
+"kind": "words_skip",
+"target": "Q115674629",
+"q": "La des"
+},
+{
+"kind": "artist+word",
+"target": "Q115674629",
+"q": "Brun anges"
+},
+{
+"kind": "prefix2",
+"target": "Q18572975",
+"q": "The Charity"
+},
+{
+"kind": "typo",
+"target": "Q18572975",
+"q": "The Chartiy of"
+},
+{
+"kind": "middle_word",
+"target": "Q18572975",
+"q": "Nicholas"
+},
+{
+"kind": "words_skip",
+"target": "Q18572975",
+"q": "The of"
+},
+{
+"kind": "artist+word",
+"target": "Q18572975",
+"q": "Lorenzetti Charity"
+},
+{
+"kind": "prefix2",
+"target": "Q29864735",
+"q": "Fuite des"
+},
+{
+"kind": "typo",
+"target": "Q29864735",
+"q": "Fuit edes vices"
+},
+{
+"kind": "middle_word",
+"target": "Q29864735",
+"q": "vices"
+},
+{
+"kind": "words_skip",
+"target": "Q29864735",
+"q": "Fuite vices"
+},
+{
+"kind": "artist+word",
+"target": "Q29864735",
+"q": "Belle vices"
+},
+{
+"kind": "prefix2",
+"target": "Q29650092",
+"q": "The Council"
+},
+{
+"kind": "typo",
+"target": "Q29650092",
+"q": "Th eCouncil of"
+},
+{
+"kind": "middle_word",
+"target": "Q29650092",
+"q": "Vigilio"
+},
+{
+"kind": "words_skip",
+"target": "Q29650092",
+"q": "The of"
+},
+{
+"kind": "prefix2",
+"target": "Q17627398",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q17627398",
+"q": "Porrtait of Catharina"
+},
+{
+"kind": "middle_word",
+"target": "Q17627398",
+"q": "Catharina"
+},
+{
+"kind": "words_skip",
+"target": "Q17627398",
+"q": "Portrait Catharina"
+},
+{
+"kind": "prefix2",
+"target": "Q115676106",
+"q": "Trois amours"
+},
+{
+"kind": "typo",
+"target": "Q115676106",
+"q": "Toris amours au"
+},
+{
+"kind": "middle_word",
+"target": "Q115676106",
+"q": "milieu"
+},
+{
+"kind": "words_skip",
+"target": "Q115676106",
+"q": "Trois au"
+},
+{
+"kind": "artist+word",
+"target": "Q115676106",
+"q": "Chaperon amours"
+},
+{
+"kind": "prefix2",
+"target": "Q106729650",
+"q": "statues (Br"
+},
+{
+"kind": "typo",
+"target": "Q106729650",
+"q": "statuse (Br 4453)"
+},
+{
+"kind": "middle_word",
+"target": "Q106729650",
+"q": "4453)"
+},
+{
+"kind": "words_skip",
+"target": "Q106729650",
+"q": "statues 4453)"
+},
+{
+"kind": "prefix2",
+"target": "Q7283381",
+"q": "Raherka and"
+},
+{
+"kind": "typo",
+"target": "Q7283381",
+"q": "Rhaerka and Meresankh"
+},
+{
+"kind": "middle_word",
+"target": "Q7283381",
+"q": "Meresankh"
+},
+{
+"kind": "words_skip",
+"target": "Q7283381",
+"q": "Raherka Meresankh"
+},
+{
+"kind": "zh_part",
+"target": "Q7283381",
+"q": "拉赫尔卡"
+},
+{
+"kind": "prefix2",
+"target": "Q87409822",
+"q": "Man with"
+},
+{
+"kind": "typo",
+"target": "Q87409822",
+"q": "Man with arsm"
+},
+{
+"kind": "middle_word",
+"target": "Q87409822",
+"q": "extended-AM"
+},
+{
+"kind": "words_skip",
+"target": "Q87409822",
+"q": "Man arms"
+},
+{
+"kind": "prefix2",
+"target": "Q115676566",
+"q": "Portrait de"
+},
+{
+"kind": "typo",
+"target": "Q115676566",
+"q": "Portarit de femme"
+},
+{
+"kind": "middle_word",
+"target": "Q115676566",
+"q": "chiens\""
+},
+{
+"kind": "words_skip",
+"target": "Q115676566",
+"q": "Portrait femme"
+},
+{
+"kind": "prefix2",
+"target": "Q87452164",
+"q": "Paire de"
+},
+{
+"kind": "typo",
+"target": "Q87452164",
+"q": "Paire de Cariatieds"
+},
+{
+"kind": "middle_word",
+"target": "Q87452164",
+"q": "Cariatides"
+},
+{
+"kind": "words_skip",
+"target": "Q87452164",
+"q": "Paire Cariatides"
+},
+{
+"kind": "artist+word",
+"target": "Q87452164",
+"q": "Sarazin double"
+},
+{
+"kind": "prefix2",
+"target": "Q123404746",
+"q": "Armoire (wardrobe)"
+},
+{
+"kind": "typo",
+"target": "Q123404746",
+"q": "Armoire (wradrobe)"
+},
+{
+"kind": "middle_word",
+"target": "Q123404746",
+"q": "(wardrobe)"
+},
+{
+"kind": "artist+word",
+"target": "Q123404746",
+"q": "Boulle (wardrobe)"
+},
+{
+"kind": "prefix2",
+"target": "Q29842423",
+"q": "La Madeleine"
+},
+{
+"kind": "typo",
+"target": "Q29842423",
+"q": "La Madeliene"
+},
+{
+"kind": "middle_word",
+"target": "Q29842423",
+"q": "Madeleine"
+},
+{
+"kind": "artist+word",
+"target": "Q29842423",
+"q": "Nattier Madeleine"
+},
+{
+"kind": "prefix2",
+"target": "Q29643375",
+"q": "Le Repas"
+},
+{
+"kind": "typo",
+"target": "Q29643375",
+"q": "Le eRpas de"
+},
+{
+"kind": "middle_word",
+"target": "Q29643375",
+"q": "Repas"
+},
+{
+"kind": "words_skip",
+"target": "Q29643375",
+"q": "Le de"
+},
+{
+"kind": "prefix2",
+"target": "Q19820084",
+"q": "Winnowing of"
+},
+{
+"kind": "typo",
+"target": "Q19820084",
+"q": "Winnowing of Grain"
+},
+{
+"kind": "middle_word",
+"target": "Q19820084",
+"q": "Grain"
+},
+{
+"kind": "words_skip",
+"target": "Q19820084",
+"q": "Winnowing Grain"
+},
+{
+"kind": "artist+word",
+"target": "Q19820084",
+"q": "dell'Abbate Grain"
+},
+{
+"kind": "prefix2",
+"target": "Q29053872",
+"q": "Horse bit"
+},
+{
+"kind": "typo",
+"target": "Q29053872",
+"q": "Hores bit"
+},
+{
+"kind": "prefix2",
+"target": "Q87412225",
+"q": "Senusret before"
+},
+{
+"kind": "typo",
+"target": "Q87412225",
+"q": "Senusret befroe an"
+},
+{
+"kind": "middle_word",
+"target": "Q87412225",
+"q": "offering-C"
+},
+{
+"kind": "words_skip",
+"target": "Q87412225",
+"q": "Senusret an"
+},
+{
+"kind": "prefix2",
+"target": "Q55184797",
+"q": "Selfportrait of"
+},
+{
+"kind": "typo",
+"target": "Q55184797",
+"q": "Selfportrait of Jean-Baptsite"
+},
+{
+"kind": "middle_word",
+"target": "Q55184797",
+"q": "Jean-Baptiste"
+},
+{
+"kind": "words_skip",
+"target": "Q55184797",
+"q": "Selfportrait Jean-Baptiste"
+},
+{
+"kind": "artist+word",
+"target": "Q55184797",
+"q": "Singry Jean-Baptiste"
+},
+{
+"kind": "prefix2",
+"target": "Q115669368",
+"q": "Poules pierrées"
+},
+{
+"kind": "typo",
+"target": "Q115669368",
+"q": "Poules pierrée sen"
+},
+{
+"kind": "middle_word",
+"target": "Q115669368",
+"q": "jaune"
+},
+{
+"kind": "words_skip",
+"target": "Q115669368",
+"q": "Poules en"
+},
+{
+"kind": "prefix2",
+"target": "Q64896984",
+"q": "Double vase-E"
+},
+{
+"kind": "typo",
+"target": "Q64896984",
+"q": "Doubel vase-E 10838"
+},
+{
+"kind": "middle_word",
+"target": "Q64896984",
+"q": "10838"
+},
+{
+"kind": "words_skip",
+"target": "Q64896984",
+"q": "Double 10838"
+},
+{
+"kind": "prefix2",
+"target": "Q121144412",
+"q": "Statuette of"
+},
+{
+"kind": "typo",
+"target": "Q121144412",
+"q": "Statuette o flittle"
+},
+{
+"kind": "middle_word",
+"target": "Q121144412",
+"q": "wearing"
+},
+{
+"kind": "words_skip",
+"target": "Q121144412",
+"q": "Statuette little"
+},
+{
+"kind": "prefix2",
+"target": "Q87456437",
+"q": "La République"
+},
+{
+"kind": "typo",
+"target": "Q87456437",
+"q": "La Républqiue"
+},
+{
+"kind": "middle_word",
+"target": "Q87456437",
+"q": "République"
+},
+{
+"kind": "artist+word",
+"target": "Q87456437",
+"q": "Chinard République"
+},
+{
+"kind": "prefix2",
+"target": "Q66123298",
+"q": "Stele of"
+},
+{
+"kind": "typo",
+"target": "Q66123298",
+"q": "Stele of Aspatla-C"
+},
+{
+"kind": "middle_word",
+"target": "Q66123298",
+"q": "Aspalta-C"
+},
+{
+"kind": "words_skip",
+"target": "Q66123298",
+"q": "Stele Aspalta-C"
+},
+{
+"kind": "prefix2",
+"target": "Q18565856",
+"q": "The Carrying"
+},
+{
+"kind": "typo",
+"target": "Q18565856",
+"q": "The aCrrying of"
+},
+{
+"kind": "middle_word",
+"target": "Q18565856",
+"q": "Carrying"
+},
+{
+"kind": "words_skip",
+"target": "Q18565856",
+"q": "The of"
+},
+{
+"kind": "artist+word",
+"target": "Q18565856",
+"q": "d'Antonio Carrying"
+},
+{
+"kind": "prefix2",
+"target": "Q115512947",
+"q": "jali au"
+},
+{
+"kind": "typo",
+"target": "Q115512947",
+"q": "jali au treilils"
+},
+{
+"kind": "middle_word",
+"target": "Q115512947",
+"q": "d'octogones"
+},
+{
+"kind": "words_skip",
+"target": "Q115512947",
+"q": "jali treillis"
+},
+{
+"kind": "prefix2",
+"target": "Q29842194",
+"q": "Le Christ"
+},
+{
+"kind": "typo",
+"target": "Q29842194",
+"q": "Le Chirst sur"
+},
+{
+"kind": "middle_word",
+"target": "Q29842194",
+"q": "Vierge"
+},
+{
+"kind": "words_skip",
+"target": "Q29842194",
+"q": "Le sur"
+},
+{
+"kind": "artist+word",
+"target": "Q29842194",
+"q": "Prud'hon pieds"
+},
+{
+"kind": "prefix2",
+"target": "Q18939390",
+"q": "Petite fille"
+},
+{
+"kind": "typo",
+"target": "Q18939390",
+"q": "Petite fill etenant"
+},
+{
+"kind": "middle_word",
+"target": "Q18939390",
+"q": "fille"
+},
+{
+"kind": "words_skip",
+"target": "Q18939390",
+"q": "Petite tenant"
+},
+{
+"kind": "artist+word",
+"target": "Q18939390",
+"q": "Russell fille"
+},
+{
+"kind": "prefix2",
+"target": "Q115668884",
+"q": "Études de"
+},
+{
+"kind": "typo",
+"target": "Q115668884",
+"q": "Études d eflamands"
+},
+{
+"kind": "middle_word",
+"target": "Q115668884",
+"q": "roses"
+},
+{
+"kind": "words_skip",
+"target": "Q115668884",
+"q": "Études flamands"
+},
+{
+"kind": "artist+word",
+"target": "Q115668884",
+"q": "Boel flamands"
+},
+{
+"kind": "prefix2",
+"target": "Q56346202",
+"q": "Braschi Antinous"
+},
+{
+"kind": "typo",
+"target": "Q56346202",
+"q": "Brascih Antinous"
+},
+{
+"kind": "middle_word",
+"target": "Q56346202",
+"q": "Antinous"
+},
+{
+"kind": "prefix2",
+"target": "Q115673292",
+"q": "Vue de"
+},
+{
+"kind": "typo",
+"target": "Q115673292",
+"q": "Vue d el'église"
+},
+{
+"kind": "middle_word",
+"target": "Q115673292",
+"q": "Sainte-Marie"
+},
+{
+"kind": "words_skip",
+"target": "Q115673292",
+"q": "Vue l'église"
+},
+{
+"kind": "artist+word",
+"target": "Q115673292",
+"q": "Joyant l'église"
+},
+{
+"kind": "prefix2",
+"target": "Q115519763",
+"q": "Carreau au"
+},
+{
+"kind": "typo",
+"target": "Q115519763",
+"q": "Carreau au copule"
+},
+{
+"kind": "middle_word",
+"target": "Q115519763",
+"q": "17365"
+},
+{
+"kind": "words_skip",
+"target": "Q115519763",
+"q": "Carreau couple"
+},
+{
+"kind": "prefix2",
+"target": "Q106691685",
+"q": "sarcophage à"
+},
+{
+"kind": "typo",
+"target": "Q106691685",
+"q": "sarcophage à visècres"
+},
+{
+"kind": "middle_word",
+"target": "Q106691685",
+"q": "viscères"
+},
+{
+"kind": "words_skip",
+"target": "Q106691685",
+"q": "sarcophage viscères"
+},
+{
+"kind": "prefix2",
+"target": "Q87763853",
+"q": "Peleus and"
+},
+{
+"kind": "typo",
+"target": "Q87763853",
+"q": "Peleu sand Thetis"
+},
+{
+"kind": "middle_word",
+"target": "Q87763853",
+"q": "Thetis"
+},
+{
+"kind": "words_skip",
+"target": "Q87763853",
+"q": "Peleus Thetis"
+},
+{
+"kind": "prefix2",
+"target": "Q115736203",
+"q": "La bienheureuse"
+},
+{
+"kind": "typo",
+"target": "Q115736203",
+"q": "La bienheureuse Luodvica"
+},
+{
+"kind": "middle_word",
+"target": "Q115736203",
+"q": "Ludovica"
+},
+{
+"kind": "words_skip",
+"target": "Q115736203",
+"q": "La Ludovica"
+},
+{
+"kind": "artist+word",
+"target": "Q115736203",
+"q": "Bernini bienheureuse"
+},
+{
+"kind": "prefix2",
+"target": "Q29847543",
+"q": "Smith in"
+},
+{
+"kind": "typo",
+"target": "Q29847543",
+"q": "Smith in ihs"
+},
+{
+"kind": "middle_word",
+"target": "Q29847543",
+"q": "workshop"
+},
+{
+"kind": "words_skip",
+"target": "Q29847543",
+"q": "Smith his"
+},
+{
+"kind": "artist+word",
+"target": "Q29847543",
+"q": "Nain workshop"
+},
+{
+"kind": "prefix2",
+"target": "Q115670189",
+"q": "Le Temps"
+},
+{
+"kind": "typo",
+"target": "Q115670189",
+"q": "Le Temsp"
+},
+{
+"kind": "middle_word",
+"target": "Q115670189",
+"q": "Temps"
+},
+{
+"kind": "artist+word",
+"target": "Q115670189",
+"q": "Prud'hon Temps"
+},
+{
+"kind": "prefix2",
+"target": "Q116761152",
+"q": "Les Amusements"
+},
+{
+"kind": "typo",
+"target": "Q116761152",
+"q": "Les Amusemetns de"
+},
+{
+"kind": "middle_word",
+"target": "Q116761152",
+"q": "l’enfance"
+},
+{
+"kind": "words_skip",
+"target": "Q116761152",
+"q": "Les de"
+},
+{
+"kind": "artist+word",
+"target": "Q116761152",
+"q": "Bachelier Amusements"
+},
+{
+"kind": "prefix2",
+"target": "Q3620831",
+"q": "The Apparition"
+},
+{
+"kind": "typo",
+"target": "Q3620831",
+"q": "The Appairtion of"
+},
+{
+"kind": "middle_word",
+"target": "Q3620831",
+"q": "Great"
+},
+{
+"kind": "words_skip",
+"target": "Q3620831",
+"q": "The of"
+},
+{
+"kind": "artist+word",
+"target": "Q3620831",
+"q": "Poussin Virgin"
+},
+{
+"kind": "prefix2",
+"target": "Q60448420",
+"q": "\" Graacht"
+},
+{
+"kind": "typo",
+"target": "Q60448420",
+"q": "\" Graacht \""
+},
+{
+"kind": "middle_word",
+"target": "Q60448420",
+"q": "dutch"
+},
+{
+"kind": "words_skip",
+"target": "Q60448420",
+"q": "\" \""
+},
+{
+"kind": "artist+word",
+"target": "Q60448420",
+"q": "Prins dutch"
+},
+{
+"kind": "prefix2",
+"target": "Q115674936",
+"q": "Médaillon rond"
+},
+{
+"kind": "typo",
+"target": "Q115674936",
+"q": "Médaillon rodn :"
+},
+{
+"kind": "middle_word",
+"target": "Q115674936",
+"q": "Rovere,"
+},
+{
+"kind": "words_skip",
+"target": "Q115674936",
+"q": "Médaillon :"
+},
+{
+"kind": "prefix2",
+"target": "Q115668780",
+"q": "Le Calvaire"
+},
+{
+"kind": "typo",
+"target": "Q115668780",
+"q": "Le Calvarie"
+},
+{
+"kind": "middle_word",
+"target": "Q115668780",
+"q": "Calvaire"
+},
+{
+"kind": "artist+word",
+"target": "Q115668780",
+"q": "d'Alessandro Calvaire"
+},
+{
+"kind": "prefix2",
+"target": "Q115671826",
+"q": "Portrait du"
+},
+{
+"kind": "typo",
+"target": "Q115671826",
+"q": "Protrait du duc"
+},
+{
+"kind": "middle_word",
+"target": "Q115671826",
+"q": "Choiseul-Praslin"
+},
+{
+"kind": "words_skip",
+"target": "Q115671826",
+"q": "Portrait duc"
+},
+{
+"kind": "prefix2",
+"target": "Q115671856",
+"q": "Sacre de"
+},
+{
+"kind": "typo",
+"target": "Q115671856",
+"q": "Sacre de Chrales"
+},
+{
+"kind": "middle_word",
+"target": "Q115671856",
+"q": "Charles"
+},
+{
+"kind": "words_skip",
+"target": "Q115671856",
+"q": "Sacre Charles"
+},
+{
+"kind": "artist+word",
+"target": "Q115671856",
+"q": "Gérard Charles"
+},
+{
+"kind": "prefix2",
+"target": "Q29650014",
+"q": "Ruines romaines"
+},
+{
+"kind": "typo",
+"target": "Q29650014",
+"q": "Ruinse romaines avec"
+},
+{
+"kind": "middle_word",
+"target": "Q29650014",
+"q": "Colisée"
+},
+{
+"kind": "words_skip",
+"target": "Q29650014",
+"q": "Ruines avec"
+},
+{
+"kind": "artist+word",
+"target": "Q29650014",
+"q": "Robert romaines"
+},
+{
+"kind": "prefix2",
+"target": "Q18177757",
+"q": "La mer"
+},
+{
+"kind": "typo",
+"target": "Q18177757",
+"q": "La mer uv"
+},
+{
+"kind": "middle_word",
+"target": "Q18177757",
+"q": "falaises"
+},
+{
+"kind": "words_skip",
+"target": "Q18177757",
+"q": "La vu"
+},
+{
+"kind": "artist+word",
+"target": "Q18177757",
+"q": "Corot falaises"
+},
+{
+"kind": "prefix2",
+"target": "Q57941475",
+"q": "Bastet on"
+},
+{
+"kind": "typo",
+"target": "Q57941475",
+"q": "Bastet on pillra-E"
+},
+{
+"kind": "middle_word",
+"target": "Q57941475",
+"q": "pillar-E"
+},
+{
+"kind": "words_skip",
+"target": "Q57941475",
+"q": "Bastet pillar-E"
+},
+{
+"kind": "prefix2",
+"target": "Q87458622",
+"q": "Modèles pour"
+},
+{
+"kind": "typo",
+"target": "Q87458622",
+"q": "Modèle spour les"
+},
+{
+"kind": "middle_word",
+"target": "Q87458622",
+"q": "encadrant"
+},
+{
+"kind": "words_skip",
+"target": "Q87458622",
+"q": "Modèles les"
+},
+{
+"kind": "artist+word",
+"target": "Q87458622",
+"q": "Gérard figures"
+},
+{
+"kind": "prefix2",
+"target": "Q30143867",
+"q": "Insigna with"
+},
+{
+"kind": "typo",
+"target": "Q30143867",
+"q": "Insigna iwth Hittit"
+},
+{
+"kind": "middle_word",
+"target": "Q30143867",
+"q": "symbols"
+},
+{
+"kind": "words_skip",
+"target": "Q30143867",
+"q": "Insigna Hittit"
+},
+{
+"kind": "prefix2",
+"target": "Q56579469",
+"q": "Seal of"
+},
+{
+"kind": "typo",
+"target": "Q56579469",
+"q": "Seal of omnkey"
+},
+{
+"kind": "middle_word",
+"target": "Q56579469",
+"q": "18998"
+},
+{
+"kind": "words_skip",
+"target": "Q56579469",
+"q": "Seal monkey"
+},
+{
+"kind": "prefix2",
+"target": "Q57205304",
+"q": "Warclub with"
+},
+{
+"kind": "typo",
+"target": "Q57205304",
+"q": "Warclu bwith chariot"
+},
+{
+"kind": "middle_word",
+"target": "Q57205304",
+"q": "serpents-AO"
+},
+{
+"kind": "words_skip",
+"target": "Q57205304",
+"q": "Warclub chariot"
+},
+{
+"kind": "prefix2",
+"target": "Q116284983",
+"q": "Vénus et"
+},
+{
+"kind": "typo",
+"target": "Q116284983",
+"q": "Vénus et Adnois"
+},
+{
+"kind": "middle_word",
+"target": "Q116284983",
+"q": "Adonis"
+},
+{
+"kind": "words_skip",
+"target": "Q116284983",
+"q": "Vénus Adonis"
+},
+{
+"kind": "artist+word",
+"target": "Q116284983",
+"q": "Verdier Adonis"
+},
+{
+"kind": "prefix2",
+"target": "Q19321788",
+"q": "The Birth"
+},
+{
+"kind": "typo",
+"target": "Q19321788",
+"q": "The Bitrh of"
+},
+{
+"kind": "middle_word",
+"target": "Q19321788",
+"q": "Virgin"
+},
+{
+"kind": "words_skip",
+"target": "Q19321788",
+"q": "The of"
+},
+{
+"kind": "artist+word",
+"target": "Q19321788",
+"q": "Dipre Virgin"
+},
+{
+"kind": "prefix2",
+"target": "Q123423922",
+"q": "Chapiteau décoré"
+},
+{
+"kind": "typo",
+"target": "Q123423922",
+"q": "Chaipteau décoré de"
+},
+{
+"kind": "middle_word",
+"target": "Q123423922",
+"q": "feuilles"
+},
+{
+"kind": "words_skip",
+"target": "Q123423922",
+"q": "Chapiteau de"
+},
+{
+"kind": "prefix2",
+"target": "Q29221389",
+"q": "Le Christ"
+},
+{
+"kind": "typo",
+"target": "Q29221389",
+"q": "Le hCrist mort"
+},
+{
+"kind": "middle_word",
+"target": "Q29221389",
+"q": "Christ"
+},
+{
+"kind": "words_skip",
+"target": "Q29221389",
+"q": "Le mort"
+},
+{
+"kind": "artist+word",
+"target": "Q29221389",
+"q": "Baugin Christ"
+},
+{
+"kind": "prefix2",
+"target": "Q29643379",
+"q": "Interior with"
+},
+{
+"kind": "typo",
+"target": "Q29643379",
+"q": "Interio rwith fish"
+},
+{
+"kind": "middle_word",
+"target": "Q29643379",
+"q": "strainer"
+},
+{
+"kind": "words_skip",
+"target": "Q29643379",
+"q": "Interior fish"
+},
+{
+"kind": "prefix2",
+"target": "Q115672596",
+"q": "Louis-Marie de"
+},
+{
+"kind": "typo",
+"target": "Q115672596",
+"q": "Louis-Marie de Slagues,"
+},
+{
+"kind": "middle_word",
+"target": "Q115672596",
+"q": "(1766-1793),"
+},
+{
+"kind": "words_skip",
+"target": "Q115672596",
+"q": "Louis-Marie Salgues,"
+},
+{
+"kind": "artist+word",
+"target": "Q115672596",
+"q": "Lefèvre général"
+},
+{
+"kind": "prefix2",
+"target": "Q83606264",
+"q": "spherical universal"
+},
+{
+"kind": "typo",
+"target": "Q83606264",
+"q": "sphericla universal dial"
+},
+{
+"kind": "middle_word",
+"target": "Q83606264",
+"q": "universal"
+},
+{
+"kind": "words_skip",
+"target": "Q83606264",
+"q": "spherical dial"
+},
+{
+"kind": "prefix2",
+"target": "Q83499848",
+"q": "Horizontal sundial"
+},
+{
+"kind": "typo",
+"target": "Q83499848",
+"q": "Hroizontal sundial"
+},
+{
+"kind": "middle_word",
+"target": "Q83499848",
+"q": "sundial"
+},
+{
+"kind": "artist+word",
+"target": "Q83499848",
+"q": "Chapotot sundial"
+},
+{
+"kind": "prefix2",
+"target": "Q87912343",
+"q": "male mask"
+},
+{
+"kind": "typo",
+"target": "Q87912343",
+"q": "mael mask"
+},
+{
+"kind": "prefix2",
+"target": "Q115668864",
+"q": "Joueurs de"
+},
+{
+"kind": "typo",
+"target": "Q115668864",
+"q": "Joueurs de quliles"
+},
+{
+"kind": "middle_word",
+"target": "Q115668864",
+"q": "quilles"
+},
+{
+"kind": "words_skip",
+"target": "Q115668864",
+"q": "Joueurs quilles"
+},
+{
+"kind": "prefix2",
+"target": "Q29164348",
+"q": "Marguerite de"
+},
+{
+"kind": "typo",
+"target": "Q29164348",
+"q": "Marguerite de Valosi"
+},
+{
+"kind": "middle_word",
+"target": "Q29164348",
+"q": "Valois"
+},
+{
+"kind": "words_skip",
+"target": "Q29164348",
+"q": "Marguerite Valois"
+},
+{
+"kind": "artist+word",
+"target": "Q29164348",
+"q": "Pils Valois"
+},
+{
+"kind": "prefix2",
+"target": "Q29655305",
+"q": "Tournament near"
+},
+{
+"kind": "typo",
+"target": "Q29655305",
+"q": "Tournament nea rthe"
+},
+{
+"kind": "middle_word",
+"target": "Q29655305",
+"q": "Steen"
+},
+{
+"kind": "words_skip",
+"target": "Q29655305",
+"q": "Tournament the"
+},
+{
+"kind": "artist+word",
+"target": "Q29655305",
+"q": "Rubens Moats"
+},
+{
+"kind": "prefix2",
+"target": "Q87452785",
+"q": "Eléménts du"
+},
+{
+"kind": "typo",
+"target": "Q87452785",
+"q": "Elémétns du décor"
+},
+{
+"kind": "middle_word",
+"target": "Q87452785",
+"q": "d'Amboise"
+},
+{
+"kind": "words_skip",
+"target": "Q87452785",
+"q": "Eléménts décor"
+},
+{
+"kind": "prefix2",
+"target": "Q111652174",
+"q": "Scène galante"
+},
+{
+"kind": "typo",
+"target": "Q111652174",
+"q": "Scèen galante"
+},
+{
+"kind": "middle_word",
+"target": "Q111652174",
+"q": "galante"
+},
+{
+"kind": "artist+word",
+"target": "Q111652174",
+"q": "Bellangé galante"
+},
+{
+"kind": "prefix2",
+"target": "Q88485029",
+"q": "Kohl case-N"
+},
+{
+"kind": "typo",
+"target": "Q88485029",
+"q": "Kohl csae-N 1764"
+},
+{
+"kind": "middle_word",
+"target": "Q88485029",
+"q": "case-N"
+},
+{
+"kind": "words_skip",
+"target": "Q88485029",
+"q": "Kohl 1764"
+},
+{
+"kind": "prefix2",
+"target": "Q29845008",
+"q": "Portrait de"
+},
+{
+"kind": "typo",
+"target": "Q29845008",
+"q": "Potrrait de jeune"
+},
+{
+"kind": "middle_word",
+"target": "Q29845008",
+"q": "jeune"
+},
+{
+"kind": "words_skip",
+"target": "Q29845008",
+"q": "Portrait jeune"
+},
+{
+"kind": "artist+word",
+"target": "Q29845008",
+"q": "Ledoux jeune"
+},
+{
+"kind": "prefix2",
+"target": "Q55788789",
+"q": "Figurine of"
+},
+{
+"kind": "typo",
+"target": "Q55788789",
+"q": "Figurnie of a"
+},
+{
+"kind": "middle_word",
+"target": "Q55788789",
+"q": "woman-Br"
+},
+{
+"kind": "words_skip",
+"target": "Q55788789",
+"q": "Figurine a"
+},
+{
+"kind": "prefix2",
+"target": "Q28885450",
+"q": "Scène d'accouchement"
+},
+{
+"kind": "typo",
+"target": "Q28885450",
+"q": "Scène d'accouchmeent"
+},
+{
+"kind": "middle_word",
+"target": "Q28885450",
+"q": "d'accouchement"
+},
+{
+"kind": "prefix2",
+"target": "Q34778153",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q34778153",
+"q": "Portrait of Philibret"
+},
+{
+"kind": "middle_word",
+"target": "Q34778153",
+"q": "(1689-1747)"
+},
+{
+"kind": "words_skip",
+"target": "Q34778153",
+"q": "Portrait Philibert"
+},
+{
+"kind": "artist+word",
+"target": "Q34778153",
+"q": "Tour (1689-1747)"
+},
+{
+"kind": "prefix2",
+"target": "Q115676415",
+"q": "peinture murale"
+},
+{
+"kind": "typo",
+"target": "Q115676415",
+"q": "peintrue murale"
+},
+{
+"kind": "middle_word",
+"target": "Q115676415",
+"q": "murale"
+},
+{
+"kind": "prefix2",
+"target": "Q87453287",
+"q": "Support décoré"
+},
+{
+"kind": "typo",
+"target": "Q87453287",
+"q": "Support dcéoré d'une"
+},
+{
+"kind": "middle_word",
+"target": "Q87453287",
+"q": "décoré"
+},
+{
+"kind": "words_skip",
+"target": "Q87453287",
+"q": "Support d'une"
+},
+{
+"kind": "prefix2",
+"target": "Q115927609",
+"q": "Plat rond"
+},
+{
+"kind": "typo",
+"target": "Q115927609",
+"q": "Plat rond représnetant"
+},
+{
+"kind": "middle_word",
+"target": "Q115927609",
+"q": "représentant"
+},
+{
+"kind": "words_skip",
+"target": "Q115927609",
+"q": "Plat représentant"
+},
+{
+"kind": "artist+word",
+"target": "Q115927609",
+"q": "Patanazzi représentant"
+},
+{
+"kind": "prefix2",
+"target": "Q106680423",
+"q": "Vase orné"
+},
+{
+"kind": "typo",
+"target": "Q106680423",
+"q": "Vase onré de"
+},
+{
+"kind": "middle_word",
+"target": "Q106680423",
+"q": "coquilles"
+},
+{
+"kind": "words_skip",
+"target": "Q106680423",
+"q": "Vase de"
+},
+{
+"kind": "artist+word",
+"target": "Q106680423",
+"q": "Mazeline fleurs"
+},
+{
+"kind": "prefix2",
+"target": "Q29842480",
+"q": "Rendez-vous de"
+},
+{
+"kind": "typo",
+"target": "Q29842480",
+"q": "Rendez-vous de chases"
+},
+{
+"kind": "middle_word",
+"target": "Q29842480",
+"q": "chasse"
+},
+{
+"kind": "words_skip",
+"target": "Q29842480",
+"q": "Rendez-vous chasse"
+},
+{
+"kind": "artist+word",
+"target": "Q29842480",
+"q": "Montpezat chasse"
+},
+{
+"kind": "prefix2",
+"target": "Q123148157",
+"q": "Portrait présumé"
+},
+{
+"kind": "typo",
+"target": "Q123148157",
+"q": "Portrait préusmé de"
+},
+{
+"kind": "middle_word",
+"target": "Q123148157",
+"q": "représentée"
+},
+{
+"kind": "words_skip",
+"target": "Q123148157",
+"q": "Portrait de"
+},
+{
+"kind": "artist+word",
+"target": "Q123148157",
+"q": "Petitot Madeleine"
+},
+{
+"kind": "prefix2",
+"target": "Q33035150",
+"q": "tablet bearing"
+},
+{
+"kind": "typo",
+"target": "Q33035150",
+"q": "tablte bearing a"
+},
+{
+"kind": "middle_word",
+"target": "Q33035150",
+"q": "gifts"
+},
+{
+"kind": "words_skip",
+"target": "Q33035150",
+"q": "tablet a"
+},
+{
+"kind": "prefix2",
+"target": "Q115670648",
+"q": "François Verdier"
+},
+{
+"kind": "typo",
+"target": "Q115670648",
+"q": "François Verdire (1651–1730),"
+},
+{
+"kind": "middle_word",
+"target": "Q115670648",
+"q": "Verdier"
+},
+{
+"kind": "words_skip",
+"target": "Q115670648",
+"q": "François (1651–1730),"
+},
+{
+"kind": "artist+word",
+"target": "Q115670648",
+"q": "Ranc Verdier"
+},
+{
+"kind": "prefix2",
+"target": "Q106873887",
+"q": "Vase, AO"
+},
+{
+"kind": "typo",
+"target": "Q106873887",
+"q": "Vase, OA 28996,"
+},
+{
+"kind": "middle_word",
+"target": "Q106873887",
+"q": "Eastern"
+},
+{
+"kind": "words_skip",
+"target": "Q106873887",
+"q": "Vase, 28996,"
+},
+{
+"kind": "prefix2",
+"target": "Q29862550",
+"q": "Scène de"
+},
+{
+"kind": "typo",
+"target": "Q29862550",
+"q": "Scène de misèer"
+},
+{
+"kind": "middle_word",
+"target": "Q29862550",
+"q": "misère"
+},
+{
+"kind": "words_skip",
+"target": "Q29862550",
+"q": "Scène misère"
+},
+{
+"kind": "artist+word",
+"target": "Q29862550",
+"q": "Danloux misère"
+},
+{
+"kind": "prefix2",
+"target": "Q29656879",
+"q": "Earth or"
+},
+{
+"kind": "typo",
+"target": "Q29656879",
+"q": "Earht or The"
+},
+{
+"kind": "middle_word",
+"target": "Q29656879",
+"q": "Earthly"
+},
+{
+"kind": "words_skip",
+"target": "Q29656879",
+"q": "Earth The"
+},
+{
+"kind": "artist+word",
+"target": "Q29656879",
+"q": "Elder Earthly"
+},
+{
+"kind": "prefix2",
+"target": "Q63995552",
+"q": "Lion-shaped game"
+},
+{
+"kind": "typo",
+"target": "Q63995552",
+"q": "Lion-shaped game countre-E"
+},
+{
+"kind": "middle_word",
+"target": "Q63995552",
+"q": "counter-E"
+},
+{
+"kind": "words_skip",
+"target": "Q63995552",
+"q": "Lion-shaped counter-E"
+},
+{
+"kind": "prefix2",
+"target": "Q122907099",
+"q": "Socle d'un"
+},
+{
+"kind": "typo",
+"target": "Q122907099",
+"q": "Socle d'un vsae"
+},
+{
+"kind": "middle_word",
+"target": "Q122907099",
+"q": "Marie-Antoinette"
+},
+{
+"kind": "words_skip",
+"target": "Q122907099",
+"q": "Socle vase"
+},
+{
+"kind": "artist+word",
+"target": "Q122907099",
+"q": "Rémond Marie-Antoinette"
+},
+{
+"kind": "prefix2",
+"target": "Q44208171",
+"q": "Louvre Br"
+},
+{
+"kind": "typo",
+"target": "Q44208171",
+"q": "Lourve Br 4787"
+},
+{
+"kind": "words_skip",
+"target": "Q44208171",
+"q": "Louvre 4787"
+},
+{
+"kind": "prefix2",
+"target": "Q115669982",
+"q": "Saint Pétrone"
+},
+{
+"kind": "typo",
+"target": "Q115669982",
+"q": "Saitn Pétrone et"
+},
+{
+"kind": "middle_word",
+"target": "Q115669982",
+"q": "saint"
+},
+{
+"kind": "words_skip",
+"target": "Q115669982",
+"q": "Saint et"
+},
+{
+"kind": "artist+word",
+"target": "Q115669982",
+"q": "Vivarini saint"
+},
+{
+"kind": "prefix2",
+"target": "Q87458062",
+"q": "Mercure rattachant"
+},
+{
+"kind": "typo",
+"target": "Q87458062",
+"q": "Mercure rattahcant ses"
+},
+{
+"kind": "middle_word",
+"target": "Q87458062",
+"q": "talonnières"
+},
+{
+"kind": "words_skip",
+"target": "Q87458062",
+"q": "Mercure ses"
+},
+{
+"kind": "artist+word",
+"target": "Q87458062",
+"q": "Rude rattachant"
+},
+{
+"kind": "prefix2",
+"target": "Q29649442",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q29649442",
+"q": "Portrati of an"
+},
+{
+"kind": "middle_word",
+"target": "Q29649442",
+"q": "unknown"
+},
+{
+"kind": "words_skip",
+"target": "Q29649442",
+"q": "Portrait an"
+},
+{
+"kind": "artist+word",
+"target": "Q29649442",
+"q": "Gelder unknown"
+},
+{
+"kind": "prefix2",
+"target": "Q21756061",
+"q": "An Older"
+},
+{
+"kind": "typo",
+"target": "Q21756061",
+"q": "An Older Mna"
+},
+{
+"kind": "middle_word",
+"target": "Q21756061",
+"q": "Older"
+},
+{
+"kind": "words_skip",
+"target": "Q21756061",
+"q": "An Man"
+},
+{
+"kind": "prefix2",
+"target": "Q57948448",
+"q": "Couple-N 2293"
+},
+{
+"kind": "typo",
+"target": "Q57948448",
+"q": "Coulpe-N 2293"
+},
+{
+"kind": "prefix2",
+"target": "Q115672106",
+"q": "Henri IV"
+},
+{
+"kind": "typo",
+"target": "Q115672106",
+"q": "Henri I Và"
+},
+{
+"kind": "middle_word",
+"target": "Q115672106",
+"q": "meunier"
+},
+{
+"kind": "words_skip",
+"target": "Q115672106",
+"q": "Henri à"
+},
+{
+"kind": "artist+word",
+"target": "Q115672106",
+"q": "Vincent Lieusaint"
+},
+{
+"kind": "prefix2",
+"target": "Q66022897",
+"q": "Stele of"
+},
+{
+"kind": "typo",
+"target": "Q66022897",
+"q": "Stele of Rmaesses"
+},
+{
+"kind": "middle_word",
+"target": "Q66022897",
+"q": "Ramesses"
+},
+{
+"kind": "words_skip",
+"target": "Q66022897",
+"q": "Stele Ramesses"
+},
+{
+"kind": "prefix2",
+"target": "Q87812359",
+"q": "Hippolytus and"
+},
+{
+"kind": "typo",
+"target": "Q87812359",
+"q": "Hippolytu sand Phaedra"
+},
+{
+"kind": "middle_word",
+"target": "Q87812359",
+"q": "Phaedra"
+},
+{
+"kind": "words_skip",
+"target": "Q87812359",
+"q": "Hippolytus Phaedra"
+},
+{
+"kind": "prefix2",
+"target": "Q111651929",
+"q": "Le Boucher"
+},
+{
+"kind": "typo",
+"target": "Q111651929",
+"q": "Le Bouhcer"
+},
+{
+"kind": "middle_word",
+"target": "Q111651929",
+"q": "Boucher"
+},
+{
+"kind": "prefix2",
+"target": "Q115669179",
+"q": "Portrait de"
+},
+{
+"kind": "typo",
+"target": "Q115669179",
+"q": "Portrai tde Louis"
+},
+{
+"kind": "middle_word",
+"target": "Q115669179",
+"q": "costume"
+},
+{
+"kind": "words_skip",
+"target": "Q115669179",
+"q": "Portrait Louis"
+},
+{
+"kind": "prefix2",
+"target": "Q64849911",
+"q": "Vase-E 23452"
+},
+{
+"kind": "typo",
+"target": "Q64849911",
+"q": "Vase-E 23452"
+},
+{
+"kind": "middle_word",
+"target": "Q64849911",
+"q": "23452"
+},
+{
+"kind": "prefix2",
+"target": "Q115675943",
+"q": "peinture murale"
+},
+{
+"kind": "typo",
+"target": "Q115675943",
+"q": "peinture umrale"
+},
+{
+"kind": "middle_word",
+"target": "Q115675943",
+"q": "murale"
+},
+{
+"kind": "prefix2",
+"target": "joconde-00000089560",
+"q": "Grande cathédrale"
+},
+{
+"kind": "typo",
+"target": "joconde-00000089560",
+"q": "Grand ecathédrale"
+},
+{
+"kind": "middle_word",
+"target": "joconde-00000089560",
+"q": "cathédrale"
+},
+{
+"kind": "artist+word",
+"target": "joconde-00000089560",
+"q": "Maurice cathédrale"
+},
+{
+"kind": "zh_part",
+"target": "joconde-00000089560",
+"q": "大教堂"
+},
+{
+"kind": "prefix2",
+"target": "joconde-00000089472",
+"q": "Les biches"
+},
+{
+"kind": "typo",
+"target": "joconde-00000089472",
+"q": "Le sbiches"
+},
+{
+"kind": "middle_word",
+"target": "joconde-00000089472",
+"q": "biches"
+},
+{
+"kind": "artist+word",
+"target": "joconde-00000089472",
+"q": "Marie biches"
+},
+{
+"kind": "zh_part",
+"target": "joconde-00000089472",
+"q": "母鹿们"
+},
+{
+"kind": "prefix2",
+"target": "joconde-00000089442",
+"q": "Portrait de"
+},
+{
+"kind": "typo",
+"target": "joconde-00000089442",
+"q": "Portrati de Paul"
+},
+{
+"kind": "middle_word",
+"target": "joconde-00000089442",
+"q": "Guillaume"
+},
+{
+"kind": "words_skip",
+"target": "joconde-00000089442",
+"q": "Portrait Paul"
+},
+{
+"kind": "artist+word",
+"target": "joconde-00000089442",
+"q": "André Guillaume"
+},
+{
+"kind": "zh_part",
+"target": "joconde-00000089442",
+"q": "保罗·纪"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC013405",
+"q": "Amor caritas"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013405",
+"q": "Amro caritas"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC013405",
+"q": "caritas"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC013405",
+"q": "BARBEDIENNE caritas"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC013405",
+"q": "爱与慈悲"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC013861",
+"q": "野鸡"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC010167",
+"q": "Femme en"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010167",
+"q": "Femme en rboe"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC010167",
+"q": "decolletee"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC010167",
+"q": "Femme robe"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC010167",
+"q": "Rembrandt decolletee"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC010167",
+"q": "穿低领裙"
+},
+{
+"kind": "prefix2",
+"target": "Q17495562",
+"q": "Saint-Honoré-les-Bains, Morning"
+},
+{
+"kind": "typo",
+"target": "Q17495562",
+"q": "Saint-Honoré-les-aBins, Morning"
+},
+{
+"kind": "middle_word",
+"target": "Q17495562",
+"q": "Morning"
+},
+{
+"kind": "artist+word",
+"target": "Q17495562",
+"q": "Osbert Morning"
+},
+{
+"kind": "zh_part",
+"target": "Q17495562",
+"q": "圣奥诺雷"
+},
+{
+"kind": "prefix2",
+"target": "Q18822980",
+"q": "From Quai"
+},
+{
+"kind": "typo",
+"target": "Q18822980",
+"q": "Fro mQuai de"
+},
+{
+"kind": "middle_word",
+"target": "Q18822980",
+"q": "Grenelle"
+},
+{
+"kind": "words_skip",
+"target": "Q18822980",
+"q": "From de"
+},
+{
+"kind": "artist+word",
+"target": "Q18822980",
+"q": "Rivière Grenelle"
+},
+{
+"kind": "zh_part",
+"target": "Q18822980",
+"q": "格尔讷尔"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC013950",
+"q": "Conducteur de"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013950",
+"q": "Conudcteur de char"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC013950",
+"q": "antique"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC013950",
+"q": "Conducteur char"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC013950",
+"q": "Emmanuel antique"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC013950",
+"q": "古代战车"
+},
+{
+"kind": "prefix2",
+"target": "Q17490617",
+"q": "In Bayeux"
+},
+{
+"kind": "typo",
+"target": "Q17490617",
+"q": "In aByeux"
+},
+{
+"kind": "middle_word",
+"target": "Q17490617",
+"q": "Bayeux"
+},
+{
+"kind": "artist+word",
+"target": "Q17490617",
+"q": "Osbert Bayeux"
+},
+{
+"kind": "zh_part",
+"target": "Q17490617",
+"q": "在巴约"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC013796",
+"q": "Renommee retenant"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013796",
+"q": "Renommee retneant pegase"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC013796",
+"q": "retenant"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC013796",
+"q": "Renommee pegase"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC013796",
+"q": "Louis pegase"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC013796",
+"q": "名声驾驭"
+},
+{
+"kind": "prefix2",
+"target": "Q17491307",
+"q": "In a"
+},
+{
+"kind": "typo",
+"target": "Q17491307",
+"q": "In a obat"
+},
+{
+"kind": "words_skip",
+"target": "Q17491307",
+"q": "In boat"
+},
+{
+"kind": "zh_part",
+"target": "Q17491307",
+"q": "在船上"
+},
+{
+"kind": "prefix2",
+"target": "Q17492543",
+"q": "The Needle"
+},
+{
+"kind": "typo",
+"target": "Q17492543",
+"q": "Teh Needle of"
+},
+{
+"kind": "middle_word",
+"target": "Q17492543",
+"q": "Needle"
+},
+{
+"kind": "words_skip",
+"target": "Q17492543",
+"q": "The of"
+},
+{
+"kind": "artist+word",
+"target": "Q17492543",
+"q": "Leroy Étretat"
+},
+{
+"kind": "zh_part",
+"target": "Q17492543",
+"q": "埃特勒塔"
+},
+{
+"kind": "prefix2",
+"target": "Q17491092",
+"q": "Table Corner"
+},
+{
+"kind": "typo",
+"target": "Q17491092",
+"q": "Tabl eCorner"
+},
+{
+"kind": "middle_word",
+"target": "Q17491092",
+"q": "Corner"
+},
+{
+"kind": "artist+word",
+"target": "Q17491092",
+"q": "Bonnard Corner"
+},
+{
+"kind": "zh_part",
+"target": "Q17491092",
+"q": "桌角"
+},
+{
+"kind": "prefix2",
+"target": "Q17493436",
+"q": "Le troupeau"
+},
+{
+"kind": "typo",
+"target": "Q17493436",
+"q": "L etroupeau"
+},
+{
+"kind": "middle_word",
+"target": "Q17493436",
+"q": "troupeau"
+},
+{
+"kind": "artist+word",
+"target": "Q17493436",
+"q": "Ménard troupeau"
+},
+{
+"kind": "zh_part",
+"target": "Q17493436",
+"q": "羊群"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC010075",
+"q": "Monument a"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010075",
+"q": "Monument a efifel"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC010075",
+"q": "eiffel"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC010075",
+"q": "Monument eiffel"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC010075",
+"q": "Antoine eiffel"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC010075",
+"q": "埃菲尔纪"
+},
+{
+"kind": "prefix2",
+"target": "Q61903420",
+"q": "The jewelry"
+},
+{
+"kind": "typo",
+"target": "Q61903420",
+"q": "Th ejewelry"
+},
+{
+"kind": "middle_word",
+"target": "Q61903420",
+"q": "jewelry"
+},
+{
+"kind": "artist+word",
+"target": "Q61903420",
+"q": "Troncy jewelry"
+},
+{
+"kind": "zh_part",
+"target": "Q61903420",
+"q": "珠宝"
+},
+{
+"kind": "prefix2",
+"target": "Q17495997",
+"q": "A meeting"
+},
+{
+"kind": "typo",
+"target": "Q17495997",
+"q": "A emeting"
+},
+{
+"kind": "middle_word",
+"target": "Q17495997",
+"q": "meeting"
+},
+{
+"kind": "artist+word",
+"target": "Q17495997",
+"q": "Bashkirtseva meeting"
+},
+{
+"kind": "zh_part",
+"target": "Q17495997",
+"q": "会议"
+},
+{
+"kind": "prefix2",
+"target": "Q17492827",
+"q": "The Oak"
+},
+{
+"kind": "typo",
+"target": "Q17492827",
+"q": "The aOk"
+},
+{
+"kind": "zh_part",
+"target": "Q17492827",
+"q": "橡树"
+},
+{
+"kind": "zh_part",
+"target": "Q17495752",
+"q": "交响曲"
+},
+{
+"kind": "prefix2",
+"target": "Q17491600",
+"q": "Gounod, resident"
+},
+{
+"kind": "typo",
+"target": "Q17491600",
+"q": "Gounod, ersident at"
+},
+{
+"kind": "middle_word",
+"target": "Q17491600",
+"q": "Villa"
+},
+{
+"kind": "words_skip",
+"target": "Q17491600",
+"q": "Gounod, at"
+},
+{
+"kind": "artist+word",
+"target": "Q17491600",
+"q": "Hébert Medici"
+},
+{
+"kind": "zh_part",
+"target": "Q17491600",
+"q": "居住在美"
+},
+{
+"kind": "prefix2",
+"target": "Q17496011",
+"q": "A Solitary"
+},
+{
+"kind": "typo",
+"target": "Q17496011",
+"q": "A Solitray Cabin"
+},
+{
+"kind": "middle_word",
+"target": "Q17496011",
+"q": "Cabin"
+},
+{
+"kind": "words_skip",
+"target": "Q17496011",
+"q": "A Cabin"
+},
+{
+"kind": "artist+word",
+"target": "Q17496011",
+"q": "Osbert Solitary"
+},
+{
+"kind": "zh_part",
+"target": "Q17496011",
+"q": "孤独的小"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC013580",
+"q": "Eugene silvain"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013580",
+"q": "Eugnee silvain (1851-1930)"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC013580",
+"q": "silvain"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC013580",
+"q": "Eugene (1851-1930)"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC013580",
+"q": "Fernand (1851-1930)"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC013580",
+"q": "欧仁·西"
+},
+{
+"kind": "prefix2",
+"target": "Q17495230",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q17495230",
+"q": "Porrtait of the"
+},
+{
+"kind": "middle_word",
+"target": "Q17495230",
+"q": "Barbey"
+},
+{
+"kind": "words_skip",
+"target": "Q17495230",
+"q": "Portrait the"
+},
+{
+"kind": "artist+word",
+"target": "Q17495230",
+"q": "Lévy Writer"
+},
+{
+"kind": "zh_part",
+"target": "Q17495230",
+"q": "作家朱尔"
+},
+{
+"kind": "prefix2",
+"target": "Q17490941",
+"q": "The Breton"
+},
+{
+"kind": "typo",
+"target": "Q17490941",
+"q": "The Breto nRound"
+},
+{
+"kind": "middle_word",
+"target": "Q17490941",
+"q": "Round"
+},
+{
+"kind": "words_skip",
+"target": "Q17490941",
+"q": "The Round"
+},
+{
+"kind": "artist+word",
+"target": "Q17490941",
+"q": "Bernard Round"
+},
+{
+"kind": "zh_part",
+"target": "Q17490941",
+"q": "布列塔尼"
+},
+{
+"kind": "prefix2",
+"target": "Q123338302",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q123338302",
+"q": "Potrrait of a"
+},
+{
+"kind": "middle_word",
+"target": "Q123338302",
+"q": "Young"
+},
+{
+"kind": "words_skip",
+"target": "Q123338302",
+"q": "Portrait a"
+},
+{
+"kind": "artist+word",
+"target": "Q123338302",
+"q": "Roger Young"
+},
+{
+"kind": "zh_part",
+"target": "Q123338302",
+"q": "年轻男子"
+},
+{
+"kind": "prefix2",
+"target": "Q3713993",
+"q": "Un café,"
+},
+{
+"kind": "typo",
+"target": "Q3713993",
+"q": "Un café, boluevard"
+},
+{
+"kind": "middle_word",
+"target": "Q3713993",
+"q": "Montmartre"
+},
+{
+"kind": "words_skip",
+"target": "Q3713993",
+"q": "Un boulevard"
+},
+{
+"kind": "artist+word",
+"target": "Q3713993",
+"q": "Degas café,"
+},
+{
+"kind": "zh_part",
+"target": "Q3713993",
+"q": "《咖啡馆"
+},
+{
+"kind": "prefix2",
+"target": "Q3795191",
+"q": "The Railway"
+},
+{
+"kind": "typo",
+"target": "Q3795191",
+"q": "The Railway Brigde"
+},
+{
+"kind": "middle_word",
+"target": "Q3795191",
+"q": "Bridge"
+},
+{
+"kind": "words_skip",
+"target": "Q3795191",
+"q": "The Bridge"
+},
+{
+"kind": "artist+word",
+"target": "Q3795191",
+"q": "Monet Bridge"
+},
+{
+"kind": "zh_part",
+"target": "Q3795191",
+"q": "阿让特伊"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC013174",
+"q": "Les quatre"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013174",
+"q": "Les quatre parites"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC013174",
+"q": "celeste"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC013174",
+"q": "Les parties"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC013174",
+"q": "Jean-Baptiste parties"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC013174",
+"q": "托举天球"
+},
+{
+"kind": "prefix2",
+"target": "Q17493504",
+"q": "Napoleon III"
+},
+{
+"kind": "typo",
+"target": "Q17493504",
+"q": "Napoleon II Iat"
+},
+{
+"kind": "middle_word",
+"target": "Q17493504",
+"q": "Solferino"
+},
+{
+"kind": "words_skip",
+"target": "Q17493504",
+"q": "Napoleon at"
+},
+{
+"kind": "artist+word",
+"target": "Q17493504",
+"q": "Meissonier battle"
+},
+{
+"kind": "zh_part",
+"target": "Q17493504",
+"q": "索尔费里"
+},
+{
+"kind": "prefix2",
+"target": "Q17491961",
+"q": "The Family"
+},
+{
+"kind": "typo",
+"target": "Q17491961",
+"q": "The Famliy Under"
+},
+{
+"kind": "middle_word",
+"target": "Q17491961",
+"q": "Under"
+},
+{
+"kind": "words_skip",
+"target": "Q17491961",
+"q": "The Under"
+},
+{
+"kind": "artist+word",
+"target": "Q17491961",
+"q": "Lebasque Under"
+},
+{
+"kind": "zh_part",
+"target": "Q17491961",
+"q": "灯下的家"
+},
+{
+"kind": "prefix2",
+"target": "Q59692320",
+"q": "L'Aurore by"
+},
+{
+"kind": "typo",
+"target": "Q59692320",
+"q": "L'Aruore by Denys"
+},
+{
+"kind": "middle_word",
+"target": "Q59692320",
+"q": "Denys"
+},
+{
+"kind": "words_skip",
+"target": "Q59692320",
+"q": "L'Aurore Denys"
+},
+{
+"kind": "artist+word",
+"target": "Q59692320",
+"q": "Puech Denys"
+},
+{
+"kind": "zh_part",
+"target": "Q59692320",
+"q": "黎明 由"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC013254",
+"q": "Le pere"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013254",
+"q": "Le pere nourricier"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC013254",
+"q": "nourricier"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC013254",
+"q": "Le nourricier"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC013254",
+"q": "Clément;THIEBAUT nourricier"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC013254",
+"q": "养父"
+},
+{
+"kind": "prefix2",
+"target": "Q64495003",
+"q": "Harpist and"
+},
+{
+"kind": "typo",
+"target": "Q64495003",
+"q": "Haprist and Group"
+},
+{
+"kind": "middle_word",
+"target": "Q64495003",
+"q": "Dancers"
+},
+{
+"kind": "words_skip",
+"target": "Q64495003",
+"q": "Harpist Group"
+},
+{
+"kind": "artist+word",
+"target": "Q64495003",
+"q": "Osbert Group"
+},
+{
+"kind": "zh_part",
+"target": "Q64495003",
+"q": "竖琴师与"
+},
+{
+"kind": "prefix2",
+"target": "Q106364075",
+"q": "The Titan"
+},
+{
+"kind": "typo",
+"target": "Q106364075",
+"q": "The Tiatn"
+},
+{
+"kind": "middle_word",
+"target": "Q106364075",
+"q": "Titan"
+},
+{
+"kind": "artist+word",
+"target": "Q106364075",
+"q": "Injalbert Titan"
+},
+{
+"kind": "zh_part",
+"target": "Q106364075",
+"q": "泰坦"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC014016",
+"q": "Madame pierre"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC014016",
+"q": "Mdaame pierre edouard"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC014016",
+"q": "cecile"
+},
+{
+"kind": "words_skip",
+"target": "joconde-000SC014016",
+"q": "Madame edouard"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC014016",
+"q": "Eugène edouard"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC014016",
+"q": "皮埃尔·"
+},
+{
+"kind": "prefix2",
+"target": "joconde-50350143605",
+"q": "Feuille de"
+},
+{
+"kind": "typo",
+"target": "joconde-50350143605",
+"q": "Feuille ed cinq"
+},
+{
+"kind": "middle_word",
+"target": "joconde-50350143605",
+"q": "études"
+},
+{
+"kind": "words_skip",
+"target": "joconde-50350143605",
+"q": "Feuille cinq"
+},
+{
+"kind": "artist+word",
+"target": "joconde-50350143605",
+"q": "Carlo sièges"
+},
+{
+"kind": "zh_part",
+"target": "joconde-50350143605",
+"q": "五个座椅"
+},
+{
+"kind": "prefix2",
+"target": "Q17495366",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q17495366",
+"q": "Protrait of the"
+},
+{
+"kind": "middle_word",
+"target": "Q17495366",
+"q": "Seward"
+},
+{
+"kind": "words_skip",
+"target": "Q17495366",
+"q": "Portrait the"
+},
+{
+"kind": "artist+word",
+"target": "Q17495366",
+"q": "Humphry Seward"
+},
+{
+"kind": "zh_part",
+"target": "Q17495366",
+"q": "年轻的西"
+},
+{
+"kind": "prefix2",
+"target": "Q28110219",
+"q": "Boating Party"
+},
+{
+"kind": "typo",
+"target": "Q28110219",
+"q": "Botaing Party"
+},
+{
+"kind": "middle_word",
+"target": "Q28110219",
+"q": "Party"
+},
+{
+"kind": "artist+word",
+"target": "Q28110219",
+"q": "Caillebotte Party"
+},
+{
+"kind": "zh_part",
+"target": "Q28110219",
+"q": "划船聚会"
+},
+{
+"kind": "prefix2",
+"target": "Q123338312",
+"q": "Study of"
+},
+{
+"kind": "typo",
+"target": "Q123338312",
+"q": "Study o fa"
+},
+{
+"kind": "middle_word",
+"target": "Q123338312",
+"q": "Woman"
+},
+{
+"kind": "words_skip",
+"target": "Q123338312",
+"q": "Study a"
+},
+{
+"kind": "artist+word",
+"target": "Q123338312",
+"q": "Cottet Woman"
+},
+{
+"kind": "zh_part",
+"target": "Q123338312",
+"q": "裸女习作"
+},
+{
+"kind": "zh_part",
+"target": "Q17494661",
+"q": "风景"
+},
+{
+"kind": "prefix2",
+"target": "Q17493855",
+"q": "Winter, Domestic"
+},
+{
+"kind": "typo",
+"target": "Q17493855",
+"q": "Witner, Domestic Work"
+},
+{
+"kind": "middle_word",
+"target": "Q17493855",
+"q": "Domestic"
+},
+{
+"kind": "words_skip",
+"target": "Q17493855",
+"q": "Winter, Work"
+},
+{
+"kind": "artist+word",
+"target": "Q17493855",
+"q": "Barrias Domestic"
+},
+{
+"kind": "zh_part",
+"target": "Q17493855",
+"q": "冬天，火"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC010035",
+"q": "La douleur"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010035",
+"q": "La duoleur"
+},
+{
+"kind": "middle_word",
+"target": "joconde-000SC010035",
+"q": "douleur"
+},
+{
+"kind": "artist+word",
+"target": "joconde-000SC010035",
+"q": "Albert douleur"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC010035",
+"q": "痛苦"
+},
+{
+"kind": "prefix2",
+"target": "Q17491314",
+"q": "In Russia"
+},
+{
+"kind": "typo",
+"target": "Q17491314",
+"q": "In uRssia"
+},
+{
+"kind": "middle_word",
+"target": "Q17491314",
+"q": "Russia"
+},
+{
+"kind": "artist+word",
+"target": "Q17491314",
+"q": "Ziem Russia"
+},
+{
+"kind": "zh_part",
+"target": "Q17491314",
+"q": "在俄罗斯"
+},
+{
+"kind": "zh_part",
+"target": "Q23639890",
+"q": "犀牛"
+},
+{
+"kind": "prefix2",
+"target": "Q17495619",
+"q": "Service in"
+},
+{
+"kind": "typo",
+"target": "Q17495619",
+"q": "Sevrice in the"
+},
+{
+"kind": "middle_word",
+"target": "Q17495619",
+"q": "Southern"
+},
+{
+"kind": "words_skip",
+"target": "Q17495619",
+"q": "Service the"
+},
+{
+"kind": "artist+word",
+"target": "Q17495619",
+"q": "Edelfelt Southern"
+},
+{
+"kind": "zh_part",
+"target": "Q17495619",
+"q": "南方群岛"
+},
+{
+"kind": "prefix2",
+"target": "joconde-000SC010068",
+"q": "Au but"
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010068",
+"q": "Au but"
+},
+{
+"kind": "zh_part",
+"target": "joconde-000SC010068",
+"q": "射门"
+},
+{
+"kind": "prefix2",
+"target": "Q17493902",
+"q": "Proletarian housing"
+},
+{
+"kind": "typo",
+"target": "Q17493902",
+"q": "Porletarian housing"
+},
+{
+"kind": "middle_word",
+"target": "Q17493902",
+"q": "housing"
+},
+{
+"kind": "artist+word",
+"target": "Q17493902",
+"q": "Jansson housing"
+},
+{
+"kind": "zh_part",
+"target": "Q17493902",
+"q": "无产阶级"
+},
+{
+"kind": "prefix2",
+"target": "Q64491393",
+"q": "Portrait of"
+},
+{
+"kind": "typo",
+"target": "Q64491393",
+"q": "Portrait of Garndmother"
+},
+{
+"kind": "middle_word",
+"target": "Q64491393",
+"q": "Grandmother"
+},
+{
+"kind": "words_skip",
+"target": "Q64491393",
+"q": "Portrait Grandmother"
+},
+{
+"kind": "artist+word",
+"target": "Q64491393",
+"q": "d'Estienne Grandmother"
+},
+{
+"kind": "zh_part",
+"target": "Q64491393",
+"q": "祖母的肖"
+},
+{
+"kind": "prefix2",
+"target": "Q17492421",
+"q": "The Red"
+},
+{
+"kind": "typo",
+"target": "Q17492421",
+"q": "The Red Tunci"
+},
+{
+"kind": "middle_word",
+"target": "Q17492421",
+"q": "Tunic"
+},
+{
+"kind": "words_skip",
+"target": "Q17492421",
+"q": "The Tunic"
+},
+{
+"kind": "artist+word",
+"target": "Q17492421",
+"q": "André Tunic"
+},
+{
+"kind": "zh_part",
+"target": "Q17492421",
+"q": "红色外衣"
+},
+{
+"kind": "prefix2",
+"target": "joconde-M5060000216",
+"q": "Effet de"
+},
+{
+"kind": "typo",
+"target": "joconde-M5060000216",
+"q": "Efeft de Phèdre"
+},
+{
+"kind": "middle_word",
+"target": "joconde-M5060000216",
+"q": "Phèdre"
+},
+{
+"kind": "words_skip",
+"target": "joconde-M5060000216",
+"q": "Effet Phèdre"
+},
+{
+"kind": "artist+word",
+"target": "joconde-M5060000216",
+"q": "Auguste bêtes"
+},
+{
+"kind": "zh_part",
+"target": "joconde-M5060000216",
+"q": "费德尔对"
+},
+{
+"kind": "prefix2",
+"target": "joconde-M5060000157",
+"q": "Un bout"
+},
+{
+"kind": "typo",
+"target": "joconde-M5060000157",
+"q": "Un bou tde"
+},
+{
+"kind": "middle_word",
+"target": "joconde-M5060000157",
+"q": "Terrace"
+},
+{
+"kind": "words_skip",
+"target": "joconde-M5060000157",
+"q": "Un de"
+},
+{
+"kind": "artist+word",
+"target": "joconde-M5060000157",
+"q": "Auguste Marine"
+},
+{
+"kind": "zh_part",
+"target": "joconde-M5060000157",
+"q": "玛琳露台"
+},
+{
+"kind": "prefix2",
+"target": "Q17493839",
+"q": "The Feather"
+},
+{
+"kind": "typo",
+"target": "Q17493839",
+"q": "The Fetaher Fan"
+},
+{
+"kind": "middle_word",
+"target": "Q17493839",
+"q": "Feather"
+},
+{
+"kind": "words_skip",
+"target": "Q17493839",
+"q": "The Fan"
+},
+{
+"kind": "artist+word",
+"target": "Q17493839",
+"q": "Chase Feather"
+},
+{
+"kind": "zh_part",
+"target": "Q17493839",
+"q": "羽毛扇"
+},
+{
+"kind": "prefix2",
+"target": "Q104444844",
+"q": "Chevaux sauvages"
+},
+{
+"kind": "typo",
+"target": "Q104444844",
+"q": "Chevau xsauvages en"
+},
+{
+"kind": "middle_word",
+"target": "Q104444844",
+"q": "Camargue"
+},
+{
+"kind": "words_skip",
+"target": "Q104444844",
+"q": "Chevaux en"
+},
+{
+"kind": "artist+word",
+"target": "Q104444844",
+"q": "Ziem Camargue"
+},
+{
+"kind": "prefix2",
+"target": "Q104445324",
+"q": "Esquisse pour"
+},
+{
+"kind": "typo",
+"target": "Q104445324",
+"q": "Esquiss epour la"
+},
+{
+"kind": "middle_word",
+"target": "Q104445324",
+"q": "mairie"
+},
+{
+"kind": "words_skip",
+"target": "Q104445324",
+"q": "Esquisse la"
+},
+{
+"kind": "artist+word",
+"target": "Q104445324",
+"q": "Séon salle"
+},
+{
+"kind": "prefix2",
+"target": "Q104454170",
+"q": "Baigneuses à"
+},
+{
+"kind": "typo",
+"target": "Q104454170",
+"q": "Baigneuses à Perro-sGuirec"
+},
+{
+"kind": "middle_word",
+"target": "Q104454170",
+"q": "Perros-Guirec"
+},
+{
+"kind": "words_skip",
+"target": "Q104454170",
+"q": "Baigneuses Perros-Guirec"
+},
+{
+"kind": "artist+word",
+"target": "Q104454170",
+"q": "Denis Perros-Guirec"
+},
+{
+"kind": "zh_part",
+"target": "Q104454170",
+"q": "佩罗斯-"
+},
+{
+"kind": "prefix2",
+"target": "Q21598236",
+"q": "The Presentation"
+},
+{
+"kind": "typo",
+"target": "Q21598236",
+"q": "Teh Presentation in"
+},
+{
+"kind": "middle_word",
+"target": "Q21598236",
+"q": "Presentation"
+},
+{
+"kind": "words_skip",
+"target": "Q21598236",
+"q": "The in"
+},
+{
+"kind": "artist+word",
+"target": "Q21598236",
+"q": "Daret Temple"
+},
+{
+"kind": "zh_part",
+"target": "Q21598236",
+"q": "圣殿献耶"
+},
+{
+"kind": "prefix2",
+"target": "Q104454348",
+"q": "Esquisse pour"
+},
+{
+"kind": "typo",
+"target": "Q104454348",
+"q": "Esqusise pour le"
+},
+{
+"kind": "middle_word",
+"target": "Q104454348",
+"q": "Sculpture"
+},
+{
+"kind": "words_skip",
+"target": "Q104454348",
+"q": "Esquisse le"
+},
+{
+"kind": "artist+word",
+"target": "Q104454348",
+"q": "Martin d'entrée"
+},
+{
+"kind": "prefix2",
+"target": "Q106462029",
+"q": "Masque de"
+},
+{
+"kind": "typo",
+"target": "Q106462029",
+"q": "Maqsue de rire"
+},
+{
+"kind": "middle_word",
+"target": "Q106462029",
+"q": "barbe"
+},
+{
+"kind": "words_skip",
+"target": "Q106462029",
+"q": "Masque rire"
+},
+{
+"kind": "artist+word",
+"target": "Q106462029",
+"q": "Carriès pointe"
+},
+{
+"kind": "prefix2",
+"target": "Q106461747",
+"q": "Tête de"
+},
+{
+"kind": "typo",
+"target": "Q106461747",
+"q": "Tête ed Jeanne"
+},
+{
+"kind": "middle_word",
+"target": "Q106461747",
+"q": "Jeanne"
+},
+{
+"kind": "words_skip",
+"target": "Q106461747",
+"q": "Tête Jeanne"
+},
+{
+"kind": "artist+word",
+"target": "Q106461747",
+"q": "Barrias d'Arc\")"
+},
+{
+"kind": "prefix2",
+"target": "Q104445579",
+"q": "Le Dôme"
+},
+{
+"kind": "typo",
+"target": "Q104445579",
+"q": "L eDôme de"
+},
+{
+"kind": "middle_word",
+"target": "Q104445579",
+"q": "Milan"
+},
+{
+"kind": "words_skip",
+"target": "Q104445579",
+"q": "Le de"
+},
+{
+"kind": "artist+word",
+"target": "Q104445579",
+"q": "Ziem Milan"
+},
+{
+"kind": "prefix2",
+"target": "Q104445771",
+"q": "Le marquis"
+},
+{
+"kind": "typo",
+"target": "Q104445771",
+"q": "Le marqusi de"
+},
+{
+"kind": "middle_word",
+"target": "Q104445771",
+"q": "Deux-Brézé"
+},
+{
+"kind": "words_skip",
+"target": "Q104445771",
+"q": "Le de"
+},
+{
+"kind": "artist+word",
+"target": "Q104445771",
+"q": "Chenavard Deux-Brézé"
+},
+{
+"kind": "prefix2",
+"target": "Q104445936",
+"q": "Histoire du"
+},
+{
+"kind": "typo",
+"target": "Q104445936",
+"q": "Histoire ud blé"
+},
+{
+"kind": "middle_word",
+"target": "Q104445936",
+"q": "Moissonneurs"
+},
+{
+"kind": "words_skip",
+"target": "Q104445936",
+"q": "Histoire blé"
+},
+{
+"kind": "artist+word",
+"target": "Q104445936",
+"q": "Baudoüin Dombasle,"
+},
+{
+"kind": "prefix2",
+"target": "Q106462062",
+"q": "Le violoniste"
+},
+{
+"kind": "typo",
+"target": "Q106462062",
+"q": "Le vilooniste"
+},
+{
+"kind": "middle_word",
+"target": "Q106462062",
+"q": "violoniste"
+},
+{
+"kind": "artist+word",
+"target": "Q106462062",
+"q": "Carpeaux violoniste"
+},
+{
+"kind": "prefix2",
+"target": "Q104445755",
+"q": "Esquisse pour"
+},
+{
+"kind": "typo",
+"target": "Q104445755",
+"q": "Esquisse pour l'égilse"
+},
+{
+"kind": "middle_word",
+"target": "Q104445755",
+"q": "Malakoff"
+},
+{
+"kind": "words_skip",
+"target": "Q104445755",
+"q": "Esquisse l'église"
+},
+{
+"kind": "artist+word",
+"target": "Q104445755",
+"q": "Dubasty Christ"
+},
+{
+"kind": "prefix2",
+"target": "Q104445398",
+"q": "La Reine"
+},
+{
+"kind": "typo",
+"target": "Q104445398",
+"q": "La Reine lBanche"
+},
+{
+"kind": "middle_word",
+"target": "Q104445398",
+"q": "délivrant"
+},
+{
+"kind": "words_skip",
+"target": "Q104445398",
+"q": "La Blanche"
+},
+{
+"kind": "artist+word",
+"target": "Q104445398",
+"q": "Granet Castille"
+},
+{
+"kind": "prefix2",
+"target": "Q104454649",
+"q": "Esquisse pour"
+},
+{
+"kind": "typo",
+"target": "Q104454649",
+"q": "Esquises pour la"
+},
+{
+"kind": "middle_word",
+"target": "Q104454649",
+"q": "(Rerum"
+},
+{
+"kind": "words_skip",
+"target": "Q104454649",
+"q": "Esquisse la"
+},
+{
+"kind": "artist+word",
+"target": "Q104454649",
+"q": "Lehmann Ville"
+},
+{
+"kind": "prefix2",
+"target": "Q106583211",
+"q": "Femme âgée"
+},
+{
+"kind": "typo",
+"target": "Q106583211",
+"q": "Femme âége à"
+},
+{
+"kind": "middle_word",
+"target": "Q106583211",
+"q": "mi-corps"
+},
+{
+"kind": "words_skip",
+"target": "Q106583211",
+"q": "Femme à"
+},
+{
+"kind": "prefix2",
+"target": "Q104444089",
+"q": "Esquisse pour"
+},
+{
+"kind": "typo",
+"target": "Q104444089",
+"q": "Esqusise pour la"
+},
+{
+"kind": "middle_word",
+"target": "Q104444089",
+"q": "métiers"
+},
+{
+"kind": "words_skip",
+"target": "Q104444089",
+"q": "Esquisse la"
+},
+{
+"kind": "artist+word",
+"target": "Q104444089",
+"q": "Delance métiers"
+},
+{
+"kind": "prefix2",
+"target": "Q106462343",
+"q": "Jeune Centaure"
+},
+{
+"kind": "typo",
+"target": "Q106462343",
+"q": "Jeune Centauer"
+},
+{
+"kind": "middle_word",
+"target": "Q106462343",
+"q": "Centaure"
+},
+{
+"kind": "artist+word",
+"target": "Q106462343",
+"q": "Falguière Centaure"
+},
+{
+"kind": "prefix2",
+"target": "Q19917822",
+"q": "Dancers in"
+},
+{
+"kind": "typo",
+"target": "Q19917822",
+"q": "Dancres in a"
+},
+{
+"kind": "middle_word",
+"target": "Q19917822",
+"q": "Landscape"
+},
+{
+"kind": "words_skip",
+"target": "Q19917822",
+"q": "Dancers a"
+},
+{
+"kind": "artist+word",
+"target": "Q19917822",
+"q": "Both Landscape"
+},
+{
+"kind": "zh_part",
+"target": "Q19917822",
+"q": "风景中的"
+},
+{
+"kind": "prefix2",
+"target": "Q106461080",
+"q": "Casseur de"
+},
+{
+"kind": "typo",
+"target": "Q106461080",
+"q": "Casseur de pierers,"
+},
+{
+"kind": "middle_word",
+"target": "Q106461080",
+"q": "aussi"
+},
+{
+"kind": "words_skip",
+"target": "Q106461080",
+"q": "Casseur pierres,"
+},
+{
+"kind": "artist+word",
+"target": "Q106461080",
+"q": "Dalou aussi"
+},
+{
+"kind": "prefix2",
+"target": "Q104453351",
+"q": "Esquisse pour"
+},
+{
+"kind": "typo",
+"target": "Q104453351",
+"q": "Esquisse pour la"
+},
+{
+"kind": "middle_word",
+"target": "Q104453351",
+"q": "l'Hôtel"
+},
+{
+"kind": "words_skip",
+"target": "Q104453351",
+"q": "Esquisse la"
+},
+{
+"kind": "artist+word",
+"target": "Q104453351",
+"q": "Bertrand Ville"
+},
+{
+"kind": "prefix2",
+"target": "Q104454365",
+"q": "Esquisse pour"
+},
+{
+"kind": "typo",
+"target": "Q104454365",
+"q": "Eqsuisse pour la"
+},
+{
+"kind": "middle_word",
+"target": "Q104454365",
+"q": "Nogent-sur-Marne"
+},
+{
+"kind": "words_skip",
+"target": "Q104454365",
+"q": "Esquisse la"
+},
+{
+"kind": "artist+word",
+"target": "Q104454365",
+"q": "Lafon mairie"
+},
+{
+"kind": "prefix2",
+"target": "Q17340485",
+"q": "Still Life"
+},
+{
+"kind": "typo",
+"target": "Q17340485",
+"q": "Still iLfe with"
+},
+{
+"kind": "middle_word",
+"target": "Q17340485",
+"q": "Turkey"
+},
+{
+"kind": "words_skip",
+"target": "Q17340485",
+"q": "Still with"
+},
+{
+"kind": "artist+word",
+"target": "Q17340485",
+"q": "Claesz Turkey"
+},
+{
+"kind": "zh_part",
+"target": "Q17340485",
+"q": "火鸡派静"
+},
+{
+"kind": "prefix2",
+"target": "Q17319634",
+"q": "The Threatened"
+},
+{
+"kind": "typo",
+"target": "Q17319634",
+"q": "The Threatened Sawn"
+},
+{
+"kind": "middle_word",
+"target": "Q17319634",
+"q": "Threatened"
+},
+{
+"kind": "words_skip",
+"target": "Q17319634",
+"q": "The Swan"
+},
+{
+"kind": "artist+word",
+"target": "Q17319634",
+"q": "Asselijn Threatened"
+},
+{
+"kind": "zh_part",
+"target": "Q17319634",
+"q": "受威胁的"
+},
+{
+"kind": "prefix2",
+"target": "Q10303119",
+"q": "Interior of"
+},
+{
+"kind": "typo",
+"target": "Q10303119",
+"q": "Interiro of the"
+},
+{
+"kind": "middle_word",
+"target": "Q10303119",
+"q": "Assendelft"
+},
+{
+"kind": "words_skip",
+"target": "Q10303119",
+"q": "Interior the"
+},
+{
+"kind": "artist+word",
+"target": "Q10303119",
+"q": "Saenredam Sint-Odulphuskerk"
+},
+{
+"kind": "zh_part",
+"target": "Q10303119",
+"q": "阿森德尔"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "portrait"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "vierge"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "saint jean"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "femme"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "paysage"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "nature morte"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "louis xiv"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "christ"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "rubens"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "corot"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "monet"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "vase"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "tête"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "bust of"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "head of"
+},
+{
+"kind": "hifreq",
+"target": null,
+"q": "studio"
+}
+]

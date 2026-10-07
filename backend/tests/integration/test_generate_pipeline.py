@@ -48,7 +48,13 @@ def session():
     upsert_object(
         s,
         m.id,
-        {"qid": "Q1", "title_en": "A", "category": "painting", "attributes": {}},
+        {
+            "qid": "Q1",
+            "title_en": "A",
+            "category": "painting",
+            "attributes": {},
+            "image": "https://example.org/q1.jpg",
+        },
     )
     s.commit()
     yield s
@@ -1365,7 +1371,9 @@ def test_strip_name_shared_helper(session):
 
 
 def _seed_ranked(session):
-    """同分件多于 N —— 不带同分裁决时「前 N」取哪几件不确定。"""
+    """同分件多于 N —— 不带同分裁决时「前 N」取哪几件不确定。
+    每件都挂一张图:top_objects 现在只给有图件排名(has_image_clause),
+    这里测的是同分裁决本身,不是有图过滤,别让两者混在一起。"""
     m = session.query(Museum).filter_by(slug="orsay").one()
     for i, pop in enumerate([5, 0, 0, 0, 0]):
         upsert_object(
@@ -1377,6 +1385,7 @@ def _seed_ranked(session):
                 "category": "painting",
                 "popularity": pop,
                 "attributes": {},
+                "image": f"https://example.org/{i}.jpg",
             },
         )
     session.commit()
