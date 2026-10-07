@@ -1632,3 +1632,143 @@ def test_museum_named_mid_guide_is_kept(session):
     draft = "Orsay bought it in 1901. The harbour is calm. Boats rest. Gulls cry."
     row, n = _guide_run(session, [draft, "unused"], lambda user: [True] * 10)
     assert row.body == draft
+
+
+def test_generate_object_falls_back_to_name_search_for_joconde_ids(
+    session, monkeypatch
+):
+    """P170 查不到(_resolve_creator 打桩成返回 None)、且 qid 不是 Wikidata
+    格式时,应该再按 artist_en 试一次按名解析;成功就写 artist_qid 和
+    artist_qid_source,且不影响已有的 guide/facts 等内容生成流程。"""
+    import app.services.enrichment.pipeline as pl
+    from app.services.object_importer import upsert_object
+
+    monkeypatch.setattr(pl, "_resolve_creator", lambda qid: None)
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    monkeypatch.setattr(
+        pl,
+        "_resolve_creator_by_name",
+        lambda name: "Q160141" if name == "SOUTINE Chaïm" else None,
+    )
+
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "joconde-00000089538",
+            "title_en": "Les maisons",
+            "artist_en": "SOUTINE Chaïm",
+            "category": "painting",
+            "attributes": {},
+        },
+    )
+    session.commit()
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "joconde-00000089538",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="gpt-4o-mini",
+        registry=_FakeRegistry(),
+    )
+
+    obj = session.query(MuseumObject).filter_by(qid="joconde-00000089538").one()
+    assert obj.attributes.get("artist_qid") == "Q160141"
+    assert obj.attributes.get("artist_qid_source") == "name_search"
+
+
+def test_generate_object_does_not_call_name_search_when_aqid_already_known(
+    session, monkeypatch
+):
+    """已经有 artist_qid(不管来自 P170 还是之前 names 回填)时,新的按名
+    解析完全不该被调用——省 HTTP 调用,也避免意外覆盖(Review Focus 第5条)。"""
+    import app.services.enrichment.pipeline as pl
+    from app.services.object_importer import upsert_object
+
+    def _should_not_be_called(name):
+        raise AssertionError("artist_qid 已知时不该调用按名解析")
+
+    monkeypatch.setattr(pl, "_resolve_creator", lambda qid: None)
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    monkeypatch.setattr(pl, "_resolve_creator_by_name", _should_not_be_called)
+
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "joconde-00000099999",
+            "title_en": "Already resolved",
+            "artist_en": "RENOIR Pierre Auguste",
+            "category": "painting",
+            "attributes": {"artist_qid": "Q39931"},
+        },
+    )
+    session.commit()
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "joconde-00000099999",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="gpt-4o-mini",
+        registry=_FakeRegistry(),
+    )
+    # 没抛 AssertionError 就说明按名解析确实没被调用
+    obj = session.query(MuseumObject).filter_by(qid="joconde-00000099999").one()
+    assert obj.attributes.get("artist_qid") == "Q39931"  # 原值没被覆盖
+
+
+def test_generate_object_does_not_call_name_search_for_wikidata_qid(
+    session, monkeypatch
+):
+    """真实 Wikidata 件(Q 开头)、P170 故意弃权(_resolve_creator 返回 None)
+    时,不该落到按名解析这条路——那是 Joconde 合成 id 才该走的(spec §3.3)。"""
+    import app.services.enrichment.pipeline as pl
+    from app.services.object_importer import upsert_object
+
+    def _should_not_be_called(name):
+        raise AssertionError("Wikidata qid 的件不该走按名解析")
+
+    monkeypatch.setattr(pl, "_resolve_creator", lambda qid: None)
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    monkeypatch.setattr(pl, "_resolve_creator_by_name", _should_not_be_called)
+
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q99999999",
+            "title_en": "Wikidata object, unknown creator",
+            "artist_en": "Some Name",
+            "category": "painting",
+            "attributes": {},
+        },
+    )
+    session.commit()
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "Q99999999",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="gpt-4o-mini",
+        registry=_FakeRegistry(),
+    )
+    obj = session.query(MuseumObject).filter_by(qid="Q99999999").one()
+    assert obj.attributes.get("artist_qid") is None  # P170 的弃权判断没被推翻

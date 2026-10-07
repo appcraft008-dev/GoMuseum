@@ -37,6 +37,14 @@ def _artist_facts(qid, artist_qid=None):
     return fetch_artist_facts(qid, artist_qid=artist_qid)
 
 
+def _resolve_creator_by_name(name):
+    """薄包装:P170 查不到时按原始署名字符串找作者(测试 monkeypatch 此处
+    避免触网)。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    return resolve_creator_by_name(name)
+
+
 def _wikidata_labels(qid, langs):
     from app.services.enrichment.material import fetch_wikidata_labels
 
@@ -196,6 +204,17 @@ def generate_object(
         except Exception:
             aqid = (o.attributes or {}).get("artist_qid")
 
+        # P170 这条路查不到 qid,且不是真 Wikidata 作品(joconde-* 合成 id)
+        # 才试第二梯队——不能推翻 resolve_creator_qid 对"Wikidata 作品但
+        # P170 是未知值"这种故意弃权的判断(spec §3.3)。
+        from_name_search = False
+        if not aqid and o.artist_en and not o.qid.startswith("Q"):
+            try:
+                aqid = _resolve_creator_by_name(o.artist_en)
+                from_name_search = bool(aqid)
+            except Exception:
+                aqid = None
+
         # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
         try:
             artist_mat = fetch_artist_material(
@@ -221,7 +240,12 @@ def generate_object(
 
         aqid = (af or {}).get("artist_qid")
         if aqid:
-            o.attributes = {**(o.attributes or {}), "artist_qid": aqid}
+            attrs = {**(o.attributes or {}), "artist_qid": aqid}
+            if from_name_search:
+                # 留痕:区分开 P170 路径解析出来的 qid,万一后续发现某类
+                # 输入系统性解析错,能一条 SQL 把受影响的件找出来(spec §3.4)。
+                attrs["artist_qid_source"] = "name_search"
+            o.attributes = attrs
             db.flush()
 
     def _enrich_artist_and_titles():
