@@ -67,3 +67,33 @@ def test_reverse_substring_needs_artist():
     line = "Henri-Edmond Cross L'Air du soir vers 1893 huile sur toile"
     acc, _ = recognize(IDX, [], [line])
     assert acc and acc[0][0] == "Q_D"
+
+
+VENUS = IDX + [_e("Q_V", {"the birth of venus"}, {"alexandre cabanel"})]
+
+
+def test_named_artist_with_no_matching_candidate_shows_nothing():
+    # 10-07 真机:AI 说波提切利《The Birth of Venus》,库里同名的是卡巴内尔 → 库外名作,不出候选
+    acc, raw = recognize(VENUS, ["The Birth of Venus"], [], ["Sandro Botticelli"])
+    assert acc == [] and raw  # raw 留着 → service 判 low_confidence
+
+
+def test_unknown_artist_still_allows_title_only():
+    for h in (["Unknown"], ["null"], []):
+        acc, _ = recognize(VENUS, ["The Birth of Venus"], [], h)
+        assert acc and acc[0][0] == "Q_V", h
+
+
+def test_surname_on_label_counts_as_artist_evidence():
+    # AI 照抄墙签「Gaspard de CRAYER」,库里「Gaspar de Crayer」:姓对上就别当库外件
+    idx = IDX + [
+        _e("Q_CR", {"the virgin and child with the saints"}, {"gaspar de crayer"})
+    ]
+    acc, _ = recognize(
+        idx,
+        ["The Virgin and Child with the Saints"],
+        ["Gaspard de CRAYER"],
+        ["Gaspard de CRAYER"],
+        label_lines_inv_only=True,
+    )
+    assert acc and acc[0][0] == "Q_CR"

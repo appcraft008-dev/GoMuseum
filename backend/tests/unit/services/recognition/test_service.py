@@ -461,6 +461,39 @@ def test_label_inv_and_artist_agree_opens_directly(session):
     assert ev.text_trace["inv_hit"] == "Q_AIR"
 
 
+def test_unrecognized_label_text_is_short_title_artist(session):
+    """认不出时 App 提示「墙签上写着 «…»」:给 AI 摘出的「标题 — 作者」,不是整段墙签
+    (10-07 真机满屏原文);整段原文照旧进 text_trace。"""
+    label = (
+        "Peintures / Espagne\nJuan de VALDÉS LEAL\nL'Immaculée Conception\nR.F. 9999"
+    )
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        mode="label",
+        identify_fn=_vision(
+            [{"title": "L'Immaculée Conception", "artist": "Juan de VALDÉS LEAL"}],
+            label=label,
+        ),
+    )
+    assert out["outcome"] == "unrecognized"
+    assert out["label_text"] == "L'Immaculée Conception — Juan de VALDÉS LEAL"
+    ev = session.query(RecognitionEvent).one()
+    assert ev.text_trace["vision"]["label_text"] == label
+
+
+def test_label_text_stays_none_without_label(session):
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: None,
+        identify_fn=_vision([{"title": "Saint Anne", "artist": "null"}]),
+    )
+    assert out["label_text"] is None
+
+
 # --- 埋点(recognition_events)+ 响应 phash ---
 
 

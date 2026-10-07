@@ -379,3 +379,25 @@ def test_inv_artist_hit_none_when_ambiguous(session):
     _add_inv(session, "Q_B", "RF 818", "B", "Claude Monet")
     idx = build_index(session, None)
     assert inv_artist_hit(idx, ["Claude Monet", "RF 818"], []) is None
+
+
+def test_inv_hit_dotted_inv_inside_provenance_line(session):
+    # 卢浮墙签(10-07 真机):「INV. 1186」挤在来源说明行;墙签拼 Gaspard,库里 Gaspar → 姓对上即可
+    idx = _add_inv(session, "Q_CRAYER", "INV 1186", "The Virgin", "Gaspar de Crayer")
+    lines = ["Gaspard de CRAYER", "Saisie révolutionnaire, 1799\t\tINV. 1186"]
+    assert inv_artist_hit(idx, lines, ["Gaspard de CRAYER"]) == "Q_CRAYER"
+
+
+def test_inv_hit_rf_with_dots(session):
+    idx = _add_inv(session, "Q_VL", "RF 2372", "Immaculate", "Juan de Valdés Leal")
+    lines = ["Juan de VALDÉS LEAL", "Collection Carvallo (1921-1963). R.F. 2372"]
+    assert inv_artist_hit(idx, lines, []) == "Q_VL"
+
+
+def test_inv_hit_ter_suffix_not_confused_with_base_number(session):
+    _add_inv(session, "Q_ROSSO", "INV 595", "Pierides", "Rosso Fiorentino")
+    idx = _add_inv(
+        session, "Q_RUO", "INV 595 ter", "Grapes", "Giovan Battista Ruoppolo"
+    )
+    lines = ["Giovanni Battista RUOPPOLO", "Achat, 1845. INV. 595 ter"]
+    assert inv_artist_hit(idx, lines, []) == "Q_RUO"

@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.services.matching.people import is_named
 from app.services.museum_repo import _photo_credit, _resolve_name, _sized
 from app.services.recognition.demands import record_demand
 from app.services.recognition.events import record_event
@@ -451,7 +452,7 @@ def _compute(
             "outcome": "unrecognized",
             "match": None,
             "candidates": [],
-            "label_text": vis.get("label_text"),
+            "label_text": _label_summary(vis),
             "reason": None,
         }
         if not queries and not label_lines:
@@ -536,6 +537,20 @@ def _compute(
         except Exception:
             pass
     return out
+
+
+def _label_summary(vis: dict) -> str | None:
+    """App 提示「墙签上写着 «…»」引用的文字:AI 摘出的「标题 — 作者」,不是整段墙签
+    (10-07 真机满屏原文)。没读到墙签 → None;整段原文照旧进 text_trace/需求表。"""
+    if not vis.get("label_text"):
+        return None
+    for c in vis["candidates"]:
+        if c.get("title") and is_named(c["title"]):
+            artist = c.get("artist")
+            return c["title"] + (f" — {artist}" if is_named(artist) else "")
+    return next(
+        (ln.strip() for ln in vis["label_text"].splitlines() if ln.strip()), None
+    )
 
 
 def recognize(
