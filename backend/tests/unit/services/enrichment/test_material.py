@@ -782,3 +782,157 @@ def test_segment_candidates_filters_by_exact_word_match():
     assert result == ["Q160141"]
     assert "SOUTINE Chaïm" in calls  # 原始顺序查过
     assert "Chaïm SOUTINE" in calls  # 重排后也查过(注意大小写:SOUTINE 仍大写)
+
+
+def test_resolve_creator_by_name_real_unambiguous_artists():
+    """2026-10-07 橘园 TOP50 内容复核手工核实过的 7 个真实作者,mock HTTP
+    响应固定,离线跑,必须原样复现这 7 个 qid。
+
+    ⚠️ `match.text` 必须填**真实会返回的那个字符串**,不能图省事填 Wikidata
+    的 canonical label——写这份计划时实测过 Modigliani 这一条,拿 canonical
+    label "Amedeo Modigliani" 当 match.text 会让词集合精确匹配(spec §3.2
+    步骤2)误判失败(因为 Joconde 原串拼的是"Amadeo",跟"Amedeo"差一个
+    字母),而真实 Wikidata 搜索返回的 match.text 是**别名**"Amadeo
+    Modigliani"(与 Joconde 原串完全一致),所以 Modigliani 这一条的
+    match_text 和前面几条的 label 不一样,是故意的,不是打错字。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def make_search(qid, match_text):
+        def _search(text, *, limit=5):
+            return [{"id": qid, "label": match_text, "match": {"text": match_text}}]
+
+        return _search
+
+    def make_claims(qid):
+        def _claims(qids):
+            return {
+                qid: {
+                    "claims": {
+                        "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
+                        "P106": [
+                            {"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}
+                        ],
+                    }
+                }
+            }
+
+        return _claims
+
+    cases = [
+        ("Renoir Pierre Auguste", "Q39931", "Pierre-Auguste Renoir"),
+        ("SOUTINE Chaïm", "Q160141", "Chaïm Soutine"),
+        ("DERAIN André", "Q156272", "André Derain"),
+        ("UTRILLO Maurice", "Q108301", "Maurice Utrillo"),
+        ("Matisse Henri", "Q5589", "Henri Matisse"),
+        ("ROUSSEAU Henri;LE DOUANIER ROUSSEAU", "Q156386", "Henri Rousseau"),
+        # match_text 是别名"Amadeo Modigliani",不是 canonical label——见上面的说明
+        ("Modigliani Amadeo", "Q120993", "Amadeo Modigliani"),
+    ]
+    for raw_name, expected_qid, match_text in cases:
+        got = resolve_creator_by_name(
+            raw_name,
+            search_entities=make_search(expected_qid, match_text),
+            get_claims=make_claims(expected_qid),
+        )
+        assert (
+            got == expected_qid
+        ), f"{raw_name!r} 应该解析成 {expected_qid},实际是 {got!r}"
+
+
+def test_resolve_creator_by_name_abstains_on_known_ambiguous_cases():
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    # 真实限定词案例:整串命中"d'après"直接弃权,不会拆分后把
+    # "VAN GOGH Vincent"单独解析成功再误采信(真实 Joconde 署名)。
+    def search_should_not_be_called(text, *, limit=5):
+        raise AssertionError(f"限定词弃权应该在拆分前拦住,不该查询 {text!r}")
+
+    assert (
+        resolve_creator_by_name(
+            "anonyme;VAN GOGH Vincent (d'après)",
+            search_entities=search_should_not_be_called,
+        )
+        is None
+    )
+
+    # Cézanne 父子同名同职业撞车:职业过滤后剩两个人,必须弃权。
+    def search_cezanne(text, *, limit=5):
+        return [
+            {
+                "id": "Q35548",
+                "label": "Paul Cézanne",
+                "match": {"text": "Paul Cézanne"},
+            },
+            {
+                "id": "Q17277915",
+                "label": "Paul Cézanne",
+                "match": {"text": "Paul Cézanne"},
+            },
+        ]
+
+    def claims_both_painters(qids):
+        return {
+            qid: {
+                "claims": {
+                    "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}
+                    ],
+                }
+            }
+            for qid in qids
+        }
+
+    assert (
+        resolve_creator_by_name(
+            "Cézanne Paul",
+            search_entities=search_cezanne,
+            get_claims=claims_both_painters,
+        )
+        is None
+    )
+
+    # 空/退化输入不能崩,必须返回 None(Review Focus 第4条)
+    assert resolve_creator_by_name(None) is None
+    assert resolve_creator_by_name("") is None
+    assert resolve_creator_by_name("   ") is None
+    assert resolve_creator_by_name(";") is None
+
+
+def test_resolve_creator_by_name_handles_real_multi_segment_signature():
+    """真实奥赛署名"BENJAMIN-CONSTANT (dit);CONSTANT Jean Joseph Benjamin"
+    (画家 Jean-Joseph Benjamin-Constant 的艺名+本名两段)。第一段带着
+    "(dit)"文本直接查,搜不到任何候选(0 个);第二段重排后能命中。跨段裁决:
+    一段失败(忽略)+一段成功 -> 集合大小为1 -> 采信。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def search(text, *, limit=5):
+        if text == "Jean Joseph Benjamin CONSTANT":
+            return [
+                {
+                    "id": "Q968357",
+                    "label": "Jean-Joseph Benjamin-Constant",
+                    "match": {"text": "Jean-Joseph Benjamin-Constant"},
+                }
+            ]
+        return []  # 其它查询(含"BENJAMIN-CONSTANT (dit)"原串)都搜不到
+
+    def claims(qids):
+        return {
+            qid: {
+                "claims": {
+                    "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}
+                    ],
+                }
+            }
+            for qid in qids
+        }
+
+    got = resolve_creator_by_name(
+        "BENJAMIN-CONSTANT (dit);CONSTANT Jean Joseph Benjamin",
+        search_entities=search,
+        get_claims=claims,
+    )
+    assert got == "Q968357"

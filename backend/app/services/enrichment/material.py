@@ -11,6 +11,7 @@ from app.services.enrichment.fetcher import _CORE
 from app.services.enrichment.merge import merge_contributions
 from app.services.enrichment.sources import wikidata as _wd
 from app.services.matching.normalize import normalize, tokens
+from app.services.matching.people import _SPLIT
 
 logger = logging.getLogger(__name__)
 
@@ -620,3 +621,95 @@ def _segment_candidates(
             if qid and qid not in seen:
                 seen.append(qid)
     return seen
+
+
+_OCCUPATION_WHITELIST = {
+    "Q1028181",  # painter
+    "Q1281618",  # sculptor
+    "Q329439",  # engraver
+    "Q15296811",  # draughtsman
+    "Q10862983",  # etcher
+    "Q11569986",  # printmaker
+    "Q7541856",  # ceramicist
+}
+
+
+def _default_get_claims(qids):
+    """真实打 Wikidata wbgetentities,批量查 P31/P106——一次请求查完一段
+    两种词序凑出来的全部候选,不逐个候选单独查(spec §3.2 步骤3)。"""
+    import requests
+
+    if not qids:
+        return {}
+    r = requests.get(
+        "https://www.wikidata.org/w/api.php",
+        params={
+            "action": "wbgetentities",
+            "ids": "|".join(qids),
+            "props": "claims",
+            "format": "json",
+        },
+        headers={"User-Agent": _wd.USER_AGENT},
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json().get("entities", {})
+
+
+def _claim_ids(entity: dict, prop: str) -> set[str]:
+    out = set()
+    for c in (entity.get("claims") or {}).get(prop, []):
+        v = (c.get("mainsnak") or {}).get("datavalue", {}).get("value")
+        if isinstance(v, dict) and v.get("id"):
+            out.add(v["id"])
+    return out
+
+
+def resolve_creator_by_name(
+    name: str | None,
+    *,
+    search_entities=None,
+    get_claims=None,
+) -> str | None:
+    """按原始署名字符串找 Wikidata 作者实体——P170 查不到创作者时的第二
+    梯队(spec §3.2)。纯函数,网络调用可注入 mock,离线可测。
+
+    歧义/查不到候选 -> None,不打分硬选(纪律37:写错共享 artists 表的
+    代价远高于暂时缺,宁缺毋滥)。"""
+    if not name or not name.strip() or _has_qualifier_marker(name):
+        return None
+    search_entities = search_entities or _default_search_entities
+    get_claims = get_claims or _default_get_claims
+
+    segments = [s.strip() for s in _SPLIT.split(name) if s.strip()]
+    if not segments:
+        return None
+
+    segment_candidates: dict[str, list[str]] = {}
+    all_candidates: set[str] = set()
+    for seg in segments:
+        word_set = frozenset(tokens(normalize(seg)))
+        cands = _segment_candidates(
+            seg, search_entities=search_entities, word_set=word_set
+        )
+        segment_candidates[seg] = cands
+        all_candidates.update(cands)
+
+    if not all_candidates:
+        return None
+
+    claims = get_claims(sorted(all_candidates))
+    artists = {
+        qid
+        for qid, ent in claims.items()
+        if "Q5" in _claim_ids(ent, "P31")
+        and _claim_ids(ent, "P106") & _OCCUPATION_WHITELIST
+    }
+
+    resolved: set[str] = set()
+    for cands in segment_candidates.values():
+        survivors = [c for c in cands if c in artists]
+        if len(survivors) == 1:
+            resolved.add(survivors[0])
+
+    return next(iter(resolved)) if len(resolved) == 1 else None
