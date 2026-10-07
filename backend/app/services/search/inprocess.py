@@ -122,6 +122,16 @@ def _build_global(db) -> list[dict]:
     return index
 
 
+def _warm_core(index) -> None:
+    """建匹配核心的倒排(两处共用)。倒排失败绝不拖垮搜索索引——rank 会退回原分档。"""
+    try:
+        from app.services.matching.index import get_core
+
+        get_core(index)
+    except Exception:
+        logger.exception("matching core build failed, search falls back to tiers")
+
+
 def _refresh_index_async() -> None:
     """后台重建索引(自带 session:不能跨线程用请求的 session)。失败留旧索引,
     下次过期再试——搜不到新件好过整条查询 5xx。"""
@@ -138,7 +148,9 @@ def _refresh_index_async() -> None:
 
             db2 = SessionLocal()
             try:
-                _index_cache[None] = (time.time(), _build_global(db2))
+                index = _build_global(db2)
+                _warm_core(index)  # 倒排同线程建好,请求线程不碰冷建
+                _index_cache[None] = (time.time(), index)
             finally:
                 db2.close()
         except Exception:
@@ -163,6 +175,7 @@ def build_search_index(db, museum_id=None) -> list[dict]:
         index = hit[1]
     else:
         index = _build_global(db)  # 进程内首次:无旧索引可用,只能同步
+        _warm_core(index)
         _index_cache[None] = (time.time(), index)
     if museum_id is None:
         return index
