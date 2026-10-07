@@ -1,0 +1,7853 @@
+[
+{
+"kind": "exact",
+"target": "Q99237035",
+"queries": [
+"Portrait of Madame Gabriac, née Sophie Allart",
+"The Persistence of Memory",
+"The Night Café"
+],
+"hints": [
+"Jean-Auguste-Dominique Ingres",
+"Salvador Dalí",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q99237035",
+"queries": [
+"Portrait of Madame Gabriac,",
+"The Hay Wain",
+"The Scream"
+],
+"hints": [
+"Jean-Auguste-Dominique Ingres",
+"John Constable",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q99237035",
+"queries": [
+"Portarit of Madame Gabriac, née Sophie Allart",
+"Café Terrace at Night",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Jean-Auguste-Dominique Ingres",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q18573648",
+"queries": [
+"Still-Life with Grapes and Figs",
+"The Hay Wain",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Michelangelo Cerquozzi",
+"John Constable",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q18573648",
+"queries": [
+"Still-Life with Grapes",
+"The Third of May 1808",
+"Guernica"
+],
+"hints": [
+"Michelangelo Cerquozzi",
+"Francisco Goya",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q18573648",
+"queries": [
+"Still-Life with Grapes an dFigs",
+"Christina's World",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Michelangelo Cerquozzi",
+"Andrew Wyeth",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q27627396",
+"queries": [
+"Vanitas with Bouquet of Flowers and Pipe",
+"Bathers at Asnières",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Jan Jansz. de Heem",
+"Georges Seurat",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q27627396",
+"queries": [
+"Vanitas with Bouquet of",
+"The Arnolfini Portrait",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Jan Jansz. de Heem",
+"Jan van Eyck",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q27627396",
+"queries": [
+"Vanitas with Bouquet of Flowres and Pipe",
+"Christina's World",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Jan Jansz. de Heem",
+"Andrew Wyeth",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q123357875",
+"queries": [
+"Altar Step of La Bâtie d'Urfé",
+"Les Demoiselles d'Avignon",
+"The Starry Night"
+],
+"hints": [
+"Masséot Abaquesne",
+"Pablo Picasso",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q123357875",
+"queries": [
+"Altar Step of La",
+"Sunflowers",
+"Guernica"
+],
+"hints": [
+"Masséot Abaquesne",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q123357875",
+"queries": [
+"Altar Step of La Btâie d'Urfé",
+"Wanderer above the Sea of Fog",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Masséot Abaquesne",
+"Caspar David Friedrich",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q20020193",
+"queries": [
+"The City and Bay of Toulon",
+"The Starry Night",
+"The Persistence of Memory"
+],
+"hints": [
+"Joseph Vernet",
+"Vincent van Gogh",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q20020193",
+"queries": [
+"The City and Bay",
+"Café Terrace at Night",
+"Guernica"
+],
+"hints": [
+"Joseph Vernet",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q20020193",
+"queries": [
+"The City and Bay of Touoln",
+"The Garden of Earthly Delights",
+"Las Meninas"
+],
+"hints": [
+"Joseph Vernet",
+"Hieronymus Bosch",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q18627401",
+"queries": [
+"Descent from the Cross",
+"The Night Café",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Pietro da Rimini",
+"Vincent van Gogh",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q18627401",
+"queries": [
+"Descent from",
+"The Scream",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Pietro da Rimini",
+"Edvard Munch",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q18627401",
+"queries": [
+"Descent from th eCross",
+"The Hay Wain",
+"Sunflowers"
+],
+"hints": [
+"Pietro da Rimini",
+"John Constable",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29864606",
+"queries": [
+"Pierre Paul Royer Collard",
+"Mont Sainte-Victoire",
+"The Creation of Adam"
+],
+"hints": [
+"Louis-Léopold Boilly",
+"Paul Cézanne",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29864606",
+"queries": [
+"Pierre Paul",
+"The Great Wave off Kanagawa",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Louis-Léopold Boilly",
+"Katsushika Hokusai",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29864606",
+"queries": [
+"Pierre Paul Royer Collrad",
+"Bathers at Asnières",
+"Guernica"
+],
+"hints": [
+"Louis-Léopold Boilly",
+"Georges Seurat",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29656735",
+"queries": [
+"Saint Sebastian Tended by Angels",
+"The Third of May 1808",
+"American Gothic"
+],
+"hints": [
+"Anthony van Dyck",
+"Francisco Goya",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29656735",
+"queries": [
+"Saint Sebastian Tended",
+"Wanderer above the Sea of Fog",
+"The Persistence of Memory"
+],
+"hints": [
+"Anthony van Dyck",
+"Caspar David Friedrich",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29656735",
+"queries": [
+"Sanit Sebastian Tended by Angels",
+"Nighthawks",
+"The Scream"
+],
+"hints": [
+"Anthony van Dyck",
+"Edward Hopper",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q127422055",
+"queries": [
+"Marble bust of Saint John the Baptist",
+"The Garden of Earthly Delights",
+"Composition VIII"
+],
+"hints": [
+"Desiderio da Settignano",
+"Hieronymus Bosch",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q127422055",
+"queries": [
+"Marble bust of Saint",
+"The Great Wave off Kanagawa",
+"The Creation of Adam"
+],
+"hints": [
+"Desiderio da Settignano",
+"Katsushika Hokusai",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q127422055",
+"queries": [
+"Marble ubst of Saint John the Baptist",
+"The Third of May 1808",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Desiderio da Settignano",
+"Francisco Goya",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q116698275",
+"queries": [
+"Alexander the Great and Diogenes",
+"Christina's World",
+"Impression, Sunrise"
+],
+"hints": [
+"Giovanni Antonio Pellegrini",
+"Andrew Wyeth",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q116698275",
+"queries": [
+"Alexander the Great",
+"Christina's World",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Giovanni Antonio Pellegrini",
+"Andrew Wyeth",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q116698275",
+"queries": [
+"Alexadner the Great and Diogenes",
+"Saturn Devouring His Son",
+"Impression, Sunrise"
+],
+"hints": [
+"Giovanni Antonio Pellegrini",
+"Francisco Goya",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q58197317",
+"queries": [
+"Henrietta Harvey and her half-sister, Elizabeth Norton",
+"The Night Café",
+"Sunflowers"
+],
+"hints": [
+"Jean-Auguste-Dominique Ingres",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q58197317",
+"queries": [
+"Henrietta Harvey and her",
+"The Night Café",
+"Impression, Sunrise"
+],
+"hints": [
+"Jean-Auguste-Dominique Ingres",
+"Vincent van Gogh",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q58197317",
+"queries": [
+"Henrietta Harvey and her half-sitser, Elizabeth Norton",
+"Las Meninas",
+"Café Terrace at Night"
+],
+"hints": [
+"Jean-Auguste-Dominique Ingres",
+"Diego Velázquez",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q115673298",
+"queries": [
+"Paysage d'Italie, effet de soleil couchant",
+"Café Terrace at Night",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Jean-François Hue",
+"Vincent van Gogh",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q115673298",
+"queries": [
+"Paysage d'Italie, effet de",
+"Sunflowers",
+"The Persistence of Memory"
+],
+"hints": [
+"Jean-François Hue",
+"Vincent van Gogh",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q115673298",
+"queries": [
+"Paysage d'Italie, effet de soleil couhcant",
+"Girl with a Pearl Earring",
+"Impression, Sunrise"
+],
+"hints": [
+"Jean-François Hue",
+"Johannes Vermeer",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q18573596",
+"queries": [
+"Madonna Adoring Child",
+"Café Terrace at Night",
+"The Starry Night"
+],
+"hints": [
+"Giovanni Battista Salvi da Sassoferrato",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q18573596",
+"queries": [
+"Madonna Adoring",
+"American Gothic",
+"Impression, Sunrise"
+],
+"hints": [
+"Giovanni Battista Salvi da Sassoferrato",
+"Grant Wood",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q18573596",
+"queries": [
+"Madonna Adroing Child",
+"The Third of May 1808",
+"Bathers at Asnières"
+],
+"hints": [
+"Giovanni Battista Salvi da Sassoferrato",
+"Francisco Goya",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q27616824",
+"queries": [
+"Rinaldo and Armida",
+"The Great Wave off Kanagawa",
+"The Arnolfini Portrait"
+],
+"hints": [
+"François Boucher",
+"Katsushika Hokusai",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q27616824",
+"queries": [
+"Rinaldo and",
+"The Garden of Earthly Delights",
+"Nighthawks"
+],
+"hints": [
+"François Boucher",
+"Hieronymus Bosch",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q27616824",
+"queries": [
+"Rinaldo and Amrida",
+"The Fighting Temeraire",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"François Boucher",
+"J. M. W. Turner",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q2529918",
+"queries": [
+"Saint George and the Dragon",
+"Nighthawks",
+"The Hay Wain"
+],
+"hints": [
+"Raphael",
+"Edward Hopper",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q2529918",
+"queries": [
+"Saint George and",
+"Bathers at Asnières",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Raphael",
+"Georges Seurat",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q2529918",
+"queries": [
+"Saint George and the Drgaon",
+"Saturn Devouring His Son",
+"Christina's World"
+],
+"hints": [
+"Raphael",
+"Francisco Goya",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q19017086",
+"queries": [
+"The Nuptials of Thetis and Peleus",
+"Impression, Sunrise",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Jan Brueghel the Elder",
+"Claude Monet",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q19017086",
+"queries": [
+"The Nuptials of Thetis",
+"The Creation of Adam",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Jan Brueghel the Elder",
+"Michelangelo",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q19017086",
+"queries": [
+"The Nuptials of Thetis and Pelesu",
+"The Sleeping Gypsy",
+"The Hay Wain"
+],
+"hints": [
+"Jan Brueghel the Elder",
+"Henri Rousseau",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q18573060",
+"queries": [
+"Madonna and Child with Angels",
+"Impression, Sunrise",
+"Nighthawks"
+],
+"hints": [
+"Sassetta",
+"Claude Monet",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q18573060",
+"queries": [
+"Madonna and Child",
+"Saturn Devouring His Son",
+"Bathers at Asnières"
+],
+"hints": [
+"Sassetta",
+"Francisco Goya",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q18573060",
+"queries": [
+"Madonna nad Child with Angels",
+"Guernica",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Sassetta",
+"Pablo Picasso",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29864325",
+"queries": [
+"Venus Asking Vulcan for Arms for Aeneas",
+"The Son of Man",
+"Composition VIII"
+],
+"hints": [
+"François Boucher",
+"René Magritte",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29864325",
+"queries": [
+"Venus Asking Vulcan for",
+"The Night Café",
+"The Creation of Adam"
+],
+"hints": [
+"François Boucher",
+"Vincent van Gogh",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29864325",
+"queries": [
+"Veuns Asking Vulcan for Arms for Aeneas",
+"The Fighting Temeraire",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"François Boucher",
+"J. M. W. Turner",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q27513122",
+"queries": [
+"The Throne of Grace",
+"The Son of Man",
+"The Hay Wain"
+],
+"hints": [
+"Colijn de Coter",
+"René Magritte",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q27513122",
+"queries": [
+"The Throne",
+"The Starry Night",
+"The Fighting Temeraire"
+],
+"hints": [
+"Colijn de Coter",
+"Vincent van Gogh",
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q27513122",
+"queries": [
+"The Thorne of Grace",
+"Sunflowers",
+"Guernica"
+],
+"hints": [
+"Colijn de Coter",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29655521",
+"queries": [
+"Adam and Eve",
+"Christina's World",
+"Las Meninas"
+],
+"hints": [
+"Pieter van der Werff",
+"Andrew Wyeth",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29655521",
+"queries": [
+"Adam and",
+"The Fighting Temeraire",
+"Guernica"
+],
+"hints": [
+"Pieter van der Werff",
+"J. M. W. Turner",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29655521",
+"queries": [
+"Aadm and Eve",
+"Sunflowers",
+"Bathers at Asnières"
+],
+"hints": [
+"Pieter van der Werff",
+"Vincent van Gogh",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29855481",
+"queries": [
+"Dido and Aeneas",
+"Self-Portrait with Bandaged Ear",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Pierre-Narcisse Guérin",
+"Vincent van Gogh",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29855481",
+"queries": [
+"Dido and",
+"The Night Café",
+"The Starry Night"
+],
+"hints": [
+"Pierre-Narcisse Guérin",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29855481",
+"queries": [
+"Dido and Aenesa",
+"Sunflowers",
+"American Gothic"
+],
+"hints": [
+"Pierre-Narcisse Guérin",
+"Vincent van Gogh",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q111651606",
+"queries": [
+"view of Paris",
+"The Starry Night",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Narcisse Virgilio Díaz",
+"Vincent van Gogh",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q111651606",
+"queries": [
+"view of",
+"The Garden of Earthly Delights",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Narcisse Virgilio Díaz",
+"Hieronymus Bosch",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q111651606",
+"queries": [
+"view fo Paris",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Guernica"
+],
+"hints": [
+"Narcisse Virgilio Díaz",
+"Georges Seurat",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q19307536",
+"queries": [
+"The Judgment of Paris",
+"Self-Portrait with Bandaged Ear",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Jean-Antoine Watteau",
+"Vincent van Gogh",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q19307536",
+"queries": [
+"The Judgment",
+"The Creation of Adam",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Jean-Antoine Watteau",
+"Michelangelo",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q19307536",
+"queries": [
+"The Judgmen tof Paris",
+"The Fighting Temeraire",
+"The Son of Man"
+],
+"hints": [
+"Jean-Antoine Watteau",
+"J. M. W. Turner",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q115674886",
+"queries": [
+"Carle Van Loo",
+"American Gothic",
+"The Scream"
+],
+"hints": [
+"Pierre Le Sueur",
+"Grant Wood",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q115674886",
+"queries": [
+"Carle Van",
+"Guernica",
+"The Persistence of Memory"
+],
+"hints": [
+"Pierre Le Sueur",
+"Pablo Picasso",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q115674886",
+"queries": [
+"Carl eVan Loo",
+"The Night Café",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Pierre Le Sueur",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q59248190",
+"queries": [
+"Michel, count of Regnaud of Saint-Jean d'Angély",
+"The Fighting Temeraire",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"François Gérard",
+"J. M. W. Turner",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q59248190",
+"queries": [
+"Michel, count of Regnaud",
+"Guernica",
+"Composition VIII"
+],
+"hints": [
+"François Gérard",
+"Pablo Picasso",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q59248190",
+"queries": [
+"Michel, count of Regnaud of aSint-Jean d'Angély",
+"The Third of May 1808",
+"The Night Café"
+],
+"hints": [
+"François Gérard",
+"Francisco Goya",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q87485950",
+"queries": [
+"Les Lutteurs",
+"The Son of Man",
+"Las Meninas"
+],
+"hints": [
+"Philippe Magnier",
+"René Magritte",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q87485950",
+"queries": [
+"Les Lutteurs",
+"Café Terrace at Night",
+"Impression, Sunrise"
+],
+"hints": [
+"Philippe Magnier",
+"Vincent van Gogh",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q115669189",
+"queries": [
+"Flight into Egypt",
+"Les Demoiselles d'Avignon",
+"The Son of Man"
+],
+"hints": [
+"Claude Lorrain",
+"Pablo Picasso",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q115669189",
+"queries": [
+"Flight into",
+"The Scream",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Claude Lorrain",
+"Edvard Munch",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q115669189",
+"queries": [
+"Fligth into Egypt",
+"Sunflowers",
+"Impression, Sunrise"
+],
+"hints": [
+"Claude Lorrain",
+"Vincent van Gogh",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q9500247",
+"queries": [
+"Madonna and Child with the Young St. John the Baptist",
+"The Great Wave off Kanagawa",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Sandro Botticelli",
+"Katsushika Hokusai",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q9500247",
+"queries": [
+"Madonna and Child with the Young",
+"The Garden of Earthly Delights",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Sandro Botticelli",
+"Hieronymus Bosch",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q9500247",
+"queries": [
+"Madonna and Chidl with the Young St. John the Baptist",
+"The Night Café",
+"The Starry Night"
+],
+"hints": [
+"Sandro Botticelli",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q122828284",
+"queries": [
+"Marie-Louise-Thérèse-Victoire de France, Known as Madame Victoire",
+"The Creation of Adam",
+"The Third of May 1808"
+],
+"hints": [
+"Adélaïde Labille-Guiard",
+"Michelangelo",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q122828284",
+"queries": [
+"Marie-Louise-Thérèse-Victoire de France, Known",
+"The Third of May 1808",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Adélaïde Labille-Guiard",
+"Francisco Goya",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q122828284",
+"queries": [
+"Marie-Louise-Thérèse-Victoire de France, Known as Madame iVctoire",
+"The Night Café",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Adélaïde Labille-Guiard",
+"Vincent van Gogh",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q115674796",
+"queries": [
+"Roman Charity",
+"Las Meninas",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Jean-Baptiste Greuze",
+"Diego Velázquez",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q115674796",
+"queries": [
+"Rmoan Charity",
+"The Scream",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Jean-Baptiste Greuze",
+"Edvard Munch",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q111651835",
+"queries": [
+"Military camp",
+"The Persistence of Memory",
+"The Creation of Adam"
+],
+"hints": [
+"Hendrick de Meijer",
+"Salvador Dalí",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q111651835",
+"queries": [
+"Miliatry camp",
+"The Garden of Earthly Delights",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Hendrick de Meijer",
+"Hieronymus Bosch",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29644930",
+"queries": [
+"Conversion of St Paul on the Road to Damascus",
+"The Persistence of Memory",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Hans Speckaert",
+"Salvador Dalí",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29644930",
+"queries": [
+"Conversion of St Paul on the",
+"The Son of Man",
+"Bathers at Asnières"
+],
+"hints": [
+"Hans Speckaert",
+"René Magritte",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29644930",
+"queries": [
+"Conversion of St Paul on the Road t oDamascus",
+"American Gothic",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Hans Speckaert",
+"Grant Wood",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29855510",
+"queries": [
+"Le général comte François Fournier-Sarlovèze",
+"The Fighting Temeraire",
+"Impression, Sunrise"
+],
+"hints": [
+"Antoine-Jean Gros",
+"J. M. W. Turner",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29855510",
+"queries": [
+"Le général comte",
+"Guernica",
+"The Son of Man"
+],
+"hints": [
+"Antoine-Jean Gros",
+"Pablo Picasso",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29855510",
+"queries": [
+"Le général comte François Fournier-Sarolvèze",
+"The Great Wave off Kanagawa",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Antoine-Jean Gros",
+"Katsushika Hokusai",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q28923337",
+"queries": [
+"The Dancing Lesson",
+"Girl with a Pearl Earring",
+"Composition VIII"
+],
+"hints": [
+"Pieter Codde",
+"Johannes Vermeer",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q28923337",
+"queries": [
+"The Dancing",
+"Les Demoiselles d'Avignon",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Pieter Codde",
+"Pablo Picasso",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q28923337",
+"queries": [
+"The Dancin gLesson",
+"The Fighting Temeraire",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Pieter Codde",
+"J. M. W. Turner",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q100998017",
+"queries": [
+"Drapery Study for the Virgin",
+"Mont Sainte-Victoire",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Leonardo da Vinci",
+"Paul Cézanne",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q100998017",
+"queries": [
+"Drapery Study for",
+"American Gothic",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Leonardo da Vinci",
+"Grant Wood",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q100998017",
+"queries": [
+"Drapery Study for teh Virgin",
+"Christina's World",
+"Bathers at Asnières"
+],
+"hints": [
+"Leonardo da Vinci",
+"Andrew Wyeth",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q118121673",
+"queries": [
+"Paysage avec des ruines",
+"Mont Sainte-Victoire",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Warnard van Rijsen",
+"Paul Cézanne",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q118121673",
+"queries": [
+"Paysage avec",
+"Wanderer above the Sea of Fog",
+"The Creation of Adam"
+],
+"hints": [
+"Warnard van Rijsen",
+"Caspar David Friedrich",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q118121673",
+"queries": [
+"Paysage avec des ruiens",
+"Guernica",
+"The Fighting Temeraire"
+],
+"hints": [
+"Warnard van Rijsen",
+"Pablo Picasso",
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17315738",
+"queries": [
+"The Origin of Painting",
+"Self-Portrait with Bandaged Ear",
+"Impression, Sunrise"
+],
+"hints": [
+"Jean-Baptiste Regnault",
+"Vincent van Gogh",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17315738",
+"queries": [
+"The Origin",
+"Christina's World",
+"The Creation of Adam"
+],
+"hints": [
+"Jean-Baptiste Regnault",
+"Andrew Wyeth",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17315738",
+"queries": [
+"The Origin of Paintnig",
+"The Fighting Temeraire",
+"Sunflowers"
+],
+"hints": [
+"Jean-Baptiste Regnault",
+"J. M. W. Turner",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q2275653",
+"queries": [
+"Self-portrait with a friend",
+"Saturn Devouring His Son",
+"The Creation of Adam"
+],
+"hints": [
+"Raphael",
+"Francisco Goya",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q2275653",
+"queries": [
+"Self-portrait with",
+"Christina's World",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Raphael",
+"Andrew Wyeth",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q2275653",
+"queries": [
+"Self-portarit with a friend",
+"Self-Portrait with Bandaged Ear",
+"Café Terrace at Night"
+],
+"hints": [
+"Raphael",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29902189",
+"queries": [
+"Head of a lion",
+"The Persistence of Memory",
+"Bathers at Asnières"
+],
+"hints": [
+"Théodore Géricault",
+"Salvador Dalí",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29902189",
+"queries": [
+"Head of",
+"Impression, Sunrise",
+"The Hay Wain"
+],
+"hints": [
+"Théodore Géricault",
+"Claude Monet",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29902189",
+"queries": [
+"Head of a ilon",
+"The Arnolfini Portrait",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Théodore Géricault",
+"Jan van Eyck",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q19404884",
+"queries": [
+"La mort de Didon, Cayot",
+"The Son of Man",
+"Christina's World"
+],
+"hints": [
+"Claude-Augustin Cayot",
+"René Magritte",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q19404884",
+"queries": [
+"La mort de",
+"Les Demoiselles d'Avignon",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Claude-Augustin Cayot",
+"Pablo Picasso",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q19404884",
+"queries": [
+"La mor tde Didon, Cayot",
+"The Persistence of Memory",
+"The Fighting Temeraire"
+],
+"hints": [
+"Claude-Augustin Cayot",
+"Salvador Dalí",
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q18573846",
+"queries": [
+"Cornelia, Mother of the Gracchi",
+"The Arnolfini Portrait",
+"Sunflowers"
+],
+"hints": [
+"Giuseppe Cades",
+"Jan van Eyck",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q18573846",
+"queries": [
+"Cornelia, Mother of",
+"The Great Wave off Kanagawa",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Giuseppe Cades",
+"Katsushika Hokusai",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q18573846",
+"queries": [
+"Cornleia, Mother of the Gracchi",
+"Christina's World",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Giuseppe Cades",
+"Andrew Wyeth",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q29654696",
+"queries": [
+"Flagellation of Christ",
+"Impression, Sunrise",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Master L. Cz.",
+"Claude Monet",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q29654696",
+"queries": [
+"Flagellation of",
+"Guernica",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Master L. Cz.",
+"Pablo Picasso",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q29654696",
+"queries": [
+"Flagellatoin of Christ",
+"Mont Sainte-Victoire",
+"The Night Café"
+],
+"hints": [
+"Master L. Cz.",
+"Paul Cézanne",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q3203231",
+"queries": [
+"Rebellious Slave",
+"Saturn Devouring His Son",
+"Las Meninas"
+],
+"hints": [
+"Michelangelo",
+"Francisco Goya",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q3203231",
+"queries": [
+"Rebellious lSave",
+"The Night Café",
+"The Scream"
+],
+"hints": [
+"Michelangelo",
+"Vincent van Gogh",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q131621207",
+"queries": [
+"Madonna and Child",
+"Wanderer above the Sea of Fog",
+"Christina's World"
+],
+"hints": [
+"Bernardino Luini",
+"Caspar David Friedrich",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q131621207",
+"queries": [
+"Madonna and",
+"The Garden of Earthly Delights",
+"Impression, Sunrise"
+],
+"hints": [
+"Bernardino Luini",
+"Hieronymus Bosch",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q131621207",
+"queries": [
+"Maodnna and Child",
+"The Scream",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Bernardino Luini",
+"Edvard Munch",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q111651082",
+"queries": [
+"St. Peter with kneeling donor",
+"The Great Wave off Kanagawa",
+"Sunflowers"
+],
+"hints": [
+"Marco d'Oggiono",
+"Katsushika Hokusai",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q111651082",
+"queries": [
+"St. Peter with",
+"Bathers at Asnières",
+"The Starry Night"
+],
+"hints": [
+"Marco d'Oggiono",
+"Georges Seurat",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q111651082",
+"queries": [
+"St. Peter with kneelnig donor",
+"Café Terrace at Night",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Marco d'Oggiono",
+"Vincent van Gogh",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-00000089468",
+"queries": [
+"Roses sur fond noir",
+"The Night Café",
+"The Son of Man"
+],
+"hints": [
+"DERAIN André",
+"Vincent van Gogh",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-00000089468",
+"queries": [
+"Roses sur",
+"Guernica",
+"The Night Café"
+],
+"hints": [
+"DERAIN André",
+"Pablo Picasso",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-00000089468",
+"queries": [
+"Roses sur fnod noir",
+"Mont Sainte-Victoire",
+"Composition VIII"
+],
+"hints": [
+"DERAIN André",
+"Paul Cézanne",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-00000089430",
+"queries": [
+"Pommes et biscuits",
+"Guernica",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Cézanne Paul",
+"Pablo Picasso",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-00000089430",
+"queries": [
+"Pommes et",
+"The Great Wave off Kanagawa",
+"The Third of May 1808"
+],
+"hints": [
+"Cézanne Paul",
+"Katsushika Hokusai",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-00000089430",
+"queries": [
+"Pommes et bisucits",
+"Les Demoiselles d'Avignon",
+"The Starry Night"
+],
+"hints": [
+"Cézanne Paul",
+"Pablo Picasso",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-00000089521",
+"queries": [
+"Bouquet de tulipes",
+"The Great Wave off Kanagawa",
+"The Scream"
+],
+"hints": [
+"RENOIR Pierre Auguste",
+"Katsushika Hokusai",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-00000089521",
+"queries": [
+"Bouquet de",
+"The Arnolfini Portrait",
+"American Gothic"
+],
+"hints": [
+"RENOIR Pierre Auguste",
+"Jan van Eyck",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-00000089521",
+"queries": [
+"Bouqeut de tulipes",
+"Nighthawks",
+"Bathers at Asnières"
+],
+"hints": [
+"RENOIR Pierre Auguste",
+"Edward Hopper",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17494115",
+"queries": [
+"Houses at La Haugelle near Carolles",
+"The Scream",
+"Composition VIII"
+],
+"hints": [
+"Alphonse Osbert",
+"Edvard Munch",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17494115",
+"queries": [
+"Houses at La Haugelle",
+"Composition VIII",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Alphonse Osbert",
+"Wassily Kandinsky",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17494115",
+"queries": [
+"Houses at L aHaugelle near Carolles",
+"Sunflowers",
+"The Scream"
+],
+"hints": [
+"Alphonse Osbert",
+"Vincent van Gogh",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-50350036741",
+"queries": [
+"Le tub",
+"Café Terrace at Night",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Manet Édouard",
+"Vincent van Gogh",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-50350036741",
+"queries": [
+"Le tub",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Manet Édouard",
+"Georges Seurat",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492764",
+"queries": [
+"The calvary",
+"The Persistence of Memory",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Gustave Moreau",
+"Salvador Dalí",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492764",
+"queries": [
+"Teh calvary",
+"Sunflowers",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Gustave Moreau",
+"Vincent van Gogh",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17494745",
+"queries": [
+"Landscape with the Sphinx",
+"The Third of May 1808",
+"Nighthawks"
+],
+"hints": [
+"Alphonse Osbert",
+"Francisco Goya",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17494745",
+"queries": [
+"Landscape with",
+"The Scream",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Alphonse Osbert",
+"Edvard Munch",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17494745",
+"queries": [
+"Landscap ewith the Sphinx",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Alphonse Osbert",
+"Georges Seurat",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17490774",
+"queries": [
+"In the Land of the Sea: Those Who Leave, The Farewell Meal, Those Who Stay",
+"Self-Portrait with Bandaged Ear",
+"American Gothic"
+],
+"hints": [
+"Charles Cottet",
+"Vincent van Gogh",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17490774",
+"queries": [
+"In the Land of the Sea: Those Who Leave, The",
+"Self-Portrait with Bandaged Ear",
+"The Son of Man"
+],
+"hints": [
+"Charles Cottet",
+"Vincent van Gogh",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17490774",
+"queries": [
+"In the Land of the Sea: Thos eWho Leave, The Farewell Meal, Those Who Stay",
+"Impression, Sunrise",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Charles Cottet",
+"Claude Monet",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17491717",
+"queries": [
+"Ischia, Gulf of Naples",
+"The Starry Night",
+"Nighthawks"
+],
+"hints": [
+"Ary Renan",
+"Vincent van Gogh",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17491717",
+"queries": [
+"Ischia, Gulf",
+"Christina's World",
+"The Fighting Temeraire"
+],
+"hints": [
+"Ary Renan",
+"Andrew Wyeth",
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17491717",
+"queries": [
+"Ischia, Gul fof Naples",
+"Guernica",
+"Café Terrace at Night"
+],
+"hints": [
+"Ary Renan",
+"Pablo Picasso",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492316",
+"queries": [
+"The Seine at Vétheuil",
+"The Great Wave off Kanagawa",
+"The Starry Night"
+],
+"hints": [
+"Claude Monet",
+"Katsushika Hokusai",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492316",
+"queries": [
+"The Seine",
+"Self-Portrait with Bandaged Ear",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Claude Monet",
+"Vincent van Gogh",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492316",
+"queries": [
+"Th eSeine at Vétheuil",
+"The Starry Night",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Claude Monet",
+"Vincent van Gogh",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17493214",
+"queries": [
+"The Port of Camaret",
+"The Night Café",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Eugène Louis Boudin",
+"Vincent van Gogh",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17493214",
+"queries": [
+"The Port",
+"The Persistence of Memory",
+"Café Terrace at Night"
+],
+"hints": [
+"Eugène Louis Boudin",
+"Salvador Dalí",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17493214",
+"queries": [
+"The Port of aCmaret",
+"The Hay Wain",
+"The Night Café"
+],
+"hints": [
+"Eugène Louis Boudin",
+"John Constable",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q130383497",
+"queries": [
+"The Little Washerwoman",
+"Mont Sainte-Victoire",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Pierre-Auguste Renoir",
+"Paul Cézanne",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q130383497",
+"queries": [
+"The Little",
+"The Great Wave off Kanagawa",
+"Bathers at Asnières"
+],
+"hints": [
+"Pierre-Auguste Renoir",
+"Katsushika Hokusai",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q130383497",
+"queries": [
+"The Litlte Washerwoman",
+"The Scream",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Pierre-Auguste Renoir",
+"Edvard Munch",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-50350132437",
+"queries": [
+"Atelier d'un tisserand vendeen",
+"Nighthawks",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"LEPERE Auguste Louis",
+"Edward Hopper",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-50350132437",
+"queries": [
+"Atelier d'un",
+"The Third of May 1808",
+"Café Terrace at Night"
+],
+"hints": [
+"LEPERE Auguste Louis",
+"Francisco Goya",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-50350132437",
+"queries": [
+"Atelie rd'un tisserand vendeen",
+"Sunflowers",
+"Composition VIII"
+],
+"hints": [
+"LEPERE Auguste Louis",
+"Vincent van Gogh",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17496073",
+"queries": [
+"Venice, the Giudecca",
+"Café Terrace at Night",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Édouard-Auguste Imer",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17496073",
+"queries": [
+"Venice, the",
+"Café Terrace at Night",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Édouard-Auguste Imer",
+"Vincent van Gogh",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17496073",
+"queries": [
+"Venice, the Giduecca",
+"Wanderer above the Sea of Fog",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Édouard-Auguste Imer",
+"Caspar David Friedrich",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q64491315",
+"queries": [
+"Bernard and Roger in Bourré",
+"The Starry Night",
+"The Creation of Adam"
+],
+"hints": [
+"Louis-Maurice Boutet de Monvel",
+"Vincent van Gogh",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q64491315",
+"queries": [
+"Bernard and Roger",
+"Nighthawks",
+"The Night Café"
+],
+"hints": [
+"Louis-Maurice Boutet de Monvel",
+"Edward Hopper",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q64491315",
+"queries": [
+"Bernard and Roger in Bourér",
+"The Great Wave off Kanagawa",
+"The Persistence of Memory"
+],
+"hints": [
+"Louis-Maurice Boutet de Monvel",
+"Katsushika Hokusai",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC010048",
+"queries": [
+"La paix",
+"The Son of Man",
+"The Starry Night"
+],
+"hints": [
+"Barye Antoine-Louis",
+"René Magritte",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010048",
+"queries": [
+"La apix",
+"The Starry Night",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Barye Antoine-Louis",
+"Vincent van Gogh",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q123338488",
+"queries": [
+"Sketch for The Family in War, and The Family in Peace, Project for the Wedding Hall of the Town Hall of Nogent-sur-Marne",
+"The Arnolfini Portrait",
+"The Creation of Adam"
+],
+"hints": [
+"Alphonse Osbert",
+"Jan van Eyck",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q123338488",
+"queries": [
+"Sketch for The Family in War, and The Family in Peace, Project for the",
+"Nighthawks",
+"Christina's World"
+],
+"hints": [
+"Alphonse Osbert",
+"Edward Hopper",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q123338488",
+"queries": [
+"Sketch for Th eFamily in War, and The Family in Peace, Project for the Wedding Hall of the Town Hall of Nogent-sur-Marne",
+"The Great Wave off Kanagawa",
+"Impression, Sunrise"
+],
+"hints": [
+"Alphonse Osbert",
+"Katsushika Hokusai",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17494981",
+"queries": [
+"Little Girl Knitting",
+"Impression, Sunrise",
+"Guernica"
+],
+"hints": [
+"Odilon Redon",
+"Claude Monet",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17494981",
+"queries": [
+"Little Girl",
+"Christina's World",
+"Guernica"
+],
+"hints": [
+"Odilon Redon",
+"Andrew Wyeth",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17494981",
+"queries": [
+"Little Girl Knitting",
+"The Persistence of Memory",
+"Las Meninas"
+],
+"hints": [
+"Odilon Redon",
+"Salvador Dalí",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17491315",
+"queries": [
+"View of Dinard, Saint-Servan",
+"The Garden of Earthly Delights",
+"The Hay Wain"
+],
+"hints": [
+"Alphonse Osbert",
+"Hieronymus Bosch",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17491315",
+"queries": [
+"View of",
+"Mont Sainte-Victoire",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Alphonse Osbert",
+"Paul Cézanne",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17491315",
+"queries": [
+"Vie wof Dinard, Saint-Servan",
+"Las Meninas",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Alphonse Osbert",
+"Diego Velázquez",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17491768",
+"queries": [
+"Young Woman Sitting",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Café Terrace at Night"
+],
+"hints": [
+"Hippolyte Petitjean",
+"Georges Seurat",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17491768",
+"queries": [
+"Young Woman",
+"Girl with a Pearl Earring",
+"Nighthawks"
+],
+"hints": [
+"Hippolyte Petitjean",
+"Johannes Vermeer",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17491768",
+"queries": [
+"Young Woman Sitting",
+"Café Terrace at Night",
+"The Fighting Temeraire"
+],
+"hints": [
+"Hippolyte Petitjean",
+"Vincent van Gogh",
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17495702",
+"queries": [
+"Underwood and Stream",
+"Las Meninas",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Charles-François Daubigny",
+"Diego Velázquez",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17495702",
+"queries": [
+"Underwood and",
+"Café Terrace at Night",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Charles-François Daubigny",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17495702",
+"queries": [
+"Underwodo and Stream",
+"Self-Portrait with Bandaged Ear",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Charles-François Daubigny",
+"Vincent van Gogh",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC010197",
+"queries": [
+"Ours brun",
+"The Starry Night",
+"The Arnolfini Portrait"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"Vincent van Gogh",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010197",
+"queries": [
+"Ours burn",
+"The Creation of Adam",
+"Nighthawks"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"Michelangelo",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492565",
+"queries": [
+"The Alley of La Tronche, along the path",
+"Café Terrace at Night",
+"The Hay Wain"
+],
+"hints": [
+"Ernest Hébert",
+"Vincent van Gogh",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492565",
+"queries": [
+"The Alley of La Tronche,",
+"The Scream",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Ernest Hébert",
+"Edvard Munch",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492565",
+"queries": [
+"The Alley of La Tronche, alogn the path",
+"American Gothic",
+"Bathers at Asnières"
+],
+"hints": [
+"Ernest Hébert",
+"Grant Wood",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492933",
+"queries": [
+"The Fire",
+"Les Demoiselles d'Avignon",
+"Bathers at Asnières"
+],
+"hints": [
+"Félix-Joseph Barrias",
+"Pablo Picasso",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492933",
+"queries": [
+"The iFre",
+"The Starry Night",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Félix-Joseph Barrias",
+"Vincent van Gogh",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC010226",
+"queries": [
+"Vieil homme et sa vache",
+"The Arnolfini Portrait",
+"Christina's World"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"Jan van Eyck",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-000SC010226",
+"queries": [
+"Vieil homme et",
+"Christina's World",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"Andrew Wyeth",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010226",
+"queries": [
+"Vieil homm eet sa vache",
+"The Son of Man",
+"The Sleeping Gypsy"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"René Magritte",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17493357",
+"queries": [
+"The Only Bird Flying Above Clouds",
+"Nighthawks",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"André Devambez",
+"Edward Hopper",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17493357",
+"queries": [
+"The Only Bird Flying",
+"The Sleeping Gypsy",
+"The Persistence of Memory"
+],
+"hints": [
+"André Devambez",
+"Henri Rousseau",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17493357",
+"queries": [
+"The Only Bird Flying Above lCouds",
+"Composition VIII",
+"The Starry Night"
+],
+"hints": [
+"André Devambez",
+"Wassily Kandinsky",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC013621",
+"queries": [
+"Méditerranée dite aussi La pensée",
+"Wanderer above the Sea of Fog",
+"The Sleeping Gypsy"
+],
+"hints": [
+"MAILLOL Aristide",
+"Caspar David Friedrich",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-000SC013621",
+"queries": [
+"Méditerranée dite aussi",
+"The Creation of Adam",
+"Bathers at Asnières"
+],
+"hints": [
+"MAILLOL Aristide",
+"Michelangelo",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013621",
+"queries": [
+"Méditerranée dite uassi La pensée",
+"Las Meninas",
+"The Sleeping Gypsy"
+],
+"hints": [
+"MAILLOL Aristide",
+"Diego Velázquez",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492992",
+"queries": [
+"Visit day at the Hospital",
+"Las Meninas",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Henri Jules Jean Geoffroy",
+"Diego Velázquez",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492992",
+"queries": [
+"Visit day at",
+"Self-Portrait with Bandaged Ear",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Henri Jules Jean Geoffroy",
+"Vincent van Gogh",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492992",
+"queries": [
+"Vsiit day at the Hospital",
+"The Night Café",
+"The Persistence of Memory"
+],
+"hints": [
+"Henri Jules Jean Geoffroy",
+"Vincent van Gogh",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17496098",
+"queries": [
+"Old Persian Faience",
+"Les Demoiselles d'Avignon",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Maurice Bompard",
+"Pablo Picasso",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17496098",
+"queries": [
+"Old Persian",
+"American Gothic",
+"Guernica"
+],
+"hints": [
+"Maurice Bompard",
+"Grant Wood",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17496098",
+"queries": [
+"Old Persian aFience",
+"The Arnolfini Portrait",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Maurice Bompard",
+"Jan van Eyck",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17494043",
+"queries": [
+"Madame Odilon Redon",
+"The Arnolfini Portrait",
+"The Scream"
+],
+"hints": [
+"Odilon Redon",
+"Jan van Eyck",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17494043",
+"queries": [
+"Madame Odilon",
+"The Great Wave off Kanagawa",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Odilon Redon",
+"Katsushika Hokusai",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17494043",
+"queries": [
+"Madame dOilon Redon",
+"Christina's World",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Odilon Redon",
+"Andrew Wyeth",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC010002",
+"queries": [
+"Femme de race foulah",
+"Girl with a Pearl Earring",
+"The Hay Wain"
+],
+"hints": [
+"ALLOUARD Henri",
+"Johannes Vermeer",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-000SC010002",
+"queries": [
+"Femme de",
+"American Gothic",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"ALLOUARD Henri",
+"Grant Wood",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010002",
+"queries": [
+"Femme de race foluah",
+"The Sleeping Gypsy",
+"The Son of Man"
+],
+"hints": [
+"ALLOUARD Henri",
+"Henri Rousseau",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17490986",
+"queries": [
+"Barge at the Quay",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Composition VIII"
+],
+"hints": [
+"Stanislas Lépine",
+"Georges Seurat",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17490986",
+"queries": [
+"Barge at",
+"The Persistence of Memory",
+"The Third of May 1808"
+],
+"hints": [
+"Stanislas Lépine",
+"Salvador Dalí",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17490986",
+"queries": [
+"Barge at hte Quay",
+"Saturn Devouring His Son",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Stanislas Lépine",
+"Francisco Goya",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q130388509",
+"queries": [
+"Cabaret Scene",
+"Bathers at Asnières",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Jean-Louis-Ernest Meissonier",
+"Georges Seurat",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q130388509",
+"queries": [
+"Cbaaret Scene",
+"Bathers at Asnières",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Jean-Louis-Ernest Meissonier",
+"Georges Seurat",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17491850",
+"queries": [
+"The Boat, the Evening",
+"Impression, Sunrise",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Antoine Chintreuil",
+"Claude Monet",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17491850",
+"queries": [
+"The Boat,",
+"Sunflowers",
+"The Third of May 1808"
+],
+"hints": [
+"Antoine Chintreuil",
+"Vincent van Gogh",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17491850",
+"queries": [
+"The Boat, the Evennig",
+"Girl with a Pearl Earring",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Antoine Chintreuil",
+"Johannes Vermeer",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17494328",
+"queries": [
+"Moret, Banks of the Loing",
+"Sunflowers",
+"Las Meninas"
+],
+"hints": [
+"Alfred Sisley",
+"Vincent van Gogh",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17494328",
+"queries": [
+"Moret, Banks of",
+"Mont Sainte-Victoire",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Alfred Sisley",
+"Paul Cézanne",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17494328",
+"queries": [
+"Moret, Bansk of the Loing",
+"Impression, Sunrise",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Alfred Sisley",
+"Claude Monet",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC010193",
+"queries": [
+"Biches et faon",
+"The Persistence of Memory",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"Salvador Dalí",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-000SC010193",
+"queries": [
+"Biches et",
+"The Third of May 1808",
+"American Gothic"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"Francisco Goya",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010193",
+"queries": [
+"Biche set faon",
+"Christina's World",
+"Nighthawks"
+],
+"hints": [
+"BUGATTI Rembrandt",
+"Andrew Wyeth",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q64491402",
+"queries": [
+"Two Mothers",
+"Bathers at Asnières",
+"Composition VIII"
+],
+"hints": [
+"Léon Maxime Faivre",
+"Georges Seurat",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q64491402",
+"queries": [
+"Tow Mothers",
+"The Scream",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Léon Maxime Faivre",
+"Edvard Munch",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17491308",
+"queries": [
+"In Correctional Facility",
+"The Starry Night",
+"The Persistence of Memory"
+],
+"hints": [
+"Jean-Louis Forain",
+"Vincent van Gogh",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17491308",
+"queries": [
+"In Correctional",
+"Christina's World",
+"The Starry Night"
+],
+"hints": [
+"Jean-Louis Forain",
+"Andrew Wyeth",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17491308",
+"queries": [
+"In Correctional Faciliyt",
+"American Gothic",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Jean-Louis Forain",
+"Grant Wood",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-50350113422",
+"queries": [
+"Siege pontifical de saint-laurent, hors les murs, a rome",
+"American Gothic",
+"The Son of Man"
+],
+"hints": [
+"LE FUEL Hector Martin",
+"Grant Wood",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-50350113422",
+"queries": [
+"Siege pontifical de saint-laurent, hors les",
+"Self-Portrait with Bandaged Ear",
+"The Starry Night"
+],
+"hints": [
+"LE FUEL Hector Martin",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-50350113422",
+"queries": [
+"Siege pontifiacl de saint-laurent, hors les murs, a rome",
+"Self-Portrait with Bandaged Ear",
+"Las Meninas"
+],
+"hints": [
+"LE FUEL Hector Martin",
+"Vincent van Gogh",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492480",
+"queries": [
+"Our Lady of the Hunter",
+"Sunflowers",
+"The Scream"
+],
+"hints": [
+"Ernest Hébert",
+"Vincent van Gogh",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492480",
+"queries": [
+"Our Lady of",
+"Saturn Devouring His Son",
+"Las Meninas"
+],
+"hints": [
+"Ernest Hébert",
+"Francisco Goya",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492480",
+"queries": [
+"Our Lady of the Huntre",
+"The Great Wave off Kanagawa",
+"The Scream"
+],
+"hints": [
+"Ernest Hébert",
+"Katsushika Hokusai",
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-M5060000277",
+"queries": [
+"Groupe de personnages dansant, en habits du XVIIIe siècle",
+"Christina's World",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"SOMM Henry",
+"Andrew Wyeth",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-M5060000277",
+"queries": [
+"Groupe de personnages dansant, en habits",
+"The Son of Man",
+"The Starry Night"
+],
+"hints": [
+"SOMM Henry",
+"René Magritte",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-M5060000277",
+"queries": [
+"Groupe de personnages dansant, e nhabits du XVIIIe siècle",
+"Bathers at Asnières",
+"The Third of May 1808"
+],
+"hints": [
+"SOMM Henry",
+"Georges Seurat",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-M5060000115",
+"queries": [
+"Le rocher de l'Ermitage",
+"The Great Wave off Kanagawa",
+"Las Meninas"
+],
+"hints": [
+"HUGO Charles",
+"Katsushika Hokusai",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-M5060000115",
+"queries": [
+"Le rocher",
+"Las Meninas",
+"The Hay Wain"
+],
+"hints": [
+"HUGO Charles",
+"Diego Velázquez",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-M5060000115",
+"queries": [
+"Le rocher de l'Ermitaeg",
+"The Fighting Temeraire",
+"The Persistence of Memory"
+],
+"hints": [
+"HUGO Charles",
+"J. M. W. Turner",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17495434",
+"queries": [
+"Stroll in a Park at Dusk",
+"Nighthawks",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Adolphe Joseph Thomas Monticelli",
+"Edward Hopper",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17495434",
+"queries": [
+"Stroll in a Park",
+"Mont Sainte-Victoire",
+"Christina's World"
+],
+"hints": [
+"Adolphe Joseph Thomas Monticelli",
+"Paul Cézanne",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17495434",
+"queries": [
+"Stroll in a Pakr at Dusk",
+"American Gothic",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Adolphe Joseph Thomas Monticelli",
+"Grant Wood",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17490977",
+"queries": [
+"Millstone Quarry at Igny",
+"The Persistence of Memory",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Antoine Chintreuil",
+"Salvador Dalí",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17490977",
+"queries": [
+"Millstone Quarry",
+"The Creation of Adam",
+"Las Meninas"
+],
+"hints": [
+"Antoine Chintreuil",
+"Michelangelo",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17490977",
+"queries": [
+"Milsltone Quarry at Igny",
+"Sunflowers",
+"Christina's World"
+],
+"hints": [
+"Antoine Chintreuil",
+"Vincent van Gogh",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492182",
+"queries": [
+"The Gate of Nevers",
+"The Third of May 1808",
+"The Creation of Adam"
+],
+"hints": [
+"Louis Braquaval",
+"Francisco Goya",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492182",
+"queries": [
+"The Gate",
+"The Great Wave off Kanagawa",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Louis Braquaval",
+"Katsushika Hokusai",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492182",
+"queries": [
+"The aGte of Nevers",
+"Nighthawks",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Louis Braquaval",
+"Edward Hopper",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q325981",
+"queries": [
+"Réunion de famille",
+"The Great Wave off Kanagawa",
+"The Creation of Adam"
+],
+"hints": [
+"Frédéric Bazille",
+"Katsushika Hokusai",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q325981",
+"queries": [
+"Réunion de",
+"Sunflowers",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Frédéric Bazille",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q325981",
+"queries": [
+"Réunoin de famille",
+"Mont Sainte-Victoire",
+"Bathers at Asnières"
+],
+"hints": [
+"Frédéric Bazille",
+"Paul Cézanne",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17490709",
+"queries": [
+"Apotheosis of the Rabble",
+"Nighthawks",
+"The Night Café"
+],
+"hints": [
+"Louis-Maurice Boutet de Monvel",
+"Edward Hopper",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17490709",
+"queries": [
+"Apotheosis of",
+"Composition VIII",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Louis-Maurice Boutet de Monvel",
+"Wassily Kandinsky",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17490709",
+"queries": [
+"Apotheosis of hte Rabble",
+"The Night Café",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Louis-Maurice Boutet de Monvel",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC013087",
+"queries": [
+"Baigneuse sur un rocher",
+"American Gothic",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Carpeaux Jean-Baptiste",
+"Grant Wood",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-000SC013087",
+"queries": [
+"Baigneuse sur",
+"Christina's World",
+"Sunflowers"
+],
+"hints": [
+"Carpeaux Jean-Baptiste",
+"Andrew Wyeth",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC013087",
+"queries": [
+"Baigneuse sur un rocehr",
+"American Gothic",
+"The Son of Man"
+],
+"hints": [
+"Carpeaux Jean-Baptiste",
+"Grant Wood",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-50350020468",
+"queries": [
+"La lecture de la bible",
+"Mont Sainte-Victoire",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"BRACQUEMOND Félix",
+"Paul Cézanne",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-50350020468",
+"queries": [
+"La lecture de",
+"The Son of Man",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"BRACQUEMOND Félix",
+"René Magritte",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-50350020468",
+"queries": [
+"La lecture de la bibel",
+"The Scream",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"BRACQUEMOND Félix",
+"Edvard Munch",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492605",
+"queries": [
+"Afternoon at Deffand",
+"Girl with a Pearl Earring",
+"Nighthawks"
+],
+"hints": [
+"Alphonse Osbert",
+"Johannes Vermeer",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492605",
+"queries": [
+"Afternoon at",
+"Composition VIII",
+"The Persistence of Memory"
+],
+"hints": [
+"Alphonse Osbert",
+"Wassily Kandinsky",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492605",
+"queries": [
+"Aftenroon at Deffand",
+"The Night Café",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Alphonse Osbert",
+"Vincent van Gogh",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-50350143799",
+"queries": [
+"Planche pour les documents décoratifs : Instruments pour la cheminée, chenet, motifs floraux, pare-feu",
+"Las Meninas",
+"Impression, Sunrise"
+],
+"hints": [
+"Mucha Alphonse",
+"Diego Velázquez",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-50350143799",
+"queries": [
+"Planche pour les documents décoratifs : Instruments pour la",
+"Composition VIII",
+"Guernica"
+],
+"hints": [
+"Mucha Alphonse",
+"Wassily Kandinsky",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-50350143799",
+"queries": [
+"Planche pour les doucments décoratifs : Instruments pour la cheminée, chenet, motifs floraux, pare-feu",
+"American Gothic",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Mucha Alphonse",
+"Grant Wood",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-50350143591",
+"queries": [
+"Etudes de motifs décoratifs : feuilles et insectes stylisés",
+"Bathers at Asnières",
+"The Fighting Temeraire"
+],
+"hints": [
+"Bugatti Carlo",
+"Georges Seurat",
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-50350143591",
+"queries": [
+"Etudes de motifs décoratifs : feuilles",
+"The Creation of Adam",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Bugatti Carlo",
+"Michelangelo",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-50350143591",
+"queries": [
+"Etudes de motifs édcoratifs : feuilles et insectes stylisés",
+"The Sleeping Gypsy",
+"Bathers at Asnières"
+],
+"hints": [
+"Bugatti Carlo",
+"Henri Rousseau",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q64494958",
+"queries": [
+"The Good Samaritan",
+"The Persistence of Memory",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Gustave Moreau",
+"Salvador Dalí",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q64494958",
+"queries": [
+"The Good",
+"Las Meninas",
+"Composition VIII"
+],
+"hints": [
+"Gustave Moreau",
+"Diego Velázquez",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q64494958",
+"queries": [
+"Teh Good Samaritan",
+"The Arnolfini Portrait",
+"The Son of Man"
+],
+"hints": [
+"Gustave Moreau",
+"Jan van Eyck",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "joconde-000SC010519",
+"queries": [
+"Femme piquee par un serpent",
+"The Creation of Adam",
+"Saturn Devouring His Son"
+],
+"hints": [
+"CLESINGER Jean-Baptiste;CLESINGER Auguste",
+"Michelangelo",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "joconde-000SC010519",
+"queries": [
+"Femme piquee par",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"The Creation of Adam"
+],
+"hints": [
+"CLESINGER Jean-Baptiste;CLESINGER Auguste",
+"Georges Seurat",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "joconde-000SC010519",
+"queries": [
+"Femme piquee pra un serpent",
+"American Gothic",
+"Café Terrace at Night"
+],
+"hints": [
+"CLESINGER Jean-Baptiste;CLESINGER Auguste",
+"Grant Wood",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17495552",
+"queries": [
+"Saint Sebastian",
+"The Hay Wain",
+"Christina's World"
+],
+"hints": [
+"Claude Ferdinand Gaillard",
+"John Constable",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17495552",
+"queries": [
+"Saint Sbeastian",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"American Gothic"
+],
+"hints": [
+"Claude Ferdinand Gaillard",
+"Georges Seurat",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q1119387",
+"queries": [
+"Poseuse de dos",
+"The Garden of Earthly Delights",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Georges Seurat",
+"Hieronymus Bosch",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q1119387",
+"queries": [
+"Poseuse de",
+"Café Terrace at Night",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Georges Seurat",
+"Vincent van Gogh",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q1119387",
+"queries": [
+"Poseus ede dos",
+"Mont Sainte-Victoire",
+"Sunflowers"
+],
+"hints": [
+"Georges Seurat",
+"Paul Cézanne",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492734",
+"queries": [
+"The Boatman, Evening",
+"The Fighting Temeraire",
+"Impression, Sunrise"
+],
+"hints": [
+"Alphonse Osbert",
+"J. M. W. Turner",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492734",
+"queries": [
+"The Boatman,",
+"The Starry Night",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Alphonse Osbert",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492734",
+"queries": [
+"The Boatamn, Evening",
+"Guernica",
+"The Persistence of Memory"
+],
+"hints": [
+"Alphonse Osbert",
+"Pablo Picasso",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q64491282",
+"queries": [
+"Henry II of France",
+"Self-Portrait with Bandaged Ear",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Jean-Léon Gérôme",
+"Vincent van Gogh",
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q64491282",
+"queries": [
+"Henry II",
+"The Arnolfini Portrait",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Jean-Léon Gérôme",
+"Jan van Eyck",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q64491282",
+"queries": [
+"Henyr II of France",
+"The Son of Man",
+"Composition VIII"
+],
+"hints": [
+"Jean-Léon Gérôme",
+"René Magritte",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17495314",
+"queries": [
+"Portrait of Paul François Collot, Dealer of Novelties",
+"Girl with a Pearl Earring",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Jean-François Millet",
+"Johannes Vermeer",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17495314",
+"queries": [
+"Portrait of Paul François Collot,",
+"The Sleeping Gypsy",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Jean-François Millet",
+"Henri Rousseau",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17495314",
+"queries": [
+"Portrait of Paul François Collot, Dealre of Novelties",
+"The Scream",
+"Composition VIII"
+],
+"hints": [
+"Jean-François Millet",
+"Edvard Munch",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q106241990",
+"queries": [
+"Emmanuel Frémiet",
+"The Arnolfini Portrait",
+"American Gothic"
+],
+"hints": [
+"Henri-Léon Gréber",
+"Jan van Eyck",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q106241990",
+"queries": [
+"Emmnauel Frémiet",
+"Café Terrace at Night",
+"Sunflowers"
+],
+"hints": [
+"Henri-Léon Gréber",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17495287",
+"queries": [
+"Portrait of Mademoiselle Laura Leroux",
+"Bathers at Asnières",
+"Christina's World"
+],
+"hints": [
+"Jean-Jacques Henner",
+"Georges Seurat",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17495287",
+"queries": [
+"Portrait of Mademoiselle",
+"The Scream",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Jean-Jacques Henner",
+"Edvard Munch",
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17495287",
+"queries": [
+"Portrait of Mademoiselle Larua Leroux",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Café Terrace at Night"
+],
+"hints": [
+"Jean-Jacques Henner",
+"Georges Seurat",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q76450701",
+"queries": [
+"Arion sitting on the dolphin",
+"Guernica",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Ernest-Eugène Hiolle",
+"Pablo Picasso",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q76450701",
+"queries": [
+"Arion sitting on",
+"The Third of May 1808",
+"The Persistence of Memory"
+],
+"hints": [
+"Ernest-Eugène Hiolle",
+"Francisco Goya",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q76450701",
+"queries": [
+"Arion sitting on the doplhin",
+"Self-Portrait with Bandaged Ear",
+"Guernica"
+],
+"hints": [
+"Ernest-Eugène Hiolle",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17491446",
+"queries": [
+"Woman in Profile with a Green Hat",
+"The Persistence of Memory",
+"The Creation of Adam"
+],
+"hints": [
+"Édouard Vuillard",
+"Salvador Dalí",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17491446",
+"queries": [
+"Woman in Profile with",
+"The Third of May 1808",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Édouard Vuillard",
+"Francisco Goya",
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17491446",
+"queries": [
+"Woman in Profil ewith a Green Hat",
+"Girl with a Pearl Earring",
+"Impression, Sunrise"
+],
+"hints": [
+"Édouard Vuillard",
+"Johannes Vermeer",
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q3713907",
+"queries": [
+"Woman in her Bath Sponging her Leg",
+"Girl with a Pearl Earring",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Edgar Degas",
+"Johannes Vermeer",
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q3713907",
+"queries": [
+"Woman in her Bath",
+"The Garden of Earthly Delights",
+"Las Meninas"
+],
+"hints": [
+"Edgar Degas",
+"Hieronymus Bosch",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q3713907",
+"queries": [
+"Woman in ehr Bath Sponging her Leg",
+"Wanderer above the Sea of Fog",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Edgar Degas",
+"Caspar David Friedrich",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17495550",
+"queries": [
+"Saint Louis at Saint-Cloud Explains His Plan to His Knights",
+"The Scream",
+"Nighthawks"
+],
+"hints": [
+"Alphonse Osbert",
+"Edvard Munch",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17495550",
+"queries": [
+"Saint Louis at Saint-Cloud Explains His",
+"American Gothic",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Alphonse Osbert",
+"Grant Wood",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17495550",
+"queries": [
+"Saint Louis at Saint-Cloud Explains iHs Plan to His Knights",
+"Mont Sainte-Victoire",
+"American Gothic"
+],
+"hints": [
+"Alphonse Osbert",
+"Paul Cézanne",
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17450435",
+"queries": [
+"The Chaste Susannah",
+"The Fighting Temeraire",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Jean-Jacques Henner",
+"J. M. W. Turner",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17450435",
+"queries": [
+"The Chaste",
+"The Scream",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Jean-Jacques Henner",
+"Edvard Munch",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17450435",
+"queries": [
+"The Chaset Susannah",
+"Wanderer above the Sea of Fog",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Jean-Jacques Henner",
+"Caspar David Friedrich",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q130365723",
+"queries": [
+"Portrait of Madame Guillaumin",
+"Impression, Sunrise",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Armand Guillaumin",
+"Claude Monet",
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q130365723",
+"queries": [
+"Portrait of",
+"The Arnolfini Portrait",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Armand Guillaumin",
+"Jan van Eyck",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q130365723",
+"queries": [
+"Portrait of Madame Guillaumin",
+"Nighthawks",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Armand Guillaumin",
+"Edward Hopper",
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17491921",
+"queries": [
+"The Coast at Vauville",
+"The Sleeping Gypsy",
+"Sunflowers"
+],
+"hints": [
+"Alphonse Osbert",
+"Henri Rousseau",
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17491921",
+"queries": [
+"The Coast",
+"The Hay Wain",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Alphonse Osbert",
+"John Constable",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17491921",
+"queries": [
+"The Coast at Vauvlile",
+"The Creation of Adam",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Alphonse Osbert",
+"Michelangelo",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17492028",
+"queries": [
+"The Golden Moorland",
+"Les Demoiselles d'Avignon",
+"The Son of Man"
+],
+"hints": [
+"Alexandre Nozal",
+"Pablo Picasso",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17492028",
+"queries": [
+"The Golden",
+"Impression, Sunrise",
+"The Son of Man"
+],
+"hints": [
+"Alexandre Nozal",
+"Claude Monet",
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17492028",
+"queries": [
+"The Golden Moorladn",
+"The Scream",
+"The Hay Wain"
+],
+"hints": [
+"Alexandre Nozal",
+"Edvard Munch",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17490625",
+"queries": [
+"At Dawn",
+"The Scream",
+"Composition VIII"
+],
+"hints": [
+"Léon-Gustave Ravanne",
+"Edvard Munch",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17490625",
+"queries": [
+"At Danw",
+"Self-Portrait with Bandaged Ear",
+"Nighthawks"
+],
+"hints": [
+"Léon-Gustave Ravanne",
+"Vincent van Gogh",
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q64354903",
+"queries": [
+"The Four Seasons: Autumn",
+"The Night Café",
+"Christina's World"
+],
+"hints": [
+"Paul Cézanne",
+"Vincent van Gogh",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q64354903",
+"queries": [
+"The Four",
+"The Fighting Temeraire",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Paul Cézanne",
+"J. M. W. Turner",
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q64354903",
+"queries": [
+"The Four Seasons: uAtumn",
+"The Persistence of Memory",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Paul Cézanne",
+"Salvador Dalí",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q104443792",
+"queries": [
+"Sketch for the Staircase of the Festivities of the City Hall of Paris: The Dance",
+"Saturn Devouring His Son",
+"The Persistence of Memory"
+],
+"hints": [
+"Luc-Olivier Merson",
+"Francisco Goya",
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q104443792",
+"queries": [
+"Sketch for the Staircase of the Festivities of the City",
+"Nighthawks",
+"Composition VIII"
+],
+"hints": [
+"Luc-Olivier Merson",
+"Edward Hopper",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q104443792",
+"queries": [
+"Sketch for the Staircase of hte Festivities of the City Hall of Paris: The Dance",
+"Wanderer above the Sea of Fog",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Luc-Olivier Merson",
+"Caspar David Friedrich",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q104445070",
+"queries": [
+"Jérôme de La Lande",
+"The Son of Man",
+"The Creation of Adam"
+],
+"hints": [
+"Jean-Honoré Fragonard",
+"René Magritte",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q104445070",
+"queries": [
+"Jérôme de",
+"Girl with a Pearl Earring",
+"The Hay Wain"
+],
+"hints": [
+"Jean-Honoré Fragonard",
+"Johannes Vermeer",
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q104445070",
+"queries": [
+"Jérôme de aL Lande",
+"Las Meninas",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Jean-Honoré Fragonard",
+"Diego Velázquez",
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q104454667",
+"queries": [
+"Abundance (Diffundet fruges copia) (preparatory sketch)",
+"The Persistence of Memory",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Henri Lehmann",
+"Salvador Dalí",
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q104454667",
+"queries": [
+"Abundance (Diffundet fruges copia)",
+"Bathers at Asnières",
+"The Creation of Adam"
+],
+"hints": [
+"Henri Lehmann",
+"Georges Seurat",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q104454667",
+"queries": [
+"Abundance (Difufndet fruges copia) (preparatory sketch)",
+"Guernica",
+"The Creation of Adam"
+],
+"hints": [
+"Henri Lehmann",
+"Pablo Picasso",
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q17342250",
+"queries": [
+"The Happy Family",
+"The Sleeping Gypsy",
+"The Fighting Temeraire"
+],
+"hints": [
+"Jan Steen",
+"Henri Rousseau",
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q17342250",
+"queries": [
+"The Happy",
+"Wanderer above the Sea of Fog",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Jan Steen",
+"Caspar David Friedrich",
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q17342250",
+"queries": [
+"The Hapyp Family",
+"American Gothic",
+"Las Meninas"
+],
+"hints": [
+"Jan Steen",
+"Grant Wood",
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "exact",
+"target": "Q9376181",
+"queries": [
+"Interior with Women beside a Linen Cupboard",
+"Self-Portrait with Bandaged Ear",
+"Christina's World"
+],
+"hints": [
+"Pieter de Hooch",
+"Vincent van Gogh",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "partial",
+"target": "Q9376181",
+"queries": [
+"Interior with Women beside",
+"Guernica",
+"Composition VIII"
+],
+"hints": [
+"Pieter de Hooch",
+"Pablo Picasso",
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "typo",
+"target": "Q9376181",
+"queries": [
+"Intreior with Women beside a Linen Cupboard",
+"Impression, Sunrise",
+"Christina's World"
+],
+"hints": [
+"Pieter de Hooch",
+"Claude Monet",
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "alias_missing",
+"target": "Q121496042",
+"queries": [
+"The Oath of Brutus",
+"The Garden of Earthly Delights",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Jacques-Antoine Beaufort",
+"Hieronymus Bosch",
+"Vincent van Gogh"
+],
+"drop": [
+"The Oath of Brutus"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q11769023",
+"queries": [
+"Mary Magdalene",
+"Self-Portrait with Bandaged Ear",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Gregor Erhart",
+"Vincent van Gogh",
+"Henri Rousseau"
+],
+"drop": [
+"Mary Magdalene"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29654769",
+"queries": [
+"Jupiter and Danaë",
+"Les Demoiselles d'Avignon",
+"Guernica"
+],
+"hints": [
+"Joachim Wtewael",
+"Pablo Picasso",
+"Pablo Picasso"
+],
+"drop": [
+"Jupiter and Danaë"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29862836",
+"queries": [
+"Madeleine reading",
+"American Gothic",
+"Café Terrace at Night"
+],
+"hints": [
+"Jean-Baptiste Camille Corot",
+"Grant Wood",
+"Vincent van Gogh"
+],
+"drop": [
+"Madeleine reading"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q27624315",
+"queries": [
+"Triple portrait of the artist, the architect Pierre Rousseau and the painter Coclers Van Wyck",
+"The Night Café",
+"Saturn Devouring His Son"
+],
+"hints": [
+"François-André Vincent",
+"Vincent van Gogh",
+"Francisco Goya"
+],
+"drop": [
+"Triple portrait of the artist, the architect Pierre Rousseau and the painter Coclers Van Wyck"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q27623301",
+"queries": [
+"Saint Francis of Paola Prophesying the Birth of a Son to Louise of Savoy",
+"Las Meninas",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"テオドール・ファン・テュルデン",
+"Diego Velázquez",
+"Paul Cézanne"
+],
+"drop": [
+"Saint Francis of Paola Prophesying the Birth of a Son to Louise of Savoy"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573893",
+"queries": [
+"Susanna and the Elders (Pittoni, Louvre Museum)",
+"Café Terrace at Night",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Giambattista Pittoni",
+"Vincent van Gogh",
+"Georges Seurat"
+],
+"drop": [
+"Susanna and the Elders (Pittoni, Louvre Museum)"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q3658719",
+"queries": [
+"Charity",
+"The Third of May 1808",
+"The Starry Night"
+],
+"hints": [
+"Andrea del Sarto",
+"Francisco Goya",
+"Vincent van Gogh"
+],
+"drop": [
+"Charity"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q27980119",
+"queries": [
+"Assumption of Mary",
+"Guernica",
+"The Hay Wain"
+],
+"hints": [
+"Peter Paul Rubens",
+"Pablo Picasso",
+"John Constable"
+],
+"drop": [
+"Assumption of Mary"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18565848",
+"queries": [
+"St. Anthony",
+"The Hay Wain",
+"The Third of May 1808"
+],
+"hints": [
+"Giovanni Bellini",
+"John Constable",
+"Francisco Goya"
+],
+"drop": [
+"St. Anthony"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18572512",
+"queries": [
+"Adoring Angel, Looking Left",
+"Christina's World",
+"Impression, Sunrise"
+],
+"hints": [
+"Fra Angelico",
+"Andrew Wyeth",
+"Claude Monet"
+],
+"drop": [
+"Adoring Angel, Looking Left"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q21077323",
+"queries": [
+"Peasant family",
+"The Fighting Temeraire",
+"Bathers at Asnières"
+],
+"hints": [
+"Louis Le Nain",
+"J. M. W. Turner",
+"Georges Seurat"
+],
+"drop": [
+"Peasant family"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29655992",
+"queries": [
+"A Man Reading a Paper",
+"Les Demoiselles d'Avignon",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"アドリアーン・ファン・オスターデ",
+"Pablo Picasso",
+"Katsushika Hokusai"
+],
+"drop": [
+"A Man Reading a Paper"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573240",
+"queries": [
+"Flora",
+"Café Terrace at Night",
+"Impression, Sunrise"
+],
+"hints": [
+"Paris Bordone",
+"Vincent van Gogh",
+"Claude Monet"
+],
+"drop": [
+"Flora"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q93120016",
+"queries": [
+"Head of an Old Man Facing Forward and Wearing a Cap",
+"Mont Sainte-Victoire",
+"Café Terrace at Night"
+],
+"hints": [
+"Lorenzo di Credi",
+"Paul Cézanne",
+"Vincent van Gogh"
+],
+"drop": [
+"Head of an Old Man Facing Forward and Wearing a Cap"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29212042",
+"queries": [
+"Adoration of the Shepherds",
+"The Persistence of Memory",
+"The Starry Night"
+],
+"hints": [
+"Hieronymous Francken I",
+"Salvador Dalí",
+"Vincent van Gogh"
+],
+"drop": [
+"Adoration of the Shepherds"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29863331",
+"queries": [
+"Portrait of an Unknown Man",
+"American Gothic",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Jean-Charles Tardieu",
+"Grant Wood",
+"Katsushika Hokusai"
+],
+"drop": [
+"Portrait of an Unknown Man"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q19321608",
+"queries": [
+"The Adoration of the Child",
+"The Night Café",
+"Las Meninas"
+],
+"hints": [
+"Josse Lieferinxe",
+"Vincent van Gogh",
+"Diego Velázquez"
+],
+"drop": [
+"The Adoration of the Child"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29656003",
+"queries": [
+"A Man Smoking in an Inn",
+"Café Terrace at Night",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"アドリアーン・ファン・オスターデ",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": [
+"A Man Smoking in an Inn"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q27107322",
+"queries": [
+"The Battle of Issus",
+"The Starry Night",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Jan Brueghel the Elder",
+"Vincent van Gogh",
+"Hieronymus Bosch"
+],
+"drop": [
+"The Battle of Issus"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29654961",
+"queries": [
+"Paradise on earth",
+"Wanderer above the Sea of Fog",
+"The Night Café"
+],
+"hints": [
+"Paul de Vos",
+"Caspar David Friedrich",
+"Vincent van Gogh"
+],
+"drop": [
+"Paradise on earth"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q3463874",
+"queries": [
+"Saint John the Baptist in the Wilderness",
+"Composition VIII",
+"Nighthawks"
+],
+"hints": [
+"Raphael",
+"Wassily Kandinsky",
+"Edward Hopper"
+],
+"drop": [
+"Saint John the Baptist in the Wilderness"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q66055452",
+"queries": [
+"Loss of East Indiaman Kent",
+"Mont Sainte-Victoire",
+"Nighthawks"
+],
+"hints": [
+"Théodore Gudin",
+"Paul Cézanne",
+"Edward Hopper"
+],
+"drop": [
+"Loss of East Indiaman Kent"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q19005601",
+"queries": [
+"The morning, the bathers",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"The Son of Man"
+],
+"hints": [
+"Joseph Vernet",
+"Georges Seurat",
+"René Magritte"
+],
+"drop": [
+"The morning, the bathers"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q19264688",
+"queries": [
+"The Immaculate Conception",
+"The Arnolfini Portrait",
+"The Son of Man"
+],
+"hints": [
+"Bartolomé Esteban Murillo",
+"Jan van Eyck",
+"René Magritte"
+],
+"drop": [
+"The Immaculate Conception"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q87748573",
+"queries": [
+"Eos pursuing Tithonus",
+"Les Demoiselles d'Avignon",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Achilles Painter",
+"Pablo Picasso",
+"Vincent van Gogh"
+],
+"drop": [
+"Eos pursuing Tithonus"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573435",
+"queries": [
+"Venus Presenting Helen to Paris",
+"The Creation of Adam",
+"The Starry Night"
+],
+"hints": [
+"Gavin Hamilton",
+"Michelangelo",
+"Vincent van Gogh"
+],
+"drop": [
+"Venus Presenting Helen to Paris"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q115668691",
+"queries": [
+"Madonna and Child",
+"Les Demoiselles d'Avignon",
+"The Scream"
+],
+"hints": [
+"Francesco di Giorgio",
+"Pablo Picasso",
+"Edvard Munch"
+],
+"drop": [
+"Madonna and Child"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q3399514",
+"queries": [
+"Portrait of Pope Pius VII",
+"Sunflowers",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Jacques-Louis David",
+"Vincent van Gogh",
+"Georges Seurat"
+],
+"drop": [
+"Portrait of Pope Pius VII"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q123481929",
+"queries": [
+"Medicis vase",
+"Bathers at Asnières",
+"Impression, Sunrise"
+],
+"hints": [
+"Louis-Simon Boizot",
+"Georges Seurat",
+"Claude Monet"
+],
+"drop": [
+"Medicis vase"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573054",
+"queries": [
+"The Death of St. Jerome and His Apparition to St. Cyril of Jerusalem",
+"Girl with a Pearl Earring",
+"The Fighting Temeraire"
+],
+"hints": [
+"Sano di Pietro",
+"Johannes Vermeer",
+"J. M. W. Turner"
+],
+"drop": [
+"The Death of St. Jerome and His Apparition to St. Cyril of Jerusalem"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q111650858",
+"queries": [
+"Singing women",
+"Mont Sainte-Victoire",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Anthonie Blocklandt van Montfoort",
+"Paul Cézanne",
+"Georges Seurat"
+],
+"drop": [
+"Singing women"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17275824",
+"queries": [
+"Simeon's song of praise",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Rembrandt",
+"Georges Seurat",
+"Johannes Vermeer"
+],
+"drop": [
+"Simeon's song of praise"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573085",
+"queries": [
+"St. Jerome Supporting Two Hanged Young People",
+"The Fighting Temeraire",
+"Bathers at Asnières"
+],
+"hints": [
+"Pietro Perugino",
+"J. M. W. Turner",
+"Georges Seurat"
+],
+"drop": [
+"St. Jerome Supporting Two Hanged Young People"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573780",
+"queries": [
+"Hagar and the Angel",
+"Sunflowers",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Giuseppe Bartolomeo Chiari",
+"Vincent van Gogh",
+"Pablo Picasso"
+],
+"drop": [
+"Hagar and the Angel"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29864794",
+"queries": [
+"Greek Sultana",
+"The Scream",
+"The Third of May 1808"
+],
+"hints": [
+"Jean Barbault",
+"Edvard Munch",
+"Francisco Goya"
+],
+"drop": [
+"Greek Sultana"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573010",
+"queries": [
+"The Abduction of Europa",
+"Christina's World",
+"The Night Café"
+],
+"hints": [
+"Liberale da Verona",
+"Andrew Wyeth",
+"Vincent van Gogh"
+],
+"drop": [
+"The Abduction of Europa"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29839015",
+"queries": [
+"Return of the Herd",
+"Christina's World",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Constant Troyon",
+"Andrew Wyeth",
+"Katsushika Hokusai"
+],
+"drop": [
+"Return of the Herd"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q116284768",
+"queries": [
+"Madonna and Child with an Angel",
+"Les Demoiselles d'Avignon",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Sandro Botticelli",
+"Pablo Picasso",
+"Katsushika Hokusai"
+],
+"drop": [
+"Madonna and Child with an Angel"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18930013",
+"queries": [
+"The Virgin, Saint John the Evangelist, two female saints and Saint Dominic de Guzman",
+"The Fighting Temeraire",
+"The Night Café"
+],
+"hints": [
+"Juan de Borgoña",
+"J. M. W. Turner",
+"Vincent van Gogh"
+],
+"drop": [
+"The Virgin, Saint John the Evangelist, two female saints and Saint Dominic de Guzman"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q114918960",
+"queries": [
+"Le massacre des mamelouks ordonné par Méhémet Ali Pacha (1811)",
+"Mont Sainte-Victoire",
+"The Third of May 1808"
+],
+"hints": [
+"Horace Vernet",
+"Paul Cézanne",
+"Francisco Goya"
+],
+"drop": [
+"Le massacre des mamelouks ordonné par Méhémet Ali Pacha (1811)"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29650016",
+"queries": [
+"Saint John of Avila's portrait",
+"Impression, Sunrise",
+"Guernica"
+],
+"hints": [
+"Pierre Subleyras",
+"Claude Monet",
+"Pablo Picasso"
+],
+"drop": [
+"Saint John of Avila's portrait"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q83480054",
+"queries": [
+"pencil holder",
+"Las Meninas",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Michael Butterfield",
+"Diego Velázquez",
+"Hieronymus Bosch"
+],
+"drop": [
+"pencil holder"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29649256",
+"queries": [
+"Young Woman in Orison Reading a Book of Hours",
+"The Garden of Earthly Delights",
+"Composition VIII"
+],
+"hints": [
+"Ambrosius Benson",
+"Hieronymus Bosch",
+"Wassily Kandinsky"
+],
+"drop": [
+"Young Woman in Orison Reading a Book of Hours"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q115668948",
+"queries": [
+"Memory of Italy: Dancer",
+"The Scream",
+"Nighthawks"
+],
+"hints": [
+"Jean-Baptiste Camille Corot",
+"Edvard Munch",
+"Edward Hopper"
+],
+"drop": [
+"Memory of Italy: Dancer"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q136533986",
+"queries": [
+"Grand noeud de corsage de l'impératrice Eugénie",
+"The Arnolfini Portrait",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"François Kramer",
+"Jan van Eyck",
+"Georges Seurat"
+],
+"drop": [
+"Grand noeud de corsage de l'impératrice Eugénie"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29656558",
+"queries": [
+"shepherdesses milking a goat",
+"Sunflowers",
+"The Son of Man"
+],
+"hints": [
+"Nicolaes Pieterszoon Berchem",
+"Vincent van Gogh",
+"René Magritte"
+],
+"drop": [
+"shepherdesses milking a goat"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q106643062",
+"queries": [
+"Acis and Galatea",
+"Les Demoiselles d'Avignon",
+"Saturn Devouring His Son"
+],
+"hints": [
+"François Perrier",
+"Pablo Picasso",
+"Francisco Goya"
+],
+"drop": [
+"Acis and Galatea"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q18573227",
+"queries": [
+"The Wedding at Cana",
+"Nighthawks",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Leandro Bassano",
+"Edward Hopper",
+"Johannes Vermeer"
+],
+"drop": [
+"The Wedding at Cana"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q3900760",
+"queries": [
+"The Plague at Ashdod",
+"The Third of May 1808",
+"Las Meninas"
+],
+"hints": [
+"Nicolas Poussin",
+"Francisco Goya",
+"Diego Velázquez"
+],
+"drop": [
+"The Plague at Ashdod"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q29655832",
+"queries": [
+"The Meadow",
+"The Sleeping Gypsy",
+"The Third of May 1808"
+],
+"hints": [
+"Paulus Potter",
+"Henri Rousseau",
+"Francisco Goya"
+],
+"drop": [
+"The Meadow"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q88385610",
+"queries": [
+"Two study heads of apostles",
+"Bathers at Asnières",
+"Guernica"
+],
+"hints": [
+"Anthony van Dyck",
+"Georges Seurat",
+"Pablo Picasso"
+],
+"drop": [
+"Two study heads of apostles"
+]
+},
+{
+"kind": "alias_missing",
+"target": "joconde-00000089553",
+"queries": [
+"Enfant de choeur",
+"Wanderer above the Sea of Fog",
+"Composition VIII"
+],
+"hints": [
+"SOUTINE Chaïm",
+"Caspar David Friedrich",
+"Wassily Kandinsky"
+],
+"drop": [
+"Enfant de choeur"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q3937645",
+"queries": [
+"Portrait of Paul Guillaume",
+"The Son of Man",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Amedeo Modigliani",
+"René Magritte",
+"Caspar David Friedrich"
+],
+"drop": [
+"Portrait of Paul Guillaume"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q28797624",
+"queries": [
+"The Water Lilies - The Two Willows",
+"Composition VIII",
+"American Gothic"
+],
+"hints": [
+"Claude Monet",
+"Wassily Kandinsky",
+"Grant Wood"
+],
+"drop": [
+"The Water Lilies - The Two Willows"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495537",
+"queries": [
+"ruins of the Tuileries",
+"The Sleeping Gypsy",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Jean-Louis-Ernest Meissonier",
+"Henri Rousseau",
+"Katsushika Hokusai"
+],
+"drop": [
+"ruins of the Tuileries"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17492492",
+"queries": [
+"Vigilence",
+"Girl with a Pearl Earring",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Pierre Puvis de Chavannes",
+"Johannes Vermeer",
+"Pablo Picasso"
+],
+"drop": [
+"Vigilence"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q23008998",
+"queries": [
+"Portrait of a Seated Lady",
+"The Garden of Earthly Delights",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Eva Gonzalès",
+"Hieronymus Bosch",
+"Caspar David Friedrich"
+],
+"drop": [
+"Portrait of a Seated Lady"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17490683",
+"queries": [
+"Amphitheater at the Colonna Concert",
+"The Starry Night",
+"Café Terrace at Night"
+],
+"hints": [
+"André Devambez",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": [
+"Amphitheater at the Colonna Concert"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495909",
+"queries": [
+"Slice of Salmon",
+"Christina's World",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Jean-Baptiste-Siméon Chardin",
+"Andrew Wyeth",
+"Vincent van Gogh"
+],
+"drop": [
+"Slice of Salmon"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17491867",
+"queries": [
+"The Mist in the Atlantic",
+"The Creation of Adam",
+"Bathers at Asnières"
+],
+"hints": [
+"Paul Jobert",
+"Michelangelo",
+"Georges Seurat"
+],
+"drop": [
+"The Mist in the Atlantic"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17492604",
+"queries": [
+"The Approach of the Storm",
+"Nighthawks",
+"The Son of Man"
+],
+"hints": [
+"Louis Alexandre Cabié",
+"Edward Hopper",
+"René Magritte"
+],
+"drop": [
+"The Approach of the Storm"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495987",
+"queries": [
+"A Corner of the Cascade of Mont-Dore",
+"The Scream",
+"The Creation of Adam"
+],
+"hints": [
+"Alphonse Osbert",
+"Edvard Munch",
+"Michelangelo"
+],
+"drop": [
+"A Corner of the Cascade of Mont-Dore"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495208",
+"queries": [
+"Self-portrait",
+"Café Terrace at Night",
+"The Night Café"
+],
+"hints": [
+"Odilon Redon",
+"Vincent van Gogh",
+"Vincent van Gogh"
+],
+"drop": [
+"Self-portrait"
+]
+},
+{
+"kind": "alias_missing",
+"target": "joconde-M5060000195",
+"queries": [
+"Margaret Allen",
+"The Fighting Temeraire",
+"Café Terrace at Night"
+],
+"hints": [
+"VACQUERIE Auguste",
+"J. M. W. Turner",
+"Vincent van Gogh"
+],
+"drop": [
+"Margaret Allen"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17490927",
+"queries": [
+"Bouquet of Roses on Blue Carpet",
+"Café Terrace at Night",
+"Wanderer above the Sea of Fog"
+],
+"hints": [
+"Albert André",
+"Vincent van Gogh",
+"Caspar David Friedrich"
+],
+"drop": [
+"Bouquet of Roses on Blue Carpet"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17496014",
+"queries": [
+"A Conspiracy in the Early Days of Rome",
+"The Persistence of Memory",
+"American Gothic"
+],
+"hints": [
+"Pierre-Paul-Léon Glaize",
+"Salvador Dalí",
+"Grant Wood"
+],
+"drop": [
+"A Conspiracy in the Early Days of Rome"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17493404",
+"queries": [
+"The Sleep of the Muse",
+"Café Terrace at Night",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Alphonse Osbert",
+"Vincent van Gogh",
+"Jan van Eyck"
+],
+"drop": [
+"The Sleep of the Muse"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17493661",
+"queries": [
+"The Ladies of Café Wepler",
+"Impression, Sunrise",
+"The Fighting Temeraire"
+],
+"hints": [
+"Albert André",
+"Claude Monet",
+"J. M. W. Turner"
+],
+"drop": [
+"The Ladies of Café Wepler"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17493105",
+"queries": [
+"The Blessed Bread",
+"The Persistence of Memory",
+"The Creation of Adam"
+],
+"hints": [
+"Pascal Dagnan-Bouveret",
+"Salvador Dalí",
+"Michelangelo"
+],
+"drop": [
+"The Blessed Bread"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17493120",
+"queries": [
+"Fording a stream",
+"The Creation of Adam",
+"The Hay Wain"
+],
+"hints": [
+"Constant Troyon",
+"Michelangelo",
+"John Constable"
+],
+"drop": [
+"Fording a stream"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q110695572",
+"queries": [
+"View of Paris, the Seine, the Estacade",
+"Nighthawks",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Johan Jongkind",
+"Edward Hopper",
+"Paul Cézanne"
+],
+"drop": [
+"View of Paris, the Seine, the Estacade"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17491362",
+"queries": [
+"Study of a bay horse",
+"The Creation of Adam",
+"American Gothic"
+],
+"hints": [
+"Rosa Bonheur",
+"Michelangelo",
+"Grant Wood"
+],
+"drop": [
+"Study of a bay horse"
+]
+},
+{
+"kind": "alias_missing",
+"target": "joconde-000PE013421",
+"queries": [
+"Truelle, marteau et couteau",
+"American Gothic",
+"Composition VIII"
+],
+"hints": [
+"BARRIAS Félix Joseph",
+"Grant Wood",
+"Wassily Kandinsky"
+],
+"drop": [
+"Truelle, marteau et couteau"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q123338299",
+"queries": [
+"Joseph Interpreting the Dreams of Pharaoh's Two Prisoners",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Sunflowers"
+],
+"hints": [
+"Paul Joseph Leyendecker",
+"Georges Seurat",
+"Vincent van Gogh"
+],
+"drop": [
+"Joseph Interpreting the Dreams of Pharaoh's Two Prisoners"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17492580",
+"queries": [
+"The Allier in the Evening at Vichy",
+"Christina's World",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Alphonse Osbert",
+"Andrew Wyeth",
+"Georges Seurat"
+],
+"drop": [
+"The Allier in the Evening at Vichy"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495188",
+"queries": [
+"Portrait of the Artist",
+"American Gothic",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Maurice Denis",
+"Grant Wood",
+"Francisco Goya"
+],
+"drop": [
+"Portrait of the Artist"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17492013",
+"queries": [
+"The Great Valley of Optevoz",
+"The Persistence of Memory",
+"Composition VIII"
+],
+"hints": [
+"Charles-François Daubigny",
+"Salvador Dalí",
+"Wassily Kandinsky"
+],
+"drop": [
+"The Great Valley of Optevoz"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q131314541",
+"queries": [
+"Study of Three Hands",
+"The Starry Night",
+"American Gothic"
+],
+"hints": [
+"Alphonse Legros",
+"Vincent van Gogh",
+"Grant Wood"
+],
+"drop": [
+"Study of Three Hands"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64495029",
+"queries": [
+"The Port of Tangier",
+"The Great Wave off Kanagawa",
+"American Gothic"
+],
+"hints": [
+"Louis-Auguste Girardot",
+"Katsushika Hokusai",
+"Grant Wood"
+],
+"drop": [
+"The Port of Tangier"
+]
+},
+{
+"kind": "alias_missing",
+"target": "joconde-000SC013439",
+"queries": [
+"Aphrodite penchee",
+"The Scream",
+"The Starry Night"
+],
+"hints": [
+"SCHNEGG Lucien",
+"Edvard Munch",
+"Vincent van Gogh"
+],
+"drop": [
+"Aphrodite Penchée",
+"Aphrodite penchee"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495233",
+"queries": [
+"Portrait of Léonce Bénédite",
+"Sunflowers",
+"The Scream"
+],
+"hints": [
+"Carolus-Duran",
+"Vincent van Gogh",
+"Edvard Munch"
+],
+"drop": [
+"Portrait of Léonce Bénédite"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17494807",
+"queries": [
+"Norwegian Landscape",
+"Las Meninas",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"Théophile Steinlen",
+"Diego Velázquez",
+"Katsushika Hokusai"
+],
+"drop": [
+"Norwegian Landscape"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17494947",
+"queries": [
+"Barges",
+"Impression, Sunrise",
+"Nighthawks"
+],
+"hints": [
+"Armand Guillaumin",
+"Claude Monet",
+"Edward Hopper"
+],
+"drop": [
+"Barges"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64491372",
+"queries": [
+"Saint Paul, the First Hermit, and Saint Anthony",
+"The Arnolfini Portrait",
+"Sunflowers"
+],
+"hints": [
+"Eugène Romain Thirion",
+"Jan van Eyck",
+"Vincent van Gogh"
+],
+"drop": [
+"Saint Paul, the First Hermit, and Saint Anthony"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17494725",
+"queries": [
+"Landscape with Trees",
+"Composition VIII",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Eugène Carrière",
+"Wassily Kandinsky",
+"Henri Rousseau"
+],
+"drop": [
+"Landscape with Trees"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17496143",
+"queries": [
+"View of Holland, Sailing Boats",
+"The Great Wave off Kanagawa",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Armand Guillaumin",
+"Katsushika Hokusai",
+"Paul Cézanne"
+],
+"drop": [
+"View of Holland, Sailing Boats"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q123338455",
+"queries": [
+"Saint Genevieve on Her Deathbed",
+"The Scream",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Jean-Paul Laurens",
+"Edvard Munch",
+"Paul Cézanne"
+],
+"drop": [
+"Saint Genevieve on Her Deathbed"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17494898",
+"queries": [
+"Landscape, View of Meudon",
+"Composition VIII",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Albert Lebourg",
+"Wassily Kandinsky",
+"Johannes Vermeer"
+],
+"drop": [
+"Landscape, View of Meudon"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64504404",
+"queries": [
+"Landscape",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Alphonse Osbert",
+"Georges Seurat",
+"Paul Cézanne"
+],
+"drop": [
+"Landscape"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495140",
+"queries": [
+"Portrait of J. J. Weerts",
+"The Hay Wain",
+"Café Terrace at Night"
+],
+"hints": [
+"Charles Paul Renouard",
+"John Constable",
+"Vincent van Gogh"
+],
+"drop": [
+"Portrait of J. J. Weerts"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495273",
+"queries": [
+"Portrait of Madame R.",
+"Nighthawks",
+"Christina's World"
+],
+"hints": [
+"Clémentine Hélène Dufau",
+"Edward Hopper",
+"Andrew Wyeth"
+],
+"drop": [
+"Portrait of Madame R."
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17494363",
+"queries": [
+"Music and Dance",
+"The Persistence of Memory",
+"Composition VIII"
+],
+"hints": [
+"Alphonse Osbert",
+"Salvador Dalí",
+"Wassily Kandinsky"
+],
+"drop": [
+"Music and Dance"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17493177",
+"queries": [
+"The England pear",
+"The Great Wave off Kanagawa",
+"Bathers at Asnières"
+],
+"hints": [
+"Pierre-Auguste Renoir",
+"Katsushika Hokusai",
+"Georges Seurat"
+],
+"drop": [
+"The England pear"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495375",
+"queries": [
+"Portrait of the Painter Ossip Lubitch",
+"Guernica",
+"The Persistence of Memory"
+],
+"hints": [
+"Cuno Amiet",
+"Pablo Picasso",
+"Salvador Dalí"
+],
+"drop": [
+"Portrait of the Painter Ossip Lubitch"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17491149",
+"queries": [
+"Twilight",
+"The Hay Wain",
+"Sunflowers"
+],
+"hints": [
+"Émile-René Ménard",
+"John Constable",
+"Vincent van Gogh"
+],
+"drop": [
+"Twilight"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64495030",
+"queries": [
+"The Ascent of the Little Saint Bernard",
+"The Fighting Temeraire",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Jean-Alfred Desbrosses",
+"J. M. W. Turner",
+"Georges Seurat"
+],
+"drop": [
+"The Ascent of the Little Saint Bernard"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64491339",
+"queries": [
+"Time Shows the Way to the New Year Holding the Book of Destiny",
+"The Sleeping Gypsy",
+"American Gothic"
+],
+"hints": [
+"Alphonse Osbert",
+"Henri Rousseau",
+"Grant Wood"
+],
+"drop": [
+"Time Shows the Way to the New Year Holding the Book of Destiny"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q16372213",
+"queries": [
+"The Oreads",
+"The Scream",
+"Las Meninas"
+],
+"hints": [
+"William-Adolphe Bouguereau",
+"Edvard Munch",
+"Diego Velázquez"
+],
+"drop": [
+"The Oreads"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17491627",
+"queries": [
+"Drinkers` scene",
+"The Son of Man",
+"The Starry Night"
+],
+"hints": [
+"Eduard von Grützner",
+"René Magritte",
+"Vincent van Gogh"
+],
+"drop": [
+"Drinkers` scene"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17491968",
+"queries": [
+"Woman with a Parrot",
+"Café Terrace at Night",
+"The Fighting Temeraire"
+],
+"hints": [
+"George Bottini",
+"Vincent van Gogh",
+"J. M. W. Turner"
+],
+"drop": [
+"Woman with a Parrot"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64491342",
+"queries": [
+"Sketch for Saint Paul the Hermit",
+"Café Terrace at Night",
+"The Arnolfini Portrait"
+],
+"hints": [
+"Alphonse Osbert",
+"Vincent van Gogh",
+"Jan van Eyck"
+],
+"drop": [
+"Sketch for Saint Paul the Hermit"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17491328",
+"queries": [
+"Burial of a sailor in the countryside in Norway",
+"The Sleeping Gypsy",
+"Composition VIII"
+],
+"hints": [
+"Gustav Wentzel",
+"Henri Rousseau",
+"Wassily Kandinsky"
+],
+"drop": [
+"Burial of a sailor in the countryside in Norway"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495609",
+"queries": [
+"Path by a Shady Valley",
+"Les Demoiselles d'Avignon",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Antoine Chintreuil",
+"Pablo Picasso",
+"Vincent van Gogh"
+],
+"drop": [
+"Path by a Shady Valley"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q19347123",
+"queries": [
+"Bacchant",
+"The Fighting Temeraire",
+"The Third of May 1808"
+],
+"hints": [
+"Jeanne Itasse",
+"J. M. W. Turner",
+"Francisco Goya"
+],
+"drop": [
+"Bacchant"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17492991",
+"queries": [
+"The Day of the Seamstress",
+"The Garden of Earthly Delights",
+"The Night Café"
+],
+"hints": [
+"Eugène Martel",
+"Hieronymus Bosch",
+"Vincent van Gogh"
+],
+"drop": [
+"The Day of the Seamstress"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17494839",
+"queries": [
+"Landscape of Bourbonnais",
+"The Sleeping Gypsy",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Alphonse Osbert",
+"Henri Rousseau",
+"Georges Seurat"
+],
+"drop": [
+"Landscape of Bourbonnais"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17492798",
+"queries": [
+"The Castle of Tarragona",
+"The Persistence of Memory",
+"The Great Wave off Kanagawa"
+],
+"hints": [
+"George Wharton Edwards",
+"Salvador Dalí",
+"Katsushika Hokusai"
+],
+"drop": [
+"The Castle of Tarragona"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17495764",
+"queries": [
+"Ruined Temples by the Water",
+"The Garden of Earthly Delights",
+"Impression, Sunrise"
+],
+"hints": [
+"Alphonse Osbert",
+"Hieronymus Bosch",
+"Claude Monet"
+],
+"drop": [
+"Ruined Temples by the Water"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q123338328",
+"queries": [
+"Old Woman from Aragon",
+"The Sleeping Gypsy",
+"The Night Café"
+],
+"hints": [
+"Henry d'Estienne",
+"Henri Rousseau",
+"Vincent van Gogh"
+],
+"drop": [
+"Old Woman from Aragon"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64491401",
+"queries": [
+"Women of Tahiti",
+"Impression, Sunrise",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Octave Morillot",
+"Claude Monet",
+"Johannes Vermeer"
+],
+"drop": [
+"Women of Tahiti"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17493158",
+"queries": [
+"The Laundry Room",
+"The Great Wave off Kanagawa",
+"Self-Portrait with Bandaged Ear"
+],
+"hints": [
+"Édouard Vuillard",
+"Katsushika Hokusai",
+"Vincent van Gogh"
+],
+"drop": [
+"The Laundry Room"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q22115548",
+"queries": [
+"Shepherdess bringing sheep in",
+"The Third of May 1808",
+"American Gothic"
+],
+"hints": [
+"Camille Pissarro",
+"Francisco Goya",
+"Grant Wood"
+],
+"drop": [
+"Shepherdess bringing sheep in"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17493219",
+"queries": [
+"The Harbor in Charenton",
+"The Third of May 1808",
+"The Hay Wain"
+],
+"hints": [
+"Armand Guillaumin",
+"Francisco Goya",
+"John Constable"
+],
+"drop": [
+"The Harbor in Charenton"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17491773",
+"queries": [
+"Young Woman Standing",
+"Christina's World",
+"Bathers at Asnières"
+],
+"hints": [
+"Hippolyte Petitjean",
+"Andrew Wyeth",
+"Georges Seurat"
+],
+"drop": [
+"Young Woman Standing"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q64491321",
+"queries": [
+"Pilgrims at Emmaus",
+"Bathers at Asnières",
+"Christina's World"
+],
+"hints": [
+"Henry Ossawa Tanner",
+"Georges Seurat",
+"Andrew Wyeth"
+],
+"drop": [
+"Pilgrims at Emmaus"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17353184",
+"queries": [
+"Henry IV Receiving the Spanish Ambassador",
+"Guernica",
+"The Scream"
+],
+"hints": [
+"Jean-Auguste-Dominique Ingres",
+"Pablo Picasso",
+"Edvard Munch"
+],
+"drop": [
+"Henry IV Receiving the Spanish Ambassador"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q104471913",
+"queries": [
+"Sketch for the Baptism of Christ in Bagnolet church.",
+"Christina's World",
+"Impression, Sunrise"
+],
+"hints": [
+"Pierre Dupuis",
+"Andrew Wyeth",
+"Claude Monet"
+],
+"drop": [
+"Sketch for the Baptism of Christ in Bagnolet church."
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q104443893",
+"queries": [
+"Childbirth Scene",
+"Sunflowers",
+"American Gothic"
+],
+"hints": [
+"Jean-Baptiste Carpeaux",
+"Vincent van Gogh",
+"Grant Wood"
+],
+"drop": [
+"Childbirth Scene"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q104443918",
+"queries": [
+"Head of a Man after Rembrandt",
+"The Arnolfini Portrait",
+"The Scream"
+],
+"hints": [
+"Félix Ziem",
+"Jan van Eyck",
+"Edvard Munch"
+],
+"drop": [
+"Head of a Man after Rembrandt"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q104468086",
+"queries": [
+"Self-portrait",
+"Wanderer above the Sea of Fog",
+"Guernica"
+],
+"hints": [
+"Charles Cottet",
+"Caspar David Friedrich",
+"Pablo Picasso"
+],
+"drop": [
+"Self-portrait"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q17319663",
+"queries": [
+"The Corpses of the De Witt Brothers",
+"Nighthawks",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Jan de Baen",
+"Edward Hopper",
+"Georges Seurat"
+],
+"drop": [
+"The Corpses of the De Witt Brothers"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q11770773",
+"queries": [
+"Emblematic Still Life with Flagon, Glass, Jug and Bridle",
+"The Fighting Temeraire",
+"Guernica"
+],
+"hints": [
+"Johannes van der Beeck",
+"J. M. W. Turner",
+"Pablo Picasso"
+],
+"drop": [
+"Emblematic Still Life with Flagon, Glass, Jug and Bridle"
+]
+},
+{
+"kind": "alias_missing",
+"target": "Q15874385",
+"queries": [
+"Death of the Pharaoh's Firstborn Son",
+"The Garden of Earthly Delights",
+"Mont Sainte-Victoire"
+],
+"hints": [
+"Lawrence Alma-Tadema",
+"Hieronymus Bosch",
+"Paul Cézanne"
+],
+"drop": [
+"Death of the Pharaoh's Firstborn Son"
+]
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Starry Night",
+"Les Demoiselles d'Avignon",
+"The Son of Man"
+],
+"hints": [
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Persistence of Memory",
+"Las Meninas",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Salvador Dalí"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Girl with a Pearl Earring",
+"The Persistence of Memory",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Johannes Vermeer"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Scream",
+"Café Terrace at Night",
+"Saturn Devouring His Son"
+],
+"hints": [
+"Edvard Munch"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Hay Wain",
+"The Garden of Earthly Delights",
+"The Sleeping Gypsy"
+],
+"hints": [
+"John Constable"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Guernica",
+"Bathers at Asnières",
+"Girl with a Pearl Earring"
+],
+"hints": [
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"American Gothic",
+"The Starry Night",
+"A Sunday Afternoon on the Island of La Grande Jatte"
+],
+"hints": [
+"Grant Wood"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Las Meninas",
+"The Third of May 1808",
+"Café Terrace at Night"
+],
+"hints": [
+"Diego Velázquez"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Garden of Earthly Delights",
+"Composition VIII",
+"Café Terrace at Night"
+],
+"hints": [
+"Hieronymus Bosch"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Sunflowers",
+"Guernica",
+"The Hay Wain"
+],
+"hints": [
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"The Sleeping Gypsy",
+"Impression, Sunrise"
+],
+"hints": [
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Nighthawks",
+"The Creation of Adam",
+"The Third of May 1808"
+],
+"hints": [
+"Edward Hopper"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Great Wave off Kanagawa",
+"A Sunday Afternoon on the Island of La Grande Jatte",
+"Sunflowers"
+],
+"hints": [
+"Katsushika Hokusai"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Arnolfini Portrait",
+"The Sleeping Gypsy",
+"Guernica"
+],
+"hints": [
+"Jan van Eyck"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Creation of Adam",
+"Sunflowers",
+"Las Meninas"
+],
+"hints": [
+"Michelangelo"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Fighting Temeraire",
+"American Gothic",
+"The Starry Night"
+],
+"hints": [
+"J. M. W. Turner"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Christina's World",
+"Las Meninas",
+"Sunflowers"
+],
+"hints": [
+"Andrew Wyeth"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Son of Man",
+"The Third of May 1808",
+"Christina's World"
+],
+"hints": [
+"René Magritte"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Composition VIII",
+"The Arnolfini Portrait",
+"The Son of Man"
+],
+"hints": [
+"Wassily Kandinsky"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Wanderer above the Sea of Fog",
+"Nighthawks",
+"The Persistence of Memory"
+],
+"hints": [
+"Caspar David Friedrich"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Third of May 1808",
+"Christina's World",
+"The Creation of Adam"
+],
+"hints": [
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Saturn Devouring His Son",
+"Girl with a Pearl Earring",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Francisco Goya"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Impression, Sunrise",
+"The Scream",
+"The Sleeping Gypsy"
+],
+"hints": [
+"Claude Monet"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Café Terrace at Night",
+"American Gothic",
+"Guernica"
+],
+"hints": [
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Self-Portrait with Bandaged Ear",
+"Girl with a Pearl Earring",
+"Impression, Sunrise"
+],
+"hints": [
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Les Demoiselles d'Avignon",
+"The Hay Wain",
+"Les Demoiselles d'Avignon"
+],
+"hints": [
+"Pablo Picasso"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Night Café",
+"Les Demoiselles d'Avignon",
+"Guernica"
+],
+"hints": [
+"Vincent van Gogh"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Bathers at Asnières",
+"Christina's World",
+"The Garden of Earthly Delights"
+],
+"hints": [
+"Georges Seurat"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"Mont Sainte-Victoire",
+"The Night Café",
+"Impression, Sunrise"
+],
+"hints": [
+"Paul Cézanne"
+],
+"drop": null
+},
+{
+"kind": "neg_famous",
+"target": null,
+"queries": [
+"The Sleeping Gypsy",
+"The Arnolfini Portrait",
+"The Starry Night"
+],
+"hints": [
+"Henri Rousseau"
+],
+"drop": null
+},
+{
+"kind": "neg_junk",
+"target": null,
+"queries": [
+"Pixelated House",
+"House in Pixel Art Style",
+"Green House Illustration"
+],
+"hints": [
+"Unknown",
+"Unknown",
+"Unknown"
+],
+"drop": null
+},
+{
+"kind": "neg_junk",
+"target": null,
+"queries": [
+"Pixel Art House",
+"8-Bit House Design",
+"Retro Style Cottage"
+],
+"hints": [
+"Unknown",
+"Unknown",
+"Unknown"
+],
+"drop": null
+},
+{
+"kind": "neg_junk",
+"target": null,
+"queries": [
+"The Venture Bros.",
+"Action Hank",
+"The Tick"
+],
+"hints": [
+"Jackson Publick and Doc Hammer",
+"Evan Dorkin",
+"Ben Edlund"
+],
+"drop": null
+},
+{
+"kind": "neg_junk",
+"target": null,
+"queries": [
+"Duke Nukem",
+"Aqua Teen Hunger Force",
+"Cartoon Network's The Venture Bros."
+],
+"hints": [
+"N/A",
+"Dave Willis, Matt Maiellaro",
+"Jackson Publick, Doc Hammer"
+],
+"drop": null
+},
+{
+"kind": "neg_junk",
+"target": null,
+"queries": [
+"Brock Samson",
+"Character from \"The Venture Bros.\"",
+"Animated Character"
+],
+"hints": [
+"Adam Reed",
+"Television Show",
+"Unknown"
+],
+"drop": null
+},
+{
+"kind": "neg_junk",
+"target": null,
+"queries": [
+"No Title Available",
+"Pixel Art House",
+"Green House Design"
+],
+"hints": [
+"Unknown",
+"Unknown",
+"Unknown"
+],
+"drop": null
+},
+{
+"kind": "neg_junk",
+"target": null,
+"queries": [
+"Pixelated House",
+"Digital Landscape",
+"Block House"
+],
+"hints": [
+"Unknown",
+"Unknown",
+"Unknown"
+],
+"drop": null
+},
+{
+"kind": "label_bilingual",
+"target": "Q17492552",
+"queries": [
+"L'Air du soir",
+"The Evening Air"
+],
+"hints": [
+"Henri-Edmond Cross"
+],
+"drop": null
+}
+]
