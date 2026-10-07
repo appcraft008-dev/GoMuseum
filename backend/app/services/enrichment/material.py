@@ -631,6 +631,11 @@ _OCCUPATION_WHITELIST = {
     "Q10862983",  # etcher
     "Q11569986",  # printmaker
     "Q7541856",  # ceramicist
+    # 2026-10-07 在 staging 对奥赛全馆跑 dry-run(Task 7)时发现的真实缺口:
+    # 奥赛收藏里雨果流亡泽西岛期间的摄影圈子(Vacquerie/Hugo 等)、以及
+    # 建筑师(Coquart)系统性弃权,按既定政策"遇到实际案例按需补"补上。
+    "Q33231",  # photographer
+    "Q42973",  # architect
 }
 
 

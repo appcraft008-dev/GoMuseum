@@ -936,3 +936,52 @@ def test_resolve_creator_by_name_handles_real_multi_segment_signature():
         get_claims=claims,
     )
     assert got == "Q968357"
+
+
+def test_resolve_creator_by_name_whitelist_covers_photographer_and_architect():
+    """2026-10-07 在 staging 对奥赛全馆跑 dry-run 时发现的真实缺口:职业
+    白名单原本不收 photographer/architect,奥赛收藏里雨果流亡泽西岛期间的
+    摄影圈子(Auguste Vacquerie Q940439,真实 P106 含 photographer Q33231)
+    和建筑师(Georges-Ernest Coquart Q3102074,P106=architect Q42973)系统
+    性弃权(前者单独命中 16 次)。按 spec §3.2 步骤3"遇到白名单漏掉的职业
+    按实际案例补"的既定政策,这里补上这两个真实验证过的职业。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def make_search(qid, match_text, occupation_qid):
+        def _search(text, *, limit=5):
+            return [{"id": qid, "label": match_text, "match": {"text": match_text}}]
+
+        return _search
+
+    def make_claims(qid, occupation_qid):
+        def _claims(qids):
+            return {
+                qid: {
+                    "claims": {
+                        "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
+                        "P106": [
+                            {
+                                "mainsnak": {
+                                    "datavalue": {"value": {"id": occupation_qid}}
+                                }
+                            }
+                        ],
+                    }
+                }
+            }
+
+        return _claims
+
+    got = resolve_creator_by_name(
+        "VACQUERIE Auguste",
+        search_entities=make_search("Q940439", "Auguste Vacquerie", "Q33231"),
+        get_claims=make_claims("Q940439", "Q33231"),
+    )
+    assert got == "Q940439"
+
+    got = resolve_creator_by_name(
+        "COQUART Ernest Georges",
+        search_entities=make_search("Q3102074", "Georges-Ernest Coquart", "Q42973"),
+        get_claims=make_claims("Q3102074", "Q42973"),
+    )
+    assert got == "Q3102074"
