@@ -690,3 +690,21 @@ def test_has_qualifier_marker_detects_real_disclaimer_phrases():
     # 正常署名,无限定词
     assert _has_qualifier_marker("SOUTINE Chaïm") is False
     assert _has_qualifier_marker("RENOIR Pierre Auguste") is False
+
+
+def test_reorder_candidates_tries_every_split_point():
+    from app.services.enrichment.material import _reorder_candidates
+
+    # 单词姓氏:3个词,2种切法(k=1,k=2)
+    assert _reorder_candidates("SOUTINE Chaïm") == ["Chaïm SOUTINE"]
+    # 多词姓氏(真实橘园数据:4个词,3种切法k=1,2,3)——必须覆盖所有切法,
+    # 不能只试"第一个词挪到末尾"这一种:k=1 对这个真实案例是错的切法
+    # (2026-10-07 实测:"CONSTANT Jean Joseph Benjamin"真正能命中
+    # Wikidata 的切法不是只移一个词,而是把 k=1 时整串重排的结果
+    # "Jean Joseph Benjamin CONSTANT"——这正是下面要断言在候选列表里的那条)。
+    result = _reorder_candidates("CONSTANT Jean Joseph Benjamin")
+    assert "Jean Joseph Benjamin CONSTANT" in result
+    assert len(result) == 3  # 4个词,n-1=3种切法
+    # 单个词:没有可重排的,返回空列表
+    assert _reorder_candidates("Anonyme") == []
+    assert _reorder_candidates("") == []

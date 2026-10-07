@@ -566,3 +566,14 @@ def _has_qualifier_marker(name: str) -> bool:
     命中就该整体弃权,不进入拆分/按名查找流程(spec §3.2 步骤0)。"""
     low = (name or "").lower()
     return any(marker in low for marker in _QUALIFIER_MARKERS)
+
+
+def _reorder_candidates(segment: str) -> list[str]:
+    """姓名重排:Joconde 惯用"姓 名"顺序查 Wikidata 常年查不到(wbsearchentities
+    对词序敏感),要试"名 姓"顺序。姓氏本身可能是多个词(如"DE MACHY Pierre
+    Antoine"),所以试全部 n-1 种切法——把开头 k 个词(k=1..n-1)当姓氏挪到
+    末尾,不是只试"第一个词 vs 剩余"这一种(spec §3.2 步骤2)。"""
+    words = segment.split()
+    if len(words) < 2:
+        return []
+    return [" ".join(words[k:] + words[:k]) for k in range(1, len(words))]
