@@ -200,15 +200,13 @@ def _photo_credit(credit: str | None, artist_aliases) -> str | None:
 
     判据:credit 命中该件作者任一语言的写法 → 是画家,不显示;否则原样留着。
     prod 65 件实测:57 判隐藏、8 判保留,保留的全是真摄影师,零误杀。
+    判同规则(词序/生卒年/修饰词、摄影归属与代际否决)见 matching.people。
     """
     if not credit:
         return None
-    norm = credit.strip().casefold()
-    return (
-        None
-        if any(norm == a.strip().casefold() for a in artist_aliases if a)
-        else credit
-    )
+    from app.services.matching.people import is_artist_credit
+
+    return None if is_artist_credit(credit, artist_aliases) else credit
 
 
 def _sized(storage, key, size):
