@@ -160,3 +160,20 @@ def test_prompts_ask_for_original_title():
     from app.services.recognition.vision import _ARTWORK_SYSTEM, _LABEL_SYSTEM
 
     assert "original_title" in _ARTWORK_SYSTEM and "original_title" in _LABEL_SYSTEM
+
+
+def test_label_mode_uses_gpt4o_high_detail(monkeypatch):
+    # 10-07 staging A/B(同一张双语墙签各 5 次):gpt-4o-mini 5/5 把说明文字里提到的
+    # 《Luxe, calme et volupté》当主标题;gpt-4o 0/5,且单价几乎相同(mini 图片按 33 倍计 token)
+    from app.services.recognition import vision
+
+    seen = []
+
+    def fake(system, user_content, model="gpt-4o-mini"):
+        seen.append((model, user_content[0]["image_url"].get("detail")))
+        return '{"candidates": [], "label_text": null}'
+
+    monkeypatch.setattr(vision, "_default_complete", fake)
+    vision.identify("b64", mode="label")
+    vision.identify("b64", mode="artwork")
+    assert seen == [("gpt-4o", "high"), ("gpt-4o-mini", None)]
