@@ -10,7 +10,7 @@ from rapidfuzz import fuzz
 
 from app.services.matching.index import core_for
 from app.services.matching.normalize import normalize, tokens
-from app.services.matching.people import same_person
+from app.services.matching.people import is_named, same_person, surname_seen
 
 ACCEPT_WITH_ARTIST = 0.75
 ACCEPT_TITLE_ONLY = 0.9
@@ -47,6 +47,8 @@ def recognize(
     inv = _inv_probes(queries + label_lines)
     ocr_norm = "" if label_lines_inv_only else normalize(" ".join(label_lines))
     hints = [h for h in (artist_hints or []) if h]
+    named = [h for h in hints if is_named(h)]
+    evidence = set(normalize(" ".join(named + label_lines)).split())
     if not label_lines_inv_only:
         # 墙签里单独成行的作者名(「Henri-Edmond Cross」)同样是作者证据;整行长句命中不了
         # same_person(词集合要相等),长句靠下面「作者名是墙签原文子串」那一路
@@ -74,12 +76,23 @@ def recognize(
         ok = any(
             same_person(h, a, allow_subset=True) for h in hints for a in e["artists"]
         ) or bool(ocr_norm and any(len(a) >= 6 and a in ocr_norm for a in e["artists"]))
-        rows.append((s + ARTIST_BONUS * ok, s, ok, e["qid"]))
+        rows.append((s + ARTIST_BONUS * ok, s, ok, e["qid"], i))
     rows.sort(key=lambda r: -r[0])
 
-    raw = [[q, round(min(k, 1.0), 3), ok] for k, _, ok, q in rows[:5]]
+    raw = [[q, round(min(k, 1.0), 3), ok] for k, _, ok, q, _ in rows[:5]]
+    passed = [
+        r
+        for r in rows
+        if r[1] >= 1.0 or r[1] >= (ACCEPT_WITH_ARTIST if r[2] else ACCEPT_TITLE_ONLY)
+    ]
+    # AI 说出了作者,而过门槛的没有一件作者对得上 → 多半是库外名作撞了同名通用标题
+    # (10-07 真机:波提切利 Venus/米开朗基罗 David 等 13 张全被整组否定)。
+    if named and not any(
+        ok or surname_seen(core.entries[i]["artists"], evidence)
+        for _, _, ok, _, i in passed
+    ):
+        return [], raw
     best: dict[str, float] = {}
-    for k, s, ok, q in rows:
-        if s >= 1.0 or s >= (ACCEPT_WITH_ARTIST if ok else ACCEPT_TITLE_ONLY):
-            best.setdefault(q, min(k, 1.0))
+    for k, _, _, q, _ in passed:
+        best.setdefault(q, min(k, 1.0))
     return list(best.items())[:limit], raw

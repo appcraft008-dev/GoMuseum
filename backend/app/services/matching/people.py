@@ -55,6 +55,33 @@ def _people(s: str) -> tuple[frozenset[str], ...]:
     return tuple(p for p in parts if p) + ((whole,) if whole else ())
 
 
+_UNNAMED = {
+    "unknown",
+    "null",
+    "none",
+    "anonymous",
+    "anonyme",
+    "inconnu",
+    "unknown artist",
+}
+
+
+def is_named(s: str | None) -> bool:
+    """AI 给的作者是不是一个真名字(它常回 "Unknown"/"null" 占位)。"""
+    n = normalize(s or "")
+    return bool(n) and n not in _UNNAMED
+
+
+def surname_seen(artists, words: set[str]) -> bool:
+    """库里作者(已归一化)的姓——末尾实词、≥4 字——在 words 里。拼法差在名上
+    (墙签 Gaspard / 库里 Gaspar、Giovanni / Giovan,10-07 真机)时 same_person 认不出。"""
+    for a in artists:
+        ws = [w for w in (a or "").split() if w not in _QUAL and w not in _GEN]
+        if ws and len(ws[-1]) >= 4 and ws[-1] in words:
+            return True
+    return False
+
+
 def same_person(a: str | None, b: str | None, allow_subset: bool = False) -> bool:
     """allow_subset:a 的词集合(≥2 词)是 b 的子集也算——AI 常给短名(「Auguste Renoir」
     vs 库里「Pierre-Auguste Renoir」)。只给识别作者加分用;署名判同不放宽(CC 署名宁显不藏)。"""
