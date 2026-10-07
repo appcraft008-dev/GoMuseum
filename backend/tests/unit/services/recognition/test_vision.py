@@ -130,5 +130,33 @@ def test_label_mode_extracts_printed_title_and_artist():
     s = seen["system"].lower()
     assert "title" in s and "printed" in s and "not guess" in s
     assert out["candidates"] == [
-        {"title": "L'Air du soir", "artist": "Henri-Edmond Cross"}
+        {
+            "title": "L'Air du soir",
+            "original_title": None,  # 墙签只印一种语言时没有原文标题
+            "artist": "Henri-Edmond Cross",
+        }
     ]
+
+
+def test_original_title_passed_through():
+    raw = json.dumps(
+        {
+            "candidates": [
+                {
+                    "title": "The Evening Air",
+                    "original_title": "L'Air du soir",
+                    "artist": "Henri-Edmond Cross",
+                }
+            ],
+            "label_text": None,
+            "self_confidence": "medium",
+        }
+    )
+    out = identify("b64", complete=lambda s, u: raw)
+    assert out["candidates"][0]["original_title"] == "L'Air du soir"
+
+
+def test_prompts_ask_for_original_title():
+    from app.services.recognition.vision import _ARTWORK_SYSTEM, _LABEL_SYSTEM
+
+    assert "original_title" in _ARTWORK_SYSTEM and "original_title" in _LABEL_SYSTEM

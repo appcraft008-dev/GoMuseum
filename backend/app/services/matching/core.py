@@ -71,9 +71,9 @@ def recognize(
     rows = []
     for i, s in cand.items():
         e = core.entries[i]
-        ok = any(same_person(h, a) for h in hints for a in e["artists"]) or bool(
-            ocr_norm and any(len(a) >= 6 and a in ocr_norm for a in e["artists"])
-        )
+        ok = any(
+            same_person(h, a, allow_subset=True) for h in hints for a in e["artists"]
+        ) or bool(ocr_norm and any(len(a) >= 6 and a in ocr_norm for a in e["artists"]))
         rows.append((s + ARTIST_BONUS * ok, s, ok, e["qid"]))
     rows.sort(key=lambda r: -r[0])
 

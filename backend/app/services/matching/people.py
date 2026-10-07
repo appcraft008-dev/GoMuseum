@@ -51,7 +51,9 @@ def _people(s: str) -> list[frozenset[str]]:
     return [p for p in parts if p] + ([whole] if whole else [])
 
 
-def same_person(a: str | None, b: str | None) -> bool:
+def same_person(a: str | None, b: str | None, allow_subset: bool = False) -> bool:
+    """allow_subset:a 的词集合(≥2 词)是 b 的子集也算——AI 常给短名(「Auguste Renoir」
+    vs 库里「Pierre-Auguste Renoir」)。只给识别作者加分用;署名判同不放宽(CC 署名宁显不藏)。"""
     if not a or not b:
         return False
     if a.strip().casefold() == b.strip().casefold():
@@ -60,7 +62,11 @@ def same_person(a: str | None, b: str | None) -> bool:
     if ga and gb and ga != gb:
         return False
     pb = _people(b)
-    return any(x == y for x in _people(a) for y in pb)
+    return any(
+        x == y or (allow_subset and len(x) >= 2 and x < y)
+        for x in _people(a)
+        for y in pb
+    )
 
 
 def is_artist_credit(credit: str, aliases) -> bool:

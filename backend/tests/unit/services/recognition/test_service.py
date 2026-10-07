@@ -1007,3 +1007,38 @@ def test_same_photo_label_mode_not_served_artwork_cache(session):
     out = recognize(session, "orsay", img, mode="label", identify_fn=identify, redis=r)
     assert identify.n == 1  # 真跑了墙签链,没吃作品模式的缓存
     assert out["outcome"] == "candidates"
+
+
+def _text_recognize(session, candidates):
+    return recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: None,
+        identify_fn=_vision(candidates),
+    )
+
+
+def test_original_title_used_as_query(session):
+    # AI 的英文名对不上,但给了原文标题 → 能认出(库里 13% 作品只有法语标题,spec §2.4)
+    out = _text_recognize(
+        session,
+        [
+            {
+                "title": "Origin Beginning Earth",
+                "original_title": "The Origin of the World",
+                "artist": None,
+            }
+        ],
+    )
+    assert out["candidates"][0]["qid"] == "Q334138"
+
+
+def test_reason_low_confidence_when_recalled_but_below_threshold(session):
+    out = _text_recognize(session, [{"title": "Origin", "artist": None}])
+    assert out["outcome"] == "unrecognized" and out["reason"] == "low_confidence"
+
+
+def test_reason_not_in_catalog_when_nothing_recalled(session):
+    out = _text_recognize(session, [{"title": "Pixelated House", "artist": "Unknown"}])
+    assert out["outcome"] == "unrecognized" and out["reason"] == "not_in_catalog"
