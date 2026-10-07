@@ -21,9 +21,13 @@ import threading
 import time
 import unicodedata
 
+from rapidfuzz import fuzz
+
 from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.services.matching.index import core_for
+from app.services.matching.normalize import normalize, normalize_inv, tokens
 from app.services.museum_repo import (
     _resolve_name,
     _sized,
@@ -31,7 +35,6 @@ from app.services.museum_repo import (
     museum_name,
     museum_names,
 )
-from app.services.recognition.matcher import normalize, normalize_inv
 
 logger = logging.getLogger(__name__)
 
@@ -200,18 +203,15 @@ def _score(entry: dict, qn: str, qinv: str) -> float:
     return 0.0
 
 
-def rank(index: list[dict], query: str, limit: int = 20) -> list[tuple[dict, float]]:
-    """[(entry, score)] 降序,同分按 popularity 降序,取 top limit。空 query → []。
+_S_TOKEN = 0.3  # 每个词都在标题/作者里命中(含拼错/跳词/姓+标题词),但不属于上面任何一档
 
-    两段式(S4):先走常规打分;query 为纯数字(≥3 位)且**没有任何条目拿到整串精确档**时,
-    再按「馆藏号只留数字」整串相等补一档 0.9 —— 说明牌上 `INV 779`,用户只敲了 `779`。
-    ⚠️ 「数字退路全部列出」靠调用方 limit 够大:前端 searchProvider 传 60(search_api.dart),
-    prod 已知同数字最多 23 件;0.9 档整体排在低档之前,截断只会先砍低档。"""
-    # 全角→半角(中日韩输入法常切成全角数字/字母)
-    query = unicodedata.normalize("NFKC", query)
+
+def _tier_scores(index: list[dict], query: str) -> dict:
+    """原分档(编号/数字编号/前缀/子串/作者子串)→ {id: (entry, score)}。query 已 NFKC。
+
+    数字退路(S4):query 为纯数字(≥3 位)且**没有任何条目拿到整串精确档**时,
+    再按「馆藏号只留数字」整串相等补一档 0.9 —— 说明牌上 `INV 779`,用户只敲了 `779`。"""
     qn = normalize(query)
-    if not qn:
-        return []
     qinv = normalize_inv(query)
     scored = {e["id"]: (e, s) for e in index if (s := _score(e, qn, qinv)) > 0}
     qd = query.strip()
@@ -224,8 +224,43 @@ def rank(index: list[dict], query: str, limit: int = 20) -> list[tuple[dict, flo
             if e["inv_digits"] == qd:
                 prev = scored.get(e["id"], (e, 0.0))[1]
                 scored[e["id"]] = (e, max(prev, _S_INV_DIGITS))
-    out = sorted(scored.values(), key=lambda es: (-es[1], -es[0]["popularity"]))
-    return out[:limit]
+    return scored
+
+
+def rank(index: list[dict], query: str, limit: int = 20) -> list[tuple[dict, float]]:
+    """[(entry, score)] 降序,取 top limit。空 query → []。
+
+    两路合并(匹配核心 10-07,spec docs/superpowers/specs/2026-10-07-matching-core-design.md):
+    ①原分档(编号/前缀/子串/作者子串)原样保留——现在能搜到的一条不丢;
+    ②每个查询词都在标题或作者里命中(允许拼错、末词前缀、跳词、姓+标题词),
+      不属于①任何一档的给 0.3。
+    排序:分档 → 同档内整名与查询越像越前 → 词元加权分 → popularity(只作最末并列键;
+    它 77% 为 0,不能当权重)。
+    ⚠️ 「数字退路全部列出」靠调用方 limit 够大:前端 searchProvider 传 60(search_api.dart),
+    prod 已知同数字最多 23 件;0.9 档整体排在低档之前,截断只会先砍低档。"""
+    # 全角→半角(中日韩输入法常切成全角数字/字母)
+    query = unicodedata.normalize("NFKC", query)
+    qn = normalize(query)
+    if not qn:
+        return []
+    merged = {k: (e, s, 0.0) for k, (e, s) in _tier_scores(index, query).items()}
+    try:
+        core, allowed = core_for(index)
+        for i, w in core.and_hits(tokens(qn), allowed).items():
+            e = core.entries[i]
+            prev = merged.get(e["id"])
+            merged[e["id"]] = (e, prev[1] if prev else _S_TOKEN, w)
+    except Exception:  # 倒排不可用时退回原分档,搜索不 5xx
+        logger.exception("matching core unavailable, tier-only search")
+
+    def sim(e):
+        return max((fuzz.ratio(qn, n) for n in e["names"]), default=0)
+
+    out = sorted(
+        merged.values(),
+        key=lambda x: (-x[1], -sim(x[0]), -x[2], -x[0]["popularity"]),
+    )
+    return [(e, s) for e, s, _ in out[:limit]]
 
 
 def _search_museums(db, query: str, language: str, visible=None) -> list[dict]:

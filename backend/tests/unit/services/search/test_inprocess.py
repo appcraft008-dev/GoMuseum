@@ -452,3 +452,63 @@ def test_fullwidth_digits(inv_session):
 def test_search_result_carries_inventory(inv_session):
     _, objs = search(inv_session, _FakeStorage(), "INV 779", language="en")
     assert objs[0]["inventory"] == "INV 779"
+
+
+# --- 匹配核心(10-07):每词命中 + 容错 + 兜底 ---
+
+
+def test_artist_surname_plus_title_word(session):
+    idx = build_search_index(session, _mid(session))
+    out = rank(idx, "gogh rhone")
+    assert [e["qid"] for e, _ in out] == ["Q_STUB"]
+    assert out[0][1] == 0.3
+
+
+def test_typo_still_found(session):
+    idx = build_search_index(session, _mid(session))
+    assert "Q45585" in {e["qid"] for e, _ in rank(idx, "satrry nihgt")}
+
+
+def test_skipped_word_found(session):
+    idx = build_search_index(session, _mid(session))
+    assert "Q_STUB" in {e["qid"] for e, _ in rank(idx, "starry rhone")}
+
+
+def test_single_cjk_char_falls_back_to_substring(session):
+    idx = build_search_index(session, _mid(session))
+    assert [e["qid"] for e, _ in rank(idx, "星")] == ["Q45585"]
+
+
+def test_punct_only_query_empty(session):
+    idx = build_search_index(session, _mid(session))
+    assert rank(idx, "!!!") == []
+
+
+def test_same_tier_closer_title_first(session):
+    # 同为前缀档:整名更接近查询的排前(不靠 popularity)
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    for qid, t in (
+        ("Q_LONG", "Portrait de femme assise dans un jardin"),
+        ("Q_SHORT", "Portrait de femme"),
+    ):
+        upsert_object(
+            session,
+            m.id,
+            {"qid": qid, "title_en": t, "category": "painting", "popularity": 0},
+        )
+    session.commit()
+    inprocess._index_cache.clear()
+    idx = build_search_index(session, _mid(session))
+    qids = [e["qid"] for e, _ in rank(idx, "portrait de femme")]
+    assert qids.index("Q_SHORT") < qids.index("Q_LONG")
+
+
+def test_scoped_search_uses_global_core(session, monkeypatch):
+    from app.services.matching import index as mindex
+
+    build_search_index(session, None)
+    built = []
+    orig = mindex.Core
+    monkeypatch.setattr(mindex, "Core", lambda ix: built.append(1) or orig(ix))
+    rank(build_search_index(session, _mid(session)), "gogh rhone")
+    assert built == []  # 馆域子集不重建倒排

@@ -72,8 +72,8 @@ class Core:
             for v, s in self.expand(tok, f, prefix).items():
                 w = s * idf[v]
                 for i in self.post[f][v]:
-                    if (allowed is None or i in allowed) and w > best.get(i, 0.0):
-                        best[i] = w
+                    if (allowed is None or i in allowed) and w >= best.get(i, 0.0):
+                        best[i] = w  # >=:idf=0 的词(每件都有)也算命中
         return best
 
     def recall(self, qtoks, k=200, allowed=None, use_artist=False):

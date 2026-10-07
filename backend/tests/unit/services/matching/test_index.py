@@ -69,3 +69,9 @@ def test_refresh_builds_core_in_background(monkeypatch):
     monkeypatch.setattr(inprocess, "_refreshing", False)
     inprocess._refresh_index_async()
     assert built and built[0] is inprocess._index_cache[None][1]
+
+
+def test_token_in_every_entry_still_counts_as_hit():
+    # 每件都有的词 idf=0,权重 0 也算命中;否则「每词都中」整体落空
+    core = mindex.get_core(_idx()[:2])  # 两件都是 van gogh
+    assert set(core.and_hits(["gogh", "rhone"], None)) == {1}
