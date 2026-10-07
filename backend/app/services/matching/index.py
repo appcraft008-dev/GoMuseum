@@ -102,26 +102,37 @@ class Core:
 
 
 _cores: collections.OrderedDict = collections.OrderedDict()  # id(index) → (index, Core)
+_pinned: tuple | None = None  # (全局索引, 它的倒排):不参与淘汰
 _lock = threading.Lock()
 
 
-def get_core(index: list[dict]) -> Core:
-    key = id(index)
+def get_core(index: list[dict], pin: bool = False) -> Core:
+    """pin=True:全局索引的倒排(_warm_core 调用),单独钉住——刷新竞态时子集临时建的倒排
+    只进 2 槽 LRU,挤不掉它(否则下个请求要重建,prod 4.5s)。"""
+    global _pinned
     with _lock:
-        hit = _cores.get(key)
+        if _pinned and _pinned[0] is index:
+            return _pinned[1]
+        hit = _cores.get(id(index))
         if hit and hit[0] is index:
+            if pin:
+                _pinned = hit
             return hit[1]
     core = Core(index)
     with _lock:
-        _cores[key] = (index, core)  # 持有 index 引用,id 不会被复用
-        while len(_cores) > 2:
-            _cores.popitem(last=False)
+        if pin:
+            _pinned = (index, core)
+        else:
+            _cores[id(index)] = (index, core)  # 持有 index 引用,id 不会被复用
+            while len(_cores) > 2:
+                _cores.popitem(last=False)
     return core
 
 
 def core_for(index: list[dict]) -> tuple[Core, set[int] | None]:
     """全局索引 → (全局倒排, None);其子集(馆域/可见性过滤,同一批 dict)→ (全局倒排, 允许下标);
-    其它列表(测试自建)→ 单建并缓存。"""
+    其它列表 → 单建并缓存:测试自建的列表,或后台刷新刚把全局索引换掉时、请求手里还是旧索引
+    的子集(极窄窗口,结果仍正确,只是这一次慢)。"""
     from app.services.search.inprocess import _index_cache
 
     hit = _index_cache.get(None)

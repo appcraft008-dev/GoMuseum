@@ -52,7 +52,7 @@ def test_refresh_builds_core_in_background(monkeypatch):
     built = []
     monkeypatch.setattr(inprocess, "_index_cache", {})  # 测完还原,不污染别的用例
     monkeypatch.setattr(inprocess, "_build_global", lambda db: _idx())
-    monkeypatch.setattr(mindex, "get_core", lambda ix: built.append(ix) or None)
+    monkeypatch.setattr(mindex, "get_core", lambda ix, **kw: built.append(ix) or None)
 
     class _T:
         def __init__(self, target, **kw):
@@ -75,3 +75,16 @@ def test_token_in_every_entry_still_counts_as_hit():
     # 每件都有的词 idf=0,权重 0 也算命中;否则「每词都中」整体落空
     core = mindex.get_core(_idx()[:2])  # 两件都是 van gogh
     assert set(core.and_hits(["gogh", "rhone"], None)) == {1}
+
+
+def test_pinned_global_core_survives_adhoc_cores(monkeypatch):
+    # 刷新竞态时子集会单建临时倒排;它们不能把全局倒排挤出缓存(否则下个请求重建 4.5s)
+    built = []
+    orig = mindex.Core
+    monkeypatch.setattr(mindex, "Core", lambda ix: built.append(1) or orig(ix))
+    g = _idx()
+    gcore = mindex.get_core(g, pin=True)
+    for _ in range(3):
+        mindex.get_core([_e(9, {"x"})])  # 3 个临时核
+    n = len(built)
+    assert mindex.get_core(g) is gcore and len(built) == n

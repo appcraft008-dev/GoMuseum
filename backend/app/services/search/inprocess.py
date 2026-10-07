@@ -130,7 +130,7 @@ def _warm_core(index) -> None:
     try:
         from app.services.matching.index import get_core
 
-        get_core(index)
+        get_core(index, pin=True)
     except Exception:
         logger.exception("matching core build failed, search falls back to tiers")
 
