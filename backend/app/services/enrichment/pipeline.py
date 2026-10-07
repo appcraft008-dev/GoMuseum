@@ -15,7 +15,7 @@ from app.services.content_repo import (
 from app.services.enrichment.category_config import guide_target_chars, sections_for
 from app.services.enrichment.content_enricher import build_material
 from app.services.enrichment.material import fetch_object_material
-from app.services.must_see import must_see_order
+from app.services.must_see import has_image_clause, must_see_order
 
 logger = logging.getLogger(__name__)
 
@@ -540,11 +540,17 @@ def top_objects(db, museum_id, limit=None):
 
     同分裁决不能省:小皇宫 97% 的件热度为 0,不带 id 时「前 20」取到哪几件
     由 DB 扫表顺序决定,生成的那批和报告看的那批可能不是同一批。
+
+    候选池也要对齐:App 列表(浏览面)只给有图件排名(见 has_image_clause),
+    这里不过滤的话,生成批次会把名额花在列表里永远看不到的无图件上,
+    排出来的「前 N」和用户在 App 里看到的「前 N」不是同一批
+    (2026-10-07 橘园 TOP50 实例:50 件里 8 件无图,挤掉了另外 8 件有图的)。
     """
     slug = db.query(Museum.slug).filter_by(id=museum_id).scalar()
     q = (
         db.query(MuseumObject)
         .filter_by(museum_id=museum_id)
+        .filter(has_image_clause())
         .order_by(
             *must_see_order(slug), MuseumObject.popularity.desc(), MuseumObject.id
         )
