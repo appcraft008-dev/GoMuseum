@@ -10,6 +10,7 @@ import logging
 from app.services.enrichment.fetcher import _CORE
 from app.services.enrichment.merge import merge_contributions
 from app.services.enrichment.sources import wikidata as _wd
+from app.services.matching.normalize import normalize, tokens
 
 logger = logging.getLogger(__name__)
 
@@ -577,3 +578,45 @@ def _reorder_candidates(segment: str) -> list[str]:
     if len(words) < 2:
         return []
     return [" ".join(words[k:] + words[:k]) for k in range(1, len(words))]
+
+
+_SEARCH_LIMIT = 5
+
+
+def _default_search_entities(text, *, limit=_SEARCH_LIMIT):
+    """真实打 Wikidata wbsearchentities(与 material.py 其它函数用的 SPARQL
+    查询服务是不同的 API,这里是 MediaWiki Action API)。"""
+    import requests
+
+    r = requests.get(
+        "https://www.wikidata.org/w/api.php",
+        params={
+            "action": "wbsearchentities",
+            "search": text,
+            "language": "en",
+            "format": "json",
+            "limit": limit,
+        },
+        headers={"User-Agent": _wd.USER_AGENT},
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json().get("search", [])
+
+
+def _segment_candidates(
+    segment: str, *, search_entities, word_set: frozenset
+) -> list[str]:
+    """一段署名 -> 两种词序查询后、词集合精确匹配过的候选 qid 列表(未去重
+    按发现顺序、未过滤职业)。词集合精确匹配堵的是 wbsearchentities 的前缀
+    匹配误判(如"LEON Paul"匹配到诗人 Léon-Paul Fargue,见 spec §3.2 步骤2)。"""
+    seen: list[str] = []
+    for query in [segment, *_reorder_candidates(segment)]:
+        for r in search_entities(query, limit=_SEARCH_LIMIT):
+            match_text = (r.get("match") or {}).get("text") or r.get("label") or ""
+            if frozenset(tokens(normalize(match_text))) != word_set:
+                continue
+            qid = r.get("id")
+            if qid and qid not in seen:
+                seen.append(qid)
+    return seen

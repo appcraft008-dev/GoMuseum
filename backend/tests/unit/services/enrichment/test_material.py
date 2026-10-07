@@ -708,3 +708,77 @@ def test_reorder_candidates_tries_every_split_point():
     # 单个词:没有可重排的,返回空列表
     assert _reorder_candidates("Anonyme") == []
     assert _reorder_candidates("") == []
+
+
+def test_segment_candidates_filters_by_exact_word_match():
+    from app.services.enrichment.material import _segment_candidates
+    from app.services.matching.normalize import normalize, tokens
+
+    # 真实案例(2026-10-07 实测):"LEON Paul"会前缀匹配到 Léon-Paul Fargue
+    # (法国诗人),match.text 是"Léon-Paul Fargue",归一化后的词集合是
+    # {leon, paul, fargue},和输入词集合 {leon, paul} 不相等——必须被滤掉。
+    def fake_search(text, *, limit=5):
+        return [
+            {
+                "id": "Q599801",
+                "label": "Léon-Paul Fargue",
+                "match": {"type": "label", "text": "Léon-Paul Fargue"},
+            },
+        ]
+
+    word_set = frozenset(tokens(normalize("LEON Paul")))
+    assert (
+        _segment_candidates("LEON Paul", search_entities=fake_search, word_set=word_set)
+        == []
+    )
+
+    # 词集合精确相等的候选要保留
+    def fake_search_exact(text, *, limit=5):
+        return [
+            {
+                "id": "Q160141",
+                "label": "Chaïm Soutine",
+                "match": {"type": "label", "text": "Chaïm Soutine"},
+            },
+        ]
+
+    word_set2 = frozenset(tokens(normalize("Chaïm Soutine")))
+    assert _segment_candidates(
+        "SOUTINE Chaïm", search_entities=fake_search_exact, word_set=word_set2
+    ) == ["Q160141"]
+
+    # match 字段缺失时退回用 label 比较,不能抛异常(Review Focus 第3条)
+    def fake_search_no_match(text, *, limit=5):
+        return [{"id": "Q1", "label": "Chaïm Soutine"}]
+
+    assert _segment_candidates(
+        "SOUTINE Chaïm", search_entities=fake_search_no_match, word_set=word_set2
+    ) == ["Q1"]
+
+    # 原始顺序+重排都会被尝试,两次查询结果去重合并——注意重排只调换词的
+    # 位置,不改每个词自身的大小写(_reorder_candidates 的实现就是这样),
+    # 所以"SOUTINE Chaïm"重排后是"Chaïm SOUTINE"(SOUTINE 仍大写),不是
+    # "Chaïm Soutine"(这个大小写写法实测跑过一遍脚本才发现:写成后者会让
+    # 两次查询的 text 都对不上,fake 函数永远返回空,测试会静默测不出东西
+    # 而不是报错——写 fake 查询函数时务必核对 _reorder_candidates 真实
+    # 产出的字符串,不要凭感觉拼大小写)。
+    calls = []
+
+    def fake_search_both_orders(text, *, limit=5):
+        calls.append(text)
+        if text == "Chaïm SOUTINE":
+            return [
+                {
+                    "id": "Q160141",
+                    "label": "Chaïm Soutine",
+                    "match": {"text": "Chaïm Soutine"},
+                }
+            ]
+        return []
+
+    result = _segment_candidates(
+        "SOUTINE Chaïm", search_entities=fake_search_both_orders, word_set=word_set2
+    )
+    assert result == ["Q160141"]
+    assert "SOUTINE Chaïm" in calls  # 原始顺序查过
+    assert "Chaïm SOUTINE" in calls  # 重排后也查过(注意大小写:SOUTINE 仍大写)
