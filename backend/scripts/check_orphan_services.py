@@ -26,8 +26,6 @@ ALLOW = {
     "fetch_museum_building_photo": "上新馆 CLI 按需调用(动态派发)",
     "run_lazy_images": "运维脚本入口",
     "to_simplified": "繁简转换工具,按需使用",
-    # 过渡:识别文字链换核(匹配核心 PR2,plan Task 6)接线后删掉这一行
-    "recall": "matching.index.Core.recall 由识别文字链 matching.core 调用(PR2 接线)",
 }
 
 # 已知死代码:整模块无人引用。**不删**(非本次改动造成,按项目规矩只报不删),
