@@ -695,16 +695,24 @@ def test_has_qualifier_marker_detects_real_disclaimer_phrases():
 def test_reorder_candidates_tries_every_split_point():
     from app.services.enrichment.material import _reorder_candidates
 
-    # 单词姓氏:3个词,2种切法(k=1,k=2)
+    # 两个词:只有一种切法(k=1)
     assert _reorder_candidates("SOUTINE Chaïm") == ["Chaïm SOUTINE"]
-    # 多词姓氏(真实橘园数据:4个词,3种切法k=1,2,3)——必须覆盖所有切法,
-    # 不能只试"第一个词挪到末尾"这一种:k=1 对这个真实案例是错的切法
-    # (2026-10-07 实测:"CONSTANT Jean Joseph Benjamin"真正能命中
-    # Wikidata 的切法不是只移一个词,而是把 k=1 时整串重排的结果
-    # "Jean Joseph Benjamin CONSTANT"——这正是下面要断言在候选列表里的那条)。
-    result = _reorder_candidates("CONSTANT Jean Joseph Benjamin")
-    assert "Jean Joseph Benjamin CONSTANT" in result
-    assert len(result) == 3  # 4个词,n-1=3种切法
+    # 多词姓氏(真实橘园数据,4个词)——断言**全部** n-1=3 种切法的完整列表,
+    # 不是只断言"其中一条在不在里面"(只查子串的话,一个只实现了 k=1、
+    # 对 k≥2 吐垂圾的版本也能让"in"断言通过,见全分支审阅 Important #4)。
+    # 真实案例(2026-10-07 实测):"CONSTANT Jean Joseph Benjamin"真正能命中
+    # Wikidata 的切法正是 k=1("Jean Joseph Benjamin CONSTANT")。
+    assert _reorder_candidates("CONSTANT Jean Joseph Benjamin") == [
+        "Jean Joseph Benjamin CONSTANT",
+        "Joseph Benjamin CONSTANT Jean",
+        "Benjamin CONSTANT Jean Joseph",
+    ]
+    # 另一个真实多词姓氏案例,交叉验证不是只对上面那一个输入凑巧对
+    assert _reorder_candidates("DE MACHY Pierre Antoine") == [
+        "MACHY Pierre Antoine DE",
+        "Pierre Antoine DE MACHY",
+        "Antoine DE MACHY Pierre",
+    ]
     # 单个词:没有可重排的,返回空列表
     assert _reorder_candidates("Anonyme") == []
     assert _reorder_candidates("") == []
@@ -938,50 +946,148 @@ def test_resolve_creator_by_name_handles_real_multi_segment_signature():
     assert got == "Q968357"
 
 
-def test_resolve_creator_by_name_whitelist_covers_photographer_and_architect():
-    """2026-10-07 在 staging 对奥赛全馆跑 dry-run 时发现的真实缺口:职业
-    白名单原本不收 photographer/architect,奥赛收藏里雨果流亡泽西岛期间的
-    摄影圈子(Auguste Vacquerie Q940439,真实 P106 含 photographer Q33231)
-    和建筑师(Georges-Ernest Coquart Q3102074,P106=architect Q42973)系统
-    性弃权(前者单独命中 16 次)。按 spec §3.2 步骤3"遇到白名单漏掉的职业
-    按实际案例补"的既定政策,这里补上这两个真实验证过的职业。"""
+def test_resolve_creator_by_name_does_not_misattribute_leon_paul():
+    """2026-10-07 全分支审阅发现的真实回归(已核实,不是假设):commit eb5b0758
+    往白名单加了 photographer/architect 想救 Vacquerie/Coquart,但同一条改动
+    把"LEON Paul"从"0 候选弃权"变成"1 个候选、误判成委内瑞拉记者 Paul León
+    (Q128960542,P106 恰好含 photographer)"——真实 Wikidata 候选集(curl 核实
+    过):Q115793023(无职业)、Q3371732(P106=professor)、Q128960542(P106 含
+    photographer),三个候选词集合都精确等于 {leon, paul}。白名单只要新增
+    一个职业,就可能让"两个真人同名、本该两个都排除"变成"恰好一个排除失败、
+    误判成那一个"——这正是"宁缺毋滥"最想防的那类错误,比多弃权几条严重得多。
+    修法:photographer/architect 整体撤回(见 _OCCUPATION_WHITELIST 的注释)。"""
     from app.services.enrichment.material import resolve_creator_by_name
 
-    def make_search(qid, match_text, occupation_qid):
-        def _search(text, *, limit=5):
-            return [{"id": qid, "label": match_text, "match": {"text": match_text}}]
+    def search(text, *, limit=5):
+        if text != "Paul LEON":
+            return []
+        return [
+            {"id": "Q115793023", "label": "Paul Leon", "match": {"text": "Paul Leon"}},
+            {
+                "id": "Q3371732",
+                "label": "Paul Léon",
+                "match": {"text": "Paul Léon"},
+            },
+            {
+                "id": "Q128960542",
+                "label": "Paul León",
+                "match": {"text": "Paul León"},
+            },
+        ]
 
-        return _search
-
-    def make_claims(qid, occupation_qid):
-        def _claims(qids):
-            return {
-                qid: {
-                    "claims": {
-                        "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
-                        "P106": [
-                            {
-                                "mainsnak": {
-                                    "datavalue": {"value": {"id": occupation_qid}}
-                                }
-                            }
-                        ],
-                    }
+    def claims(qids):
+        human = {"P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}]}
+        return {
+            "Q115793023": {"claims": {**human, "P106": []}},
+            "Q3371732": {
+                "claims": {
+                    **human,
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q121594"}}}}
+                    ],  # professor
                 }
-            }
+            },
+            "Q128960542": {
+                "claims": {
+                    **human,
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q1930187"}}}},
+                        {
+                            "mainsnak": {"datavalue": {"value": {"id": "Q33231"}}}
+                        },  # photographer
+                    ],
+                }
+            },
+        }
 
-        return _claims
-
-    got = resolve_creator_by_name(
-        "VACQUERIE Auguste",
-        search_entities=make_search("Q940439", "Auguste Vacquerie", "Q33231"),
-        get_claims=make_claims("Q940439", "Q33231"),
+    assert (
+        resolve_creator_by_name("LEON Paul", search_entities=search, get_claims=claims)
+        is None
     )
-    assert got == "Q940439"
 
-    got = resolve_creator_by_name(
-        "COQUART Ernest Georges",
-        search_entities=make_search("Q3102074", "Georges-Ernest Coquart", "Q42973"),
-        get_claims=make_claims("Q3102074", "Q42973"),
+
+def test_resolve_creator_by_name_treats_uncertain_attribution_marker_as_qualifier():
+    """真实 Joconde 数据里"(?)"表示"不确定是不是这个人画的",和"(d'après)"
+    一样是弃权信号,不是普通噪声。真实案例"HUGO Charles (?);VACQUERIE Auguste"
+    (已入库的历史数据,旧清洗正则没剥掉"(?)"因为那不是纯日期形态)——如果
+    "(?)"不触发弃权闸,Hugo 那一段会因为带着字面"(?)"查不到(0 候选,被忽略),
+    只剩 Vacquerie 那一段"成功",于是把本来"不确定是雨果还是瓦克里"的两可
+    标注,错误坐实成"肯定是瓦克里"。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def search_should_not_be_called(text, *, limit=5):
+        raise AssertionError(f"(?) 弃权应该在拆分前拦住,不该查询 {text!r}")
+
+    assert (
+        resolve_creator_by_name(
+            "HUGO Charles (?);VACQUERIE Auguste",
+            search_entities=search_should_not_be_called,
+        )
+        is None
     )
-    assert got == "Q3102074"
+
+
+def test_resolve_creator_by_name_abstains_on_bare_surname():
+    """真实验证过(curl,`limit=5`——和生产代码的 `_SEARCH_LIMIT` 一致):裸
+    姓氏"ROUSSEAU"搜索结果里排第一屏的 5 条是家族姓条目、Henri Rousseau
+    (别名"Rousseau Douanier",词集合不精确相等,被滤掉)、Théodore Rousseau
+    (Q310025,别名恰好就是裸姓氏"Rousseau")、Jean-Jacques Rousseau(哲学家,
+    职业过滤会排除)、given name 条目。**同样是画家、同样有裸姓氏别名的
+    Jacques Rousseau(Q6120842)排在第 8 位,`limit=5` 根本看不到他**——于是
+    "唯一候选"规则被排名顺序意外满足,把"本该因为撞名而弃权"错误坐实成
+    "肯定是 Théodore"。这不是候选集凑巧只有一个人,是单词查询本身就弱到
+    排名说了算;真正的修法是单个词的署名段直接不产出候选,不进解析
+    (spec 原意正是这个)。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def search(text, *, limit=5):
+        # limit=5 下真实返回的候选集(2026-10-07 curl 核实):画家 Jacques
+        # Rousseau(Q6120842)排第 8,不在这 5 条里——这正是回归的根源。
+        return [
+            {"id": "Q16036532", "label": "Rousseau", "match": {"text": "Rousseau"}},
+            {
+                "id": "Q156386",
+                "label": "Henri Rousseau",
+                "match": {"text": "Rousseau Douanier"},
+            },
+            {
+                "id": "Q310025",
+                "label": "Théodore Rousseau",
+                "match": {"text": "Rousseau"},
+            },
+            {
+                "id": "Q6527",
+                "label": "Jean-Jacques Rousseau",
+                "match": {"text": "Rousseau"},
+            },
+            {
+                "id": "Q111072568",
+                "label": "Rousseau",
+                "match": {"text": "Rousseau"},
+            },
+        ]
+
+    def claims(qids):
+        human = {"P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}]}
+        not_human = {
+            "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q101352"}}}}]
+        }  # family name
+        painter = {"P106": [{"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}]}
+        return {
+            "Q16036532": {"claims": not_human},
+            "Q310025": {"claims": {**human, **painter}},
+            "Q6527": {
+                "claims": {
+                    **human,
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q36180"}}}}
+                    ],  # writer, not in whitelist
+                }
+            },
+            "Q111072568": {"claims": not_human},
+        }
+
+    assert (
+        resolve_creator_by_name("ROUSSEAU", search_entities=search, get_claims=claims)
+        is None
+    )

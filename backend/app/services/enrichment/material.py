@@ -560,6 +560,9 @@ _QUALIFIER_MARKERS = (
     "d'après", "d'apres", "atelier", "entourage", "attribué à", "attribue a",
     "attribué", "attribue", "attribution incertaine", "imitation",
     "inspiré par", "inspire par", "genre de", "anonyme", "anonymous",
+    "(?",  # 真实数据里"(?)"= 不确定是不是这个人画的,和 d'après 同级弃权信号
+    # (2026-10-07 全分支审阅发现:漏了这条会让"两可"的历史数据因为"(?)"
+    # 字面查不到而让另一段意外"唯一成功",错误坐实成某一个人)
 )  # fmt: skip
 
 
@@ -631,11 +634,14 @@ _OCCUPATION_WHITELIST = {
     "Q10862983",  # etcher
     "Q11569986",  # printmaker
     "Q7541856",  # ceramicist
-    # 2026-10-07 在 staging 对奥赛全馆跑 dry-run(Task 7)时发现的真实缺口:
-    # 奥赛收藏里雨果流亡泽西岛期间的摄影圈子(Vacquerie/Hugo 等)、以及
-    # 建筑师(Coquart)系统性弃权,按既定政策"遇到实际案例按需补"补上。
-    "Q33231",  # photographer
-    "Q42973",  # architect
+    # ⛔ 2026-10-07 试过加 photographer(Q33231)/architect(Q42973)去救奥赛
+    # 的 Vacquerie/Coquart(真实 dry-run 发现的缺口),已撤回:全分支审阅
+    # 用真实 Wikidata 数据证明,同一条改动把"LEON Paul"从"0候选正确弃权"
+    # 变成"1个候选误判成委内瑞拉记者 Paul León(他 P106 恰好含
+    # photographer)"——往白名单加任何职业,都可能让"两个同名真人本该都被
+    # 排除"变成"凑巧一个没被排除、误判成那一个",这正是宁缺毋滥最想防的
+    # 错误。以后要再加职业,必须先把 spec §3.5 的全部必须弃权案例跑一遍
+    # 真实 Wikidata 回归,不能只验证新加的正样本。
 }
 
 
@@ -686,7 +692,16 @@ def resolve_creator_by_name(
     search_entities = search_entities or _default_search_entities
     get_claims = get_claims or _default_get_claims
 
-    segments = [s.strip() for s in _SPLIT.split(name) if s.strip()]
+    # 单个词的段(裸姓氏/裸名字)不产出候选——真实验证过(curl):裸姓氏
+    # "ROUSSEAU"会通过 Wikidata 自己的别名系统精确匹配到某个同名画家,
+    # 但到底是哪个画家完全看搜索排名(真正该入选的候选可能排到 limit
+    # 之外),"唯一候选"规则在这种情况下是被排名顺序意外满足的,不是真的
+    # 唯一(2026-10-07 全分支审阅发现)。单词本身信息量不够,不该进解析。
+    segments = [
+        s.strip()
+        for s in _SPLIT.split(name)
+        if s.strip() and len(s.strip().split()) >= 2
+    ]
     if not segments:
         return None
 
