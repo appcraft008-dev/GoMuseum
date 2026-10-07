@@ -57,8 +57,8 @@ _LABEL_SYSTEM = (
 )
 
 
-def _default_complete(system: str, user_content) -> str:
-    """真实 GPT-4o-mini 视觉调用(30s 超时)。客户端是 AsyncOpenAI——必须 asyncio.run
+def _default_complete(system: str, user_content, model: str = "gpt-4o-mini") -> str:
+    """真实视觉调用(30s 超时)。客户端是 AsyncOpenAI——必须 asyncio.run
     (staging 教训:漏 await 时 create() 返回协程,identify 静默空结果)。"""
     import asyncio
 
@@ -70,7 +70,7 @@ def _default_complete(system: str, user_content) -> str:
 
     async def _run():
         resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_content},
@@ -84,14 +84,20 @@ def _default_complete(system: str, user_content) -> str:
 
 def identify(image_b64: str, mode: str = "artwork", complete=None) -> dict:
     """照片 → {"candidates": [{title, artist}], "label_text", "self_confidence"}。"""
-    complete = complete or _default_complete
-    system = _LABEL_SYSTEM if mode == "label" else _ARTWORK_SYSTEM
-    user_content = [
-        {
-            "type": "image_url",
-            "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
-        }
-    ]
+    label = mode == "label"
+    if complete is None:
+        # 墙签用 gpt-4o + 高清:10-07 staging A/B 同一张双语墙签各 5 次,mini 5/5 把说明文字里
+        # 提到的另一幅画当主标题,gpt-4o 0/5;单价几乎相同(mini 图片按 33 倍计 token)
+        model = "gpt-4o" if label else "gpt-4o-mini"
+
+        def complete(system, user_content):
+            return _default_complete(system, user_content, model=model)
+
+    system = _LABEL_SYSTEM if label else _ARTWORK_SYSTEM
+    image_url = {"url": f"data:image/jpeg;base64,{image_b64}"}
+    if label:
+        image_url["detail"] = "high"  # 小字多,低清会读错
+    user_content = [{"type": "image_url", "image_url": image_url}]
     try:
         from app.services.enrichment.content_enricher import _parse_json
 
