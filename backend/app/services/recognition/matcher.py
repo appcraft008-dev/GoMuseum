@@ -7,16 +7,17 @@ from __future__ import annotations
 
 import heapq
 import re
-import unicodedata
 from difflib import SequenceMatcher
+
+from app.services.matching.normalize import (  # noqa: F401  再导出
+    normalize,
+    normalize_inv,
+)
 
 HIGH = 0.85  # ≥ 直开讲解页;真实数据校准前的初值
 LOW = 0.5  # < 未收录;[LOW, HIGH) 出确认卡
 
 
-_PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
-_WS = re.compile(r"[\s_]+")
-_NONALNUM = re.compile(r"[^a-z0-9]+")
 _INV_MIN = 3  # 归一化后长度 <3 不做编号匹配(防误伤)
 # 从整段 OCR 抽馆藏号样式 token(≥2 字母前缀 + 至多 3 段数字)。脏 OCR 把标题/号/尺寸
 # 挤一行时,整行 normalize_inv 抠不出号,靠此正则补(实测 0.55→1.0)。数字段有界,避免
@@ -27,19 +28,6 @@ _REVSUB_MIN = 8  # 反向子串:目录名归一化 ≥8 字符才算"出现在 O
 _REVSUB_SCORE = 0.7  # 反向子串命中分(≥LOW 出候选卡,<HIGH 不直判)
 _ARTIST_BONUS = 0.1
 _FLOOR = LOW - _ARTIST_BONUS - 1e-9  # 标题分 ≤ 此值,加满作者分也够不到 LOW
-
-
-def normalize(s: str) -> str:
-    """小写/NFD 去音符/去标点/压空白(Théodore≈Theodore)。"""
-    s = unicodedata.normalize("NFD", s or "")
-    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
-    s = _PUNCT.sub(" ", s.lower())
-    return _WS.sub(" ", s).strip()
-
-
-def normalize_inv(s: str) -> str:
-    """馆藏号归一化:小写 + 去所有非字母数字("RF 1668"→"rf1668")。空/None 安全。"""
-    return _NONALNUM.sub("", (s or "").lower())
 
 
 def build_index(db, museum_id) -> list[dict]:
