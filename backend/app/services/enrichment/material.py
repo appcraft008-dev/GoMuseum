@@ -546,3 +546,23 @@ def fetch_museum_building_photo(qid: str, *, run_query=None) -> str | None:
         if v:
             return v
     return None
+
+
+# 弃权关键词全部是法语(Auteur 字段是法语,不是英语),2026-10-07 实测奥赛
+# +橘园真实 Auteur 字段逐个核对出来的"这不是作者本人画的"类表述。不包括
+# dit/dite/née/patronyme(这些是别名标记,不是弃权信号)、也不包括
+# fondeur/orfèvre/céramiste/éditeur/mouleur/praticien/exécutant(这些是
+# 工匠角色词,交给职业过滤自然处理——铸造厂/工坊这类机构名在 Wikidata 搜
+# 不出 human 候选,那一段自然解析失败,不需要在这里特殊处理)。
+_QUALIFIER_MARKERS = (
+    "d'après", "d'apres", "atelier", "entourage", "attribué à", "attribue a",
+    "attribué", "attribue", "attribution incertaine", "imitation",
+    "inspiré par", "inspire par", "genre de", "anonyme", "anonymous",
+)  # fmt: skip
+
+
+def _has_qualifier_marker(name: str) -> bool:
+    """整串扫一遍限定词(仿作/工作室作品等)关键词,子串匹配、大小写不敏感。
+    命中就该整体弃权,不进入拆分/按名查找流程(spec §3.2 步骤0)。"""
+    low = (name or "").lower()
+    return any(marker in low for marker in _QUALIFIER_MARKERS)

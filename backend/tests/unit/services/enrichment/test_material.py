@@ -655,3 +655,38 @@ def test_fetch_creators_batch_picks_same_winner_as_single():
     assert _fetch_creators(["Q64309678"], run_query=lambda s: rows[::-1]) == {
         "Q64309678": "Q35548"
     }
+
+
+def test_has_qualifier_marker_detects_real_disclaimer_phrases():
+    from app.services.enrichment.material import _has_qualifier_marker
+
+    # 真实 Joconde 数据(2026-10-07 实测奥赛+橘园 Auteur 字段):这些都是
+    # "这不是作者本人画的"类表述,必须命中。
+    assert _has_qualifier_marker("anonyme;VAN GOGH Vincent (d'après)") is True
+    assert _has_qualifier_marker("Cézanne Paul (1839-1906) (attribué à)") is True
+    assert _has_qualifier_marker("Boucher François (d'après)") is True
+    assert _has_qualifier_marker("CLOUET François (atelier)") is True
+    assert _has_qualifier_marker("Courbet Gustave (genre de);anonyme") is True
+    assert _has_qualifier_marker("anonyme") is True
+    assert (
+        _has_qualifier_marker("SEGUIN Armand;Gauguin Paul (attribution incertaine)")
+        is True
+    )
+    # 大小写不敏感(Joconde 惯用全大写姓氏段落,限定词有时跟着一起大写)
+    assert _has_qualifier_marker("BOUCHER FRANÇOIS (D'APRÈS)") is True
+    # 别名标记(dit/née)和工匠角色词(fondeur)不是弃权信号,不该命中——
+    # 这些交给拆分+解析步骤正常处理(spec §3.2 步骤0的说明)。
+    assert (
+        _has_qualifier_marker("BENJAMIN-CONSTANT (dit);CONSTANT Jean Joseph Benjamin")
+        is False
+    )
+    assert _has_qualifier_marker("ALLAR André Joseph;MATIFA C (fondeur)") is False
+    assert (
+        _has_qualifier_marker(
+            "BESNARD Charlotte Gabrielle;DUBRAY Charlotte Gabrielle (née)"
+        )
+        is False
+    )
+    # 正常署名,无限定词
+    assert _has_qualifier_marker("SOUTINE Chaïm") is False
+    assert _has_qualifier_marker("RENOIR Pierre Auguste") is False
