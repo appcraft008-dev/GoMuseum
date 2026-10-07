@@ -14,9 +14,9 @@
 改清单只需部署后端,不用发 App 包。顺序即排序。
 """
 
-from sqlalchemy import case
+from sqlalchemy import and_, case, exists, or_
 
-from app.models.museum_object import MuseumObject
+from app.models.museum_object import MuseumObject, ObjectImage
 
 MUST_SEE: dict[str, list[str]] = {
     "louvre": [
@@ -92,3 +92,24 @@ def must_see_order(slug: str | None) -> list:
     return [
         case({q: i for i, q in enumerate(qs)}, value=MuseumObject.qid, else_=len(qs))
     ]
+
+
+def has_image_clause():
+    """有图过滤:对象至少有一张可展示图(image_key 或 source_url 非空,且非隔离图)。
+
+    与 must_see_order 同属"馆 TOP-N 是谁"这一个问题:App 藏品列表(浏览面)
+    只给有图件排名,生成/报告用的 top_objects 曾经不过滤,导致两边候选池不同、
+    排出来的第 N 位不是同一件(2026-10-07 橘园 TOP50 实例)。统一到这一个函数,
+    谁用 top_objects / must_see_order 就自动跟 App 列表口径一致。
+    qid 直达与搜索不受影响,只影响"前 N 件是谁"这个排名问题。
+    """
+    return exists().where(
+        and_(
+            ObjectImage.object_id == MuseumObject.id,
+            or_(
+                ObjectImage.image_key.isnot(None),
+                ObjectImage.source_url.isnot(None),
+            ),
+            ObjectImage.role != "view_quarantine",
+        )
+    )
