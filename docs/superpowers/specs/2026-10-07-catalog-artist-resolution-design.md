@@ -62,7 +62,7 @@ _DATES = re.compile(r"\s*\(\d{3,4}-\d{3,4}\)\s*$")
 
 这是 `joconde_catalog.py` 里**一行正则**的改动，不新增字段、不动 schema、不需要迁移——新入库的件从此 `artist_en` 会带着"(atelier)"之类的限定词；已入库的历史数据不受影响（见 §2 非目标）。
 
-### 3.2 解析算法：`resolve_creator_by_name(name, category)`
+### 3.2 解析算法：`resolve_creator_by_name(name)`
 
 新函数，放 `app/services/enrichment/material.py`（与 `resolve_creator_qid` 并列，同属"作者解析"职责）。
 
@@ -105,7 +105,7 @@ _QUALIFIER_MARKERS = (
 
 **步骤 5：跨段裁决**。所有解析成功的段落得到的 qid 取**去重后的集合**——集合大小为 1（包括"只有一段解析成功，其余段失败"的情况）才采信、写回 `artist_qid`；集合大小 ≥2（真正不同的两个人）则整体返回 `None`，不强行二选一。
 
-这是纯函数（给定 name + category，返回 qid 或 None），不读写 DB，方便单独测。网络调用全部走 `material.py` 已有的 `run_query`/HTTP 封装模式（可注入 mock，离线可测）。
+这是纯函数（给定 name，返回 qid 或 None），不读写 DB，方便单独测。**不收 `category` 参数**——原稿留过这个参数但没用上，Fable 评审指出"要么用要么删"，这里选删（YAGNI，真用到类目信息再加不迟）。网络调用是新的注入点（`search_entities`/`get_claims` 两个可选关键字参数，默认打 Wikidata 的 `wbsearchentities`/`wbgetentities`），和 `material.py` 现有函数用的 `run_query`（SPARQL 查询服务）是不同的 API、不同的协议，不能共用同一个注入参数，但沿用同一个"默认真实实现 + 可传参覆盖"的风格，可注入 mock，离线可测。
 
 ### 3.3 接入点
 
@@ -115,7 +115,7 @@ _QUALIFIER_MARKERS = (
 aqid = (o.attributes or {}).get("artist_qid") or _resolve_creator(o.qid)
 if not aqid and o.artist_en and not o.qid.startswith("Q"):
     try:
-        aqid = _resolve_creator_by_name(o.artist_en, o.category)
+        aqid = _resolve_creator_by_name(o.artist_en)
     except Exception:
         aqid = None
 ```
