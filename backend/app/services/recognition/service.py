@@ -19,7 +19,12 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.museum_repo import _photo_credit, _resolve_name, _sized
 from app.services.recognition.demands import record_demand
 from app.services.recognition.events import record_event
-from app.services.recognition.matcher import LOW, build_index, inv_artist_hit, match
+from app.services.recognition.matcher import (
+    LOW,
+    build_index,
+    inv_artist_hit,
+    match_with_trace,
+)
 from app.services.recognition.vector_index import query_index
 from app.services.recognition.vision import identify
 
@@ -433,6 +438,10 @@ def _compute(
         text_trace = {"vision": vis, "matched": []}
         clock.mark("gpt")
         queries = [c["title"] for c in vis["candidates"] if c.get("title")]
+        # 原文标题(如法语原名)一起匹配:库里 13% 作品只有法语标题(spec §2.4)
+        queries += [
+            c["original_title"] for c in vis["candidates"] if c.get("original_title")
+        ]
         # 作者名只作加分线索,绝不当标题探针(肖像画劫持教训,见 matcher.match)
         artist_hints = [c["artist"] for c in vis["candidates"] if c.get("artist")]
         label_lines = (vis.get("label_text") or "").splitlines()
@@ -455,18 +464,18 @@ def _compute(
             inv_hit = inv_artist_hit(index, queries + label_lines, artist_hints)
             text_trace["inv_hit"] = inv_hit
             # 墙签模式:AI 已摘出印着的标题 → 只拿它匹配;整段墙签行只用来抽馆藏号
-            results = (
-                [(inv_hit, 1.0)]
-                if inv_hit
-                else match(
+            if inv_hit:
+                results, raw = [(inv_hit, 1.0)], [[inv_hit, 1.0, True]]
+            else:
+                results, raw = match_with_trace(
                     index,
                     queries,
                     label_lines,
                     artist_hints,
                     label_lines_inv_only=mode == "label" and bool(queries),
                 )
-            )
-            text_trace["matched"] = [[q, round(sc, 3)] for q, sc in results[:5]]
+            # 原始前 5(含没过门槛的,附作者是否对上):文字链复盘与评测用
+            text_trace["matched"] = raw
             top = results[0] if results else None
             # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);
             # 直判只属于向量像素证据,唯一例外是馆藏号+作者双重吻合(inv_hit)。
@@ -483,10 +492,10 @@ def _compute(
                     out["candidates"].append(
                         {**_summary(db, storage, o, language), "score": round(score, 3)}
                     )
-            elif not results:
-                out["reason"] = "not_in_catalog"
+            elif raw:
+                out["reason"] = "low_confidence"  # 有召回,但都不够门槛
             else:
-                out["reason"] = "low_confidence"
+                out["reason"] = "not_in_catalog"
         clock.mark("match")
 
     if out["outcome"] == "unrecognized":  # 仅 GPT 链会到此,vis 必有值

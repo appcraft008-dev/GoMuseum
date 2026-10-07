@@ -83,3 +83,15 @@ def test_multiline_credit_with_uploader_stays_visible():
 def test_misspelled_photo_marker_stays_visible():
     c = "Gabriel Blanchard; Michel Mathieu (phooto)"
     assert _photo_credit(c, {"Gabriel Blanchard"}) == c
+
+
+def test_short_name_matches_full_name_only_when_subset_allowed():
+    # AI 常给短名(Auguste Renoir vs 库里 Pierre-Auguste Renoir):识别加分允许子集,署名不放宽
+    assert same_person("Auguste Renoir", "Pierre-Auguste Renoir", allow_subset=True)
+    assert not same_person("Auguste Renoir", "Pierre-Auguste Renoir")
+    assert not same_person(
+        "Renoir", "Pierre-Auguste Renoir", allow_subset=True
+    )  # 单词不算
+    assert not same_person(
+        "Pieter Brueghel the Elder", "Pieter Brueghel the Younger", allow_subset=True
+    )

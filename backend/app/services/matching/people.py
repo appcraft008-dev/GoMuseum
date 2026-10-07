@@ -8,6 +8,7 @@ prod 10-07 实测:署名与作者名只差词序/逗号/生卒年/修饰词时�
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 from app.services.matching.normalize import normalize
 
@@ -32,8 +33,10 @@ def _words(s: str) -> list[str]:
     return normalize(s).split()
 
 
-def _generation(s: str) -> set[str]:
-    return {_GEN[w] for w in _words(s) if w in _GEN}
+# ponytail: 纯函数按串缓存——识别时每个候选×每个作者名都要比,不缓存时 3/4 耗时花在重复归一化
+@lru_cache(maxsize=65536)
+def _generation(s: str) -> frozenset[str]:
+    return frozenset(_GEN[w] for w in _words(s) if w in _GEN)
 
 
 def _person(s: str) -> frozenset[str]:
@@ -42,16 +45,19 @@ def _person(s: str) -> frozenset[str]:
     )
 
 
-def _people(s: str) -> list[frozenset[str]]:
+@lru_cache(maxsize=65536)
+def _people(s: str) -> tuple[frozenset[str], ...]:
     """一个署名串 → 每个人的词集合(先剥括号里的生卒年/出生地),外加整串一份。"""
     while _PAREN.search(s):
         s = _PAREN.sub(" ", s)
     parts = [_person(p) for p in _SPLIT.split(s)]
     whole = frozenset(w for p in parts for w in p)
-    return [p for p in parts if p] + ([whole] if whole else [])
+    return tuple(p for p in parts if p) + ((whole,) if whole else ())
 
 
-def same_person(a: str | None, b: str | None) -> bool:
+def same_person(a: str | None, b: str | None, allow_subset: bool = False) -> bool:
+    """allow_subset:a 的词集合(≥2 词)是 b 的子集也算——AI 常给短名(「Auguste Renoir」
+    vs 库里「Pierre-Auguste Renoir」)。只给识别作者加分用;署名判同不放宽(CC 署名宁显不藏)。"""
     if not a or not b:
         return False
     if a.strip().casefold() == b.strip().casefold():
@@ -60,7 +66,11 @@ def same_person(a: str | None, b: str | None) -> bool:
     if ga and gb and ga != gb:
         return False
     pb = _people(b)
-    return any(x == y for x in _people(a) for y in pb)
+    return any(
+        x == y or (allow_subset and len(x) >= 2 and x < y)
+        for x in _people(a)
+        for y in pb
+    )
 
 
 def is_artist_credit(credit: str, aliases) -> bool:

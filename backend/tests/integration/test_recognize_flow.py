@@ -123,17 +123,32 @@ def test_text_chain_exact_title_returns_candidates_not_match(session):
 
 
 def test_mid_confidence_returns_candidates(session):
+    # 半对的标题 + 作者对上 → 出候选(作者对上门槛 0.75,spec §3.3)
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        identify_fn=_vision(
+            [{"title": "Origin of the World study", "artist": "Gustave Courbet"}]
+        ),
+    )
+    assert out["outcome"] == "candidates"
+    assert 1 <= len(out["candidates"]) <= 3
+    assert out["candidates"][0]["qid"] == "Q334138"
+    assert 0 < out["candidates"][0]["score"] <= 1
+    assert out["match"] is None
+
+
+def test_half_right_title_without_artist_is_low_confidence(session):
+    # spec §3.3:无作者佐证、标题分 <0.9 → 不出卡,诊断 low_confidence(10-07 起;此前 ≥0.5 就出卡,
+    # 而评测里库外名作/垃圾输入正落在 0.5–0.9,误报 100%)
     out = recognize(
         session,
         "orsay",
         _jpeg(),
         identify_fn=_vision([{"title": "Origin of World painting", "artist": None}]),
     )
-    assert out["outcome"] == "candidates"
-    assert 1 <= len(out["candidates"]) <= 3
-    assert out["candidates"][0]["qid"] == "Q334138"
-    assert 0 < out["candidates"][0]["score"] < 1
-    assert out["match"] is None
+    assert out["outcome"] == "unrecognized" and out["reason"] == "low_confidence"
 
 
 def test_unmatched_records_demand(session):
