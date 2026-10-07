@@ -17,7 +17,9 @@ aqid = (o.attributes or {}).get("artist_qid") or _resolve_creator(o.qid)
 
 `artist_qid` 一旦解析不出来，`generate_object` 里整段作者富化（`_enrich_artist_and_titles`，bio/多语名字/国籍/代表作）都被跳过——不是生成了空字段，是**完全没跑**。
 
-**已知影响面**（`app/services/enrichment/batch_names.py:47-48` 注释）：卢浮宫 17283 件里仅 1 件有 `artist_qid`，10041 件作者名因此没有中文。橘园本次 TOP50 复核实测 38/50 件同样的问题，背后只有 8 个独立作者，手工核实后 7 个已在别馆解析过（跨馆共享生效），只有 1 个（Soutine）是全新作者。只要是走 Joconde 目录（而非 Wikidata 作品清单）铺的馆/件，都会撞到这个缺口，包括未来新上的馆。
+**已知影响面**——这一条原稿引用了 `app/services/enrichment/batch_names.py:47-48` 的注释，把"卢浮宫 17283 件里仅 1 件有 `artist_qid`"当成同一个根因的证据。**写这份 spec 的过程中直接查了 prod 数据，发现这条引用是错的**：卢浮宫全部 17283 件都是真实 Wikidata qid（`Q*`），一件 `joconde-*` 合成 id 都没有（`museums.yaml` 里卢浮宫没配 `joconde_museum`，根本不走 `JocondeCatalog` 这条入库路径）。卢浮宫那 6990 件缺 `artist_qid` 的，`artist_en` 基本也是空的——是"Wikidata 本身没有可用的创作者信息"（很可能是大量无名氏古物/装饰艺术品，本来就没有具体作者），不是这份 spec 要解决的问题，引用已订正，不再把卢浮宫当证据。
+
+真正受影响、且已核实的：`museums.yaml` 里配了 `joconde_museum` 的馆（目前只有 orsay、orangerie）会用 `JocondeCatalog` 批量建 `joconde-*` 合成 id 的件。实测 prod 数据：**奥赛 1628 件 joconde 件全部缺 `artist_qid`**（且都有 `artist_en` 可用，新解析器能直接生效）；**橘园 122 件 joconde 件里 84 件缺**（本次 TOP50 复核撞到的 38 件是这 84 件的子集）。背后不是 84+1628 个不同的人——橘园这次手工核实的 8 个作者里 7 个已经在别馆（主要是奥赛）解析过，跨馆共享天然生效。只要未来新馆配了 `joconde_museum`，新入库的件都会撞到同一个缺口。
 
 ## 2. 目标与非目标
 
@@ -27,7 +29,7 @@ aqid = (o.attributes or {}).get("artist_qid") or _resolve_creator(o.qid)
 - 不建新表/索引缓存。解析结果落 `artists` 表后天然跨馆复用（本次橘园 7/8 命中已验证），新馆增量远低于需要专建缓存的量级。
 - 不做人工审核队列 UI。歧义/查不到 = 留空，维持现状（人工看到缺口再手工处理，就像本次橘园的处理方式）。
 - 不特殊处理真正的多作者作品（夫妻合作、工作室联合署名）——§3.1 的拆分+裁决会让这类情况自然落到"两个不同 qid → 留空"，不额外设计"选哪个作者当代表"的规则。
-- 不给已入库馆（卢浮宫等）回填限定词信息（历史数据 `artist_en` 已经被清洗过，这次改动后新字段不会神奇地补上已经发生过的清洗）。这不等于"信息永久丢失没法补"——Joconde 是外部开放数据集，随时能重新拉取，回填方式是"重新抓目录 + 重跑这个新函数"，属于 §4 已经排除在外的"跨馆存量回填"运维动作，不在本次设计范围内另行规划。
+- 不给已入库馆（奥赛等，真正走过 `JocondeCatalog` 的馆）回填限定词信息（历史数据 `artist_en` 已经被清洗过，这次改动后新字段不会神奇地补上已经发生过的清洗）。这不等于"信息永久丢失没法补"——Joconde 是外部开放数据集，随时能重新拉取，回填方式是"重新抓目录 + 重跑这个新函数"，属于 §4 已经排除在外的"跨馆存量回填"运维动作，不在本次设计范围内另行规划。
 
 ## 3. 方案
 
@@ -49,7 +51,7 @@ _DATES = re.compile(r"\s*\([^)]*\)\s*$")  # 作者尾部"(1844-1926)"
 _DATES = re.compile(r"\s*\((?:\d[\d\s?.,\-–—]*|[^)]*si[eè]cle[^)]*)\)\s*$")
 ```
 
-（具体字符类在实现时跑一遍卢浮宫+橘园全量 `Auteur` 字段核对，不是凑出来的，上面只是方向）。这是 `joconde_catalog.py` 里**一行正则**的改动，不新增字段、不动 schema、不需要迁移——新入库的件从此 `artist_en` 会带着"(atelier)"之类的限定词；已入库的历史数据不受影响（见 §2 非目标）。
+（具体字符类在实现时跑一遍奥赛+橘园全量 `Auteur` 字段核对——这两个馆是真正配了 `joconde_museum`、走 `JocondeCatalog` 入库的馆，不是凑出来的，上面只是方向）。这是 `joconde_catalog.py` 里**一行正则**的改动，不新增字段、不动 schema、不需要迁移——新入库的件从此 `artist_en` 会带着"(atelier)"之类的限定词；已入库的历史数据不受影响（见 §2 非目标）。
 
 ### 3.2 解析算法：`resolve_creator_by_name(name, category)`
 
@@ -118,7 +120,7 @@ if not aqid and o.artist_en and not o.qid.startswith("Q"):
    - `LEON Paul`：会前缀匹配到 Q599801 Léon-Paul Fargue（法国诗人，P106 碰巧也挂了 painter）——验证 §3.2 步骤 2 的词集合精确匹配能把这个候选滤掉，不依赖"唯一候选"兜底。
    - `anonyme;Boucher François (d'après)`（假设 §3.1 的正则修正已生效、限定词没被清洗掉）：验证步骤 0 的前置扫描直接弃权，不会拆分后把 "Boucher François" 这一段单独解析成功再误采信。
    - 裸姓氏 `"ROUSSEAU"`：`limit=5` 下真实能搜出 2 个画家（Henri、Théodore Rousseau，P106 都过得了职业过滤）——数字订正为 2（原稿写的"4 个"是 `limit≥8` 才出现的，已核实订正），2 个已经足够验证"≥2 个合法候选 → 弃权"这条规则，不用追加 limit。Joconde 真实数据里几乎不会出现裸姓氏输入，这条测试是防御性的边界覆盖，不代表预期会被真实数据触发。
-3. **真实数据抽查**：改完后在橘园全馆（141 件，不只 TOP50）+ 卢浮宫抽样（几百个不同署名，覆盖更多限定词/多段署名形态）各跑一次 dry-run（只打印会解析出什么 qid，不落库），人工过一遍输出名单，确认没有明显张冠李戴，再正式跑写库。
+3. **真实数据抽查**：改完后在橘园全馆（141 件，不只 TOP50）+ 奥赛全馆（1628 件 joconde 件，覆盖更多限定词/多段署名形态，样本量也大得多）各跑一次 dry-run（只打印会解析出什么 qid，不落库），人工过一遍输出名单，确认没有明显张冠李戴，再正式跑写库。
 4. 现有 `tests/unit/services/enrichment/` 下的 material/pipeline 相关测试跑一遍确认不回归。
 
 ## 4. 实施范围
@@ -130,4 +132,4 @@ if not aqid and o.artist_en and not o.qid.startswith("Q"):
 - 新增单测：`backend/tests/unit/services/enrichment/test_material.py`（或同目录新文件）覆盖 §3.5 的正样本+反例
 - 不改 DB schema、不改 CLI 参数、不改任何既有已发布内容
 
-跨馆存量回填（卢浮宫等已上线馆的历史缺口，包括重新抓取 Joconde 目录以拿到未清洗的限定词信息）不在本次范围——那是"重新抓目录 + 跑这个新函数"的运维动作，设计落地后按 `docs/ops/backlog.md` 的既有节奏另行安排，不在这份 spec 里规划执行细节。
+跨馆存量回填（奥赛/橘园等已走过 `JocondeCatalog` 的馆的历史缺口，包括重新抓取 Joconde 目录以拿到未清洗的限定词信息）不在本次范围——那是"重新抓目录 + 跑这个新函数"的运维动作，设计落地后按 `docs/ops/backlog.md` 的既有节奏另行安排，不在这份 spec 里规划执行细节。
