@@ -569,19 +569,26 @@ def core_for(index: list[dict]) -> tuple[Core, set[int] | None]:
 ```python
 # _refresh_index_async._run 里
                 index = _build_global(db2)
-                from app.services.matching.index import get_core
-
-                get_core(index)  # 倒排同线程建好,请求线程不碰冷建
+                _warm_core(index)  # 倒排同线程建好,请求线程不碰冷建
                 _index_cache[None] = (time.time(), index)
 ```
 
 ```python
 # build_search_index 冷建分支
         index = _build_global(db)
+        _warm_core(index)
+        _index_cache[None] = (time.time(), index)
+```
+
+```python
+# inprocess.py 模块级新增(两处共用;倒排失败绝不拖垮搜索索引——rank 会退回原分档)
+def _warm_core(index) -> None:
+    try:
         from app.services.matching.index import get_core
 
         get_core(index)
-        _index_cache[None] = (time.time(), index)
+    except Exception:
+        logger.exception("matching core build failed, search falls back to tiers")
 ```
 
 （建倒排要在写进 `_index_cache` **之前**，测试里 `built[0] is _index_cache[None][1]` 只比对象身份，顺序不影响断言；生产上先建再换，换上去的那一刻倒排已就绪。）
@@ -589,7 +596,7 @@ def core_for(index: list[dict]) -> tuple[Core, set[int] | None]:
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `$PY -m pytest tests/unit/services/matching tests/unit/services/search/test_inprocess.py -p no:cacheprovider --no-cov -q`
-Expected: PASS（`test_stale_index_served_without_blocking` 等旧测试 monkeypatch 了 `_build_global` 返回假条目，若假条目缺 `names`/`artists` 键导致 `Core()` 报错，给 `get_core` 调用包 `try/except Exception: logger.exception(...)`——倒排失败不能拖垮搜索索引，`rank` 在 Task 4 里对 `core_for` 失败回退旧档位；把这条写进 ledger 作为 Ruling）
+Expected: PASS。`test_cold_start_builds_synchronously` 把 `_build_global` 换成返回 `[{"museum_id": 7}]`（无 `names` 键）——`_warm_core` 吞掉 `KeyError` 只记日志，测试照旧拿到 `[{"museum_id": 7}]`，这正是 `_warm_core` 要包 try 的原因。
 
 - [ ] **Step 5: prod 规模内存与建索引耗时（本地，读）**
 
@@ -1051,7 +1058,9 @@ def recognize(index, queries, label_lines, artist_hints=None, limit=5, label_lin
     ocr_norm = "" if label_lines_inv_only else normalize(" ".join(label_lines))
     hints = [h for h in (artist_hints or []) if h]
     if not label_lines_inv_only:
-        hints += label_lines  # 墙签原文里的作者行同样是作者证据
+        # 墙签里单独成行的作者名(「Henri-Edmond Cross」)同样是作者证据;整行长句命中不了
+        # same_person(词集合要相等),长句靠下面「作者名是墙签原文子串」那一路
+        hints += label_lines
     core, allowed = core_for(index)
 
     cand: dict[int, float] = {}
@@ -1116,7 +1125,7 @@ def match(index, queries, label_lines, artist_hints=None, limit: int = 5, label_
         ):
 ```
 
-（`hints` 用未归一化的 `artist_hints` 原串；import `from app.services.matching.people import same_person`。）
+（同时把该函数里 `hints = [normalize(a) for a in (artist_hints or []) if a]` 改为 `hints = [a for a in (artist_hints or []) if a]`（`same_person` 自己会归一化）；import `from app.services.matching.people import same_person`。）
 
 - [ ] **Step 5: 跑匹配测试，处理一条预期内的行为变化**
 
@@ -1267,10 +1276,29 @@ _LABEL_SYSTEM = (
                 out["reason"] = "not_in_catalog"
 ```
 
-- [ ] **Step 4: 跑识别全部测试**
+- [ ] **Step 4: 跑识别全部测试，处理一条预期内的行为变化**
 
 Run: `$PY -m pytest tests/unit/services/recognition tests/integration/test_recognize_flow.py -p no:cacheprovider --no-cov -q`
-Expected: 全部 PASS（`test_text_path_event_keeps_vision_and_match_trace` 读 `tr["matched"][0][0]`，新格式第一个元素仍是 qid）。
+Expected: 除下面一条外全部 PASS（`test_text_path_event_keeps_vision_and_match_trace` 读 `tr["matched"][0][0]`，新格式第一个元素仍是 qid）。
+
+`tests/integration/test_recognize_flow.py::test_mid_confidence_returns_candidates` 会 FAIL：它用 `"Origin of World painting"`、无作者，标题分实测 0.638——旧逻辑 ≥LOW(0.5) 出候选，新逻辑无作者要 ≥0.9 → `unrecognized/low_confidence`。**这是 spec §3.3 的有意变化**（评测里库外名作与垃圾输入的分数正落在 0.5–0.9 这段，靠它切掉 100%→20%/0% 的误报），不是 bug。改写为两条，并记 Ruling「候选档语义:无作者佐证的半对猜测不再出卡」：
+
+```python
+def test_mid_confidence_returns_candidates(...):  # 沿用原 fixture/调用方式
+    # 半对的标题 + 作者对上 → 出候选(作者 ≥0.75 门槛)
+    vis = {"candidates": [{"title": "Origin of the World study", "artist": "Gustave Courbet"}], ...}
+    ...
+    assert out["outcome"] == "candidates" and 0 < out["candidates"][0]["score"] <= 1
+
+
+def test_half_right_title_without_artist_is_low_confidence(...):
+    # spec §3.3:无作者佐证、标题分 <0.9 → 不出卡,诊断 low_confidence
+    vis = {"candidates": [{"title": "Origin of World painting", "artist": None}], ...}
+    ...
+    assert out["outcome"] == "unrecognized" and out["reason"] == "low_confidence"
+```
+
+（先读原测试 118–140 行照抄 fixture 与调用；`"origin of the world study"` vs `"the origin of the world"` 的标题分在实现时实算一次，必须 ≥0.75，否则换成 `"The Origin of the World"` 并在注释说明。）其余测试有失败先查 bug，不准顺手改断言。
 
 - [ ] **Step 5: Commit**
 
