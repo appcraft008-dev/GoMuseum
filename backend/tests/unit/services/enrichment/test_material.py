@@ -576,28 +576,25 @@ _Q64309678 = [
 
 
 def test_resolve_creator_prefers_better_sourced_claim():
-    from app.services.enrichment.material import resolve_creator_qid
+    from app.services.enrichment.material import _creator_from_rows
 
-    assert resolve_creator_qid("Q64309678", run_query=lambda s: _Q64309678) == "Q35548"
+    assert _creator_from_rows(_Q64309678) == "Q35548"
     # 行序不该影响结果 —— SPARQL 不保证顺序,这正是旧代码的病根
-    assert (
-        resolve_creator_qid("Q64309678", run_query=lambda s: _Q64309678[::-1])
-        == "Q35548"
-    )
+    assert _creator_from_rows(_Q64309678[::-1]) == "Q35548"
 
 
 def test_resolve_creator_rank_beats_qualifier():
-    from app.services.enrichment.material import resolve_creator_qid
+    from app.services.enrichment.material import _creator_from_rows
 
     rows = [
         _creator_row("Q1", cert="Q30230067", rank="PreferredRank"),
         _creator_row("Q2", refs=9),  # 无限定 + 多引用,但只是 normal rank
     ]
-    assert resolve_creator_qid("Qx", run_query=lambda s: rows) == "Q1"
+    assert _creator_from_rows(rows) == "Q1"
 
 
 def test_resolve_creator_skips_blank_node_and_deprecated():
-    from app.services.enrichment.material import resolve_creator_qid
+    from app.services.enrichment.material import _creator_from_rows
 
     rows = [
         {
@@ -606,7 +603,7 @@ def test_resolve_creator_skips_blank_node_and_deprecated():
         },
         _creator_row("Q7", rank="DeprecatedRank"),
     ]
-    assert resolve_creator_qid("Qx", run_query=lambda s: rows) is None
+    assert _creator_from_rows(rows) is None
 
 
 def test_fetch_artist_facts_with_artist_qid_does_not_traverse_p170():
@@ -1134,3 +1131,125 @@ def test_label_rows_match_sparql_shape():
 
     rows = _label_rows(_E["Q35548"])
     assert {"l": {"xml:lang": "en", "value": "Paul Cézanne"}} in rows
+
+
+import copy as _copy
+
+
+def _p170(aq, rank="normal", certs=(), refs=0, snaktype="value"):
+    """按真实夹具形状造 P170 语句(形状由 test_p170_helper_matches_real_shape 钉住)。"""
+    st = _copy.deepcopy(_E["Q64309678"]["claims"]["P170"][0])
+    st["rank"] = rank
+    st["mainsnak"]["snaktype"] = snaktype
+    if snaktype == "value":
+        st["mainsnak"]["datavalue"]["value"]["id"] = aq
+        st["mainsnak"]["datavalue"]["value"]["numeric-id"] = int(aq[1:])
+    else:
+        st["mainsnak"].pop("datavalue", None)
+    q0 = _copy.deepcopy(_E["Q64309678"]["claims"]["P170"][0]["qualifiers"]["P1480"][0])
+    quals = []
+    for kind, val in certs:
+        q = _copy.deepcopy(q0)
+        q["snaktype"] = kind
+        if kind == "value":
+            q["datavalue"]["value"]["id"] = val
+        else:
+            q.pop("datavalue", None)
+        quals.append(q)
+    st["qualifiers"] = {"P1480": quals} if quals else {}
+    ref0 = _E["Q64309678"]["claims"]["P170"][0]["references"][0]
+    st["references"] = [_copy.deepcopy(ref0) for _ in range(refs)]
+    return st
+
+
+# ⚠️ 不能叫 _work:本文件已有 _work(n)(代表作测试在用),同名会整模块覆盖。
+# 作品编号必须是 ^Q\d+$,否则被 resolve_creator_qid 的非 Wikidata 守卫直接返回 None,测试就不再走归组逻辑。
+_WORK_QID = "Q900000001"
+
+
+def _p170_entity(*sts):
+    return {_WORK_QID: {"id": _WORK_QID, "claims": {"P170": list(sts)}}}
+
+
+def _resolve(ents):
+    from app.services.enrichment.material import resolve_creator_qid
+
+    return resolve_creator_qid(_WORK_QID, get_entities=lambda ids, **k: ents)
+
+
+def test_p170_helper_matches_real_shape():
+    real = _E["Q64309678"]["claims"]["P170"][0]
+    made = _p170("Q35548", certs=[("value", "Q18122778")], refs=1)
+    assert made["mainsnak"] == real["mainsnak"]
+    assert (
+        made["qualifiers"]["P1480"][0]["datavalue"]
+        == real["qualifiers"]["P1480"][0]["datavalue"]
+    )
+
+
+def test_resolve_creator_real_q64309678_prefers_cezanne():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    assert resolve_creator_qid("Q64309678", get_entities=_fake_get()) == "Q35548"
+
+
+def test_resolve_creator_real_unknown_value_is_none():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    assert resolve_creator_qid("Q104479426", get_entities=_fake_get()) is None
+
+
+def test_creator_refs_summed_across_duplicate_statements_changes_winner():
+    """spec §3.1:同作者同 rank 同 cert 两条语句(2、3 条引用)→ 一个 refs=5 候选,胜过 refs=4 的 B。
+    若不相加,A 最多 3 < 4,胜者会变成 B。"""
+    ents = _p170_entity(_p170("Q1", refs=2), _p170("Q1", refs=3), _p170("Q2", refs=4))
+    assert _resolve(ents) == "Q1"
+
+
+def test_creator_multi_p1480_on_one_statement_uses_best():
+    ents = _p170_entity(
+        _p170(
+            "Q1", certs=[("value", "Q30230067"), ("value", "Q18122778")]
+        ),  # possibly + presumably
+        _p170("Q2", certs=[("value", "Q30230067")], refs=5),  # possibly
+    )
+    assert _resolve(ents) == "Q1"
+
+
+def test_creator_p1480_unknown_value_ranks_between_presumably_and_possibly():
+    ents = _p170_entity(
+        _p170("Q1", certs=[("somevalue", None)]),
+        _p170("Q2", certs=[("value", "Q30230067")]),
+    )
+    assert _resolve(ents) == "Q1"
+    ents = _p170_entity(
+        _p170("Q1", certs=[("somevalue", None)]),
+        _p170("Q3", certs=[("value", "Q18122778")]),
+    )
+    assert _resolve(ents) == "Q3"
+
+
+def test_creator_p1480_novalue_counts_as_no_qualifier():
+    ents = _p170_entity(
+        _p170("Q1", certs=[("novalue", None)]),
+        _p170("Q2", certs=[("value", "Q18122778")], refs=9),
+    )
+    assert _resolve(ents) == "Q1"
+
+
+def test_creator_deprecated_and_unknown_statements_excluded():
+    ents = _p170_entity(
+        _p170("Q1", rank="deprecated", refs=9),
+        _p170(None, snaktype="somevalue"),
+        _p170("Q2"),
+    )
+    assert _resolve(ents) == "Q2"
+
+
+def test_resolve_creator_skips_non_wikidata_id():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    def boom(*a, **k):
+        raise AssertionError("不该对非 Wikidata 编号发请求")
+
+    assert resolve_creator_qid("joconde-00000089446", get_entities=boom) is None

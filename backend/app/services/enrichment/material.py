@@ -103,22 +103,68 @@ def creator_candidate(row, *, var="artist"):
     return key, aq
 
 
-def resolve_creator_qid(qid, *, run_query=None) -> str | None:
+_ENTITY_IRI = "http://www.wikidata.org/entity/"
+_RANK_IRI = {
+    "preferred": "PreferredRank",
+    "normal": "NormalRank",
+    "deprecated": "DeprecatedRank",
+}
+
+
+def _creator_rows(entity: dict) -> list[dict]:
+    """转换层:P170 语句 → 与旧 _CREATOR_QUERY 同形的行(spec §3.1)。
+
+    旧 SPARQL 对同一语句的 P1480 × 引用交叉相乘,再按 (artist, rank, cert) 分组 COUNT(?ref):
+    同组多条语句的引用数**相加**;一条语句多个 P1480 各成一组。P1480 本身是「未知值」时
+    旧查询绑到 blank node → creator_candidate 视为未知限定词(_CERT_UNKNOWN),这里用非 QID
+    占位值复现;P1480「无值」旧查询不绑定 → 等同无限定。作者本身未知/无值 → 不产行。"""
+    groups: dict = {}
+    for st in ((entity or {}).get("claims") or {}).get("P170", []):
+        aq = _wa.entity_id(st)
+        if not aq:
+            continue
+        certs = []
+        for q in (st.get("qualifiers") or {}).get("P1480", []):
+            if q.get("snaktype") == "value":
+                certs.append(q["datavalue"]["value"]["id"])
+            elif q.get("snaktype") == "somevalue":
+                certs.append("somevalue")
+        rank = _RANK_IRI.get(st.get("rank"), "NormalRank")
+        refs = len(st.get("references") or [])
+        for cert in certs or [None]:
+            groups[(aq, rank, cert)] = groups.get((aq, rank, cert), 0) + refs
+    rows = []
+    for (aq, rank, cert), n in groups.items():
+        row = {
+            "artist": {"value": _ENTITY_IRI + aq},
+            "rank": {"value": "http://wikiba.se/ontology#" + rank},
+            "refs": {"value": str(n)},
+        }
+        if cert:
+            row["cert"] = {"value": _ENTITY_IRI + cert}
+        rows.append(row)
+    return rows
+
+
+def _creator_from_rows(rows) -> str | None:
+    """解析层(原 resolve_creator_qid 的择优,原样搬出)。"""
+    cands = [c for c in (creator_candidate(r) for r in rows or []) if c]
+    return min(cands)[1] if cands else None
+
+
+def resolve_creator_qid(qid, *, get_entities=None) -> str | None:
     """作品 QID → **唯一**作者 QID。多值时按 (rank, 不确定性限定词, 引用数) 择优。
 
     全流程只应调这一次,结果传给 fetch_artist_facts / fetch_artist_material。
-    无作者、或 P170 是"未知值"(blank node)→ None(宁缺毋滥,不猜)。
+    无作者、或 P170 是"未知值"→ None(宁缺毋滥,不猜)。非 Wikidata 编号 → None,不发请求。
     """
-    run_query = run_query or _default_artist_query
-    cands = [
-        c
-        for c in (
-            creator_candidate(r)
-            for r in run_query(_CREATOR_QUERY.format(qid=qid)) or []
-        )
-        if c
-    ]
-    return min(cands)[1] if cands else None
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return None
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([qid], props="claims").get(qid)
+    return _creator_from_rows(_creator_rows(ent))
 
 
 _ARTIST_QUERY = """
