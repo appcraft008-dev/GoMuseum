@@ -650,6 +650,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideNotGenerated => '讲解暂未生成';
 
   @override
+  String get guideDailyCap => '今日讲解生成名额已满，明天再来看看吧';
+
+  @override
   String get audioNotReady => '讲解生成后可听';
 
   @override
@@ -1815,6 +1818,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get guideNotGenerated => '講解暫未生成';
+
+  @override
+  String get guideDailyCap => '今日講解生成名額已滿，明天再來看看吧';
 
   @override
   String get audioNotReady => '講解生成後可聽';

@@ -371,6 +371,7 @@
   "camSearch": "Search",
   "guideUnavailable": "No guide for this artwork in this language yet",
   "guideNotGenerated": "Guide not generated yet",
+  "guideDailyCap": "Today's limit for writing new guides has been reached — please check back tomorrow",
   "audioNotReady": "Audio available once the guide is ready",
   "audioFailed": "Audio unavailable, please retry",
   "deepGenerating": "Generating in-depth content…",

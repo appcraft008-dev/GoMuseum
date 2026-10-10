@@ -674,6 +674,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get guideNotGenerated => 'Przewodnik jeszcze nie wygenerowany';
 
   @override
+  String get guideDailyCap =>
+      'Osiągnięto dzienny limit tworzenia przewodników — zajrzyj jutro';
+
+  @override
   String get audioNotReady => 'Audio dostępne po przygotowaniu przewodnika';
 
   @override

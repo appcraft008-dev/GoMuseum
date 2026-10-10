@@ -652,6 +652,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guideNotGenerated => 'ガイドはまだ生成されていません';
 
   @override
+  String get guideDailyCap => '本日のガイド作成枠に達しました。明日またお試しください';
+
+  @override
   String get audioNotReady => '解説の生成後に再生できます';
 
   @override

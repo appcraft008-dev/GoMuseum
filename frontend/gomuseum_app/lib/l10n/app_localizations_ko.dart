@@ -653,6 +653,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get guideNotGenerated => '아직 가이드가 생성되지 않았습니다';
 
   @override
+  String get guideDailyCap => '오늘의 가이드 생성 한도에 도달했습니다. 내일 다시 확인해 주세요';
+
+  @override
   String get audioNotReady => '해설 생성 후 들을 수 있습니다';
 
   @override

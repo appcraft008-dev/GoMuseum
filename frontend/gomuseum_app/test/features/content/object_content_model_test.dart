@@ -54,4 +54,12 @@ void main() {
     expect(c.tabs, isEmpty);
     expect(c.facts.artist, isNull);
   });
+
+  test('unavailable_reason:daily_cap = 当日懒生成名额已满;老后端缺字段 → false', () {
+    expect(
+        ObjectContent.fromJson(const {'unavailable_reason': 'daily_cap'})
+            .dailyCapReached,
+        isTrue);
+    expect(ObjectContent.fromJson(const {}).dailyCapReached, isFalse);
+  });
 }
