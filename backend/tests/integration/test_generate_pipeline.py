@@ -974,7 +974,7 @@ def test_generate_object_passes_country_lang_to_artist_material(session, monkeyp
     seen = {}
 
     def fake_artist_material(
-        qid, registry, *, run_query=None, country_lang="fr", artist_qid=None
+        qid, registry, *, get_entities=None, country_lang="fr", artist_qid=None
     ):
         seen["country_lang"] = country_lang
         return {}

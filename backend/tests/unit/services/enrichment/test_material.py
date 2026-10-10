@@ -34,13 +34,10 @@ def test_fetch_object_material_empty_when_no_contribs():
     assert fetch_object_material("Q1", {}, {}, reg) == {}
 
 
-def test_fetch_artist_material_via_injected_query():
+def test_fetch_artist_material_uses_sitelink_titles():
     from app.services.enrichment.material import fetch_artist_material
-    from app.services.enrichment.registry import SourceRegistry
-    from app.services.enrichment.sources.base import ObjectContribution, Source
 
-    def fake_run_query(sparql):
-        return [{"al_en": {"value": "https://en.wikipedia.org/wiki/Gustave_Courbet"}}]
+    seen = {}
 
     class _Wiki(Source):
         name = "wikipedia"
@@ -49,35 +46,26 @@ def test_fetch_artist_material_via_injected_query():
             return []
 
         def enrich(self, qid, ext, ctx):
-            t = (ctx.get("wiki_titles") or {}).get("en")
-            return (
-                ObjectContribution(
-                    source="wikipedia",
-                    qid=qid,
-                    fields={"extract_en": f"bio of {t}"},
-                    raw={},
-                )
-                if t
-                else None
+            seen["titles"] = ctx.get("wiki_titles")
+            return ObjectContribution(
+                source="wikipedia", qid=qid, fields={"extract_en": "bio"}, raw={}
             )
 
-    reg = SourceRegistry([_Wiki()])
-    out = fetch_artist_material("Q1", reg, run_query=fake_run_query, country_lang="fr")
-    assert out["artist_extract_en"] == "bio of Gustave_Courbet"
-
-
-def test_fetch_artist_material_empty_when_no_artist():
-    from app.services.enrichment.material import fetch_artist_material
-    from app.services.enrichment.registry import SourceRegistry
-
+    calls = []
     out = fetch_artist_material(
-        "Q1", SourceRegistry([]), run_query=lambda s: [], country_lang="fr"
+        "Q64309678",
+        SourceRegistry([_Wiki()]),
+        get_entities=_fake_get(calls),
+        country_lang="fr",
+        artist_qid="Q35548",
     )
-    assert out == {}
+    assert seen["titles"] == {"en": "Paul Cézanne", "fr": "Paul Cézanne"}
+    assert out == {"artist_extract_en": "bio"}
+    assert calls == [(("Q35548",), "sitelinks", ())]
 
 
 def test_fetch_artist_facts_parses_structured():
-    from app.services.enrichment.material import fetch_artist_facts
+    from app.services.enrichment.material import _artist_facts_from_rows
 
     def fake(sparql):
         return [
@@ -91,20 +79,20 @@ def test_fetch_artist_facts_parses_structured():
             {"natLabel": {"value": "France"}, "workLabel": {"value": "Olympia"}},
         ]
 
-    f = fetch_artist_facts("Q1", run_query=fake)
+    f = _artist_facts_from_rows(fake(None))
     assert f["artist_birth"] == "1832" and f["artist_death"] == "1883"
     assert f["artist_nationality"] == "France"
     assert f["artist_notable_works"] == ["Olympia", "The Fifer"]  # 去重保序
 
 
 def test_fetch_artist_facts_empty_on_no_rows():
-    from app.services.enrichment.material import fetch_artist_facts
+    from app.services.enrichment.material import _artist_facts_from_rows
 
-    assert fetch_artist_facts("Q1", run_query=lambda s: []) == {}
+    assert _artist_facts_from_rows([]) == {}
 
 
 def test_fetch_artist_facts_skips_raw_qid_works():
-    from app.services.enrichment.material import fetch_artist_facts
+    from app.services.enrichment.material import _artist_facts_from_rows
 
     def fake(sparql):
         return [
@@ -113,24 +101,9 @@ def test_fetch_artist_facts_skips_raw_qid_works():
             {"natLabel": {"value": "France"}},
         ]
 
-    f = fetch_artist_facts("Q1", run_query=fake)
+    f = _artist_facts_from_rows(fake(None))
     assert f["artist_notable_works"] == ["Homage to Cézanne"]  # QID 被过滤
     assert f["artist_nationality"] == "France"
-
-
-def test_fetch_artist_facts_returns_artist_qid():
-    from app.services.enrichment.material import fetch_artist_facts
-
-    def fake(sparql):
-        return [
-            {
-                "artist": {"value": "http://www.wikidata.org/entity/Q296"},
-                "natLabel": {"value": "Netherlands"},
-            }
-        ]
-
-    f = fetch_artist_facts("Q1", run_query=fake)
-    assert f["artist_qid"] == "Q296"
 
 
 def test_fetch_wikidata_labels():
@@ -604,37 +577,6 @@ def test_resolve_creator_skips_blank_node_and_deprecated():
         _creator_row("Q7", rank="DeprecatedRank"),
     ]
     assert _creator_from_rows(rows) is None
-
-
-def test_fetch_artist_facts_with_artist_qid_does_not_traverse_p170():
-    """给定作者时必须直接问该实体 —— 否则多作者会逐行串味(qid 来自 A、生年来自 B)。"""
-    from app.services.enrichment.material import fetch_artist_facts
-
-    seen = {}
-
-    def fake(sparql):
-        seen["sparql"] = sparql
-        return [{"birth": {"value": "1839-01-19T00:00:00Z"}}]
-
-    f = fetch_artist_facts("Q64309678", run_query=fake, artist_qid="Q35548")
-    assert "wdt:P170" not in seen["sparql"] and "wd:Q35548" in seen["sparql"]
-    assert f["artist_qid"] == "Q35548" and f["artist_birth"] == "1839"
-
-
-def test_fetch_artist_material_with_artist_qid_does_not_traverse_p170():
-    from app.services.enrichment.material import fetch_artist_material
-    from app.services.enrichment.registry import SourceRegistry
-
-    seen = {}
-
-    def fake(sparql):
-        seen["sparql"] = sparql
-        return []
-
-    fetch_artist_material(
-        "Q64309678", SourceRegistry([]), run_query=fake, artist_qid="Q35548"
-    )
-    assert "wdt:P170" not in seen["sparql"] and "wd:Q35548" in seen["sparql"]
 
 
 def test_fetch_creators_batch_picks_same_winner_as_single():
@@ -1253,3 +1195,73 @@ def test_resolve_creator_skips_non_wikidata_id():
         raise AssertionError("不该对非 Wikidata 编号发请求")
 
     assert resolve_creator_qid("joconde-00000089446", get_entities=boom) is None
+
+
+def test_artist_facts_and_material_empty_without_artist_qid():
+    """spec §2.2/§4.1:artist_qid 为空 = 无作者或故意弃权,不再遍历 P170(哈希作者的来源)。"""
+    from app.services.enrichment.material import (
+        fetch_artist_facts,
+        fetch_artist_material,
+    )
+
+    def boom(*a, **k):
+        raise AssertionError("artist_qid 为空时不该发请求")
+
+    assert fetch_artist_facts("Q104479426", get_entities=boom) == {}
+    assert (
+        fetch_artist_material("Q104479426", SourceRegistry([]), get_entities=boom) == {}
+    )
+
+
+def test_fetch_artist_facts_real_cezanne_skips_deprecated_death():
+    from app.services.enrichment.material import fetch_artist_facts
+
+    f = fetch_artist_facts("Q64309678", get_entities=_fake_get(), artist_qid="Q35548")
+    assert f["artist_qid"] == "Q35548"
+    assert f["artist_birth"] == "1839" and f["artist_death"] == "1906"
+    assert f["artist_nationality"] == "France"
+    expected = [
+        _E[s["mainsnak"]["datavalue"]["value"]["id"]]["labels"]["en"]["value"]
+        for s in _E["Q35548"]["claims"]["P800"]
+        if s["rank"] != "deprecated"
+        and _E.get(s["mainsnak"]["datavalue"]["value"]["id"], {})
+        .get("labels", {})
+        .get("en")
+    ][:5]
+    assert f["artist_notable_works"] == expected
+
+
+def test_fetch_artist_facts_real_raphael_tied_preferred_and_deprecated_nationality():
+    """拉斐尔:P569 两条 preferred(同为 1483),P27 normal 意大利城邦 + deprecated Q38 → 取第一条、排除 deprecated。"""
+    from app.services.enrichment.material import fetch_artist_facts
+
+    f = fetch_artist_facts("Qx", get_entities=_fake_get(), artist_qid="Q5597")
+    assert f["artist_birth"] == "1483" and f["artist_death"] == "1520"
+    assert f["artist_nationality"] == _E["Q12548"]["labels"]["en"]["value"]
+
+
+def test_fetch_artist_facts_unknown_birth_not_stored_as_http():
+    """spec §4.2:生年是「未知值」时不再存成 'http'。"""
+    from app.services.enrichment.material import fetch_artist_facts
+
+    art = _copy.deepcopy(_E["Q35548"])
+    art["claims"]["P569"][0]["mainsnak"]["snaktype"] = "somevalue"
+    art["claims"]["P569"][0]["mainsnak"].pop("datavalue")
+    f = fetch_artist_facts(
+        "Qx",
+        get_entities=lambda ids, **k: {
+            "Q35548": art,
+            **{q: _E[q] for q in ids if q in _E and q != "Q35548"},
+        },
+        artist_qid="Q35548",
+    )
+    assert "artist_birth" not in f and f["artist_death"] == "1906"
+
+
+def test_artist_fact_rows_fill_raw_qid_when_no_english_label():
+    from app.services.enrichment.material import _artist_fact_rows
+
+    art = {"claims": {"P800": [_copy.deepcopy(_E["Q35548"]["claims"]["P800"][0])]}}
+    art["claims"]["P800"][0]["mainsnak"]["datavalue"]["value"]["id"] = "Q999999999"
+    rows = _artist_fact_rows(art, lambda ids, **k: {})
+    assert rows == [{"workLabel": {"value": "Q999999999"}}]

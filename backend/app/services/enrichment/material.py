@@ -229,17 +229,38 @@ SELECT ?artist ?birth ?death ?natLabel ?workLabel WHERE {{
 """
 
 
-def fetch_artist_facts(qid, *, run_query=None, artist_qid=None) -> dict:
-    """作者 Wikidata 实体结构化属性 → {artist_birth/death/nationality/notable_works}。无→{}。
+def _wd_time(t: str) -> str:
+    """wbgetentities 的 '+1483-04-06T…' → SPARQL 同形 '1483-04-06T…'(旧解析取 [:4])。"""
+    return t[1:] if t.startswith("+") else t
 
-    artist_qid 已由 resolve_creator_qid 定好时直接问该实体 —— 多作者作品必须走这条,
-    否则字段会跨作者串味。不传则退回 P170 遍历(兼容老调用点)。
-    """
-    run_query = run_query or _default_artist_query
-    if artist_qid:
-        rows = run_query(_ARTIST_FACTS_BY_ARTIST_QUERY.format(aqid=artist_qid))
-    else:
-        rows = run_query(_ARTIST_FACTS_QUERY.format(qid=qid))
+
+def _artist_fact_rows(entity: dict, fetch) -> list[dict]:
+    """转换层:作者实体 → 与旧 _ARTIST_FACTS_BY_ARTIST_QUERY 同形的行。
+    主值规则见 wikidata_api.best_statements;无英文名的值填原始 QID(旧 label 服务行为,
+    解析层 _is_raw_qid 照旧过滤)。"""
+    births = [t for t in map(_wa.time_value, _wa.best_statements(entity, "P569")) if t]
+    deaths = [t for t in map(_wa.time_value, _wa.best_statements(entity, "P570")) if t]
+    nats = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P27")) if q]
+    works = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P800")) if q]
+    en = _wa.labels_of(list(dict.fromkeys(nats + works)), ["en"], fetch)
+
+    def lab(q):
+        return (en.get(q) or {}).get("en") or q
+
+    cols = {
+        "birth": [_wd_time(t) for t in births],
+        "death": [_wd_time(t) for t in deaths],
+        "natLabel": [lab(q) for q in nats],
+        "workLabel": [lab(q) for q in works],
+    }
+    n = max((len(v) for v in cols.values()), default=0)
+    return [
+        {k: {"value": v[i]} for k, v in cols.items() if i < len(v)} for i in range(n)
+    ]
+
+
+def _artist_facts_from_rows(rows, artist_qid=None) -> dict:
+    """解析层(原 fetch_artist_facts 逐行解析;删去 P170 遍历的 artist 列分支,spec §4.1)。"""
     if not rows:
         return {"artist_qid": artist_qid} if artist_qid else {}
     out = {"artist_qid": artist_qid} if artist_qid else {}
@@ -254,10 +275,6 @@ def fetch_artist_facts(qid, *, run_query=None, artist_qid=None) -> dict:
             nat = None
         if w and _is_raw_qid(w):
             w = None
-        if "artist_qid" not in out:
-            au = (row.get("artist") or {}).get("value", "")
-            if au:
-                out["artist_qid"] = au.rsplit("/", 1)[-1]
         if b and "artist_birth" not in out:
             out["artist_birth"] = b[:4]
         if d and "artist_death" not in out:
@@ -269,6 +286,19 @@ def fetch_artist_facts(qid, *, run_query=None, artist_qid=None) -> dict:
     if works:
         out["artist_notable_works"] = works[:5]
     return out
+
+
+def fetch_artist_facts(qid, *, get_entities=None, artist_qid=None) -> dict:
+    """作者 Wikidata 实体结构化属性 → {artist_birth/death/nationality/notable_works}。
+
+    artist_qid 必须由 resolve_creator_qid 定好;为空 → {}。旧实现为空时遍历作品 P170,
+    「未知值」的 blank node 哈希会被当作者 QID 写回(prod 61 件假作者卡,spec §4.1)。
+    """
+    if not artist_qid:
+        return {}
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([artist_qid], props="claims").get(artist_qid) or {}
+    return _artist_facts_from_rows(_artist_fact_rows(ent, get_entities), artist_qid)
 
 
 _LABELS_QUERY = """
@@ -420,28 +450,25 @@ def fetch_wikidata_labels_batch(qids, langs: list, *, run_query=None) -> dict:
 
 
 def fetch_artist_material(
-    qid, registry, *, run_query=None, country_lang="fr", artist_qid=None
+    qid, registry, *, get_entities=None, country_lang="fr", artist_qid=None
 ) -> dict:
-    """抓作者实体 Wikipedia(作者→维基标题→extract)。无作者/无维基→{}。
+    """抓作者实体 Wikipedia(作者→维基条目名→extract)。无作者/无维基→{}。
 
-    artist_qid 已定则直接问该实体;不传则退回作品→P170 遍历(兼容老调用点)。
+    artist_qid 必须由 resolve_creator_qid 先定好;为空 = 无作者或故意弃权 → {}
+    (不再遍历 P170,spec §2.2/§4)。条目名直接用 sitelinks 完整 title(旧实现 rsplit("/")
+    会截断含 / 的条目名,spec §4.3)。
     """
-    run_query = run_query or _default_artist_query
-    cl = country_lang or "fr"
-    if artist_qid:
-        rows = run_query(_ARTIST_TITLES_QUERY.format(aqid=artist_qid, cl=cl))
-    else:
-        rows = run_query(_ARTIST_QUERY.format(qid=qid, cl=cl))
-    if not rows:
+    if not artist_qid:
         return {}
-    row = rows[0]
+    get_entities = get_entities or _wa.get_entities
+    cl = country_lang or "fr"
+    ent = get_entities([artist_qid], props="sitelinks").get(artist_qid) or {}
+    sl = ent.get("sitelinks") or {}
     titles = {}
-    se = (row.get("al_en") or {}).get("value")
-    if se:
-        titles["en"] = se.rsplit("/", 1)[-1]
-    scl = (row.get("al_cl") or {}).get("value")
-    if scl:
-        titles[country_lang or "fr"] = scl.rsplit("/", 1)[-1]
+    if (sl.get("enwiki") or {}).get("title"):
+        titles["en"] = sl["enwiki"]["title"]
+    if (sl.get(f"{cl}wiki") or {}).get("title"):
+        titles[cl] = sl[f"{cl}wiki"]["title"]
     if not titles:
         return {}
     wiki = registry.get("wikipedia")
