@@ -191,7 +191,7 @@ def generate_object(
         pool.submit(
             _ev.fetch_rich_facts,
             o.qid,
-            run_query=None if registry is not None else (lambda _sparql: []),
+            get_entities=None if registry is not None else (lambda ids, **kw: {}),
         )
         if o.evidence_pack is None or force
         else None
@@ -208,8 +208,8 @@ def generate_object(
 
         try:
             aqid = known_aqid or (f_cre.result() if f_cre else None)
-        except Exception:
-            logger.warning("prep: resolve creator failed for %s", qid)
+        except Exception as e:
+            logger.warning("prep: resolve creator failed for %s: %r", qid, e)
             aqid = known_aqid
 
         # P170 这条路查不到 qid,且不是真 Wikidata 作品(joconde-* 合成 id)
@@ -272,14 +272,14 @@ def generate_object(
             if ti.get("zh") and not o.title_zh:
                 o.title_zh = ti["zh"]
             db.flush()
-        except Exception:
-            logger.warning("prep: title labels failed for %s", qid)
+        except Exception as e:
+            logger.warning("prep: title labels failed for %s: %r", qid, e)
 
         # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
         try:
             artist_mat = f_amat.result()
-        except Exception:
-            logger.warning("prep: artist material failed for %s", qid)
+        except Exception as e:
+            logger.warning("prep: artist material failed for %s: %r", qid, e)
             artist_mat = {}
         if artist_mat:
             o.attributes = {**(o.attributes or {}), **artist_mat}
@@ -289,8 +289,8 @@ def generate_object(
         if f_af is not None:
             try:
                 af = f_af.result()
-            except Exception:
-                logger.warning("prep: artist facts failed for %s", qid)
+            except Exception as e:
+                logger.warning("prep: artist facts failed for %s: %r", qid, e)
         # 结构化属性抓失败不等于没作者:已解析的 aqid 要留着,否则下面整段作者块
         # (bio/名字)被静默跳过。2026-09-27 小皇宫《好撒玛利亚人》Q65734706 就这样没了作者简介。
         if aqid:
@@ -443,8 +443,8 @@ def generate_object(
     if f_rich is not None:
         try:
             rich = f_rich.result()
-        except Exception:
-            logger.warning("prep: rich facts failed for %s", qid)
+        except Exception as e:
+            logger.warning("prep: rich facts failed for %s: %r", qid, e)
             rich = []
         try:
             o.evidence_pack = _ev.build_evidence_pack(

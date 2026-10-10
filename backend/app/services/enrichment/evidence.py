@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.services.enrichment.sources import wikidata as _wd
+from app.services.enrichment import wikidata_api as _wa
 
 # 富属性 → (claim 中文名, lane topic)。结构化 → type=fact。
 _RICH_PROPS = {
@@ -21,37 +21,25 @@ _RICH_PROPS = {
 
 _RICH_MAX_PER_PROP = 5  # 多值属性(如衍生作品)每 pid 最多取几条,防名作爆表
 
-_RICH_QUERY = """
-SELECT ?pid ?vLabel WHERE {{
-  VALUES ?prop {{ wdt:P88 wdt:P180 wdt:P186 wdt:P135 wdt:P136 wdt:P1343
-                  wdt:P4969 wdt:P144 wdt:P941 wdt:P361 }}
-  wd:{qid} ?prop ?v .
-  ?p wikibase:directClaim ?prop . BIND(STRAFTER(STR(?p), "entity/") AS ?pid)
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
-}}
-"""
+
+def _rich_rows(entity: dict, fetch) -> list[dict]:
+    """转换层:作品实体 _RICH_PROPS 主值 → 与旧 _RICH_QUERY 同形的行(无英文名填原始 QID)。
+    只对实体值取名(这几项属性都是 wikibase-item);非实体值跳过。"""
+    pairs = [
+        (pid, q)
+        for pid in _RICH_PROPS
+        for q in map(_wa.entity_id, _wa.best_statements(entity, pid))
+        if q
+    ]
+    en = _wa.labels_of(list(dict.fromkeys(q for _, q in pairs)), ["en"], fetch)
+    return [
+        {"pid": {"value": pid}, "vLabel": {"value": (en.get(q) or {}).get("en") or q}}
+        for pid, q in pairs
+    ]
 
 
-def _default_run_query(sparql):
-    import requests
-
-    r = requests.get(
-        _wd.SPARQL_ENDPOINT,
-        params={"query": sparql, "format": "json"},
-        headers={
-            "User-Agent": _wd.USER_AGENT,
-            "Accept": "application/sparql-results+json",
-        },
-        timeout=60,
-    )
-    r.raise_for_status()
-    return r.json()["results"]["bindings"]
-
-
-def fetch_rich_facts(qid: str, *, run_query=None) -> list[dict]:
-    """Wikidata 富属性 → 事实原子 [{claim,value,source,topic}]。无→[]。"""
-    run_query = run_query or _default_run_query
-    rows = run_query(_RICH_QUERY.format(qid=qid))
+def _rich_from_rows(rows) -> list[dict]:
+    """解析层(原 fetch_rich_facts 逐行解析,原样搬出)。"""
     out = []
     per_prop: dict[str, int] = {}
     for row in rows:
@@ -76,6 +64,17 @@ def fetch_rich_facts(qid: str, *, run_query=None) -> list[dict]:
     return out
 
 
+def fetch_rich_facts(qid: str, *, get_entities=None) -> list[dict]:
+    """Wikidata 富属性 → 事实原子 [{claim,value,source,topic}]。无→[]。非 Wikidata 编号不发请求。"""
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return []
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([qid], props="claims").get(qid) or {}
+    return _rich_from_rows(_rich_rows(ent, get_entities))
+
+
 # Joconde/基础 attributes 键 → (claim, topic, tier)。wall_label=进面板, material=只喂生成。
 _ATTR_FACTS = {
     "medium_fr": ("材质", "analysis", "wall_label"),
@@ -97,7 +96,7 @@ _OBJ_FACTS = [
 
 
 def build_evidence_pack(
-    obj: dict, *, run_query=None, complete=None, rich_facts=None
+    obj: dict, *, get_entities=None, complete=None, rich_facts=None
 ) -> dict:
     """组装证据包:结构原子 facts(带 tier)+ 标源 narrative + (可选)LLM flagged。
     rich_facts=已预取的 fetch_rich_facts 结果(懒生成并发预取);None=当场查。"""
@@ -128,7 +127,7 @@ def build_evidence_pack(
     if obj.get("qid"):
         try:
             if rich_facts is None:
-                rich_facts = fetch_rich_facts(obj["qid"], run_query=run_query)
+                rich_facts = fetch_rich_facts(obj["qid"], get_entities=get_entities)
             for f in rich_facts:
                 f.setdefault("tier", "material")
                 facts.append(f)

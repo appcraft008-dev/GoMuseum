@@ -1,5 +1,5 @@
 def test_fetch_rich_facts_maps_props_to_topics():
-    from app.services.enrichment.evidence import fetch_rich_facts
+    from app.services.enrichment.evidence import _rich_from_rows
 
     def fake_run_query(sparql):
         return [
@@ -8,7 +8,7 @@ def test_fetch_rich_facts_maps_props_to_topics():
             {"pid": {"value": "P135"}, "vLabel": {"value": "Realism"}},
         ]
 
-    facts = fetch_rich_facts("Q1", run_query=fake_run_query)
+    facts = _rich_from_rows(fake_run_query(None))
     by = {f["source"]: f for f in facts}
     assert (
         by["wikidata:P88"]["value"] == "Khalil Bey"
@@ -19,9 +19,9 @@ def test_fetch_rich_facts_maps_props_to_topics():
 
 
 def test_fetch_rich_facts_empty_on_no_rows():
-    from app.services.enrichment.evidence import fetch_rich_facts
+    from app.services.enrichment.evidence import _rich_from_rows
 
-    assert fetch_rich_facts("Q1", run_query=lambda s: []) == []
+    assert _rich_from_rows([]) == []
 
 
 def test_build_evidence_pack_assembles_facts_and_narrative():
@@ -39,7 +39,7 @@ def test_build_evidence_pack_assembles_facts_and_narrative():
             "artist_extract_en": "<artist bio>",
         },
     }
-    pack = build_evidence_pack(obj, run_query=lambda s: [], complete=None)
+    pack = build_evidence_pack(obj, get_entities=lambda ids, **k: {}, complete=None)
     fact_sources = {f["source"] for f in pack["facts"]}
     assert any("medium" in s for s in fact_sources)  # medium_fr → 事实
     assert any(s.startswith("object:") for s in fact_sources)  # 艺术家/年代/标题
@@ -57,11 +57,11 @@ def test_build_evidence_pack_assembles_facts_and_narrative():
 def test_build_evidence_pack_rich_facts_network_failure_degrades():
     from app.services.enrichment.evidence import build_evidence_pack
 
-    def boom(sparql):
+    def boom(*a, **k):
         raise RuntimeError("wdqs down")
 
     obj = {"qid": "Q1", "title_en": "X", "attributes": {"extract_en": "t"}}
-    pack = build_evidence_pack(obj, run_query=boom, complete=None)
+    pack = build_evidence_pack(obj, get_entities=boom, complete=None)
     # 富属性失败不拖垮:基础事实 + narrative 仍在
     assert any(s.startswith("object:") for s in {f["source"] for f in pack["facts"]})
     assert any(n["source"] == "wikipedia:work" for n in pack["narrative"])
@@ -88,7 +88,7 @@ def test_extract_flagged_classifies_contested():
             "extract_en": "Scholars believe the model was X. Possibly made before the war."
         },
     }
-    pack = build_evidence_pack(obj, run_query=lambda s: [], complete=fake)
+    pack = build_evidence_pack(obj, get_entities=lambda ids, **k: {}, complete=fake)
     types = {f["type"] for f in pack["flagged"]}
     assert "contested" in types and "inference" in types
 
@@ -101,21 +101,21 @@ def test_extract_flagged_robust_on_llm_error():
 
     pack = build_evidence_pack(
         {"qid": "Q1", "attributes": {"extract_en": "x"}},
-        run_query=lambda s: [],
+        get_entities=lambda ids, **k: {},
         complete=boom,
     )
     assert pack["flagged"] == []  # LLM 失败优雅降级
 
 
 def test_fetch_rich_facts_relational_props():
-    from app.services.enrichment.evidence import fetch_rich_facts
+    from app.services.enrichment.evidence import _rich_from_rows
 
     rows = [
         {"pid": {"value": "P4969"}, "vLabel": {"value": "Later Homage"}},
         {"pid": {"value": "P144"}, "vLabel": {"value": "Titian Venus"}},
         {"pid": {"value": "P361"}, "vLabel": {"value": "Salon Series"}},
     ]
-    facts = fetch_rich_facts("Q1", run_query=lambda s: rows)
+    facts = _rich_from_rows(rows)
     by = {f["source"]: f for f in facts}
     assert (
         by["wikidata:P4969"]["topic"] == "significance"
@@ -129,22 +129,66 @@ def test_fetch_rich_facts_relational_props():
 
 
 def test_fetch_rich_facts_caps_per_prop_at_5():
-    from app.services.enrichment.evidence import fetch_rich_facts
+    from app.services.enrichment.evidence import _rich_from_rows
 
     rows = [
         {"pid": {"value": "P4969"}, "vLabel": {"value": "d%d" % i}} for i in range(8)
     ]
-    facts = fetch_rich_facts("Q1", run_query=lambda s: rows)
+    facts = _rich_from_rows(rows)
     assert len([f for f in facts if f["source"] == "wikidata:P4969"]) == 5  # 限5
 
 
 def test_fetch_rich_facts_skips_raw_qid_labels():
-    from app.services.enrichment.evidence import fetch_rich_facts
+    from app.services.enrichment.evidence import _rich_from_rows
 
     rows = [
         {"pid": {"value": "P4969"}, "vLabel": {"value": "Q137160517"}},  # 无标签→跳
         {"pid": {"value": "P4969"}, "vLabel": {"value": "Real Homage"}},  # 有标签→留
     ]
-    facts = fetch_rich_facts("Q1", run_query=lambda s: rows)
+    facts = _rich_from_rows(rows)
     vals = [f["value"] for f in facts if f["source"] == "wikidata:P4969"]
     assert vals == ["Real Homage"]  # QID-only 被过滤
+
+
+import json as _json
+from pathlib import Path as _Path
+
+_E = _json.loads(
+    (_Path(__file__).parents[3] / "fixtures" / "wikidata" / "entities.json").read_text()
+)
+
+
+def _fake_get(ids, *, props, languages=None):
+    return {q: _E[q] for q in ids if q in _E}
+
+
+def test_fetch_rich_facts_real_mona_lisa():
+    """真实夹具 Q12418:P186 两条 preferred 压过 normal(Q287 不出现);P180 9 条限 5。"""
+    from app.services.enrichment.evidence import fetch_rich_facts
+
+    facts = fetch_rich_facts("Q12418", get_entities=_fake_get)
+    by = {}
+    for f in facts:
+        by.setdefault(f["source"], []).append(f["value"])
+    en = lambda q: _E[q]["labels"]["en"]["value"]  # noqa: E731
+    assert by["wikidata:P186"] == [en("Q296955"), en("Q106857865")]
+    assert len(by["wikidata:P180"]) == 5
+    assert by["wikidata:P88"] == [en("Q1395822")]
+
+
+def test_fetch_rich_facts_skips_non_wikidata_id():
+    from app.services.enrichment.evidence import fetch_rich_facts
+
+    def boom(*a, **k):
+        raise AssertionError("不该对非 Wikidata 编号发请求")
+
+    assert fetch_rich_facts("joconde-00000089446", get_entities=boom) == []
+
+
+def test_rich_rows_raw_qid_when_no_english_label():
+    from app.services.enrichment.evidence import _rich_rows
+
+    ent = {"claims": {"P88": [_E["Q12418"]["claims"]["P88"][0]]}}
+    assert _rich_rows(ent, lambda ids, **k: {}) == [
+        {"pid": {"value": "P88"}, "vLabel": {"value": "Q1395822"}}
+    ]
