@@ -226,10 +226,18 @@ def generate_object(
             o.attributes = {**(o.attributes or {}), **artist_mat}
             db.flush()
 
-        try:
-            af = _artist_facts(o.qid, artist_qid=aqid)
-        except Exception:
+        # 作者卡已有生年 = Wikidata 已查过一次。这几项只给作者卡补缺(见下方作者块),
+        # 再查一遍是首屏关键路径上的纯白等:SPARQL 实测 0.5-14.6s(2026-10-10 staging)。
+        from app.models.artist import Artist
+
+        known = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
+        if known is not None and known.birth:
             af = {}
+        else:
+            try:
+                af = _artist_facts(o.qid, artist_qid=aqid)
+            except Exception:
+                af = {}
         # 结构化属性抓失败不等于没作者:已解析的 aqid 要留着,否则下面整段作者块
         # (bio/名字)被静默跳过。2026-09-27 小皇宫《好撒玛利亚人》Q65734706 就这样没了作者简介。
         if aqid:
