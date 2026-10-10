@@ -515,22 +515,39 @@ def _pick_work_label(labels: dict, lang: str) -> str | None:
     )
 
 
-def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
-    """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
-    单查询 rdfs:label 语言过滤(同 _LABELS_QUERY 款,一作者一查)。
-    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]}}。
-    代表作**先选作品集合再逐语言取标签**,所以各语言列的是同一批作品、长度一致;
-    国籍无标签的语言仍缺席(由调用方翻译兜底)。"""
-    run_query = run_query or _default_artist_query
+def _i18n_wanted(langs) -> list:
     # 变体语言要连它的兜底源一起取:zh-hant 的链里有 zh,若只按 langs 过滤,
     # 请求 zh-hant 而没请求 zh 时链就断了、只能掉到英文。
-    wanted = list(
+    return list(
         dict.fromkeys(
             [*langs, *(v for x in langs for v in (_SCRIPT_VARIANTS.get(x) or ((),))[0])]
         )
     )
-    langlist = ", ".join('"%s"' % x for x in wanted)
-    rows = run_query(_ARTIST_I18N_FACTS_QUERY.format(qid=artist_qid, langs=langlist))
+
+
+def _artist_i18n_rows(entity: dict, wanted: list, fetch) -> list[dict]:
+    """转换层:作者 P27/P800 主值 × 各语言标签 → 与旧 _ARTIST_I18N_FACTS_QUERY 同形的行。"""
+    nats = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P27")) if q]
+    works = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P800")) if q]
+    labels = _wa.labels_of(list(dict.fromkeys(nats + works)), wanted, fetch)
+    rows = []
+    for q in nats:
+        for lang, v in (labels.get(q) or {}).items():
+            rows.append({"natLabel": {"xml:lang": lang, "value": v}})
+    for q in works:
+        for lang, v in (labels.get(q) or {}).items():
+            rows.append(
+                {
+                    "work": {"value": _ENTITY_IRI + q},
+                    "workLabel": {"xml:lang": lang, "value": v},
+                }
+            )
+    return rows
+
+
+def _artist_i18n_from_rows(rows, langs) -> dict:
+    """解析层(原 fetch_artist_i18n_facts 逐行解析与选集,原样搬出)。"""
+    wanted = _i18n_wanted(langs)
     nat_i18n: dict = {}
     works: dict = {}  # 作品 qid -> {lang: label}
     for row in rows:
@@ -562,6 +579,16 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
         # 字符串猜不出来(法语的 Olympia 就等于英语的 Olympia)。
         "notable_works_labels": [ls for _, ls in top],
     }
+
+
+def fetch_artist_i18n_facts(artist_qid, langs, *, get_entities=None) -> dict:
+    """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
+    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]},
+    "notable_works_labels": [...]}。代表作**先选作品集合再逐语言取标签**,各语言同一批作品。"""
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([artist_qid], props="claims").get(artist_qid) or {}
+    rows = _artist_i18n_rows(ent, _i18n_wanted(langs), get_entities)
+    return _artist_i18n_from_rows(rows, langs)
 
 
 def fetch_museum_intro_material(qid: str, *, get_json=None) -> dict:

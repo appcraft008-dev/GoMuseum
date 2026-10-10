@@ -121,7 +121,7 @@ def test_fetch_wikidata_labels():
 
 def test_fetch_artist_i18n_facts_multilang_labels():
     # 作者国籍(P27)/代表作(P800)的多语权威标签(交接③:非英语界面显英文)
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     W = {"value": "http://www.wikidata.org/entity/Q622062"}
     rows = [
@@ -141,14 +141,14 @@ def test_fetch_artist_i18n_facts_multilang_labels():
             "workLabel": {"value": "Olympia", "xml:lang": "de"},
         },
     ]
-    out = fetch_artist_i18n_facts("Q296", ["zh", "en", "de"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["zh", "en", "de"])
     assert out["nationality_i18n"] == {"zh": "法国", "en": "France", "de": "Frankreich"}
     assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
     assert out["notable_works_i18n"]["en"] == ["Olympia"]
 
 
 def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = [
         {"natLabel": {"value": "Q142", "xml:lang": "zh"}},  # 无标签退回QID→跳过
@@ -157,7 +157,7 @@ def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
             "workLabel": {"value": "Olympia", "xml:lang": "en"},
         },
     ]
-    out = fetch_artist_i18n_facts("Q296", ["zh", "en"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["zh", "en"])
     assert "zh" not in out["nationality_i18n"]
     assert out["notable_works_i18n"]["en"] == ["Olympia"]
     # 中文没有权威标签 → 回退英文,而不是整条缺席:各语言列的必须是同一批作品
@@ -204,7 +204,7 @@ def test_zh_hans_label_untouched():
 
 
 def test_artist_i18n_facts_zh_converted():
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = [
         {"natLabel": {"value": "法國", "xml:lang": "zh"}},
@@ -213,7 +213,7 @@ def test_artist_i18n_facts_zh_converted():
             "workLabel": {"value": "奧林匹亞", "xml:lang": "zh"},
         },
     ]
-    out = fetch_artist_i18n_facts("Q40599", ["zh"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["zh"])
     assert out["nationality_i18n"]["zh"] == "法国"
     assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
 
@@ -450,10 +450,10 @@ def _rows_uneven():
 def test_notable_works_same_set_across_languages():
     """旧实现每语言各自 append 再各自 [:5] → zh 只有 1 条、ja 2 条、en 5 条,
     而且三者根本不是同一批画。新实现:先定作品集合,再逐语言取标签。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     langs = ["en", "zh", "ja"]
-    out = fetch_artist_i18n_facts("Q1", langs, run_query=lambda s: _rows_uneven())
+    out = _artist_i18n_from_rows(_rows_uneven(), langs)
     w = out["notable_works_i18n"]
     assert {len(w[x]) for x in langs} == {
         5
@@ -472,19 +472,17 @@ def test_notable_works_same_set_across_languages():
 
 def test_notable_works_selection_is_language_order_independent():
     """选集判据必须与传入语言的顺序/行序无关,否则又回到"各挑各的"。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = _rows_uneven()
-    a = fetch_artist_i18n_facts("Q1", ["en", "zh", "ja"], run_query=lambda s: rows)
-    b = fetch_artist_i18n_facts(
-        "Q1", ["ja", "en", "zh"], run_query=lambda s: list(reversed(rows))
-    )
+    a = _artist_i18n_from_rows(rows, ["en", "zh", "ja"])
+    b = _artist_i18n_from_rows(list(reversed(rows)), ["ja", "en", "zh"])
     assert a["notable_works_i18n"]["en"] == b["notable_works_i18n"]["en"]
 
 
 def test_notable_works_caps_at_five_by_label_coverage():
     """超过 5 件时,按"被标注得最全"取前 5(近似最知名),同分按 qid 稳定排。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = []
     for n in range(201, 208):  # 7 件,en 都有
@@ -495,7 +493,7 @@ def test_notable_works_caps_at_five_by_label_coverage():
         rows.append(
             {"work": _work(n), "workLabel": {"value": f"Q{n}-zh", "xml:lang": "zh"}}
         )
-    out = fetch_artist_i18n_facts("Q1", ["en", "zh"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["en", "zh"])
     got = out["notable_works_i18n"]["en"]
     assert len(got) == 5
     assert got[:2] == ["Q206-en", "Q207-en"], got  # 覆盖度 2 的排前,同分按 qid
@@ -503,29 +501,14 @@ def test_notable_works_caps_at_five_by_label_coverage():
 
 def test_notable_works_zh_hant_converts_from_zh_not_english():
     """繁体没有权威标签时应走简体转繁(字形变体,确定性),而不是掉到英文。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = [
         {"work": _work(301), "workLabel": {"value": "Olympia", "xml:lang": "en"}},
         {"work": _work(301), "workLabel": {"value": "奥林匹亚", "xml:lang": "zh"}},
     ]
-    out = fetch_artist_i18n_facts("Q1", ["en", "zh-hant"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["en", "zh-hant"])
     assert out["notable_works_i18n"]["zh-hant"] == ["奧林匹亞"]
-
-
-def test_artist_i18n_query_selects_every_binding_the_parser_reads():
-    """解析侧按 row["work"] 给作品分组,查询就必须 SELECT ?work。
-
-    ⚠️ 上面那些桩数据单测**永远抓不到这一条** —— 桩里的 work 字段是我自己造的,
-    它当然在。真实查询漏 SELECT 时解析侧读到空,works 全空、返回 {} ——
-    库里数据不会被抹(合并时空字典不覆盖),但**整个修复静默失效**:
-    单测全绿、上线后一点变化都没有。
-    """
-    from app.services.enrichment.material import _ARTIST_I18N_FACTS_QUERY
-
-    selected = _ARTIST_I18N_FACTS_QUERY.split("WHERE")[0].split()
-    for var in ("?natLabel", "?work", "?workLabel"):
-        assert var in selected, f"{var} 没进 SELECT,解析侧只会读到空"
 
 
 def _creator_row(aq, rank="NormalRank", cert=None, refs=0, var="artist"):
@@ -1265,3 +1248,31 @@ def test_artist_fact_rows_fill_raw_qid_when_no_english_label():
     art["claims"]["P800"][0]["mainsnak"]["datavalue"]["value"]["id"] = "Q999999999"
     rows = _artist_fact_rows(art, lambda ids, **k: {})
     assert rows == [{"workLabel": {"value": "Q999999999"}}]
+
+
+def test_fetch_artist_i18n_real_cezanne_same_works_every_language():
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    calls = []
+    out = fetch_artist_i18n_facts(
+        "Q35548", ["en", "zh", "zh-hant"], get_entities=_fake_get(calls)
+    )
+    assert out["nationality_i18n"]["en"] == "France"
+    assert out["nationality_i18n"]["zh"] == "法国"
+    en, zh = out["notable_works_i18n"]["en"], out["notable_works_i18n"]["zh"]
+    assert len(en) == len(zh) == len(out["notable_works_labels"]) <= 5
+    assert "Mont Sainte-Victoire" in en and "圣维克多山" in zh
+    assert (
+        calls[0][1] == "claims" and calls[1][1] == "labels" and "zh-hans" in calls[1][2]
+    )
+
+
+def test_artist_i18n_rows_carry_work_qid_for_grouping():
+    from app.services.enrichment.material import _artist_i18n_rows
+
+    rows = _artist_i18n_rows(_E["Q35548"], ["en"], _fake_get())
+    work_rows = [r for r in rows if "work" in r]
+    assert work_rows and all(
+        r["work"]["value"].startswith("http://www.wikidata.org/entity/Q")
+        for r in work_rows
+    )
