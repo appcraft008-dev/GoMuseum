@@ -1884,3 +1884,74 @@ def test_autouse_fixture_prevents_real_network_for_name_search_by_default(
     )
 
     assert calls == []  # 真实 HTTP 层从没被打到——证明被 autouse 的桩拦住了
+
+
+def _seed_known_artist_object(session, artist):
+    from app.services.object_importer import upsert_object
+
+    session.add(artist)
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q77",
+            "title_en": "Known artist work",
+            "category": "painting",
+            "attributes": {"artist_qid": artist.qid},
+        },
+    )
+    session.commit()
+
+
+def _gen_q77(session):
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "Q77",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+
+
+def test_artist_facts_skipped_when_artist_card_already_fetched(session, monkeypatch):
+    """作者卡已有生年 = Wikidata 已查过一次;这几项只给作者卡补缺,首屏关键路径上
+    再查一遍纯白等(实测 0.5-14.6s)。"""
+    import app.services.enrichment.pipeline as pl
+
+    calls = []  # 不用 raise:调用点有 except Exception 会吞掉断言
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: calls.append(qid) or {}
+    )
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    _seed_known_artist_object(
+        session, Artist(qid="Q330", name_en="David", birth="1748", bio={"en": "Bio."})
+    )
+    _gen_q77(session)
+    assert calls == []
+    o = session.query(MuseumObject).filter_by(qid="Q77").one()
+    assert o.attributes.get("artist_qid") == "Q330"
+    assert session.query(Artist).filter_by(qid="Q330").one().birth == "1748"
+
+
+def test_artist_facts_still_fetched_for_bare_artist_card(session, monkeypatch):
+    """上馆时建的空卡(只有名字、无生年)还没查过 → 照查并补缺。"""
+    import app.services.enrichment.pipeline as pl
+
+    calls = []
+
+    def _facts(qid, artist_qid=None):
+        calls.append(artist_qid)
+        return {"artist_birth": "1748"}
+
+    monkeypatch.setattr(pl, "_artist_facts", _facts)
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    _seed_known_artist_object(session, Artist(qid="Q330", name_en="David"))
+    _gen_q77(session)
+    assert calls == ["Q330"]
+    assert session.query(Artist).filter_by(qid="Q330").one().birth == "1748"
