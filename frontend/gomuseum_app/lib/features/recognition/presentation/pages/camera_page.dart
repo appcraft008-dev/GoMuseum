@@ -1314,7 +1314,7 @@ class FallbackChoices extends StatelessWidget {
       required this.onSearch,
       required this.onRetake});
 
-  /// 已读出墙签:不再劝拍说明牌,主按钮换成输入编号(墙签文字已预填)。
+  /// 已读出墙签:不再给拍说明牌,主按钮换成输入编号(墙签文字已预填)。
   final bool labelSeen;
   final VoidCallback onShootLabel;
   final VoidCallback onSearch;
@@ -1378,12 +1378,12 @@ class FallbackChoices extends StatelessWidget {
         const SizedBox(height: 10),
         Row(
           children: [
-            labelSeen
-                ? secondary(const Key('fbShootLabel'), GmIcons.camera,
-                    l10n.recShootLabelBtn, onShootLabel)
-                : secondary(const Key('fbSearch'), GmIcons.search,
-                    l10n.recTypeNumberOrName, onSearch),
-            const SizedBox(width: 10),
+            // 已读出墙签:重拍同一张墙签结果一样,改字走主按钮的预填搜索(用户 10-11 定)
+            if (!labelSeen) ...[
+              secondary(const Key('fbSearch'), GmIcons.search,
+                  l10n.recTypeNumberOrName, onSearch),
+              const SizedBox(width: 10),
+            ],
             retake,
           ],
         ),

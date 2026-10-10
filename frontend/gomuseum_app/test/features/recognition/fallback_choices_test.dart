@@ -1,6 +1,6 @@
 // 「没认出 / 都不是 / 失败」选择卡布局(10-10 用户定):拍说明牌是唯一主按钮,说明在它上面;
 // 输入编号(左)与重拍作品(右)并排同级。真实用户 17 次没认出 11 次直接放弃、0 次拍说明牌。
-// 10-11:已拍过墙签时主按钮换成输入编号(墙签文字已预填),拍说明牌降为次按钮;
+// 10-11:已拍过墙签时主按钮换成输入编号(墙签文字已预填),不再给拍说明牌(重拍同一张墙签结果一样);
 // 次按钮文字放不下(大字号/德语)时缩小到一行,不换行。
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -69,23 +69,23 @@ void main() {
     expect(find.textContaining('Museum labels show'), findsNothing);
   });
 
-  testWidgets('已拍过墙签:主按钮是输入编号,拍说明牌在左、重拍在右', (t) async {
+  testWidgets('已拍过墙签:主按钮是输入编号,下面只剩整行的重拍', (t) async {
     final taps = await _pump(t, labelSeen: true);
     expect(find.byType(GmTicketButton), findsOneWidget);
     await t.tap(find.byType(GmTicketButton));
-    final label = find.byKey(const Key('fbShootLabel'));
     final retake = find.byKey(const Key('fbRetake'));
     expect(find.byKey(const Key('fbSearch')), findsNothing);
-    expect(t.getTopLeft(label).dx, lessThan(t.getTopLeft(retake).dx));
-    await t.tap(label);
-    expect(taps, ['search', 'label']);
+    expect(find.byKey(const Key('fbShootLabel')), findsNothing);
+    expect(t.getSize(retake).width, 360);
+    await t.tap(retake);
+    expect(taps, ['search', 'retake']);
   });
 
   for (final seen in [false, true]) {
     testWidgets('次按钮文字一行放下:德语 + 1.5 倍字号(labelSeen=$seen)', (t) async {
       await _pump(t,
           labelSeen: seen, locale: const Locale('de'), textScale: 1.5);
-      for (final key in [seen ? 'fbShootLabel' : 'fbSearch', 'fbRetake']) {
+      for (final key in [if (!seen) 'fbSearch', 'fbRetake']) {
         final p = t.renderObject<RenderParagraph>(find.descendant(
             of: find.byKey(Key(key)), matching: find.byType(RichText)));
         expect(p.maxLines, 1, reason: key);
