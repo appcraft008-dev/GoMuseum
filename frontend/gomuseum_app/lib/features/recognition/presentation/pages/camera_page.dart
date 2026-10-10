@@ -1052,9 +1052,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ];
   }
 
-  /// 「没认出来」与「都不是」共用的选择卡(S4,用户 2026-10-05 定):
-  /// 「拍说明牌」「输入编号/名称」两个并列主按钮 —— 说明牌上的馆藏号唯一、名称比 AI
-  /// 猜的准;拍不了(禁拍/反光/太远)就手输。「重新拍作品」降为小字。
+  /// 「没认出来」与「都不是」共用的选择卡(布局见 FallbackChoices)。
   /// 绝不显示 AI 猜测的名字(契约 R1)。
   List<Widget> _unrecognizedContent(
       GmPalette gm, RecognitionUnrecognized state) {
@@ -1093,38 +1091,17 @@ class _CameraPageState extends ConsumerState<CameraPage>
     _recognizeImage(shot, live: _lastShotLive);
   }
 
-  List<Widget> _fallbackChoices(GmPalette gm, String? label) {
-    final l10n = AppLocalizations.of(context)!;
-    return [
-      GmTicketButton(
-        label: l10n.recShootLabelBtn,
-        icon: GmIcons.camera,
-        onTap: _startLabelCapture,
-      ),
-      const SizedBox(height: 10),
-      GmTicketButton(
-        label: l10n.recTypeNumberOrName,
-        icon: GmIcons.search,
-        // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
-        onTap: () => _showTagSearchSheet(
-            initialQuery: label == null ? null : labelSearchQuery(label)),
-      ),
-      if (label == null) ...[
-        const SizedBox(height: 8),
-        Text(l10n.recShootLabelHint,
-            textAlign: TextAlign.center,
-            style: GmText.sans(size: 11.5, color: gm.sub)),
-      ],
-      const SizedBox(height: 12),
-      Center(
-        child: GestureDetector(
-          onTap: _retake,
-          child: Text(l10n.camRetake,
-              style: GmText.sans(size: 12.5, color: gm.accent)),
+  List<Widget> _fallbackChoices(GmPalette gm, String? label) => [
+        FallbackChoices(
+          // 已读出墙签(标签上写着…)时不再劝拍说明牌
+          showHint: label == null,
+          onShootLabel: _startLabelCapture,
+          // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
+          onSearch: () => _showTagSearchSheet(
+              initialQuery: label == null ? null : labelSearchQuery(label)),
+          onRetake: _retake,
         ),
-      ),
-    ];
-  }
+      ];
 }
 
 /// 识别兜底 → 搜索闭环：无图区/未收录时按编号/名称查找（全局即时搜索）。
@@ -1327,6 +1304,88 @@ class CandidateRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 识别没结果时的出路(10-10 用户定):拍说明牌是唯一主按钮,说明紧贴在它上面先讲为什么;
+/// 输入编号(左)、重拍作品(右)并排同级描边。原先两个同样的橙色主按钮 + 说明垫底 + 重拍
+/// 是小字:prod 真实用户 17 次没认出 11 次直接放弃、0 次拍说明牌(说明牌之后 89% 有结果)。
+class FallbackChoices extends StatelessWidget {
+  const FallbackChoices(
+      {super.key,
+      required this.showHint,
+      required this.onShootLabel,
+      required this.onSearch,
+      required this.onRetake});
+
+  final bool showHint;
+  final VoidCallback onShootLabel;
+  final VoidCallback onSearch;
+  final VoidCallback onRetake;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final l10n = AppLocalizations.of(context)!;
+    Widget secondary(Key key, GmIcons icon, String label, VoidCallback onTap) =>
+        Expanded(
+          child: GestureDetector(
+            key: key,
+            onTap: onTap,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: gm.accent),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GmIcon(icon, size: 16, color: gm.accent),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GmText.sans(
+                            size: 13.5,
+                            weight: FontWeight.w600,
+                            color: gm.accent)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showHint) ...[
+          Text(l10n.recShootLabelHint,
+              style: GmText.sans(size: 12.5, height: 1.5, color: gm.sub)),
+          const SizedBox(height: 12),
+        ],
+        GmTicketButton(
+          label: l10n.recShootLabelBtn,
+          icon: GmIcons.camera,
+          onTap: onShootLabel,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            secondary(const Key('fbSearch'), GmIcons.search,
+                l10n.recTypeNumberOrName, onSearch),
+            const SizedBox(width: 10),
+            secondary(
+                const Key('fbRetake'), GmIcons.photo, l10n.camRetake, onRetake),
+          ],
+        ),
+      ],
     );
   }
 }
