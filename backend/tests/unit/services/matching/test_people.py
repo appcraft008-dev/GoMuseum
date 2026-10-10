@@ -24,6 +24,8 @@ from app.services.museum_repo import _photo_credit
             "Anselme Flamen",
         ),
         ("David Teniers", "David Teniers the Younger"),  # 一边没写代际 → 仍同人
+        # 卢浮墙签「本名, dit 通称」(10-10 真机);库里法语名 Le Caravage
+        ("Michelangelo MERISI, dit CARAVAGE (CARAVAGGIO)", "Le Caravage"),
     ],
 )
 def test_same_person_variants(a, b):

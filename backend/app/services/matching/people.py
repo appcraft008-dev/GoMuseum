@@ -17,7 +17,10 @@ _PHOTO = re.compile(
     re.IGNORECASE,
 )
 _PAREN = re.compile(r"\([^()]*\)")
-_SPLIT = re.compile(r"\s*(?:/|;|&amp;|&|\band\b|\bet\b)\s*", re.IGNORECASE)
+# 「本名, dit 通称」(卢浮墙签:Michelangelo MERISI, dit CARAVAGE)两段各当一个名字
+_SPLIT = re.compile(
+    r"\s*(?:/|;|&amp;|&|\band\b|\bet\b|,?\s*\bdite?\b)\s*", re.IGNORECASE
+)
 _QUAL = {
     "probably", "possibly", "attributed", "to", "after", "copy", "of", "workshop",
     "circle", "school", "follower", "manner", "studio", "atelier", "d", "apres",
