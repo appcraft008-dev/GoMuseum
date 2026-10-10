@@ -11,8 +11,8 @@ import time
 
 import requests
 
-from app.services.enrichment import material as m
 from app.services.enrichment import evidence as ev
+from app.services.enrichment import material as m
 from app.services.enrichment.sources import wikidata as _wd
 
 LANGS = ["en", "zh", "zh-hant", "fr", "de", "es", "it", "ja", "ko", "pt"]
