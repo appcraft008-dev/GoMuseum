@@ -34,13 +34,10 @@ def test_fetch_object_material_empty_when_no_contribs():
     assert fetch_object_material("Q1", {}, {}, reg) == {}
 
 
-def test_fetch_artist_material_via_injected_query():
+def test_fetch_artist_material_uses_sitelink_titles():
     from app.services.enrichment.material import fetch_artist_material
-    from app.services.enrichment.registry import SourceRegistry
-    from app.services.enrichment.sources.base import ObjectContribution, Source
 
-    def fake_run_query(sparql):
-        return [{"al_en": {"value": "https://en.wikipedia.org/wiki/Gustave_Courbet"}}]
+    seen = {}
 
     class _Wiki(Source):
         name = "wikipedia"
@@ -49,35 +46,26 @@ def test_fetch_artist_material_via_injected_query():
             return []
 
         def enrich(self, qid, ext, ctx):
-            t = (ctx.get("wiki_titles") or {}).get("en")
-            return (
-                ObjectContribution(
-                    source="wikipedia",
-                    qid=qid,
-                    fields={"extract_en": f"bio of {t}"},
-                    raw={},
-                )
-                if t
-                else None
+            seen["titles"] = ctx.get("wiki_titles")
+            return ObjectContribution(
+                source="wikipedia", qid=qid, fields={"extract_en": "bio"}, raw={}
             )
 
-    reg = SourceRegistry([_Wiki()])
-    out = fetch_artist_material("Q1", reg, run_query=fake_run_query, country_lang="fr")
-    assert out["artist_extract_en"] == "bio of Gustave_Courbet"
-
-
-def test_fetch_artist_material_empty_when_no_artist():
-    from app.services.enrichment.material import fetch_artist_material
-    from app.services.enrichment.registry import SourceRegistry
-
+    calls = []
     out = fetch_artist_material(
-        "Q1", SourceRegistry([]), run_query=lambda s: [], country_lang="fr"
+        "Q64309678",
+        SourceRegistry([_Wiki()]),
+        get_entities=_fake_get(calls),
+        country_lang="fr",
+        artist_qid="Q35548",
     )
-    assert out == {}
+    assert seen["titles"] == {"en": "Paul Cézanne", "fr": "Paul Cézanne"}
+    assert out == {"artist_extract_en": "bio"}
+    assert calls == [(("Q35548",), "sitelinks", ())]
 
 
 def test_fetch_artist_facts_parses_structured():
-    from app.services.enrichment.material import fetch_artist_facts
+    from app.services.enrichment.material import _artist_facts_from_rows
 
     def fake(sparql):
         return [
@@ -91,20 +79,20 @@ def test_fetch_artist_facts_parses_structured():
             {"natLabel": {"value": "France"}, "workLabel": {"value": "Olympia"}},
         ]
 
-    f = fetch_artist_facts("Q1", run_query=fake)
+    f = _artist_facts_from_rows(fake(None))
     assert f["artist_birth"] == "1832" and f["artist_death"] == "1883"
     assert f["artist_nationality"] == "France"
     assert f["artist_notable_works"] == ["Olympia", "The Fifer"]  # 去重保序
 
 
 def test_fetch_artist_facts_empty_on_no_rows():
-    from app.services.enrichment.material import fetch_artist_facts
+    from app.services.enrichment.material import _artist_facts_from_rows
 
-    assert fetch_artist_facts("Q1", run_query=lambda s: []) == {}
+    assert _artist_facts_from_rows([]) == {}
 
 
 def test_fetch_artist_facts_skips_raw_qid_works():
-    from app.services.enrichment.material import fetch_artist_facts
+    from app.services.enrichment.material import _artist_facts_from_rows
 
     def fake(sparql):
         return [
@@ -113,28 +101,13 @@ def test_fetch_artist_facts_skips_raw_qid_works():
             {"natLabel": {"value": "France"}},
         ]
 
-    f = fetch_artist_facts("Q1", run_query=fake)
+    f = _artist_facts_from_rows(fake(None))
     assert f["artist_notable_works"] == ["Homage to Cézanne"]  # QID 被过滤
     assert f["artist_nationality"] == "France"
 
 
-def test_fetch_artist_facts_returns_artist_qid():
-    from app.services.enrichment.material import fetch_artist_facts
-
-    def fake(sparql):
-        return [
-            {
-                "artist": {"value": "http://www.wikidata.org/entity/Q296"},
-                "natLabel": {"value": "Netherlands"},
-            }
-        ]
-
-    f = fetch_artist_facts("Q1", run_query=fake)
-    assert f["artist_qid"] == "Q296"
-
-
 def test_fetch_wikidata_labels():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     def fake(sparql):
         return [
@@ -142,13 +115,13 @@ def test_fetch_wikidata_labels():
             {"l": {"value": "Starry Night", "xml:lang": "en"}},
         ]
 
-    out = fetch_wikidata_labels("Q1", ["en", "fr", "de"], run_query=fake)
+    out = _labels_from_rows(fake(None), ["en", "fr", "de"])
     assert out == {"fr": "La Nuit étoilée", "en": "Starry Night"}  # 只含 Wikidata 有的
 
 
 def test_fetch_artist_i18n_facts_multilang_labels():
     # 作者国籍(P27)/代表作(P800)的多语权威标签(交接③:非英语界面显英文)
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     W = {"value": "http://www.wikidata.org/entity/Q622062"}
     rows = [
@@ -168,14 +141,14 @@ def test_fetch_artist_i18n_facts_multilang_labels():
             "workLabel": {"value": "Olympia", "xml:lang": "de"},
         },
     ]
-    out = fetch_artist_i18n_facts("Q296", ["zh", "en", "de"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["zh", "en", "de"])
     assert out["nationality_i18n"] == {"zh": "法国", "en": "France", "de": "Frankreich"}
     assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
     assert out["notable_works_i18n"]["en"] == ["Olympia"]
 
 
 def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = [
         {"natLabel": {"value": "Q142", "xml:lang": "zh"}},  # 无标签退回QID→跳过
@@ -184,7 +157,7 @@ def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
             "workLabel": {"value": "Olympia", "xml:lang": "en"},
         },
     ]
-    out = fetch_artist_i18n_facts("Q296", ["zh", "en"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["zh", "en"])
     assert "zh" not in out["nationality_i18n"]
     assert out["notable_works_i18n"]["en"] == ["Olympia"]
     # 中文没有权威标签 → 回退英文,而不是整条缺席:各语言列的必须是同一批作品
@@ -193,45 +166,45 @@ def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
 
 def test_fetch_labels_prefers_zh_hans_over_traditional():
     # 繁简混杂尾巴:Wikidata zh 标签变体不定(愛德華·馬奈)→ zh-hans > zh-cn > zh
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [
         {"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}},
         {"l": {"value": "爱德华·马奈", "xml:lang": "zh-hans"}},
         {"l": {"value": "Édouard Manet", "xml:lang": "fr"}},
     ]
-    out = fetch_wikidata_labels("Q296", ["zh", "fr"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh", "fr"])
     assert out["zh"] == "爱德华·马奈"  # hans 优先于繁体 zh
     assert out["fr"] == "Édouard Manet"
 
 
 def test_fetch_labels_zh_falls_back_when_no_hans():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "馬奈", "xml:lang": "zh"}}]
-    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "马奈"  # 没 hans 时取 zh 并 t2s 转简
 
 
 def test_zh_label_converted_to_simplified_when_only_traditional():
     # 根因:马奈/高更等在 Wikidata 只有繁体 zh 标签(无 zh-hans)→ OpenCC t2s 确定性转换
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}}]
-    out = fetch_wikidata_labels("Q40599", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "爱德华·马奈"  # 繁→简
 
 
 def test_zh_hans_label_untouched():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "克劳德·莫奈", "xml:lang": "zh-hans"}}]
-    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "克劳德·莫奈"
 
 
 def test_artist_i18n_facts_zh_converted():
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = [
         {"natLabel": {"value": "法國", "xml:lang": "zh"}},
@@ -240,27 +213,27 @@ def test_artist_i18n_facts_zh_converted():
             "workLabel": {"value": "奧林匹亞", "xml:lang": "zh"},
         },
     ]
-    out = fetch_artist_i18n_facts("Q40599", ["zh"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["zh"])
     assert out["nationality_i18n"]["zh"] == "法国"
     assert out["notable_works_i18n"]["zh"] == ["奥林匹亚"]
 
 
 def test_zh_hant_prefers_traditional_authoritative_label():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [
         {"l": {"value": "顯現", "xml:lang": "zh-hant"}},
         {"l": {"value": "显现", "xml:lang": "zh-hans"}},
     ]
-    out = fetch_wikidata_labels("Q1", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "顯現"  # 权威繁体优先
 
 
 def test_zh_hant_converts_simplified_to_traditional_when_only_hans():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "爱德华·马奈", "xml:lang": "zh-hans"}}]
-    out = fetch_wikidata_labels("Q296", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "愛德華·馬奈"  # 简→繁 s2t
 
 
@@ -270,38 +243,38 @@ def test_zh_hant_prefers_mandarin_over_cantonese_hk_label():
     实测 Q35548 Cézanne:Wikidata 无 zh-hant/zh-tw 标签,zh-hk 标签是「保羅·施傘」,
     旧回退序取到它,于是每一段繁体讲解都把塞尚叫成施傘(污染 27 段)。
     """
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [
         {"l": {"value": "保羅·施傘", "xml:lang": "zh-hk"}},
         {"l": {"value": "保罗·塞尚", "xml:lang": "zh"}},
     ]
-    out = fetch_wikidata_labels("Q35548", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "保羅·塞尚"
 
 
 def test_zh_hant_still_uses_hk_label_as_last_resort():
     """但 zh-hk 仍留在链尾:它是唯一的中文标签时,人工标签好过机翻兜底。"""
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "梵高", "xml:lang": "zh-hk"}}]
-    out = fetch_wikidata_labels("Q5582", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "梵高"
 
 
 def test_zh_still_simplified_regression():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}}]
-    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "爱德华·马奈"  # 繁→简,回归不破
 
 
 def test_non_variant_language_not_converted():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "エドゥアール・マネ", "xml:lang": "ja"}}]
-    out = fetch_wikidata_labels("Q296", ["ja"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["ja"])
     assert out["ja"] == "エドゥアール・マネ"  # 非变体不动
 
 
@@ -337,7 +310,7 @@ def test_fetch_museum_intro_material_no_sitelink():
 def test_fetch_labels_batch_matches_single_semantics():
     """批量版必须与单件版逐字同义(含 zh 变体收敛),只是网络往返少了 N 倍。"""
     from app.services.enrichment.material import (
-        fetch_wikidata_labels,
+        _labels_from_rows,
         fetch_wikidata_labels_batch,
     )
 
@@ -358,13 +331,12 @@ def test_fetch_labels_batch_matches_single_semantics():
     assert batch["Q12418"] == {"en": "Mona Lisa", "zh": "蒙娜丽莎"}
     assert batch["Q762"] == {"en": "Leonardo"}
 
-    single = fetch_wikidata_labels(
-        "Q12418",
-        ["en", "zh"],
-        run_query=lambda s: [
+    single = _labels_from_rows(
+        [
             {"l": {"xml:lang": "en", "value": "Mona Lisa"}},
             {"l": {"xml:lang": "zh-hans", "value": "蒙娜丽莎"}},
         ],
+        ["en", "zh"],
     )
     assert single == batch["Q12418"]  # 语义一致
 
@@ -478,10 +450,10 @@ def _rows_uneven():
 def test_notable_works_same_set_across_languages():
     """旧实现每语言各自 append 再各自 [:5] → zh 只有 1 条、ja 2 条、en 5 条,
     而且三者根本不是同一批画。新实现:先定作品集合,再逐语言取标签。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     langs = ["en", "zh", "ja"]
-    out = fetch_artist_i18n_facts("Q1", langs, run_query=lambda s: _rows_uneven())
+    out = _artist_i18n_from_rows(_rows_uneven(), langs)
     w = out["notable_works_i18n"]
     assert {len(w[x]) for x in langs} == {
         5
@@ -500,19 +472,17 @@ def test_notable_works_same_set_across_languages():
 
 def test_notable_works_selection_is_language_order_independent():
     """选集判据必须与传入语言的顺序/行序无关,否则又回到"各挑各的"。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = _rows_uneven()
-    a = fetch_artist_i18n_facts("Q1", ["en", "zh", "ja"], run_query=lambda s: rows)
-    b = fetch_artist_i18n_facts(
-        "Q1", ["ja", "en", "zh"], run_query=lambda s: list(reversed(rows))
-    )
+    a = _artist_i18n_from_rows(rows, ["en", "zh", "ja"])
+    b = _artist_i18n_from_rows(list(reversed(rows)), ["ja", "en", "zh"])
     assert a["notable_works_i18n"]["en"] == b["notable_works_i18n"]["en"]
 
 
 def test_notable_works_caps_at_five_by_label_coverage():
     """超过 5 件时,按"被标注得最全"取前 5(近似最知名),同分按 qid 稳定排。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = []
     for n in range(201, 208):  # 7 件,en 都有
@@ -523,7 +493,7 @@ def test_notable_works_caps_at_five_by_label_coverage():
         rows.append(
             {"work": _work(n), "workLabel": {"value": f"Q{n}-zh", "xml:lang": "zh"}}
         )
-    out = fetch_artist_i18n_facts("Q1", ["en", "zh"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["en", "zh"])
     got = out["notable_works_i18n"]["en"]
     assert len(got) == 5
     assert got[:2] == ["Q206-en", "Q207-en"], got  # 覆盖度 2 的排前,同分按 qid
@@ -531,29 +501,14 @@ def test_notable_works_caps_at_five_by_label_coverage():
 
 def test_notable_works_zh_hant_converts_from_zh_not_english():
     """繁体没有权威标签时应走简体转繁(字形变体,确定性),而不是掉到英文。"""
-    from app.services.enrichment.material import fetch_artist_i18n_facts
+    from app.services.enrichment.material import _artist_i18n_from_rows
 
     rows = [
         {"work": _work(301), "workLabel": {"value": "Olympia", "xml:lang": "en"}},
         {"work": _work(301), "workLabel": {"value": "奥林匹亚", "xml:lang": "zh"}},
     ]
-    out = fetch_artist_i18n_facts("Q1", ["en", "zh-hant"], run_query=lambda s: rows)
+    out = _artist_i18n_from_rows(rows, ["en", "zh-hant"])
     assert out["notable_works_i18n"]["zh-hant"] == ["奧林匹亞"]
-
-
-def test_artist_i18n_query_selects_every_binding_the_parser_reads():
-    """解析侧按 row["work"] 给作品分组,查询就必须 SELECT ?work。
-
-    ⚠️ 上面那些桩数据单测**永远抓不到这一条** —— 桩里的 work 字段是我自己造的,
-    它当然在。真实查询漏 SELECT 时解析侧读到空,works 全空、返回 {} ——
-    库里数据不会被抹(合并时空字典不覆盖),但**整个修复静默失效**:
-    单测全绿、上线后一点变化都没有。
-    """
-    from app.services.enrichment.material import _ARTIST_I18N_FACTS_QUERY
-
-    selected = _ARTIST_I18N_FACTS_QUERY.split("WHERE")[0].split()
-    for var in ("?natLabel", "?work", "?workLabel"):
-        assert var in selected, f"{var} 没进 SELECT,解析侧只会读到空"
 
 
 def _creator_row(aq, rank="NormalRank", cert=None, refs=0, var="artist"):
@@ -577,28 +532,25 @@ _Q64309678 = [
 
 
 def test_resolve_creator_prefers_better_sourced_claim():
-    from app.services.enrichment.material import resolve_creator_qid
+    from app.services.enrichment.material import _creator_from_rows
 
-    assert resolve_creator_qid("Q64309678", run_query=lambda s: _Q64309678) == "Q35548"
+    assert _creator_from_rows(_Q64309678) == "Q35548"
     # 行序不该影响结果 —— SPARQL 不保证顺序,这正是旧代码的病根
-    assert (
-        resolve_creator_qid("Q64309678", run_query=lambda s: _Q64309678[::-1])
-        == "Q35548"
-    )
+    assert _creator_from_rows(_Q64309678[::-1]) == "Q35548"
 
 
 def test_resolve_creator_rank_beats_qualifier():
-    from app.services.enrichment.material import resolve_creator_qid
+    from app.services.enrichment.material import _creator_from_rows
 
     rows = [
         _creator_row("Q1", cert="Q30230067", rank="PreferredRank"),
         _creator_row("Q2", refs=9),  # 无限定 + 多引用,但只是 normal rank
     ]
-    assert resolve_creator_qid("Qx", run_query=lambda s: rows) == "Q1"
+    assert _creator_from_rows(rows) == "Q1"
 
 
 def test_resolve_creator_skips_blank_node_and_deprecated():
-    from app.services.enrichment.material import resolve_creator_qid
+    from app.services.enrichment.material import _creator_from_rows
 
     rows = [
         {
@@ -607,38 +559,7 @@ def test_resolve_creator_skips_blank_node_and_deprecated():
         },
         _creator_row("Q7", rank="DeprecatedRank"),
     ]
-    assert resolve_creator_qid("Qx", run_query=lambda s: rows) is None
-
-
-def test_fetch_artist_facts_with_artist_qid_does_not_traverse_p170():
-    """给定作者时必须直接问该实体 —— 否则多作者会逐行串味(qid 来自 A、生年来自 B)。"""
-    from app.services.enrichment.material import fetch_artist_facts
-
-    seen = {}
-
-    def fake(sparql):
-        seen["sparql"] = sparql
-        return [{"birth": {"value": "1839-01-19T00:00:00Z"}}]
-
-    f = fetch_artist_facts("Q64309678", run_query=fake, artist_qid="Q35548")
-    assert "wdt:P170" not in seen["sparql"] and "wd:Q35548" in seen["sparql"]
-    assert f["artist_qid"] == "Q35548" and f["artist_birth"] == "1839"
-
-
-def test_fetch_artist_material_with_artist_qid_does_not_traverse_p170():
-    from app.services.enrichment.material import fetch_artist_material
-    from app.services.enrichment.registry import SourceRegistry
-
-    seen = {}
-
-    def fake(sparql):
-        seen["sparql"] = sparql
-        return []
-
-    fetch_artist_material(
-        "Q64309678", SourceRegistry([]), run_query=fake, artist_qid="Q35548"
-    )
-    assert "wdt:P170" not in seen["sparql"] and "wd:Q35548" in seen["sparql"]
+    assert _creator_from_rows(rows) is None
 
 
 def test_fetch_creators_batch_picks_same_winner_as_single():
@@ -1091,3 +1012,292 @@ def test_resolve_creator_by_name_abstains_on_bare_surname():
         resolve_creator_by_name("ROUSSEAU", search_entities=search, get_claims=claims)
         is None
     )
+
+
+import json as _json
+from pathlib import Path as _Path
+
+_E = _json.loads(
+    (_Path(__file__).parents[3] / "fixtures" / "wikidata" / "entities.json").read_text()
+)
+
+
+def _fake_get(calls=None):
+    def get(ids, *, props, languages=None):
+        if calls is not None:
+            calls.append((tuple(ids), props, tuple(languages or ())))
+        return {q: _E[q] for q in ids if q in _E}
+
+    return get
+
+
+def test_fetch_wikidata_labels_real_shape_zh_variants():
+    """真实夹具 Q35548(塞尚):zh 取 zh-hans→简体;zh-hant 链(无 zh-hant/zh-tw 时)取 zh 转繁,港式垫底。"""
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    calls = []
+    out = fetch_wikidata_labels(
+        "Q35548", ["en", "zh", "zh-hant"], get_entities=_fake_get(calls)
+    )
+    assert out["en"] == "Paul Cézanne"
+    assert out["zh"] == _labels_expected_zh()
+    assert calls[0][1] == "labels" and "zh-hans" in calls[0][2]
+
+
+def _labels_expected_zh():
+    from app.services.enrichment.material import _collapse_variants
+
+    raw = {k: v["value"] for k, v in _E["Q35548"]["labels"].items()}
+    return _collapse_variants(raw, ["zh"])["zh"]
+
+
+def test_label_rows_match_sparql_shape():
+    from app.services.enrichment.material import _label_rows
+
+    rows = _label_rows(_E["Q35548"])
+    assert {"l": {"xml:lang": "en", "value": "Paul Cézanne"}} in rows
+
+
+import copy as _copy
+
+
+def _p170(aq, rank="normal", certs=(), refs=0, snaktype="value"):
+    """按真实夹具形状造 P170 语句(形状由 test_p170_helper_matches_real_shape 钉住)。"""
+    st = _copy.deepcopy(_E["Q64309678"]["claims"]["P170"][0])
+    st["rank"] = rank
+    st["mainsnak"]["snaktype"] = snaktype
+    if snaktype == "value":
+        st["mainsnak"]["datavalue"]["value"]["id"] = aq
+        st["mainsnak"]["datavalue"]["value"]["numeric-id"] = int(aq[1:])
+    else:
+        st["mainsnak"].pop("datavalue", None)
+    q0 = _copy.deepcopy(_E["Q64309678"]["claims"]["P170"][0]["qualifiers"]["P1480"][0])
+    quals = []
+    for kind, val in certs:
+        q = _copy.deepcopy(q0)
+        q["snaktype"] = kind
+        if kind == "value":
+            q["datavalue"]["value"]["id"] = val
+        else:
+            q.pop("datavalue", None)
+        quals.append(q)
+    st["qualifiers"] = {"P1480": quals} if quals else {}
+    ref0 = _E["Q64309678"]["claims"]["P170"][0]["references"][0]
+    st["references"] = [_copy.deepcopy(ref0) for _ in range(refs)]
+    return st
+
+
+# ⚠️ 不能叫 _work:本文件已有 _work(n)(代表作测试在用),同名会整模块覆盖。
+# 作品编号必须是 ^Q\d+$,否则被 resolve_creator_qid 的非 Wikidata 守卫直接返回 None,测试就不再走归组逻辑。
+_WORK_QID = "Q900000001"
+
+
+def _p170_entity(*sts):
+    return {_WORK_QID: {"id": _WORK_QID, "claims": {"P170": list(sts)}}}
+
+
+def _resolve(ents):
+    from app.services.enrichment.material import resolve_creator_qid
+
+    return resolve_creator_qid(_WORK_QID, get_entities=lambda ids, **k: ents)
+
+
+def test_p170_helper_matches_real_shape():
+    real = _E["Q64309678"]["claims"]["P170"][0]
+    made = _p170("Q35548", certs=[("value", "Q18122778")], refs=1)
+    assert made["mainsnak"] == real["mainsnak"]
+    assert (
+        made["qualifiers"]["P1480"][0]["datavalue"]
+        == real["qualifiers"]["P1480"][0]["datavalue"]
+    )
+
+
+def test_resolve_creator_real_q64309678_prefers_cezanne():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    assert resolve_creator_qid("Q64309678", get_entities=_fake_get()) == "Q35548"
+
+
+def test_resolve_creator_real_unknown_value_is_none():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    assert resolve_creator_qid("Q104479426", get_entities=_fake_get()) is None
+
+
+def test_creator_refs_summed_across_duplicate_statements_changes_winner():
+    """spec §3.1:同作者同 rank 同 cert 两条语句(2、3 条引用)→ 一个 refs=5 候选,胜过 refs=4 的 B。
+    若不相加,A 最多 3 < 4,胜者会变成 B。"""
+    ents = _p170_entity(_p170("Q1", refs=2), _p170("Q1", refs=3), _p170("Q2", refs=4))
+    assert _resolve(ents) == "Q1"
+
+
+def test_creator_multi_p1480_on_one_statement_uses_best():
+    ents = _p170_entity(
+        _p170(
+            "Q1", certs=[("value", "Q30230067"), ("value", "Q18122778")]
+        ),  # possibly + presumably
+        _p170("Q2", certs=[("value", "Q30230067")], refs=5),  # possibly
+    )
+    assert _resolve(ents) == "Q1"
+
+
+def test_creator_p1480_unknown_value_ranks_between_presumably_and_possibly():
+    ents = _p170_entity(
+        _p170("Q1", certs=[("somevalue", None)]),
+        _p170("Q2", certs=[("value", "Q30230067")]),
+    )
+    assert _resolve(ents) == "Q1"
+    ents = _p170_entity(
+        _p170("Q1", certs=[("somevalue", None)]),
+        _p170("Q3", certs=[("value", "Q18122778")]),
+    )
+    assert _resolve(ents) == "Q3"
+
+
+def test_creator_p1480_novalue_counts_as_no_qualifier():
+    ents = _p170_entity(
+        _p170("Q1", certs=[("novalue", None)]),
+        _p170("Q2", certs=[("value", "Q18122778")], refs=9),
+    )
+    assert _resolve(ents) == "Q1"
+
+
+def test_creator_deprecated_and_unknown_statements_excluded():
+    ents = _p170_entity(
+        _p170("Q1", rank="deprecated", refs=9),
+        _p170(None, snaktype="somevalue"),
+        _p170("Q2"),
+    )
+    assert _resolve(ents) == "Q2"
+
+
+def test_resolve_creator_skips_non_wikidata_id():
+    from app.services.enrichment.material import resolve_creator_qid
+
+    def boom(*a, **k):
+        raise AssertionError("不该对非 Wikidata 编号发请求")
+
+    assert resolve_creator_qid("joconde-00000089446", get_entities=boom) is None
+
+
+def test_artist_facts_and_material_empty_without_artist_qid():
+    """spec §2.2/§4.1:artist_qid 为空 = 无作者或故意弃权,不再遍历 P170(哈希作者的来源)。"""
+    from app.services.enrichment.material import (
+        fetch_artist_facts,
+        fetch_artist_material,
+    )
+
+    def boom(*a, **k):
+        raise AssertionError("artist_qid 为空时不该发请求")
+
+    assert fetch_artist_facts("Q104479426", get_entities=boom) == {}
+    assert (
+        fetch_artist_material("Q104479426", SourceRegistry([]), get_entities=boom) == {}
+    )
+
+
+def test_fetch_artist_facts_real_cezanne_skips_deprecated_death():
+    from app.services.enrichment.material import fetch_artist_facts
+
+    f = fetch_artist_facts("Q64309678", get_entities=_fake_get(), artist_qid="Q35548")
+    assert f["artist_qid"] == "Q35548"
+    assert f["artist_birth"] == "1839" and f["artist_death"] == "1906"
+    assert f["artist_nationality"] == "France"
+    expected = [
+        _E[s["mainsnak"]["datavalue"]["value"]["id"]]["labels"]["en"]["value"]
+        for s in _E["Q35548"]["claims"]["P800"]
+        if s["rank"] != "deprecated"
+        and _E.get(s["mainsnak"]["datavalue"]["value"]["id"], {})
+        .get("labels", {})
+        .get("en")
+    ][:5]
+    assert f["artist_notable_works"] == expected
+
+
+def test_fetch_artist_facts_real_raphael_tied_preferred_and_deprecated_nationality():
+    """拉斐尔:P569 两条 preferred(同为 1483),P27 normal 意大利城邦 + deprecated Q38 → 取第一条、排除 deprecated。"""
+    from app.services.enrichment.material import fetch_artist_facts
+
+    f = fetch_artist_facts("Qx", get_entities=_fake_get(), artist_qid="Q5597")
+    assert f["artist_birth"] == "1483" and f["artist_death"] == "1520"
+    assert f["artist_nationality"] == _E["Q12548"]["labels"]["en"]["value"]
+
+
+def test_fetch_artist_facts_unknown_birth_not_stored_as_http():
+    """spec §4.2:生年是「未知值」时不再存成 'http'。"""
+    from app.services.enrichment.material import fetch_artist_facts
+
+    art = _copy.deepcopy(_E["Q35548"])
+    art["claims"]["P569"][0]["mainsnak"]["snaktype"] = "somevalue"
+    art["claims"]["P569"][0]["mainsnak"].pop("datavalue")
+    f = fetch_artist_facts(
+        "Qx",
+        get_entities=lambda ids, **k: {
+            "Q35548": art,
+            **{q: _E[q] for q in ids if q in _E and q != "Q35548"},
+        },
+        artist_qid="Q35548",
+    )
+    assert "artist_birth" not in f and f["artist_death"] == "1906"
+
+
+def test_artist_fact_rows_fill_raw_qid_when_no_english_label():
+    from app.services.enrichment.material import _artist_fact_rows
+
+    art = {"claims": {"P800": [_copy.deepcopy(_E["Q35548"]["claims"]["P800"][0])]}}
+    art["claims"]["P800"][0]["mainsnak"]["datavalue"]["value"]["id"] = "Q999999999"
+    rows = _artist_fact_rows(art, lambda ids, **k: {})
+    assert rows == [{"workLabel": {"value": "Q999999999"}}]
+
+
+def test_fetch_artist_i18n_real_cezanne_same_works_every_language():
+    from app.services.enrichment.material import fetch_artist_i18n_facts
+
+    calls = []
+    out = fetch_artist_i18n_facts(
+        "Q35548", ["en", "zh", "zh-hant"], get_entities=_fake_get(calls)
+    )
+    assert out["nationality_i18n"]["en"] == "France"
+    assert out["nationality_i18n"]["zh"] == "法国"
+    en, zh = out["notable_works_i18n"]["en"], out["notable_works_i18n"]["zh"]
+    assert len(en) == len(zh) == len(out["notable_works_labels"]) <= 5
+    assert "Mont Sainte-Victoire" in en and "圣维克多山" in zh
+    assert (
+        calls[0][1] == "claims" and calls[1][1] == "labels" and "zh-hans" in calls[1][2]
+    )
+
+
+def test_artist_i18n_rows_carry_work_qid_for_grouping():
+    from app.services.enrichment.material import _artist_i18n_rows
+
+    rows = _artist_i18n_rows(_E["Q35548"], ["en"], _fake_get())
+    work_rows = [r for r in rows if "work" in r]
+    assert work_rows and all(
+        r["work"]["value"].startswith("http://www.wikidata.org/entity/Q")
+        for r in work_rows
+    )
+
+
+def test_stored_hash_artist_qid_is_not_queried():
+    """终审 #1:prod 存量 61 件的 artist_qid 是 32 位哈希;拿它去查只会报 no-such-entity
+    并刷 prep 警告。三个作者函数都要先判 is_wikidata_qid。"""
+    from app.services.enrichment.material import (
+        fetch_artist_facts,
+        fetch_artist_i18n_facts,
+        fetch_artist_material,
+    )
+
+    def boom(*a, **k):
+        raise AssertionError("哈希作者 QID 不该发请求")
+
+    h = "6b3fdc5b548e4fdde651a18ead38c7ec"
+    assert fetch_artist_facts("Q1", get_entities=boom, artist_qid=h) == {}
+    assert (
+        fetch_artist_material("Q1", SourceRegistry([]), get_entities=boom, artist_qid=h)
+        == {}
+    )
+    assert fetch_artist_i18n_facts(h, ["en"], get_entities=boom) == {
+        "nationality_i18n": {},
+        "notable_works_i18n": {},
+        "notable_works_labels": [],
+    }

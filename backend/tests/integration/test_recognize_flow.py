@@ -551,8 +551,6 @@ def test_billing_inflight_waiter_not_charged(session, monkeypatch):
     """⭐ S2:已登录用户超时后重发同一张照片,首请求还在服务端算 → 重发变成等待者。
     首请求自己会扣次+解锁;等待者若按普通缓存命中走计费,此刻首请求的解锁还没提交
     → `free_audio_qids` 里没有这件 → 再扣一次 = 一张照片扣两次。"""
-    import threading
-
     import fakeredis
 
     from app.services.image_service import ImageService
@@ -574,7 +572,16 @@ def test_billing_inflight_waiter_not_charged(session, monkeypatch):
         r.setex(ck, 60, first_json)
         r.delete(svc._inflight_key(ck))
 
-    threading.Timer(0.1, finish_first).start()
+    # 等待者一进入等待分支就让首请求完成 —— 不用固定 0.1s 定时器:识别前的准备阶段碰上
+    # 一次 GC 停顿就会错过窗口(10-10 全套测试中稳定复现),变成「普通缓存命中」照扣。
+    # 若代码退化成不等待直接重算,这个包装根本不会被调用,首请求永远不完成 → 重算 → 扣次 → 失败。
+    orig_wait = svc._wait_inflight
+
+    def wait_then_finish(redis, ckey):
+        finish_first()
+        return orig_wait(redis, ckey)
+
+    monkeypatch.setattr(svc, "_wait_inflight", wait_then_finish)
     out = recognize_billed(
         session,
         "orsay",

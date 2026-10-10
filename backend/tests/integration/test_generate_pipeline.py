@@ -974,7 +974,7 @@ def test_generate_object_passes_country_lang_to_artist_material(session, monkeyp
     seen = {}
 
     def fake_artist_material(
-        qid, registry, *, run_query=None, country_lang="fr", artist_qid=None
+        qid, registry, *, get_entities=None, country_lang="fr", artist_qid=None
     ):
         seen["country_lang"] = country_lang
         return {}
@@ -1884,3 +1884,185 @@ def test_autouse_fixture_prevents_real_network_for_name_search_by_default(
     )
 
     assert calls == []  # 真实 HTTP 层从没被打到——证明被 autouse 的桩拦住了
+
+
+def _seed_known_artist_object(session, artist):
+    from app.services.object_importer import upsert_object
+
+    session.add(artist)
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "Q77",
+            "title_en": "Known artist work",
+            "category": "painting",
+            "attributes": {"artist_qid": artist.qid},
+        },
+    )
+    session.commit()
+
+
+def _gen_q77(session):
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "Q77",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+        registry=_FakeRegistry(),
+    )
+
+
+def test_artist_facts_skipped_when_artist_card_already_fetched(session, monkeypatch):
+    """作者卡已有生年 = Wikidata 已查过一次;这几项只给作者卡补缺,首屏关键路径上
+    再查一遍纯白等(实测 0.5-14.6s)。"""
+    import app.services.enrichment.pipeline as pl
+
+    calls = []  # 不用 raise:调用点有 except Exception 会吞掉断言
+    monkeypatch.setattr(
+        pl, "_artist_facts", lambda qid, artist_qid=None: calls.append(qid) or {}
+    )
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    _seed_known_artist_object(
+        session, Artist(qid="Q330", name_en="David", birth="1748", bio={"en": "Bio."})
+    )
+    _gen_q77(session)
+    assert calls == []
+    o = session.query(MuseumObject).filter_by(qid="Q77").one()
+    assert o.attributes.get("artist_qid") == "Q330"
+    assert session.query(Artist).filter_by(qid="Q330").one().birth == "1748"
+
+
+def test_artist_facts_still_fetched_for_bare_artist_card(session, monkeypatch):
+    """上馆时建的空卡(只有名字、无生年)还没查过 → 照查并补缺。"""
+    import app.services.enrichment.pipeline as pl
+
+    calls = []
+
+    def _facts(qid, artist_qid=None):
+        calls.append(artist_qid)
+        return {"artist_birth": "1748"}
+
+    monkeypatch.setattr(pl, "_artist_facts", _facts)
+    monkeypatch.setattr(pl, "_wikidata_labels", lambda qid, langs: {})
+    _seed_known_artist_object(session, Artist(qid="Q330", name_en="David"))
+    _gen_q77(session)
+    assert calls == ["Q330"]
+    assert session.query(Artist).filter_by(qid="Q330").one().birth == "1748"
+
+
+def test_prep_network_fetches_run_concurrently(session, monkeypatch):
+    """AI 写之前的 5 路联网取数互不依赖,必须同时发出(串行时首屏 = 各步相加,
+    2026-10-10 staging 实测 17-31s)。屏障要 5 方同时到达才放行;串行跑则每方等满超时。"""
+    import threading
+
+    import app.services.enrichment.evidence as ev
+    import app.services.enrichment.pipeline as pl
+    import app.services.enrichment.vision as vi
+
+    barrier = threading.Barrier(5, timeout=2)
+    met = []
+
+    def meet(name, ret):
+        def f(*a, **k):
+            try:
+                barrier.wait()
+                met.append(name)
+            except threading.BrokenBarrierError:
+                pass
+            return ret
+
+        return f
+
+    monkeypatch.setattr(pl, "fetch_object_material", meet("material", {}))
+    monkeypatch.setattr(pl, "_wikidata_labels", meet("labels", {}))
+    monkeypatch.setattr(pl, "_resolve_creator", meet("creator", None))
+    monkeypatch.setattr(ev, "fetch_rich_facts", meet("rich", []))
+    monkeypatch.setattr(vi, "primary_image_url", lambda db, obj: "https://img/x.jpg")
+    monkeypatch.setattr(vi, "describe_image", meet("vision", "A red sky."))
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.content_status = "stub"
+    session.commit()
+    _run(session, "Q1", registry=_FakeRegistry())
+
+    assert sorted(met) == ["creator", "labels", "material", "rich", "vision"]
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes.get(vi.KEY) == "A red sky."  # 看图结果照旧落库
+
+
+def test_first_generation_material_includes_evidence_pack_rich_facts(
+    session, monkeypatch
+):
+    """首次生成(stub,还没有证据包)时,讲解和深度模块的材料必须已含证据包富属性。
+    设计(2026-06-30 阶段2a §3)要求两者都经 build_material 吃上 pack;此前证据包
+    在拼材料**之后**才建,首次生成永远用不上(只有 --force 重生成才用上)。"""
+    import app.services.enrichment.evidence as ev
+    from app.services.enrichment.content_enricher import build_material
+
+    monkeypatch.setattr(
+        ev,
+        "fetch_rich_facts",
+        lambda qid, get_entities=None: [
+            {
+                "claim": "commissioned by",
+                "value": "Pope Julius II",
+                "source": "wikidata:P88",
+                "topic": "origin",
+            }
+        ],
+    )
+    seen = {}
+
+    class _Rec(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            seen["guide"] = build_material(obj)
+            return None
+
+        def generate_canonical(self, obj, sections, guide=None):
+            seen["canonical"] = build_material(obj)
+            return super().generate_canonical(obj, sections, guide=guide)
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Rec(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert "Pope Julius II" in seen["guide"]
+    assert "Pope Julius II" in seen["canonical"]
+
+
+def test_prep_failure_warning_carries_the_cause(session, monkeypatch):
+    """终审 #5:上线后要靠 prep 警告分辨是限流、超时还是 maxlag —— 警告里必须带异常本身。"""
+    import app.services.enrichment.evidence as ev
+    import app.services.enrichment.pipeline as pl
+
+    def boom(qid, langs):
+        raise RuntimeError("WDQS-said-429")
+
+    warned = []
+    monkeypatch.setattr(pl, "_wikidata_labels", boom)
+    monkeypatch.setattr(
+        pl.logger, "warning", lambda msg, *a, **k: warned.append(msg % a)
+    )
+    # 不碰真实网络:否则后台预取线程会去重试真实请求
+    monkeypatch.setattr(ev, "fetch_rich_facts", lambda qid, get_entities=None: [])
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.content_status = "stub"
+    session.commit()
+    _run(session, "Q1", registry=_FakeRegistry())
+    assert any(
+        "prep: title labels failed" in w and "WDQS-said-429" in w for w in warned
+    )

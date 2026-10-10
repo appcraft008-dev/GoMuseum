@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 
+from app.services.enrichment import wikidata_api as _wa
 from app.services.enrichment.fetcher import _CORE
 from app.services.enrichment.merge import merge_contributions
 from app.services.enrichment.sources import wikidata as _wd
@@ -56,15 +57,6 @@ def fetch_object_material(
 # 管线把加歇的维基传记灌进 artist_extract_*,10 语 78 条正文全在讲"梵高的医生
 # 画了这幅静物",而结构化字段是塞尚的生卒年和代表作。
 # → 解析一次、传下去。排序键用 Wikidata 自己的不确定性标记,不是随机取首个。
-_CREATOR_QUERY = """
-SELECT ?artist ?rank ?cert (COUNT(?ref) AS ?refs) WHERE {{
-  wd:{qid} p:P170 ?st .
-  ?st ps:P170 ?artist ; wikibase:rank ?rank .
-  OPTIONAL {{ ?st pq:P1480 ?cert . }}
-  OPTIONAL {{ ?st prov:wasDerivedFrom ?ref . }}
-}} GROUP BY ?artist ?rank ?cert
-"""
-
 _RANK_ORDER = {"PreferredRank": 0, "NormalRank": 1}
 # P1480 "sourcing circumstances":无限定=直接断言最强,其次 presumably,再次 possibly。
 # 未知限定词按最弱处理(宁可信有标记的那条更不确定)。
@@ -102,39 +94,68 @@ def creator_candidate(row, *, var="artist"):
     return key, aq
 
 
-def resolve_creator_qid(qid, *, run_query=None) -> str | None:
-    """作品 QID → **唯一**作者 QID。多值时按 (rank, 不确定性限定词, 引用数) 择优。
+_ENTITY_IRI = "http://www.wikidata.org/entity/"
+_RANK_IRI = {
+    "preferred": "PreferredRank",
+    "normal": "NormalRank",
+    "deprecated": "DeprecatedRank",
+}
 
-    全流程只应调这一次,结果传给 fetch_artist_facts / fetch_artist_material。
-    无作者、或 P170 是"未知值"(blank node)→ None(宁缺毋滥,不猜)。
-    """
-    run_query = run_query or _default_artist_query
-    cands = [
-        c
-        for c in (
-            creator_candidate(r)
-            for r in run_query(_CREATOR_QUERY.format(qid=qid)) or []
-        )
-        if c
-    ]
+
+def _creator_rows(entity: dict) -> list[dict]:
+    """转换层:P170 语句 → 与旧 _CREATOR_QUERY 同形的行(spec §3.1)。
+
+    旧 SPARQL 对同一语句的 P1480 × 引用交叉相乘,再按 (artist, rank, cert) 分组 COUNT(?ref):
+    同组多条语句的引用数**相加**;一条语句多个 P1480 各成一组。P1480 本身是「未知值」时
+    旧查询绑到 blank node → creator_candidate 视为未知限定词(_CERT_UNKNOWN),这里用非 QID
+    占位值复现;P1480「无值」旧查询不绑定 → 等同无限定。作者本身未知/无值 → 不产行。"""
+    groups: dict = {}
+    for st in ((entity or {}).get("claims") or {}).get("P170", []):
+        aq = _wa.entity_id(st)
+        if not aq:
+            continue
+        certs = []
+        for q in (st.get("qualifiers") or {}).get("P1480", []):
+            if q.get("snaktype") == "value":
+                certs.append(q["datavalue"]["value"]["id"])
+            elif q.get("snaktype") == "somevalue":
+                certs.append("somevalue")
+        rank = _RANK_IRI.get(st.get("rank"), "NormalRank")
+        refs = len(st.get("references") or [])
+        for cert in certs or [None]:
+            groups[(aq, rank, cert)] = groups.get((aq, rank, cert), 0) + refs
+    rows = []
+    for (aq, rank, cert), n in groups.items():
+        row = {
+            "artist": {"value": _ENTITY_IRI + aq},
+            "rank": {"value": "http://wikiba.se/ontology#" + rank},
+            "refs": {"value": str(n)},
+        }
+        if cert:
+            row["cert"] = {"value": _ENTITY_IRI + cert}
+        rows.append(row)
+    return rows
+
+
+def _creator_from_rows(rows) -> str | None:
+    """解析层(原 resolve_creator_qid 的择优,原样搬出)。"""
+    cands = [c for c in (creator_candidate(r) for r in rows or []) if c]
     return min(cands)[1] if cands else None
 
 
-_ARTIST_QUERY = """
-SELECT ?al_en ?al_cl WHERE {{
-  wd:{qid} wdt:P170 ?artist .
-  OPTIONAL {{ ?a_en schema:about ?artist ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?al_en . }}
-  OPTIONAL {{ ?a_cl schema:about ?artist ; schema:isPartOf <https://{cl}.wikipedia.org/> ; schema:name ?al_cl . }}
-}} LIMIT 1
-"""
+def resolve_creator_qid(qid, *, get_entities=None) -> str | None:
+    """作品 QID → **唯一**作者 QID。多值时按 (rank, 不确定性限定词, 引用数) 择优。
 
-# artist_qid 已由 resolve_creator_qid 定好时走这条:直接问作者实体,不再跳 P170。
-_ARTIST_TITLES_QUERY = """
-SELECT ?al_en ?al_cl WHERE {{
-  OPTIONAL {{ ?a_en schema:about wd:{aqid} ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?al_en . }}
-  OPTIONAL {{ ?a_cl schema:about wd:{aqid} ; schema:isPartOf <https://{cl}.wikipedia.org/> ; schema:name ?al_cl . }}
-}} LIMIT 1
-"""
+    全流程只应调这一次,结果传给 fetch_artist_facts / fetch_artist_material。
+    无作者、或 P170 是"未知值"→ None(宁缺毋滥,不猜)。非 Wikidata 编号 → None,不发请求。
+    """
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return None
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([qid], props="claims").get(qid)
+    return _creator_from_rows(_creator_rows(ent))
 
 
 def _default_artist_query(sparql):
@@ -158,41 +179,38 @@ def _is_raw_qid(v: str) -> bool:
     return bool(v) and v[0] in "QP" and v[1:].isdigit()
 
 
-# 同上:作者已定则直接问作者实体。走 P170 版本时多作者会**逐行串味**
-# (artist_qid 来自 A、生年来自 B),这正是 Q64309678 的病灶之一。
-_ARTIST_FACTS_BY_ARTIST_QUERY = """
-SELECT ?birth ?death ?natLabel ?workLabel WHERE {{
-  OPTIONAL {{ wd:{aqid} wdt:P569 ?birth. }}
-  OPTIONAL {{ wd:{aqid} wdt:P570 ?death. }}
-  OPTIONAL {{ wd:{aqid} wdt:P27 ?nat. }}
-  OPTIONAL {{ wd:{aqid} wdt:P800 ?work. }}
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
-}}
-"""
-
-_ARTIST_FACTS_QUERY = """
-SELECT ?artist ?birth ?death ?natLabel ?workLabel WHERE {{
-  wd:{qid} wdt:P170 ?artist .
-  OPTIONAL {{ ?artist wdt:P569 ?birth. }}
-  OPTIONAL {{ ?artist wdt:P570 ?death. }}
-  OPTIONAL {{ ?artist wdt:P27 ?nat. }}
-  OPTIONAL {{ ?artist wdt:P800 ?work. }}
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
-}}
-"""
+def _wd_time(t: str) -> str:
+    """wbgetentities 的 '+1483-04-06T…' → SPARQL 同形 '1483-04-06T…'(旧解析取 [:4])。"""
+    return t[1:] if t.startswith("+") else t
 
 
-def fetch_artist_facts(qid, *, run_query=None, artist_qid=None) -> dict:
-    """作者 Wikidata 实体结构化属性 → {artist_birth/death/nationality/notable_works}。无→{}。
+def _artist_fact_rows(entity: dict, fetch) -> list[dict]:
+    """转换层:作者实体 → 与旧 _ARTIST_FACTS_BY_ARTIST_QUERY 同形的行。
+    主值规则见 wikidata_api.best_statements;无英文名的值填原始 QID(旧 label 服务行为,
+    解析层 _is_raw_qid 照旧过滤)。"""
+    births = [t for t in map(_wa.time_value, _wa.best_statements(entity, "P569")) if t]
+    deaths = [t for t in map(_wa.time_value, _wa.best_statements(entity, "P570")) if t]
+    nats = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P27")) if q]
+    works = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P800")) if q]
+    en = _wa.labels_of(list(dict.fromkeys(nats + works)), ["en"], fetch)
 
-    artist_qid 已由 resolve_creator_qid 定好时直接问该实体 —— 多作者作品必须走这条,
-    否则字段会跨作者串味。不传则退回 P170 遍历(兼容老调用点)。
-    """
-    run_query = run_query or _default_artist_query
-    if artist_qid:
-        rows = run_query(_ARTIST_FACTS_BY_ARTIST_QUERY.format(aqid=artist_qid))
-    else:
-        rows = run_query(_ARTIST_FACTS_QUERY.format(qid=qid))
+    def lab(q):
+        return (en.get(q) or {}).get("en") or q
+
+    cols = {
+        "birth": [_wd_time(t) for t in births],
+        "death": [_wd_time(t) for t in deaths],
+        "natLabel": [lab(q) for q in nats],
+        "workLabel": [lab(q) for q in works],
+    }
+    n = max((len(v) for v in cols.values()), default=0)
+    return [
+        {k: {"value": v[i]} for k, v in cols.items() if i < len(v)} for i in range(n)
+    ]
+
+
+def _artist_facts_from_rows(rows, artist_qid=None) -> dict:
+    """解析层(原 fetch_artist_facts 逐行解析;删去 P170 遍历的 artist 列分支,spec §4.1)。"""
     if not rows:
         return {"artist_qid": artist_qid} if artist_qid else {}
     out = {"artist_qid": artist_qid} if artist_qid else {}
@@ -207,10 +225,6 @@ def fetch_artist_facts(qid, *, run_query=None, artist_qid=None) -> dict:
             nat = None
         if w and _is_raw_qid(w):
             w = None
-        if "artist_qid" not in out:
-            au = (row.get("artist") or {}).get("value", "")
-            if au:
-                out["artist_qid"] = au.rsplit("/", 1)[-1]
         if b and "artist_birth" not in out:
             out["artist_birth"] = b[:4]
         if d and "artist_death" not in out:
@@ -224,9 +238,20 @@ def fetch_artist_facts(qid, *, run_query=None, artist_qid=None) -> dict:
     return out
 
 
-_LABELS_QUERY = """
-SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
-"""
+def fetch_artist_facts(qid, *, get_entities=None, artist_qid=None) -> dict:
+    """作者 Wikidata 实体结构化属性 → {artist_birth/death/nationality/notable_works}。
+
+    artist_qid 必须由 resolve_creator_qid 定好;为空 → {}。旧实现为空时遍历作品 P170,
+    「未知值」的 blank node 哈希会被当作者 QID 写回(prod 61 件假作者卡,spec §4.1)。
+    """
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not artist_qid or not is_wikidata_qid(artist_qid):
+        return {}
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([artist_qid], props="claims").get(artist_qid) or {}
+    return _artist_facts_from_rows(_artist_fact_rows(ent, get_entities), artist_qid)
+
 
 # 批量版:一次查一批实体的标签。上大馆的硬前提——单件版是 N+1,卢浮宫 17283 件
 # = 17283 次串行 SPARQL(实测 ~5h,CPU 只占 12%,全在等网络)。
@@ -274,19 +299,16 @@ def to_simplified(s: str) -> str:
     return _variant_convert("zh", s)
 
 
-def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
-    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
-    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。
-    非 Wikidata 对外把手(joconde-<ref> 等)→ 直接 {}(无真 QID,names 回退机翻 title_en)。"""
-    from app.services.enrichment.identity import is_wikidata_qid
+def _label_rows(entity: dict) -> list[dict]:
+    """转换层:实体 labels → 与旧 _LABELS_QUERY 同形的行(spec §2.2)。"""
+    return [
+        {"l": {"xml:lang": v["language"], "value": v["value"]}}
+        for v in ((entity or {}).get("labels") or {}).values()
+    ]
 
-    if not is_wikidata_qid(qid):
-        return {}
-    run_query = (
-        run_query or _default_artist_query
-    )  # ponytail: same generic SPARQL caller
-    langlist = ", ".join('"%s"' % x for x in _query_langs(langs))
-    rows = run_query(_LABELS_QUERY.format(qid=qid, langs=langlist))
+
+def _labels_from_rows(rows, langs: list) -> dict:
+    """解析层(原 fetch_wikidata_labels 逐行解析,原样搬出)。"""
     raw: dict = {}
     for row in rows:
         lv = row.get("l") or {}
@@ -295,6 +317,19 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
         if lang and val and lang not in raw:
             raw[lang] = val
     return _collapse_variants(raw, langs)
+
+
+def fetch_wikidata_labels(qid: str, langs: list, *, get_entities=None) -> dict:
+    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
+    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。
+    非 Wikidata 对外把手(joconde-<ref> 等)→ 直接 {}(无真 QID,names 回退机翻 title_en)。"""
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return {}
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([qid], props="labels", languages=_query_langs(langs)).get(qid)
+    return _labels_from_rows(_label_rows(ent), langs)
 
 
 def _query_langs(langs: list) -> list:
@@ -363,28 +398,28 @@ def fetch_wikidata_labels_batch(qids, langs: list, *, run_query=None) -> dict:
 
 
 def fetch_artist_material(
-    qid, registry, *, run_query=None, country_lang="fr", artist_qid=None
+    qid, registry, *, get_entities=None, country_lang="fr", artist_qid=None
 ) -> dict:
-    """抓作者实体 Wikipedia(作者→维基标题→extract)。无作者/无维基→{}。
+    """抓作者实体 Wikipedia(作者→维基条目名→extract)。无作者/无维基→{}。
 
-    artist_qid 已定则直接问该实体;不传则退回作品→P170 遍历(兼容老调用点)。
+    artist_qid 必须由 resolve_creator_qid 先定好;为空 = 无作者或故意弃权 → {}
+    (不再遍历 P170,spec §2.2/§4)。条目名直接用 sitelinks 完整 title(旧实现 rsplit("/")
+    会截断含 / 的条目名,spec §4.3)。
     """
-    run_query = run_query or _default_artist_query
-    cl = country_lang or "fr"
-    if artist_qid:
-        rows = run_query(_ARTIST_TITLES_QUERY.format(aqid=artist_qid, cl=cl))
-    else:
-        rows = run_query(_ARTIST_QUERY.format(qid=qid, cl=cl))
-    if not rows:
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    # 非 QID(prod 存量 61 件的 32 位哈希,终审 #1)不发请求
+    if not artist_qid or not is_wikidata_qid(artist_qid):
         return {}
-    row = rows[0]
+    get_entities = get_entities or _wa.get_entities
+    cl = country_lang or "fr"
+    ent = get_entities([artist_qid], props="sitelinks").get(artist_qid) or {}
+    sl = ent.get("sitelinks") or {}
     titles = {}
-    se = (row.get("al_en") or {}).get("value")
-    if se:
-        titles["en"] = se.rsplit("/", 1)[-1]
-    scl = (row.get("al_cl") or {}).get("value")
-    if scl:
-        titles[country_lang or "fr"] = scl.rsplit("/", 1)[-1]
+    if (sl.get("enwiki") or {}).get("title"):
+        titles["en"] = sl["enwiki"]["title"]
+    if (sl.get(f"{cl}wiki") or {}).get("title"):
+        titles[cl] = sl[f"{cl}wiki"]["title"]
     if not titles:
         return {}
     wiki = registry.get("wikipedia")
@@ -398,16 +433,6 @@ def fetch_artist_material(
         for k, v in contrib.fields.items()
         if k.startswith("extract_") and v
     }
-
-
-_ARTIST_I18N_FACTS_QUERY = """
-SELECT ?natLabel ?work ?workLabel WHERE {{
-  OPTIONAL {{ wd:{qid} wdt:P27 ?nat . ?nat rdfs:label ?natLabel .
-             FILTER(lang(?natLabel) IN ({langs})) }}
-  OPTIONAL {{ wd:{qid} wdt:P800 ?work . ?work rdfs:label ?workLabel .
-             FILTER(lang(?workLabel) IN ({langs})) }}
-}}
-"""
 
 
 def authoritative_work_label(labels: dict, lang: str) -> str | None:
@@ -431,22 +456,39 @@ def _pick_work_label(labels: dict, lang: str) -> str | None:
     )
 
 
-def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
-    """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
-    单查询 rdfs:label 语言过滤(同 _LABELS_QUERY 款,一作者一查)。
-    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]}}。
-    代表作**先选作品集合再逐语言取标签**,所以各语言列的是同一批作品、长度一致;
-    国籍无标签的语言仍缺席(由调用方翻译兜底)。"""
-    run_query = run_query or _default_artist_query
+def _i18n_wanted(langs) -> list:
     # 变体语言要连它的兜底源一起取:zh-hant 的链里有 zh,若只按 langs 过滤,
     # 请求 zh-hant 而没请求 zh 时链就断了、只能掉到英文。
-    wanted = list(
+    return list(
         dict.fromkeys(
             [*langs, *(v for x in langs for v in (_SCRIPT_VARIANTS.get(x) or ((),))[0])]
         )
     )
-    langlist = ", ".join('"%s"' % x for x in wanted)
-    rows = run_query(_ARTIST_I18N_FACTS_QUERY.format(qid=artist_qid, langs=langlist))
+
+
+def _artist_i18n_rows(entity: dict, wanted: list, fetch) -> list[dict]:
+    """转换层:作者 P27/P800 主值 × 各语言标签 → 与旧 _ARTIST_I18N_FACTS_QUERY 同形的行。"""
+    nats = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P27")) if q]
+    works = [q for q in map(_wa.entity_id, _wa.best_statements(entity, "P800")) if q]
+    labels = _wa.labels_of(list(dict.fromkeys(nats + works)), wanted, fetch)
+    rows = []
+    for q in nats:
+        for lang, v in (labels.get(q) or {}).items():
+            rows.append({"natLabel": {"xml:lang": lang, "value": v}})
+    for q in works:
+        for lang, v in (labels.get(q) or {}).items():
+            rows.append(
+                {
+                    "work": {"value": _ENTITY_IRI + q},
+                    "workLabel": {"xml:lang": lang, "value": v},
+                }
+            )
+    return rows
+
+
+def _artist_i18n_from_rows(rows, langs) -> dict:
+    """解析层(原 fetch_artist_i18n_facts 逐行解析与选集,原样搬出)。"""
+    wanted = _i18n_wanted(langs)
     nat_i18n: dict = {}
     works: dict = {}  # 作品 qid -> {lang: label}
     for row in rows:
@@ -478,6 +520,20 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, run_query=None) -> dict:
         # 字符串猜不出来(法语的 Olympia 就等于英语的 Olympia)。
         "notable_works_labels": [ls for _, ls in top],
     }
+
+
+def fetch_artist_i18n_facts(artist_qid, langs, *, get_entities=None) -> dict:
+    """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
+    返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]},
+    "notable_works_labels": [...]}。代表作**先选作品集合再逐语言取标签**,各语言同一批作品。"""
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(artist_qid):
+        return _artist_i18n_from_rows([], langs)
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([artist_qid], props="claims").get(artist_qid) or {}
+    rows = _artist_i18n_rows(ent, _i18n_wanted(langs), get_entities)
+    return _artist_i18n_from_rows(rows, langs)
 
 
 def fetch_museum_intro_material(qid: str, *, get_json=None) -> dict:

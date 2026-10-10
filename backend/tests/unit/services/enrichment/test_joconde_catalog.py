@@ -232,11 +232,13 @@ def test_is_wikidata_qid_and_labels_guard():
     # 合成 qid → 直接 {},绝不调 SPARQL(省成本 + 避免 wd:<合成号> 垃圾查询)
     called = {"n": 0}
 
-    def _boom(q):
+    def _boom(*a, **k):
         called["n"] += 1
-        raise AssertionError("run_query 不该被调用")
+        raise AssertionError("get_entities 不该被调用")
 
-    assert fetch_wikidata_labels("joconde-50350115122", ["zh"], run_query=_boom) == {}
+    assert (
+        fetch_wikidata_labels("joconde-50350115122", ["zh"], get_entities=_boom) == {}
+    )
     assert called["n"] == 0
 
 
