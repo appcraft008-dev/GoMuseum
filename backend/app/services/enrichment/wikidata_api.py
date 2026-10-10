@@ -21,6 +21,8 @@ API = "https://www.wikidata.org/w/api.php"
 _BATCH = 50  # wbgetentities 匿名调用上限(超了返回 200 + error toomanyvalues)
 _TIMEOUT = 10
 _TRIES = 3
+# Retry-After 封顶:懒生成首屏在等这一步,服务器要求等太久就按 5s 重试,3 次后放弃(终审 #2)
+_MAX_WAIT = 5.0
 # ponytail: 进程级同时在途 ≤2(Wikimedia API 礼仪);prod 2 worker → ≤4。量大再上跨进程令牌。
 _GATE = threading.BoundedSemaphore(2)
 
@@ -58,25 +60,31 @@ def _get(params: dict, http_get, sleep) -> dict:
                 )
             if r.status_code == 429 or r.status_code >= 500:
                 last = WikidataApiError(f"HTTP {r.status_code}")
-                wait = _retry_after(r) or wait
+                wait = min(_retry_after(r) or wait, _MAX_WAIT)
             else:
+                # 其它 4xx:不重试,统一成 WikidataApiError
                 try:
                     r.raise_for_status()
-                except (
-                    requests.HTTPError
-                ) as e:  # 其它 4xx:不重试,统一成 WikidataApiError
+                except requests.HTTPError as e:
                     raise WikidataApiError(f"HTTP {r.status_code}") from e
-                body = r.json()
-                err = body.get("error")
-                if err:
-                    if err.get("code") != "maxlag":
-                        raise WikidataApiError(f"{err.get('code')}: {err.get('info')}")
-                    last = WikidataApiError("maxlag")
-                    wait = _retry_after(r) or wait
-                elif "entities" not in body:
-                    raise WikidataApiError("response has no entities")
+                # 200 但不是 JSON(代理/错误页)= 瞬时故障,重试(终审 #3)
+                try:
+                    body = r.json()
+                except ValueError:
+                    last = WikidataApiError("non-JSON response")
                 else:
-                    return body["entities"]
+                    err = body.get("error")
+                    if err:
+                        if err.get("code") != "maxlag":
+                            raise WikidataApiError(
+                                f"{err.get('code')}: {err.get('info')}"
+                            )
+                        last = WikidataApiError("maxlag")
+                        wait = min(_retry_after(r) or wait, _MAX_WAIT)
+                    elif "entities" not in body:
+                        raise WikidataApiError("response has no entities")
+                    else:
+                        return body["entities"]
         except (requests.Timeout, requests.ConnectionError) as e:
             last = e
         if attempt < _TRIES - 1:

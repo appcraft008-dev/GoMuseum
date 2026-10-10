@@ -226,3 +226,26 @@ def test_labels_of_maps_and_skips_empty():
         "Q2": {},
     }
     assert wa.labels_of([], ["en"], fetch) == {}
+
+
+def test_retry_after_capped_so_first_screen_never_stalls():
+    """终审 #2:服务器给的 Retry-After 不设上限会把用户首屏一起卡住。"""
+    waits = []
+    get, _ = _seq(_Resp(429, headers={"Retry-After": "600"}), _ok({"Q1": {}}))
+    wa.get_entities(["Q1"], props="claims", http_get=get, sleep=waits.append)
+    assert waits == [5.0]
+
+
+def test_non_json_200_is_retried():
+    """终审 #3:代理/错误页返回 200 + HTML 是瞬时故障,要重试而不是直接丢资料。"""
+
+    class _Html(_Resp):
+        def json(self):
+            raise ValueError("Expecting value")
+
+    waits = []
+    get, calls = _seq(_Html(), _ok({"Q1": {}}))
+    assert wa.get_entities(
+        ["Q1"], props="claims", http_get=get, sleep=waits.append
+    ) == {"Q1": {}}
+    assert len(calls) == 2

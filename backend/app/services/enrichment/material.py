@@ -244,7 +244,9 @@ def fetch_artist_facts(qid, *, get_entities=None, artist_qid=None) -> dict:
     artist_qid 必须由 resolve_creator_qid 定好;为空 → {}。旧实现为空时遍历作品 P170,
     「未知值」的 blank node 哈希会被当作者 QID 写回(prod 61 件假作者卡,spec §4.1)。
     """
-    if not artist_qid:
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not artist_qid or not is_wikidata_qid(artist_qid):
         return {}
     get_entities = get_entities or _wa.get_entities
     ent = get_entities([artist_qid], props="claims").get(artist_qid) or {}
@@ -404,7 +406,10 @@ def fetch_artist_material(
     (不再遍历 P170,spec §2.2/§4)。条目名直接用 sitelinks 完整 title(旧实现 rsplit("/")
     会截断含 / 的条目名,spec §4.3)。
     """
-    if not artist_qid:
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    # 非 QID(prod 存量 61 件的 32 位哈希,终审 #1)不发请求
+    if not artist_qid or not is_wikidata_qid(artist_qid):
         return {}
     get_entities = get_entities or _wa.get_entities
     cl = country_lang or "fr"
@@ -521,6 +526,10 @@ def fetch_artist_i18n_facts(artist_qid, langs, *, get_entities=None) -> dict:
     """作者国籍(P27)/代表作(P800)的多语权威标签(交接③:作者卡本地化)。
     返回 {"nationality_i18n": {lang: label}, "notable_works_i18n": {lang: [labels]},
     "notable_works_labels": [...]}。代表作**先选作品集合再逐语言取标签**,各语言同一批作品。"""
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(artist_qid):
+        return _artist_i18n_from_rows([], langs)
     get_entities = get_entities or _wa.get_entities
     ent = get_entities([artist_qid], props="claims").get(artist_qid) or {}
     rows = _artist_i18n_rows(ent, _i18n_wanted(langs), get_entities)

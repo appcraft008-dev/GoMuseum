@@ -1276,3 +1276,28 @@ def test_artist_i18n_rows_carry_work_qid_for_grouping():
         r["work"]["value"].startswith("http://www.wikidata.org/entity/Q")
         for r in work_rows
     )
+
+
+def test_stored_hash_artist_qid_is_not_queried():
+    """终审 #1:prod 存量 61 件的 artist_qid 是 32 位哈希;拿它去查只会报 no-such-entity
+    并刷 prep 警告。三个作者函数都要先判 is_wikidata_qid。"""
+    from app.services.enrichment.material import (
+        fetch_artist_facts,
+        fetch_artist_i18n_facts,
+        fetch_artist_material,
+    )
+
+    def boom(*a, **k):
+        raise AssertionError("哈希作者 QID 不该发请求")
+
+    h = "6b3fdc5b548e4fdde651a18ead38c7ec"
+    assert fetch_artist_facts("Q1", get_entities=boom, artist_qid=h) == {}
+    assert (
+        fetch_artist_material("Q1", SourceRegistry([]), get_entities=boom, artist_qid=h)
+        == {}
+    )
+    assert fetch_artist_i18n_facts(h, ["en"], get_entities=boom) == {
+        "nationality_i18n": {},
+        "notable_works_i18n": {},
+        "notable_works_labels": [],
+    }

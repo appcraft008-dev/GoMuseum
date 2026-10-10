@@ -230,17 +230,20 @@ def _cap_check(k, c, a, b):
         if strip(a[k]) != strip(b[k]):
             return "DIFF"
         pool = set(a[full])
-        ok = all(
-            w in pool
-            for d in (a[k], b[k])
-            for w in (d or {}).get("artist_notable_works", [])
-        )
+        wa, wb = ((d or {}).get("artist_notable_works", []) for d in (a[k], b[k]))
+        # 个数也要对上(终审 #4):新实现少选也算真实损失
+        ok = all(w in pool for w in wa + wb) and len(wa) == len(wb) == min(5, len(pool))
     else:
         pool = set(map(tuple, a[full]))
-        ok = all(
-            (f["source"].split(":")[1], f["value"]) in pool
-            for d in (a[k], b[k])
-            for f in d
+        picks_a = [(f["source"].split(":")[1], f["value"]) for f in a[k]]
+        picks_b = [(f["source"].split(":")[1], f["value"]) for f in b[k]]
+        pids = {p for p, _ in pool}
+        # 每个属性选中的个数都要 = min(5, 该属性完整集合大小)(终审 #4)
+        ok = all(x in pool for x in picks_a + picks_b) and all(
+            sum(p == pid for p, _ in picks_a)
+            == sum(p == pid for p, _ in picks_b)
+            == min(5, sum(p == pid for p, _ in pool))
+            for pid in pids
         )
     return "cap_selection" if ok else "DIFF"
 

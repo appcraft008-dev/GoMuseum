@@ -2042,3 +2042,27 @@ def test_first_generation_material_includes_evidence_pack_rich_facts(
     )
     assert "Pope Julius II" in seen["guide"]
     assert "Pope Julius II" in seen["canonical"]
+
+
+def test_prep_failure_warning_carries_the_cause(session, monkeypatch):
+    """终审 #5:上线后要靠 prep 警告分辨是限流、超时还是 maxlag —— 警告里必须带异常本身。"""
+    import app.services.enrichment.evidence as ev
+    import app.services.enrichment.pipeline as pl
+
+    def boom(qid, langs):
+        raise RuntimeError("WDQS-said-429")
+
+    warned = []
+    monkeypatch.setattr(pl, "_wikidata_labels", boom)
+    monkeypatch.setattr(
+        pl.logger, "warning", lambda msg, *a, **k: warned.append(msg % a)
+    )
+    # 不碰真实网络:否则后台预取线程会去重试真实请求
+    monkeypatch.setattr(ev, "fetch_rich_facts", lambda qid, get_entities=None: [])
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.content_status = "stub"
+    session.commit()
+    _run(session, "Q1", registry=_FakeRegistry())
+    assert any(
+        "prep: title labels failed" in w and "WDQS-said-429" in w for w in warned
+    )
