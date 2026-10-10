@@ -593,9 +593,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recNotRecognized => 'この作品を認識できませんでした';
 
   @override
-  String recLabelSeen(String text) {
-    return 'ラベルには「$text」とあります — まだ完全なガイドはありませんが、ご要望を記録しました ✅';
-  }
+  String get recNotInCatalog => 'この作品はまだ収録されていません';
 
   @override
   String get recShootLabelBtn => '解説プレートを撮影';

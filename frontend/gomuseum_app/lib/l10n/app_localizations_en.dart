@@ -603,9 +603,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recNotRecognized => 'Couldn\'t recognize this work';
 
   @override
-  String recLabelSeen(String text) {
-    return 'The label reads \"$text\" — we haven\'t added its full guide yet, but we\'ve noted your request ✅';
-  }
+  String get recNotInCatalog => 'This work isn\'t in our guide yet';
 
   @override
   String get recShootLabelBtn => 'Photograph the wall label';

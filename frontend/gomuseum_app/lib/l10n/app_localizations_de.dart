@@ -612,9 +612,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recNotRecognized => 'Werk nicht erkannt';
 
   @override
-  String recLabelSeen(String text) {
-    return 'Auf dem Schild steht „$text\" — wir haben noch keinen vollständigen Guide dazu, aber Ihre Anfrage ist notiert ✅';
-  }
+  String get recNotInCatalog => 'Dieses Werk ist noch nicht im Guide';
 
   @override
   String get recShootLabelBtn => 'Wandschild fotografieren';

@@ -180,7 +180,7 @@
   "recNoneOfThese": "Ninguna de estas",
   "recThisIsIt": "Es esta",
   "recNotRecognized": "No se reconoció esta obra",
-  "recLabelSeen": "La etiqueta dice «{text}» — aún no tenemos su guía completa, pero hemos anotado tu solicitud ✅",
+  "recNotInCatalog": "Esta obra aún no está en nuestra guía",
   "recShootLabelBtn": "Fotografía la cartela",
   "recTypeNumberOrName": "Escribir el número o el título",
   "photoFbTitle": "¿Nos envías esta foto?",

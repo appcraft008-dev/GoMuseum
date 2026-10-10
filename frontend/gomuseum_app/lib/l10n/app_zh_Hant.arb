@@ -180,7 +180,7 @@
   "recNoneOfThese": "都不是",
   "recThisIsIt": "就是這件",
   "recNotRecognized": "沒認出來這件作品",
-  "recLabelSeen": "標籤上寫著 \"{text}\"——我們還沒收錄它的完整講解，已記下你的需求 ✅",
+  "recNotInCatalog": "這件作品暫未收錄",
   "recShootLabelBtn": "拍下作品旁的說明牌",
   "recTypeNumberOrName": "輸入編號或名稱",
   "photoFbTitle": "把這張照片發給我們?",

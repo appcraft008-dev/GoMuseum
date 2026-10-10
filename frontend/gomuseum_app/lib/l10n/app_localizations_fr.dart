@@ -613,9 +613,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recNotRecognized => 'Œuvre non reconnue';
 
   @override
-  String recLabelSeen(String text) {
-    return 'L\'étiquette indique « $text » — nous n\'avons pas encore son guide complet, mais votre demande est notée ✅';
-  }
+  String get recNotInCatalog =>
+      'Cette œuvre n\'est pas encore dans notre guide';
 
   @override
   String get recShootLabelBtn => 'Photographier le cartel';

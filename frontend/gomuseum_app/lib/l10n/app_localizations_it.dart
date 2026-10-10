@@ -607,9 +607,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recNotRecognized => 'Opera non riconosciuta';
 
   @override
-  String recLabelSeen(String text) {
-    return 'L\'etichetta dice «$text» — non abbiamo ancora la sua guida completa, ma la tua richiesta è stata registrata ✅';
-  }
+  String get recNotInCatalog => 'Quest\'opera non è ancora nella guida';
 
   @override
   String get recShootLabelBtn => 'Fotografa il cartellino';

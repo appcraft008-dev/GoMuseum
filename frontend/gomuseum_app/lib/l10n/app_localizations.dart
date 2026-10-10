@@ -1193,11 +1193,11 @@ abstract class AppLocalizations {
   /// **'Couldn\'t recognize this work'**
   String get recNotRecognized;
 
-  /// No description provided for @recLabelSeen.
+  /// No description provided for @recNotInCatalog.
   ///
   /// In en, this message translates to:
-  /// **'The label reads \"{text}\" — we haven\'t added its full guide yet, but we\'ve noted your request ✅'**
-  String recLabelSeen(String text);
+  /// **'This work isn\'t in our guide yet'**
+  String get recNotInCatalog;
 
   /// No description provided for @recShootLabelBtn.
   ///
