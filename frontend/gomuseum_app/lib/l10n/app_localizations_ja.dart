@@ -631,7 +631,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get camRecognizeTitle => '作品を識別';
 
   @override
-  String get camViewfinderHint => '作品全体を枠内に収めてください';
+  String get camViewfinderHint => '作品全体を枠内に収めてください\n横長の作品はスマホを横向きに';
 
   @override
   String get camRecentGallery => '最近';
@@ -650,6 +650,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guideNotGenerated => 'ガイドはまだ生成されていません';
+
+  @override
+  String get guideDailyCap => '本日のガイド作成枠に達しました。明日またお試しください';
 
   @override
   String get audioNotReady => '解説の生成後に再生できます';

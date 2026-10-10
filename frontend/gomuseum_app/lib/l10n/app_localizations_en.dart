@@ -643,7 +643,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get camRecognizeTitle => 'Identify Artwork';
 
   @override
-  String get camViewfinderHint => 'Fit the whole artwork in the frame';
+  String get camViewfinderHint =>
+      'Fit the whole artwork in the frame\nTurn your phone sideways for wide works';
 
   @override
   String get camRecentGallery => 'Recent';
@@ -663,6 +664,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideNotGenerated => 'Guide not generated yet';
+
+  @override
+  String get guideDailyCap =>
+      'Today\'s limit for writing new guides has been reached — please check back tomorrow';
 
   @override
   String get audioNotReady => 'Audio available once the guide is ready';

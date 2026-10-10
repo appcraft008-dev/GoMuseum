@@ -383,3 +383,17 @@ def test_confirm_on_published_qid_reaches_billing(client, monkeypatch):
         "/api/v1/recognize/confirm", json={"phash": "p", "qid": "Q1"}, headers=NORMAL
     )
     assert len(calls) == 1
+
+
+def test_content_carries_unavailable_reason(client, monkeypatch):
+    # 加法字段:懒生成因当日预算用尽被跳过 → App 显示「今日名额已满」而非假「重试」
+    _spy(monkeypatch, "app.services.enrichment.lazy.maybe_trigger", ret="daily_cap")
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/content?language=zh", headers=NORMAL
+    )
+    assert r.json()["unavailable_reason"] == "daily_cap"
+    _spy(monkeypatch, "app.services.enrichment.lazy.maybe_trigger")
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/content?language=zh", headers=NORMAL
+    )
+    assert r.json()["unavailable_reason"] is None

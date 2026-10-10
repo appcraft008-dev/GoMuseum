@@ -401,3 +401,12 @@ def test_inv_hit_ter_suffix_not_confused_with_base_number(session):
     )
     lines = ["Giovanni Battista RUOPPOLO", "Achat, 1845. INV. 595 ter"]
     assert inv_artist_hit(idx, lines, []) == "Q_RUO"
+
+
+def test_inv_token_not_truncated_into_shorter_number(session):
+    # 10-10 真机:「Inv. RF2002147」被截成 RF20021,撞上卢浮 Dujardin「R.F. 2002-1」以 1.0 混进候选
+    idx = _add_inv(
+        session, "Q_DUJ", "R.F. 2002-1", "The Morra Players", "Karel Dujardin"
+    )
+    out = match(idx, [], ["Entré au musée en 1936 - Inv. RF2002147"])
+    assert not any(qid == "Q_DUJ" and score == 1.0 for qid, score in out)

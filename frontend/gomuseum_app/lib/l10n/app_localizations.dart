@@ -1268,7 +1268,7 @@ abstract class AppLocalizations {
   /// No description provided for @camViewfinderHint.
   ///
   /// In en, this message translates to:
-  /// **'Fit the whole artwork in the frame'**
+  /// **'Fit the whole artwork in the frame\nTurn your phone sideways for wide works'**
   String get camViewfinderHint;
 
   /// No description provided for @camRecentGallery.
@@ -1306,6 +1306,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Guide not generated yet'**
   String get guideNotGenerated;
+
+  /// No description provided for @guideDailyCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s limit for writing new guides has been reached — please check back tomorrow'**
+  String get guideDailyCap;
 
   /// No description provided for @audioNotReady.
   ///

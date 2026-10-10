@@ -632,7 +632,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get camRecognizeTitle => '작품 식별';
 
   @override
-  String get camViewfinderHint => '작품 전체를 화면에 담으세요';
+  String get camViewfinderHint => '작품 전체를 화면에 담으세요\n가로로 긴 작품은 휴대폰을 가로로 드세요';
 
   @override
   String get camRecentGallery => '최근';
@@ -651,6 +651,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get guideNotGenerated => '아직 가이드가 생성되지 않았습니다';
+
+  @override
+  String get guideDailyCap => '오늘의 가이드 생성 한도에 도달했습니다. 내일 다시 확인해 주세요';
 
   @override
   String get audioNotReady => '해설 생성 후 들을 수 있습니다';

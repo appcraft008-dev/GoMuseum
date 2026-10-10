@@ -648,7 +648,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get camRecognizeTitle => 'Identifica opera';
 
   @override
-  String get camViewfinderHint => 'Inquadra tutta l\'opera';
+  String get camViewfinderHint =>
+      'Inquadra tutta l\'opera\nRuota il telefono per le opere larghe';
 
   @override
   String get camRecentGallery => 'Recenti';
@@ -668,6 +669,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get guideNotGenerated => 'Guida non ancora generata';
+
+  @override
+  String get guideDailyCap =>
+      'Raggiunto il limite giornaliero di nuove guide: torna domani';
 
   @override
   String get audioNotReady => 'Audio disponibile quando la guida è pronta';

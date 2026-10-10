@@ -629,7 +629,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get camRecognizeTitle => '识别作品';
 
   @override
-  String get camViewfinderHint => '将画作完整置于取景框内';
+  String get camViewfinderHint => '将画作完整置于取景框内\n宽幅作品可横过来拍';
 
   @override
   String get camRecentGallery => '最近图库';
@@ -648,6 +648,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get guideNotGenerated => '讲解暂未生成';
+
+  @override
+  String get guideDailyCap => '今日讲解生成名额已满，明天再来看看吧';
 
   @override
   String get audioNotReady => '讲解生成后可听';
@@ -1796,7 +1799,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get camRecognizeTitle => '識別作品';
 
   @override
-  String get camViewfinderHint => '將畫作完整置於取景框內';
+  String get camViewfinderHint => '將畫作完整置於取景框內\n寬幅作品可橫過來拍';
 
   @override
   String get camRecentGallery => '最近相簿';
@@ -1815,6 +1818,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get guideNotGenerated => '講解暫未生成';
+
+  @override
+  String get guideDailyCap => '今日講解生成名額已滿，明天再來看看吧';
 
   @override
   String get audioNotReady => '講解生成後可聽';

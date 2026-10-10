@@ -652,7 +652,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get camRecognizeTitle => 'Identificar obra';
 
   @override
-  String get camViewfinderHint => 'Encuadra toda la obra';
+  String get camViewfinderHint =>
+      'Encuadra toda la obra\nGira el móvil para obras anchas';
 
   @override
   String get camRecentGallery => 'Recientes';
@@ -671,6 +672,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get guideNotGenerated => 'Guía aún no generada';
+
+  @override
+  String get guideDailyCap =>
+      'Se alcanzó el límite diario de nuevas guías; vuelve mañana';
 
   @override
   String get audioNotReady => 'Audio disponible cuando la guía esté lista';

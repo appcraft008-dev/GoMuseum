@@ -651,7 +651,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String get camRecognizeTitle => 'Rozpoznaj dzieło';
 
   @override
-  String get camViewfinderHint => 'Zmieść całe dzieło w kadrze';
+  String get camViewfinderHint =>
+      'Zmieść całe dzieło w kadrze\nSzerokie dzieła: obróć telefon poziomo';
 
   @override
   String get camRecentGallery => 'Ostatnie';
@@ -671,6 +672,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get guideNotGenerated => 'Przewodnik jeszcze nie wygenerowany';
+
+  @override
+  String get guideDailyCap =>
+      'Osiągnięto dzienny limit tworzenia przewodników — zajrzyj jutro';
 
   @override
   String get audioNotReady => 'Audio dostępne po przygotowaniu przewodnika';

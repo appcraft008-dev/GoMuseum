@@ -653,7 +653,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get camRecognizeTitle => 'Werk erkennen';
 
   @override
-  String get camViewfinderHint => 'Das ganze Werk in den Rahmen';
+  String get camViewfinderHint =>
+      'Das ganze Werk in den Rahmen\nFür breite Werke das Handy quer halten';
 
   @override
   String get camRecentGallery => 'Zuletzt';
@@ -673,6 +674,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get guideNotGenerated => 'Guide noch nicht erstellt';
+
+  @override
+  String get guideDailyCap =>
+      'Das tägliche Limit für neue Guides ist erreicht – bitte morgen wieder vorbeischauen';
 
   @override
   String get audioNotReady => 'Audio verfügbar, sobald der Guide bereit ist';

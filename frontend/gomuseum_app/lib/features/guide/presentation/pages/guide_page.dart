@@ -359,6 +359,13 @@ class _GuidePageState extends ConsumerState<GuidePage>
         if (content.status == ContentStatus.empty) {
           return _A5UnavailableScaffold(gm: gm, onBack: () => _goBack(context));
         }
+        // 当日懒生成名额已满:重试到 UTC 零点前都没用,别给假「重试」(10-10 真机)
+        if (content.dailyCapReached) {
+          return _A5UnavailableScaffold(
+              gm: gm,
+              onBack: () => _goBack(context),
+              message: AppLocalizations.of(context)!.guideDailyCap);
+        }
         return _A5RetryScaffold(
           gm: gm,
           onBack: () => _goBack(context),
@@ -694,9 +701,13 @@ class _A5ErrorScaffold extends StatelessWidget {
 /// empty 既可能是资料真不够，也可能只是这门语言还没翻(懒翻译日额度用尽/匿名不触发)
 /// —— 文案只说「这个语言还没有」,两种都成立;原先写「资料不足」对后者是假话。
 class _A5UnavailableScaffold extends StatelessWidget {
-  const _A5UnavailableScaffold({required this.gm, required this.onBack});
+  const _A5UnavailableScaffold(
+      {required this.gm, required this.onBack, this.message});
   final dynamic gm;
   final VoidCallback onBack;
+
+  /// 缺省 = 该语言暂无讲解。
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -711,7 +722,7 @@ class _A5UnavailableScaffold extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                AppLocalizations.of(context)!.guideUnavailable,
+                message ?? AppLocalizations.of(context)!.guideUnavailable,
                 textAlign: TextAlign.center,
                 style: GmText.sans(size: 14, color: palette.sub),
               ),
