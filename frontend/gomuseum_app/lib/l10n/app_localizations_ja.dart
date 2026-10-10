@@ -631,7 +631,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get camRecognizeTitle => '作品を識別';
 
   @override
-  String get camViewfinderHint => '作品全体を枠内に収めてください';
+  String get camViewfinderHint => '作品全体を枠内に収めてください\n横長の作品はスマホを横向きに';
 
   @override
   String get camRecentGallery => '最近';

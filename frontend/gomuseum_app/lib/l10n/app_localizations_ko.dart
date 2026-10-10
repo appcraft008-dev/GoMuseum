@@ -632,7 +632,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get camRecognizeTitle => '작품 식별';
 
   @override
-  String get camViewfinderHint => '작품 전체를 화면에 담으세요';
+  String get camViewfinderHint => '작품 전체를 화면에 담으세요\n가로로 긴 작품은 휴대폰을 가로로 드세요';
 
   @override
   String get camRecentGallery => '최근';

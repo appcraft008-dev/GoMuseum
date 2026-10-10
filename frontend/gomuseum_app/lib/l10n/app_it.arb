@@ -192,7 +192,7 @@
   "recShootLabelHint": "I cartellini del museo mostrano titolo e artista — fotografalo e potremo identificare l'opera",
   "recViewfinderLabelHint": "Inquadra il testo del cartellino, riempi lo schermo",
   "camRecognizeTitle": "Identifica opera",
-  "camViewfinderHint": "Inquadra tutta l'opera",
+  "camViewfinderHint": "Inquadra tutta l'opera\nRuota il telefono per le opere larghe",
   "camRecentGallery": "Recenti",
   "camAllAlbums": "Tutti gli album",
   "camGallery": "Galleria",

@@ -653,7 +653,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get camRecognizeTitle => 'Werk erkennen';
 
   @override
-  String get camViewfinderHint => 'Das ganze Werk in den Rahmen';
+  String get camViewfinderHint =>
+      'Das ganze Werk in den Rahmen\nFür breite Werke das Handy quer halten';
 
   @override
   String get camRecentGallery => 'Zuletzt';

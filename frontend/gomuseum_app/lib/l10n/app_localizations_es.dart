@@ -652,7 +652,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get camRecognizeTitle => 'Identificar obra';
 
   @override
-  String get camViewfinderHint => 'Encuadra toda la obra';
+  String get camViewfinderHint =>
+      'Encuadra toda la obra\nGira el móvil para obras anchas';
 
   @override
   String get camRecentGallery => 'Recientes';

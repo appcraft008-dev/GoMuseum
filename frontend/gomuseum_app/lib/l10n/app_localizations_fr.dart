@@ -654,7 +654,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get camRecognizeTitle => 'Identifier l\'œuvre';
 
   @override
-  String get camViewfinderHint => 'Cadrez toute l\'œuvre';
+  String get camViewfinderHint =>
+      'Cadrez toute l\'œuvre\nTournez le téléphone pour les œuvres larges';
 
   @override
   String get camRecentGallery => 'Récents';

@@ -6,10 +6,10 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -92,6 +92,15 @@ String? photoFeedbackTriggerOnRetake(
         {required bool reachedChoice, required bool onChoicePage}) =>
     reachedChoice && onChoicePage ? 'not_found' : null;
 
+/// 相机页允许的方向。手机(最短边 <600dp)锁竖屏:横屏时竖屏布局被整个转过来,
+/// 取景框挤到上半截。锁竖屏不妨碍横拍——相机插件按重力感应给照片定方向,后端按 EXIF 转正。
+/// 大屏(平板/折叠屏内屏)不锁:空间够,且 Android 16 起大屏会忽略方向锁。空列表=不限制。
+@visibleForTesting
+List<DeviceOrientation> cameraOrientations(Size logicalScreen) =>
+    logicalScreen.shortestSide < 600
+        ? const [DeviceOrientation.portraitUp]
+        : const [];
+
 @visibleForTesting
 bool shouldRestartCamera(AppLifecycleState state,
         {required bool hasController, bool isTopRoute = true}) =>
@@ -137,6 +146,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final view = WidgetsBinding.instance.platformDispatcher.views.first;
+    SystemChrome.setPreferredOrientations(
+        cameraOrientations(view.physicalSize / view.devicePixelRatio));
     _initCamera();
     _loadRecentAssets();
     // 进入识别页时重置上一次识别状态
@@ -266,6 +278,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    SystemChrome.setPreferredOrientations(const []); // 离开相机页恢复自由旋转
     _controller?.dispose();
     super.dispose();
   }

@@ -651,7 +651,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String get camRecognizeTitle => 'Rozpoznaj dzieło';
 
   @override
-  String get camViewfinderHint => 'Zmieść całe dzieło w kadrze';
+  String get camViewfinderHint =>
+      'Zmieść całe dzieło w kadrze\nSzerokie dzieła: obróć telefon poziomo';
 
   @override
   String get camRecentGallery => 'Ostatnie';

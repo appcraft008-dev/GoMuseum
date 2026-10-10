@@ -629,7 +629,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get camRecognizeTitle => '识别作品';
 
   @override
-  String get camViewfinderHint => '将画作完整置于取景框内';
+  String get camViewfinderHint => '将画作完整置于取景框内\n宽幅作品可横过来拍';
 
   @override
   String get camRecentGallery => '最近图库';
@@ -1796,7 +1796,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get camRecognizeTitle => '識別作品';
 
   @override
-  String get camViewfinderHint => '將畫作完整置於取景框內';
+  String get camViewfinderHint => '將畫作完整置於取景框內\n寬幅作品可橫過來拍';
 
   @override
   String get camRecentGallery => '最近相簿';

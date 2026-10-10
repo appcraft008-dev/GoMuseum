@@ -643,7 +643,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get camRecognizeTitle => 'Identify Artwork';
 
   @override
-  String get camViewfinderHint => 'Fit the whole artwork in the frame';
+  String get camViewfinderHint =>
+      'Fit the whole artwork in the frame\nTurn your phone sideways for wide works';
 
   @override
   String get camRecentGallery => 'Recent';

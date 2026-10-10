@@ -648,7 +648,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get camRecognizeTitle => 'Identifica opera';
 
   @override
-  String get camViewfinderHint => 'Inquadra tutta l\'opera';
+  String get camViewfinderHint =>
+      'Inquadra tutta l\'opera\nRuota il telefono per le opere larghe';
 
   @override
   String get camRecentGallery => 'Recenti';
