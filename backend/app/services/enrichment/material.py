@@ -10,6 +10,8 @@ import logging
 from app.services.enrichment.fetcher import _CORE
 from app.services.enrichment.merge import merge_contributions
 from app.services.enrichment.sources import wikidata as _wd
+from app.services.matching.normalize import normalize, tokens
+from app.services.matching.people import _SPLIT
 
 logger = logging.getLogger(__name__)
 
@@ -546,3 +548,195 @@ def fetch_museum_building_photo(qid: str, *, run_query=None) -> str | None:
         if v:
             return v
     return None
+
+
+# 弃权关键词全部是法语(Auteur 字段是法语,不是英语),2026-10-07 实测奥赛
+# +橘园真实 Auteur 字段逐个核对出来的"这不是作者本人画的"类表述。不包括
+# dit/dite/née/patronyme(这些是别名标记,不是弃权信号)、也不包括
+# fondeur/orfèvre/céramiste/éditeur/mouleur/praticien/exécutant(这些是
+# 工匠角色词,交给职业过滤自然处理——铸造厂/工坊这类机构名在 Wikidata 搜
+# 不出 human 候选,那一段自然解析失败,不需要在这里特殊处理)。
+_QUALIFIER_MARKERS = (
+    "d'après", "d'apres", "atelier", "entourage", "attribué à", "attribue a",
+    "attribué", "attribue", "attribution incertaine", "imitation",
+    "inspiré par", "inspire par", "genre de", "anonyme", "anonymous",
+    "(?",  # 真实数据里"(?)"= 不确定是不是这个人画的,和 d'après 同级弃权信号
+    # (2026-10-07 全分支审阅发现:漏了这条会让"两可"的历史数据因为"(?)"
+    # 字面查不到而让另一段意外"唯一成功",错误坐实成某一个人)
+)  # fmt: skip
+
+
+def _has_qualifier_marker(name: str) -> bool:
+    """整串扫一遍限定词(仿作/工作室作品等)关键词,子串匹配、大小写不敏感。
+    命中就该整体弃权,不进入拆分/按名查找流程(spec §3.2 步骤0)。"""
+    low = (name or "").lower()
+    return any(marker in low for marker in _QUALIFIER_MARKERS)
+
+
+def _reorder_candidates(segment: str) -> list[str]:
+    """姓名重排:Joconde 惯用"姓 名"顺序查 Wikidata 常年查不到(wbsearchentities
+    对词序敏感),要试"名 姓"顺序。姓氏本身可能是多个词(如"DE MACHY Pierre
+    Antoine"),所以试全部 n-1 种切法——把开头 k 个词(k=1..n-1)当姓氏挪到
+    末尾,不是只试"第一个词 vs 剩余"这一种(spec §3.2 步骤2)。"""
+    words = segment.split()
+    if len(words) < 2:
+        return []
+    return [" ".join(words[k:] + words[:k]) for k in range(1, len(words))]
+
+
+_SEARCH_LIMIT = 5
+
+
+def _default_search_entities(text, *, limit=_SEARCH_LIMIT):
+    """真实打 Wikidata wbsearchentities(与 material.py 其它函数用的 SPARQL
+    查询服务是不同的 API,这里是 MediaWiki Action API)。"""
+    import requests
+
+    r = requests.get(
+        "https://www.wikidata.org/w/api.php",
+        params={
+            "action": "wbsearchentities",
+            "search": text,
+            "language": "en",
+            "format": "json",
+            "limit": limit,
+        },
+        headers={"User-Agent": _wd.USER_AGENT},
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json().get("search", [])
+
+
+def _segment_candidates(
+    segment: str, *, search_entities, word_set: frozenset
+) -> list[str]:
+    """一段署名 -> 两种词序查询后、词集合精确匹配过的候选 qid 列表(未去重
+    按发现顺序、未过滤职业)。词集合精确匹配堵的是 wbsearchentities 的前缀
+    匹配误判(如"LEON Paul"匹配到诗人 Léon-Paul Fargue,见 spec §3.2 步骤2)。"""
+    seen: list[str] = []
+    for query in [segment, *_reorder_candidates(segment)]:
+        for r in search_entities(query, limit=_SEARCH_LIMIT):
+            match_text = (r.get("match") or {}).get("text") or r.get("label") or ""
+            if frozenset(tokens(normalize(match_text))) != word_set:
+                continue
+            qid = r.get("id")
+            if qid and qid not in seen:
+                seen.append(qid)
+    return seen
+
+
+_OCCUPATION_WHITELIST = {
+    "Q1028181",  # painter
+    "Q1281618",  # sculptor
+    "Q329439",  # engraver
+    "Q15296811",  # draughtsman
+    "Q10862983",  # etcher
+    "Q11569986",  # printmaker
+    "Q7541856",  # ceramicist
+    # ⛔ 2026-10-07 试过加 photographer(Q33231)/architect(Q42973)去救奥赛
+    # 的 Vacquerie/Coquart(真实 dry-run 发现的缺口),已撤回:全分支审阅
+    # 用真实 Wikidata 数据证明,同一条改动把"LEON Paul"从"0候选正确弃权"
+    # 变成"1个候选误判成委内瑞拉记者 Paul León(他 P106 恰好含
+    # photographer)"——往白名单加任何职业,都可能让"两个同名真人本该都被
+    # 排除"变成"凑巧一个没被排除、误判成那一个",这正是宁缺毋滥最想防的
+    # 错误。以后要再加职业,必须先把 spec §3.5 的全部必须弃权案例跑一遍
+    # 真实 Wikidata 回归,不能只验证新加的正样本。
+}
+
+
+def _default_get_claims(qids):
+    """真实打 Wikidata wbgetentities,批量查 P31/P106——一次请求查完一段
+    两种词序凑出来的全部候选,不逐个候选单独查(spec §3.2 步骤3)。"""
+    import requests
+
+    if not qids:
+        return {}
+    r = requests.get(
+        "https://www.wikidata.org/w/api.php",
+        params={
+            "action": "wbgetentities",
+            "ids": "|".join(qids),
+            "props": "claims",
+            "format": "json",
+        },
+        headers={"User-Agent": _wd.USER_AGENT},
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json().get("entities", {})
+
+
+def _claim_ids(entity: dict, prop: str) -> set[str]:
+    out = set()
+    for c in (entity.get("claims") or {}).get(prop, []):
+        v = (c.get("mainsnak") or {}).get("datavalue", {}).get("value")
+        if isinstance(v, dict) and v.get("id"):
+            out.add(v["id"])
+    return out
+
+
+def resolve_creator_by_name(
+    name: str | None,
+    *,
+    search_entities=None,
+    get_claims=None,
+) -> str | None:
+    """按原始署名字符串找 Wikidata 作者实体——P170 查不到创作者时的第二
+    梯队(spec §3.2)。纯函数,网络调用可注入 mock,离线可测。
+
+    歧义/查不到候选 -> None,不打分硬选(纪律37:写错共享 artists 表的
+    代价远高于暂时缺,宁缺毋滥)。"""
+    if not name or not name.strip() or _has_qualifier_marker(name):
+        return None
+    search_entities = search_entities or _default_search_entities
+    get_claims = get_claims or _default_get_claims
+
+    # 单个词的段(裸姓氏/裸名字)不产出候选——真实验证过(curl):裸姓氏
+    # "ROUSSEAU"会通过 Wikidata 自己的别名系统精确匹配到某个同名画家,
+    # 但到底是哪个画家完全看搜索排名(真正该入选的候选可能排到 limit
+    # 之外),"唯一候选"规则在这种情况下是被排名顺序意外满足的,不是真的
+    # 唯一(2026-10-07 全分支审阅发现)。单词本身信息量不够,不该进解析。
+    segments = [
+        s.strip()
+        for s in _SPLIT.split(name)
+        if s.strip() and len(s.strip().split()) >= 2
+    ]
+    if not segments:
+        return None
+
+    segment_candidates: dict[str, list[str]] = {}
+    all_candidates: set[str] = set()
+    for seg in segments:
+        word_set = frozenset(tokens(normalize(seg)))
+        cands = _segment_candidates(
+            seg, search_entities=search_entities, word_set=word_set
+        )
+        segment_candidates[seg] = cands
+        all_candidates.update(cands)
+
+    if not all_candidates:
+        return None
+
+    claims = get_claims(sorted(all_candidates))
+    artists = {
+        qid
+        for qid, ent in claims.items()
+        if "Q5" in _claim_ids(ent, "P31")
+        and _claim_ids(ent, "P106") & _OCCUPATION_WHITELIST
+    }
+
+    # ⚠️ 已知天花板(全分支审阅发现,记录不修):非末尾段落如果带着括号内容
+    # (如真实数据"BAZILLE Frédéric;Manet Édouard (1832-1883)"里 Manet 那段
+    # 的生卒年),词集合精确匹配会失败、这一段被当"解析失败"忽略——于是
+    # 只剩另一位合作者"独占"署名。当前 §3.1 的新正则恰好在入库时把这类
+    # 具体形态清掉了,所以暂时没有实例触发,但这不是设计上的保证,只是
+    # 眼下的数据巧合。真要堵,需要在拆分后对每段单独再跑一次限定词/日期
+    # 扫描,而不是只在整串层面扫一次——YAGNI,等真的撞到再做。
+    resolved: set[str] = set()
+    for cands in segment_candidates.values():
+        survivors = [c for c in cands if c in artists]
+        if len(survivors) == 1:
+            resolved.add(survivors[0])
+
+    return next(iter(resolved)) if len(resolved) == 1 else None

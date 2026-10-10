@@ -11,7 +11,7 @@ from app.services.matching.normalize import (  # noqa: F401  再导出
     normalize,
     normalize_inv,
 )
-from app.services.matching.people import same_person
+from app.services.matching.people import same_person, surname_seen
 
 HIGH = 0.85  # ≥ 直开讲解页;真实数据校准前的初值
 LOW = 0.5  # < 未收录;[LOW, HIGH) 出确认卡
@@ -21,8 +21,11 @@ _INV_MIN = 3  # 归一化后长度 <3 不做编号匹配(防误伤)
 # 从整段 OCR 抽馆藏号样式 token(≥2 字母前缀 + 至多 3 段数字)。脏 OCR 把标题/号/尺寸
 # 挤一行时,整行 normalize_inv 抠不出号,靠此正则补(实测 0.55→1.0)。数字段有界,避免
 # 贪婪吞掉紧随的尺寸位;抽号前先剥"74x94cm"类尺寸,防污染。
+# 卢浮墙签印「INV. 1186」「R.F. 2372」「INV. 595 ter」(10-07 真机):字母间可带点,可带 bis/ter。
 _DIM = re.compile(r"\d+\s*[x×]\s*\d+\s*(?:cm|mm|in)?", re.IGNORECASE)
-_INV_TOKEN = re.compile(r"[A-Za-z]{2,4}\s?\d{1,5}(?:[\s\-]\d{1,4}){0,2}")
+_INV_TOKEN = re.compile(
+    r"\b(?:[A-Za-z]\.?){2,4}\s?\d{1,5}(?:[\s\-]\d{1,4}){0,2}(?:\s(?:bis|ter)\b)?"
+)
 
 
 def build_index(db, museum_id) -> list[dict]:
@@ -55,18 +58,20 @@ def inv_artist_hit(
     """馆藏号精确命中 + 该件作者也对上(出现在原文里或 AI 摘出的作者)→ 唯一 qid,否则 None。
     文字链本不直判(同名撞车);编号+作者双重吻合足以排除。作者只认原文/AI 摘出两路——
     AI 会张冠李戴(10-06 把 Cross 写成 Signac),原文里印着的名字更可靠。
-    同号多件(RF 编号跨馆共用,prod 765 组)→ 不直判。"""
+    同号多件(RF 编号跨馆共用,prod 765 组)→ 不直判。
+    编号已精确相等,作者这一步只防撞号,姓对上即可(名的拼法常不同:Gaspard/Gaspar)。"""
     raw = [t for t in texts if t]
     inv = _inv_probes(raw)
     if not inv:
         return None
     text_norm = normalize(" ".join(raw))
     hints = [a for a in (artist_hints or []) if a]  # same_person 自己归一化
+    words = set(normalize(" ".join(raw + hints)).split())
     hits = set()
     for e in index:
         if not (e.get("inv") and e["inv"] in inv):
             continue
-        if any(
+        if surname_seen(e["artists"], words) or any(
             an and (an in text_norm or any(same_person(h, an) for h in hints))
             for an in e["artists"]
         ):

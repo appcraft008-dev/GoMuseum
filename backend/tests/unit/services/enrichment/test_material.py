@@ -655,3 +655,439 @@ def test_fetch_creators_batch_picks_same_winner_as_single():
     assert _fetch_creators(["Q64309678"], run_query=lambda s: rows[::-1]) == {
         "Q64309678": "Q35548"
     }
+
+
+def test_has_qualifier_marker_detects_real_disclaimer_phrases():
+    from app.services.enrichment.material import _has_qualifier_marker
+
+    # 真实 Joconde 数据(2026-10-07 实测奥赛+橘园 Auteur 字段):这些都是
+    # "这不是作者本人画的"类表述,必须命中。
+    assert _has_qualifier_marker("anonyme;VAN GOGH Vincent (d'après)") is True
+    assert _has_qualifier_marker("Cézanne Paul (1839-1906) (attribué à)") is True
+    assert _has_qualifier_marker("Boucher François (d'après)") is True
+    assert _has_qualifier_marker("CLOUET François (atelier)") is True
+    assert _has_qualifier_marker("Courbet Gustave (genre de);anonyme") is True
+    assert _has_qualifier_marker("anonyme") is True
+    assert (
+        _has_qualifier_marker("SEGUIN Armand;Gauguin Paul (attribution incertaine)")
+        is True
+    )
+    # 大小写不敏感(Joconde 惯用全大写姓氏段落,限定词有时跟着一起大写)
+    assert _has_qualifier_marker("BOUCHER FRANÇOIS (D'APRÈS)") is True
+    # 别名标记(dit/née)和工匠角色词(fondeur)不是弃权信号,不该命中——
+    # 这些交给拆分+解析步骤正常处理(spec §3.2 步骤0的说明)。
+    assert (
+        _has_qualifier_marker("BENJAMIN-CONSTANT (dit);CONSTANT Jean Joseph Benjamin")
+        is False
+    )
+    assert _has_qualifier_marker("ALLAR André Joseph;MATIFA C (fondeur)") is False
+    assert (
+        _has_qualifier_marker(
+            "BESNARD Charlotte Gabrielle;DUBRAY Charlotte Gabrielle (née)"
+        )
+        is False
+    )
+    # 正常署名,无限定词
+    assert _has_qualifier_marker("SOUTINE Chaïm") is False
+    assert _has_qualifier_marker("RENOIR Pierre Auguste") is False
+
+
+def test_reorder_candidates_tries_every_split_point():
+    from app.services.enrichment.material import _reorder_candidates
+
+    # 两个词:只有一种切法(k=1)
+    assert _reorder_candidates("SOUTINE Chaïm") == ["Chaïm SOUTINE"]
+    # 多词姓氏(真实橘园数据,4个词)——断言**全部** n-1=3 种切法的完整列表,
+    # 不是只断言"其中一条在不在里面"(只查子串的话,一个只实现了 k=1、
+    # 对 k≥2 吐垂圾的版本也能让"in"断言通过,见全分支审阅 Important #4)。
+    # 真实案例(2026-10-07 实测):"CONSTANT Jean Joseph Benjamin"真正能命中
+    # Wikidata 的切法正是 k=1("Jean Joseph Benjamin CONSTANT")。
+    assert _reorder_candidates("CONSTANT Jean Joseph Benjamin") == [
+        "Jean Joseph Benjamin CONSTANT",
+        "Joseph Benjamin CONSTANT Jean",
+        "Benjamin CONSTANT Jean Joseph",
+    ]
+    # 另一个真实多词姓氏案例,交叉验证不是只对上面那一个输入凑巧对
+    assert _reorder_candidates("DE MACHY Pierre Antoine") == [
+        "MACHY Pierre Antoine DE",
+        "Pierre Antoine DE MACHY",
+        "Antoine DE MACHY Pierre",
+    ]
+    # 单个词:没有可重排的,返回空列表
+    assert _reorder_candidates("Anonyme") == []
+    assert _reorder_candidates("") == []
+
+
+def test_segment_candidates_filters_by_exact_word_match():
+    from app.services.enrichment.material import _segment_candidates
+    from app.services.matching.normalize import normalize, tokens
+
+    # 真实案例(2026-10-07 实测):"LEON Paul"会前缀匹配到 Léon-Paul Fargue
+    # (法国诗人),match.text 是"Léon-Paul Fargue",归一化后的词集合是
+    # {leon, paul, fargue},和输入词集合 {leon, paul} 不相等——必须被滤掉。
+    def fake_search(text, *, limit=5):
+        return [
+            {
+                "id": "Q599801",
+                "label": "Léon-Paul Fargue",
+                "match": {"type": "label", "text": "Léon-Paul Fargue"},
+            },
+        ]
+
+    word_set = frozenset(tokens(normalize("LEON Paul")))
+    assert (
+        _segment_candidates("LEON Paul", search_entities=fake_search, word_set=word_set)
+        == []
+    )
+
+    # 词集合精确相等的候选要保留
+    def fake_search_exact(text, *, limit=5):
+        return [
+            {
+                "id": "Q160141",
+                "label": "Chaïm Soutine",
+                "match": {"type": "label", "text": "Chaïm Soutine"},
+            },
+        ]
+
+    word_set2 = frozenset(tokens(normalize("Chaïm Soutine")))
+    assert _segment_candidates(
+        "SOUTINE Chaïm", search_entities=fake_search_exact, word_set=word_set2
+    ) == ["Q160141"]
+
+    # match 字段缺失时退回用 label 比较,不能抛异常(Review Focus 第3条)
+    def fake_search_no_match(text, *, limit=5):
+        return [{"id": "Q1", "label": "Chaïm Soutine"}]
+
+    assert _segment_candidates(
+        "SOUTINE Chaïm", search_entities=fake_search_no_match, word_set=word_set2
+    ) == ["Q1"]
+
+    # 原始顺序+重排都会被尝试,两次查询结果去重合并——注意重排只调换词的
+    # 位置,不改每个词自身的大小写(_reorder_candidates 的实现就是这样),
+    # 所以"SOUTINE Chaïm"重排后是"Chaïm SOUTINE"(SOUTINE 仍大写),不是
+    # "Chaïm Soutine"(这个大小写写法实测跑过一遍脚本才发现:写成后者会让
+    # 两次查询的 text 都对不上,fake 函数永远返回空,测试会静默测不出东西
+    # 而不是报错——写 fake 查询函数时务必核对 _reorder_candidates 真实
+    # 产出的字符串,不要凭感觉拼大小写)。
+    calls = []
+
+    def fake_search_both_orders(text, *, limit=5):
+        calls.append(text)
+        if text == "Chaïm SOUTINE":
+            return [
+                {
+                    "id": "Q160141",
+                    "label": "Chaïm Soutine",
+                    "match": {"text": "Chaïm Soutine"},
+                }
+            ]
+        return []
+
+    result = _segment_candidates(
+        "SOUTINE Chaïm", search_entities=fake_search_both_orders, word_set=word_set2
+    )
+    assert result == ["Q160141"]
+    assert "SOUTINE Chaïm" in calls  # 原始顺序查过
+    assert "Chaïm SOUTINE" in calls  # 重排后也查过(注意大小写:SOUTINE 仍大写)
+
+
+def test_resolve_creator_by_name_real_unambiguous_artists():
+    """2026-10-07 橘园 TOP50 内容复核手工核实过的 7 个真实作者,mock HTTP
+    响应固定,离线跑,必须原样复现这 7 个 qid。
+
+    ⚠️ `match.text` 必须填**真实会返回的那个字符串**,不能图省事填 Wikidata
+    的 canonical label——写这份计划时实测过 Modigliani 这一条,拿 canonical
+    label "Amedeo Modigliani" 当 match.text 会让词集合精确匹配(spec §3.2
+    步骤2)误判失败(因为 Joconde 原串拼的是"Amadeo",跟"Amedeo"差一个
+    字母),而真实 Wikidata 搜索返回的 match.text 是**别名**"Amadeo
+    Modigliani"(与 Joconde 原串完全一致),所以 Modigliani 这一条的
+    match_text 和前面几条的 label 不一样,是故意的,不是打错字。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def make_search(qid, match_text):
+        def _search(text, *, limit=5):
+            return [{"id": qid, "label": match_text, "match": {"text": match_text}}]
+
+        return _search
+
+    def make_claims(qid):
+        def _claims(qids):
+            return {
+                qid: {
+                    "claims": {
+                        "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
+                        "P106": [
+                            {"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}
+                        ],
+                    }
+                }
+            }
+
+        return _claims
+
+    cases = [
+        ("Renoir Pierre Auguste", "Q39931", "Pierre-Auguste Renoir"),
+        ("SOUTINE Chaïm", "Q160141", "Chaïm Soutine"),
+        ("DERAIN André", "Q156272", "André Derain"),
+        ("UTRILLO Maurice", "Q108301", "Maurice Utrillo"),
+        ("Matisse Henri", "Q5589", "Henri Matisse"),
+        ("ROUSSEAU Henri;LE DOUANIER ROUSSEAU", "Q156386", "Henri Rousseau"),
+        # match_text 是别名"Amadeo Modigliani",不是 canonical label——见上面的说明
+        ("Modigliani Amadeo", "Q120993", "Amadeo Modigliani"),
+    ]
+    for raw_name, expected_qid, match_text in cases:
+        got = resolve_creator_by_name(
+            raw_name,
+            search_entities=make_search(expected_qid, match_text),
+            get_claims=make_claims(expected_qid),
+        )
+        assert (
+            got == expected_qid
+        ), f"{raw_name!r} 应该解析成 {expected_qid},实际是 {got!r}"
+
+
+def test_resolve_creator_by_name_abstains_on_known_ambiguous_cases():
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    # 真实限定词案例:整串命中"d'après"直接弃权,不会拆分后把
+    # "VAN GOGH Vincent"单独解析成功再误采信(真实 Joconde 署名)。
+    def search_should_not_be_called(text, *, limit=5):
+        raise AssertionError(f"限定词弃权应该在拆分前拦住,不该查询 {text!r}")
+
+    assert (
+        resolve_creator_by_name(
+            "anonyme;VAN GOGH Vincent (d'après)",
+            search_entities=search_should_not_be_called,
+        )
+        is None
+    )
+
+    # Cézanne 父子同名同职业撞车:职业过滤后剩两个人,必须弃权。
+    def search_cezanne(text, *, limit=5):
+        return [
+            {
+                "id": "Q35548",
+                "label": "Paul Cézanne",
+                "match": {"text": "Paul Cézanne"},
+            },
+            {
+                "id": "Q17277915",
+                "label": "Paul Cézanne",
+                "match": {"text": "Paul Cézanne"},
+            },
+        ]
+
+    def claims_both_painters(qids):
+        return {
+            qid: {
+                "claims": {
+                    "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}
+                    ],
+                }
+            }
+            for qid in qids
+        }
+
+    assert (
+        resolve_creator_by_name(
+            "Cézanne Paul",
+            search_entities=search_cezanne,
+            get_claims=claims_both_painters,
+        )
+        is None
+    )
+
+    # 空/退化输入不能崩,必须返回 None(Review Focus 第4条)
+    assert resolve_creator_by_name(None) is None
+    assert resolve_creator_by_name("") is None
+    assert resolve_creator_by_name("   ") is None
+    assert resolve_creator_by_name(";") is None
+
+
+def test_resolve_creator_by_name_handles_real_multi_segment_signature():
+    """真实奥赛署名"BENJAMIN-CONSTANT (dit);CONSTANT Jean Joseph Benjamin"
+    (画家 Jean-Joseph Benjamin-Constant 的艺名+本名两段)。第一段带着
+    "(dit)"文本直接查,搜不到任何候选(0 个);第二段重排后能命中。跨段裁决:
+    一段失败(忽略)+一段成功 -> 集合大小为1 -> 采信。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def search(text, *, limit=5):
+        if text == "Jean Joseph Benjamin CONSTANT":
+            return [
+                {
+                    "id": "Q968357",
+                    "label": "Jean-Joseph Benjamin-Constant",
+                    "match": {"text": "Jean-Joseph Benjamin-Constant"},
+                }
+            ]
+        return []  # 其它查询(含"BENJAMIN-CONSTANT (dit)"原串)都搜不到
+
+    def claims(qids):
+        return {
+            qid: {
+                "claims": {
+                    "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}
+                    ],
+                }
+            }
+            for qid in qids
+        }
+
+    got = resolve_creator_by_name(
+        "BENJAMIN-CONSTANT (dit);CONSTANT Jean Joseph Benjamin",
+        search_entities=search,
+        get_claims=claims,
+    )
+    assert got == "Q968357"
+
+
+def test_resolve_creator_by_name_does_not_misattribute_leon_paul():
+    """2026-10-07 全分支审阅发现的真实回归(已核实,不是假设):commit eb5b0758
+    往白名单加了 photographer/architect 想救 Vacquerie/Coquart,但同一条改动
+    把"LEON Paul"从"0 候选弃权"变成"1 个候选、误判成委内瑞拉记者 Paul León
+    (Q128960542,P106 恰好含 photographer)"——真实 Wikidata 候选集(curl 核实
+    过):Q115793023(无职业)、Q3371732(P106=professor)、Q128960542(P106 含
+    photographer),三个候选词集合都精确等于 {leon, paul}。白名单只要新增
+    一个职业,就可能让"两个真人同名、本该两个都排除"变成"恰好一个排除失败、
+    误判成那一个"——这正是"宁缺毋滥"最想防的那类错误,比多弃权几条严重得多。
+    修法:photographer/architect 整体撤回(见 _OCCUPATION_WHITELIST 的注释)。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def search(text, *, limit=5):
+        if text != "Paul LEON":
+            return []
+        return [
+            {"id": "Q115793023", "label": "Paul Leon", "match": {"text": "Paul Leon"}},
+            {
+                "id": "Q3371732",
+                "label": "Paul Léon",
+                "match": {"text": "Paul Léon"},
+            },
+            {
+                "id": "Q128960542",
+                "label": "Paul León",
+                "match": {"text": "Paul León"},
+            },
+        ]
+
+    def claims(qids):
+        human = {"P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}]}
+        return {
+            "Q115793023": {"claims": {**human, "P106": []}},
+            "Q3371732": {
+                "claims": {
+                    **human,
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q121594"}}}}
+                    ],  # professor
+                }
+            },
+            "Q128960542": {
+                "claims": {
+                    **human,
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q1930187"}}}},
+                        {
+                            "mainsnak": {"datavalue": {"value": {"id": "Q33231"}}}
+                        },  # photographer
+                    ],
+                }
+            },
+        }
+
+    assert (
+        resolve_creator_by_name("LEON Paul", search_entities=search, get_claims=claims)
+        is None
+    )
+
+
+def test_resolve_creator_by_name_treats_uncertain_attribution_marker_as_qualifier():
+    """真实 Joconde 数据里"(?)"表示"不确定是不是这个人画的",和"(d'après)"
+    一样是弃权信号,不是普通噪声。真实案例"HUGO Charles (?);VACQUERIE Auguste"
+    (已入库的历史数据,旧清洗正则没剥掉"(?)"因为那不是纯日期形态)——如果
+    "(?)"不触发弃权闸,Hugo 那一段会因为带着字面"(?)"查不到(0 候选,被忽略),
+    只剩 Vacquerie 那一段"成功",于是把本来"不确定是雨果还是瓦克里"的两可
+    标注,错误坐实成"肯定是瓦克里"。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def search_should_not_be_called(text, *, limit=5):
+        raise AssertionError(f"(?) 弃权应该在拆分前拦住,不该查询 {text!r}")
+
+    assert (
+        resolve_creator_by_name(
+            "HUGO Charles (?);VACQUERIE Auguste",
+            search_entities=search_should_not_be_called,
+        )
+        is None
+    )
+
+
+def test_resolve_creator_by_name_abstains_on_bare_surname():
+    """真实验证过(curl,`limit=5`——和生产代码的 `_SEARCH_LIMIT` 一致):裸
+    姓氏"ROUSSEAU"搜索结果里排第一屏的 5 条是家族姓条目、Henri Rousseau
+    (别名"Rousseau Douanier",词集合不精确相等,被滤掉)、Théodore Rousseau
+    (Q310025,别名恰好就是裸姓氏"Rousseau")、Jean-Jacques Rousseau(哲学家,
+    职业过滤会排除)、given name 条目。**同样是画家、同样有裸姓氏别名的
+    Jacques Rousseau(Q6120842)排在第 8 位,`limit=5` 根本看不到他**——于是
+    "唯一候选"规则被排名顺序意外满足,把"本该因为撞名而弃权"错误坐实成
+    "肯定是 Théodore"。这不是候选集凑巧只有一个人,是单词查询本身就弱到
+    排名说了算;真正的修法是单个词的署名段直接不产出候选,不进解析
+    (spec 原意正是这个)。"""
+    from app.services.enrichment.material import resolve_creator_by_name
+
+    def search(text, *, limit=5):
+        # limit=5 下真实返回的候选集(2026-10-07 curl 核实):画家 Jacques
+        # Rousseau(Q6120842)排第 8,不在这 5 条里——这正是回归的根源。
+        return [
+            {"id": "Q16036532", "label": "Rousseau", "match": {"text": "Rousseau"}},
+            {
+                "id": "Q156386",
+                "label": "Henri Rousseau",
+                "match": {"text": "Rousseau Douanier"},
+            },
+            {
+                "id": "Q310025",
+                "label": "Théodore Rousseau",
+                "match": {"text": "Rousseau"},
+            },
+            {
+                "id": "Q6527",
+                "label": "Jean-Jacques Rousseau",
+                "match": {"text": "Rousseau"},
+            },
+            {
+                "id": "Q111072568",
+                "label": "Rousseau",
+                "match": {"text": "Rousseau"},
+            },
+        ]
+
+    def claims(qids):
+        human = {"P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}]}
+        not_human = {
+            "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q101352"}}}}]
+        }  # family name
+        painter = {"P106": [{"mainsnak": {"datavalue": {"value": {"id": "Q1028181"}}}}]}
+        return {
+            "Q16036532": {"claims": not_human},
+            "Q310025": {"claims": {**human, **painter}},
+            "Q6527": {
+                "claims": {
+                    **human,
+                    "P106": [
+                        {"mainsnak": {"datavalue": {"value": {"id": "Q36180"}}}}
+                    ],  # writer, not in whitelist
+                }
+            },
+            "Q111072568": {"claims": not_human},
+        }
+
+    assert (
+        resolve_creator_by_name("ROUSSEAU", search_entities=search, get_claims=claims)
+        is None
+    )
