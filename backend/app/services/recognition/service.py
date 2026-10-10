@@ -477,6 +477,16 @@ def _compute(
                 )
             # 原始前 5(含没过门槛的,附作者是否对上):文字链复盘与评测用
             text_trace["matched"] = raw
+            # 影子统计,不改行为(10-10):只出 1 个候选且作者对上、标题 ≥0.9(raw 分含作者
+            # 加分 0.1、封顶 1.0,故 ≥1.0)时,若放开直开会打开哪件。攒够确认/否定再决定放不放。
+            shown = [q for q, s in results[:3] if s >= LOW]
+            text_trace["single_direct"] = (
+                shown[0]
+                if not inv_hit
+                and len(shown) == 1
+                and any(q == shown[0] and ok and s >= 1.0 for q, s, ok in raw)
+                else None
+            )
             top = results[0] if results else None
             # 文字链证据=名字对上≠就是这件(同名撞车 E2E 实证:自画像/The Bathers);
             # 直判只属于向量像素证据,唯一例外是馆藏号+作者双重吻合(inv_hit)。

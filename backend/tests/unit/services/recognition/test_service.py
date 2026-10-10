@@ -1075,3 +1075,31 @@ def test_reason_low_confidence_when_recalled_but_below_threshold(session):
 def test_reason_not_in_catalog_when_nothing_recalled(session):
     out = _text_recognize(session, [{"title": "Pixelated House", "artist": "Unknown"}])
     assert out["outcome"] == "unrecognized" and out["reason"] == "not_in_catalog"
+
+
+def _single_direct(session, artist):
+    recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        mode="label",
+        identify_fn=_vision(
+            [{"title": "The Origin of the World", "artist": artist}],
+            label=f"{artist}\nThe Origin of the World\n1866",
+        ),
+    )
+    return session.query(RecognitionEvent).one()
+
+
+def test_single_candidate_artist_agree_shadow_logged_not_opened(session):
+    """单候选 + 作者对上 + 标题 ≥0.9:只记 text_trace.single_direct,行为不变仍出确认卡
+    (先攒确认/否定数据再决定要不要直开)。"""
+    ev = _single_direct(session, "Gustave Courbet")
+    assert ev.outcome == "candidates"
+    assert ev.text_trace["single_direct"] == "Q334138"
+
+
+def test_single_candidate_artist_disagree_not_shadow_logged(session):
+    # 同名撞车(10-07 真机:Hockney《The Swimmer》→ 库里 Caillebotte 同名画)不进这一类
+    ev = _single_direct(session, "")
+    assert ev.text_trace["single_direct"] is None
