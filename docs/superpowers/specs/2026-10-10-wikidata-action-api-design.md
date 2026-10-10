@@ -42,7 +42,7 @@ def get_entities(ids, *, props, languages=None) -> dict[str, dict]:
 ```
 
 - 端点 `https://www.wikidata.org/w/api.php`,`action=wbgetentities&format=json`,`props` / `languages` 用 `|` 连接,
-  User-Agent 复用 `sources/wikidata.USER_AGENT`,带 `maxlag=5`(Wikimedia 推荐的礼貌参数)。
+  User-Agent 复用 `sources/wikidata.USER_AGENT`。**不带 `maxlag`**(实施中修订,10-10):它跟的是 WDQS 复制延迟(实测 7.9s / 23.9s),设 5 会让只读请求恰在 WDQS 慢时被全部拒掉——正是本设计要绕开的场景;maxlag 是给批量写入的机器人用的。对 maxlag 错误的重试仍保留作兜底。
 - **失败判定看两层**:HTTP 状态(429 / 5xx)、网络(超时 / 连接错误),**以及响应体 `error.code`**——`maxlag`、`toomanyvalues` 等错误是 **HTTP 200 + `{"error": …}` 且没有 `entities` 键**(10-10 实测)。只看状态码会把它当成功,调用方拿到空结果,等于以「实体不存在」的面目重新静默丢资料。规则:响应体有 `error` → `maxlag` 重试,其它 error 直接抛;没有 `entities` 键 → 抛。
 - 单次超时 10s;可重试的错误(429 / 5xx / 超时 / 连接错误 / `maxlag`)共试 3 次;有 `Retry-After` 按它等,否则 1s、2s 退避。
   3 次都败 → 抛异常(调用方已有 `except` → `prep: ... failed` warning,行为同今天,但只在真失败时发生)。
@@ -121,6 +121,7 @@ def get_entities(ids, *, props, languages=None) -> dict[str, dict]:
 **每处差异必须归类**:
 - 完全一致;
 - 仅顺序不同(多值集合相等);
+- **截断选集不同**(实施中补充,10-10):代表作、证据包每项只取前 5 个;旧 SPARQL 行序不保证,新按 Wikidata 语句顺序,截断后选中的 5 个可能不同。判定条件:截断前的完整集合相同、其余字段一致、两边所选都出自该集合;否则仍算 DIFF;
 - 旧 bug 被修(§4);
 - WDQS 滞后(SPARQL 副本落后于实时数据,复查 Wikidata 页面确认新值为当前值);
 - **无法解释:必须 0 件,否则不切换。**

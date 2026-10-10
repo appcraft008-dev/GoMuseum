@@ -47,7 +47,9 @@ def test_sends_props_languages_maxlag_and_user_agent():
     assert seen["url"] == "https://www.wikidata.org/w/api.php"
     assert p["action"] == "wbgetentities" and p["format"] == "json"
     assert p["ids"] == "Q1" and p["props"] == "labels" and p["languages"] == "en|zh"
-    assert p["maxlag"] == 5 and seen["timeout"] == 10
+    # 不带 maxlag:它跟的是 WDQS 复制延迟(10-10 实测 7.9s/23.9s),设 5 会让只读请求
+    # 恰在 WDQS 慢时被全部拒掉 —— 正是本次要绕开的场景。maxlag 是给批量写入的机器人用的。
+    assert "maxlag" not in p and seen["timeout"] == 10
     assert seen["headers"]["User-Agent"] == wa._wd.USER_AGENT
 
 

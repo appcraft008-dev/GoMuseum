@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from app.services.enrichment import wikidata_api as _wa
-from app.services.enrichment.sources import wikidata as _wd
 
 # 富属性 → (claim 中文名, lane topic)。结构化 → type=fact。
 _RICH_PROPS = {
@@ -21,32 +20,6 @@ _RICH_PROPS = {
 }
 
 _RICH_MAX_PER_PROP = 5  # 多值属性(如衍生作品)每 pid 最多取几条,防名作爆表
-
-_RICH_QUERY = """
-SELECT ?pid ?vLabel WHERE {{
-  VALUES ?prop {{ wdt:P88 wdt:P180 wdt:P186 wdt:P135 wdt:P136 wdt:P1343
-                  wdt:P4969 wdt:P144 wdt:P941 wdt:P361 }}
-  wd:{qid} ?prop ?v .
-  ?p wikibase:directClaim ?prop . BIND(STRAFTER(STR(?p), "entity/") AS ?pid)
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
-}}
-"""
-
-
-def _default_run_query(sparql):
-    import requests
-
-    r = requests.get(
-        _wd.SPARQL_ENDPOINT,
-        params={"query": sparql, "format": "json"},
-        headers={
-            "User-Agent": _wd.USER_AGENT,
-            "Accept": "application/sparql-results+json",
-        },
-        timeout=60,
-    )
-    r.raise_for_status()
-    return r.json()["results"]["bindings"]
 
 
 def _rich_rows(entity: dict, fetch) -> list[dict]:

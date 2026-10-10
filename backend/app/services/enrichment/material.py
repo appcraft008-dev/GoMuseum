@@ -57,15 +57,6 @@ def fetch_object_material(
 # 管线把加歇的维基传记灌进 artist_extract_*,10 语 78 条正文全在讲"梵高的医生
 # 画了这幅静物",而结构化字段是塞尚的生卒年和代表作。
 # → 解析一次、传下去。排序键用 Wikidata 自己的不确定性标记,不是随机取首个。
-_CREATOR_QUERY = """
-SELECT ?artist ?rank ?cert (COUNT(?ref) AS ?refs) WHERE {{
-  wd:{qid} p:P170 ?st .
-  ?st ps:P170 ?artist ; wikibase:rank ?rank .
-  OPTIONAL {{ ?st pq:P1480 ?cert . }}
-  OPTIONAL {{ ?st prov:wasDerivedFrom ?ref . }}
-}} GROUP BY ?artist ?rank ?cert
-"""
-
 _RANK_ORDER = {"PreferredRank": 0, "NormalRank": 1}
 # P1480 "sourcing circumstances":无限定=直接断言最强,其次 presumably,再次 possibly。
 # 未知限定词按最弱处理(宁可信有标记的那条更不确定)。
@@ -167,23 +158,6 @@ def resolve_creator_qid(qid, *, get_entities=None) -> str | None:
     return _creator_from_rows(_creator_rows(ent))
 
 
-_ARTIST_QUERY = """
-SELECT ?al_en ?al_cl WHERE {{
-  wd:{qid} wdt:P170 ?artist .
-  OPTIONAL {{ ?a_en schema:about ?artist ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?al_en . }}
-  OPTIONAL {{ ?a_cl schema:about ?artist ; schema:isPartOf <https://{cl}.wikipedia.org/> ; schema:name ?al_cl . }}
-}} LIMIT 1
-"""
-
-# artist_qid 已由 resolve_creator_qid 定好时走这条:直接问作者实体,不再跳 P170。
-_ARTIST_TITLES_QUERY = """
-SELECT ?al_en ?al_cl WHERE {{
-  OPTIONAL {{ ?a_en schema:about wd:{aqid} ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?al_en . }}
-  OPTIONAL {{ ?a_cl schema:about wd:{aqid} ; schema:isPartOf <https://{cl}.wikipedia.org/> ; schema:name ?al_cl . }}
-}} LIMIT 1
-"""
-
-
 def _default_artist_query(sparql):
     import requests
 
@@ -203,30 +177,6 @@ def _default_artist_query(sparql):
 def _is_raw_qid(v: str) -> bool:
     """wikibase:label 对无本地化标签的实体退回原始 QID/PID(如 'Q17490760')。"""
     return bool(v) and v[0] in "QP" and v[1:].isdigit()
-
-
-# 同上:作者已定则直接问作者实体。走 P170 版本时多作者会**逐行串味**
-# (artist_qid 来自 A、生年来自 B),这正是 Q64309678 的病灶之一。
-_ARTIST_FACTS_BY_ARTIST_QUERY = """
-SELECT ?birth ?death ?natLabel ?workLabel WHERE {{
-  OPTIONAL {{ wd:{aqid} wdt:P569 ?birth. }}
-  OPTIONAL {{ wd:{aqid} wdt:P570 ?death. }}
-  OPTIONAL {{ wd:{aqid} wdt:P27 ?nat. }}
-  OPTIONAL {{ wd:{aqid} wdt:P800 ?work. }}
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
-}}
-"""
-
-_ARTIST_FACTS_QUERY = """
-SELECT ?artist ?birth ?death ?natLabel ?workLabel WHERE {{
-  wd:{qid} wdt:P170 ?artist .
-  OPTIONAL {{ ?artist wdt:P569 ?birth. }}
-  OPTIONAL {{ ?artist wdt:P570 ?death. }}
-  OPTIONAL {{ ?artist wdt:P27 ?nat. }}
-  OPTIONAL {{ ?artist wdt:P800 ?work. }}
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
-}}
-"""
 
 
 def _wd_time(t: str) -> str:
@@ -300,10 +250,6 @@ def fetch_artist_facts(qid, *, get_entities=None, artist_qid=None) -> dict:
     ent = get_entities([artist_qid], props="claims").get(artist_qid) or {}
     return _artist_facts_from_rows(_artist_fact_rows(ent, get_entities), artist_qid)
 
-
-_LABELS_QUERY = """
-SELECT ?l WHERE {{ wd:{qid} rdfs:label ?l . FILTER(lang(?l) IN ({langs})) }}
-"""
 
 # 批量版:一次查一批实体的标签。上大馆的硬前提——单件版是 N+1,卢浮宫 17283 件
 # = 17283 次串行 SPARQL(实测 ~5h,CPU 只占 12%,全在等网络)。
@@ -482,16 +428,6 @@ def fetch_artist_material(
         for k, v in contrib.fields.items()
         if k.startswith("extract_") and v
     }
-
-
-_ARTIST_I18N_FACTS_QUERY = """
-SELECT ?natLabel ?work ?workLabel WHERE {{
-  OPTIONAL {{ wd:{qid} wdt:P27 ?nat . ?nat rdfs:label ?natLabel .
-             FILTER(lang(?natLabel) IN ({langs})) }}
-  OPTIONAL {{ wd:{qid} wdt:P800 ?work . ?work rdfs:label ?workLabel .
-             FILTER(lang(?workLabel) IN ({langs})) }}
-}}
-"""
 
 
 def authoritative_work_label(labels: dict, lang: str) -> str | None:

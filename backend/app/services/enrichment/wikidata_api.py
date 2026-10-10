@@ -40,6 +40,8 @@ def _retry_after(resp) -> float | None:
 def _get(params: dict, http_get, sleep) -> dict:
     """一次 wbgetentities(带重试)。返回 entities 字典。
 
+    不带 maxlag 参数:它跟的是 WDQS 复制延迟,只读请求带上会在 WDQS 慢时被全部拒掉
+    (10-10 实测 7.9s/23.9s)。保留对 maxlag 错误的重试只为兜底。
     ⚠️ 失败看两层:HTTP 状态,以及**响应体 error.code** —— maxlag/toomanyvalues 等是
     HTTP 200 + {"error": …}、没有 entities 键,只看状态码会当成「实体不存在」静默丢资料。
     """
@@ -92,7 +94,6 @@ def get_entities(
         params = {
             "action": "wbgetentities",
             "format": "json",
-            "maxlag": 5,
             "ids": "|".join(ids[i : i + _BATCH]),
             "props": props,
         }
