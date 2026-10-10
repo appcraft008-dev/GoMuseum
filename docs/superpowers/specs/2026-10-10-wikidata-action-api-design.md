@@ -51,6 +51,8 @@ def get_entities(ids, *, props, languages=None) -> dict[str, dict]:
 
 ### 2.2 六个函数换实现(函数名、业务参数、返回结构不变)
 
+**实现策略:转换成旧行、复用旧解析。** 每个函数拆成三层:取数(`get_entities`)→ **转换**(实体 JSON → 与旧 SPARQL 结果**同形的行**)→ **解析**(原有的逐行解析代码原样抽成 `_xxx_from_rows(rows, …)`,一行不改)。这样作者排序(`creator_candidate`)、字形变体、代表作选集、事实提取的语义全部沿用,等价风险只落在「转换」这一层;现有基于行的语义测试改为直接测解析函数而保留。转换层按 SPARQL 的形状造行:年份去掉前导 `+`(旧解析的 `[:4]` 因此得到同样结果)、无英文名的值填原始 QID(旧解析的 `_is_raw_qid` 照旧过滤)、作者语句按 `(artist, rank, cert)` 归组相加引用数(§3.1)。
+
 唯一的签名变化:用于依赖注入的关键字参数 `run_query`(收 SPARQL、回行绑定)改名为 `get_entities`(形状见 2.1)。调用方须同步改:`pipeline.py` 给 `fetch_rich_facts` 的离线开关、`test_material.py` / 流水线等测试的注入。
 
 | 函数(material.py / evidence.py) | 取什么 | Action API 实现 |
@@ -74,6 +76,7 @@ def get_entities(ids, *, props, languages=None) -> dict[str, dict]:
 - rank:preferred=0、normal=1、deprecated → 排除。
 - 不确定性:P1480 限定词无=0、presumably(Q18122778)=1、possibly(Q30230067)=3、其它=2;一条语句多个 P1480 → 每个各成一候选(同 SPARQL 每行)。
 - 引用数:该语句 `references` 条数。旧 SPARQL 中 `OPTIONAL pq:P1480` 与 `OPTIONAL prov:wasDerivedFrom` 在同一语句上交叉相乘,再按 `(artist, rank, cert)` 分组 `COUNT(?ref)`——于是**同一作者、同 rank、同 cert 的多条语句合并成一个候选,引用数相加**(如两条重复语句各 2、3 条引用 → 一个候选 refs=5,而不是两个候选)。新实现必须先按 `(artist, rank, cert)` 归组、组内引用数相加,再造候选。这是排序里最容易做错的一处(Q64309678 那类多作者事故就出在这条规则上),§5 与 §6 各有专门样本/夹具。
+- P1480 限定词本身是「未知值」:旧 SPARQL 绑定 blank node → `creator_candidate` 视为未知限定词(=2);转换层用一个非 QID 的占位值保持同样结果。限定词「无值」:SPARQL `pq:` 不绑定 → 等同无限定;转换层跳过。
 - `snaktype` 为 `somevalue`(未知值)/ `novalue` → 不产候选(旧实现靠 `is_wikidata_qid` 拦 blank node,结果相同)。
 
 ### 3.2 「主值」= SPARQL `wdt:` 的 rank 规则 + 额外排除未知值(故意收紧)
@@ -92,12 +95,16 @@ def get_entities(ids, *, props, languages=None) -> dict[str, dict]:
 ### 3.4 评审建议未采纳:合并同一作品实体的两次取语句
 作者解析与证据包都读作品实体的 claims,可合并成一次请求(评审 M1)。不采纳:两次请求并发、每次 ~0.5s,按 §7 估算即使两件同时生成也在看图耗时之内;合并需要在流水线里引入共享取数,改动面大于收益。若 §7 并发实测超标再做。
 
+### 3.5 非 Wikidata 编号(Joconde 合成 id 等)
+旧实现对 `joconde-…` 发 SPARQL 会语法错误 → 异常被调用方吞掉 → 无作者/无富属性。新实现在 `resolve_creator_qid`、`fetch_rich_facts` 入口用 `is_wikidata_qid` 直接返回空(不发请求),结果相同(`fetch_wikidata_labels` 本来就有这道判断)。
+
 ## 4. 顺带修复的旧 bug
 
 1. **假作者卡**:作者为「未知值」时,`resolve_creator_qid` 正确返回空,但随后 `fetch_artist_facts` 走 P170 遍历,把 blank node
    的哈希当作者 QID 写回(`out["artist_qid"]`),流水线据此建出空作者卡。prod 现有 **61 件作品**(卢浮宫 59 / 小皇宫 2,均 ready)
    挂着 32 位哈希作者 QID 和对应的 61 张空作者卡。新实现不再遍历(§2.2),从源头堵住。
    **存量清理不在本设计**:属 prod 写操作,记待办,按纪律 37 单独列写入面报用户确认。
+3. **作者维基条目名含 `/` 被截断**:旧实现对条目名做 `rsplit("/")`(把它当 URL 处理),含 `/` 的条目名只剩最后一段,抓不到正文。新实现直接用 sitelinks 的完整 `title`。等价验证中归入「旧 bug 被修」。
 2. **「未知值」日期**:同一机制下生卒年会被存成 `http`(blank node URL 的前 4 位)。prod 目前 0 条;新实现按 §3.2 只取 `snaktype=value`,一并堵住。
 
 ## 5. 等价验证(切换的硬门槛)
