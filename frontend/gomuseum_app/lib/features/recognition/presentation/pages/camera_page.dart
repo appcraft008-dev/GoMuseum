@@ -66,25 +66,16 @@ double computeZoomLevel({
 /// `resumed` 一起吞了——开过图库/授权弹窗回来后相机永不重启，取景器停在转圈、
 /// 快门也按不动。
 /// S5:点选作品进详情页前,要不要问用户要照片、以哪个时刻(spec ⑦⑧⑨)。
-/// 走过选择页之后找到作品 → found(同一张照片只问一次);返回候选后改选另一件 →
-/// corrected(答案变了,允许再问);其余(直接命中、首次就选第 2/3 名候选)→ null 不问。
-/// found 先判:作品候选选过 A → 都不是 → 说明牌候选选 B,这是「经选择页找到」,
-/// 不是在同一组候选里改主意。抽成纯函数:这段是隐私敏感的判定核心,相机页只喂状态。
+/// 走过选择页之后找到作品 → found(同一张照片只问一次);其余(直接命中、选候选)→ null 不问。
+/// 原有「返回候选改选 → corrected」随返回候选一起去掉(10-10:有了看大图,改选 ~2%)。
+/// 抽成纯函数:这段是隐私敏感的判定核心,相机页只喂状态。
 @visibleForTesting
 String? photoFeedbackTriggerOnPick({
-  required bool fromCandidates,
   required bool fromSearch,
   required bool reachedChoice,
   required bool foundAsked,
-  required String? candidateOpened,
-  required String qid,
-}) {
-  if ((fromSearch || reachedChoice) && !foundAsked) return 'found';
-  if (fromCandidates && candidateOpened != null && candidateOpened != qid) {
-    return 'corrected';
-  }
-  return null;
-}
+}) =>
+    (fromSearch || reachedChoice) && !foundAsked ? 'found' : null;
 
 /// S5:点「重新拍摄」时 —— 只有在选择页上放弃这张照片才算「最终没找到」。
 @visibleForTesting
@@ -126,11 +117,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
   /// 这张作品照片走到过选择页(「没认出来」或「都不是」)——之后找到作品 = 触发「找到了」。
   bool _reachedChoice = false;
 
-  /// 同一张作品照片「找到了」只问一次(换选另算)。
+  /// 同一张作品照片「找到了」只问一次。
   bool _foundAsked = false;
-
-  /// 候选路径上用户已进过详情页的那件 —— 返回后改选另一件 = 触发「换选」。
-  String? _candidateOpened;
 
   /// 「最近图库」缩略图条的最近图片资产（相册权限拿到后填充）。
   List<AssetEntity> _recentAssets = const [];
@@ -257,7 +245,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       _releaseCamera();
     } else if (shouldRestartCamera(state,
         hasController: _controller != null,
-        // S3:候选进详情页是 push,相机页还在栈里;详情页在上时回前台不能在底下重开相机。
+        // S4:搜索结果进详情页是 push,相机页还在栈里;详情页在上时回前台不能在底下重开相机。
         // 前提:/camera 与 /guide 同在根 Navigator(ShellRoute 外)——相机挪进
         // shell/嵌套 Navigator 时这个判断要重查。
         isTopRoute: ModalRoute.of(context)?.isCurrent ?? true)) {
@@ -439,7 +427,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
       _photoFeedbackEnabled = false;
       _reachedChoice = false;
       _foundAsked = false;
-      _candidateOpened = null;
     });
     ref.read(recognitionNotifierProvider.notifier).resetState();
   }
@@ -494,17 +481,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Future<void> _goGuide(String slug, String qid,
-      {bool fromCandidates = false,
-      bool fromSearch = false,
-      String? queryText}) async {
+      {bool fromSearch = false, String? queryText}) async {
     // S5 照片反馈(进详情页前问;判定见 photoFeedbackTriggerOnPick)
     final trigger = photoFeedbackTriggerOnPick(
-      fromCandidates: fromCandidates,
       fromSearch: fromSearch,
       reachedChoice: _reachedChoice,
       foundAsked: _foundAsked,
-      candidateOpened: _candidateOpened,
-      qid: qid,
     );
     if (trigger == 'found') _foundAsked = true;
     if (trigger != null) {
@@ -513,7 +495,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
           museum: slug,
           queryText: trigger == 'found' ? queryText : null);
     }
-    if (fromCandidates) _candidateOpened = qid;
     if (!mounted) return;
     // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」。
     // 搜索路径不记:取景器上的搜索按钮拍照前就能用,_lastShotLive 可能是上一张的残值(S4)
@@ -540,13 +521,13 @@ class _CameraPageState extends ConsumerState<CameraPage>
       // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
       autoPlayAudio: !fromSearch,
     );
-    // 候选/搜索路径都 push:返回回到候选列表/选择页(S3/S4)
-    if (!fromCandidates && !fromSearch) {
+    // 命中与选候选都 pushReplacement:返回一次就退出识别。候选原先 push 好让返回改选(S3),
+    // 有了全屏比对后改选 ~2%,却每次要多退一层(10-10 用户定去掉)。
+    if (!fromSearch) {
       context.pushReplacement('/guide', extra: args);
       return;
     }
-    // S3:候选点进详情页用 push —— 用户常在详情页点开大图才发现选错,返回要回到候选列表
-    // (识别状态还在,不用重拍)。进去前放掉相机(否则详情页底下一直占着相机),回来再开。
+    // 搜索路径 push:返回回到选择页(S4)。进去前放掉相机(否则详情页底下一直占着相机),回来再开。
     _releaseCamera();
     await context.push('/guide', extra: args);
     if (mounted && _controller == null) _initCamera();
@@ -578,7 +559,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
             icon: GmIcons.chevR,
             onTap: () {
               Navigator.of(ctx).pop();
-              _goGuide(cands[i].museum!, cands[i].qid, fromCandidates: true);
+              _goGuide(cands[i].museum!, cands[i].qid);
             },
           ),
         ],
@@ -1049,7 +1030,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 12),
       for (final c in state.candidates) ...[
-        _candidateRow(gm, c),
+        CandidateRow(
+          item: c,
+          // 候选已按 isValid 过滤
+          onPick: () => _goGuide(c.museum!, c.qid),
+          onZoom: () => _openCandidateViewer(c),
+        ),
         const SizedBox(height: 8),
       ],
       const SizedBox(height: 4),
@@ -1064,84 +1050,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
         ),
       ),
     ];
-  }
-
-  Widget _candidateRow(GmPalette gm, RecognizedItem c) {
-    // ponytail: 点选=一条"照片→确认QID"标注(喂后端二期 CLIP 校准);
-    // 埋点接口 P2 提供,现只保证跳转畅通。
-    // 跳转用该候选归属馆;老后端无 museum 字段 → 回退 orsay(契约容错)。
-    return GestureDetector(
-      // 候选已按 isValid 过滤
-      onTap: () => _goGuide(c.museum!, c.qid, fromCandidates: true),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(
-          color: gm.surface,
-          border: Border.all(color: gm.line),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // 正方形、裁剪铺满(2026-10-01 用户定):三张一致，画面放得够大,
-            // 一眼对得上刚拍的画。考虑过「完整显示不裁」,但横竖幅混排时
-            // 留白忽上下忽左右，用户否了。候选恒 ≤3 个(后端 cands[:3]),
-            // 放大不会撑爆底部面板(非滚动 Column)。
-            GestureDetector(
-              // 缩略图单独可点:全屏放大比对(S3),整行点击仍是直接选
-              // 没图(无图作品)不开:打开也只是一张坏图;null 时点击落到整行=直接选
-              onTap: c.image == null ? null : () => _openCandidateViewer(c),
-              child: Stack(children: [
-                SizedBox(
-                  width: 92,
-                  height: 92,
-                  child: c.thumbnail != null
-                      ? Image.network(sizedImageUrl(c.thumbnail!, 280),
-                          fit: BoxFit.cover,
-                          headers: kImageRequestHeaders,
-                          errorBuilder: (_, __, ___) => ColoredBox(
-                              color: gm.chipBg,
-                              child: Center(
-                                  child: GmIcon(GmIcons.photo,
-                                      size: 26, color: gm.faint))))
-                      : ColoredBox(color: gm.chipBg),
-                ),
-                Positioned(
-                  right: 4,
-                  bottom: 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                        color: Colors.black45, shape: BoxShape.circle),
-                    child: const GmIcon(GmIcons.search,
-                        size: 12, color: Colors.white),
-                  ),
-                ),
-              ]),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(c.title,
-                      style: GmText.serif(size: 14.5, weight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 3),
-                  Text(c.artist,
-                      style: GmText.sans(size: 12, color: gm.sub),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            GmIcon(GmIcons.chevR, size: 16, color: gm.faint),
-          ],
-        ),
-      ),
-    );
   }
 
   /// 「没认出来」与「都不是」共用的选择卡(S4,用户 2026-10-05 定):
@@ -1319,6 +1227,105 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
             ),
           const SizedBox(height: 14),
         ],
+      ),
+    );
+  }
+}
+
+/// 候选行。点击区(10-10 用户定):整行含缩略图 = 直接选;只有角上放大镜 = 全屏比对。
+/// 原先缩略图本身是放大——人看着画就点画,确认了也常误点进大图。
+class CandidateRow extends StatelessWidget {
+  const CandidateRow(
+      {super.key,
+      required this.item,
+      required this.onPick,
+      required this.onZoom});
+
+  final RecognizedItem item;
+  final VoidCallback onPick;
+  final VoidCallback onZoom;
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    final c = item;
+    return GestureDetector(
+      onTap: onPick,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: gm.surface,
+          border: Border.all(color: gm.line),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // 正方形、裁剪铺满(2026-10-01 用户定):三张一致，画面放得够大,
+            // 一眼对得上刚拍的画。考虑过「完整显示不裁」,但横竖幅混排时
+            // 留白忽上下忽左右，用户否了。候选恒 ≤3 个(后端 cands[:3]),
+            // 放大不会撑爆底部面板(非滚动 Column)。
+            Stack(key: const Key('candThumb'), children: [
+              SizedBox(
+                width: 92,
+                height: 92,
+                child: c.thumbnail != null
+                    ? Image.network(sizedImageUrl(c.thumbnail!, 280),
+                        fit: BoxFit.cover,
+                        headers: kImageRequestHeaders,
+                        errorBuilder: (_, __, ___) => ColoredBox(
+                            color: gm.chipBg,
+                            child: Center(
+                                child: GmIcon(GmIcons.photo,
+                                    size: 26, color: gm.faint))))
+                    : ColoredBox(color: gm.chipBg),
+              ),
+              // 没大图(无图作品)不给放大:打开也只是一张坏图
+              if (c.image != null)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    key: const Key('candZoom'),
+                    onTap: onZoom,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(
+                              color: Colors.black54, shape: BoxShape.circle),
+                          child: const GmIcon(GmIcons.search,
+                              size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.title,
+                      style: GmText.serif(size: 14.5, weight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Text(c.artist,
+                      style: GmText.sans(size: 12, color: gm.sub),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            GmIcon(GmIcons.chevR, size: 16, color: gm.faint),
+          ],
+        ),
       ),
     );
   }
