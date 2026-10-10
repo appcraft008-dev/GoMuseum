@@ -378,3 +378,25 @@ def test_clean_year_table_and_passthrough():
     # 语义模糊的原样:「约1867**或**1868」压成区间是改写原意
     assert _clean_year("1867 vers,1868 ou") == "1867 vers,1868 ou"
     assert _clean_year("1859 avant") == "1859 avant"  # 留给前端做 l10n
+
+
+def test_clean_artist_strips_dates_but_keeps_qualifiers():
+    """2026-10-07 实测奥赛+橘园真实 Auteur 字段:120 个生卒年全部是严格
+    \\d{3,4}-\\d{3,4} 形态,211 个非日期内容(限定词/角色词)零例外不匹配这个
+    形态——两类可以用同一条正则干净分开,不用模糊字符类。"""
+    # 生卒年:应该被清洗掉(真实奥赛数据)
+    assert _clean_artist("Cassatt Mary (1844-1926)") == "Cassatt Mary"
+    assert _clean_artist("Renoir Pierre Auguste (1841-1919)") == "Renoir Pierre Auguste"
+    # 限定词:不该被清洗掉(真实奥赛/橘园数据,旧正则会把这些也删掉)
+    assert _clean_artist("Boucher François (d'après)") == "Boucher François (d'après)"
+    assert _clean_artist("CLOUET François (atelier)") == "CLOUET François (atelier)"
+    assert _clean_artist("Gauguin Paul (attribué à)") == "Gauguin Paul (attribué à)"
+    assert _clean_artist("anonyme") == "anonyme"
+    assert _clean_artist("BENJAMIN-CONSTANT (dit)") == "BENJAMIN-CONSTANT (dit)"
+    # 已知局限(spec §3.1):生卒年+限定词是两个独立括号时,末尾那个是限定词,
+    # 整串(包括生卒年)都不会被清洗——不影响正确性,下游的限定词扫描是子串
+    # 匹配,不管前面夹着什么都能扫到"attribué à"。
+    assert (
+        _clean_artist("Cézanne Paul (1839-1906) (attribué à)")
+        == "Cézanne Paul (1839-1906) (attribué à)"
+    )

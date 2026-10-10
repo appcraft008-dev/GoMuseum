@@ -39,7 +39,10 @@ _MILL_RULES = (
     (re.compile(r"^(\d+)-(\d+)$"), lambda m: f"{m[1]}–{m[2]}"),
 )
 
-_DATES = re.compile(r"\s*\([^)]*\)\s*$")  # 作者尾部"(1844-1926)"
+# 作者尾部"(1844-1926)"——只匹配生卒年形态,不匹配"(atelier)"/"(d'après)"
+# 这类限定词(2026-10-07 实测奥赛+橘园全量 Auteur 字段:两类内容零例外可以
+# 用这条正则分开)。限定词要留着,resolve_creator_by_name 的弃权判断要用到。
+_DATES = re.compile(r"\s*\(\d{3,4}-\d{3,4}\)\s*$")
 _DOMAINE_CAT = {
     "peinture": "painting",
     "sculpture": "sculpture",
