@@ -413,3 +413,26 @@ def test_lazy_generation_only_request_language(session, monkeypatch):
         qid="Q1", language="zh", session_factory=lambda: session, close=False
     )
     assert set(captured["target_langs"]) == {"en", "zh"}  # 只 en+zh,非全 10 语
+
+
+def test_maybe_trigger_reports_daily_cap_and_schedules_nothing(session, monkeypatch):
+    # 10-10:预算用尽原先静默跳过,App 只能显示一个永远点不好的「重试」
+    monkeypatch.setattr(
+        "app.services.enrichment.lazy.daily_budget_exhausted", lambda db: True
+    )
+    scheduled = []
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(a),
+        environment="staging",
+    )
+    assert reason == "daily_cap"
+    assert scheduled == []
+
+
+def test_maybe_trigger_no_reason_when_scheduled(session):
+    assert (
+        maybe_trigger(session, "Q1", schedule=lambda *a: None, environment="staging")
+        is None
+    )
