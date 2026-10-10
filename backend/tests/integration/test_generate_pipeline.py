@@ -2009,7 +2009,7 @@ def test_first_generation_material_includes_evidence_pack_rich_facts(
     monkeypatch.setattr(
         ev,
         "fetch_rich_facts",
-        lambda qid, run_query=None: [
+        lambda qid, get_entities=None: [
             {
                 "claim": "commissioned by",
                 "value": "Pope Julius II",

@@ -191,7 +191,7 @@ def generate_object(
         pool.submit(
             _ev.fetch_rich_facts,
             o.qid,
-            run_query=None if registry is not None else (lambda _sparql: []),
+            get_entities=None if registry is not None else (lambda ids, **kw: {}),
         )
         if o.evidence_pack is None or force
         else None
