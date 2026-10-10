@@ -21,9 +21,13 @@ void main() {
 
     expect(body('_errorContent'), contains('_fallbackChoices('));
     expect(body('_unrecognizedContent'), contains('_fallbackChoices('));
-    final choices = body('_fallbackChoices');
-    expect(choices, contains('recShootLabelBtn'));
-    expect(choices, contains('recTypeNumberOrName'));
+    // 选择卡本体在 FallbackChoices 组件里(10-10 抽出,布局另有 fallback_choices_test)
+    final fb = src.indexOf('List<Widget> _fallbackChoices(');
+    expect(
+        src.substring(fb, src.indexOf('];', fb)), contains('FallbackChoices('));
+    final card = src.substring(src.indexOf('class FallbackChoices '));
+    expect(card, contains('recShootLabelBtn'));
+    expect(card, contains('recTypeNumberOrName'));
   });
 
   // 真机 10-06:网络两分钟里连断 4 次,服务端早算好了结果却没送到。「重拍」=新照片从头算
