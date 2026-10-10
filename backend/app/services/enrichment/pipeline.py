@@ -282,13 +282,20 @@ def generate_object(
                 if new_artist:
                     art = Artist(qid=aqid)
                     db.add(art)
+                # Wikidata 自己的标签先取出来——优先用它,不用这件作品上的
+                # 原始署名字符串:那只是这件作品这一侧的视角,Joconde 来源
+                # 的件还可能是"姓 名"顺序的原始大写格式(如"SOUTINE Chaïm"),
+                # 没有标签才退回这件作品上的名字(全分支审阅发现的 Minor)。
+                try:
+                    alabels = _wikidata_labels(aqid, target_langs)
+                except Exception:
+                    alabels = {}
                 # 已有作者:以下字段**已有就不动**,只补缺(同纪律 37)。
-                # 这件作品上的 artist_en/代表作只是它这一侧的视角,不能盖掉全馆共享的那份。
                 if not art.name_en:
-                    art.name_en = o.artist_en
-                # 中文名缺(Wikidata 无 zh 标签)→ 翻译补,同标题机制
+                    art.name_en = alabels.get("en") or o.artist_en
+                # 中文名缺 → Wikidata zh 标签优先,没有才翻译补,同标题机制
                 if not art.name_zh:
-                    name_zh = o.artist_zh
+                    name_zh = alabels.get("zh") or o.artist_zh
                     if (
                         not name_zh
                         and o.artist_en
@@ -300,7 +307,6 @@ def generate_object(
                             name_zh = None
                     art.name_zh = name_zh
                 try:
-                    alabels = _wikidata_labels(aqid, target_langs)
                     art.name_i18n = _fill_i18n(
                         art.name_i18n, o.artist_en, alabels, target_langs, translator
                     )

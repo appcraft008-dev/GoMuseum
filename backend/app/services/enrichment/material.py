@@ -726,6 +726,13 @@ def resolve_creator_by_name(
         and _claim_ids(ent, "P106") & _OCCUPATION_WHITELIST
     }
 
+    # ⚠️ 已知天花板(全分支审阅发现,记录不修):非末尾段落如果带着括号内容
+    # (如真实数据"BAZILLE Frédéric;Manet Édouard (1832-1883)"里 Manet 那段
+    # 的生卒年),词集合精确匹配会失败、这一段被当"解析失败"忽略——于是
+    # 只剩另一位合作者"独占"署名。当前 §3.1 的新正则恰好在入库时把这类
+    # 具体形态清掉了,所以暂时没有实例触发,但这不是设计上的保证,只是
+    # 眼下的数据巧合。真要堵,需要在拆分后对每段单独再跑一次限定词/日期
+    # 扫描,而不是只在整串层面扫一次——YAGNI,等真的撞到再做。
     resolved: set[str] = set()
     for cands in segment_candidates.values():
         survivors = [c for c in cands if c in artists]
