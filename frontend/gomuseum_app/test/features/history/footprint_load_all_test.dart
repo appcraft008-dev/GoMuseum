@@ -1,6 +1,10 @@
 /// 足迹必须拉全 —— 原先只拉第一页 20 条且页面没有「加载更多」,
 /// 2026-10-02 用户识别 160+ 条只看得到 20 件。
+/// 10-11:801 条足迹串行 9 个请求、全程转圈 4–5 秒 → 首个请求只拉 50 条立刻显示,
+/// 其余后台续拉接在后面。
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +16,15 @@ import 'package:gomuseum_app/features/settings/presentation/providers/language_p
 
 /// 模拟后端分页:总共 [total] 条,按 offset/limit 切。
 class _PagedDs implements HistoryRemoteDataSource {
-  _PagedDs(this.total);
-  final int total;
+  _PagedDs(int total) : ids = [for (var i = 0; i < total; i++) 'e$i'];
+
+  /// 服务端现存的足迹(删了就真少一条,后面的 offset 跟着前移)。
+  final List<String> ids;
   int calls = 0;
+  final limits = <int>[];
+
+  /// 非空时,第一页之后的请求都等它放行(模拟后台续拉还没回来)。
+  Completer<void>? gate;
 
   @override
   Future<List<HistoryItemModel>> getRecentHistory({
@@ -24,12 +34,14 @@ class _PagedDs implements HistoryRemoteDataSource {
     String? language,
   }) async {
     calls++;
-    final end = (offset + limit).clamp(0, total);
+    limits.add(limit);
+    if (offset > 0 && gate != null) await gate!.future;
+    final end = (offset + limit).clamp(0, ids.length);
     return [
-      for (var i = offset; i < end; i++)
+      for (final id in ids.sublist(offset.clamp(0, ids.length), end))
         HistoryItemModel(
-          id: 'e$i',
-          artworkName: 'A$i',
+          id: id,
+          artworkName: id,
           artist: '',
           period: '',
           description: '',
@@ -51,7 +63,7 @@ class _PagedDs implements HistoryRemoteDataSource {
   Future<Map<String, dynamic>> getHistoryStats({int days = 30}) async => {};
 
   @override
-  Future<void> deleteHistoryItem(String id) async {}
+  Future<void> deleteHistoryItem(String id) async => ids.remove(id);
 }
 
 Future<HistoryState> _loaded(_PagedDs ds) async {
@@ -103,5 +115,95 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(c.read(historyProvider).items.length, 164);
     expect(ds.calls, calls);
+  });
+
+  test('首个请求只拉 50 条,拿到就显示,不等后面的页', () async {
+    final ds = _PagedDs(164)..gate = Completer<void>();
+    final c = ProviderContainer(overrides: [
+      historyRemoteDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(historyProvider, (_, __) {});
+    for (var i = 0; i < 10; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(ds.limits.first, 50);
+    final s = c.read(historyProvider);
+    expect(s.items.length, 50);
+    expect(s.hasMore, isTrue, reason: '还在续拉,统计行据此暂不显示');
+
+    ds.gate!.complete();
+    for (var i = 0; i < 20 && c.read(historyProvider).isLoading; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(c.read(historyProvider).items.length, 164);
+    expect(c.read(historyProvider).hasMore, isFalse);
+  });
+
+  test('已有列表时刷新不先缩回 50 条', () async {
+    final ds = _PagedDs(164);
+    final c = ProviderContainer(overrides: [
+      historyRemoteDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(historyProvider, (_, __) {});
+    for (var i = 0; i < 20 && c.read(historyProvider).isLoading; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    ds.gate = Completer<void>();
+    final done = c.read(historyProvider.notifier).refresh();
+    for (var i = 0; i < 10; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(c.read(historyProvider).items.length, 164);
+    ds.gate!.complete();
+    await done;
+    expect(c.read(historyProvider).items.length, 164);
+  });
+
+  test('新一次加载开始后,旧的续拉结果作废', () async {
+    final ds = _PagedDs(164)..gate = Completer<void>();
+    final c = ProviderContainer(overrides: [
+      historyRemoteDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(historyProvider, (_, __) {});
+    for (var i = 0; i < 10; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    final second = c.read(historyProvider.notifier).refresh();
+    ds.gate!.complete();
+    await second;
+    for (var i = 0; i < 10; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    final s = c.read(historyProvider);
+    expect(s.items.length, 164);
+    expect(s.items.map((i) => i.id).toSet().length, 164, reason: '两轮没有叠在一起');
+  });
+
+  test('续拉途中删一条:不复活、后面的也不漏', () async {
+    final ds = _PagedDs(164)..gate = Completer<void>();
+    final c = ProviderContainer(overrides: [
+      historyRemoteDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(historyProvider, (_, __) {});
+    for (var i = 0; i < 10; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(c.read(historyProvider).items.length, 50);
+    await c.read(historyProvider.notifier).deleteItem('e3');
+    ds.gate!.complete();
+    for (var i = 0; i < 100 && c.read(historyProvider).isLoading; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    final got = c.read(historyProvider).items.map((i) => i.id).toList();
+    expect(got, isNot(contains('e3')));
+    expect(got.toSet(), {for (var i = 0; i < 164; i++) 'e$i'}..remove('e3'));
   });
 }

@@ -105,6 +105,14 @@ class History extends _$History {
   /// (繁体要映射成 `zh-hant`)。
   late String _lang;
 
+  static const _firstPage = 50;
+
+  /// 每次 [loadHistory] 自增;续拉回来发现不是最新一轮就丢弃结果。
+  int _gen = 0;
+
+  /// 本轮加载期间删掉的足迹:续拉合并时别让它复活。
+  final _removed = <String>{};
+
   @override
   HistoryState build() {
     _lang = apiLanguage(ref.watch(resolvedLocaleProvider));
@@ -118,24 +126,32 @@ class History extends _$History {
 
   /// 拉**全部**足迹。页面没有「加载更多」,只拉第一页 = 永远只看得到最近 20 条
   /// (2026-10-02 真机:识别 160+ 条只显示 20 件),统计行的件数/天数也跟着错。
-  /// 每页 100 = 后端 `limit` 上限(`le=100`)。
-  /// ponytail: 后端每页都把该用户全部事件渲染一遍再切片,几百条级够用;
-  /// 上千条了改后端先切片再渲染,或改游标分页 + 列表滚动加载。
+  ///
+  /// 首个请求只拉 [_firstPage] 条,列表为空时拿到就显示(足迹页 + 首页「继续游览」),
+  /// 其余每页 100(后端 `limit` 上限 `le=100`)在后台续拉接在后面;`hasMore` 为真 =
+  /// 还没拉完,统计行据此暂不显示。801 条串行 9 个请求全程转圈 4–5 秒(2026-10-11 真机)。
+  /// 已有列表时(识别后刷新/下拉)整份拉完再换,不先缩回 50 条。
+  /// ponytail: 仍是拉全量,上万条了改成滚动到底再拉 + 后端给总数。
   Future<void> loadHistory({int? days}) async {
     const page = 100;
+    final gen = ++_gen;
+    _removed.clear();
+    final progressive = state.items.isEmpty;
     state = state.copyWith(isLoading: true, error: null);
 
     final useCase = ref.read(getRecentHistoryUseCaseProvider);
     final all = <HistoryItem>[];
-    var got = page;
+    var limit = _firstPage;
     // 页数封顶:后端分页一旦不前进(offset 被忽略),无上限会无限请求
-    for (var p = 0; p < 20 && got == page; p++) {
+    for (var p = 0; p < 20; p++) {
       final result = await useCase(
-        limit: page,
+        limit: limit,
         offset: all.length,
         days: days,
         language: _lang,
       );
+      if (gen != _gen) return; // 已被更新的一次加载取代(刷新/切语言/换账号)
+      var got = 0;
       final failure = result.fold((f) => f, (items) {
         all.addAll(items);
         got = items.length;
@@ -145,9 +161,21 @@ class History extends _$History {
         state = state.copyWith(isLoading: false, error: failure.message);
         return;
       }
+      if (got < limit) break;
+      if (progressive) {
+        state = state.copyWith(items: _kept(all), hasMore: true);
+      }
+      limit = page;
     }
-    state = state.copyWith(items: all, isLoading: false, hasMore: false);
+    state = state.copyWith(items: _kept(all), isLoading: false, hasMore: false);
+    // 续拉途中删过:服务端列表前移,在途那页的 offset 会错位漏一条 → 整份再对一遍
+    if (_removed.isNotEmpty) await loadHistory(days: days);
   }
+
+  List<HistoryItem> _kept(List<HistoryItem> all) => [
+        for (final i in all)
+          if (!_removed.contains(i.id)) i
+      ];
 
   Future<void> searchHistory(String query) async {
     if (query.trim().isEmpty) {
@@ -193,6 +221,7 @@ class History extends _$History {
         state = state.copyWith(error: failure.message);
         return;
       }
+      _removed.add(one);
       state = state.copyWith(
           items: state.items.where((item) => item.id != one).toList());
     }
