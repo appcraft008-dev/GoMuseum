@@ -1059,12 +1059,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
     final l10n = AppLocalizations.of(context)!;
     final label = state.labelText;
     return [
-      if (label != null)
-        Text(l10n.recLabelSeen(label),
-            style: GmText.sans(size: 13, height: 1.5))
-      else
-        Text(l10n.recNotRecognized,
-            style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      Text(label != null ? l10n.recNotInCatalog : l10n.recNotRecognized,
+          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 14),
       ..._fallbackChoices(gm, label),
     ];
@@ -1093,8 +1089,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   List<Widget> _fallbackChoices(GmPalette gm, String? label) => [
         FallbackChoices(
-          // 已读出墙签(标签上写着…)时不再劝拍说明牌
-          showHint: label == null,
+          labelSeen: label != null,
           onShootLabel: _startLabelCapture,
           // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
           onSearch: () => _showTagSearchSheet(
@@ -1314,12 +1309,13 @@ class CandidateRow extends StatelessWidget {
 class FallbackChoices extends StatelessWidget {
   const FallbackChoices(
       {super.key,
-      required this.showHint,
+      required this.labelSeen,
       required this.onShootLabel,
       required this.onSearch,
       required this.onRetake});
 
-  final bool showHint;
+  /// 已读出墙签:不再劝拍说明牌,主按钮换成输入编号(墙签文字已预填)。
+  final bool labelSeen;
   final VoidCallback onShootLabel;
   final VoidCallback onSearch;
   final VoidCallback onRetake;
@@ -1346,43 +1342,49 @@ class FallbackChoices extends StatelessWidget {
                 children: [
                   GmIcon(icon, size: 16, color: gm.accent),
                   const SizedBox(width: 6),
+                  // 放不下(大字号/长语言)就缩小,不换行(用户 10-11 定)
                   Flexible(
-                    child: Text(label,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GmText.sans(
-                            size: 13.5,
-                            weight: FontWeight.w600,
-                            color: gm.accent)),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(label,
+                          maxLines: 1,
+                          style: GmText.sans(
+                              size: 13.5,
+                              weight: FontWeight.w600,
+                              color: gm.accent)),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
         );
+    final retake = secondary(
+        const Key('fbRetake'), GmIcons.photo, l10n.camRetake, onRetake);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (showHint) ...[
+        if (!labelSeen) ...[
           Text(l10n.recShootLabelHint,
               style: GmText.sans(size: 12.5, height: 1.5, color: gm.sub)),
           const SizedBox(height: 12),
         ],
         GmTicketButton(
-          label: l10n.recShootLabelBtn,
-          icon: GmIcons.camera,
-          onTap: onShootLabel,
+          label: labelSeen ? l10n.recTypeNumberOrName : l10n.recShootLabelBtn,
+          icon: labelSeen ? GmIcons.search : GmIcons.camera,
+          onTap: labelSeen ? onSearch : onShootLabel,
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            secondary(const Key('fbSearch'), GmIcons.search,
-                l10n.recTypeNumberOrName, onSearch),
+            labelSeen
+                ? secondary(const Key('fbShootLabel'), GmIcons.camera,
+                    l10n.recShootLabelBtn, onShootLabel)
+                : secondary(const Key('fbSearch'), GmIcons.search,
+                    l10n.recTypeNumberOrName, onSearch),
             const SizedBox(width: 10),
-            secondary(
-                const Key('fbRetake'), GmIcons.photo, l10n.camRetake, onRetake),
+            retake,
           ],
         ),
       ],

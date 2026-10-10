@@ -593,9 +593,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recNotRecognized => '이 작품을 인식하지 못했습니다';
 
   @override
-  String recLabelSeen(String text) {
-    return '라벨에 \"$text\"라고 적혀 있습니다 — 아직 전체 가이드는 없지만 요청을 기록했습니다 ✅';
-  }
+  String get recNotInCatalog => '아직 수록되지 않은 작품입니다';
 
   @override
   String get recShootLabelBtn => '설명판 촬영';

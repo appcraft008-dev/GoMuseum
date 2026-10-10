@@ -180,7 +180,7 @@
   "recNoneOfThese": "Żadne z nich",
   "recThisIsIt": "To ta",
   "recNotRecognized": "Nie rozpoznano tego dzieła",
-  "recLabelSeen": "Na etykiecie widnieje „{text}” — nie mamy jeszcze pełnego przewodnika, ale odnotowaliśmy Twoją prośbę ✅",
+  "recNotInCatalog": "Tego dzieła jeszcze nie ma w przewodniku",
   "recShootLabelBtn": "Sfotografuj tabliczkę",
   "recTypeNumberOrName": "Wpisz numer lub tytuł",
   "photoFbTitle": "Wysłać nam to zdjęcie?",
