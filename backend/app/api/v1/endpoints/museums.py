@@ -135,11 +135,16 @@ def object_content(
 
     if _hidden(db, credentials, slug, qid):
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
+    reason = None
     if _caller_id(db, credentials):
-        maybe_trigger(db, qid, schedule=background_tasks.add_task, language=language)
+        reason = maybe_trigger(
+            db, qid, schedule=background_tasks.add_task, language=language
+        )
     data = get_object_content(db, slug, qid, language)
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
+    # 加法字段(2026-10-10):为什么没在生成。"daily_cap"=当日懒生成预算用尽;null=无特别原因
+    data["unavailable_reason"] = reason
     # 加法字段(2026-09-29 分享):null = 这件在这个语言下不可分享,App 不显示分享键
     data["share"] = share_info(db, slug, qid, language, data)
     return data

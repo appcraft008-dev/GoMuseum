@@ -17,9 +17,10 @@ _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
 # ponytail: 进程级并发上限2,保护 API 响应与 LLM 限速;多 worker/量大再上队列
 _SEM = threading.Semaphore(2)
 # 全局日上限(2026-09-20 安全审计):当天已生成段数达此值就不再点火。
-# 300 段 ≈ 170 件 ≈ $1-3/天;近 40 天真实业务量是 838 段/40 天,远低于它。
+# 300 → 1000(10-10 用户定):10-07/10-08 只靠运营者逛馆就顶满(301/315),之后打开的新件全
+# 显示假「重试」到 UTC 零点。1000 段 ≈ 120 件 ≈ 最坏 $4-10/天。
 # ponytail: 一条 count 查询,不建表不加字段。见 daily_budget_exhausted。
-_LAZY_DAILY_SECTION_CAP = 300
+_LAZY_DAILY_SECTION_CAP = 1000
 # 懒生成/懒翻译写的段打这个来源,日上限只数它。原先不分来源:2026-09-28 我批量
 # 补译小皇宫 440 段把当天额度吃光,用户点开第 61 件的 7 门语言全被「预算用尽」跳过,
 # App 显示错误。批量是运营者主动花的钱,不该挤掉用户那份。
@@ -282,8 +283,11 @@ def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
     )
 
 
-def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) -> None:
-    """content 端点接线(拿到锁才调度,其余静默):
+def maybe_trigger(
+    db, qid: str, *, schedule, environment=None, language=None
+) -> str | None:
+    """content 端点接线(拿到锁才调度,其余静默)。返回不生成的原因,端点透传给 App:
+    "daily_cap"=当日预算用尽(App 提示明天再来);其余 None。
     - stub → 懒生成(完整生成,请求语言优先);
     - ready 但请求语言缺已发布内容且有 en 轴心 → 懒翻译(只翻该语言);
     - empty 不动(无可接地材料,防循环烧钱)。
@@ -318,7 +322,7 @@ def maybe_trigger(db, qid: str, *, schedule, environment=None, language=None) ->
             qid,
             language,
         )
-        return
+        return "daily_cap"
     if wants_generation:
         if try_acquire_lock(db, o):
             schedule(run_lazy_generation, qid, language)
