@@ -55,6 +55,23 @@ class _FakeRepo implements HistoryRepository {
       const Right(null);
 }
 
+/// 首页 50 条照常返回,后续续拉一直不回来(还在后台拉)。
+class _FirstPageOnlyRepo extends _FakeRepo {
+  _FirstPageOnlyRepo(super.items);
+  var _calls = 0;
+
+  @override
+  Future<Either<Failure, List<HistoryItem>>> getRecentHistory({
+    int limit = 20,
+    int offset = 0,
+    int? days,
+    String? language,
+  }) =>
+      _calls++ == 0
+          ? Future.value(Right(items.take(limit).toList()))
+          : Completer<Either<Failure, List<HistoryItem>>>().future;
+}
+
 MuseumSummary _museum(String slug, String name, String city) => MuseumSummary(
       slug: slug,
       name: name,
@@ -83,11 +100,12 @@ Future<void> _pump(
   WidgetTester tester,
   List<HistoryItem> items, {
   List<MuseumSummary>? museums,
+  HistoryRepository? repo,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        historyRepositoryProvider.overrideWithValue(_FakeRepo(items)),
+        historyRepositoryProvider.overrideWithValue(repo ?? _FakeRepo(items)),
         // 必须覆写：不覆写就是一次真 dio 请求，测试结束后连接超时的 Timer
         // 还挂着，整个用例直接判失败。
         // museums == null = 模拟"馆列表还没回来"，用永不完成的 future
@@ -259,5 +277,17 @@ void main() {
     expect(notes.any((n) => n.contains('${now.year - 1}年')), isTrue);
     expect(notes.any((n) => n.contains('${now.year}年')), isFalse,
         reason: '今年的不该带年份，多余');
+  });
+
+  testWidgets('还在后台续拉时先出列表,统计行等拉完再显示', (t) async {
+    final items = [
+      for (var i = 0; i < 60; i++)
+        _item('作品$i', DateTime(2026, 9, 18, 10, i), slug: 'orsay'),
+    ];
+    await _pump(t, items, museums: paris, repo: _FirstPageOnlyRepo(items));
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(_sectionLabels(t), ['奥赛博物馆']);
+    expect(find.textContaining('件作品'), findsNothing, reason: '只拉到 50 条,数字还不准');
   });
 }
