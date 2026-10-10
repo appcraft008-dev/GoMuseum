@@ -26,6 +26,43 @@ from app.services.enrichment.material import resolve_creator_by_name
 _SLEEP_SECONDS = 0.3
 
 
+def _scan(objs, *, resolve=resolve_creator_by_name, sleep=None):
+    """逐件尝试解析,打印每件结果,返回汇总计数。单件异常不中断整个扫描——
+    原来没有 try/except,批量跑一整个馆时一次 HTTP 异常就会让后面几百件
+    全部扫不到(全分支审阅发现的 Minor)。"""
+    counts = {
+        "resolved": 0,
+        "abstained": 0,
+        "errored": 0,
+        "skipped_has_aqid": 0,
+        "skipped_qid_format": 0,
+    }
+    for o in objs:
+        attrs = o.attributes or {}
+        if attrs.get("artist_qid"):
+            counts["skipped_has_aqid"] += 1
+            continue
+        if o.qid.startswith("Q"):
+            counts["skipped_qid_format"] += 1
+            continue
+        try:
+            aqid = resolve(o.artist_en)
+        except Exception as e:
+            counts["errored"] += 1
+            print(f"ERROR   \t{o.qid}\t{o.artist_en!r}\t{e!r}")
+            continue
+        finally:
+            if sleep:
+                sleep(_SLEEP_SECONDS)
+        if aqid:
+            counts["resolved"] += 1
+            print(f"RESOLVED\t{o.qid}\t{o.artist_en!r}\t-> {aqid}")
+        else:
+            counts["abstained"] += 1
+            print(f"ABSTAIN \t{o.qid}\t{o.artist_en!r}")
+    return counts
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--slug", required=True)
@@ -40,28 +77,13 @@ def main():
             .filter(MuseumObject.artist_en.isnot(None))
             .all()
         )
-        resolved = skipped_has_aqid = skipped_qid_format = abstained = 0
-        for o in objs:
-            attrs = o.attributes or {}
-            if attrs.get("artist_qid"):
-                skipped_has_aqid += 1
-                continue
-            if o.qid.startswith("Q"):
-                skipped_qid_format += 1
-                continue
-            aqid = resolve_creator_by_name(o.artist_en)
-            time.sleep(_SLEEP_SECONDS)
-            if aqid:
-                resolved += 1
-                print(f"RESOLVED\t{o.qid}\t{o.artist_en!r}\t-> {aqid}")
-            else:
-                abstained += 1
-                print(f"ABSTAIN \t{o.qid}\t{o.artist_en!r}")
+        counts = _scan(objs, sleep=time.sleep)
         print(
             f"\n--- {args.slug} 汇总 ---\n"
-            f"resolved={resolved} abstained={abstained} "
-            f"skipped(已有artist_qid)={skipped_has_aqid} "
-            f"skipped(Wikidata qid)={skipped_qid_format}"
+            f"resolved={counts['resolved']} abstained={counts['abstained']} "
+            f"errored={counts['errored']} "
+            f"skipped(已有artist_qid)={counts['skipped_has_aqid']} "
+            f"skipped(Wikidata qid)={counts['skipped_qid_format']}"
         )
     finally:
         db.close()

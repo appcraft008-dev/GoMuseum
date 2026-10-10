@@ -25,6 +25,11 @@ def _offline_artist_i18n(monkeypatch):
     # 作者解析同样默认打桩:generate 现在先解析唯一作者再抓材料(多值 P170 修复),
     # 不打桩会让每个既有测试多打一次 SPARQL。
     monkeypatch.setattr(pl, "_resolve_creator", lambda qid: None)
+    # P170 查不到时的第二梯队同样默认打桩——不打桩的话,任何"非 Q qid +
+    # 有 artist_en + 没 artist_qid"的既有测试都会打一次真实 Wikidata
+    # wbsearchentities(失败会被 try/except 吞掉,测试照样绿,但那次真实
+    # 网络尝试正是这个 fixture 存在的目的要防的;全分支审阅发现的 Minor)。
+    monkeypatch.setattr(pl, "_resolve_creator_by_name", lambda name: None)
 
 
 @pytest.fixture()
@@ -1683,6 +1688,57 @@ def test_generate_object_falls_back_to_name_search_for_joconde_ids(
     assert obj.attributes.get("artist_qid_source") == "name_search"
 
 
+def test_new_artist_from_name_search_prefers_wikidata_label_over_raw_joconde_string(
+    session, monkeypatch
+):
+    """全分支审阅发现的 Minor:新建 Artist 行时 `name_en` 原来直接用这件
+    作品上的原始署名字符串(Joconde 来源常是"姓 名"顺序的大写格式,如
+    "SOUTINE Chaïm"),而 Wikidata 自己的标签("Chaïm Soutine")明明已经
+    在旁边的 `_wikidata_labels` 调用里抓到了——没理由不用更干净的那个。"""
+    import app.services.enrichment.pipeline as pl
+    from app.services.object_importer import upsert_object
+
+    monkeypatch.setattr(pl, "_resolve_creator", lambda qid: None)
+    monkeypatch.setattr(
+        pl, "_wikidata_labels", lambda qid, langs: {"en": "Chaïm Soutine"}
+    )
+    monkeypatch.setattr(
+        pl,
+        "_resolve_creator_by_name",
+        lambda name: "Q160141" if name == "SOUTINE Chaïm" else None,
+    )
+
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "joconde-00000089539",
+            "title_en": "Autre tableau",
+            "artist_en": "SOUTINE Chaïm",
+            "category": "painting",
+            "attributes": {},
+        },
+    )
+    session.commit()
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "joconde-00000089539",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="gpt-4o-mini",
+        registry=_FakeRegistry(),
+    )
+
+    art = session.query(Artist).filter_by(qid="Q160141").one()
+    assert art.name_en == "Chaïm Soutine"  # Wikidata 标签,不是原始大写字符串
+
+
 def test_generate_object_does_not_call_name_search_when_aqid_already_known(
     session, monkeypatch
 ):
@@ -1772,3 +1828,59 @@ def test_generate_object_does_not_call_name_search_for_wikidata_qid(
     )
     obj = session.query(MuseumObject).filter_by(qid="Q99999999").one()
     assert obj.attributes.get("artist_qid") is None  # P170 的弃权判断没被推翻
+
+
+def test_autouse_fixture_prevents_real_network_for_name_search_by_default(
+    session, monkeypatch
+):
+    """全分支审阅发现的 Minor:`_offline_artist_i18n` 这个 autouse fixture
+    打桩了 `_resolve_creator`,没打桩新加的 `_resolve_creator_by_name`——
+    任何"非 Q qid + 有 artist_en + 没 artist_qid"的既有测试,如果没有自己
+    显式 monkeypatch 这个函数,就会调用真实的 `resolve_creator_by_name`,
+    对 Wikidata 发一次真实 HTTP 请求(失败会被 pipeline.py 的 try/except
+    吞掉,测试照样绿,但那次真实网络尝试本来就是这个 fixture 存在的目的
+    要防的)。这里直接在 material 模块打桩两个真正发 HTTP 的默认实现,
+    证明不显式 monkeypatch `_resolve_creator_by_name` 时也从不会打到真实
+    网络层。"""
+    import app.services.enrichment.material as material
+    from app.services.object_importer import upsert_object
+
+    calls = []
+
+    def _tracking_search(text, *, limit=5):
+        calls.append(text)
+        return []
+
+    monkeypatch.setattr(material, "_default_search_entities", _tracking_search)
+    monkeypatch.setattr(
+        material, "_default_get_claims", lambda qids: calls.append(qids) or {}
+    )
+
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {
+            "qid": "joconde-00000012345",
+            "title_en": "Test object",
+            "artist_en": "SOUTINE Chaïm",
+            "category": "painting",
+            "attributes": {},
+        },
+    )
+    session.commit()
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "joconde-00000012345",
+        enricher=_FakeEnricher(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="gpt-4o-mini",
+        registry=_FakeRegistry(),
+    )
+
+    assert calls == []  # 真实 HTTP 层从没被打到——证明被 autouse 的桩拦住了
