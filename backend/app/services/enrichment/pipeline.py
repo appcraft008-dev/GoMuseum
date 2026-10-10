@@ -149,16 +149,98 @@ def generate_object(
     if not force and _has_published_en(db, o.id):
         return {"qid": qid, "skipped": "exists"}
 
-    if registry is not None and o.content_status == "stub":
-        attrs = o.attributes or {}
-        fetched = fetch_object_material(
+    # ★ AI 写之前的联网取数并发发出(2026-10-10):作品材料/看图/多语标题/作者解析/
+    # 证据包富属性互不依赖,串行时首屏 = 各步相加(staging 实测 17-31s,最慢一步
+    # Wikidata 0.5-14.6s 波动)。只有网络调用进线程;DB 会话不跨线程,结果回主线程
+    # **按原顺序**落库,写入面不变。
+    # ponytail: 每件一个 5 线程池(其中打 Wikidata 的 ≤4 路);懒生成本身限 2 件并发。
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.services.enrichment import evidence as _ev
+    from app.services.enrichment import vision as _vi
+
+    pool = ThreadPoolExecutor(max_workers=5)
+    attrs0 = o.attributes or {}
+    f_mat = (
+        pool.submit(
+            fetch_object_material,
             o.qid,
-            attrs.get("external_ids") or {},
-            attrs.get("wiki_titles") or {},
+            attrs0.get("external_ids") or {},
+            attrs0.get("wiki_titles") or {},
             registry,
         )
+        if registry is not None and o.content_status == "stub"
+        else None
+    )
+    vis_url = None if attrs0.get(_vi.KEY) else _vi.primary_image_url(db, o)
+    f_vis = pool.submit(_vi.describe_image, vis_url) if vis_url else None
+    f_lab = (
+        pool.submit(_wikidata_labels, o.qid, target_langs)
+        if registry is not None
+        else None
+    )
+    # 已存的 artist_qid 优先(材料源不产出 artist_qid,所以取数前读即可)
+    known_aqid = attrs0.get("artist_qid")
+    f_cre = (
+        pool.submit(_resolve_creator, o.qid)
+        if registry is not None and not known_aqid
+        else None
+    )
+    # Wikidata 富属性按 registry 门控:registry 在=真实生成(走网络);无=测试/离线(no-op)。
+    f_rich = (
+        pool.submit(
+            _ev.fetch_rich_facts,
+            o.qid,
+            run_query=None if registry is not None else (lambda _sparql: []),
+        )
+        if o.evidence_pack is None or force
+        else None
+    )
+
+    # 作者**解析一次**,传给下面两个抓取器。此前 material / facts 各自跳一遍
+    # P170,多作者作品会各取一个不同的人 —— 橘园 Q64309678 就这么把梵高的
+    # 医生写成了静物画的作者(见 material.resolve_creator_qid 注释)。
+    # 先解析作者并发出作者两路取数,再回头按原顺序落前面几路的结果。
+    from_name_search = False
+    f_amat = f_af = None
+    if registry is not None:
+        from app.services.enrichment.material import fetch_artist_material
+
+        try:
+            aqid = known_aqid or (f_cre.result() if f_cre else None)
+        except Exception:
+            logger.warning("prep: resolve creator failed for %s", qid)
+            aqid = known_aqid
+
+        # P170 这条路查不到 qid,且不是真 Wikidata 作品(joconde-* 合成 id)
+        # 才试第二梯队——不能推翻 resolve_creator_qid 对"Wikidata 作品但
+        # P170 是未知值"这种故意弃权的判断(spec §3.3)。
+        if not aqid and o.artist_en and not o.qid.startswith("Q"):
+            try:
+                aqid = _resolve_creator_by_name(o.artist_en)
+                from_name_search = bool(aqid)
+            except Exception:
+                aqid = None
+
+        f_amat = pool.submit(
+            fetch_artist_material,
+            o.qid,
+            registry,
+            country_lang=country_lang or "fr",
+            artist_qid=aqid,
+        )
+        # 作者卡已有生年 = Wikidata 已查过一次。这几项只给作者卡补缺(见下方作者块),
+        # 再查一遍是首屏关键路径上的纯白等:SPARQL 实测 0.5-14.6s(2026-10-10 staging)。
+        from app.models.artist import Artist
+
+        known = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
+        if known is None or not known.birth:
+            f_af = pool.submit(_artist_facts, o.qid, artist_qid=aqid)
+
+    if f_mat is not None:
+        fetched = f_mat.result()
         if fetched:
-            o.attributes = {**attrs, **fetched}
+            o.attributes = {**(o.attributes or {}), **fetched}
             db.flush()
 
     # 看图写外观描述 —— **必须在 build_material 之前**,否则材料包里没有它。
@@ -169,16 +251,16 @@ def generate_object(
     #
     # 代价:懒生成首次请求 +3.6s(实测 3.1/3.4/4.4),TTFC 16-18s → ~20s。
     # 只有第一个看到这件作品的人要等,描述落库后永久复用(见 ensure_description)。
+    # (2026-10-10 起看图与其它取数并发,不再单独占首屏时间。)
     #
     # 不限 content_status == "stub":存量已生成的件将来 --force 重跑时也该补上
     # 描述,而它们的 status 早就是 ready 了。幂等由"已有描述就跳过"保证。
-    from app.services.enrichment.vision import ensure_description
-
-    ensure_description(db, o)
+    if f_vis is not None:
+        _vi.ensure_description(db, o, describe=lambda _url: f_vis.result())
 
     if registry is not None:
         try:
-            wlabels = _wikidata_labels(o.qid, target_langs)
+            wlabels = f_lab.result()
             ti = _fill_i18n(
                 (o.attributes or {}).get("title_i18n"),
                 o.title_en,
@@ -191,53 +273,24 @@ def generate_object(
                 o.title_zh = ti["zh"]
             db.flush()
         except Exception:
-            pass
-
-        from app.services.enrichment.material import fetch_artist_material
-
-        # 作者**解析一次**,传给下面两个抓取器。此前 material / facts 各自跳一遍
-        # P170,多作者作品会各取一个不同的人 —— 橘园 Q64309678 就这么把梵高的
-        # 医生写成了静物画的作者(见 material.resolve_creator_qid 注释)。
-        # 已存的 artist_qid 优先:names 回填过就别再问一次,也保证两条路径一致。
-        try:
-            aqid = (o.attributes or {}).get("artist_qid") or _resolve_creator(o.qid)
-        except Exception:
-            aqid = (o.attributes or {}).get("artist_qid")
-
-        # P170 这条路查不到 qid,且不是真 Wikidata 作品(joconde-* 合成 id)
-        # 才试第二梯队——不能推翻 resolve_creator_qid 对"Wikidata 作品但
-        # P170 是未知值"这种故意弃权的判断(spec §3.3)。
-        from_name_search = False
-        if not aqid and o.artist_en and not o.qid.startswith("Q"):
-            try:
-                aqid = _resolve_creator_by_name(o.artist_en)
-                from_name_search = bool(aqid)
-            except Exception:
-                aqid = None
+            logger.warning("prep: title labels failed for %s", qid)
 
         # Wikidata/网络抖动不应拖垮整件生成 → 失败则当无作者材料继续
         try:
-            artist_mat = fetch_artist_material(
-                o.qid, registry, country_lang=country_lang or "fr", artist_qid=aqid
-            )
+            artist_mat = f_amat.result()
         except Exception:
+            logger.warning("prep: artist material failed for %s", qid)
             artist_mat = {}
         if artist_mat:
             o.attributes = {**(o.attributes or {}), **artist_mat}
             db.flush()
 
-        # 作者卡已有生年 = Wikidata 已查过一次。这几项只给作者卡补缺(见下方作者块),
-        # 再查一遍是首屏关键路径上的纯白等:SPARQL 实测 0.5-14.6s(2026-10-10 staging)。
-        from app.models.artist import Artist
-
-        known = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
-        if known is not None and known.birth:
-            af = {}
-        else:
+        af = {}
+        if f_af is not None:
             try:
-                af = _artist_facts(o.qid, artist_qid=aqid)
+                af = f_af.result()
             except Exception:
-                af = {}
+                logger.warning("prep: artist facts failed for %s", qid)
         # 结构化属性抓失败不等于没作者:已解析的 aqid 要留着,否则下面整段作者块
         # (bio/名字)被静默跳过。2026-09-27 小皇宫《好撒玛利亚人》Q65734706 就这样没了作者简介。
         if aqid:
@@ -388,18 +441,21 @@ def generate_object(
     facts = _facts_text(obj)
 
     # 证据包:缺则建并落库(内容生成材料底座;阶段2 才切到它生成)。网络/LLM 抖动不拖垮。
-    # Wikidata 富属性按 registry 门控:registry 在=真实生成(走网络);无=测试/离线(no-op,不触网)。
-    if o.evidence_pack is None or force:
-        from app.services.enrichment.evidence import build_evidence_pack
-
-        ev_run_query = None if registry is not None else (lambda _sparql: [])
+    # 富属性已在开头并发预取(f_rich)。
+    if f_rich is not None:
         try:
-            o.evidence_pack = build_evidence_pack(
-                {**obj, "qid": o.qid}, run_query=ev_run_query, complete=None
+            rich = f_rich.result()
+        except Exception:
+            logger.warning("prep: rich facts failed for %s", qid)
+            rich = []
+        try:
+            o.evidence_pack = _ev.build_evidence_pack(
+                {**obj, "qid": o.qid}, rich_facts=rich, complete=None
             )
             db.flush()
         except Exception:
             pass
+    pool.shutdown(wait=False)  # 预取已全部取完
 
     sections = sections_for(o.category)
 

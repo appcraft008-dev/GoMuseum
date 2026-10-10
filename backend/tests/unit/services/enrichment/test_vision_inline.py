@@ -110,7 +110,7 @@ def test_pipeline_looks_at_the_image_before_it_builds_the_material():
     from app.services.enrichment import pipeline
 
     src = inspect.getsource(pipeline.generate_object)
-    i_vision = src.index("ensure_description(db, o)")
+    i_vision = src.index("ensure_description(db, o,")
     i_material = src.index("material = build_material(obj)")
     assert i_vision < i_material, "ensure_description 必须在 build_material 之前调用"
 

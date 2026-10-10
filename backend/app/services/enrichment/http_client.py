@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Callable
 
@@ -25,13 +26,16 @@ class PoliteSession:
         self._timeout = timeout
         self._sleep = sleep
         self._last = 0.0
+        # 懒生成并发预取时作品/作者两路线程共用同一会话 → 限速间隔要加锁才守得住
+        self._lock = threading.Lock()
 
     def _throttle(self) -> None:
         # 限速用真实 sleep；注入的 self._sleep 仅用于退避（便于测试断言退避时长）。
-        wait = self._min_interval - (time.monotonic() - self._last)
-        if wait > 0:
-            time.sleep(wait)
-        self._last = time.monotonic()
+        with self._lock:
+            wait = self._min_interval - (time.monotonic() - self._last)
+            if wait > 0:
+                time.sleep(wait)
+            self._last = time.monotonic()
 
     def get_json(self, url, params=None, _transport=None) -> dict:
         get = _transport or (

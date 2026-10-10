@@ -1955,3 +1955,43 @@ def test_artist_facts_still_fetched_for_bare_artist_card(session, monkeypatch):
     _gen_q77(session)
     assert calls == ["Q330"]
     assert session.query(Artist).filter_by(qid="Q330").one().birth == "1748"
+
+
+def test_prep_network_fetches_run_concurrently(session, monkeypatch):
+    """AI 写之前的 5 路联网取数互不依赖,必须同时发出(串行时首屏 = 各步相加,
+    2026-10-10 staging 实测 17-31s)。屏障要 5 方同时到达才放行;串行跑则每方等满超时。"""
+    import threading
+
+    import app.services.enrichment.evidence as ev
+    import app.services.enrichment.pipeline as pl
+    import app.services.enrichment.vision as vi
+
+    barrier = threading.Barrier(5, timeout=2)
+    met = []
+
+    def meet(name, ret):
+        def f(*a, **k):
+            try:
+                barrier.wait()
+                met.append(name)
+            except threading.BrokenBarrierError:
+                pass
+            return ret
+
+        return f
+
+    monkeypatch.setattr(pl, "fetch_object_material", meet("material", {}))
+    monkeypatch.setattr(pl, "_wikidata_labels", meet("labels", {}))
+    monkeypatch.setattr(pl, "_resolve_creator", meet("creator", None))
+    monkeypatch.setattr(ev, "fetch_rich_facts", meet("rich", []))
+    monkeypatch.setattr(vi, "primary_image_url", lambda db, obj: "https://img/x.jpg")
+    monkeypatch.setattr(vi, "describe_image", meet("vision", "A red sky."))
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.content_status = "stub"
+    session.commit()
+    _run(session, "Q1", registry=_FakeRegistry())
+
+    assert sorted(met) == ["creator", "labels", "material", "rich", "vision"]
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.attributes.get(vi.KEY) == "A red sky."  # 看图结果照旧落库

@@ -88,3 +88,24 @@ def test_fallback_delay_when_no_retry_after():
     s = PoliteSession(user_agent="UA", max_retries=2, sleep=sleeps.append)
     assert s.get_json("https://x", _transport=fake_get) == {"ok": 1}
     assert sleeps == [2.0]  # fallback = 2.0*(attempt0+1)
+
+
+def test_throttle_holds_across_threads():
+    """懒生成并发预取时两路线程共用一个会话:限速间隔不能被同时穿过。"""
+    import threading
+    import time
+
+    s = PoliteSession(user_agent="t", min_interval=0.2)
+    stamps = []
+
+    def hit():
+        s._throttle()
+        stamps.append(time.monotonic())
+
+    ts = [threading.Thread(target=hit) for _ in range(3)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+    stamps.sort()
+    assert all(b - a >= 0.19 for a, b in zip(stamps, stamps[1:]))
