@@ -149,6 +149,13 @@ def test_other_error_body_raises_without_retry():
     assert len(calls) == 1
 
 
+def test_other_4xx_raises_wikidata_error_without_retry():
+    get, calls = _seq(_Resp(400))
+    with pytest.raises(wa.WikidataApiError):
+        wa.get_entities(["Q1"], props="claims", http_get=get, sleep=lambda s: None)
+    assert len(calls) == 1
+
+
 def test_200_without_entities_raises():
     get, _ = _seq(_Resp(body={"success": 1}))
     with pytest.raises(wa.WikidataApiError):
@@ -316,7 +323,10 @@ def _get(params: dict, http_get, sleep) -> dict:
                 last = WikidataApiError(f"HTTP {r.status_code}")
                 wait = _retry_after(r) or wait
             else:
-                r.raise_for_status()
+                try:
+                    r.raise_for_status()
+                except requests.HTTPError as e:  # 其它 4xx:不重试,统一成 WikidataApiError
+                    raise WikidataApiError(f"HTTP {r.status_code}") from e
                 body = r.json()
                 err = body.get("error")
                 if err:
@@ -399,7 +409,7 @@ def labels_of(ids, languages, fetch) -> dict[str, dict[str, str]]:
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `$PY -m pytest -q --no-cov tests/unit/services/enrichment/test_wikidata_api.py`
-Expected: 14 passed
+Expected: 15 passed
 
 - [ ] **Step 5: 提交**
 
@@ -472,7 +482,7 @@ print(len(out), "entities")
 ```
 
 Run: `cd backend && $PY tests/fixtures/wikidata/fetch_fixtures.py`
-Expected: 打印 `N entities`(N ≈ 40–60),生成 `entities.json`。
+Expected: 打印 `N entities`(N ≈ 100,10-10 实测 101),生成 `entities.json`。
 
 然后核对夹具与本计划期望一致(数据若已被 Wikidata 改动,以夹具为准改后续测试期望,并在 ledger 记 Ruling):
 
@@ -484,7 +494,7 @@ def st(q, p): return [(s["rank"], s["mainsnak"]["snaktype"], (s["mainsnak"].get(
 print(st("Q64309678", "P170"))       # 期望:两条 normal value,Q35548(P1480 Q18122778,1 引用)/ Q1369513(P1480 Q30230067,0 引用)
 print(st("Q104479426", "P170"))      # 期望:[('normal','somevalue',None)]
 print(st("Q35548", "P570"))          # 期望:normal +1906-10-22 与 deprecated +1906-10-23
-print(st("Q5597", "P569")[:2])       # 期望:两条 preferred +1483-04-06 / +1483-03-28
+print(st("Q5597", "P569"))           # 期望:两条 preferred +1483-04-06 / +1483-03-28,外加一条 normal +1483-00-00(主值规则会丢掉它)
 print(st("Q5597", "P27"))            # 期望:normal Q12548 与 deprecated Q38
 print(st("Q12418", "P186"))          # 期望:preferred Q296955、preferred Q106857865、normal Q287
 print(len(st("Q12418", "P180")))     # 期望:9
@@ -766,14 +776,19 @@ def _p170(aq, rank="normal", certs=(), refs=0, snaktype="value"):
     return st
 
 
-def _work(*sts):
-    return {"Qw": {"id": "Qw", "claims": {"P170": list(sts)}}}
+# ⚠️ 不能叫 _work:本文件已有 _work(n)(代表作测试在用),同名会整模块覆盖。
+# 作品编号必须是 ^Q\d+$,否则被 resolve_creator_qid 的非 Wikidata 守卫直接返回 None,测试就不再走归组逻辑。
+_WORK_QID = "Q900000001"
+
+
+def _p170_entity(*sts):
+    return {_WORK_QID: {"id": _WORK_QID, "claims": {"P170": list(sts)}}}
 
 
 def _resolve(ents):
     from app.services.enrichment.material import resolve_creator_qid
 
-    return resolve_creator_qid("Qw", get_entities=lambda ids, **k: ents)
+    return resolve_creator_qid(_WORK_QID, get_entities=lambda ids, **k: ents)
 
 
 def test_p170_helper_matches_real_shape():
@@ -798,12 +813,12 @@ def test_resolve_creator_real_unknown_value_is_none():
 def test_creator_refs_summed_across_duplicate_statements_changes_winner():
     """spec §3.1:同作者同 rank 同 cert 两条语句(2、3 条引用)→ 一个 refs=5 候选,胜过 refs=4 的 B。
     若不相加,A 最多 3 < 4,胜者会变成 B。"""
-    ents = _work(_p170("Q1", refs=2), _p170("Q1", refs=3), _p170("Q2", refs=4))
+    ents = _p170_entity(_p170("Q1", refs=2), _p170("Q1", refs=3), _p170("Q2", refs=4))
     assert _resolve(ents) == "Q1"
 
 
 def test_creator_multi_p1480_on_one_statement_uses_best():
-    ents = _work(
+    ents = _p170_entity(
         _p170("Q1", certs=[("value", "Q30230067"), ("value", "Q18122778")]),  # possibly + presumably
         _p170("Q2", certs=[("value", "Q30230067")], refs=5),  # possibly
     )
@@ -811,19 +826,19 @@ def test_creator_multi_p1480_on_one_statement_uses_best():
 
 
 def test_creator_p1480_unknown_value_ranks_between_presumably_and_possibly():
-    ents = _work(_p170("Q1", certs=[("somevalue", None)]), _p170("Q2", certs=[("value", "Q30230067")]))
+    ents = _p170_entity(_p170("Q1", certs=[("somevalue", None)]), _p170("Q2", certs=[("value", "Q30230067")]))
     assert _resolve(ents) == "Q1"
-    ents = _work(_p170("Q1", certs=[("somevalue", None)]), _p170("Q3", certs=[("value", "Q18122778")]))
+    ents = _p170_entity(_p170("Q1", certs=[("somevalue", None)]), _p170("Q3", certs=[("value", "Q18122778")]))
     assert _resolve(ents) == "Q3"
 
 
 def test_creator_p1480_novalue_counts_as_no_qualifier():
-    ents = _work(_p170("Q1", certs=[("novalue", None)]), _p170("Q2", certs=[("value", "Q18122778")], refs=9))
+    ents = _p170_entity(_p170("Q1", certs=[("novalue", None)]), _p170("Q2", certs=[("value", "Q18122778")], refs=9))
     assert _resolve(ents) == "Q1"
 
 
 def test_creator_deprecated_and_unknown_statements_excluded():
-    ents = _work(_p170("Q1", rank="deprecated", refs=9), _p170(None, snaktype="somevalue"), _p170("Q2"))
+    ents = _p170_entity(_p170("Q1", rank="deprecated", refs=9), _p170(None, snaktype="somevalue"), _p170("Q2"))
     assert _resolve(ents) == "Q2"
 
 
@@ -1483,7 +1498,7 @@ git commit -m "refactor(enrichment): 证据包富属性改走 wbgetentities;流�
 
 - [ ] **Step 1: 搬常量**
 
-在 `material.py`、`evidence.py` 里确认下列常量已无生产调用(`grep -rn "<NAME>" app scripts` 只剩定义):`_CREATOR_QUERY`、`_ARTIST_QUERY`、`_ARTIST_TITLES_QUERY`、`_ARTIST_FACTS_BY_ARTIST_QUERY`、`_ARTIST_FACTS_QUERY`、`_LABELS_QUERY`、`_ARTIST_I18N_FACTS_QUERY`、`_RICH_QUERY`、`evidence._default_run_query`。把它们的文本**原样**复制进验证脚本,然后从生产模块删除。删除后 `evidence.py` 顶部的 `from app.services.enrichment.sources import wikidata as _wd` 若已无引用(`grep -n "_wd\." app/services/enrichment/evidence.py` 为空)一并删掉。`_LABELS_BATCH_QUERY`、`_default_artist_query`、`_BUILDING_PHOTO_QUERY` 仍有调用,保留。
+在 `material.py`、`evidence.py` 里确认下列常量已无调用(`grep -rn "<NAME>" app scripts tests` 只剩定义):`_CREATOR_QUERY`、`_ARTIST_QUERY`、`_ARTIST_TITLES_QUERY`、`_ARTIST_FACTS_BY_ARTIST_QUERY`、`_ARTIST_FACTS_QUERY`、`_LABELS_QUERY`、`_ARTIST_I18N_FACTS_QUERY`、`_RICH_QUERY`、`evidence._default_run_query`。把它们的文本**原样**复制进验证脚本,然后从生产模块删除。删除后 `evidence.py` 顶部的 `from app.services.enrichment.sources import wikidata as _wd` 若已无引用(`grep -n "_wd\." app/services/enrichment/evidence.py` 为空)一并删掉。`_LABELS_BATCH_QUERY`、`_default_artist_query`、`_BUILDING_PHOTO_QUERY` 仍有调用,保留。
 
 - [ ] **Step 2: 写脚本**
 
