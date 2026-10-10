@@ -671,6 +671,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get guideNotGenerated => 'Guida non ancora generata';
 
   @override
+  String get guideDailyCap =>
+      'Raggiunto il limite giornaliero di nuove guide: torna domani';
+
+  @override
   String get audioNotReady => 'Audio disponibile quando la guida è pronta';
 
   @override

@@ -223,6 +223,7 @@ class ObjectContent extends Equatable {
     required this.tabs,
     required this.suggestedQuestions,
     this.generating = false,
+    this.unavailableReason,
     this.defaultGuide,
     this.artist,
     this.share,
@@ -234,6 +235,10 @@ class ObjectContent extends Equatable {
 
   /// 后端任务锁信号：true = 正在懒生成/懒翻译（加法字段，老后端缺 → false）。
   final bool generating;
+
+  /// 为什么没在生成(加法字段 2026-10-10,老后端缺 → null)。"daily_cap"=当日懒生成名额已满。
+  final String? unavailableReason;
+  bool get dailyCapReached => unavailableReason == 'daily_cap';
   final String title;
   final List<ObjectImage> images;
   final ObjectFacts facts;
@@ -249,6 +254,7 @@ class ObjectContent extends Equatable {
         language: j['language'] as String? ?? 'zh',
         status: _statusFromA5(j['status'] as String?),
         generating: j['generating'] as bool? ?? false,
+        unavailableReason: j['unavailable_reason'] as String?,
         title: j['title'] as String? ?? '未命名',
         images: (j['images'] as List?)
                 ?.whereType<Map<String, dynamic>>()

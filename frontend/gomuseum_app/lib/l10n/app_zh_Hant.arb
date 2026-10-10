@@ -199,6 +199,7 @@
   "camSearch": "搜尋",
   "guideUnavailable": "這件作品暫時還沒有這個語言的講解",
   "guideNotGenerated": "講解暫未生成",
+  "guideDailyCap": "今日講解生成名額已滿，明天再來看看吧",
   "audioNotReady": "講解生成後可聽",
   "audioFailed": "音訊暫不可用，請重試",
   "deepGenerating": "深度內容生成中…",

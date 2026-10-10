@@ -1307,6 +1307,12 @@ abstract class AppLocalizations {
   /// **'Guide not generated yet'**
   String get guideNotGenerated;
 
+  /// No description provided for @guideDailyCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s limit for writing new guides has been reached — please check back tomorrow'**
+  String get guideDailyCap;
+
   /// No description provided for @audioNotReady.
   ///
   /// In en, this message translates to:

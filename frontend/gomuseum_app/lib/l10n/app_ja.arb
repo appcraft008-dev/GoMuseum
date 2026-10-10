@@ -199,6 +199,7 @@
   "camSearch": "検索",
   "guideUnavailable": "この作品にはまだこの言語のガイドがありません",
   "guideNotGenerated": "ガイドはまだ生成されていません",
+  "guideDailyCap": "本日のガイド作成枠に達しました。明日またお試しください",
   "audioNotReady": "解説の生成後に再生できます",
   "audioFailed": "音声を利用できません。再試行してください",
   "deepGenerating": "詳細コンテンツを生成中…",

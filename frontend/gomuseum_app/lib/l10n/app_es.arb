@@ -199,6 +199,7 @@
   "camSearch": "Buscar",
   "guideUnavailable": "Esta obra aún no tiene guía en este idioma",
   "guideNotGenerated": "Guía aún no generada",
+  "guideDailyCap": "Se alcanzó el límite diario de nuevas guías; vuelve mañana",
   "audioNotReady": "Audio disponible cuando la guía esté lista",
   "audioFailed": "Audio no disponible, reinténtalo",
   "deepGenerating": "Generando contenido detallado…",
