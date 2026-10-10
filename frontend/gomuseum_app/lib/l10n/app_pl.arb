@@ -192,7 +192,7 @@
   "recShootLabelHint": "Muzealne tabliczki podają tytuł i artystę — sfotografuj ją, a rozpoznamy dzieło",
   "recViewfinderLabelHint": "Wyceluj w tekst tabliczki, wypełnij kadr",
   "camRecognizeTitle": "Rozpoznaj dzieło",
-  "camViewfinderHint": "Zmieść całe dzieło w kadrze",
+  "camViewfinderHint": "Zmieść całe dzieło w kadrze\nSzerokie dzieła: obróć telefon poziomo",
   "camRecentGallery": "Ostatnie",
   "camAllAlbums": "Wszystkie albumy",
   "camGallery": "Galeria",

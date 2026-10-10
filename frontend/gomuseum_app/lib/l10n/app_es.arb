@@ -192,7 +192,7 @@
   "recShootLabelHint": "Las cartelas del museo muestran el título y el artista — fotografíala y podremos identificar la obra",
   "recViewfinderLabelHint": "Apunta al texto de la cartela, llena el encuadre",
   "camRecognizeTitle": "Identificar obra",
-  "camViewfinderHint": "Encuadra toda la obra",
+  "camViewfinderHint": "Encuadra toda la obra\nGira el móvil para obras anchas",
   "camRecentGallery": "Recientes",
   "camAllAlbums": "Todos los álbumes",
   "camGallery": "Galería",

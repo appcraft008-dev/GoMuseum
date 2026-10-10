@@ -192,7 +192,7 @@
   "recShootLabelHint": "美術館のプレートには題名と作家が書かれています。撮影すれば作品を特定できます",
   "recViewfinderLabelHint": "プレートの文字を画面いっぱいに写してください",
   "camRecognizeTitle": "作品を識別",
-  "camViewfinderHint": "作品全体を枠内に収めてください",
+  "camViewfinderHint": "作品全体を枠内に収めてください\n横長の作品はスマホを横向きに",
   "camRecentGallery": "最近",
   "camAllAlbums": "すべてのアルバム",
   "camGallery": "ギャラリー",

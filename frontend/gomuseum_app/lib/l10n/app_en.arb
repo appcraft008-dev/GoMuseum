@@ -364,7 +364,7 @@
   "recShootLabelHint": "Museum labels show the title and artist — snap it and we can identify the work",
   "recViewfinderLabelHint": "Aim at the label text, fill the frame",
   "camRecognizeTitle": "Identify Artwork",
-  "camViewfinderHint": "Fit the whole artwork in the frame",
+  "camViewfinderHint": "Fit the whole artwork in the frame\nTurn your phone sideways for wide works",
   "camRecentGallery": "Recent",
   "camAllAlbums": "All albums",
   "camGallery": "Gallery",

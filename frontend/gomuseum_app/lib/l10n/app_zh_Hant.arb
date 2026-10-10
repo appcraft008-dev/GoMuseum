@@ -192,7 +192,7 @@
   "recShootLabelHint": "博物館的小標牌上有作品名和作者，拍它我們就能認出來",
   "recViewfinderLabelHint": "對準標籤文字，佔滿畫面",
   "camRecognizeTitle": "識別作品",
-  "camViewfinderHint": "將畫作完整置於取景框內",
+  "camViewfinderHint": "將畫作完整置於取景框內\n寬幅作品可橫過來拍",
   "camRecentGallery": "最近相簿",
   "camAllAlbums": "全部相簿",
   "camGallery": "相簿",

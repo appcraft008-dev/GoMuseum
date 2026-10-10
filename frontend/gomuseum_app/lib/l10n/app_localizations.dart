@@ -1268,7 +1268,7 @@ abstract class AppLocalizations {
   /// No description provided for @camViewfinderHint.
   ///
   /// In en, this message translates to:
-  /// **'Fit the whole artwork in the frame'**
+  /// **'Fit the whole artwork in the frame\nTurn your phone sideways for wide works'**
   String get camViewfinderHint;
 
   /// No description provided for @camRecentGallery.
