@@ -65,8 +65,10 @@ def primary_image_url(db, obj) -> str | None:
     return get_object_storage().public_url(f"{img.image_key}_large.jpg")
 
 
-def ensure_description(db, obj) -> bool:
+def ensure_description(db, obj, describe=None) -> bool:
     """这件还没有外观描述且有图 → 看一次图并落库。返回是否新写了描述。
+
+    describe=已在后台线程发出的看图调用(懒生成并发预取,见 pipeline);默认当场看。
 
     **一次性**:描述落库后永久复用,重生成(--force)不会再看第二次图。
     所以按件计的 $0.0044 只付一次,而正文会被重生成很多次。
@@ -83,7 +85,7 @@ def ensure_description(db, obj) -> bool:
     if not url:
         return False
     try:
-        text = describe_image(url)
+        text = (describe or describe_image)(url)
     except Exception:
         logger.exception("VISION_FAILED qid=%s url=%s", obj.qid, url)
         return False

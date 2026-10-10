@@ -96,8 +96,11 @@ _OBJ_FACTS = [
 ]
 
 
-def build_evidence_pack(obj: dict, *, run_query=None, complete=None) -> dict:
-    """组装证据包:结构原子 facts(带 tier)+ 标源 narrative + (可选)LLM flagged。"""
+def build_evidence_pack(
+    obj: dict, *, run_query=None, complete=None, rich_facts=None
+) -> dict:
+    """组装证据包:结构原子 facts(带 tier)+ 标源 narrative + (可选)LLM flagged。
+    rich_facts=已预取的 fetch_rich_facts 结果(懒生成并发预取);None=当场查。"""
     attrs = obj.get("attributes") or {}
     facts = []
     for claim, key, topic, tier in _OBJ_FACTS:
@@ -124,7 +127,9 @@ def build_evidence_pack(obj: dict, *, run_query=None, complete=None) -> dict:
             )
     if obj.get("qid"):
         try:
-            for f in fetch_rich_facts(obj["qid"], run_query=run_query):
+            if rich_facts is None:
+                rich_facts = fetch_rich_facts(obj["qid"], run_query=run_query)
+            for f in rich_facts:
                 f.setdefault("tier", "material")
                 facts.append(f)
         except Exception:
