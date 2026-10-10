@@ -436,11 +436,9 @@ def generate_object(
             except Exception:
                 pass
 
-    obj = _row_to_obj(o)
-    material = build_material(obj)
-    facts = _facts_text(obj)
-
-    # 证据包:缺则建并落库(内容生成材料底座;阶段2 才切到它生成)。网络/LLM 抖动不拖垮。
+    # 证据包:缺则建并落库,**必须在拼材料之前**——讲解与深度模块都经 build_material(obj)
+    # 吃 pack 的 Wikidata 富属性(阶段2a 设计 §3)。2026-10-10 前顺序反了:首次生成
+    # (stub 懒生成/上馆批量)永远用不上,只有 --force 重生成才用上。网络/LLM 抖动不拖垮。
     # 富属性已在开头并发预取(f_rich)。
     if f_rich is not None:
         try:
@@ -450,11 +448,15 @@ def generate_object(
             rich = []
         try:
             o.evidence_pack = _ev.build_evidence_pack(
-                {**obj, "qid": o.qid}, rich_facts=rich, complete=None
+                {**_row_to_obj(o), "qid": o.qid}, rich_facts=rich, complete=None
             )
             db.flush()
         except Exception:
             pass
+
+    obj = _row_to_obj(o)
+    material = build_material(obj)
+    facts = _facts_text(obj)
     pool.shutdown(wait=False)  # 预取已全部取完
 
     sections = sections_for(o.category)

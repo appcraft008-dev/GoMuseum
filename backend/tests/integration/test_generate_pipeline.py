@@ -1995,3 +1995,50 @@ def test_prep_network_fetches_run_concurrently(session, monkeypatch):
     assert sorted(met) == ["creator", "labels", "material", "rich", "vision"]
     o = session.query(MuseumObject).filter_by(qid="Q1").one()
     assert o.attributes.get(vi.KEY) == "A red sky."  # 看图结果照旧落库
+
+
+def test_first_generation_material_includes_evidence_pack_rich_facts(
+    session, monkeypatch
+):
+    """首次生成(stub,还没有证据包)时,讲解和深度模块的材料必须已含证据包富属性。
+    设计(2026-06-30 阶段2a §3)要求两者都经 build_material 吃上 pack;此前证据包
+    在拼材料**之后**才建,首次生成永远用不上(只有 --force 重生成才用上)。"""
+    import app.services.enrichment.evidence as ev
+    from app.services.enrichment.content_enricher import build_material
+
+    monkeypatch.setattr(
+        ev,
+        "fetch_rich_facts",
+        lambda qid, run_query=None: [
+            {
+                "claim": "commissioned by",
+                "value": "Pope Julius II",
+                "source": "wikidata:P88",
+                "topic": "origin",
+            }
+        ],
+    )
+    seen = {}
+
+    class _Rec(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            seen["guide"] = build_material(obj)
+            return None
+
+        def generate_canonical(self, obj, sections, guide=None):
+            seen["canonical"] = build_material(obj)
+            return super().generate_canonical(obj, sections, guide=guide)
+
+    from app.services.enrichment.pipeline import generate_object
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Rec(),
+        gate=_FakeGate(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    assert "Pope Julius II" in seen["guide"]
+    assert "Pope Julius II" in seen["canonical"]
