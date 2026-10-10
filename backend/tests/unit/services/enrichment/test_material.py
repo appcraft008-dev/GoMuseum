@@ -134,7 +134,7 @@ def test_fetch_artist_facts_returns_artist_qid():
 
 
 def test_fetch_wikidata_labels():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     def fake(sparql):
         return [
@@ -142,7 +142,7 @@ def test_fetch_wikidata_labels():
             {"l": {"value": "Starry Night", "xml:lang": "en"}},
         ]
 
-    out = fetch_wikidata_labels("Q1", ["en", "fr", "de"], run_query=fake)
+    out = _labels_from_rows(fake(None), ["en", "fr", "de"])
     assert out == {"fr": "La Nuit étoilée", "en": "Starry Night"}  # 只含 Wikidata 有的
 
 
@@ -193,40 +193,40 @@ def test_fetch_artist_i18n_facts_skips_raw_qids_and_empty():
 
 def test_fetch_labels_prefers_zh_hans_over_traditional():
     # 繁简混杂尾巴:Wikidata zh 标签变体不定(愛德華·馬奈)→ zh-hans > zh-cn > zh
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [
         {"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}},
         {"l": {"value": "爱德华·马奈", "xml:lang": "zh-hans"}},
         {"l": {"value": "Édouard Manet", "xml:lang": "fr"}},
     ]
-    out = fetch_wikidata_labels("Q296", ["zh", "fr"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh", "fr"])
     assert out["zh"] == "爱德华·马奈"  # hans 优先于繁体 zh
     assert out["fr"] == "Édouard Manet"
 
 
 def test_fetch_labels_zh_falls_back_when_no_hans():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "馬奈", "xml:lang": "zh"}}]
-    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "马奈"  # 没 hans 时取 zh 并 t2s 转简
 
 
 def test_zh_label_converted_to_simplified_when_only_traditional():
     # 根因:马奈/高更等在 Wikidata 只有繁体 zh 标签(无 zh-hans)→ OpenCC t2s 确定性转换
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}}]
-    out = fetch_wikidata_labels("Q40599", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "爱德华·马奈"  # 繁→简
 
 
 def test_zh_hans_label_untouched():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "克劳德·莫奈", "xml:lang": "zh-hans"}}]
-    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "克劳德·莫奈"
 
 
@@ -246,21 +246,21 @@ def test_artist_i18n_facts_zh_converted():
 
 
 def test_zh_hant_prefers_traditional_authoritative_label():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [
         {"l": {"value": "顯現", "xml:lang": "zh-hant"}},
         {"l": {"value": "显现", "xml:lang": "zh-hans"}},
     ]
-    out = fetch_wikidata_labels("Q1", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "顯現"  # 权威繁体优先
 
 
 def test_zh_hant_converts_simplified_to_traditional_when_only_hans():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "爱德华·马奈", "xml:lang": "zh-hans"}}]
-    out = fetch_wikidata_labels("Q296", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "愛德華·馬奈"  # 简→繁 s2t
 
 
@@ -270,38 +270,38 @@ def test_zh_hant_prefers_mandarin_over_cantonese_hk_label():
     实测 Q35548 Cézanne:Wikidata 无 zh-hant/zh-tw 标签,zh-hk 标签是「保羅·施傘」,
     旧回退序取到它,于是每一段繁体讲解都把塞尚叫成施傘(污染 27 段)。
     """
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [
         {"l": {"value": "保羅·施傘", "xml:lang": "zh-hk"}},
         {"l": {"value": "保罗·塞尚", "xml:lang": "zh"}},
     ]
-    out = fetch_wikidata_labels("Q35548", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "保羅·塞尚"
 
 
 def test_zh_hant_still_uses_hk_label_as_last_resort():
     """但 zh-hk 仍留在链尾:它是唯一的中文标签时,人工标签好过机翻兜底。"""
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "梵高", "xml:lang": "zh-hk"}}]
-    out = fetch_wikidata_labels("Q5582", ["zh-hant"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh-hant"])
     assert out["zh-hant"] == "梵高"
 
 
 def test_zh_still_simplified_regression():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "愛德華·馬奈", "xml:lang": "zh"}}]
-    out = fetch_wikidata_labels("Q296", ["zh"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["zh"])
     assert out["zh"] == "爱德华·马奈"  # 繁→简,回归不破
 
 
 def test_non_variant_language_not_converted():
-    from app.services.enrichment.material import fetch_wikidata_labels
+    from app.services.enrichment.material import _labels_from_rows
 
     rows = [{"l": {"value": "エドゥアール・マネ", "xml:lang": "ja"}}]
-    out = fetch_wikidata_labels("Q296", ["ja"], run_query=lambda s: rows)
+    out = _labels_from_rows(rows, ["ja"])
     assert out["ja"] == "エドゥアール・マネ"  # 非变体不动
 
 
@@ -337,7 +337,7 @@ def test_fetch_museum_intro_material_no_sitelink():
 def test_fetch_labels_batch_matches_single_semantics():
     """批量版必须与单件版逐字同义(含 zh 变体收敛),只是网络往返少了 N 倍。"""
     from app.services.enrichment.material import (
-        fetch_wikidata_labels,
+        _labels_from_rows,
         fetch_wikidata_labels_batch,
     )
 
@@ -358,13 +358,12 @@ def test_fetch_labels_batch_matches_single_semantics():
     assert batch["Q12418"] == {"en": "Mona Lisa", "zh": "蒙娜丽莎"}
     assert batch["Q762"] == {"en": "Leonardo"}
 
-    single = fetch_wikidata_labels(
-        "Q12418",
-        ["en", "zh"],
-        run_query=lambda s: [
+    single = _labels_from_rows(
+        [
             {"l": {"xml:lang": "en", "value": "Mona Lisa"}},
             {"l": {"xml:lang": "zh-hans", "value": "蒙娜丽莎"}},
         ],
+        ["en", "zh"],
     )
     assert single == batch["Q12418"]  # 语义一致
 
@@ -1091,3 +1090,47 @@ def test_resolve_creator_by_name_abstains_on_bare_surname():
         resolve_creator_by_name("ROUSSEAU", search_entities=search, get_claims=claims)
         is None
     )
+
+
+import json as _json
+from pathlib import Path as _Path
+
+_E = _json.loads(
+    (_Path(__file__).parents[3] / "fixtures" / "wikidata" / "entities.json").read_text()
+)
+
+
+def _fake_get(calls=None):
+    def get(ids, *, props, languages=None):
+        if calls is not None:
+            calls.append((tuple(ids), props, tuple(languages or ())))
+        return {q: _E[q] for q in ids if q in _E}
+
+    return get
+
+
+def test_fetch_wikidata_labels_real_shape_zh_variants():
+    """真实夹具 Q35548(塞尚):zh 取 zh-hans→简体;zh-hant 链(无 zh-hant/zh-tw 时)取 zh 转繁,港式垫底。"""
+    from app.services.enrichment.material import fetch_wikidata_labels
+
+    calls = []
+    out = fetch_wikidata_labels(
+        "Q35548", ["en", "zh", "zh-hant"], get_entities=_fake_get(calls)
+    )
+    assert out["en"] == "Paul Cézanne"
+    assert out["zh"] == _labels_expected_zh()
+    assert calls[0][1] == "labels" and "zh-hans" in calls[0][2]
+
+
+def _labels_expected_zh():
+    from app.services.enrichment.material import _collapse_variants
+
+    raw = {k: v["value"] for k, v in _E["Q35548"]["labels"].items()}
+    return _collapse_variants(raw, ["zh"])["zh"]
+
+
+def test_label_rows_match_sparql_shape():
+    from app.services.enrichment.material import _label_rows
+
+    rows = _label_rows(_E["Q35548"])
+    assert {"l": {"xml:lang": "en", "value": "Paul Cézanne"}} in rows

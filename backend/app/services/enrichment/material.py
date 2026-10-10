@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 
+from app.services.enrichment import wikidata_api as _wa
 from app.services.enrichment.fetcher import _CORE
 from app.services.enrichment.merge import merge_contributions
 from app.services.enrichment.sources import wikidata as _wd
@@ -274,19 +275,16 @@ def to_simplified(s: str) -> str:
     return _variant_convert("zh", s)
 
 
-def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
-    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
-    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。
-    非 Wikidata 对外把手(joconde-<ref> 等)→ 直接 {}(无真 QID,names 回退机翻 title_en)。"""
-    from app.services.enrichment.identity import is_wikidata_qid
+def _label_rows(entity: dict) -> list[dict]:
+    """转换层:实体 labels → 与旧 _LABELS_QUERY 同形的行(spec §2.2)。"""
+    return [
+        {"l": {"xml:lang": v["language"], "value": v["value"]}}
+        for v in ((entity or {}).get("labels") or {}).values()
+    ]
 
-    if not is_wikidata_qid(qid):
-        return {}
-    run_query = (
-        run_query or _default_artist_query
-    )  # ponytail: same generic SPARQL caller
-    langlist = ", ".join('"%s"' % x for x in _query_langs(langs))
-    rows = run_query(_LABELS_QUERY.format(qid=qid, langs=langlist))
+
+def _labels_from_rows(rows, langs: list) -> dict:
+    """解析层(原 fetch_wikidata_labels 逐行解析,原样搬出)。"""
     raw: dict = {}
     for row in rows:
         lv = row.get("l") or {}
@@ -295,6 +293,19 @@ def fetch_wikidata_labels(qid: str, langs: list, *, run_query=None) -> dict:
         if lang and val and lang not in raw:
             raw[lang] = val
     return _collapse_variants(raw, langs)
+
+
+def fetch_wikidata_labels(qid: str, langs: list, *, get_entities=None) -> dict:
+    """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
+    zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。
+    非 Wikidata 对外把手(joconde-<ref> 等)→ 直接 {}(无真 QID,names 回退机翻 title_en)。"""
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return {}
+    get_entities = get_entities or _wa.get_entities
+    ent = get_entities([qid], props="labels", languages=_query_langs(langs)).get(qid)
+    return _labels_from_rows(_label_rows(ent), langs)
 
 
 def _query_langs(langs: list) -> list:
