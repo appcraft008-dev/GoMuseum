@@ -356,7 +356,8 @@ class _GuidePageState extends ConsumerState<GuidePage>
 
         _stopPolling();
         // 3) 非生成中且无内容：资料不足(empty) / 暂未生成可重试(stub)。
-        if (content.status == ContentStatus.empty) {
+        // 无图作品(方案 B)同理:后端不会为它生成,显示「暂无讲解」,不给假「重试」
+        if (content.status == ContentStatus.empty || content.noImage) {
           return _A5UnavailableScaffold(gm: gm, onBack: () => _goBack(context));
         }
         // 当日懒生成名额已满:重试到 UTC 零点前都没用,别给假「重试」(10-10 真机)

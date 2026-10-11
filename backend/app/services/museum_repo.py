@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timezone
 from functools import lru_cache
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.content import (
@@ -558,13 +558,18 @@ def museum_name(museum: Museum, language: str) -> str:
 
 def list_museums(db: Session, *, preview: bool = False) -> list[dict]:
     """preview=False 只列已放出的馆(可见性闸,spec 2026-09-20)。"""
-    q = db.query(Museum, func.count(MuseumObject.id).label("cnt")).outerjoin(
-        MuseumObject, MuseumObject.museum_id == Museum.id
+    # 件数只算有图作品(方案 B 2026-10-11):卡片「含 N 件藏品」与馆头部、列表口径一致
+    cnt = (
+        select(func.count(MuseumObject.id))
+        .where(MuseumObject.museum_id == Museum.id, _has_image_clause())
+        .correlate(Museum)
+        .scalar_subquery()
     )
+    q = db.query(Museum, cnt.label("cnt"))
     if not preview:
         q = q.filter(Museum.published_at.isnot(None))
     rows = (
-        q.group_by(Museum.id)
+        q
         # 按 slug 只是兜底次序——真正的排序在下面按 rank 做。别把它当最终顺序:
         # 首条会被探索页拿去上大卡,而字母序意味着哪天上个 `british_museum`
         # 就会无声顶掉卢浮宫的首位。
@@ -614,6 +619,7 @@ def get_museum_pack(
         (
             db.query(MuseumObject)
             .filter_by(museum_id=m.id)
+            .filter(_has_image_clause())  # 无图件不对用户开放(方案 B)
             .order_by(MuseumObject.popularity.desc())
             .all()
         )
@@ -704,11 +710,10 @@ def get_museum_pack(
         for code, cnt in sorted(cat_rows, key=lambda x: -x[1])
     ]
 
-    # 双数字(加法字段):catalog_count=有图件数, archive_count=总件数。
-    # 一律现场 count——不读 museum.stats 快照(补图/上新不刷新它,2026-10-04 橘园显旧值 15)
-    archive_count = (
-        db.query(func.count(MuseumObject.id)).filter_by(museum_id=m.id).scalar()
-    )
+    # catalog_count=有图件数。一律现场 count——不读 museum.stats 快照(补图/上新不刷新它,
+    # 2026-10-04 橘园显旧值 15)。archive_count(总件数)不再给 App(方案 B 用户 10-11 定):
+    # 无图件搜不到也认不出,「档案条目 M 件(可识别/搜索)」成了假话;App 两数齐全才显示
+    # 那一行,给 null 即隐藏。总件数内部看 `onboard coverage-report`。
     catalog_count = (
         db.query(func.count(MuseumObject.id))
         .filter_by(museum_id=m.id)
@@ -725,15 +730,11 @@ def get_museum_pack(
             "name_i18n": museum_names(m),
             "source": _LEGACY_SOURCE,
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            # 独立 COUNT:artworks=False 时列表为空,但件数是门面字段(App 显"17283 件"),
+            # 独立 COUNT:artworks=False 时列表为空,但件数是门面字段,
             # 不能从列表长度推(测试 test_pack_skip_artworks_keeps_shape 抓到过)
-            "artwork_count": (
-                len(artworks)
-                if artworks
-                else db.query(MuseumObject).filter_by(museum_id=m.id).count()
-            ),
+            "artwork_count": catalog_count,
             "catalog_count": catalog_count,
-            "archive_count": archive_count,
+            "archive_count": None,
             "categories": categories,
             "artworks": artworks,
             # 博物馆介绍(spec 2026-07-18):按语言解析,缺→en→任一→null;前端 as String? 容错

@@ -180,7 +180,7 @@
   "recNoneOfThese": "どれも違う",
   "recThisIsIt": "これです",
   "recNotRecognized": "この作品を認識できませんでした",
-  "recLabelSeen": "ラベルには「{text}」とあります — まだ完全なガイドはありませんが、ご要望を記録しました ✅",
+  "recNotInCatalog": "この作品はまだ収録されていません",
   "recShootLabelBtn": "解説プレートを撮影",
   "recTypeNumberOrName": "番号か作品名を入力",
   "photoFbTitle": "この写真を送りますか?",

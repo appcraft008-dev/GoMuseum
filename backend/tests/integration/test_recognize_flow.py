@@ -198,6 +198,7 @@ def test_artist_name_does_not_hijack_portrait_titles(session):
         m.id,
         {
             "qid": "Q12142552",
+            "image": "https://img/Q12142552.jpg",  # 有图才对用户开放(方案 B)
             "title_en": "Auguste Renoir",  # 肖像画:标题=画家名
             "artist_en": "Frédéric Bazille",
             "category": "painting",
@@ -209,6 +210,7 @@ def test_artist_name_does_not_hijack_portrait_titles(session):
         m.id,
         {
             "qid": "Q683274",
+            "image": "https://img/Q683274.jpg",  # 有图才对用户开放(方案 B)
             "title_en": "Bal du moulin de la Galette",
             "artist_en": "Pierre-Auguste Renoir",
             "category": "painting",

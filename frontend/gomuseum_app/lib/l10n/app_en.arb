@@ -339,14 +339,7 @@
   "recThisIsIt": "This is it",
   "@recThisIsIt": {"description": "Button in the full-screen candidate viewer: pick this candidate"},
   "recNotRecognized": "Couldn't recognize this work",
-  "recLabelSeen": "The label reads \"{text}\" — we haven't added its full guide yet, but we've noted your request ✅",
-  "@recLabelSeen": {
-    "placeholders": {
-      "text": {
-        "type": "String"
-      }
-    }
-  },
+  "recNotInCatalog": "This work isn't in our guide yet",
   "recShootLabelBtn": "Photograph the wall label",
   "recTypeNumberOrName": "Type the number or title",
   "@recTypeNumberOrName": {"description": "Primary button on the not-recognized choice card: type the inventory number or the title from the wall label"},

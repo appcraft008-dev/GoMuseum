@@ -57,7 +57,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               const GmDiamond(width: 110),
               const SizedBox(height: 8),
               Text(
-                _statsLine(history.items),
+                _statsLine(history),
                 style: GmText.sans(size: 11.5, letterSpacing: 1, color: gm.sub),
               ),
               const SizedBox(height: 4),
@@ -75,9 +75,12 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     );
   }
 
-  String _statsLine(List<HistoryItem> items) {
+  String _statsLine(HistoryState history) {
+    final items = history.items;
     final l10n = AppLocalizations.of(context)!;
     if (items.isEmpty) return l10n.noFootprints;
+    // 后台还在续拉:先只显示列表,数字拉完再出,免得 50 跳到几百像算错了
+    if (history.hasMore) return '';
     final days = items
         .map((i) =>
             '${i.timestamp.year}-${i.timestamp.month}-${i.timestamp.day}')

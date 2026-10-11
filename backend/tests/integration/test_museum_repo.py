@@ -145,12 +145,24 @@ def test_pack_title_zh_falls_back_when_null(session):
     upsert_object(
         session,
         m.id,
-        {"qid": "Q2", "title_zh": None, "title_en": "Sunrise", "attributes": {}},
+        {
+            "qid": "Q2",
+            "image": "http://x/Q2.jpg",
+            "title_zh": None,
+            "title_en": "Sunrise",
+            "attributes": {},
+        },
     )
     upsert_object(
         session,
         m.id,
-        {"qid": "Q3", "title_zh": None, "title_en": None, "attributes": {}},
+        {
+            "qid": "Q3",
+            "image": "http://x/Q3.jpg",
+            "title_zh": None,
+            "title_en": None,
+            "attributes": {},
+        },
     )
     session.commit()
     by_qid = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}
@@ -167,7 +179,13 @@ def test_pack_title_en_falls_back_to_i18n(session):
     o = upsert_object(
         session,
         m.id,
-        {"qid": "Q9", "title_zh": None, "title_en": None, "attributes": {}},
+        {
+            "qid": "Q9",
+            "image": "http://x/Q9.jpg",
+            "title_zh": None,
+            "title_en": None,
+            "attributes": {},
+        },
     )
     o.attributes = {"title_i18n": {"en": "Battle of the Amazons", "zh": "亚马逊之战"}}
     session.commit()
@@ -183,7 +201,12 @@ def test_pack_artist_name_localized_from_artist_i18n(session):
     o = upsert_object(
         session,
         m.id,
-        {"qid": "Q7", "title_en": "The Barque of Dante", "attributes": {}},
+        {
+            "qid": "Q7",
+            "image": "http://x/Q7.jpg",
+            "title_en": "The Barque of Dante",
+            "attributes": {},
+        },
     )
     o.artist_en = "Eugène Delacroix"
     o.attributes = {"artist_qid": "Q33477"}
@@ -203,7 +226,11 @@ def test_pack_artist_name_localized_from_artist_i18n(session):
 def test_pack_artist_falls_back_to_column_without_artist_row(session):
     # 无 Artist 行(未解析作者)→ 回落对象列,不返 null
     m = session.query(Museum).filter_by(slug="orsay").one()
-    o = upsert_object(session, m.id, {"qid": "Q8", "title_en": "X", "attributes": {}})
+    o = upsert_object(
+        session,
+        m.id,
+        {"qid": "Q8", "image": "http://x/Q8.jpg", "title_en": "X", "attributes": {}},
+    )
     o.artist_en = "Anonymous Master"
     session.commit()
     art = {a["qid"]: a for a in get_museum_pack(session, "orsay")["artworks"]}["Q8"]
@@ -344,3 +371,40 @@ def test_list_carries_coordinates_from_yaml(session):
     lat, lng = _museum_coords()["orsay"]
     assert rows["orsay"]["coordinates"] == [lat, lng]
     assert 48 < lat < 49 and 2 < lng < 3, "奥赛在巴黎"
+
+
+# --- 方案 B(2026-10-11):件数与馆包只算有图作品,档案条目不再对用户显示 ---
+
+
+def _add_imageless(session):
+    from app.models.museum import Museum
+    from app.services.object_importer import upsert_object
+
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q_NOIMG", "title_en": "No Image", "category": "painting"},
+    )
+    session.commit()
+
+
+def test_list_artwork_count_only_counts_imaged(session):
+    _add_imageless(session)
+    row = next(r for r in list_museums(session) if r["slug"] == "orsay")
+    assert row["artwork_count"] == 1  # 首页/探索页卡片「含 N 件藏品」
+
+
+def test_pack_hides_imageless_and_archive_count(session):
+    _add_imageless(session)
+    pack = get_museum_pack(session, "orsay")
+    assert [a["qid"] for a in pack["artworks"]] == ["Q1"]
+    assert pack["artwork_count"] == 1 == pack["catalog_count"]
+    assert pack["archive_count"] is None  # App 两数齐全才显示第二行 → 不再显示
+
+
+def test_pack_skip_artworks_counts_only_imaged(session):
+    _add_imageless(session)
+    pack = get_museum_pack(session, "orsay", artworks=False)
+    assert pack["artwork_count"] == 1
+    assert pack["archive_count"] is None

@@ -5,7 +5,15 @@
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -73,10 +81,8 @@ def _pass_required(db: Session, museum, language: str) -> dict:
     }
 
 
-def _caller_id(
-    db: Session, credentials: HTTPAuthorizationCredentials | None
-) -> str | None:
-    """令牌 → user_id，**坏/过期令牌一律当匿名，绝不 401**。
+def _caller(db: Session, credentials: HTTPAuthorizationCredentials | None):
+    """令牌 → 用户对象，**坏/过期令牌一律当匿名(None)，绝不 401**。
 
     与 `recognize_global._user_id` 同款。401 在这里是不能出的:老 App 拿着过期
     token 打探索页/详情页,一旦 401 整页就崩了 —— 而这两个端点本来就允许匿名读。
@@ -86,7 +92,7 @@ def _caller_id(
     try:
         from app.services.auth_service import AuthService
 
-        return str(AuthService.get_current_user(db, credentials.credentials).id)
+        return AuthService.get_current_user(db, credentials.credentials)
     except Exception:
         return None
 
@@ -114,6 +120,7 @@ def object_content(
     slug: str,
     qid: str,
     background_tasks: BackgroundTasks,
+    request: Request,
     language: str = "zh",
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
@@ -131,19 +138,36 @@ def object_content(
     匿名照常拿到已有内容(探索页不带令牌是正常形态,游客也持 `/auth/guest` 发的
     令牌),只是不点火。副产品:将来的公开网页层 `/a/{slug}/{qid}` 天然不点火。
     """
-    from app.services.enrichment.lazy import maybe_trigger
+    from app.services.enrichment.lazy import imageless_stub, maybe_trigger
 
     if _hidden(db, credentials, slug, qid):
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
     reason = None
-    if _caller_id(db, credentials):
+    user = _caller(db, credentials)
+    if user is not None:
         reason = maybe_trigger(
-            db, qid, schedule=background_tasks.add_task, language=language
+            db,
+            qid,
+            schedule=background_tasks.add_task,
+            language=language,
+            user_id=str(user.id),
+            # ProxyHeadersMiddleware(main.py)已把它解析成真实客户端 IP
+            ip=request.client.host if request.client else None,
+            exempt=bool(getattr(user, "can_preview", False)),
         )
     data = get_object_content(db, slug, qid, language)
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
-    # 加法字段(2026-10-10):为什么没在生成。"daily_cap"=当日懒生成预算用尽;null=无特别原因
+    if user is None and data["status"] == "empty":
+        # 匿名不点火,但无图 stub 也要告诉 App 别给「重试」(方案 B)。
+        # 只在没内容时才查,不给每次匿名浏览多一次往返。
+        from app.models.museum_object import MuseumObject
+
+        obj = db.query(MuseumObject).filter_by(qid=qid).one()
+        if imageless_stub(db, obj):
+            reason = "no_image"
+    # 加法字段(2026-10-10):为什么没在生成。"daily_cap"=当日懒生成预算用尽;
+    # "no_image"=无图作品不生成(2026-10-11 方案 B);null=无特别原因
     data["unavailable_reason"] = reason
     # 加法字段(2026-09-29 分享):null = 这件在这个语言下不可分享,App 不显示分享键
     data["share"] = share_info(db, slug, qid, language, data)

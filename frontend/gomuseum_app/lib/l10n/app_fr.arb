@@ -180,7 +180,7 @@
   "recNoneOfThese": "Aucune de celles-ci",
   "recThisIsIt": "C'est celle-ci",
   "recNotRecognized": "Œuvre non reconnue",
-  "recLabelSeen": "L'étiquette indique « {text} » — nous n'avons pas encore son guide complet, mais votre demande est notée ✅",
+  "recNotInCatalog": "Cette œuvre n'est pas encore dans notre guide",
   "recShootLabelBtn": "Photographier le cartel",
   "recTypeNumberOrName": "Saisir le numéro ou le titre",
   "photoFbTitle": "Nous envoyer cette photo ?",

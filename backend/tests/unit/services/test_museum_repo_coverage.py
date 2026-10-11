@@ -70,7 +70,7 @@ def test_pack_double_numbers_live_compute(session):
     s, m = session
     pack = museum_repo.get_museum_pack(s, "orsay")
     assert pack["catalog_count"] == 1  # 有图件数
-    assert pack["archive_count"] == 2  # 总件数
+    assert pack["archive_count"] is None  # 方案 B:档案条目不再对用户显示
 
 
 def test_pack_double_numbers_ignore_stale_stats(session):
@@ -81,7 +81,7 @@ def test_pack_double_numbers_ignore_stale_stats(session):
     s.commit()
     pack = museum_repo.get_museum_pack(s, "orsay")
     assert pack["catalog_count"] == 1
-    assert pack["archive_count"] == 2
+    assert pack["archive_count"] is None
 
 
 def test_quarantined_only_counts_as_imageless(session):

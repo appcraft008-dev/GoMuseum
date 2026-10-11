@@ -62,4 +62,15 @@ void main() {
         isTrue);
     expect(ObjectContent.fromJson(const {}).dailyCapReached, isFalse);
   });
+
+  test('unavailable_reason:no_image = 无图作品不生成(方案 B);与 daily_cap 互不串', () {
+    final c = ObjectContent.fromJson(const {'unavailable_reason': 'no_image'});
+    expect(c.noImage, isTrue);
+    expect(c.dailyCapReached, isFalse);
+    expect(ObjectContent.fromJson(const {}).noImage, isFalse);
+    expect(
+        ObjectContent.fromJson(const {'unavailable_reason': 'daily_cap'})
+            .noImage,
+        isFalse);
+  });
 }

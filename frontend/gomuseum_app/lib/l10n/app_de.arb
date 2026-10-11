@@ -180,7 +180,7 @@
   "recNoneOfThese": "Keines davon",
   "recThisIsIt": "Das ist es",
   "recNotRecognized": "Werk nicht erkannt",
-  "recLabelSeen": "Auf dem Schild steht „{text}\" — wir haben noch keinen vollständigen Guide dazu, aber Ihre Anfrage ist notiert ✅",
+  "recNotInCatalog": "Dieses Werk ist noch nicht im Guide",
   "recShootLabelBtn": "Wandschild fotografieren",
   "recTypeNumberOrName": "Nummer oder Titel eingeben",
   "photoFbTitle": "Uns dieses Foto senden?",

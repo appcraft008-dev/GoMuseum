@@ -591,9 +591,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recNotRecognized => '没认出来这件作品';
 
   @override
-  String recLabelSeen(String text) {
-    return '标签上写着 \"$text\"——我们还没收录它的完整讲解，已记下你的需求 ✅';
-  }
+  String get recNotInCatalog => '这件作品暂未收录';
 
   @override
   String get recShootLabelBtn => '拍下作品旁的说明牌';
@@ -1761,9 +1759,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get recNotRecognized => '沒認出來這件作品';
 
   @override
-  String recLabelSeen(String text) {
-    return '標籤上寫著 \"$text\"——我們還沒收錄它的完整講解，已記下你的需求 ✅';
-  }
+  String get recNotInCatalog => '這件作品暫未收錄';
 
   @override
   String get recShootLabelBtn => '拍下作品旁的說明牌';

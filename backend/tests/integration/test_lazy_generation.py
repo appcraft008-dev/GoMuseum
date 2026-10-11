@@ -35,6 +35,16 @@ def session():
     upsert_object(s, m.id, {"qid": "Q1", "title_en": "A", "category": "painting"})
     o = s.query(MuseumObject).filter_by(qid="Q1").one()
     o.content_status = "stub"
+    # 有图才点火(方案 B 2026-10-11);已物化,不触发懒补图
+    s.add(
+        ObjectImage(
+            object_id=o.id,
+            role="primary",
+            sort=0,
+            source_url="https://x/q1.jpg",
+            image_key="images/Q1/0",
+        )
+    )
     s.commit()
     yield s
 
@@ -436,3 +446,181 @@ def test_maybe_trigger_no_reason_when_scheduled(session):
         maybe_trigger(session, "Q1", schedule=lambda *a: None, environment="staging")
         is None
     )
+
+
+import fakeredis  # noqa: E402
+
+from app.services.enrichment.lazy import CAP_PER_USER  # noqa: E402
+
+
+def _full_user(r, uid="u1"):
+    from app.services.enrichment.lazy import _today
+
+    r.set(f"lazy:u:{uid}:{_today()}", CAP_PER_USER)
+
+
+def test_per_user_cap_blocks_generation_and_clears_lock(session):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    _full_user(r)
+    scheduled = []
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(fn),
+        environment="staging",
+        user_id="u1",
+        ip="1.2.3.4",
+        redis=r,
+    )
+    assert reason == "daily_cap"
+    assert scheduled == []
+    assert not _obj(session).attributes.get("lazy_lock_at")  # 锁已清,不会"假生成中"
+
+
+def test_generation_charges_weight_8(session):
+    from app.services.enrichment.lazy import _today
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda *a: None,
+        environment="staging",
+        user_id="u1",
+        ip="1.2.3.4",
+        redis=r,
+    )
+    assert r.get(f"lazy:u:u1:{_today()}") == "8"
+
+
+def test_translation_charges_weight_3(session):
+    from app.services.enrichment.lazy import _today
+
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    _publish(session, "Q1", "en")  # 文件里已有的 helper
+    r = fakeredis.FakeRedis(decode_responses=True)
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda *a: None,
+        environment="staging",
+        language="fr",
+        user_id="u1",
+        ip="1.2.3.4",
+        redis=r,
+    )
+    assert r.get(f"lazy:u:u1:{_today()}") == "3"
+
+
+def test_no_charge_when_lock_not_acquired(session):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    try_acquire_lock(session, _obj(session))  # 别人正在生成
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda *a: None,
+        environment="staging",
+        user_id="u1",
+        ip="1.2.3.4",
+        redis=r,
+    )
+    assert r.keys("lazy:*") == []
+
+
+def test_exempt_skips_user_and_ip_caps(session):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    _full_user(r)
+    scheduled = []
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(fn),
+        environment="staging",
+        user_id="u1",
+        ip="1.2.3.4",
+        exempt=True,
+        redis=r,
+    )
+    assert reason is None
+    assert len(scheduled) == 1
+
+
+def test_exempt_still_bound_by_global_cap(session, monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    monkeypatch.setattr(lazy, "daily_budget_exhausted", lambda db, **k: True)
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda *a: None,
+        environment="staging",
+        user_id="u1",
+        exempt=True,
+        redis=fakeredis.FakeRedis(decode_responses=True),
+    )
+    assert reason == "daily_cap"
+
+
+def _drop_images(s):
+    s.query(ObjectImage).filter_by(object_id=_obj(s).id).delete()
+    s.commit()
+
+
+def test_imageless_stub_reports_no_image_and_charges_nothing(session):
+    """无图 stub 不点火(方案 B):用户本就到不了,生成了会编外观,也不该占额度。"""
+    _drop_images(session)
+    r = fakeredis.FakeRedis(decode_responses=True)
+    scheduled = []
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(fn),
+        environment="staging",
+        user_id="u1",
+        ip="1.2.3.4",
+        redis=r,
+    )
+    assert reason == "no_image"
+    assert scheduled == []
+    assert r.keys("lazy:*") == []
+    assert not (_obj(session).attributes or {}).get("lazy_lock_at")
+
+
+def test_imageless_stub_not_blocked_by_quarantined_image_only(session):
+    """只有隔离图 = 无图(与 has_image_clause 同口径)。"""
+    _drop_images(session)
+    session.add(
+        ObjectImage(
+            object_id=_obj(session).id,
+            role="view_quarantine",
+            sort=0,
+            source_url="https://x/q.jpg",
+            image_key="images/Q1/q",
+        )
+    )
+    session.commit()
+    assert (
+        maybe_trigger(session, "Q1", schedule=lambda *a: None, environment="staging")
+        == "no_image"
+    )
+
+
+def test_imageless_ready_still_lazy_translates(session):
+    """懒翻译不拦:只翻已有内容、不看图,拦了会让足迹里的用户切语言撞「重试」。"""
+    _drop_images(session)
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    _publish(session, "Q1", "en")
+    scheduled = []
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append(fn.__name__),
+        environment="staging",
+        language="de",
+    )
+    assert reason is None
+    assert scheduled == ["run_lazy_translation"]

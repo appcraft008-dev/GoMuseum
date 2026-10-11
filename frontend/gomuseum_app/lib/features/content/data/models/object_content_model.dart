@@ -239,6 +239,9 @@ class ObjectContent extends Equatable {
   /// 为什么没在生成(加法字段 2026-10-10,老后端缺 → null)。"daily_cap"=当日懒生成名额已满。
   final String? unavailableReason;
   bool get dailyCapReached => unavailableReason == 'daily_cap';
+
+  /// "no_image"=无图作品不生成讲解(2026-10-11 方案 B):重试永远不会成功,别给「重试」。
+  bool get noImage => unavailableReason == 'no_image';
   final String title;
   final List<ObjectImage> images;
   final ObjectFacts facts;

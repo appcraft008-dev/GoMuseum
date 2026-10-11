@@ -22,6 +22,7 @@ import time
 import unicodedata
 
 from rapidfuzz import fuzz
+from sqlalchemy import or_
 
 from app.models.artist import Artist
 from app.models.museum import Museum
@@ -71,6 +72,17 @@ def _build_global(db) -> list[dict]:
         .order_by(ObjectImage.sort)
     ):
         img_by_object.setdefault(oid, (key, url))
+    # 有图口径同 must_see.has_image_clause(任意非隔离图),与探索列表一致;
+    # 缩略图仍只取 primary。无图件不对用户开放(方案 B 2026-10-11)。
+    has_img = {
+        oid
+        for (oid,) in db.query(ObjectImage.object_id)
+        .filter(
+            or_(ObjectImage.image_key.isnot(None), ObjectImage.source_url.isnot(None)),
+            ObjectImage.role != "view_quarantine",
+        )
+        .distinct()
+    }
     index = []
     rows = db.query(
         MuseumObject.id,
@@ -122,6 +134,7 @@ def _build_global(db) -> list[dict]:
                 "year": year,
                 "image_key": image_key,
                 "image_url": image_url,
+                "has_image": oid in has_img,
             }
         )
     return index
@@ -307,7 +320,7 @@ def search(
     visible=None,
 ) -> tuple[list[dict], list[dict]]:
     """契约实现:(museums, objects)。museum_id 给定=馆域(无 museums 段);None=全局。
-    无图 stub 照常在 objects 里(has_image=False)。空 query → ([], [])。
+    无图件不返回(方案 B 2026-10-11:用户看不到图就无法确认是不是眼前这件)。空 query → ([], [])。
     objects 段全部来自索引条目,不回表(与原 _summary 输出形状一致)。"""
     qn = normalize(query)
     objects = []
@@ -316,6 +329,8 @@ def search(
         if visible is not None:
             # 索引不带可见性,查询时过滤(索引是进程内缓存,放出的 SQL 碰不到它)
             index = [e for e in index if e["museum_id"] in visible]
+        # 无图件不对用户开放:编号精确命中也不返回(用户 10-11 定)
+        index = [e for e in index if e.get("has_image")]
         for entry, _score_val in rank(index, query, limit):
             thumbnail = None
             if entry["image_key"]:
