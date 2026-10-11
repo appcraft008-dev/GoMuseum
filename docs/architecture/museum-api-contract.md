@@ -3,7 +3,7 @@
 > **这是唯一权威主文档。** 所有博物馆按本文的契约与路线图上线;奥赛 = 样板馆。
 > **工作纪律**:每次决策 / 发现的问题 / 零散需求 → **回写本文**。带日期的 `docs/superpowers/specs/*` = 设计记录,**喂给本文**;本文永远是当前真相。新馆只读本文即可快速上线。
 > 端点前缀 `/api/v1`。**加法/前向兼容**——只增字段、不破老解析;破坏性变更走版本化端点。
-> 最近更新:2026-10-10(content 加 `unavailable_reason`、首屏关键路径原则补记、纪律 16/22/28 补记、新增纪律 44-47)。
+> 最近更新:2026-10-11(方案 B 无图作品不对用户开放:搜索/识别文字链/懒生成/馆件数口径;`unavailable_reason` 加 `no_image`;`archive_count` 置 null)。
 
 ## 北极星
 
@@ -158,7 +158,7 @@
 
 **`generating` 字段(✅2026-07-04 加法)**:content 端点返回 `generating: bool`(信号源=懒任务锁)——true=懒生成/懒翻译进行中。前端三态:generating→"生成中"继续轮询;false+empty→"资料不足"停;false+stub 无内容→"待完善"+重试入口。老 App 不读则无感。
 
-**`unavailable_reason` 字段(✅2026-10-10 加法,#877)**:content 端点在**带身份的请求**里说明"为什么没讲解、也没在生成":`"daily_cap"` = 当天懒生成名额已满(全局按 UTC 日计,只数懒生成/懒翻译写的段,上限 1000 段 ≈ 120 件;运营批量生成不占;**另有每账号 160 段 / 每 IP 300 段的日额度**,点火时按估算段数扣:懒生成 8、懒翻译 3,Redis 计数、Redis 不可用时放行,`can_preview` 账号豁免,超了同样返回 `daily_cap`,2026-10-11 方案 A),前端提示"今天的新讲解名额已满,明天再来"、**不给重试入口**(重试必然再失败);`null`/缺省 = 其它情况,沿用 `generating` 三态。匿名读不点燃生成,也不判这个字段。老 App 不读则照旧显示"待完善"+重试。前端解析 `as String?`。
+**`unavailable_reason` 字段(✅2026-10-10 加法,#877)**:content 端点在**带身份的请求**里说明"为什么没讲解、也没在生成":`"daily_cap"` = 当天懒生成名额已满(全局按 UTC 日计,只数懒生成/懒翻译写的段,上限 1000 段 ≈ 120 件;运营批量生成不占;**另有每账号 160 段 / 每 IP 300 段的日额度**,点火时按估算段数扣:懒生成 8、懒翻译 3,Redis 计数、Redis 不可用时放行,`can_preview` 账号豁免,超了同样返回 `daily_cap`,2026-10-11 方案 A),前端提示"今天的新讲解名额已满,明天再来"、**不给重试入口**(重试必然再失败);`"no_image"`(2026-10-11 方案 B)= 无图 stub 不生成讲解,**带身份与匿名请求都给**,前端显示「暂无讲解」不给重试(老 App 不认 → 仍显示重试,但列表/搜索/识别/分享都到不了无图 stub);`null`/缺省 = 其它情况,沿用 `generating` 三态。匿名读不点燃生成。老 App 不读则照旧显示"待完善"+重试。前端解析 `as String?`。
 
 **懒翻译(✅2026-07-03 落地,懒生成姐妹场景)**:content 端点命中"对象 `ready`、有 en 轴心、但**请求语言**无已发布内容" → 后台**只翻这一门语言**(补语种原语:段落+问答+作者bio,数十秒、费用分钱级)。配合**列表 content_status 按请求语言解读**:该语言缺 → 列表即显"待完善",点开触发懒翻译,刷新即有——任何语言视图所见即所得,新加语言自动享受同样行为。同锁/并发/环境门。
 
@@ -1520,7 +1520,7 @@ _state.json 里 ok=true 的条数  ==  灌入目录里的文件数        ← �
 - `POST /museums/{slug}/recognize`(保留,行为不变):馆域内匹配。**⚠️ 馆域调用不做全局回退**(2026-07-11 裁决:老 App 不读 `museum` 字段,跨馆命中会拿他馆 qid 撞详情 404 死胡同——前向兼容;将来带馆提示要"馆内优先+全局回退"时加显式参数再开)。
 
 响应:`{outcome: match|candidates|unrecognized, match:{qid,title,artist,thumbnail,confidence,museum}, candidates:[{…,score,museum}], label_text, reason, phash}`
-——**`phash`(2026-07-13 加法字段)**=该次识别的感知哈希,配套 **`POST /api/v1/recognize/confirm`**(`{"phash","qid"}`,可选 Bearer,永远204,fire-and-forget):确认卡点选时上报,回填 recognition_events.confirmed_qid——**确认卡=标注飞轮**从此有服务端落点(KPI 的 hits=match+确认候选;match 直跳不上报,confirmed 语义=用户确认)。识别每次调用落 `recognition_events`(只存 phash 不存照片;engine 记 vector/vector_crops/text/cache)——**KPI 与展陈证据一表两吃**。museum pack 加法字段 `catalog_count`/`archive_count`(馆页双数字"在线图录N·档案M",**每次请求现场 count**;2026-10-04 #804 前曾读 museums.stats 快照,补图后橘园仍显旧值 15——门面数字不读快照)。
+——**`phash`(2026-07-13 加法字段)**=该次识别的感知哈希,配套 **`POST /api/v1/recognize/confirm`**(`{"phash","qid"}`,可选 Bearer,永远204,fire-and-forget):确认卡点选时上报,回填 recognition_events.confirmed_qid——**确认卡=标注飞轮**从此有服务端落点(KPI 的 hits=match+确认候选;match 直跳不上报,confirmed 语义=用户确认)。识别每次调用落 `recognition_events`(只存 phash 不存照片;engine 记 vector/vector_crops/text/cache)——**KPI 与展陈证据一表两吃**。museum pack 加法字段 `catalog_count`/`archive_count`(馆页双数字"在线图录N·档案M",**每次请求现场 count**;**2026-10-11 方案 B 起 `archive_count` 恒为 null**——无图件搜不到也认不出,「可识别/搜索」成了假话,App 两数齐全才显示该行 → 隐藏;`artwork_count`(馆包两分支与 `/museums` 列表)= 有图件数;2026-10-04 #804 前曾读 museums.stats 快照,补图后橘园仍显旧值 15——门面数字不读快照)。
 ——**`museum`=归属馆 slug(2026-07-11 加法字段)**,前端跳详情用它(老 App 不读不炸;新前端解析 `as String?` + 回退)。`outcome/reason` 机器码不译;`title/artist` 按 language 走显示名规则;thumbnail=thumb 档。命中跳详情 → 懒生成/懒翻译/懒补图自动接管。同图重复识别走 Redis 缓存(命中 30 天/未收录 1 天;键空间 `recog3`)。**阈值 server-driven**:向量档 `RECOG_HIGH=0.85`/`RECOG_LOW=0.72`(环境变量,由 benchmark 校准,库外零误接受);文字兜底档沿用 HIGH=0.85/LOW=0.5。
 
 **低分自动多裁剪重查(2026-07-11)**:全图向量分 < LOW 时(即原本注定失败的照片)自动裁 中心60%/35%+四象限+左右半幅 批量重查取最大分,再不中才进 GPT 兜底。**正常近拍照片走快路径零延迟影响**;触发裁剪的照片 +~2s,仍快于其下一站 GPT(2-5s)。已知代价(bench 实测):库外照片经多裁剪误出候选卡比例升高(48%→81%)——确认卡"都不是"出口兜底,可接受。
@@ -1631,13 +1631,13 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 
 ## 搜索（打字查找;✅2026-07-13;稳定契约+可替换引擎）
 
-识别的姊妹功能,也是**文字可识别层无图 stub 的主可达路径**(与浏览列表隐藏无图件相反——搜索是无图件主入口)。**打字搜索 ≠ 识别匹配**:识别是整串模糊相似(GPT/向量给完整候选),搜索是子串/前缀/分词命中(用户打"梵高"/"moulin"/"RF1668");搜索匹配独立设计,仅复用 matcher 归一化工具。
+识别的姊妹功能。**2026-10-11 方案 B 起无图件不返回**(含编号精确命中;用户看不到图就无法确认是不是眼前这件),与浏览列表同口径 `has_image_clause`;补图后随索引重建 ≤600s 自动出现。**打字搜索 ≠ 识别匹配**:识别是整串模糊相似(GPT/向量给完整候选),搜索是子串/前缀/分词命中(用户打"梵高"/"moulin"/"RF1668");搜索匹配独立设计,仅复用 matcher 归一化工具。
 
 **两端点(加法,响应同族)**:
 - `GET /api/v1/search?q=&language=&limit=20`——全局(探索页),响应含 `museums`+`objects` 两段。
 - `GET /api/v1/museums/{slug}/search?q=&language=&limit=20`——馆域(馆列表页),只有 `objects`;馆不存在 404。
 
-响应:`{query, museums:[{slug,name,city}](仅全局), objects:[{qid,title,artist,year,thumbnail,museum,has_image}]}`。`title/artist` 走既有显示名规则(`_resolve_name`,全语种);**无图 stub 照常在 `objects`(`has_image:false`,`thumbnail:null`),前端类目占位图**;`museum`=归属馆 slug(点击跳讲解页,与识别 match 同款导航);空 `q`/无结果 → 诚实空态 `objects:[]`。全语种搜(藏品 `title_i18n`+作者 `name_i18n` 全语种进索引,中文界面打 Van Gogh 也中)。
+响应:`{query, museums:[{slug,name,city}](仅全局), objects:[{qid,title,artist,year,thumbnail,museum,has_image}]}`。`title/artist` 走既有显示名规则(`_resolve_name`,全语种);~~无图 stub 照常在 `objects`~~(2026-10-11 起不返回;`has_image` 恒为 true,只有 view 图的件 `thumbnail:null`);`museum`=归属馆 slug(点击跳讲解页,与识别 match 同款导航);空 `q`/无结果 → 诚实空态 `objects:[]`。全语种搜(藏品 `title_i18n`+作者 `name_i18n` 全语种进索引,中文界面打 Van Gogh 也中)。
 
 **稳定契约 + 可替换引擎**(照搬识别架构):用户可感知行为由契约锁定、跨引擎不变;引擎可插拔。**首发=进程内索引**(`search/inprocess.py`,单一真相源=Postgres、零同步,馆域索引 TTL 600s 缓存;三路匹配:编号精确 1.0>标题前缀 0.8>标题子串 0.6>作者子串 0.4,同分按 popularity)。**规模触发换引擎**(藏品越过 ~5-10 万件/卢浮+蓬皮杜级别,或实测延迟退化)→ 自托管 Meilisearch/Typesense(CJK 分词好、百万级即时);换引擎只换 `search()` 实现,**契约与前端零改**,唯排序权重可微差、"能搜到什么"一致。
 
@@ -1700,6 +1700,7 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 ## 变更记录
 
 - 2026-10-11:**懒生成防刷(方案 A)回写**。`daily_cap` 语义扩为「全站 / 本账号 / 本 IP 任一当日额度用尽」,契约形状不变(spec `2026-10-11-lazy-gen-abuse-guard-design.md`)。
+- 2026-10-11:**无图作品不对用户开放(方案 B)回写**(spec `2026-10-11-hide-imageless-objects-design.md`)。搜索不返回无图件;识别文字链不给无图件(在全量上匹配、`limit=50` 后再滤,被隐藏的命中记 `text_trace.hidden_imageless`),缓存键 `recog4`;懒生成对无图 stub 返回 `no_image`(懒翻译不拦);`artwork_count` 改有图件数,`archive_count` 置 null。全部为少返回元素或已有字段的加法取值,不发包(前端 `no_image` 分支随下个版本)。
 - 2026-10-10:**懒生成首屏提速专题(#877/#881–#885)回写**。API 加法:content `unavailable_reason`(`daily_cap`)。原则:首屏关键路径原则补记(准备阶段并发;**提速不许以内容变薄为代价**,用户定);纪律 16 补记(证据包只在重生成路径进材料,#883)、纪律 22 补记(未知值只在一条读取路径被拦,prod 61 件假作者卡)、纪律 28 补记(修好输入后先 A/B 再定回刷,10 件只 2 件用上);多语言列表原则补「单值同理」(国籍);新增纪律 44(Wikidata 单实体走 Action API)、45(保护参数先查拒绝条件,maxlag)、46(换数据源新旧并跑等价验证)、47(测试不许用固定时间窗)。
 - 2026-10-05:**纪律 31 补记 ④⑤(降级分支只捕依赖故障、探活看业务信号)、纪律 33 补记 ④(缓存键带引擎版本)、新增纪律 43(skip 前提不许调用被测对象)、图片字段新增「图源授权判据」+ 巴黎市属馆配方**。
   来源:识别缓存自上线 0 命中(#826,S1 评审发现);S7 无图作品补授权图 1065 件(小皇宫 1343→319)。
