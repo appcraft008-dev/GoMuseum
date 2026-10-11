@@ -60,6 +60,7 @@ def session():
             "title_en": "The Origin of the World",
             "artist_en": "Gustave Courbet",
             "category": "painting",
+            "image": "https://img/Q334138.jpg",
             "attributes": {"title_i18n": {"en": "The Origin of the World"}},
         },
     )
@@ -71,6 +72,7 @@ def session():
             "title_en": "Luncheon on the Grass",
             "artist_en": "Édouard Manet",
             "category": "painting",
+            "image": "https://img/Q152509.jpg",
             "attributes": {"title_i18n": {"en": "Luncheon on the Grass"}},
         },
     )
@@ -255,7 +257,7 @@ def test_cache_key_global_prefix(session):
         identify_fn=_vision([]),
         redis=r,
     )
-    assert any(k.startswith("recog3:global:") for k in r.keys)
+    assert any(k.startswith("recog4:global:") for k in r.keys)
 
 
 def _one_crop(b):
@@ -437,6 +439,7 @@ def test_label_inv_and_artist_agree_opens_directly(session):
         m.id,
         {
             "qid": "Q_AIR",
+            "image": "https://img/Q_AIR.jpg",  # 有图才对用户开放(方案 B)
             "inventory_number": "RF 1976 81",
             "title_en": "L'air du soir",
             "artist_en": "Henri-Edmond Cross",
@@ -792,12 +795,12 @@ def test_default_redis_cache_actually_hits(session):
                 embed_fn=lambda b: "V",
                 vector_query_fn=lambda db, v, m: [("Q334138", 0.95)],
             )
-        keys = r.keys("recog3:orsay:*")
+        keys = r.keys("recog4:orsay:*")
         assert out["outcome"] == "match"
         engines = [e.engine for e in session.query(RecognitionEvent).all()]
         assert engines == ["vector", "cache"]
     finally:
-        for k in keys or r.keys("recog3:orsay:*"):
+        for k in keys or r.keys("recog4:orsay:*"):
             r.delete(k)
 
 
@@ -946,6 +949,7 @@ def test_summary_has_large_image_and_credit(session):
     from app.services.recognition.service import _summary
 
     o = session.query(MuseumObject).filter_by(qid="Q334138").one()
+    session.query(ObjectImage).filter_by(object_id=o.id).delete()  # 夹具已补一张图
     session.add_all(
         [
             ObjectImage(
@@ -974,6 +978,7 @@ def test_summary_credit_hidden_when_it_is_the_artist(session):
     from app.services.recognition.service import _summary
 
     o = session.query(MuseumObject).filter_by(qid="Q334138").one()
+    session.query(ObjectImage).filter_by(object_id=o.id).delete()  # 夹具已补一张图
     session.add(
         ObjectImage(
             object_id=o.id,
@@ -1103,3 +1108,97 @@ def test_single_candidate_artist_disagree_not_shadow_logged(session):
     # 同名撞车(10-07 真机:Hockney《The Swimmer》→ 库里 Caillebotte 同名画)不进这一类
     ev = _single_direct(session, "")
     assert ev.text_trace["single_direct"] is None
+
+
+# --- 方案 B(2026-10-11):文字链不给无图作品,被隐藏的命中记入 text_trace ---
+
+
+def _add(session, qid, title, artist, *, image, inv=None):
+    m = session.query(Museum).filter_by(slug="orsay").one()
+    data = {
+        "qid": qid,
+        "title_en": title,
+        "artist_en": artist,
+        "category": "painting",
+        "inventory_number": inv,
+        "attributes": {"title_i18n": {"en": title}},
+    }
+    if image:
+        data["image"] = f"https://img/{qid}.jpg"
+    upsert_object(session, m.id, data)
+    session.commit()
+    inprocess._index_cache.clear()
+
+
+def test_text_candidates_exclude_imageless_and_record_hidden(session):
+    _add(session, "Q_NOIMG", "The Gleaners", "Jean-François Millet", image=False)
+    _add(session, "Q_IMG", "The Gleaners at Dusk", "Jean-François Millet", image=True)
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        identify_fn=_vision([{"title": "The Gleaners", "artist": "Millet"}]),
+    )
+    qids = [c["qid"] for c in out["candidates"]]
+    assert "Q_NOIMG" not in qids
+    hidden = session.query(RecognitionEvent).one().text_trace["hidden_imageless"]
+    assert [h["qid"] for h in hidden] == ["Q_NOIMG"]
+    assert hidden[0]["via"] == "match"
+
+
+def test_text_candidates_not_truncated_by_hidden(session):
+    # 5 件同名无图件排在前面,第 6 件同名有图:匹配核心默认截到前 5,先截再滤会丢掉它
+    for i in range(5):
+        _add(session, f"Q_B{i}", "The Bathers", "Pierre-Auguste Renoir", image=False)
+    _add(session, "Q_B_IMG", "The Bathers", "Pierre-Auguste Renoir", image=True)
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        identify_fn=_vision([{"title": "The Bathers", "artist": "Renoir"}]),
+    )
+    assert [c["qid"] for c in out["candidates"]] == ["Q_B_IMG"]
+
+
+def test_inv_hit_on_imageless_falls_back_and_dedupes(session):
+    _add(
+        session,
+        "Q_INVNOIMG",
+        "Evening Air",
+        "Henri-Edmond Cross",
+        image=False,
+        inv="RF 1976 81",
+    )
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        mode="label",
+        identify_fn=_vision(
+            [{"title": "Evening Air", "artist": "Henri-Edmond Cross"}],
+            label="Henri-Edmond Cross\nEvening Air\nRF 1976 81",
+        ),
+    )
+    assert out["outcome"] != "match"  # 无图件不直判
+    tr = session.query(RecognitionEvent).one().text_trace
+    assert tr["inv_hit"] is None
+    assert tr["hidden_imageless"] == [
+        {"qid": "Q_INVNOIMG", "score": 1.0, "via": "inv"}
+    ]  # 模糊匹配又命中同一件,不重复记
+
+
+def test_only_imageless_hits_unrecognized(session):
+    _add(session, "Q_ONLY", "The Angelus", "Jean-François Millet", image=False)
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        identify_fn=_vision([{"title": "The Angelus", "artist": "Millet"}]),
+    )
+    assert out["outcome"] == "unrecognized"
+    assert out["candidates"] == []
+
+
+def test_cache_key_prefix_bumped_for_hidden_imageless():
+    # 旧缓存可能含无图件(认出缓存 30 天),换前缀整体作废
+    assert svc._cache_key("orsay", "abc", "zh").startswith("recog4:")

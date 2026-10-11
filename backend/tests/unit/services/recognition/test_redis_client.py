@@ -57,4 +57,4 @@ def test_cache_key_changes_with_engine(monkeypatch):
     monkeypatch.setattr(service.settings, "RECOG_MODEL", "dinov4-x")
     k2 = service._cache_key(None, "sha", "en")
     assert k1 != k2  # 换引擎不能吃旧引擎的缓存结果
-    assert k1.startswith("recog3:global:")
+    assert k1.startswith("recog4:global:")
