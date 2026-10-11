@@ -52,7 +52,7 @@ prod 本地未物化(只有外链)的件:**0**。所以 v1 里"懒生成先物�
 | 6 | 懒生成 | 无图 stub 可点火 | 无图 stub 不点火,返回 `"no_image"`(在额度检查之前,不扣额度)。**懒翻译不拦**:只翻已有内容、不看图、不会编外观,且无图 ready 件只有几十件 | `enrichment/lazy.py:maybe_trigger` |
 | 6b | 内容端点对无图 stub | `generating=false`、`unavailable_reason=null` → App 显示「重试」,重试永远失败 | 端点透传 `unavailable_reason="no_image"`(匿名请求也判)。⚠️**只改后端不够**:讲解页不认顶层 `status="empty"`(`object_content_model.dart:6-17` 把未知值映射成 ready),所以要**前端下个版本**在 `guide_page.dart` 加一支:`no_image` → 显示「暂无讲解」+返回。老 App 仍显示重试;方案 B 之后列表/搜索/识别/分享都到不了无图 stub,只有手工拼请求能到,接受 | `museums.py:object_content`、前端 `guide_page.dart` |
 | 7 | 老版馆包 `artworks=True` | 全量 | 过滤无图件(形状不变;前端本就不解析 artworks)。连带:`artwork_count` 取 `len(artworks)`,会从总件数变成有图件数(卢浮 17283→约 10391),与探索列表口径一致,属预期 | `museum_repo.get_museum_pack` |
-| 8 | 馆头部第二行「在线图录 N · 档案条目 M(可识别/搜索)」 | `archive_count`=总件数 | 馆包响应 `archive_count` 返回 null → 前端两数齐全才显示,已装 App 立即不显示这一行(`museum_page.dart:263`),只剩「N 件收录藏品」。后端照算,内部报表用(用户 10-11 定) | `museum_repo.get_museum_pack` |
+| 8 | 馆头部第二行「在线图录 N · 档案条目 M(可识别/搜索)」 | `archive_count`=总件数 | 馆包响应 `archive_count` 返回 null → 前端两数齐全才显示,已装 App 立即不显示这一行(`museum_page.dart:263`),只剩「N 件收录藏品」。总件数内部看 `onboard coverage-report`(已有),馆包里那条 COUNT 删掉、不留死代码(用户 10-11 定隐藏这一行) | `museum_repo.get_museum_pack` |
 | 9 | 首页/探索页馆卡片「含 N 件藏品」 | `/museums` 的 `artwork_count`=总件数(卢浮 17283) | 改成有图件数(`has_image_clause`),与馆头部 10391 一致;馆包的 `artwork_count` 两个分支也统一成有图件数 | `museum_repo.list_museums`、`get_museum_pack` |
 | — | 内容 / 音频 / 分享 / 足迹 | — | **不变**,已有内容照常返回,不 404 | — |
 | — | 向量识别 | 向量只来自有图件 | 不变 | — |
