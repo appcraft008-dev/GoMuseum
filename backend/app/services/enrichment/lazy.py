@@ -25,6 +25,16 @@ _LAZY_DAILY_SECTION_CAP = 1000
 # 补译小皇宫 440 段把当天额度吃光,用户点开第 61 件的 7 门语言全被「预算用尽」跳过,
 # App 显示错误。批量是运营者主动花的钱,不该挤掉用户那份。
 LAZY_SOURCE = "ai_lazy"
+# 每账号 / 每 IP 日上限(2026-10-11 方案 A)。单位与全站上限相同 = 段,
+# 点火时按估算段数扣:prod 10-01~10-10 实测懒生成 7.2-8.9 段/件、懒翻译 2.7-3.0 段/次。
+# 按"次数"计会让单 IP 100 次新生成 ≈ 800 段吃掉全站 80%(spec 第二节)。
+WEIGHT_GENERATION = 8
+WEIGHT_TRANSLATION = 3
+CAP_PER_USER = 160  # ≈20 件新生成;挡单账号,也挡同一 WiFi 下一个人吃光整个 IP
+CAP_PER_IP = (
+    300  # ≈37 件;单 IP 最多吃全站 30%。⚠️对 IPv6/代理轮换无效,分布式只靠全站上限
+)
+_CAP_TTL_S = 2 * 86400
 
 
 def lock_active(obj: MuseumObject) -> bool:
@@ -281,6 +291,61 @@ def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
         .count()
         >= cap
     )
+
+
+def _redis():
+    """复用识别缓存的 Redis 单例(自带连接失败冷却,Redis 挂了不会每次请求等超时)。"""
+    from app.services.recognition.service import _get_redis
+
+    return _get_redis()
+
+
+def _today() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%d")
+
+
+def _charge(user_id, ip, weight: int, redis=None) -> str | None:
+    """按账号、按 IP 扣当日额度。None=放行;"user"/"ip"=该层超限(已全部回滚)。
+
+    先 INCRBY 再判断:INCRBY 原子,两个 worker 并发也不会越线(先查后加会)。
+    超限就把本次加上的全部退回,被拒的请求不占额度。
+    Redis 不可用 → 放行(fail open):全站上限在 DB,照样兜底;反过来 Redis 一抖全站懒生成就停了。
+    """
+    layers = [
+        (name, f"lazy:{name}:{ident}:{_today()}", cap)
+        for name, ident, cap in (("u", user_id, CAP_PER_USER), ("ip", ip, CAP_PER_IP))
+        if ident
+    ]
+    if not layers:
+        return None
+    r = redis if redis is not None else _redis()
+    if r is None:
+        logger.error(
+            "lazy caps: redis unavailable, allowing (global cap still applies)"
+        )
+        return None
+    try:
+        pipe = r.pipeline()
+        for _, key, _cap in layers:
+            pipe.incrby(key, weight)
+            # 每次都设:键里带日期,重复设无害,不会漏设成永不过期
+            pipe.expire(key, _CAP_TTL_S)
+        used = pipe.execute()[0::2]
+        over = [name for (name, _, cap), u in zip(layers, used) if int(u) > cap]
+        if not over:
+            return None
+        pipe = r.pipeline()
+        for _, key, _cap in layers:
+            pipe.decrby(key, weight)
+        pipe.execute()
+        layer = "user" if "u" in over else "ip"
+        logger.warning(
+            "lazy: cap hit layer=%s user=%s ip=%s used=%s", layer, user_id, ip, used
+        )
+        return layer
+    except Exception:
+        logger.exception("lazy caps: redis error, allowing (global cap still applies)")
+        return None
 
 
 def maybe_trigger(
