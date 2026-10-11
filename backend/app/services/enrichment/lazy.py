@@ -349,14 +349,25 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
 
 
 def maybe_trigger(
-    db, qid: str, *, schedule, environment=None, language=None
+    db,
+    qid: str,
+    *,
+    schedule,
+    environment=None,
+    language=None,
+    user_id=None,
+    ip=None,
+    exempt=False,
+    redis=None,
 ) -> str | None:
     """content 端点接线(拿到锁才调度,其余静默)。返回不生成的原因,端点透传给 App:
     "daily_cap"=当日预算用尽(App 提示明天再来);其余 None。
     - stub → 懒生成(完整生成,请求语言优先);
     - ready 但请求语言缺已发布内容且有 en 轴心 → 懒翻译(只翻该语言);
     - empty 不动(无可接地材料,防循环烧钱)。
-    只在部署环境生效(development/测试不触发:防误连库、误烧 LLM 费)。"""
+    只在部署环境生效(development/测试不触发:防误连库、误烧 LLM 费)。
+    - user_id/ip:按账号/IP 扣当日额度(拿到锁后才扣,超了清锁返回 "daily_cap");
+      exempt=运营预览账号,只受全站上限。"""
     if environment is None:
         from app.core.config import settings
 
@@ -390,7 +401,13 @@ def maybe_trigger(
         return "daily_cap"
     if wants_generation:
         if try_acquire_lock(db, o):
+            if not exempt and _charge(user_id, ip, WEIGHT_GENERATION, redis):
+                _clear_lock(db, o)
+                return "daily_cap"
             schedule(run_lazy_generation, qid, language)
         return
     if try_acquire_lock(db, o, require_status=("ready",)):
+        if not exempt and _charge(user_id, ip, WEIGHT_TRANSLATION, redis):
+            _clear_lock(db, o)
+            return "daily_cap"
         schedule(run_lazy_translation, qid, language)
