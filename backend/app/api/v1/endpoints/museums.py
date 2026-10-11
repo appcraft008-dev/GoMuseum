@@ -155,16 +155,17 @@ def object_content(
             ip=request.client.host if request.client else None,
             exempt=bool(getattr(user, "can_preview", False)),
         )
-    else:
-        # 匿名不点火,但无图 stub 也要告诉 App 别给「重试」(方案 B)
-        from app.models.museum_object import MuseumObject
-
-        obj = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
-        if obj is not None and imageless_stub(db, obj):
-            reason = "no_image"
     data = get_object_content(db, slug, qid, language)
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
+    if user is None and data["status"] == "empty":
+        # 匿名不点火,但无图 stub 也要告诉 App 别给「重试」(方案 B)。
+        # 只在没内容时才查,不给每次匿名浏览多一次往返。
+        from app.models.museum_object import MuseumObject
+
+        obj = db.query(MuseumObject).filter_by(qid=qid).one()
+        if imageless_stub(db, obj):
+            reason = "no_image"
     # 加法字段(2026-10-10):为什么没在生成。"daily_cap"=当日懒生成预算用尽;
     # "no_image"=无图作品不生成(2026-10-11 方案 B);null=无特别原因
     data["unavailable_reason"] = reason
