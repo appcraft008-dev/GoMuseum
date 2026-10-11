@@ -334,18 +334,23 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
         over = [name for (name, _, cap), u in zip(layers, used) if int(u) > cap]
         if not over:
             return None
+    except Exception:
+        logger.exception("lazy caps: redis error, allowing (global cap still applies)")
+        return None
+    layer = "user" if "u" in over else "ip"
+    logger.warning(
+        "lazy: cap hit layer=%s user=%s ip=%s used=%s", layer, user_id, ip, used
+    )
+    # 已知超限:退额度失败也照样拒绝。退不回去只会让这些键多计一次 weight,
+    # 当天提前一点被拦;键带 UTC 日期,次日自然换新键,不会长期卡住。
+    try:
         pipe = r.pipeline()
         for _, key, _cap in layers:
             pipe.decrby(key, weight)
         pipe.execute()
-        layer = "user" if "u" in over else "ip"
-        logger.warning(
-            "lazy: cap hit layer=%s user=%s ip=%s used=%s", layer, user_id, ip, used
-        )
-        return layer
     except Exception:
-        logger.exception("lazy caps: redis error, allowing (global cap still applies)")
-        return None
+        logger.exception("lazy caps: rollback failed, keys over-counted by %s", weight)
+    return layer
 
 
 def maybe_trigger(

@@ -103,3 +103,20 @@ def test_concurrent_charges_never_exceed_cap(r):
     [t.join() for t in ts]
     assert sorted(results, key=str) == [None, "user"]
     assert _used(r, "u", "u1") == CAP_PER_USER
+
+
+def test_rollback_failure_still_refuses(r):
+    """已知超限、但退回额度那一步 Redis 报错 → 仍然拒绝(不能因为退不回去就放行)。"""
+    r.set("lazy:u:u1:" + lazy._today(), CAP_PER_USER)
+
+    class FlakyRollback:
+        def __init__(self, real):
+            self.real, self.n = real, 0
+
+        def pipeline(self):
+            self.n += 1
+            if self.n == 2:  # 第二个 pipeline = 回滚
+                raise ConnectionError("down")
+            return self.real.pipeline()
+
+    assert _charge("u1", None, 8, redis=FlakyRollback(r)) == "user"
