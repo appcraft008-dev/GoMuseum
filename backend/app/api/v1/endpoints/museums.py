@@ -5,7 +5,15 @@
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -73,10 +81,8 @@ def _pass_required(db: Session, museum, language: str) -> dict:
     }
 
 
-def _caller_id(
-    db: Session, credentials: HTTPAuthorizationCredentials | None
-) -> str | None:
-    """令牌 → user_id，**坏/过期令牌一律当匿名，绝不 401**。
+def _caller(db: Session, credentials: HTTPAuthorizationCredentials | None):
+    """令牌 → 用户对象，**坏/过期令牌一律当匿名(None)，绝不 401**。
 
     与 `recognize_global._user_id` 同款。401 在这里是不能出的:老 App 拿着过期
     token 打探索页/详情页,一旦 401 整页就崩了 —— 而这两个端点本来就允许匿名读。
@@ -86,7 +92,7 @@ def _caller_id(
     try:
         from app.services.auth_service import AuthService
 
-        return str(AuthService.get_current_user(db, credentials.credentials).id)
+        return AuthService.get_current_user(db, credentials.credentials)
     except Exception:
         return None
 
@@ -114,6 +120,7 @@ def object_content(
     slug: str,
     qid: str,
     background_tasks: BackgroundTasks,
+    request: Request,
     language: str = "zh",
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
@@ -136,9 +143,17 @@ def object_content(
     if _hidden(db, credentials, slug, qid):
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
     reason = None
-    if _caller_id(db, credentials):
+    user = _caller(db, credentials)
+    if user is not None:
         reason = maybe_trigger(
-            db, qid, schedule=background_tasks.add_task, language=language
+            db,
+            qid,
+            schedule=background_tasks.add_task,
+            language=language,
+            user_id=str(user.id),
+            # ProxyHeadersMiddleware(main.py)已把它解析成真实客户端 IP
+            ip=request.client.host if request.client else None,
+            exempt=bool(getattr(user, "can_preview", False)),
         )
     data = get_object_content(db, slug, qid, language)
     if data is None:

@@ -217,3 +217,56 @@ def test_daily_budget_exhausted_blocks_generation(client, monkeypatch):
     )
     assert r.status_code == 200
     assert calls == []
+
+
+def test_endpoint_passes_user_ip_and_preview_flag(client, monkeypatch):
+    """端点把账号、客户端 IP、can_preview 交给 maybe_trigger(额度闸的输入)。"""
+    import app.services.enrichment.lazy as lazy
+    from app.services.auth_service import AuthService
+
+    _make_stub(monkeypatch)
+    seen = {}
+
+    def spy(db, qid, **kw):
+        seen.update(kw)
+        return None
+
+    monkeypatch.setattr(lazy, "maybe_trigger", spy)
+    monkeypatch.setattr(
+        AuthService,
+        "get_current_user",
+        staticmethod(
+            lambda db, t: type("U", (), {"id": "user-9", "can_preview": True})()
+        ),
+    )
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/content?language=zh",
+        headers={"Authorization": "Bearer x"},
+    )
+    assert r.status_code == 200
+    assert seen["user_id"] == "user-9"
+    assert seen["exempt"] is True
+    assert seen["ip"]  # TestClient 的 client.host("testclient"),非空即可
+
+
+def test_per_user_cap_reaches_app_as_daily_cap(client, monkeypatch):
+    """额度满 → 响应带 unavailable_reason=daily_cap,且一分钱不花。"""
+    import fakeredis
+
+    import app.services.enrichment.lazy as lazy
+
+    _make_stub(monkeypatch)
+    headers = _as_logged_in(monkeypatch)
+    calls = []
+    monkeypatch.setattr(lazy, "run_lazy_generation", lambda *a, **k: calls.append(a))
+    r_ = fakeredis.FakeRedis(decode_responses=True)
+    r_.set(f"lazy:u:user-1:{lazy._today()}", lazy.CAP_PER_USER)
+    monkeypatch.setattr(lazy, "_redis", lambda: r_)
+
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/content?language=zh", headers=headers
+    )
+    assert r.status_code == 200
+    assert r.json()["unavailable_reason"] == "daily_cap"
+    assert r.json()["generating"] is False
+    assert calls == []
