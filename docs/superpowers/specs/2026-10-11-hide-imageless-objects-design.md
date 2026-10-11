@@ -50,8 +50,10 @@ prod 本地未物化(只有外链)的件:**0**。所以 v1 里"懒生成先物�
 | 4 | 识别文字链:候选 | 无图件可进候选 | 在全量索引上匹配,但 `match_with_trace` 传 **`limit=50`**(匹配核心在 `matching/core.py:98` 按 limit 截断,默认 5 会在去掉无图件前就把有图候选截掉),拿回后去掉无图件再取前 3;被去掉且过门槛的记隐藏(按 qid 去重)。`raw`(复盘用前 5)不滤 | 同上 |
 | 5 | 识别缓存 | 旧缓存可能含无图件(命中缓存 30 天) | 缓存键前缀 `recog3` → `recog4`,旧缓存整体作废 | `recognition/service.py:_cache_key` |
 | 6 | 懒生成 | 无图 stub 可点火 | 无图 stub 不点火,返回 `"no_image"`(在额度检查之前,不扣额度)。**懒翻译不拦**:只翻已有内容、不看图、不会编外观,且无图 ready 件只有几十件 | `enrichment/lazy.py:maybe_trigger` |
-| 6b | 内容端点对无图 stub | `generating=false`、`unavailable_reason=null` → App 显示「重试」,重试永远失败 | 响应里 `status` 报 `"empty"`(不写库)、`unavailable_reason="no_image"`。已装 App 对 `empty` 显示「暂无讲解」+返回,不给假重试;**匿名请求同样处理** | `museums.py:object_content` |
+| 6b | 内容端点对无图 stub | `generating=false`、`unavailable_reason=null` → App 显示「重试」,重试永远失败 | 端点透传 `unavailable_reason="no_image"`(匿名请求也判)。⚠️**只改后端不够**:讲解页不认顶层 `status="empty"`(`object_content_model.dart:6-17` 把未知值映射成 ready),所以要**前端下个版本**在 `guide_page.dart` 加一支:`no_image` → 显示「暂无讲解」+返回。老 App 仍显示重试;方案 B 之后列表/搜索/识别/分享都到不了无图 stub,只有手工拼请求能到,接受 | `museums.py:object_content`、前端 `guide_page.dart` |
 | 7 | 老版馆包 `artworks=True` | 全量 | 过滤无图件(形状不变;前端本就不解析 artworks)。连带:`artwork_count` 取 `len(artworks)`,会从总件数变成有图件数(卢浮 17283→约 10391),与探索列表口径一致,属预期 | `museum_repo.get_museum_pack` |
+| 8 | 馆头部第二行「在线图录 N · 档案条目 M(可识别/搜索)」 | `archive_count`=总件数 | 馆包响应 `archive_count` 返回 null → 前端两数齐全才显示,已装 App 立即不显示这一行(`museum_page.dart:263`),只剩「N 件收录藏品」。后端照算,内部报表用(用户 10-11 定) | `museum_repo.get_museum_pack` |
+| 9 | 首页/探索页馆卡片「含 N 件藏品」 | `/museums` 的 `artwork_count`=总件数(卢浮 17283) | 改成有图件数(`has_image_clause`),与馆头部 10391 一致;馆包的 `artwork_count` 两个分支也统一成有图件数 | `museum_repo.list_museums`、`get_museum_pack` |
 | — | 内容 / 音频 / 分享 / 足迹 | — | **不变**,已有内容照常返回,不 404 | — |
 | — | 向量识别 | 向量只来自有图件 | 不变 | — |
 
@@ -64,7 +66,7 @@ prod 本地未物化(只有外链)的件:**0**。所以 v1 里"懒生成先物�
 
 **被隐藏件的匹配语义**:匹配核心的"AI 点了作者名、过门槛的没有一件作者对得上 → 整组否定"仍在全量结果上判断(不改匹配核心)。即:若作者对上的恰好是被隐藏的无图件,其余作者对不上的有图候选仍会显示 —— 它们有图,用户可对照后选「都不是」。
 
-**契约**:除 `unavailable_reason` 新增取值 `"no_image"`(已有字段的加法取值,老 App 只认 `daily_cap`、其余按 null 处理)与无图 stub 报 `status="empty"`(已有取值)外,全部是"少返回一些元素" → 前向兼容,不发包。
+**契约**:除 `unavailable_reason` 新增取值 `"no_image"`(已有字段的加法取值,老 App 只认 `daily_cap`、其余按 null 处理)、`archive_count` 返回 null(前端本就容忍缺失)、`artwork_count` 口径改为有图件数外,全部是"少返回一些元素" → 前向兼容,不发包。
 
 ## 五、写入面
 
@@ -80,7 +82,9 @@ prod 本地未物化(只有外链)的件:**0**。所以 v1 里"懒生成先物�
   ③全是无图件 → `unrecognized`;④向量路径不受影响(回归)。
 - 缓存键前缀为 `recog4`。
 - 懒生成:无图 stub 不点火、不扣方案 A 的额度;有图 stub 照常(两侧都测)。
-- 馆包:artworks 不含无图件,其他键不变。
+- 馆包:artworks 不含无图件;`archive_count` 为 null;`artwork_count`(两分支)= 有图件数。
+- 馆列表 `/museums`:`artwork_count` = 有图件数。
+- 前端:`unavailableReason == 'no_image'` → 讲解页显示「暂无讲解」不给重试(widget 测试)。
 - 照片补上 → 搜索索引重建(≤600s TTL)后出现(用索引重建函数直接测)。
 - staging 实测:搜一件已知无图件的标题 → 不出现;给它挂一张图 → 重建后出现。
 
@@ -110,7 +114,7 @@ prod 本地未物化(只有外链)的件:**0**。所以 v1 里"懒生成先物�
 |---|---|---|
 | B(严重)在 service 层去掉无图件,但匹配核心已按 limit=5 截断 → 有图候选被白白截掉,37% 的情况 top1 是无图件 | 属实:`matching/core.py:98` `[:limit]` | **采纳**:传 `limit=50` 再过滤取前 3;不改匹配核心。测试 ⓪ 钉住 |
 | B(次要)同一请求 inv 与 match 都记同一 qid | 属实 | **采纳**:按 qid 去重 |
-| E(重要)无图 stub 不点火后 `generating=false`、`reason=null` → App 显示假「重试」 | 属实:`guide_page.dart:358-374`,`empty` 才显示「暂无讲解」 | **采纳**:端点对无图 stub 报 `status=empty` + `reason=no_image`,不写库、不发包 |
+| E(重要)无图 stub 不点火后 `generating=false`、`reason=null` → App 显示假「重试」 | 属实。作者起初以为报 `status=empty` 即可不发包,再核实:内容模型不认 `empty`(映射成 ready),此路不通 | **采纳**:返回 `reason=no_image`,前端下个版本加分支;老 App 维持重试(实际到不了) |
 | A(次要)馆包 `artwork_count` 连带变小 | 属实:取 `len(artworks)` | 写入第四节 #7,属预期 |
 | C(次要)缓存键换前缀会重置匿名用户同图不扣次窗口 | 属实,影响小 | 写入第五节,不改 |
 | D(重要)月度补图如果只插行不物化,向量识别永远认不出 | 核实:物化即嵌入(`materializer.py:149-153`);S7 一次性脚本未入库 | 第七节写明"先插行再 `onboard images`" |
