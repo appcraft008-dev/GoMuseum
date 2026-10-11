@@ -48,7 +48,8 @@ def _cache_key(
         ).hexdigest()[:8]
     )
     # 引擎进键:换模型(v2→v3 那种)后旧引擎的结果不能再被命中。
-    key = f"recog3:{slug or 'global'}:{settings.RECOG_MODEL}:{language}:{vtag}:{sha}"
+    # recog4(2026-10-11 方案 B):文字链不再给无图件,旧缓存里可能还有,整体作废。
+    key = f"recog4:{slug or 'global'}:{settings.RECOG_MODEL}:{language}:{vtag}:{sha}"
     # mode 进键:同一张图当作品认过、再当墙签选,不能吃作品模式的结果(墙签不走向量、
     # prompt 不同)。作品模式键形不变 → 上线不让已有缓存作废。
     return key + ":label" if mode == "label" else key
@@ -461,20 +462,38 @@ def _compute(
             index = build_index(db, museum_id)
             if visible is not None:
                 index = [e for e in index if e["museum_id"] in visible]
+            # 无图件不对用户开放(方案 B 2026-10-11):在全量上匹配,命中的无图件不给用户、
+            # 记进 text_trace.hidden_imageless(每月补授权图时优先找这些)。
+            img_ok = {e["qid"] for e in index if e.get("has_image")}
+            hidden: dict = {}
             # 馆藏号 + 作者双重吻合 → 直判,模糊匹配不用跑(编号是墙签上最准的线索)
             inv_hit = inv_artist_hit(index, queries + label_lines, artist_hints)
+            if inv_hit and inv_hit not in img_ok:
+                hidden[inv_hit] = {"qid": inv_hit, "score": 1.0, "via": "inv"}
+                inv_hit = None
             text_trace["inv_hit"] = inv_hit
             # 墙签模式:AI 已摘出印着的标题 → 只拿它匹配;整段墙签行只用来抽馆藏号
             if inv_hit:
                 results, raw = [(inv_hit, 1.0)], [[inv_hit, 1.0, True]]
             else:
+                # limit=50:匹配核心按 limit 截断(matching/core.py),默认 5 会在去掉
+                # 无图件之前就把排在后面的有图候选截掉
                 results, raw = match_with_trace(
                     index,
                     queries,
                     label_lines,
                     artist_hints,
+                    limit=50,
                     label_lines_inv_only=mode == "label" and bool(queries),
                 )
+                for q, sc in results[:3]:
+                    if sc >= LOW and q not in img_ok:
+                        hidden.setdefault(
+                            q, {"qid": q, "score": round(sc, 3), "via": "match"}
+                        )
+                results = [(q, sc) for q, sc in results if q in img_ok]
+            if hidden:
+                text_trace["hidden_imageless"] = list(hidden.values())
             # 原始前 5(含没过门槛的,附作者是否对上):文字链复盘与评测用
             text_trace["matched"] = raw
             # 影子统计,不改行为(10-10):只出 1 个候选且作者对上、标题 ≥0.9(raw 分含作者

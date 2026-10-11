@@ -4,7 +4,7 @@
 - 馆域(馆列表页):GET /api/v1/museums/{slug}/search —— 只搜当前馆藏品(无 museums 段)。
 
 稳定契约 + 可替换引擎:用户可感知行为跨引擎不变;引擎(进程内→Meilisearch)可插拔。
-无图 stub 照常出现(has_image=False),是文字可识别层的主入口。
+无图件不返回(方案 B 2026-10-11);照片补上后随索引重建(≤600s)自动出现。
 """
 
 from fastapi import APIRouter, Depends, HTTPException

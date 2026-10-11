@@ -353,6 +353,21 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
     return layer
 
 
+def imageless_stub(db, obj) -> bool:
+    """无图 stub 不点火(方案 B 2026-10-11):列表/搜索/识别都不给无图件,用户本就到不了;
+    生成了也没图可看、外观描写还会是编的。口径同探索列表(has_image_clause)。"""
+    from app.services.must_see import has_image_clause
+
+    if obj.content_status != "stub":
+        return False
+    return (
+        db.query(MuseumObject.id)
+        .filter(MuseumObject.id == obj.id, has_image_clause())
+        .first()
+        is None
+    )
+
+
 def maybe_trigger(
     db,
     qid: str,
@@ -366,7 +381,7 @@ def maybe_trigger(
     redis=None,
 ) -> str | None:
     """content 端点接线(拿到锁才调度,其余静默)。返回不生成的原因,端点透传给 App:
-    "daily_cap"=当日预算用尽(App 提示明天再来);其余 None。
+    "daily_cap"=当日预算用尽(App 提示明天再来);"no_image"=无图 stub 不生成;其余 None。
     - stub → 懒生成(完整生成,请求语言优先);
     - ready 但请求语言缺已发布内容且有 en 轴心 → 懒翻译(只翻该语言);
     - empty 不动(无可接地材料,防循环烧钱)。
@@ -394,6 +409,8 @@ def maybe_trigger(
     )
     if not (wants_generation or wants_translation):
         return
+    if wants_generation and imageless_stub(db, o):
+        return "no_image"  # 在额度检查之前:不扣方案 A 的额度
     # 预算检查放在这里而不是函数开头:它是一条 COUNT,而绝大多数请求打的是
     # 已 ready 的件、上面就返回了。放开头等于给每次详情页浏览加一次全表扫描。
     if daily_budget_exhausted(db):

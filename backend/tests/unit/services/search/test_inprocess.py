@@ -226,15 +226,46 @@ def test_scoped_search_has_no_museum_segment(session):
     assert museums == []  # 馆域端点不搜博物馆
 
 
-def test_no_image_stub_in_results_with_flag(session):
-    # "starry" 命中两件(Q45585 有图,Q_STUB 无图 stub)
+def test_no_image_stub_not_in_results(session):
+    # "starry" 命中两件(Q45585 有图,Q_STUB 无图):无图件不对用户开放(方案 B 2026-10-11)
     _, objects = search(
         session, _FakeStorage(), "starry", museum_id=None, language="zh"
     )
-    by_qid = {o["qid"]: o for o in objects}
-    assert by_qid["Q45585"]["has_image"] is True and by_qid["Q45585"]["thumbnail"]
-    assert by_qid["Q_STUB"]["has_image"] is False
-    assert by_qid["Q_STUB"]["thumbnail"] is None  # 无图件诚实 null
+    assert [o["qid"] for o in objects] == ["Q45585"]
+    assert objects[0]["has_image"] is True and objects[0]["thumbnail"]
+
+
+def test_inventory_exact_hit_on_imageless_not_returned(session):
+    # 编号精确命中无图件也不返回(用户 10-11 定:讲解页没图,用户仍无法确认)
+    _, objects = search(session, _FakeStorage(), "RF 1993-15", language="zh")
+    assert objects == []
+
+
+def test_index_entry_has_image_flag(session):
+    o = session.query(MuseumObject).filter_by(qid="Q_STUB").one()
+    session.add(
+        ObjectImage(
+            object_id=o.id, role="view_quarantine", sort=0, source_url="https://q/x.jpg"
+        )
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    by_qid = {e["qid"]: e for e in build_search_index(session, None)}
+    assert by_qid["Q45585"]["has_image"] is True
+    assert by_qid["Q_STUB"]["has_image"] is False  # 隔离图不算有图
+
+
+def test_view_only_object_is_searchable_without_thumbnail(session):
+    # 只有 view 图、没有 primary 的件:按 has_image_clause 口径算有图(与探索列表一致)
+    o = session.query(MuseumObject).filter_by(qid="Q_STUB").one()
+    session.add(
+        ObjectImage(object_id=o.id, role="view", sort=0, source_url="https://v/x.jpg")
+    )
+    session.commit()
+    inprocess._index_cache.clear()
+    _, objects = search(session, _FakeStorage(), "rhone", language="zh")
+    assert [o["qid"] for o in objects] == ["Q_STUB"]
+    assert objects[0]["thumbnail"] is None  # 缩略图仍只取 primary,与探索列表现状一致
 
 
 def test_museum_slug_on_object(session):
@@ -283,7 +314,7 @@ def test_warm_search_no_object_table_roundtrips(session):
     _, objects = search(
         session, _FakeStorage(), "starry", museum_id=None, language="zh"
     )
-    assert len(objects) == 2
+    assert len(objects) == 1  # 两件命中,无图那件不返回(方案 B)
     joined = " ".join(stmts).lower()
     assert "museum_objects" not in joined
     assert "artists" not in joined and "object_images" not in joined
@@ -295,7 +326,7 @@ def test_scoped_search_reuses_global_index(session):
     build_search_index(session)
     stmts = _capture_sql(session)
     _, objects = search(session, _FakeStorage(), "starry", museum_id=mid, language="zh")
-    assert len(objects) == 2
+    assert len(objects) == 1  # 两件命中,无图那件不返回(方案 B)
     assert stmts == []
 
 
@@ -389,7 +420,13 @@ def inv_session(session):
         upsert_object(
             session,
             mid,
-            {"qid": qid, "title_en": title, "inventory_number": inv, "popularity": pop},
+            {
+                "qid": qid,
+                "title_en": title,
+                "inventory_number": inv,
+                "popularity": pop,
+                "image": f"https://example.com/{qid}.jpg",  # 有图才对用户开放
+            },
         )
     session.commit()
     inprocess._index_cache.clear()

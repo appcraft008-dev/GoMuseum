@@ -138,7 +138,7 @@ def object_content(
     匿名照常拿到已有内容(探索页不带令牌是正常形态,游客也持 `/auth/guest` 发的
     令牌),只是不点火。副产品:将来的公开网页层 `/a/{slug}/{qid}` 天然不点火。
     """
-    from app.services.enrichment.lazy import maybe_trigger
+    from app.services.enrichment.lazy import imageless_stub, maybe_trigger
 
     if _hidden(db, credentials, slug, qid):
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
@@ -158,7 +158,16 @@ def object_content(
     data = get_object_content(db, slug, qid, language)
     if data is None:
         raise HTTPException(status_code=404, detail=f"object not found: {qid}")
-    # 加法字段(2026-10-10):为什么没在生成。"daily_cap"=当日懒生成预算用尽;null=无特别原因
+    if user is None and data["status"] == "empty":
+        # 匿名不点火,但无图 stub 也要告诉 App 别给「重试」(方案 B)。
+        # 只在没内容时才查,不给每次匿名浏览多一次往返。
+        from app.models.museum_object import MuseumObject
+
+        obj = db.query(MuseumObject).filter_by(qid=qid).one()
+        if imageless_stub(db, obj):
+            reason = "no_image"
+    # 加法字段(2026-10-10):为什么没在生成。"daily_cap"=当日懒生成预算用尽;
+    # "no_image"=无图作品不生成(2026-10-11 方案 B);null=无特别原因
     data["unavailable_reason"] = reason
     # 加法字段(2026-09-29 分享):null = 这件在这个语言下不可分享,App 不显示分享键
     data["share"] = share_info(db, slug, qid, language, data)

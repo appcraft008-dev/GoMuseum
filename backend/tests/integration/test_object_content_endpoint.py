@@ -270,3 +270,33 @@ def test_per_user_cap_reaches_app_as_daily_cap(client, monkeypatch):
     assert r.json()["unavailable_reason"] == "daily_cap"
     assert r.json()["generating"] is False
     assert calls == []
+
+
+def _drop_q1_images():
+    from sqlalchemy.orm import Session
+
+    db: Session = next(iter(app.dependency_overrides[get_db]()))
+    o = db.query(MuseumObject).filter_by(qid="Q1").one()
+    db.query(ObjectImage).filter_by(object_id=o.id).delete()
+    db.commit()
+
+
+@pytest.mark.parametrize("logged_in", [True, False])
+def test_imageless_stub_reports_no_image(client, monkeypatch, logged_in):
+    """无图 stub(方案 B):带令牌与匿名都拿到 no_image,且不点火 —— App 据此显示「暂无讲解」,
+    不给永远失败的「重试」。"""
+    import app.services.enrichment.lazy as lazy
+
+    _make_stub(monkeypatch)
+    _drop_q1_images()
+    calls = []
+    monkeypatch.setattr(lazy, "run_lazy_generation", lambda *a, **k: calls.append(a))
+    headers = _as_logged_in(monkeypatch) if logged_in else {}
+
+    r = client.get(
+        "/api/v1/museums/orsay/objects/Q1/content?language=zh", headers=headers
+    )
+    assert r.status_code == 200
+    assert r.json()["unavailable_reason"] == "no_image"
+    assert r.json()["generating"] is False
+    assert calls == []
