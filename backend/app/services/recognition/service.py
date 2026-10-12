@@ -410,8 +410,9 @@ def _compute(
                     ranked = _merge(ranked, canvas)
                 clock.mark("canvas")
             # 全景式拍法(画占画面小)的对症药——实测 0.509→0.847;怼拍照片不受影响(快路径)。
-            # 已 ≥ LOW → 不跑金字塔。
-            if not ranked or ranked[0][1] < settings.RECOG_LOW:
+            # 未到 HIGH 就跑(10-12:原先 ≥LOW 就跳过,《自由引导人民》画框给错件 0.723 挡住了
+            # 金字塔的 0.912;评测集 recognition_photo_eval 救回 6 张、弄坏 0,候选档约 +0.85s)。
+            if not ranked or ranked[0][1] < settings.RECOG_HIGH:
                 crops = (embed_crops_fn or _default_embed_crops)(image_bytes)
                 if crops is not None:
                     crops_used = True

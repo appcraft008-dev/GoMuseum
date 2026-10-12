@@ -304,10 +304,10 @@ def test_lowscore_crops_also_low_falls_to_gpt(session):
     assert out["outcome"] == "candidates"
 
 
-def test_fullframe_ok_skips_crop_pyramid(session):
-    # 快路径:全帧已 ≥ LOW → 不跑金字塔(embed_crops_fn 不被调用)
+def test_fullframe_high_skips_crop_pyramid(session):
+    # 快路径:全帧已 ≥ HIGH → 不跑金字塔(embed_crops_fn 不被调用)
     crops = _Counter(_one_crop)
-    vq = _FakeVQ([("Q334138", 0.80)])
+    vq = _FakeVQ([("Q334138", 0.90)])
     out = recognize(
         session,
         "orsay",
@@ -316,8 +316,32 @@ def test_fullframe_ok_skips_crop_pyramid(session):
         embed_crops_fn=crops,
         vector_query_fn=vq,
     )
-    assert crops.n == 0  # 快路径未变
-    assert out["outcome"] == "candidates"
+    assert crops.n == 0
+    assert out["outcome"] == "match"
+
+
+def test_candidate_band_runs_crop_pyramid_liberty_case(session):
+    # 10-12 真机《自由引导人民》:画框给错的作品 0.723(已 ≥LOW),只有金字塔能把
+    # 答案抬到 0.912。候选档(<HIGH)也要跑金字塔(评测集 6 张救回、0 张弄坏)
+    canvas, crops = _Counter(_one_crop), _Counter(_one_crop)
+    vq = _FakeVQ(
+        [("Q152509", 0.60)],
+        [("Q152509", 0.723)],
+        [("Q334138", 0.912), ("Q152509", 0.70)],
+    )
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_canvas_fn=canvas,
+        embed_crops_fn=crops,
+        vector_query_fn=vq,
+    )
+    assert canvas.n == 1 and crops.n == 1
+    assert out["outcome"] == "match"
+    assert out["match"]["qid"] == "Q334138"
+    assert session.query(RecognitionEvent).one().engine == "vector_crops"
 
 
 def test_crop_pyramid_failure_falls_to_gpt(session):
@@ -339,7 +363,7 @@ def test_crop_pyramid_failure_falls_to_gpt(session):
 
 
 def test_candidate_band_canvas_lifts_to_match(session):
-    # 画框挤占:全帧只到候选档(0.80)→ 画布候选重查命中 HIGH → match;已 ≥LOW 不跑金字塔
+    # 画框挤占:全帧只到候选档(0.80)→ 画布候选重查命中 HIGH → match;已 ≥HIGH 不跑金字塔
     canvas, crops = _Counter(_one_crop), _Counter(_one_crop)
     vq = _FakeVQ([("Q334138", 0.80)], [("Q334138", 0.90)])
     out = recognize(

@@ -120,7 +120,7 @@ def main():
     th = dict(
         low=settings.RECOG_LOW, high=settings.RECOG_HIGH, margin=settings.RECOG_MARGIN
     )
-    policies = {"现在(<LOW 才裁块)": th["low"], "改后(<HIGH 就裁块)": th["high"]}
+    policies = {"旧(<LOW 才裁块)": th["low"], "现行(<HIGH 就裁块,10-12)": th["high"]}
     print("门槛", th)
     db = SessionLocal()
     try:
