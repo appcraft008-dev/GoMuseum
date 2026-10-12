@@ -1234,4 +1234,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get collectionViewList => 'Als Liste anzeigen';
+
+  @override
+  String get guideNotThisOne => 'Nicht dieses Werk?';
+
+  @override
+  String get guideNotThisOneNoted =>
+      'Notiert. Versuchen Sie einen anderen Winkel oder nutzen Sie die Suche.';
 }

@@ -1176,4 +1176,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get collectionViewList => 'リストで表示';
+
+  @override
+  String get guideNotThisOne => 'この作品ではない？';
+
+  @override
+  String get guideNotThisOneNoted => '記録しました。角度を変えて撮り直すか、検索で探してください。';
 }

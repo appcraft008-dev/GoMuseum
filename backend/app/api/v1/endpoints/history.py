@@ -62,7 +62,12 @@ def _footprint_qid(ev: RecognitionEvent) -> Optional[str]:
     那条展陈证据完全一致,别让两处漂开。"""
     if ev.confirmed_qid:
         return ev.confirmed_qid
-    if ev.outcome == "match" and ev.top_qid:
+    # 直判后点了「不是这件?」(10-12)= 用户亲口否定,不算看过
+    if (
+        ev.outcome == "match"
+        and ev.top_qid
+        and ev.top_qid not in (ev.rejected_qids or [])
+    ):
         return ev.top_qid
     return None
 
