@@ -283,7 +283,18 @@ SECTION_ROLES: dict[str, dict] = {
         "max_chars": 380,
     },
     "significance": {
-        "role": "LEGACY & influence: what it changed, who it influenced, why it matters to art history. Do NOT re-tell the scandal events (that's background).",
+        # 10-12 P1-9:原写法要「影响了谁/为何重要」,冷门件材料没有 → 模型写套话论断被闸删空
+        # (9-07 起 388 段挂起里 370 段删空)。A/B 30 件:发布 9→16、挂起 21→5、主动留空 9。
+        "role": (
+            "LEGACY & standing — ONLY what the MATERIAL explicitly states: what the work "
+            "changed, whom it influenced, how its reputation developed, its recognised status "
+            "(e.g. called the artist's masterpiece, a national treasure, among the most visited "
+            "works). Every claim must be traceable to the material. If the material states none "
+            "of this, return an EMPTY STRING for this section — do NOT infer influence from style "
+            "or period, and do NOT write generic praise ('pivotal', 'influenced countless "
+            "artists', 'enduring impact', 'reshaped art'). Do NOT re-tell the scandal events "
+            "(that's background)."
+        ),
         "max_chars": 240,
     },
     "facts": {

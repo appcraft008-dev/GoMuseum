@@ -207,3 +207,12 @@ def test_antiquity_decorative_arts_qids_map():
     assert category_for("Q1570005") == "manuscript"  # clay tablet
     # 长尾稀有类型仍 unknown(走 _FALLBACK 段落,宁缺毋滥)
     assert category_for("Q99999999") == DEFAULT_CATEGORY
+
+
+def test_significance_only_from_material_or_empty():
+    """10-12 P1-9:作品意义段只写材料明说的影响/地位,没有就留空——不许推断、不写套话。"""
+    from app.services.enrichment.category_config import SECTION_ROLES
+
+    role = SECTION_ROLES["significance"]["role"]
+    assert "ONLY what the MATERIAL explicitly states" in role
+    assert "EMPTY STRING" in role
