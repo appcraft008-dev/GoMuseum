@@ -357,7 +357,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _recognizeImage(XFile shot, {bool live = false}) async {
     _lastShotLive = live;
     setState(() => _captured = shot);
-    final benefits = ref.read(benefitsStateProvider.notifier);
     final lang = apiLanguage(ref.read(resolvedLocaleProvider));
     final mode = _labelMode ? 'label' : 'artwork';
     await ref
@@ -409,7 +408,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 扣费只能有一个执行点,那个点在后端(前端算额度=改客户端就能白嫖)。
     if (st is RecognitionMatched) {
       ref.invalidate(entitlementsProvider);
-      unawaited(benefits.refresh());
     }
     if (st is RecognitionMatched && mounted) {
       _goGuide(st.match.museum!, st.match.qid, // isValid 已保证有馆
