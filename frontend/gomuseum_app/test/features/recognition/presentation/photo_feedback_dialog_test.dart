@@ -7,6 +7,20 @@ import 'package:gomuseum_app/features/recognition/presentation/widgets/photo_fee
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 
 void main() {
+  group('photoFeedbackDeclined(10-12:误关不算拒绝)', () {
+    test('没勾就继续 = 拒绝,本次进程不再问', () {
+      expect(photoFeedbackDeclined(const PhotoFeedbackChoice(send: false)),
+          isTrue);
+    });
+    test('点外面/返回键关掉(null)不算拒绝,下次照常问', () {
+      expect(photoFeedbackDeclined(null), isFalse);
+    });
+    test('勾选发送不算拒绝', () {
+      expect(photoFeedbackDeclined(const PhotoFeedbackChoice(send: true)),
+          isFalse);
+    });
+  });
+
   // 1×1 透明 PNG
   final png = Uint8List.fromList(const [
     0x89,
