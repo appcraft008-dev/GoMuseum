@@ -453,7 +453,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     final choice = await showPhotoFeedbackDialog(context, photo: shot);
     if (choice == null || !choice.send) {
-      photoFeedbackDeclinedThisSession = true;
+      photoFeedbackDeclinedThisSession |= photoFeedbackDeclined(choice);
       return;
     }
     final labelText = st is RecognitionUnrecognized ? st.labelText : null;
