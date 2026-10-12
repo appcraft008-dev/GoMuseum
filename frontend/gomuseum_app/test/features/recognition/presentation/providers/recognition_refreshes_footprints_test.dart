@@ -76,12 +76,18 @@ class _CountingHistory implements HistoryRemoteDataSource {
   Future<void> deleteHistoryItem(String id) async {}
 }
 
+/// 每次 build/refresh 都是一次 GET /payment/benefits。
+int benefitsFetches = 0;
+
 class _StubBenefits extends BenefitsState {
   @override
-  FutureOr<UserBenefits> build() => UserBenefits.none();
+  FutureOr<UserBenefits> build() {
+    benefitsFetches++;
+    return UserBenefits.none();
+  }
 
   @override
-  Future<void> refresh() async {}
+  Future<void> refresh() async => benefitsFetches++;
 }
 
 const _item = {'qid': 'Q12418', 'title': 'Mona Lisa', 'museum': 'louvre'};
@@ -129,5 +135,21 @@ void main() {
         .confirmRecognition('Q12418');
     await Future<void>.delayed(Duration.zero);
     expect(h.fetches, 1);
+  });
+
+  /// 10-12 统计:benefits 两周 5600 次 ≈ 每次识别 4 次,而它的数据界面上没人读
+  /// (额度显示走 entitlementsProvider)。识别流程不该再碰它。
+  test('命中与点选确认都不拉 benefits', () async {
+    benefitsFetches = 0;
+    final (c, _) = await _setup({
+      'outcome': 'candidates',
+      'candidates': [_item],
+      'phash': 'abc',
+    });
+    await c
+        .read(recognitionNotifierProvider.notifier)
+        .confirmRecognition('Q12418');
+    await Future<void>.delayed(Duration.zero);
+    expect(benefitsFetches, 0);
   });
 }

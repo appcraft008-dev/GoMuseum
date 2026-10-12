@@ -199,9 +199,10 @@ class RecognitionNotifier extends _$RecognitionNotifier {
     if (fromSearch) return; // 没扣次:不用刷权益;足迹下次刷新时自然带上
     _refreshFootprints(); // 放在权益刷新之前:那边抛了不该连带足迹
     // 确认扣掉了 1 次额度，权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
+    // 不刷 benefitsStateProvider:界面上没人读它(额度显示走 entitlements),
+    // 它又是 autoDispose,read 一次就是一次 GET(10-12:每次识别 ~4 次)。
     ref.invalidate(entitlementsProvider);
     ref.invalidate(museumEntitlementsProvider);
-    await ref.read(benefitsStateProvider.notifier).refresh();
   }
 
   /// 命中 / 点选确认 = 后端多了一条足迹。足迹列表(足迹 tab + 首页「继续游览」)
