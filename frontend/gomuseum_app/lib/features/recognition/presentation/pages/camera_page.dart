@@ -385,7 +385,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
       unawaited(_retake());
       // 顺序要紧:先用当前权益判"已购未激活",再 invalidate ——
       // 反过来会把 `.value` 清成 null,那个分支永远命不中。
-      if (await _passActivatedIfPurchased(museum: st.museum)) return;
+      if (await _passActivatedIfPurchased(museum: st.museum)) {
+        // 刚撕开激活:同一张照片直接重识别,别让人再拍一次(2026-10-12 真机)。
+        // ponytail: 说明牌模式不重试 —— 它依赖已被 _retake 清掉的作品照片上下文。
+        if (mode == 'artwork' && mounted) {
+          await _recognizeImage(shot, live: live);
+        }
+        return;
+      }
       ref.invalidate(entitlementsProvider); // 客户端闸与后端不一致,重拉一次
       if (mounted) _showQuotaExhaustedSheet(passId: st.passId);
       return;
