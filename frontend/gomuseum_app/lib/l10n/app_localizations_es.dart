@@ -1238,4 +1238,8 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get guideNotThisOneNoted =>
       'Anotado. Prueba con otro ángulo o usa la búsqueda.';
+
+  @override
+  String get recMaybeNotCollected =>
+      'Las exposiciones temporales y algunas obras aún no están en nuestra colección. Prueba con la cartela junto a la obra o con la búsqueda.';
 }

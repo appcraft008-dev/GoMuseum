@@ -368,5 +368,6 @@
   "collectionViewGrid": "Als große Bilder anzeigen",
   "collectionViewList": "Als Liste anzeigen",
   "guideNotThisOne": "Nicht dieses Werk?",
-  "guideNotThisOneNoted": "Notiert. Versuchen Sie einen anderen Winkel oder nutzen Sie die Suche."
+  "guideNotThisOneNoted": "Notiert. Versuchen Sie einen anderen Winkel oder nutzen Sie die Suche.",
+  "recMaybeNotCollected": "Sonderausstellungen und manche Werke sind noch nicht erfasst. Versuchen Sie das Schild neben dem Werk oder die Suche."
 }

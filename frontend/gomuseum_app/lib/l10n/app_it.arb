@@ -368,5 +368,6 @@
   "collectionViewGrid": "Mostra come immagini grandi",
   "collectionViewList": "Mostra come elenco",
   "guideNotThisOne": "Non è questa?",
-  "guideNotThisOneNoted": "Annotato. Prova un'altra angolazione o usa la ricerca."
+  "guideNotThisOneNoted": "Annotato. Prova un'altra angolazione o usa la ricerca.",
+  "recMaybeNotCollected": "Le mostre temporanee e alcune opere non sono ancora nella nostra raccolta. Prova la didascalia accanto all'opera o la ricerca."
 }

@@ -368,5 +368,6 @@
   "collectionViewGrid": "大图显示",
   "collectionViewList": "列表显示",
   "guideNotThisOne": "不是这件？",
-  "guideNotThisOneNoted": "已记下。换个角度再拍一张，或用搜索找到它。"
+  "guideNotThisOneNoted": "已记下。换个角度再拍一张，或用搜索找到它。",
+  "recMaybeNotCollected": "临时展览和部分作品还没有收录。可以拍作品旁的说明牌，或者搜索试试。"
 }
