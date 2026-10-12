@@ -115,3 +115,17 @@ def test_detail_gallery_excludes_quarantined(session):
     urls = [i["url"] for i in d["images"]]
     assert any(u.endswith("v.jpg") for u in urls)
     assert not any(u.endswith("bad.jpg") for u in urls)
+
+
+def test_detail_gallery_excludes_recog_views(session):
+    """P1-8:画作补的他人实拍只用于识别,不进图集(用户 10-12 定)。"""
+    s, m = session
+    q = s.query(MuseumObject).filter_by(qid="Q1").one()
+    s.add(
+        ObjectImage(
+            object_id=q.id, role="recog_view", source_url="http://x/crowd.jpg", sort=1
+        )
+    )
+    s.commit()
+    d = museum_repo.get_object_content(s, "orsay", "Q1", "en")
+    assert not any(i["url"].endswith("crowd.jpg") for i in d["images"])

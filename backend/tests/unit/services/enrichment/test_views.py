@@ -10,7 +10,11 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
-from app.services.enrichment.views import add_view_images, fetch_view_urls
+from app.services.enrichment.views import (
+    add_recog_views,
+    add_view_images,
+    fetch_view_urls,
+)
 from app.services.object_importer import upsert_museum, upsert_object
 
 
@@ -174,3 +178,32 @@ def test_claim_without_datavalue_is_none():
 
     urls = fetch_view_urls("Q7", max_n=2, http_get=fake_get)
     assert urls == ["https://commons.wikimedia.org/wiki/Special:FilePath/A.jpg"]
+
+
+# ---- P1-8(10-12):画作补「只用于识别」的他人实拍(role=recog_view,不进图集) ----
+
+
+def test_recog_views_for_painting_up_to_max(session):
+    s, m = session
+    o = _make_obj(s, m, "painting", 1)
+    urls = [f"http://c/{i}.jpg" for i in range(12)]
+    n = add_recog_views(s, o, max_n=10, fetch=lambda qid, max_n: urls[:max_n])
+    s.commit()
+    rows = s.query(ObjectImage).filter_by(object_id=o.id, role="recog_view").all()
+    assert n == 10 and len(rows) == 10
+    assert sorted(r.sort for r in rows) == list(range(1, 11))
+
+
+def test_recog_views_idempotent_and_skip_known_urls(session):
+    s, m = session
+    o = _make_obj(s, m, "painting", 1)
+    urls = ["http://x/0.jpg", "http://c/a.jpg"]  # 第一张就是 primary 本尊
+    assert add_recog_views(s, o, fetch=lambda qid, max_n: urls) == 1
+    s.commit()
+    assert add_recog_views(s, o, fetch=lambda qid, max_n: urls) == 0
+
+
+def test_recog_views_need_primary(session):
+    s, m = session
+    o = _make_obj(s, m, "painting", 0)
+    assert add_recog_views(s, o, fetch=lambda qid, max_n: ["http://c/a.jpg"]) == 0

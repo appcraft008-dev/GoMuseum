@@ -11,7 +11,7 @@ import time
 from urllib.parse import quote
 
 from app.models.museum_object import ObjectImage
-from app.services.recognition.tiles import TILE_ROLE
+from app.services.recognition.tiles import RECOG_VIEW_ROLE, TILE_ROLE
 
 _UA = "GoMuseumEnrichment/1.0 (appcraft008@gmail.com)"
 _WD_API = "https://www.wikidata.org/w/api.php"
@@ -126,6 +126,36 @@ def add_view_images(db, obj, *, max_total: int = 5, fetch=None) -> int:
             continue
         db.add(
             ObjectImage(object_id=obj.id, role="view", source_url=url, sort=next_sort)
+        )
+        have.add(url)
+        next_sort += 1
+        inserted += 1
+    db.flush()
+    return inserted
+
+
+def add_recog_views(db, obj, *, max_n: int = 10, fetch=None) -> int:
+    """画作补 Commons 他人实拍作识别参考图(role=recog_view,不进图集),不限品类。
+    影子评估(10-12):36 幅必看画作补图后评测集直判对 114→117、弄坏 0。
+    入库闸(相似度 + 更像别的作品就隔离)在物化嵌入时执行。不 commit;返回新插行数。"""
+    images = db.query(ObjectImage).filter_by(object_id=obj.id).all()
+    if not (obj.qid or "").startswith("Q") or not any(
+        img.role == "primary" for img in images
+    ):
+        return 0
+    fetch = fetch or (lambda qid, max_n: fetch_view_urls(qid, max_n=max_n))
+    have = {img.source_url for img in images}
+    next_sort = max((img.sort or 0 for img in images), default=-1) + 1
+    inserted = 0
+    for url in fetch(obj.qid, max_n):
+        if inserted >= max_n:
+            break
+        if url in have:
+            continue
+        db.add(
+            ObjectImage(
+                object_id=obj.id, role=RECOG_VIEW_ROLE, source_url=url, sort=next_sort
+            )
         )
         have.add(url)
         next_sort += 1
