@@ -88,7 +88,7 @@ class HistoryState {
 ///
 /// **常驻(keepAlive)**:底部 tab 是普通 ShellRoute,切走页面就卸载;autoDispose 时
 /// 整份足迹跟着扔掉,切回来从空列表串行重拉全部页、全程转圈约 2 秒(2026-10-05 真机)。
-/// 常驻不会变旧:识别完成会主动 refresh(recognition_provider)、删除就地改 state、
+/// 常驻不会变旧:识别完成会主动 pullLatest(recognition_provider)、删除就地改 state、
 /// 换账号/切语言靠 build 里的 watch 重建,下拉仍可手动刷新。
 @Riverpod(keepAlive: true)
 class History extends _$History {
@@ -229,5 +229,28 @@ class History extends _$History {
 
   Future<void> refresh() async {
     await loadHistory();
+  }
+
+  /// 识别命中/确认后用:只拉最新一页,没见过的插到最前。原先每次识别都整份重拉
+  /// (~900 条 9 个请求),10-12 统计占 App 全部 API 请求 37%、一天 53.5MB。
+  /// 列表还在加载/续拉时走整份加载:在途那轮可能没带上新条目,混着插会错位。
+  Future<void> pullLatest() async {
+    if (state.isLoading || state.hasMore || state.items.isEmpty) {
+      return loadHistory();
+    }
+    final gen = _gen;
+    final result = await ref.read(getRecentHistoryUseCaseProvider)(
+        limit: 20, language: _lang);
+    if (gen != _gen) return; // 期间有整份加载,以它为准
+    result.fold((_) {}, (latest) {
+      final have = {for (final i in state.items) i.id};
+      final fresh = [
+        for (final i in latest)
+          if (!have.contains(i.id) && !_removed.contains(i.id)) i
+      ];
+      if (fresh.isNotEmpty) {
+        state = state.copyWith(items: [...fresh, ...state.items]);
+      }
+    });
   }
 }

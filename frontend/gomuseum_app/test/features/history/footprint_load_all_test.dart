@@ -206,4 +206,49 @@ void main() {
     expect(got, isNot(contains('e3')));
     expect(got.toSet(), {for (var i = 0; i < 164; i++) 'e$i'}..remove('e3'));
   });
+
+  /// 10-12 统计:识别后整份重拉占全部 API 请求 37%、一天 53.5MB → 只拉最新一页插到前面。
+  test('识别后只拉最新一页,新条目插到最前', () async {
+    final ds = _PagedDs(164);
+    final c = ProviderContainer(overrides: [
+      historyRemoteDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(historyProvider, (_, __) {});
+    for (var i = 0; i < 20 && c.read(historyProvider).isLoading; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    ds.ids.insert(0, 'new');
+    ds.calls = 0;
+    ds.limits.clear();
+    await c.read(historyProvider.notifier).pullLatest();
+    expect(ds.calls, 1);
+    expect(ds.limits.single, lessThanOrEqualTo(20));
+    final ids = c.read(historyProvider).items.map((i) => i.id).toList();
+    expect(ids.first, 'new');
+    expect(ids.length, 165);
+    expect(ids.toSet().length, 165, reason: '已有的不重复插入');
+  });
+
+  test('列表还在加载时 pullLatest 走整份加载(不和续拉错位)', () async {
+    final ds = _PagedDs(164)..gate = Completer<void>();
+    final c = ProviderContainer(overrides: [
+      historyRemoteDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ]);
+    addTearDown(c.dispose);
+    c.listen(historyProvider, (_, __) {});
+    for (var i = 0; i < 10; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    ds.ids.insert(0, 'new');
+    final done = c.read(historyProvider.notifier).pullLatest();
+    ds.gate!.complete();
+    await done;
+    final ids = c.read(historyProvider).items.map((i) => i.id).toList();
+    expect(ids.first, 'new');
+    expect(ids.toSet().length, 165);
+    expect(ids.length, 165);
+  });
 }
