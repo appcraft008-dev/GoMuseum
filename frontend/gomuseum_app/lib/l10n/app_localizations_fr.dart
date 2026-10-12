@@ -1238,4 +1238,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get collectionViewList => 'Afficher en liste';
+
+  @override
+  String get guideNotThisOne => 'Ce n\'est pas celle-ci ?';
+
+  @override
+  String get guideNotThisOneNoted =>
+      'C\'est noté. Essayez un autre angle, ou utilisez la recherche.';
+
+  @override
+  String get recMaybeNotCollected =>
+      'Les expositions temporaires et certaines œuvres ne sont pas encore dans notre collection. Essayez le cartel à côté de l\'œuvre, ou la recherche.';
 }

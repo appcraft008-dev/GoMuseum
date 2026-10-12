@@ -1220,4 +1220,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get collectionViewList => 'Show as list';
+
+  @override
+  String get guideNotThisOne => 'Not this one?';
+
+  @override
+  String get guideNotThisOneNoted =>
+      'Noted. Try another angle, or use search to find it.';
+
+  @override
+  String get recMaybeNotCollected =>
+      'Temporary exhibitions and some works aren\'t in our collection yet. Try the label next to the work, or search.';
 }

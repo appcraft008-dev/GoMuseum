@@ -260,6 +260,24 @@ def test_unconfirmed_candidates_are_not_footprints(client, db):
     assert names == ["自由引导人民"]
 
 
+def test_rejected_direct_match_is_not_a_footprint(client, db):
+    """直判后点了「不是这件?」(10-12):用户亲口说没看这件,不能还挂在足迹里。"""
+    _obj(db, "Q12418", title_zh="蒙娜丽莎")
+    _obj(db, "Q45585", title_zh="自由引导人民")
+    a = _register(client, "a@test.com")
+    me = _uid(db, "a@test.com")
+    ev = _event(db, me, "Q12418", minutes=1)
+    ev.rejected_qids = ["Q12418"]
+    db.commit()
+    _event(db, me, "Q45585", minutes=0)
+
+    names = [
+        i["artwork_name"]
+        for i in client.get("/api/v1/history/recent", headers=a).json()
+    ]
+    assert names == ["自由引导人民"]
+
+
 def test_missing_object_is_skipped(client, db):
     """目录里查无此 qid(下架/改馆)时跳过,不能 500,也不能给个空壳条目。"""
     a = _register(client, "a@test.com")

@@ -366,5 +366,8 @@
   "updateReady": "Hay una nueva versión lista",
   "updateRestart": "Reiniciar",
   "collectionViewGrid": "Ver como imágenes grandes",
-  "collectionViewList": "Ver como lista"
+  "collectionViewList": "Ver como lista",
+  "guideNotThisOne": "¿No es esta?",
+  "guideNotThisOneNoted": "Anotado. Prueba con otro ángulo o usa la búsqueda.",
+  "recMaybeNotCollected": "Las exposiciones temporales y algunas obras aún no están en nuestra colección. Prueba con la cartela junto a la obra o con la búsqueda."
 }

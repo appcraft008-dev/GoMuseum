@@ -357,7 +357,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _recognizeImage(XFile shot, {bool live = false}) async {
     _lastShotLive = live;
     setState(() => _captured = shot);
-    final benefits = ref.read(benefitsStateProvider.notifier);
     final lang = apiLanguage(ref.read(resolvedLocaleProvider));
     final mode = _labelMode ? 'label' : 'artwork';
     await ref
@@ -385,7 +384,14 @@ class _CameraPageState extends ConsumerState<CameraPage>
       unawaited(_retake());
       // 顺序要紧:先用当前权益判"已购未激活",再 invalidate ——
       // 反过来会把 `.value` 清成 null,那个分支永远命不中。
-      if (await _passActivatedIfPurchased(museum: st.museum)) return;
+      if (await _passActivatedIfPurchased(museum: st.museum)) {
+        // 刚撕开激活:同一张照片直接重识别,别让人再拍一次(2026-10-12 真机)。
+        // ponytail: 说明牌模式不重试 —— 它依赖已被 _retake 清掉的作品照片上下文。
+        if (mode == 'artwork' && mounted) {
+          await _recognizeImage(shot, live: live);
+        }
+        return;
+      }
       ref.invalidate(entitlementsProvider); // 客户端闸与后端不一致,重拉一次
       if (mounted) _showQuotaExhaustedSheet(passId: st.passId);
       return;
@@ -402,10 +408,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 扣费只能有一个执行点,那个点在后端(前端算额度=改客户端就能白嫖)。
     if (st is RecognitionMatched) {
       ref.invalidate(entitlementsProvider);
-      unawaited(benefits.refresh());
     }
     if (st is RecognitionMatched && mounted) {
-      _goGuide(st.match.museum!, st.match.qid); // isValid 已保证有馆
+      _goGuide(st.match.museum!, st.match.qid, // isValid 已保证有馆
+          rejectPhash: st.phash);
     }
   }
 
@@ -446,7 +452,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     final choice = await showPhotoFeedbackDialog(context, photo: shot);
     if (choice == null || !choice.send) {
-      photoFeedbackDeclinedThisSession = true;
+      photoFeedbackDeclinedThisSession |= photoFeedbackDeclined(choice);
       return;
     }
     final labelText = st is RecognitionUnrecognized ? st.labelText : null;
@@ -481,7 +487,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Future<void> _goGuide(String slug, String qid,
-      {bool fromSearch = false, String? queryText}) async {
+      {bool fromSearch = false, String? queryText, String? rejectPhash}) async {
     // S5 照片反馈(进详情页前问;判定见 photoFeedbackTriggerOnPick)
     final trigger = photoFeedbackTriggerOnPick(
       fromSearch: fromSearch,
@@ -520,6 +526,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       // 识别成功即自动播讲解:这是"保证送达的首体验",
       // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
       autoPlayAudio: !fromSearch,
+      rejectPhash: rejectPhash,
     );
     // 命中与选候选都 pushReplacement:返回一次就退出识别。候选原先 push 好让返回改选(S3),
     // 有了全屏比对后改选 ~2%,却每次要多退一层(10-10 用户定去掉)。
@@ -1061,6 +1068,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
     return [
       Text(label != null ? l10n.recNotInCatalog : l10n.recNotRecognized,
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      // 10-12 照片反馈:认不出的里约三成是临展作品,库里永远不会有 —— 说清楚,别让人以为坏了
+      const SizedBox(height: 6),
+      Text(l10n.recMaybeNotCollected,
+          style: GmText.sans(size: 12.5, color: gm.sub)),
       const SizedBox(height: 14),
       ..._fallbackChoices(gm, label),
     ];

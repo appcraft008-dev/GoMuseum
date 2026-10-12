@@ -36,7 +36,9 @@ def embed_image_row(
         # view 入库闸:primary 已有向量时先算相似度再决定 删/隔离/入库。
         # 纯自动无人审(spec ④);错杀极端角度由照片飞轮补回。
         # primary 向量尚不存在 → 照常嵌入(后续 vet CLI 兜底)。
-        if vet and row.role == "view":
+        from app.services.recognition.tiles import RECOG_VIEW_ROLE
+
+        if vet and row.role in ("view", RECOG_VIEW_ROLE):
             import numpy as np
 
             from app.models.museum_object import ObjectImage
@@ -68,6 +70,11 @@ def embed_image_row(
                 if sim < quarantine_below:
                     row.role = "view_quarantine"
                     return False
+                # Commons 分类混进别的作品(迦拿的婚礼分类里有「蒙娜丽莎前的人群」):
+                # 在现有索引里更像另一件 → 收进来会串号,隔离
+                if row.role == RECOG_VIEW_ROLE and _closer_to_other(db, row, vec, sim):
+                    row.role = "view_quarantine"
+                    return False
         db.add(
             ObjectEmbedding(
                 object_id=row.object_id,
@@ -80,3 +87,15 @@ def embed_image_row(
     except Exception:
         logger.exception("embed_image_row failed (image_id=%s)", row.id)
         return False
+
+
+def _closer_to_other(db, row, vec, own_sim: float) -> bool:
+    from app.models.museum_object import MuseumObject
+    from app.services.recognition import vector_index
+
+    own = db.query(MuseumObject.qid).filter_by(id=row.object_id).scalar()
+    for qid, score in vector_index.query_index(db, vec):
+        if qid != own:
+            return score > own_sim
+        return False  # 排第一的就是自己
+    return False

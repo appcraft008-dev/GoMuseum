@@ -80,7 +80,7 @@ def recompute_display(db: Session, museum_slug: str, *, traffic_days: int = 30) 
 
         n_scans = 0
         if obj.qid:
-            n_scans = (
+            evs = (
                 db.query(RecognitionEvent)
                 .filter(
                     RecognitionEvent.created_at >= since,
@@ -92,7 +92,13 @@ def recompute_display(db: Session, museum_slug: str, *, traffic_days: int = 30) 
                         RecognitionEvent.confirmed_qid == obj.qid,
                     ),
                 )
-                .count()
+                .all()
+            )
+            # 同 history._footprint_qid:直判后被「不是这件?」否定的不算
+            n_scans = sum(
+                1
+                for e in evs
+                if e.confirmed_qid == obj.qid or obj.qid not in (e.rejected_qids or [])
             )
 
         if n_scans:

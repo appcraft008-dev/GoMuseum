@@ -172,3 +172,51 @@ def test_view_gate_uses_current_model_thresholds(session, monkeypatch):
     assert embed_image_row(s, view, _tiny_png_bytes(), embedder=_fake(0.36)) is True
     s.commit()
     assert s.query(ObjectImage).filter_by(id=view.id).first().role == "view"
+
+
+# ---- recog_view(P1-8):同一道相似度闸 + 「更像另一件作品」就隔离 ----
+
+
+def _add_recog_view(s, o):
+    v = ObjectImage(
+        object_id=o.id, role="recog_view", source_url="http://x/r.jpg", sort=1
+    )
+    s.add(v)
+    s.commit()
+    return v
+
+
+def test_recog_view_mid_sim_quarantines(session):
+    s, o, img = session
+    _add_primary_embedding(s, o, img)
+    v = _add_recog_view(s, o)
+    assert embed_image_row(s, v, _tiny_png_bytes(), embedder=_fake(0.32)) is False
+    s.commit()
+    assert s.query(ObjectImage).filter_by(id=v.id).one().role == "view_quarantine"
+
+
+def test_recog_view_closer_to_other_work_quarantines(session, monkeypatch):
+    """《迦拿的婚礼》的 Commons 分类里混着「蒙娜丽莎前的人群」:收进来会把蒙娜丽莎认成迦拿。"""
+    s, o, img = session
+    _add_primary_embedding(s, o, img)
+    v = _add_recog_view(s, o)
+    monkeypatch.setattr(
+        "app.services.recognition.vector_index.query_index",
+        lambda db, vec, museum_id=None, visible=None: [("Q-other", 0.95), ("Q1", 0.9)],
+    )
+    assert embed_image_row(s, v, _tiny_png_bytes(), embedder=_fake(0.9)) is False
+    s.commit()
+    assert s.query(ObjectImage).filter_by(id=v.id).one().role == "view_quarantine"
+
+
+def test_recog_view_high_sim_own_top_embeds(session, monkeypatch):
+    s, o, img = session
+    _add_primary_embedding(s, o, img)
+    v = _add_recog_view(s, o)
+    monkeypatch.setattr(
+        "app.services.recognition.vector_index.query_index",
+        lambda db, vec, museum_id=None, visible=None: [("Q1", 0.9), ("Q-other", 0.5)],
+    )
+    assert embed_image_row(s, v, _tiny_png_bytes(), embedder=_fake(0.9)) is True
+    s.commit()
+    assert s.query(ObjectImage).filter_by(id=v.id).one().role == "recog_view"

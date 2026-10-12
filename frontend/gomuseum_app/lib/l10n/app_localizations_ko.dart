@@ -1178,4 +1178,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get collectionViewList => '목록으로 보기';
+
+  @override
+  String get guideNotThisOne => '이 작품이 아닌가요?';
+
+  @override
+  String get guideNotThisOneNoted => '기록했습니다. 다른 각도로 다시 찍거나 검색으로 찾아보세요.';
+
+  @override
+  String get recMaybeNotCollected =>
+      '특별전과 일부 작품은 아직 수록되지 않았습니다. 작품 옆 설명판을 찍거나 검색해 보세요.';
 }

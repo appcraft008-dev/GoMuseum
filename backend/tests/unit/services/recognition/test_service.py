@@ -106,12 +106,15 @@ class _FakeVQ:
         return self.returns[len(self.calls) - 1]
 
 
-def _vision(candidates=None, label=None):
-    def fake(image_b64, mode="artwork", complete=None):
+def _vision(candidates=None, label=None, pick=None, seen=None):
+    def fake(image_b64, mode="artwork", complete=None, shortlist=None):
+        if seen is not None:
+            seen["shortlist"] = shortlist
         return {
             "candidates": candidates or [],
             "label_text": label,
             "self_confidence": "medium",
+            "pick": pick,
         }
 
     return fake
@@ -170,7 +173,10 @@ def test_clear_runner_up_gap_still_matches(session):
 def test_museum_low_no_global_fallback(session):
     # 馆域调用向量 miss → 不回退全局(老 App 前向兼容:跨馆 qid = 404 死胡同),直落 GPT 链
     identify = _Counter(
-        _vision([{"title": "The Origin of the World", "artist": "Gustave Courbet"}])
+        _vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+            pick=1,  # P1-7:向量前 5 名里选中第 1 件
+        )
     )
     vq = _FakeVQ([("Q334138", 0.40)])  # top < LOW
     out = recognize(
@@ -286,7 +292,10 @@ def test_lowscore_crop_pyramid_high_hit_skips_gpt(session):
 
 def test_lowscore_crops_also_low_falls_to_gpt(session):
     identify = _Counter(
-        _vision([{"title": "The Origin of the World", "artist": "Gustave Courbet"}])
+        _vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+            pick=1,  # P1-7:向量前 5 名里选中第 1 件
+        )
     )
     vq = _FakeVQ([("Q334138", 0.50)], [("Q334138", 0.60)])  # 裁剪仍 < LOW
     crops = _Counter(_one_crop)
@@ -304,10 +313,52 @@ def test_lowscore_crops_also_low_falls_to_gpt(session):
     assert out["outcome"] == "candidates"
 
 
-def test_fullframe_ok_skips_crop_pyramid(session):
-    # 快路径:全帧已 ≥ LOW → 不跑金字塔(embed_crops_fn 不被调用)
+def _low_vector(session, identify):
+    return recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_canvas_fn=lambda b: None,
+        embed_crops_fn=lambda b: None,
+        vector_query_fn=_FakeVQ([("Q334138", 0.60), ("Q152509", 0.55)]),
+        identify_fn=identify,
+    )
+
+
+def test_low_vector_ai_picks_from_shortlist(session):
+    """P1-7(10-12):向量 <LOW 时前 5 名交给 AI 做选择题,选中的那件作唯一候选(不直判)。
+    AI 自由猜的名字(这里会文字匹配到 Q334138)不再出候选。"""
+    seen = {}
+    identify = _vision(
+        [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+        pick=2,
+        seen=seen,
+    )
+    out = _low_vector(session, identify)
+    assert [it["title"] for it in seen["shortlist"]] == [
+        "The Origin of the World",
+        "Luncheon on the Grass",
+    ]
+    assert out["outcome"] == "candidates"
+    assert [c["qid"] for c in out["candidates"]] == ["Q152509"]
+    ev = session.query(RecognitionEvent).one()
+    assert ev.text_trace["shortlist_pick"] == "Q152509"
+
+
+def test_low_vector_ai_picks_none_is_unrecognized(session):
+    identify = _vision(
+        [{"title": "The Origin of the World", "artist": "Gustave Courbet"}], pick=None
+    )
+    out = _low_vector(session, identify)
+    assert out["outcome"] == "unrecognized"
+    assert out["candidates"] == []
+
+
+def test_fullframe_high_skips_crop_pyramid(session):
+    # 快路径:全帧已 ≥ HIGH → 不跑金字塔(embed_crops_fn 不被调用)
     crops = _Counter(_one_crop)
-    vq = _FakeVQ([("Q334138", 0.80)])
+    vq = _FakeVQ([("Q334138", 0.90)])
     out = recognize(
         session,
         "orsay",
@@ -316,13 +367,40 @@ def test_fullframe_ok_skips_crop_pyramid(session):
         embed_crops_fn=crops,
         vector_query_fn=vq,
     )
-    assert crops.n == 0  # 快路径未变
-    assert out["outcome"] == "candidates"
+    assert crops.n == 0
+    assert out["outcome"] == "match"
+
+
+def test_candidate_band_runs_crop_pyramid_liberty_case(session):
+    # 10-12 真机《自由引导人民》:画框给错的作品 0.723(已 ≥LOW),只有金字塔能把
+    # 答案抬到 0.912。候选档(<HIGH)也要跑金字塔(评测集 6 张救回、0 张弄坏)
+    canvas, crops = _Counter(_one_crop), _Counter(_one_crop)
+    vq = _FakeVQ(
+        [("Q152509", 0.60)],
+        [("Q152509", 0.723)],
+        [("Q334138", 0.912), ("Q152509", 0.70)],
+    )
+    out = recognize(
+        session,
+        "orsay",
+        _jpeg(),
+        embed_fn=lambda b: "V",
+        embed_canvas_fn=canvas,
+        embed_crops_fn=crops,
+        vector_query_fn=vq,
+    )
+    assert canvas.n == 1 and crops.n == 1
+    assert out["outcome"] == "match"
+    assert out["match"]["qid"] == "Q334138"
+    assert session.query(RecognitionEvent).one().engine == "vector_crops"
 
 
 def test_crop_pyramid_failure_falls_to_gpt(session):
     identify = _Counter(
-        _vision([{"title": "The Origin of the World", "artist": "Gustave Courbet"}])
+        _vision(
+            [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+            pick=1,  # P1-7:向量前 5 名里选中第 1 件
+        )
     )
     vq = _FakeVQ([("Q334138", 0.50)])  # 全帧低分,裁剪失败后无二次查询
     out = recognize(
@@ -339,7 +417,7 @@ def test_crop_pyramid_failure_falls_to_gpt(session):
 
 
 def test_candidate_band_canvas_lifts_to_match(session):
-    # 画框挤占:全帧只到候选档(0.80)→ 画布候选重查命中 HIGH → match;已 ≥LOW 不跑金字塔
+    # 画框挤占:全帧只到候选档(0.80)→ 画布候选重查命中 HIGH → match;已 ≥HIGH 不跑金字塔
     canvas, crops = _Counter(_one_crop), _Counter(_one_crop)
     vq = _FakeVQ([("Q334138", 0.80)], [("Q334138", 0.90)])
     out = recognize(

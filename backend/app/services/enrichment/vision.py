@@ -52,11 +52,16 @@ def primary_image_url(db, obj) -> str | None:
     单图件,挑 primary 会把它们整批判成"无图"。
     """
     from app.models.museum_object import ObjectImage
+    from app.services.recognition.tiles import HIDDEN_ROLES
     from app.services.storage import get_object_storage
 
     img = (
         db.query(ObjectImage)
-        .filter(ObjectImage.object_id == obj.id, ObjectImage.image_key.isnot(None))
+        .filter(
+            ObjectImage.object_id == obj.id,
+            ObjectImage.image_key.isnot(None),
+            ObjectImage.role.notin_(HIDDEN_ROLES),  # 别拿识别切块/他人实拍去写外观描述
+        )
         .order_by(ObjectImage.sort.asc().nullslast())
         .first()
     )

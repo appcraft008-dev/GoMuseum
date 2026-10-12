@@ -9,6 +9,11 @@ import 'package:gomuseum_app/ui/gm/gm.dart';
 /// 本次 App 进程内用户拒绝过(没勾就继续)→ 不再问(spec ⑩)。进程重启即重置。
 bool photoFeedbackDeclinedThisSession = false;
 
+/// 这次回答算不算「拒绝」(置上面那个开关)。只有**没勾就继续**才算;
+/// 点外面/返回键关掉(null)不算 —— 连拍时手快误关一次就整段不再问(10-12 真机)。
+bool photoFeedbackDeclined(PhotoFeedbackChoice? choice) =>
+    choice != null && !choice.send;
+
 class PhotoFeedbackChoice {
   const PhotoFeedbackChoice({required this.send, this.text = ''});
   final bool send;

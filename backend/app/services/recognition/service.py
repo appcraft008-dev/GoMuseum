@@ -325,6 +325,47 @@ def _vector_out(db, storage, ranked: list, language: str) -> dict | None:
     return None
 
 
+def _shortlist(db, storage, ranked: list) -> list:
+    """向量前 5 → AI 选择题材料:标题/作者 + 参考缩略图(R2 自存副本;取不到就只给名字)。"""
+    import base64
+    from concurrent.futures import ThreadPoolExecutor
+
+    qids = [q for q, _ in ranked]
+    objs = {o.qid: o for o in db.query(MuseumObject).filter(MuseumObject.qid.in_(qids))}
+    keys = {}
+    rows = (
+        db.query(ObjectImage)
+        .filter(
+            ObjectImage.object_id.in_([o.id for o in objs.values()]),
+            ObjectImage.image_key.isnot(None),
+        )
+        .order_by(ObjectImage.role != "primary", ObjectImage.sort)
+    )
+    for img in rows:
+        keys.setdefault(img.object_id, img.image_key)
+
+    def thumb(qid):
+        o = objs.get(qid)
+        key = keys.get(o.id) if o else None
+        try:
+            b = storage.get(f"{key}_thumb.jpg") if key else None
+        except Exception:
+            b = None
+        return base64.b64encode(b).decode() if b else None
+
+    with ThreadPoolExecutor(5) as ex:
+        thumbs = list(ex.map(thumb, qids))
+    return [
+        {
+            "title": (o.title_en or o.title_zh or q) if o else q,
+            "artist": (o.artist_en or "") if o else "",
+            "thumb_b64": t,
+        }
+        for q, t in zip(qids, thumbs)
+        for o in [objs.get(q)]
+    ]
+
+
 class _StageClock:
     """识别分步计时(S1)。mark(name) 记「上一个打点到现在」的毫秒数。
     ponytail: 只记跑了的阶段,同名重复 mark 会覆盖——recognize() 里每个阶段只 mark 一次。"""
@@ -382,6 +423,7 @@ def _compute(
 
     out = None
     vis = None
+    shortlist_ranked: list = []  # 向量没决出时的前 5 名,交给 AI 做选择题(P1-7)
     engine = "none"  # 埋点:决出结果的档位
     # --- 向量前置(仅 artwork;label 纯转写直走 GPT 链) ---
     if mode == "artwork":
@@ -410,8 +452,9 @@ def _compute(
                     ranked = _merge(ranked, canvas)
                 clock.mark("canvas")
             # 全景式拍法(画占画面小)的对症药——实测 0.509→0.847;怼拍照片不受影响(快路径)。
-            # 已 ≥ LOW → 不跑金字塔。
-            if not ranked or ranked[0][1] < settings.RECOG_LOW:
+            # 未到 HIGH 就跑(10-12:原先 ≥LOW 就跳过,《自由引导人民》画框给错件 0.723 挡住了
+            # 金字塔的 0.912;评测集 recognition_photo_eval 救回 6 张、弄坏 0,候选档约 +0.85s)。
+            if not ranked or ranked[0][1] < settings.RECOG_HIGH:
                 crops = (embed_crops_fn or _default_embed_crops)(image_bytes)
                 if crops is not None:
                     crops_used = True
@@ -420,7 +463,9 @@ def _compute(
             ranked = _drop_hidden(db, ranked, visible)
             out = _vector_out(db, storage, ranked, language)
             clock.mark("vector_out")
-            if out is not None:
+            if out is None:
+                shortlist_ranked = ranked[:5]
+            else:
                 engine = (
                     "vector_crops"
                     if crops_used
@@ -436,7 +481,12 @@ def _compute(
         from app.services.recognition.vision import _shrink
 
         identify_fn = identify_fn or identify
-        vis = identify_fn(ImageService.to_base64(_shrink(image_bytes)), mode=mode)
+        extra = {}
+        if shortlist_ranked:
+            extra["shortlist"] = _shortlist(db, storage, shortlist_ranked)
+        vis = identify_fn(
+            ImageService.to_base64(_shrink(image_bytes)), mode=mode, **extra
+        )
         text_trace = {"vision": vis, "matched": []}
         clock.mark("gpt")
         queries = [c["title"] for c in vis["candidates"] if c.get("title")]
@@ -526,6 +576,23 @@ def _compute(
                 out["reason"] = "low_confidence"  # 有召回,但都不够门槛
             else:
                 out["reason"] = "not_in_catalog"
+        # P1-7(10-12 用户定):向量给了排名 → AI 在前 5 名里选中的那件取代自由猜名出候选
+        # (评测集:在库答案进候选 5→19/32,库外照片误给候选 15→22/59)。馆藏号直判仍优先。
+        if shortlist_ranked and out["outcome"] != "match":
+            pick = vis.get("pick")
+            pq, ps = shortlist_ranked[pick - 1] if pick else (None, None)
+            text_trace["shortlist"] = [q for q, _ in shortlist_ranked]
+            text_trace["shortlist_pick"] = pq
+            out["candidates"] = []
+            if pq:
+                o = db.query(MuseumObject).filter_by(qid=pq).one()
+                out["outcome"], out["reason"] = "candidates", None
+                out["candidates"] = [
+                    {**_summary(db, storage, o, language), "score": round(ps, 3)}
+                ]
+            else:
+                out["outcome"] = "unrecognized"
+                out["reason"] = out["reason"] or "low_confidence"
         clock.mark("match")
 
     if out["outcome"] == "unrecognized":  # 仅 GPT 链会到此,vis 必有值

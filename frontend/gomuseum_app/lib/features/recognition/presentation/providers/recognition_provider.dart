@@ -27,9 +27,12 @@ class RecognitionLoading extends RecognitionState {
 
 /// 命中：直接跳该 qid 详情。
 class RecognitionMatched extends RecognitionState {
-  const RecognitionMatched(this.match, this.slug);
+  const RecognitionMatched(this.match, this.slug, {this.phash});
   final RecognizedItem match;
   final String? slug;
+
+  /// 讲解页「不是这件?」上报否定用(10-12);老后端不给 → 不显示入口。
+  final String? phash;
 }
 
 /// 多候选：确认卡「是这件吗？」。
@@ -153,7 +156,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
       }
       state = switch (resp.outcome) {
         RecognizeOutcome.match when resp.match?.isValid == true =>
-          RecognitionMatched(resp.match!, slug),
+          RecognitionMatched(resp.match!, slug, phash: resp.phash),
         RecognizeOutcome.candidates when resp.candidates.isNotEmpty =>
           RecognitionCandidates(resp.candidates, resp.labelText, slug,
               phash: resp.phash, photoFeedback: resp.photoFeedback),
@@ -196,17 +199,18 @@ class RecognitionNotifier extends _$RecognitionNotifier {
     if (fromSearch) return; // 没扣次:不用刷权益;足迹下次刷新时自然带上
     _refreshFootprints(); // 放在权益刷新之前:那边抛了不该连带足迹
     // 确认扣掉了 1 次额度，权益缓存必须失效 —— 否则设置页还显示旧的剩余次数。
+    // 不刷 benefitsStateProvider:界面上没人读它(额度显示走 entitlements),
+    // 它又是 autoDispose,read 一次就是一次 GET(10-12:每次识别 ~4 次)。
     ref.invalidate(entitlementsProvider);
     ref.invalidate(museumEntitlementsProvider);
-    await ref.read(benefitsStateProvider.notifier).refresh();
   }
 
   /// 命中 / 点选确认 = 后端多了一条足迹。足迹列表(足迹 tab + 首页「继续游览」)
   /// 是常驻缓存,不在这里刷的话一直停在打开 App 那一刻(2026-10-02 真机报告:
-  /// 连拍几十件,两处都看不到)。用 refresh 而不是 invalidate:后者会先清空列表,
-  /// 首页那节闪没再出现。
+  /// 连拍几十件,两处都看不到)。不用 invalidate:会先清空列表,首页那节闪没再出现。
+  /// 只拉最新一页插到前面,不整份重拉(10-12:整份重拉占全部 API 请求 37%)。
   void _refreshFootprints() =>
-      unawaited(ref.read(historyProvider.notifier).refresh());
+      unawaited(ref.read(historyProvider.notifier).pullLatest());
 
   /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字），并把这组候选上报为被否定(S3)。
   void rejectCandidates() {

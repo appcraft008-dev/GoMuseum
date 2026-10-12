@@ -1170,6 +1170,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get collectionViewList => '列表显示';
+
+  @override
+  String get guideNotThisOne => '不是这件？';
+
+  @override
+  String get guideNotThisOneNoted => '已记下。换个角度再拍一张，或用搜索找到它。';
+
+  @override
+  String get recMaybeNotCollected => '临时展览和部分作品还没有收录。可以拍作品旁的说明牌，或者搜索试试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2338,4 +2347,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get collectionViewList => '列表顯示';
+
+  @override
+  String get guideNotThisOne => '不是這件？';
+
+  @override
+  String get guideNotThisOneNoted => '已記下。換個角度再拍一張，或用搜尋找到它。';
+
+  @override
+  String get recMaybeNotCollected => '臨時展覽和部分作品還沒有收錄。可以拍作品旁的說明牌，或者搜尋試試。';
 }

@@ -26,6 +26,7 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
 import 'package:gomuseum_app/features/feedback/presentation/widgets/feedback_sheet.dart';
+import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_question_list.dart';
@@ -33,6 +34,7 @@ import 'package:gomuseum_app/features/guide/presentation/widgets/guide_deep_shee
 import 'package:gomuseum_app/features/guide/presentation/widgets/image_gallery.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/recognition/domain/entities/recognition_result.dart';
+import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -59,6 +61,7 @@ class GuideArgs {
     this.slug,
     this.qid,
     this.autoPlayAudio = false,
+    this.rejectPhash,
   }) : assert(
           (slug != null && qid != null) || result != null,
           'GuideArgs 需提供 (slug+qid) 或 result 其中一种',
@@ -78,6 +81,10 @@ class GuideArgs {
 
   /// 藏品 qid（馆藏列表流程）
   final String? qid;
+
+  /// 直判进来时带识别照片的 phash → 显示「不是这件?」(10-12)。
+  /// 候选里自己点选的不给:那是用户确认过的。
+  final String? rejectPhash;
 
   /// 识别成功后**自动播放**主讲解。
   ///
@@ -349,6 +356,9 @@ class _GuidePageState extends ConsumerState<GuidePage>
                 onToggleFacts: () =>
                     setState(() => _factsExpanded = !_factsExpanded),
                 autoPlayAudio: widget.args.autoPlayAudio,
+                onNotThisOne: widget.args.rejectPhash == null
+                    ? null
+                    : () => _notThisOne(context, widget.args.rejectPhash!, qid),
               ),
             ),
           );
@@ -375,6 +385,23 @@ class _GuidePageState extends ConsumerState<GuidePage>
         );
       },
     );
+  }
+
+  /// 「不是这件?」(10-12):上报否定(后端据此不算足迹、算直判准确率)→ 回相机重拍。
+  /// 用户定:先不退次数,只记录。
+  void _notThisOne(BuildContext context, String phash, String qid) {
+    // 本页马上被替换:回调里 ref 已不能用,先拿容器
+    final container = ProviderScope.containerOf(context, listen: false);
+    unawaited(container
+        .read(recognitionRemoteDataSourceProvider)
+        .reject(phash: phash, qids: [qid])
+        // 足迹里那条错的随后端判据消失;否定是低频操作,整份重拉无妨
+        .then((_) => container.read(historyProvider.notifier).refresh())
+        .catchError((_) {}));
+    final messenger = ScaffoldMessenger.of(context);
+    final noted = AppLocalizations.of(context)!.guideNotThisOneNoted;
+    context.pushReplacement('/camera');
+    messenger.showSnackBar(SnackBar(content: Text(noted)));
   }
 
   void _goBack(BuildContext context) {
@@ -1210,6 +1237,7 @@ class _A5Body extends StatelessWidget {
     required this.factsExpanded,
     required this.onToggleFacts,
     this.autoPlayAudio = false,
+    this.onNotThisOne,
   });
 
   final ObjectContent content;
@@ -1226,6 +1254,9 @@ class _A5Body extends StatelessWidget {
   /// 识别路径进来 → 自动播主讲解(见 GuideArgs.autoPlayAudio)。
   final bool autoPlayAudio;
 
+  /// 非空 = 直判进来,墙签上方显示「不是这件?」(见 GuideArgs.rejectPhash)。
+  final VoidCallback? onNotThisOne;
+
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
@@ -1237,6 +1268,20 @@ class _A5Body extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (onNotThisOne != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onNotThisOne,
+                style: TextButton.styleFrom(
+                  foregroundColor: gm.sub,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: Text(l10n.guideNotThisOne,
+                    style: GmText.sans(size: 12.5, color: gm.sub)),
+              ),
+            ),
           _WallLabel(facts: content.facts),
           const SizedBox(height: 8),
           Container(height: 1, color: gm.line),

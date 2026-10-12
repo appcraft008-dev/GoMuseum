@@ -2224,6 +2224,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show as list'**
   String get collectionViewList;
+
+  /// Link on the guide page after a direct recognition match: the user says the match is wrong
+  ///
+  /// In en, this message translates to:
+  /// **'Not this one?'**
+  String get guideNotThisOne;
+
+  /// Snackbar after tapping 'Not this one?', back on the camera
+  ///
+  /// In en, this message translates to:
+  /// **'Noted. Try another angle, or use search to find it.'**
+  String get guideNotThisOneNoted;
+
+  /// Hint under 'not recognized' title: temporary exhibitions are never in the catalog
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary exhibitions and some works aren\'t in our collection yet. Try the label next to the work, or search.'**
+  String get recMaybeNotCollected;
 }
 
 class _AppLocalizationsDelegate
