@@ -1231,4 +1231,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get collectionViewList => 'Pokaż jako listę';
+
+  @override
+  String get guideNotThisOne => 'To nie to dzieło?';
+
+  @override
+  String get guideNotThisOneNoted =>
+      'Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania.';
 }

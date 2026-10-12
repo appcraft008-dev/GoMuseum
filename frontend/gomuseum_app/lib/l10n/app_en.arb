@@ -337,22 +337,36 @@
   "recCandidatesTitle": "Is this the one?",
   "recNoneOfThese": "None of these",
   "recThisIsIt": "This is it",
-  "@recThisIsIt": {"description": "Button in the full-screen candidate viewer: pick this candidate"},
+  "@recThisIsIt": {
+    "description": "Button in the full-screen candidate viewer: pick this candidate"
+  },
   "recNotRecognized": "Couldn't recognize this work",
   "recNotInCatalog": "This work isn't in our guide yet",
   "recShootLabelBtn": "Photograph the wall label",
   "recTypeNumberOrName": "Type the number or title",
-  "@recTypeNumberOrName": {"description": "Primary button on the not-recognized choice card: type the inventory number or the title from the wall label"},
+  "@recTypeNumberOrName": {
+    "description": "Primary button on the not-recognized choice card: type the inventory number or the title from the wall label"
+  },
   "photoFbTitle": "Send us this photo?",
-  "@photoFbTitle": {"description": "Photo feedback dialog title (S5): ask the user whether to send the artwork photo"},
+  "@photoFbTitle": {
+    "description": "Photo feedback dialog title (S5): ask the user whether to send the artwork photo"
+  },
   "photoFbBody": "Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.",
-  "@photoFbBody": {"description": "Photo feedback dialog purpose line. Must keep both promises: kept at most 90 days, never shown publicly"},
+  "@photoFbBody": {
+    "description": "Photo feedback dialog purpose line. Must keep both promises: kept at most 90 days, never shown publicly"
+  },
   "photoFbConsent": "Send this photo",
-  "@photoFbConsent": {"description": "Checkbox label, unchecked by default"},
+  "@photoFbConsent": {
+    "description": "Checkbox label, unchecked by default"
+  },
   "photoFbNoteHint": "Add a note (optional)",
-  "@photoFbNoteHint": {"description": "Optional note field hint"},
+  "@photoFbNoteHint": {
+    "description": "Optional note field hint"
+  },
   "photoFbContinue": "Continue",
-  "@photoFbContinue": {"description": "The only button: continue regardless of the checkbox"},
+  "@photoFbContinue": {
+    "description": "The only button: continue regardless of the checkbox"
+  },
   "recSearchWithLabel": "Search using this text",
   "recShootLabelHint": "Museum labels show the title and artist — snap it and we can identify the work",
   "recViewfinderLabelHint": "Aim at the label text, fill the frame",
@@ -381,9 +395,13 @@
   "camRecognizing": "Recognizing…",
   "camComparing": "AI is comparing with collections and public art databases",
   "recWaitSlow": "Taking a bit longer than usual — still looking",
-  "@recWaitSlow": {"description": "Recognition loading hint shown after ~10s"},
+  "@recWaitSlow": {
+    "description": "Recognition loading hint shown after ~10s"
+  },
   "recWaitSwitchApp": "You can switch to another app — the result will be here when you come back",
-  "@recWaitSwitchApp": {"description": "Recognition loading hint shown after ~20s; promises only switching apps, not leaving the page"},
+  "@recWaitSwitchApp": {
+    "description": "Recognition loading hint shown after ~20s; promises only switching apps, not leaving the page"
+  },
   "camConfirmPrompt": "Recognition done, please confirm the work",
   "camConfidence": "Confidence",
   "camConfirmStart": "Confirm & start guide",
@@ -696,10 +714,24 @@
     "description": "同意声明里的「隐私政策」;单独一个键是因为有的语言要变格(pl 宾格 Politykę)"
   },
   "updateReady": "A new version is ready",
-  "@updateReady": {"description": "应用内更新下载完成后的底部提示"},
+  "@updateReady": {
+    "description": "应用内更新下载完成后的底部提示"
+  },
   "updateRestart": "Restart",
   "collectionViewGrid": "Show as large images",
-  "@collectionViewGrid": {"description": "馆藏目录视图切换按钮的无障碍标签(切到大图网格)"},
+  "@collectionViewGrid": {
+    "description": "馆藏目录视图切换按钮的无障碍标签(切到大图网格)"
+  },
   "collectionViewList": "Show as list",
-  "@collectionViewList": {"description": "馆藏目录视图切换按钮的无障碍标签(切到列表)"}
+  "@collectionViewList": {
+    "description": "馆藏目录视图切换按钮的无障碍标签(切到列表)"
+  },
+  "guideNotThisOne": "Not this one?",
+  "guideNotThisOneNoted": "Noted. Try another angle, or use search to find it.",
+  "@guideNotThisOne": {
+    "description": "Link on the guide page after a direct recognition match: the user says the match is wrong"
+  },
+  "@guideNotThisOneNoted": {
+    "description": "Snackbar after tapping 'Not this one?', back on the camera"
+  }
 }

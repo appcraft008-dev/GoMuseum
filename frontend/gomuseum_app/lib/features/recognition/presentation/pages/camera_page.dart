@@ -412,7 +412,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
       unawaited(benefits.refresh());
     }
     if (st is RecognitionMatched && mounted) {
-      _goGuide(st.match.museum!, st.match.qid); // isValid 已保证有馆
+      _goGuide(st.match.museum!, st.match.qid, // isValid 已保证有馆
+          rejectPhash: st.phash);
     }
   }
 
@@ -488,7 +489,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   Future<void> _goGuide(String slug, String qid,
-      {bool fromSearch = false, String? queryText}) async {
+      {bool fromSearch = false, String? queryText, String? rejectPhash}) async {
     // S5 照片反馈(进详情页前问;判定见 photoFeedbackTriggerOnPick)
     final trigger = photoFeedbackTriggerOnPick(
       fromSearch: fromSearch,
@@ -527,6 +528,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       // 识别成功即自动播讲解:这是"保证送达的首体验",
       // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
       autoPlayAudio: !fromSearch,
+      rejectPhash: rejectPhash,
     );
     // 命中与选候选都 pushReplacement:返回一次就退出识别。候选原先 push 好让返回改选(S3),
     // 有了全屏比对后改选 ~2%,却每次要多退一层(10-10 用户定去掉)。

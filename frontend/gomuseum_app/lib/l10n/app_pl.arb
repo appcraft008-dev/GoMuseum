@@ -366,5 +366,7 @@
   "updateReady": "Nowa wersja jest gotowa",
   "updateRestart": "Uruchom ponownie",
   "collectionViewGrid": "Pokaż jako duże obrazy",
-  "collectionViewList": "Pokaż jako listę"
+  "collectionViewList": "Pokaż jako listę",
+  "guideNotThisOne": "To nie to dzieło?",
+  "guideNotThisOneNoted": "Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania."
 }

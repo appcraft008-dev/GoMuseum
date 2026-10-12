@@ -366,5 +366,7 @@
   "updateReady": "새 버전이 준비되었습니다",
   "updateRestart": "다시 시작",
   "collectionViewGrid": "큰 이미지로 보기",
-  "collectionViewList": "목록으로 보기"
+  "collectionViewList": "목록으로 보기",
+  "guideNotThisOne": "이 작품이 아닌가요?",
+  "guideNotThisOneNoted": "기록했습니다. 다른 각도로 다시 찍거나 검색으로 찾아보세요."
 }

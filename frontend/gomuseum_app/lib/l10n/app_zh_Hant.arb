@@ -366,5 +366,7 @@
   "updateReady": "新版本已下載",
   "updateRestart": "重新啟動",
   "collectionViewGrid": "大圖顯示",
-  "collectionViewList": "列表顯示"
+  "collectionViewList": "列表顯示",
+  "guideNotThisOne": "不是這件？",
+  "guideNotThisOneNoted": "已記下。換個角度再拍一張，或用搜尋找到它。"
 }

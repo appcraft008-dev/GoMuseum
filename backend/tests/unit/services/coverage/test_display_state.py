@@ -101,6 +101,21 @@ def test_no_evidence_is_unknown(session):
     assert obj.attributes["display"]["status"] == "UNKNOWN"
 
 
+def test_rejected_direct_match_is_not_evidence(session):
+    """直判后点了「不是这件?」(10-12):与足迹同一判据,不算在展证据。"""
+    s, m = session
+    upsert_object(s, m.id, {"qid": "Q1", "title_en": "A"})
+    s.commit()
+    _event(s, "Q1", days_ago=1)
+    ev = s.query(RecognitionEvent).one()
+    ev.rejected_qids = ["Q1"]
+    s.commit()
+
+    counts = recompute_display(s, "orsay")
+
+    assert counts == {"confirmed": 0, "likely": 0, "unknown": 1}
+
+
 def test_stale_event_outside_window_not_confirmed(session):
     """用例4: 事件在 40 天前(超30天窗) → 不算 confirmed(落到 UNKNOWN)。"""
     s, m = session

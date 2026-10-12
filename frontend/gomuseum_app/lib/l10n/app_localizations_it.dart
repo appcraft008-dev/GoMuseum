@@ -1228,4 +1228,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get collectionViewList => 'Mostra come elenco';
+
+  @override
+  String get guideNotThisOne => 'Non è questa?';
+
+  @override
+  String get guideNotThisOneNoted =>
+      'Annotato. Prova un\'altra angolazione o usa la ricerca.';
 }
