@@ -26,7 +26,12 @@ def test_identify_parses_candidates_and_label():
 
 def test_identify_bad_json_returns_empty_not_raise():
     out = identify("b64data", complete=lambda s, u: "not json at all")
-    assert out == {"candidates": [], "label_text": None, "self_confidence": "low"}
+    assert out == {
+        "candidates": [],
+        "label_text": None,
+        "self_confidence": "low",
+        "pick": None,
+    }
 
 
 def test_identify_exception_returns_empty_not_raise():
@@ -177,3 +182,49 @@ def test_label_mode_uses_gpt4o_high_detail(monkeypatch):
     vision.identify("b64", mode="label")
     vision.identify("b64", mode="artwork")
     assert seen == [("gpt-4o", "high"), ("gpt-4o-mini", None)]
+
+
+# ---- P1-7(10-12):向量低分时 AI 在向量前 5 名里选 ----
+
+_SHORT = [
+    {"title": "Olympia", "artist": "Édouard Manet", "thumb_b64": "T1"},
+    {"title": "The Ray", "artist": "Chardin", "thumb_b64": None},
+]
+
+
+def test_shortlist_sent_as_numbered_list_with_reference_images():
+    seen = {}
+
+    def fake(system, user_content):
+        seen["system"], seen["content"] = system, user_content
+        return json.dumps({"candidates": [], "pick": 2})
+
+    out = identify("b64data", complete=fake, shortlist=_SHORT)
+    texts = " ".join(c["text"] for c in seen["content"] if c["type"] == "text")
+    assert "1. Olympia — Édouard Manet" in texts and "2. The Ray — Chardin" in texts
+    urls = [c["image_url"]["url"] for c in seen["content"] if c["type"] == "image_url"]
+    assert urls == ["data:image/jpeg;base64,b64data", "data:image/jpeg;base64,T1"]
+    assert "pick" in seen["system"]
+    assert out["pick"] == 2
+
+
+def test_pick_out_of_range_or_garbage_is_none():
+    for raw in [0, 3, "x", None, "null"]:
+        out = identify(
+            "b64data",
+            complete=lambda s, u, raw=raw: json.dumps({"candidates": [], "pick": raw}),
+            shortlist=_SHORT,
+        )
+        assert out["pick"] is None, raw
+
+
+def test_no_shortlist_no_pick_and_prompt_unchanged():
+    seen = {}
+
+    def fake(system, user_content):
+        seen["system"] = system
+        return json.dumps({"candidates": [], "pick": 1})
+
+    out = identify("b64data", complete=fake)
+    assert out["pick"] is None
+    assert "pick" not in seen["system"]
