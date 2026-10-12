@@ -20,7 +20,9 @@ from app.models.museum_object import ObjectImage
 
 TILE_ROLE = "tile"
 # 不进图集/分享的 role
-HIDDEN_ROLES = ("view_quarantine", TILE_ROLE)
+# 画作补的他人实拍(画框/人群/书页扫描):只进识别索引,不进图集/分享(P1-8,用户 10-12 定)
+RECOG_VIEW_ROLE = "recog_view"
+HIDDEN_ROLES = ("view_quarantine", TILE_ROLE, RECOG_VIEW_ROLE)
 TILE_MIN_RATIO = 2.0  # 长短边比 ≥ 此值才切
 _SORT_BASE = 1000  # 排在所有展示图之后(按 sort 取首图的地方不会取到 tile)
 _JPEG_QUALITY = 82

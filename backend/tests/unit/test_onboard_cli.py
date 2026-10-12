@@ -45,3 +45,10 @@ def test_images_step_tiles_wide_artworks(monkeypatch):
     )
     onboard.cmd_images("orangerie", None, "staging")
     assert calls == ["orangerie"]
+
+
+def test_recog_views_subcommand_parses_qids():
+    from scripts.onboard import build_parser
+
+    ns = build_parser().parse_args(["recog-views", "--qids", "Q12418,Q29530"])
+    assert ns.command == "recog-views" and ns.qids == "Q12418,Q29530" and ns.max == 10

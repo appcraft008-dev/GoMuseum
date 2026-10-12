@@ -103,6 +103,9 @@ def build_parser() -> argparse.ArgumentParser:
     vw = sub.add_parser("views")  # 雕塑多视角补图(Commons 参考图,物化时嵌入)
     vw.add_argument("--museum", required=True)
     vw.add_argument("--max", type=int, default=4)
+    rv = sub.add_parser("recog-views")  # 画作补他人实拍,只用于识别(P1-8)
+    rv.add_argument("--qids", required=True, help="逗号分隔")
+    rv.add_argument("--max", type=int, default=10)
     de = sub.add_parser(
         "display-evidence"
     )  # Joconde 展陈证据(法国馆:P347→localisation)
@@ -413,6 +416,28 @@ def cmd_images(slug: str, limit: int | None, target: str) -> None:
     tile_museum(slug)
 
 
+def cmd_recog_views(qids: list[str], max_n: int) -> None:
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.views import add_recog_views
+
+    db = SessionLocal()
+    try:
+        total = 0
+        for qid in qids:
+            o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+            if o is None:
+                print(f"  {qid}: 库里没有,跳过")
+                continue
+            n = add_recog_views(db, o, max_n=max_n)
+            db.commit()  # 逐件落盘
+            total += n
+            print(f"  {qid}: +{n} recog_view")
+        print(f"✓ recog-views 完成: {len(qids)} 件, 共新增 {total} 行")
+        print("↳ 下一步跑 `images` 物化(下载→R2→嵌入+入库闸)")
+    finally:
+        db.close()
+
+
 def cmd_views(museum: str, max_n: int) -> None:
     from app.models.museum import Museum
     from app.models.museum_object import MuseumObject
@@ -622,6 +647,8 @@ def main(argv=None) -> None:
         cmd_images(ns.slug, ns.limit, ns.target)
     elif ns.command == "views":
         cmd_views(ns.museum, ns.max)
+    elif ns.command == "recog-views":
+        cmd_recog_views([q.strip() for q in ns.qids.split(",") if q.strip()], ns.max)
     elif ns.command == "display-evidence":
         cmd_display_evidence(ns.museum, ns.limit)
     elif ns.command == "intro":
