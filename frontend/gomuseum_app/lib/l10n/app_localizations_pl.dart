@@ -1238,4 +1238,8 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get guideNotThisOneNoted =>
       'Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania.';
+
+  @override
+  String get recMaybeNotCollected =>
+      'Wystaw czasowych i części dzieł jeszcze nie mamy. Spróbuj zrobić zdjęcie opisu obok dzieła albo wyszukać.';
 }

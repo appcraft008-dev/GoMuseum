@@ -368,5 +368,6 @@
   "collectionViewGrid": "大きな画像で表示",
   "collectionViewList": "リストで表示",
   "guideNotThisOne": "この作品ではない？",
-  "guideNotThisOneNoted": "記録しました。角度を変えて撮り直すか、検索で探してください。"
+  "guideNotThisOneNoted": "記録しました。角度を変えて撮り直すか、検索で探してください。",
+  "recMaybeNotCollected": "企画展や一部の作品はまだ収録されていません。作品横の解説パネルを撮るか、検索してみてください。"
 }

@@ -368,5 +368,6 @@
   "collectionViewGrid": "Pokaż jako duże obrazy",
   "collectionViewList": "Pokaż jako listę",
   "guideNotThisOne": "To nie to dzieło?",
-  "guideNotThisOneNoted": "Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania."
+  "guideNotThisOneNoted": "Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania.",
+  "recMaybeNotCollected": "Wystaw czasowych i części dzieł jeszcze nie mamy. Spróbuj zrobić zdjęcie opisu obok dzieła albo wyszukać."
 }

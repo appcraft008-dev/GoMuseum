@@ -1241,4 +1241,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get guideNotThisOneNoted =>
       'Notiert. Versuchen Sie einen anderen Winkel oder nutzen Sie die Suche.';
+
+  @override
+  String get recMaybeNotCollected =>
+      'Sonderausstellungen und manche Werke sind noch nicht erfasst. Versuchen Sie das Schild neben dem Werk oder die Suche.';
 }

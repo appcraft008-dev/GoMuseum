@@ -1182,4 +1182,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guideNotThisOneNoted => '記録しました。角度を変えて撮り直すか、検索で探してください。';
+
+  @override
+  String get recMaybeNotCollected =>
+      '企画展や一部の作品はまだ収録されていません。作品横の解説パネルを撮るか、検索してみてください。';
 }

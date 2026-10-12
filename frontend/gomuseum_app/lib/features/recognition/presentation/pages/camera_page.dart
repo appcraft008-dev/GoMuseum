@@ -1070,6 +1070,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
     return [
       Text(label != null ? l10n.recNotInCatalog : l10n.recNotRecognized,
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+      // 10-12 照片反馈:认不出的里约三成是临展作品,库里永远不会有 —— 说清楚,别让人以为坏了
+      const SizedBox(height: 6),
+      Text(l10n.recMaybeNotCollected,
+          style: GmText.sans(size: 12.5, color: gm.sub)),
       const SizedBox(height: 14),
       ..._fallbackChoices(gm, label),
     ];

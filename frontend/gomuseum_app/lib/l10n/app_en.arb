@@ -733,5 +733,9 @@
   },
   "@guideNotThisOneNoted": {
     "description": "Snackbar after tapping 'Not this one?', back on the camera"
+  },
+  "recMaybeNotCollected": "Temporary exhibitions and some works aren't in our collection yet. Try the label next to the work, or search.",
+  "@recMaybeNotCollected": {
+    "description": "Hint under 'not recognized' title: temporary exhibitions are never in the catalog"
   }
 }
