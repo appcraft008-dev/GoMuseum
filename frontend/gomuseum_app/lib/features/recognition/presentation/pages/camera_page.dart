@@ -79,10 +79,8 @@ String? photoFeedbackTriggerOnPick({
 
 /// S5:点「重新拍摄」时 —— 只有在选择页上放弃这张照片才算「最终没找到」。
 @visibleForTesting
-String? photoFeedbackTriggerOnRetake({
-  required bool reachedChoice,
-  required bool onChoicePage,
-}) =>
+String? photoFeedbackTriggerOnRetake(
+        {required bool reachedChoice, required bool onChoicePage}) =>
     reachedChoice && onChoicePage ? 'not_found' : null;
 
 /// 相机页允许的方向。手机(最短边 <600dp)锁竖屏:横屏时竖屏布局被整个转过来,
@@ -95,11 +93,8 @@ List<DeviceOrientation> cameraOrientations(Size logicalScreen) =>
         : const [];
 
 @visibleForTesting
-bool shouldRestartCamera(
-  AppLifecycleState state, {
-  required bool hasController,
-  bool isTopRoute = true,
-}) =>
+bool shouldRestartCamera(AppLifecycleState state,
+        {required bool hasController, bool isTopRoute = true}) =>
     state == AppLifecycleState.resumed && !hasController && isTopRoute;
 
 class _CameraPageState extends ConsumerState<CameraPage>
@@ -141,8 +136,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     WidgetsBinding.instance.addObserver(this);
     final view = WidgetsBinding.instance.platformDispatcher.views.first;
     SystemChrome.setPreferredOrientations(
-      cameraOrientations(view.physicalSize / view.devicePixelRatio),
-    );
+        cameraOrientations(view.physicalSize / view.devicePixelRatio));
     _initCamera();
     _loadRecentAssets();
     // 进入识别页时重置上一次识别状态
@@ -193,8 +187,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         setState(
-          () => _cameraError = AppLocalizations.of(context)!.camNoCamera,
-        );
+            () => _cameraError = AppLocalizations.of(context)!.camNoCamera);
         return;
       }
       final back = cameras.firstWhere(
@@ -239,10 +232,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
         _zoom = 1.0.clamp(min, max); // 相机重启回到 1×
       });
     } on CameraException catch (e) {
-      setState(
-        () => _cameraError =
-            e.description ?? AppLocalizations.of(context)!.camInitFailed,
-      );
+      setState(() => _cameraError =
+          e.description ?? AppLocalizations.of(context)!.camInitFailed);
     } finally {
       _initializing = false;
     }
@@ -252,14 +243,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive) {
       _releaseCamera();
-    } else if (shouldRestartCamera(
-      state,
-      hasController: _controller != null,
-      // S4:搜索结果进详情页是 push,相机页还在栈里;详情页在上时回前台不能在底下重开相机。
-      // 前提:/camera 与 /guide 同在根 Navigator(ShellRoute 外)——相机挪进
-      // shell/嵌套 Navigator 时这个判断要重查。
-      isTopRoute: ModalRoute.of(context)?.isCurrent ?? true,
-    )) {
+    } else if (shouldRestartCamera(state,
+        hasController: _controller != null,
+        // S4:搜索结果进详情页是 push,相机页还在栈里;详情页在上时回前台不能在底下重开相机。
+        // 前提:/camera 与 /guide 同在根 Navigator(ShellRoute 外)——相机挪进
+        // shell/嵌套 Navigator 时这个判断要重查。
+        isTopRoute: ModalRoute.of(context)?.isCurrent ?? true)) {
       _initCamera();
     }
   }
@@ -430,10 +419,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _retake() async {
     // 选择页上放弃这张照片 = 「最终没找到」(S5 触发 ②)
     final trigger = photoFeedbackTriggerOnRetake(
-      reachedChoice: _reachedChoice,
-      onChoicePage:
-          ref.read(recognitionNotifierProvider) is RecognitionUnrecognized,
-    );
+        reachedChoice: _reachedChoice,
+        onChoicePage:
+            ref.read(recognitionNotifierProvider) is RecognitionUnrecognized);
     if (trigger != null) {
       await _maybeAskPhoto(trigger);
       if (!mounted) return;
@@ -452,12 +440,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
 
   /// S5 照片反馈。服务端开关关着、本进程已拒绝过、没有作品照片 → 不弹,直接返回。
   /// 不勾不分叉:无论选什么,调用方之后的流程完全一样;上传在后台,不 await。
-  Future<void> _maybeAskPhoto(
-    String trigger, {
-    String? answerQid,
-    String? museum,
-    String? queryText,
-  }) async {
+  Future<void> _maybeAskPhoto(String trigger,
+      {String? answerQid, String? museum, String? queryText}) async {
     final st = ref.read(recognitionNotifierProvider);
     final shot = _artworkShot;
     final phash = _artworkPhash;
@@ -480,20 +464,18 @@ class _CameraPageState extends ConsumerState<CameraPage>
     } catch (_) {
       deviceId = null;
     }
-    unawaited(
-      ref.read(photoFeedbackRepositoryProvider).send(
-            image: shot,
-            trigger: trigger,
-            phash: phash,
-            answerQid: answerQid,
-            museumSlug: museum,
-            language: apiLanguage(ref.read(resolvedLocaleProvider)),
-            queryText: queryText,
-            labelText: labelText,
-            text: choice.text,
-            deviceId: deviceId,
-          ),
-    );
+    unawaited(ref.read(photoFeedbackRepositoryProvider).send(
+          image: shot,
+          trigger: trigger,
+          phash: phash,
+          answerQid: answerQid,
+          museumSlug: museum,
+          language: apiLanguage(ref.read(resolvedLocaleProvider)),
+          queryText: queryText,
+          labelText: labelText,
+          text: choice.text,
+          deviceId: deviceId,
+        ));
   }
 
   /// 进入引导拍墙签：回取景器，下一张以 `mode=label` 提交。
@@ -505,12 +487,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ref.read(recognitionNotifierProvider.notifier).resetState();
   }
 
-  Future<void> _goGuide(
-    String slug,
-    String qid, {
-    bool fromSearch = false,
-    String? queryText,
-  }) async {
+  Future<void> _goGuide(String slug, String qid,
+      {bool fromSearch = false, String? queryText}) async {
     // S5 照片反馈(进详情页前问;判定见 photoFeedbackTriggerOnPick)
     final trigger = photoFeedbackTriggerOnPick(
       fromSearch: fromSearch,
@@ -519,12 +497,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
     );
     if (trigger == 'found') _foundAsked = true;
     if (trigger != null) {
-      await _maybeAskPhoto(
-        trigger,
-        answerQid: qid,
-        museum: slug,
-        queryText: trigger == 'found' ? queryText : null,
-      );
+      await _maybeAskPhoto(trigger,
+          answerQid: qid,
+          museum: slug,
+          queryText: trigger == 'found' ? queryText : null);
     }
     if (!mounted) return;
     // 命中(直接 match,或在候选里确认)且是快门现场拍的 → 记「人在这家馆」。
@@ -532,21 +508,16 @@ class _CameraPageState extends ConsumerState<CameraPage>
     if (_lastShotLive && !fromSearch) {
       // 这个页可能马上被销毁(命中走 pushReplacement):写完存储时 ref 已不能用,所以先拿容器
       final container = ProviderScope.containerOf(context, listen: false);
-      unawaited(
-        recordLiveMatch(
-          slug,
-        ).then((_) => container.invalidate(nearbyProvider)).catchError((_) {}),
-      );
+      unawaited(recordLiveMatch(slug)
+          .then((_) => container.invalidate(nearbyProvider))
+          .catchError((_) {}));
     }
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
-    unawaited(
-      ref.read(recognitionNotifierProvider.notifier).confirmRecognition(
-            qid,
-            fromSearch: fromSearch,
-            phashOverride: _artworkPhash,
-          ),
-    );
+    unawaited(ref.read(recognitionNotifierProvider.notifier).confirmRecognition(
+        qid,
+        fromSearch: fromSearch,
+        phashOverride: _artworkPhash));
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     final args = GuideArgs(
       slug: slug,
@@ -585,15 +556,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
       footerBuilder: (ctx, i) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            cands[i].title,
-            textAlign: TextAlign.center,
-            style: GmText.serif(
-              size: 16,
-              weight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
+          Text(cands[i].title,
+              textAlign: TextAlign.center,
+              style: GmText.serif(
+                  size: 16, weight: FontWeight.w600, color: Colors.white)),
           const SizedBox(height: 10),
           GmTicketButton(
             label: l10n.recThisIsIt,
@@ -668,10 +634,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              l10n.camQuotaUsedUp,
-              style: GmText.serif(size: 16.5, weight: FontWeight.w700),
-            ),
+            Text(l10n.camQuotaUsedUp,
+                style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
               l10n.camUpgradeHint,
@@ -759,10 +723,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
                     Text(
                       AppLocalizations.of(context)!.camRecognizeTitle,
                       style: GmText.serif(
-                        size: 15.5,
-                        weight: FontWeight.w700,
-                        color: GmColors.scanInk,
-                      ),
+                          size: 15.5,
+                          weight: FontWeight.w700,
+                          color: GmColors.scanInk),
                     ),
                     // 闪光已移除：博物馆多禁闪光，且玻璃/画框眩光反伤识别
                     Align(
@@ -784,10 +747,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: const Color(0x8C171310),
                     borderRadius: BorderRadius.circular(999),
@@ -805,10 +766,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
               alignment: Alignment.center,
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 40),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 9,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                 decoration: BoxDecoration(
                   color: const Color(0x8C171310),
                   borderRadius: BorderRadius.circular(999),
@@ -843,31 +802,21 @@ class _CameraPageState extends ConsumerState<CameraPage>
               if (_recentAssets.isNotEmpty) ...[
                 Row(
                   children: [
-                    Text(
-                      l10n.camRecentGallery,
-                      style: GmText.sans(
-                        size: 11,
-                        letterSpacing: 1,
-                        color: gm.sub,
-                      ),
-                    ),
+                    Text(l10n.camRecentGallery,
+                        style: GmText.sans(
+                            size: 11, letterSpacing: 1, color: gm.sub)),
                     const SizedBox(width: 10),
                     const Expanded(child: GmHairline()),
                     const SizedBox(width: 10),
                     GestureDetector(
                       onTap: _pickFromGallery,
                       behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            l10n.camAllAlbums,
-                            style: GmText.sans(size: 11, color: gm.accent),
-                          ),
-                          const SizedBox(width: 3),
-                          GmIcon(GmIcons.arrowR, size: 12, color: gm.accent),
-                        ],
-                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(l10n.camAllAlbums,
+                            style: GmText.sans(size: 11, color: gm.accent)),
+                        const SizedBox(width: 3),
+                        GmIcon(GmIcons.arrowR, size: 12, color: gm.accent),
+                      ]),
                     ),
                   ],
                 ),
@@ -880,16 +829,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _labeledButton(
-                    GmIcons.photo,
-                    l10n.camGallery,
-                    _pickFromGallery,
-                  ),
+                      GmIcons.photo, l10n.camGallery, _pickFromGallery),
                   _shutterButton(gm),
                   _labeledButton(
-                    GmIcons.search,
-                    l10n.camSearch,
-                    _showTagSearchSheet,
-                  ),
+                      GmIcons.search, l10n.camSearch, _showTagSearchSheet),
                 ],
               ),
             ],
@@ -912,9 +855,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
             width: 58,
             height: 58,
             child: FutureBuilder<Uint8List?>(
-              future: asset.thumbnailDataWithSize(
-                const ThumbnailSize.square(200),
-              ),
+              future:
+                  asset.thumbnailDataWithSize(const ThumbnailSize.square(200)),
               builder: (_, snap) {
                 final bytes = snap.data;
                 if (bytes == null) return ColoredBox(color: gm.chipBg);
@@ -976,7 +918,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
       child: Container(
         width: 38,
         height: 38,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+        ),
         alignment: Alignment.center,
         child: GmIcon(icon, size: 19, color: GmColors.scanInk),
       ),
@@ -1074,10 +1019,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 12),
-          Text(
-            l10n.camRecognizing,
-            style: GmText.serif(size: 16.5, weight: FontWeight.w700),
-          ),
+          Text(l10n.camRecognizing,
+              style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
         ],
       ),
       const SizedBox(height: 8),
@@ -1090,10 +1033,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
   List<Widget> _candidatesContent(GmPalette gm, RecognitionCandidates state) {
     final l10n = AppLocalizations.of(context)!;
     return [
-      Text(
-        l10n.recCandidatesTitle,
-        style: GmText.serif(size: 16.5, weight: FontWeight.w700),
-      ),
+      Text(l10n.recCandidatesTitle,
+          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 12),
       for (final c in state.candidates) ...[
         CandidateRow(
@@ -1111,10 +1052,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
             ref.read(recognitionNotifierProvider.notifier).rejectCandidates();
             _reachedChoice = true; // 「都不是」= 走到选择页(S5)
           },
-          child: Text(
-            l10n.recNoneOfThese,
-            style: GmText.sans(size: 12.5, color: gm.accent),
-          ),
+          child: Text(l10n.recNoneOfThese,
+              style: GmText.sans(size: 12.5, color: gm.accent)),
         ),
       ),
     ];
@@ -1123,16 +1062,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
   /// 「没认出来」与「都不是」共用的选择卡(布局见 FallbackChoices)。
   /// 绝不显示 AI 猜测的名字(契约 R1)。
   List<Widget> _unrecognizedContent(
-    GmPalette gm,
-    RecognitionUnrecognized state,
-  ) {
+      GmPalette gm, RecognitionUnrecognized state) {
     final l10n = AppLocalizations.of(context)!;
     final label = state.labelText;
     return [
-      Text(
-        label != null ? l10n.recNotInCatalog : l10n.recNotRecognized,
-        style: GmText.serif(size: 16.5, weight: FontWeight.w700),
-      ),
+      Text(label != null ? l10n.recNotInCatalog : l10n.recNotRecognized,
+          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 14),
       ..._fallbackChoices(gm, label),
     ];
@@ -1142,16 +1077,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
   List<Widget> _errorContent(GmPalette gm) {
     final l10n = AppLocalizations.of(context)!;
     return [
-      Text(
-        l10n.camRecognizeFailed,
-        style: GmText.serif(size: 16.5, weight: FontWeight.w700),
-      ),
+      Text(l10n.camRecognizeFailed,
+          style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
       const SizedBox(height: 14),
       GmTicketButton(
-        label: l10n.retry,
-        icon: GmIcons.photo,
-        onTap: _retryLastShot,
-      ),
+          label: l10n.retry, icon: GmIcons.photo, onTap: _retryLastShot),
       const SizedBox(height: 10),
       ..._fallbackChoices(gm, null),
     ];
@@ -1170,8 +1100,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
           onShootLabel: _startLabelCapture,
           // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
           onSearch: () => _showTagSearchSheet(
-            initialQuery: label == null ? null : labelSearchQuery(label),
-          ),
+              initialQuery: label == null ? null : labelSearchQuery(label)),
           onRetake: _retake,
         ),
       ];
@@ -1197,9 +1126,8 @@ class _TagSearchSheet extends ConsumerStatefulWidget {
 class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
   String _q = '';
   Timer? _timer;
-  late final TextEditingController _ctrl = TextEditingController(
-    text: widget.initialQuery ?? '',
-  );
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initialQuery ?? '');
 
   @override
   void initState() {
@@ -1232,19 +1160,13 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        22,
-        18,
-        22,
-        18 + MediaQuery.of(context).viewInsets.bottom,
-      ),
+          22, 18, 22, 18 + MediaQuery.of(context).viewInsets.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.camTagSearch,
-            style: GmText.serif(size: 16.5, weight: FontWeight.w700),
-          ),
+          Text(l10n.camTagSearch,
+              style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(l10n.camTagHint, style: GmText.sans(size: 12, color: gm.sub)),
           const SizedBox(height: 14),
@@ -1292,12 +1214,11 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
 /// 候选行。点击区(10-10 用户定):整行含缩略图 = 直接选;只有角上放大镜 = 全屏比对。
 /// 原先缩略图本身是放大——人看着画就点画,确认了也常误点进大图。
 class CandidateRow extends StatelessWidget {
-  const CandidateRow({
-    super.key,
-    required this.item,
-    required this.onPick,
-    required this.onZoom,
-  });
+  const CandidateRow(
+      {super.key,
+      required this.item,
+      required this.onPick,
+      required this.onZoom});
 
   final RecognizedItem item;
   final VoidCallback onPick;
@@ -1323,79 +1244,60 @@ class CandidateRow extends StatelessWidget {
             // 一眼对得上刚拍的画。考虑过「完整显示不裁」,但横竖幅混排时
             // 留白忽上下忽左右，用户否了。候选恒 ≤3 个(后端 cands[:3]),
             // 放大不会撑爆底部面板(非滚动 Column)。
-            Stack(
-              key: const Key('candThumb'),
-              children: [
-                SizedBox(
-                  width: 92,
-                  height: 92,
-                  child: c.thumbnail != null
-                      ? Image.network(
-                          sizedImageUrl(c.thumbnail!, 280),
-                          fit: BoxFit.cover,
-                          headers: kImageRequestHeaders,
-                          errorBuilder: (_, __, ___) => ColoredBox(
+            Stack(key: const Key('candThumb'), children: [
+              SizedBox(
+                width: 92,
+                height: 92,
+                child: c.thumbnail != null
+                    ? Image.network(sizedImageUrl(c.thumbnail!, 280),
+                        fit: BoxFit.cover,
+                        headers: kImageRequestHeaders,
+                        errorBuilder: (_, __, ___) => ColoredBox(
                             color: gm.chipBg,
                             child: Center(
-                              child: GmIcon(
-                                GmIcons.photo,
-                                size: 26,
-                                color: gm.faint,
-                              ),
-                            ),
-                          ),
-                        )
-                      : ColoredBox(color: gm.chipBg),
-                ),
-                // 没大图(无图作品)不给放大:打开也只是一张坏图
-                if (c.image != null)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: GestureDetector(
-                      key: const Key('candZoom'),
-                      onTap: onZoom,
-                      behavior: HitTestBehavior.opaque,
-                      child: SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const GmIcon(
-                              GmIcons.search,
-                              size: 14,
-                              color: Colors.white,
-                            ),
-                          ),
+                                child: GmIcon(GmIcons.photo,
+                                    size: 26, color: gm.faint))))
+                    : ColoredBox(color: gm.chipBg),
+              ),
+              // 没大图(无图作品)不给放大:打开也只是一张坏图
+              if (c.image != null)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    key: const Key('candZoom'),
+                    onTap: onZoom,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: const BoxDecoration(
+                              color: Colors.black54, shape: BoxShape.circle),
+                          child: const GmIcon(GmIcons.search,
+                              size: 14, color: Colors.white),
                         ),
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ]),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    c.title,
-                    style: GmText.serif(size: 14.5, weight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(c.title,
+                      style: GmText.serif(size: 14.5, weight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 3),
-                  Text(
-                    c.artist,
-                    style: GmText.sans(size: 12, color: gm.sub),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(c.artist,
+                      style: GmText.sans(size: 12, color: gm.sub),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
@@ -1412,13 +1314,12 @@ class CandidateRow extends StatelessWidget {
 /// 输入编号(左)、重拍作品(右)并排同级描边。原先两个同样的橙色主按钮 + 说明垫底 + 重拍
 /// 是小字:prod 真实用户 17 次没认出 11 次直接放弃、0 次拍说明牌(说明牌之后 89% 有结果)。
 class FallbackChoices extends StatelessWidget {
-  const FallbackChoices({
-    super.key,
-    required this.labelSeen,
-    required this.onShootLabel,
-    required this.onSearch,
-    required this.onRetake,
-  });
+  const FallbackChoices(
+      {super.key,
+      required this.labelSeen,
+      required this.onShootLabel,
+      required this.onSearch,
+      required this.onRetake});
 
   /// 已读出墙签:不再给拍说明牌,主按钮换成输入编号(墙签文字已预填)。
   final bool labelSeen;
@@ -1452,15 +1353,12 @@ class FallbackChoices extends StatelessWidget {
                   Flexible(
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        style: GmText.sans(
-                          size: 13.5,
-                          weight: FontWeight.w600,
-                          color: gm.accent,
-                        ),
-                      ),
+                      child: Text(label,
+                          maxLines: 1,
+                          style: GmText.sans(
+                              size: 13.5,
+                              weight: FontWeight.w600,
+                              color: gm.accent)),
                     ),
                   ),
                 ],
@@ -1469,20 +1367,14 @@ class FallbackChoices extends StatelessWidget {
           ),
         );
     final retake = secondary(
-      const Key('fbRetake'),
-      GmIcons.photo,
-      l10n.camRetake,
-      onRetake,
-    );
+        const Key('fbRetake'), GmIcons.photo, l10n.camRetake, onRetake);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!labelSeen) ...[
-          Text(
-            l10n.recShootLabelHint,
-            style: GmText.sans(size: 12.5, height: 1.5, color: gm.sub),
-          ),
+          Text(l10n.recShootLabelHint,
+              style: GmText.sans(size: 12.5, height: 1.5, color: gm.sub)),
           const SizedBox(height: 12),
         ],
         GmTicketButton(
@@ -1495,12 +1387,8 @@ class FallbackChoices extends StatelessWidget {
           children: [
             // 已读出墙签:重拍同一张墙签结果一样,改字走主按钮的预填搜索(用户 10-11 定)
             if (!labelSeen) ...[
-              secondary(
-                const Key('fbSearch'),
-                GmIcons.search,
-                l10n.recTypeNumberOrName,
-                onSearch,
-              ),
+              secondary(const Key('fbSearch'), GmIcons.search,
+                  l10n.recTypeNumberOrName, onSearch),
               const SizedBox(width: 10),
             ],
             retake,
