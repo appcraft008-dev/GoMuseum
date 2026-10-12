@@ -55,7 +55,8 @@ double computeZoomLevel({
   required double scale,
   required double min,
   required double max,
-}) => (startZoom * scale).clamp(min, max);
+}) =>
+    (startZoom * scale).clamp(min, max);
 
 /// 回前台是否要重建相机。
 ///
@@ -73,14 +74,16 @@ String? photoFeedbackTriggerOnPick({
   required bool fromSearch,
   required bool reachedChoice,
   required bool foundAsked,
-}) => (fromSearch || reachedChoice) && !foundAsked ? 'found' : null;
+}) =>
+    (fromSearch || reachedChoice) && !foundAsked ? 'found' : null;
 
 /// S5:点「重新拍摄」时 —— 只有在选择页上放弃这张照片才算「最终没找到」。
 @visibleForTesting
 String? photoFeedbackTriggerOnRetake({
   required bool reachedChoice,
   required bool onChoicePage,
-}) => reachedChoice && onChoicePage ? 'not_found' : null;
+}) =>
+    reachedChoice && onChoicePage ? 'not_found' : null;
 
 /// 相机页允许的方向。手机(最短边 <600dp)锁竖屏:横屏时竖屏布局被整个转过来,
 /// 取景框挤到上半截。锁竖屏不妨碍横拍——相机插件按重力感应给照片定方向,后端按 EXIF 转正。
@@ -88,15 +91,16 @@ String? photoFeedbackTriggerOnRetake({
 @visibleForTesting
 List<DeviceOrientation> cameraOrientations(Size logicalScreen) =>
     logicalScreen.shortestSide < 600
-    ? const [DeviceOrientation.portraitUp]
-    : const [];
+        ? const [DeviceOrientation.portraitUp]
+        : const [];
 
 @visibleForTesting
 bool shouldRestartCamera(
   AppLifecycleState state, {
   required bool hasController,
   bool isTopRoute = true,
-}) => state == AppLifecycleState.resumed && !hasController && isTopRoute;
+}) =>
+    state == AppLifecycleState.resumed && !hasController && isTopRoute;
 
 class _CameraPageState extends ConsumerState<CameraPage>
     with WidgetsBindingObserver {
@@ -477,9 +481,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       deviceId = null;
     }
     unawaited(
-      ref
-          .read(photoFeedbackRepositoryProvider)
-          .send(
+      ref.read(photoFeedbackRepositoryProvider).send(
             image: shot,
             trigger: trigger,
             phash: phash,
@@ -539,9 +541,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
     unawaited(
-      ref
-          .read(recognitionNotifierProvider.notifier)
-          .confirmRecognition(
+      ref.read(recognitionNotifierProvider.notifier).confirmRecognition(
             qid,
             fromSearch: fromSearch,
             phashOverride: _artworkPhash,
@@ -1165,16 +1165,16 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   List<Widget> _fallbackChoices(GmPalette gm, String? label) => [
-    FallbackChoices(
-      labelSeen: label != null,
-      onShootLabel: _startLabelCapture,
-      // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
-      onSearch: () => _showTagSearchSheet(
-        initialQuery: label == null ? null : labelSearchQuery(label),
-      ),
-      onRetake: _retake,
-    ),
-  ];
+        FallbackChoices(
+          labelSeen: label != null,
+          onShootLabel: _startLabelCapture,
+          // 墙签已拍、OCR 出了文字 → 预填,免得用户再手打一遍
+          onSearch: () => _showTagSearchSheet(
+            initialQuery: label == null ? null : labelSearchQuery(label),
+          ),
+          onRetake: _retake,
+        ),
+      ];
 }
 
 /// 识别兜底 → 搜索闭环：无图区/未收录时按编号/名称查找（全局即时搜索）。
