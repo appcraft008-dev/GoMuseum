@@ -203,10 +203,10 @@ class RecognitionNotifier extends _$RecognitionNotifier {
 
   /// 命中 / 点选确认 = 后端多了一条足迹。足迹列表(足迹 tab + 首页「继续游览」)
   /// 是常驻缓存,不在这里刷的话一直停在打开 App 那一刻(2026-10-02 真机报告:
-  /// 连拍几十件,两处都看不到)。用 refresh 而不是 invalidate:后者会先清空列表,
-  /// 首页那节闪没再出现。
+  /// 连拍几十件,两处都看不到)。不用 invalidate:会先清空列表,首页那节闪没再出现。
+  /// 只拉最新一页插到前面,不整份重拉(10-12:整份重拉占全部 API 请求 37%)。
   void _refreshFootprints() =>
-      unawaited(ref.read(historyProvider.notifier).refresh());
+      unawaited(ref.read(historyProvider.notifier).pullLatest());
 
   /// 候选卡「都不是」→ 转未收录 UI（保留已识别的墙签文字），并把这组候选上报为被否定(S3)。
   void rejectCandidates() {
