@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart'
     show GuideArgs;
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
@@ -163,7 +164,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               onTap: () => context.push(
                 '/guide',
                 extra: GuideArgs(
-                    slug: it.museumSlug, qid: it.qid, imageUrl: it.thumbnail),
+                    slug: it.museumSlug,
+                    qid: it.qid,
+                    imageUrl: it.thumbnail,
+                    entry: GuideEntry.home),
               ),
               child: SizedBox(
                 width: 104,

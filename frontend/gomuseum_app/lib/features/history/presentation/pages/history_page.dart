@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/history/domain/entities/history_item.dart';
 import 'package:gomuseum_app/features/history/presentation/footprint_visit.dart';
@@ -291,6 +292,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           slug: item.museumSlug,
           qid: item.qid,
           imageUrl: item.thumbnail,
+          entry: GuideEntry.history,
         ),
       );
       return;

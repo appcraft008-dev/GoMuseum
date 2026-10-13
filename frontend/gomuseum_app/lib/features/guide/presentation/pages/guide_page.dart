@@ -18,6 +18,7 @@ import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/core/services/tts_service.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/share_object.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/domain/entities/explanation.dart';
@@ -62,6 +63,7 @@ class GuideArgs {
     this.qid,
     this.autoPlayAudio = false,
     this.rejectPhash,
+    this.entry,
   }) : assert(
           (slug != null && qid != null) || result != null,
           'GuideArgs 需提供 (slug+qid) 或 result 其中一种',
@@ -85,6 +87,9 @@ class GuideArgs {
   /// 直判进来时带识别照片的 phash → 显示「不是这件?」(10-12)。
   /// 候选里自己点选的不给:那是用户确认过的。
   final String? rejectPhash;
+
+  /// 从哪进来(埋点 content_viewed)。null = 不报。
+  final GuideEntry? entry;
 
   /// 识别成功后**自动播放**主讲解。
   ///
@@ -155,6 +160,11 @@ class _GuidePageState extends ConsumerState<GuidePage>
     super.initState();
     if (!widget.args.useA5) {
       _loadExplanation();
+    }
+    final a = widget.args;
+    if (a.useA5 && a.entry != null) {
+      unawaited(reportContentViewed(ref.read(dioProvider),
+          slug: a.slug!, qid: a.qid!, entry: a.entry!));
     }
   }
 
