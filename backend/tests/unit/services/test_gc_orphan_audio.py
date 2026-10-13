@@ -97,13 +97,62 @@ def test_empty_reference_set_means_abort_not_delete_everything():
     assert should_abort is True
 
 
-def test_grace_period_protects_in_flight_playback():
-    """宽限期内的对象不删 —— 可能有人正拿着旧直链在播,即时删会中断播放。"""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-    fresh = datetime.now(timezone.utc) - timedelta(hours=1)
-    old = datetime.now(timezone.utc) - timedelta(days=30)
-    assert fresh > cutoff, "新对象应被保护"
-    assert old < cutoff, "旧对象可回收"
+def test_slot_strips_random_suffix_and_legacy_extension():
+    from gc_orphan_audio import slot
+
+    assert slot("object-audio/Q1/en/guide-Ab_c-234567890XY.mp3") == (
+        "object-audio/Q1/en/guide"
+    )
+    assert slot("object-audio/Q1/en/guide.mp3") == "object-audio/Q1/en/guide"
+
+
+def test_grace_counts_from_slot_change_not_file_mtime(db):
+    """宽限期从「这个位置换了音频」算起,不看 R2 文件写入时间(9-06 全桶重写把 mtime 刷平了):
+    一年前录的旧音频昨天才被换掉,也可能有人正拿着旧直链在播。"""
+    from gc_orphan_audio import recently_changed_slots
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    m = Museum(slug="m", name_en="M")
+    db.add(m)
+    db.commit()
+    o = MuseumObject(museum_id=m.id, qid="Q1")
+    db.add(o)
+    db.commit()
+    for lang, age in (("en", 1), ("fr", 30)):
+        db.add(
+            ObjectContentSection(
+                object_id=o.id,
+                language=lang,
+                section_code="guide",
+                audio_key=f"object-audio/Q1/{lang}/guide-NEWNEWNEWNEWNEW1.mp3",
+                updated_at=now - timedelta(days=age),
+            )
+        )
+    db.add(
+        ObjectSuggestedQuestion(
+            object_id=o.id,
+            language="en",
+            sort=1,
+            question="q",
+            answer="a",
+            audio_key="object-audio/Q1/en/qa_1-NEWNEWNEWNEWNEW1.mp3",
+            updated_at=now - timedelta(days=2),
+        )
+    )
+    db.add(
+        Artist(
+            qid="Q2",
+            name_en="Y",
+            bio_audio={"zh": "object-audio/artist/Q2/zh-NEWNEWNEWNEWNEW1.mp3"},
+            updated_at=datetime.now(timezone.utc) - timedelta(days=3),
+        )
+    )
+    db.commit()
+    assert recently_changed_slots(db, now - timedelta(days=7)) == {
+        "object-audio/Q1/en/guide",
+        "object-audio/Q1/en/qa_1",
+        "object-audio/artist/Q2/zh",
+    }
 
 
 def test_ratio_ceiling_blocks_mass_deletion():

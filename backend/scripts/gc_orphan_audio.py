@@ -16,8 +16,11 @@
 ## 安全护栏(比功能本身重要 —— 这是不可逆删除)
 
 - **默认 dry-run**,必须显式 `--apply` 才真删
-- **宽限期**(默认 7 天):比宽限期新的对象一律不动,覆盖在途播放与
-  "刚写入但事务尚未提交"的竞态
+- **宽限期**(默认 7 天):覆盖在途播放与"刚写入但事务尚未提交"的竞态。
+  年龄按两处取、任一处新就不动:R2 文件写入时间,以及**这个位置(作品×语种×段)
+  在 DB 里最近一次变更**(`updated_at`)。只看 R2 时间不够 —— 一年前录的旧音频
+  昨天才被换掉,文件很老,但可能有人正拿着旧直链在播;9-06 全桶重写后 R2 时间
+  也都被刷平了
 - **引用集合为空则中止**:DB 查询出错/连错库会让"引用集合"变空,
   照删就是清空整个音频库。宁可不删
 - **删除比例上限**:一次删掉超过总量 [--max-ratio] 的对象则中止并要求人工确认
@@ -32,6 +35,7 @@
 """
 
 import argparse
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -72,6 +76,28 @@ def referenced_keys(db) -> set[str]:
     return keys
 
 
+def slot(key: str) -> str:
+    """key 去掉随机后缀(`audio_key()` 的 16 位)和 .mp3 → 位置;旧格式无后缀也归到同一位置。"""
+    return re.sub(r"(-[A-Za-z0-9_-]{16})?\.mp3$", "", key)
+
+
+def recently_changed_slots(db, since) -> set[str]:
+    """since(naive UTC)之后 DB 里变更过的音频位置。被换下的旧 key 与新 key 同位置。"""
+    out: set[str] = set()
+    for model in (ObjectContentSection, ObjectSuggestedQuestion):
+        for (k,) in db.query(model.audio_key).filter(
+            model.audio_key.isnot(None), model.updated_at >= since
+        ):
+            out.add(slot(k))
+    # artists.updated_at 带时区,单独比
+    for d, ts in db.query(Artist.bio_audio, Artist.updated_at).filter(
+        Artist.bio_audio.isnot(None)
+    ):
+        if ts and ts.replace(tzinfo=None) - (ts.utcoffset() or timedelta()) >= since:
+            out.update(slot(v) for v in (d or {}).values() if v)
+    return out
+
+
 def ledger_protected_keys(db, days: int = 60) -> set[str]:
     """audio_invalidations 里 days 天内登记过的 key —— 可能正等着恢复,不许当孤儿删。"""
     from app.models.audio_invalidation import AudioInvalidation
@@ -110,6 +136,7 @@ def main() -> int:
     db = SessionLocal()
     try:
         refs = referenced_keys(db)
+        recent = recently_changed_slots(db, cutoff.replace(tzinfo=None))
         protected = ledger_protected_keys(db, ns.ledger_days) - refs
     finally:
         db.close()
@@ -129,7 +156,7 @@ def main() -> int:
         if key in protected:
             kept_ledger += 1  # 纪律 37:近期被清的在用音频,可能正等着挂回
             continue
-        if isinstance(mtime, datetime) and mtime > cutoff:
+        if (isinstance(mtime, datetime) and mtime > cutoff) or slot(key) in recent:
             kept_young += 1  # 宽限期内:可能有人正拿着旧 URL 在播
             continue
         orphans.append((key, size))
