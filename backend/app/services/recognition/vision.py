@@ -100,6 +100,14 @@ def _pick(raw, n: int):
     return i if 1 <= i <= n else None
 
 
+def _val(v):
+    """模型会照抄提示里的 "... or null",把字符串 "null" 当值返回(prod 30 天文字链 462 次里
+    label_text 32 次)。当空处理,否则 App 以为拍了墙签、显示「暂未收录」。"""
+    if isinstance(v, str) and v.strip().lower() in ("", "null", "none"):
+        return None
+    return v or None
+
+
 def identify(
     image_b64: str, mode: str = "artwork", complete=None, shortlist=None
 ) -> dict:
@@ -148,17 +156,17 @@ def identify(
         return dict(_EMPTY)
     cands = []
     for c in data.get("candidates") or []:
-        if isinstance(c, dict) and c.get("title"):
+        if isinstance(c, dict) and _val(c.get("title")):
             cands.append(
                 {
                     "title": c["title"],
-                    "original_title": c.get("original_title") or None,
-                    "artist": c.get("artist"),
+                    "original_title": _val(c.get("original_title")),
+                    "artist": _val(c.get("artist")),
                 }
             )
     return {
         "candidates": cands[:3],
-        "label_text": data.get("label_text") or None,
+        "label_text": _val(data.get("label_text")),
         "self_confidence": data.get("self_confidence") or "low",
         "pick": _pick(data.get("pick"), len(shortlist)) if shortlist else None,
     }
