@@ -228,3 +228,30 @@ def test_no_shortlist_no_pick_and_prompt_unchanged():
     out = identify("b64data", complete=fake)
     assert out["pick"] is None
     assert "pick" not in seen["system"]
+
+
+def test_null_strings_are_treated_as_missing():
+    """模型照抄提示里的 "... or null",把字符串 "null" 当值返回(prod 30 天 462 次文字链里
+    label_text 32 次、original_title 40 次)。不当空 → App 以为拍了墙签,标题显示「暂未收录」。"""
+
+    def fake(system, user_content):
+        return json.dumps(
+            {
+                "candidates": [
+                    {
+                        "title": "Mona Lisa",
+                        "artist": "Leonardo",
+                        "original_title": "null",
+                    },
+                    {"title": "None", "artist": "x"},
+                ],
+                "label_text": "null",
+                "self_confidence": "high",
+            }
+        )
+
+    out = identify("b64data", complete=fake)
+    assert out["label_text"] is None
+    assert out["candidates"] == [
+        {"title": "Mona Lisa", "original_title": None, "artist": "Leonardo"}
+    ]

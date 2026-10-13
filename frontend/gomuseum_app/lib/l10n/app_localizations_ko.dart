@@ -590,10 +590,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recThisIsIt => '이 작품이에요';
 
   @override
-  String get recNotRecognized => '이 작품을 인식하지 못했습니다';
+  String get recNotRecognized => '인식하지 못했습니다';
 
   @override
-  String get recNotInCatalog => '아직 수록되지 않은 작품입니다';
+  String get recNotInCatalog => '작품을 찾지 못했습니다';
 
   @override
   String get recShootLabelBtn => '설명판 촬영';
@@ -619,9 +619,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => '이 텍스트로 검색';
-
-  @override
-  String get recShootLabelHint => '미술관 설명판에는 제목과 작가가 있습니다. 촬영하면 작품을 식별할 수 있습니다';
 
   @override
   String get recViewfinderLabelHint => '설명판 글자를 화면에 가득 채우세요';
@@ -1187,5 +1184,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      '특별전과 일부 작품은 아직 수록되지 않았습니다. 작품 옆 설명판을 찍거나 검색해 보세요.';
+      '특별전이거나 아직 수록되지 않은 작품일 수 있습니다. 옆의 설명판을 찍으면 더 잘 인식됩니다.';
+
+  @override
+  String get recLabelNoMatch =>
+      '특별전이거나 아직 수록되지 않은 작품일 수 있습니다. 다른 이름이나 번호로 검색해 보세요.';
 }

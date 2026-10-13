@@ -612,7 +612,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recNotRecognized => 'Werk nicht erkannt';
 
   @override
-  String get recNotInCatalog => 'Dieses Werk ist noch nicht im Guide';
+  String get recNotInCatalog => 'Werk nicht gefunden';
 
   @override
   String get recShootLabelBtn => 'Wandschild fotografieren';
@@ -638,10 +638,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => 'Mit diesem Text suchen';
-
-  @override
-  String get recShootLabelHint =>
-      'Museumsschilder zeigen Titel und Künstler — fotografieren Sie es und wir erkennen das Werk';
 
   @override
   String get recViewfinderLabelHint =>
@@ -1244,5 +1240,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Sonderausstellungen und manche Werke sind noch nicht erfasst. Versuchen Sie das Schild neben dem Werk oder die Suche.';
+      'Vielleicht eine Sonderausstellung oder noch nicht im Guide. Ein Foto des Schilds daneben hilft meist.';
+
+  @override
+  String get recLabelNoMatch =>
+      'Vielleicht eine Sonderausstellung oder noch nicht im Guide. Versuchen Sie einen anderen Namen oder eine Nummer.';
 }

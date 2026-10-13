@@ -1,4 +1,5 @@
-// 「没认出 / 都不是 / 失败」选择卡布局(10-10 用户定):拍说明牌是唯一主按钮,说明在它上面;
+// 「没认出 / 都不是 / 失败」选择卡布局(10-10 用户定):拍说明牌是唯一主按钮;
+// 10-13 用户定:卡里不再放「小标牌上有作品名…」说明(和外层一行说明、按钮文字重复,太啰嗦);
 // 输入编号(左)与重拍作品(右)并排同级。真实用户 17 次没认出 11 次直接放弃、0 次拍说明牌。
 // 10-11:已拍过墙签时主按钮换成输入编号(墙签文字已预填),不再给拍说明牌(重拍同一张墙签结果一样);
 // 次按钮文字放不下(大字号/德语)时缩小到一行,不换行。
@@ -46,10 +47,10 @@ void main() {
     expect(taps, ['label']);
   });
 
-  testWidgets('说明文字在主按钮上方', (t) async {
-    await _pump(t);
-    final hint = t.getTopLeft(find.textContaining('Museum labels show'));
-    expect(hint.dy, lessThan(t.getTopLeft(find.byType(GmTicketButton)).dy));
+  testWidgets('卡里只有按钮,没有说明文字(10-13 嫌啰嗦)', (t) async {
+    await _pump(t, locale: const Locale('zh'));
+    expect(find.textContaining('小标牌'), findsNothing);
+    expect(find.byType(Text), findsNWidgets(3)); // 三个按钮的文字
   });
 
   testWidgets('输入编号在左、重拍在右,并排同高', (t) async {

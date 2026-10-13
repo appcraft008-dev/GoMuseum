@@ -76,6 +76,12 @@ def _startup() -> None:
         get_object_storage()
     except Exception:
         logger.exception("Object storage warm-up failed (will init on first use)")
+    try:
+        from app.services.recognition.embedder import warm_embedder
+
+        warm_embedder()
+    except Exception:
+        logger.exception("Embedder warm-up failed (will load on first query)")
 
 
 @asynccontextmanager

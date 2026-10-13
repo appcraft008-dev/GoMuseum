@@ -50,10 +50,13 @@ def _load(db) -> tuple:
 
 
 def _fingerprint(db) -> tuple:
-    """向量只增删不原地改 → (行数, 最近 created_at);矩阵还带作品 qid/馆 → 加作品表指纹。"""
+    """向量只增删不原地改 → (行数, 最近 created_at);矩阵还带作品 qid/馆 → 只摘要这两列
+    (懒生成写描述/状态不该触发重载,见 index_digest)。"""
+    from app.services.index_digest import column_digest
+
     return (
         tuple(db.query(func.count(), func.max(ObjectEmbedding.created_at)).one()),
-        tuple(db.query(func.count(), func.max(MuseumObject.updated_at)).one()),
+        column_digest(db, MuseumObject.id, MuseumObject.qid, MuseumObject.museum_id),
     )
 
 

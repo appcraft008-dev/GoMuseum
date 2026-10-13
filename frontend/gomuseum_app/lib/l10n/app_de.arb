@@ -180,7 +180,7 @@
   "recNoneOfThese": "Keines davon",
   "recThisIsIt": "Das ist es",
   "recNotRecognized": "Werk nicht erkannt",
-  "recNotInCatalog": "Dieses Werk ist noch nicht im Guide",
+  "recNotInCatalog": "Werk nicht gefunden",
   "recShootLabelBtn": "Wandschild fotografieren",
   "recTypeNumberOrName": "Nummer oder Titel eingeben",
   "photoFbTitle": "Uns dieses Foto senden?",
@@ -189,7 +189,6 @@
   "photoFbNoteHint": "Anmerkung hinzufügen (optional)",
   "photoFbContinue": "Weiter",
   "recSearchWithLabel": "Mit diesem Text suchen",
-  "recShootLabelHint": "Museumsschilder zeigen Titel und Künstler — fotografieren Sie es und wir erkennen das Werk",
   "recViewfinderLabelHint": "Auf den Schildtext zielen, Rahmen ausfüllen",
   "camRecognizeTitle": "Werk erkennen",
   "camViewfinderHint": "Das ganze Werk in den Rahmen\nFür breite Werke das Handy quer halten",
@@ -369,5 +368,6 @@
   "collectionViewList": "Als Liste anzeigen",
   "guideNotThisOne": "Nicht dieses Werk?",
   "guideNotThisOneNoted": "Notiert. Versuchen Sie einen anderen Winkel oder nutzen Sie die Suche.",
-  "recMaybeNotCollected": "Sonderausstellungen und manche Werke sind noch nicht erfasst. Versuchen Sie das Schild neben dem Werk oder die Suche."
+  "recMaybeNotCollected": "Vielleicht eine Sonderausstellung oder noch nicht im Guide. Ein Foto des Schilds daneben hilft meist.",
+  "recLabelNoMatch": "Vielleicht eine Sonderausstellung oder noch nicht im Guide. Versuchen Sie einen anderen Namen oder eine Nummer."
 }

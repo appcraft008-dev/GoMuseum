@@ -179,8 +179,8 @@
   "recCandidatesTitle": "是這件嗎？",
   "recNoneOfThese": "都不是",
   "recThisIsIt": "就是這件",
-  "recNotRecognized": "沒認出來這件作品",
-  "recNotInCatalog": "這件作品暫未收錄",
+  "recNotRecognized": "沒認出來",
+  "recNotInCatalog": "沒找到這件作品",
   "recShootLabelBtn": "拍下作品旁的說明牌",
   "recTypeNumberOrName": "輸入編號或名稱",
   "photoFbTitle": "把這張照片發給我們?",
@@ -189,7 +189,6 @@
   "photoFbNoteHint": "補充說明(選填)",
   "photoFbContinue": "繼續",
   "recSearchWithLabel": "用這段文字搜尋",
-  "recShootLabelHint": "博物館的小標牌上有作品名和作者，拍它我們就能認出來",
   "recViewfinderLabelHint": "對準標籤文字，佔滿畫面",
   "camRecognizeTitle": "識別作品",
   "camViewfinderHint": "將畫作完整置於取景框內\n寬幅作品可橫過來拍",
@@ -369,5 +368,6 @@
   "collectionViewList": "列表顯示",
   "guideNotThisOne": "不是這件？",
   "guideNotThisOneNoted": "已記下。換個角度再拍一張，或用搜尋找到它。",
-  "recMaybeNotCollected": "臨時展覽和部分作品還沒有收錄。可以拍作品旁的說明牌，或者搜尋試試。"
+  "recMaybeNotCollected": "可能是臨展或還沒收錄的作品，拍旁邊的說明牌更容易認出。",
+  "recLabelNoMatch": "可能是臨展或還沒收錄，換個名稱或編號搜搜看。"
 }

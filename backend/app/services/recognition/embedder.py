@@ -174,3 +174,26 @@ def get_embedder():
             logger.exception("embedder unavailable, falling back to GPT chain")
             _retry_after = time.time() + _RETRY_COOLDOWN
             return None
+
+
+def warm_embedder() -> None:
+    """启动预热(后台线程,不阻塞启动):模型加载 + 首次推理 + 首次照片预处理都有冷启动开销,
+    prod 10-13 部署后首个识别 prep 2.3s + embed 5.5s,每个 worker 的第一个用户都要等。"""
+    threading.Thread(target=_warm, daemon=True, name="warm-embedder").start()
+
+
+def _warm() -> None:
+    try:
+        import io
+
+        from app.services.image_service import ImageService
+
+        buf = io.BytesIO()
+        Image.new("RGB", (224, 224)).save(buf, "JPEG")
+        ImageService.generate_perceptual_hash(buf.getvalue())
+        e = get_embedder()
+        if e is not None:
+            e.embed(Image.new("RGB", (224, 224)))
+            logger.info("recognition embedder warmed")
+    except Exception:
+        logger.exception("embedder warm-up failed (will load on first query)")

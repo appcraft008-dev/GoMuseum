@@ -607,10 +607,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recThisIsIt => 'To ta';
 
   @override
-  String get recNotRecognized => 'Nie rozpoznano tego dzieła';
+  String get recNotRecognized => 'Nie rozpoznano dzieła';
 
   @override
-  String get recNotInCatalog => 'Tego dzieła jeszcze nie ma w przewodniku';
+  String get recNotInCatalog => 'Nie znaleziono dzieła';
 
   @override
   String get recShootLabelBtn => 'Sfotografuj tabliczkę';
@@ -636,10 +636,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => 'Szukaj tym tekstem';
-
-  @override
-  String get recShootLabelHint =>
-      'Muzealne tabliczki podają tytuł i artystę — sfotografuj ją, a rozpoznamy dzieło';
 
   @override
   String get recViewfinderLabelHint =>
@@ -1241,5 +1237,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Wystaw czasowych i części dzieł jeszcze nie mamy. Spróbuj zrobić zdjęcie opisu obok dzieła albo wyszukać.';
+      'Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Zdjęcie opisu obok zwykle pomaga.';
+
+  @override
+  String get recLabelNoMatch =>
+      'Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Spróbuj innej nazwy lub numeru.';
 }
