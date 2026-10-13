@@ -164,7 +164,8 @@ def get_embedder():
                 if want and hashlib.sha256(data).hexdigest() != want:
                     raise RuntimeError("model sha256 mismatch")
                 cache.mkdir(parents=True, exist_ok=True)
-                tmp = local.with_suffix(".tmp")
+                # 每进程独立 tmp:多 worker 同时冷启动共用一个 .tmp 会互相换走
+                tmp = local.with_suffix(f".{os.getpid()}.tmp")
                 tmp.write_bytes(data)
                 os.replace(tmp, local)  # 原子替换:防半写文件被当有效缓存
             _engine = OnnxEmbedder(str(local), cfg["preset"])
