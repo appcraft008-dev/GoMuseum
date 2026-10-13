@@ -538,3 +538,23 @@ def test_fetch_creators_skips_blank_node_unknown_value():
 
     out = _fetch_creators(["Q12418", "Q88168525"], run_query=fake_run)
     assert out == {"Q12418": "Q762"}  # 真作者留下,blank node 丢弃
+
+
+def test_backfill_qids_limits_scope(session):
+    """按 qid 补收录时只处理指定件,不顺带回填全馆其它缺名的件(写入面可控)。"""
+    upsert_object(
+        session, session.query(Museum).one().id, {"qid": "Q3", "title_en": "Other"}
+    )
+    session.commit()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "zh"],
+        fetch_labels=_labels({}),
+        fetch_creators=lambda qids: {},
+        qids=["Q3"],
+    )
+    q = session.query(MuseumObject)
+    assert (q.filter_by(qid="Q3").one().attributes or {}).get("title_i18n")
+    assert not (q.filter_by(qid="Q1").one().attributes or {}).get("title_i18n")
