@@ -1,5 +1,7 @@
 """向量索引服务:全局矩阵点积 + 同qid取max降序 + 馆掩码过滤 + TTL缓存。"""
 
+from datetime import datetime
+
 import numpy as np
 import pytest
 from sqlalchemy import create_engine
@@ -179,3 +181,20 @@ def test_refresh_skips_reload_when_unchanged(monkeypatch):
     vector_index._refresh(None)
     assert len(loads) == 3
     vector_index.invalidate()
+
+
+def test_fingerprint_ignores_object_content_writes(session):
+    """矩阵只用作品的 qid/馆:懒生成写描述/状态不该触发重载;qid 变了要重载。"""
+    m = upsert_museum(session, {"slug": "orsay", "name_en": "Orsay"})
+    o = _add_object(session, m.id, "Q1", "A", ["u1"], [[1, 0, 0, 0]])
+    session.commit()
+    fp0 = vector_index._fingerprint(session)
+    o.attributes = {"vision_description": "x"}
+    o.content_status = "ready"
+    o.title_en = "A2"
+    o.updated_at = datetime(2030, 1, 1)  # SQLite 同一秒内 onupdate 不变,显式推进
+    session.commit()
+    assert vector_index._fingerprint(session) == fp0
+    o.qid = "Q1b"
+    session.commit()
+    assert vector_index._fingerprint(session) != fp0
