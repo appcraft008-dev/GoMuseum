@@ -1070,9 +1070,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
     return [
       Text(label != null ? l10n.recNotInCatalog : l10n.recNotRecognized,
           style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
-      // 10-12 照片反馈:认不出的里约三成是临展作品,库里永远不会有 —— 说清楚,别让人以为坏了
+      // 10-12 照片反馈:认不出的里约三成是临展作品,库里永远不会有 —— 说清楚,别让人以为坏了。
+      // 10-13:读出了墙签还没对上 → 别再叫人拍说明牌(已经拍过了),改叫换个词搜。
       const SizedBox(height: 6),
-      Text(l10n.recMaybeNotCollected,
+      Text(label != null ? l10n.recLabelNoMatch : l10n.recMaybeNotCollected,
           style: GmText.sans(size: 12.5, color: gm.sub)),
       const SizedBox(height: 14),
       ..._fallbackChoices(gm, label),
@@ -1378,11 +1379,6 @@ class FallbackChoices extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!labelSeen) ...[
-          Text(l10n.recShootLabelHint,
-              style: GmText.sans(size: 12.5, height: 1.5, color: gm.sub)),
-          const SizedBox(height: 12),
-        ],
         GmTicketButton(
           label: labelSeen ? l10n.recTypeNumberOrName : l10n.recShootLabelBtn,
           icon: labelSeen ? GmIcons.search : GmIcons.camera,

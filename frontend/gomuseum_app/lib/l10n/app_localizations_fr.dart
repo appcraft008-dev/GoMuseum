@@ -613,8 +613,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recNotRecognized => 'Œuvre non reconnue';
 
   @override
-  String get recNotInCatalog =>
-      'Cette œuvre n\'est pas encore dans notre guide';
+  String get recNotInCatalog => 'Œuvre introuvable';
 
   @override
   String get recShootLabelBtn => 'Photographier le cartel';
@@ -640,10 +639,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => 'Rechercher avec ce texte';
-
-  @override
-  String get recShootLabelHint =>
-      'Le cartel du musée indique le titre et l\'artiste — photographiez-le et nous pourrons identifier l\'œuvre';
 
   @override
   String get recViewfinderLabelHint =>
@@ -1248,5 +1243,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Les expositions temporaires et certaines œuvres ne sont pas encore dans notre collection. Essayez le cartel à côté de l\'œuvre, ou la recherche.';
+      'C\'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Photographier le cartel aide souvent.';
+
+  @override
+  String get recLabelNoMatch =>
+      'C\'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Essayez un autre nom ou numéro.';
 }

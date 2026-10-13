@@ -590,10 +590,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recThisIsIt => 'これです';
 
   @override
-  String get recNotRecognized => 'この作品を認識できませんでした';
+  String get recNotRecognized => '認識できませんでした';
 
   @override
-  String get recNotInCatalog => 'この作品はまだ収録されていません';
+  String get recNotInCatalog => '作品が見つかりませんでした';
 
   @override
   String get recShootLabelBtn => '解説プレートを撮影';
@@ -618,9 +618,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => 'このテキストで検索';
-
-  @override
-  String get recShootLabelHint => '美術館のプレートには題名と作家が書かれています。撮影すれば作品を特定できます';
 
   @override
   String get recViewfinderLabelHint => 'プレートの文字を画面いっぱいに写してください';
@@ -1185,5 +1182,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      '企画展や一部の作品はまだ収録されていません。作品横の解説パネルを撮るか、検索してみてください。';
+      '企画展か、まだ収録されていない作品かもしれません。横の解説パネルを撮ると認識しやすくなります。';
+
+  @override
+  String get recLabelNoMatch => '企画展か、まだ収録されていない作品かもしれません。別の名前や番号で検索してみてください。';
 }

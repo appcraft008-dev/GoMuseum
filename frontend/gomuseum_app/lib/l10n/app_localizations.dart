@@ -1190,13 +1190,13 @@ abstract class AppLocalizations {
   /// No description provided for @recNotRecognized.
   ///
   /// In en, this message translates to:
-  /// **'Couldn\'t recognize this work'**
+  /// **'Couldn\'t recognize it'**
   String get recNotRecognized;
 
   /// No description provided for @recNotInCatalog.
   ///
   /// In en, this message translates to:
-  /// **'This work isn\'t in our guide yet'**
+  /// **'Couldn\'t find this work'**
   String get recNotInCatalog;
 
   /// No description provided for @recShootLabelBtn.
@@ -1246,12 +1246,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search using this text'**
   String get recSearchWithLabel;
-
-  /// No description provided for @recShootLabelHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Museum labels show the title and artist — snap it and we can identify the work'**
-  String get recShootLabelHint;
 
   /// No description provided for @recViewfinderLabelHint.
   ///
@@ -2237,11 +2231,17 @@ abstract class AppLocalizations {
   /// **'Noted. Try another angle, or use search to find it.'**
   String get guideNotThisOneNoted;
 
-  /// Hint under 'not recognized' title: temporary exhibitions are never in the catalog
+  /// Hint under 'not recognized' title (artwork photo): temporary exhibitions are never in the catalog; shooting the label helps
   ///
   /// In en, this message translates to:
-  /// **'Temporary exhibitions and some works aren\'t in our collection yet. Try the label next to the work, or search.'**
+  /// **'It may be a temporary exhibit or not in our guide yet. Snapping the label next to it usually works.'**
   String get recMaybeNotCollected;
+
+  /// Hint under 'couldn't find this work': label text was read but matched nothing; suggest another search, not shooting the label again
+  ///
+  /// In en, this message translates to:
+  /// **'It may be a temporary exhibit or not in our guide yet. Try another name or number.'**
+  String get recLabelNoMatch;
 }
 
 class _AppLocalizationsDelegate

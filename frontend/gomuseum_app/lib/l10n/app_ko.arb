@@ -179,8 +179,8 @@
   "recCandidatesTitle": "이 작품인가요?",
   "recNoneOfThese": "모두 아님",
   "recThisIsIt": "이 작품이에요",
-  "recNotRecognized": "이 작품을 인식하지 못했습니다",
-  "recNotInCatalog": "아직 수록되지 않은 작품입니다",
+  "recNotRecognized": "인식하지 못했습니다",
+  "recNotInCatalog": "작품을 찾지 못했습니다",
   "recShootLabelBtn": "설명판 촬영",
   "recTypeNumberOrName": "번호나 작품명 입력",
   "photoFbTitle": "이 사진을 보내 주시겠어요?",
@@ -189,7 +189,6 @@
   "photoFbNoteHint": "메모 추가(선택)",
   "photoFbContinue": "계속",
   "recSearchWithLabel": "이 텍스트로 검색",
-  "recShootLabelHint": "미술관 설명판에는 제목과 작가가 있습니다. 촬영하면 작품을 식별할 수 있습니다",
   "recViewfinderLabelHint": "설명판 글자를 화면에 가득 채우세요",
   "camRecognizeTitle": "작품 식별",
   "camViewfinderHint": "작품 전체를 화면에 담으세요\n가로로 긴 작품은 휴대폰을 가로로 드세요",
@@ -369,5 +368,6 @@
   "collectionViewList": "목록으로 보기",
   "guideNotThisOne": "이 작품이 아닌가요?",
   "guideNotThisOneNoted": "기록했습니다. 다른 각도로 다시 찍거나 검색으로 찾아보세요.",
-  "recMaybeNotCollected": "특별전과 일부 작품은 아직 수록되지 않았습니다. 작품 옆 설명판을 찍거나 검색해 보세요."
+  "recMaybeNotCollected": "특별전이거나 아직 수록되지 않은 작품일 수 있습니다. 옆의 설명판을 찍으면 더 잘 인식됩니다.",
+  "recLabelNoMatch": "특별전이거나 아직 수록되지 않은 작품일 수 있습니다. 다른 이름이나 번호로 검색해 보세요."
 }

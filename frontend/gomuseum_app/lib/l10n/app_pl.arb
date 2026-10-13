@@ -179,8 +179,8 @@
   "recCandidatesTitle": "Czy to jest to dzieło?",
   "recNoneOfThese": "Żadne z nich",
   "recThisIsIt": "To ta",
-  "recNotRecognized": "Nie rozpoznano tego dzieła",
-  "recNotInCatalog": "Tego dzieła jeszcze nie ma w przewodniku",
+  "recNotRecognized": "Nie rozpoznano dzieła",
+  "recNotInCatalog": "Nie znaleziono dzieła",
   "recShootLabelBtn": "Sfotografuj tabliczkę",
   "recTypeNumberOrName": "Wpisz numer lub tytuł",
   "photoFbTitle": "Wysłać nam to zdjęcie?",
@@ -189,7 +189,6 @@
   "photoFbNoteHint": "Dodaj uwagę (opcjonalnie)",
   "photoFbContinue": "Dalej",
   "recSearchWithLabel": "Szukaj tym tekstem",
-  "recShootLabelHint": "Muzealne tabliczki podają tytuł i artystę — sfotografuj ją, a rozpoznamy dzieło",
   "recViewfinderLabelHint": "Wyceluj w tekst tabliczki, wypełnij kadr",
   "camRecognizeTitle": "Rozpoznaj dzieło",
   "camViewfinderHint": "Zmieść całe dzieło w kadrze\nSzerokie dzieła: obróć telefon poziomo",
@@ -369,5 +368,6 @@
   "collectionViewList": "Pokaż jako listę",
   "guideNotThisOne": "To nie to dzieło?",
   "guideNotThisOneNoted": "Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania.",
-  "recMaybeNotCollected": "Wystaw czasowych i części dzieł jeszcze nie mamy. Spróbuj zrobić zdjęcie opisu obok dzieła albo wyszukać."
+  "recMaybeNotCollected": "Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Zdjęcie opisu obok zwykle pomaga.",
+  "recLabelNoMatch": "Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Spróbuj innej nazwy lub numeru."
 }

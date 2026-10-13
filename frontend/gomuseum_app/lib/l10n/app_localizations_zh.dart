@@ -588,10 +588,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recThisIsIt => '就是这件';
 
   @override
-  String get recNotRecognized => '没认出来这件作品';
+  String get recNotRecognized => '没认出来';
 
   @override
-  String get recNotInCatalog => '这件作品暂未收录';
+  String get recNotInCatalog => '没找到这件作品';
 
   @override
   String get recShootLabelBtn => '拍下作品旁的说明牌';
@@ -616,9 +616,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => '用这段文字搜索';
-
-  @override
-  String get recShootLabelHint => '博物馆的小标牌上有作品名和作者，拍它我们就能认出来';
 
   @override
   String get recViewfinderLabelHint => '对准标签文字，占满画面';
@@ -1178,7 +1175,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideNotThisOneNoted => '已记下。换个角度再拍一张，或用搜索找到它。';
 
   @override
-  String get recMaybeNotCollected => '临时展览和部分作品还没有收录。可以拍作品旁的说明牌，或者搜索试试。';
+  String get recMaybeNotCollected => '可能是临展或还没收录的作品，拍旁边的说明牌更容易认出。';
+
+  @override
+  String get recLabelNoMatch => '可能是临展或还没收录，换个名称或编号搜搜看。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1765,10 +1765,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get recThisIsIt => '就是這件';
 
   @override
-  String get recNotRecognized => '沒認出來這件作品';
+  String get recNotRecognized => '沒認出來';
 
   @override
-  String get recNotInCatalog => '這件作品暫未收錄';
+  String get recNotInCatalog => '沒找到這件作品';
 
   @override
   String get recShootLabelBtn => '拍下作品旁的說明牌';
@@ -1793,9 +1793,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get recSearchWithLabel => '用這段文字搜尋';
-
-  @override
-  String get recShootLabelHint => '博物館的小標牌上有作品名和作者，拍它我們就能認出來';
 
   @override
   String get recViewfinderLabelHint => '對準標籤文字，佔滿畫面';
@@ -2355,5 +2352,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get guideNotThisOneNoted => '已記下。換個角度再拍一張，或用搜尋找到它。';
 
   @override
-  String get recMaybeNotCollected => '臨時展覽和部分作品還沒有收錄。可以拍作品旁的說明牌，或者搜尋試試。';
+  String get recMaybeNotCollected => '可能是臨展或還沒收錄的作品，拍旁邊的說明牌更容易認出。';
+
+  @override
+  String get recLabelNoMatch => '可能是臨展或還沒收錄，換個名稱或編號搜搜看。';
 }
