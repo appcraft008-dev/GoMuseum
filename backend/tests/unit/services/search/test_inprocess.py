@@ -119,7 +119,7 @@ def test_artist_substring_cross_language(session):
     out = rank(idx, "van gogh")
     qids = {e["qid"] for e, _ in out}
     assert {"Q45585", "Q_STUB"} <= qids
-    assert all(s == 0.4 for _, s in out)  # 作者子串档
+    assert all(s in (inprocess._S_ARTIST_WORD, inprocess._S_ARTIST_FIRST) for _, s in out)
 
 
 def test_artist_zh_hits(session):
@@ -577,7 +577,7 @@ def test_tier_scores_match_full_scan(session):
     for q in ["星", "星夜", "starry", "night", "the", "s", "gogh", "梵高", "vincent", "zz"]:
         qn, qinv = normalize(q), normalize_inv(q)
         want = {e["id"]: s for e in index if (s := inprocess._score(e, qn, qinv)) > 0}
-        got = {k: s for k, (_, s) in inprocess._tier_scores(index, q).items()}
+        got = {k: s for k, (_, s) in inprocess._tier_hits(index, qn, qinv).items()}
         assert got == want, q
 
 
@@ -608,3 +608,30 @@ def test_artist_name_written_without_spaces_matches(session):
     hits = rank(index, "vangogh")
     assert hits and hits[0][0]["qid"] == "Q45585"
     assert hits[0][1] == inprocess._S_ARTIST
+
+
+def _bare(i, names, artists=(), pop=0):
+    return {"id": i, "qid": f"Q{i}", "museum_id": 1, "names": set(names),
+            "artists": set(artists), "inv": None, "inv_digits": None, "popularity": pop}  # fmt: skip
+
+
+def test_artist_whole_word_outranks_title_substring():
+    """搜「monet」:莫奈的作品排在法语标题含 monétaire 的硬币前面(prod 10-13 前排全是硬币)。"""
+    index = [
+        _bare(1, {"etalon monetaire au nom de umar", "monetary standard"}, pop=50),
+        _bare(5, {"impression sunrise"}, {"claude monet"}),
+        _bare(2, {"water lilies"}, {"claude monet"}),
+        _bare(3, {"画家莫奈像"}),
+        _bare(4, {"睡莲"}, {"克劳德 莫奈"}),
+    ]
+    assert {e["id"] for e, _ in rank(index, "monet")[:2]} == {2, 5}
+    assert rank(index, "莫奈")[0][0]["id"] == 4
+    # 作者名里的片段/名(非姓)仍是作者子串档,不抬
+    assert dict((e["id"], s) for e, s in rank(index, "mone"))[2] == inprocess._S_ARTIST
+    assert dict((e["id"], s) for e, s in rank(index, "claude"))[2] == inprocess._S_ARTIST
+
+
+def test_title_prefix_still_beats_artist_surname():
+    """冷门画家的姓撞常用词(Jean-Baptiste Roman):搜「roman」《罗马废墟》仍排第一。"""
+    index = [_bare(1, {"roman ruins"}), _bare(2, {"death of euryalus"}, {"jean baptiste roman"})]
+    assert [e["id"] for e, _ in rank(index, "roman")] == [1, 2]
