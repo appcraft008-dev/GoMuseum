@@ -7,6 +7,7 @@ import 'package:gomuseum_app/core/router/app_shell.dart';
 import 'package:gomuseum_app/features/home/presentation/pages/home_page.dart';
 import 'package:gomuseum_app/features/recognition/presentation/pages/camera_page.dart';
 import 'package:gomuseum_app/features/explore/presentation/pages/museum_page.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/pages/benefits_page.dart';
 import 'package:gomuseum_app/features/explore/presentation/pages/explore_page.dart';
@@ -232,6 +233,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           args: GuideArgs(
             slug: state.pathParameters['slug'],
             qid: state.pathParameters['qid'],
+            entry: GuideEntry.link,
           ),
         ),
       ),

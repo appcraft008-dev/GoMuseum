@@ -16,6 +16,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
@@ -527,6 +528,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
       autoPlayAudio: !fromSearch,
       rejectPhash: rejectPhash,
+      entry: fromSearch ? GuideEntry.search : GuideEntry.recognition,
     );
     // 命中与选候选都 pushReplacement:返回一次就退出识别。候选原先 push 好让返回改选(S3),
     // 有了全屏比对后改选 ~2%,却每次要多退一层(10-10 用户定去掉)。

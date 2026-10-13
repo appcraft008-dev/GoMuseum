@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/utils/year_format.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/search/data/search_api.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -167,7 +168,8 @@ class _ObjectHitRow extends StatelessWidget {
                 return;
               }
               context.push('/guide',
-                  extra: GuideArgs(slug: slug, qid: obj.qid));
+                  extra: GuideArgs(
+                      slug: slug, qid: obj.qid, entry: GuideEntry.search));
             },
       behavior: HitTestBehavior.opaque,
       child: Container(
