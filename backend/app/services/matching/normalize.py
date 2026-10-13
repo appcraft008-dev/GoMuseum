@@ -37,6 +37,13 @@ def with_cjk_joined(names: set[str]) -> set[str]:
     return names | {_CJK_GAP.sub("", n) for n in names}
 
 
+def artist_keys(names: set[str]) -> set[str]:
+    """作者名集再加去掉全部空格的写法:用户常把姓连写(「davinci」「vangogh」「vandyck」),
+    原来只能靠拼错容错碰上、排在最低档。"""
+    names = with_cjk_joined(names)
+    return names | {n.replace(" ", "") for n in names}
+
+
 def tokens(s: str) -> list[str]:
     """已归一化串 → 词。拉丁按空格;中日韩无空格,按二字组(单字保留)。"""
     out: list[str] = []

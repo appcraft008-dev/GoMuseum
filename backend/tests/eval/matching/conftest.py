@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from app.services.matching.normalize import normalize, normalize_inv, with_cjk_joined
+from app.services.matching.normalize import (
+    artist_keys,
+    normalize,
+    normalize_inv,
+    with_cjk_joined,
+)
 
 HERE = Path(__file__).parent
 
@@ -28,7 +33,7 @@ def to_entries(cat):
                 "qid": d["qid"],
                 "museum_id": d["m"],
                 "names": with_cjk_joined({normalize(x) for x in raw} - {""}),
-                "artists": with_cjk_joined({normalize(a) for a in arts} - {""}),
+                "artists": artist_keys({normalize(a) for a in arts} - {""}),
                 "inv": normalize_inv(d.get("inv")) or None,
                 "inv_digits": re.sub(r"\D", "", d.get("inv") or "") or None,
                 "popularity": d.get("pop") or 0,
