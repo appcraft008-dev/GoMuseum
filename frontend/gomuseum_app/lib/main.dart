@@ -20,9 +20,12 @@ Future<void> main() async {
   // Firebase Crashlytics + Analytics（配置缺失时静默跳过，不影响应用启动）
   try {
     await Firebase.initializeApp();
-    await FirebaseCrashlytics.instance
-        .setCrashlyticsCollectionEnabled(!kDebugMode);
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+      !kDebugMode,
+    );
+    // 界面层错误(图片加载失败、字体下载断线等)不会让 App 退出,按非致命上报;
+    // 真闪退由 Crashlytics 原生层抓
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
@@ -32,11 +35,7 @@ Future<void> main() async {
     debugPrint('Firebase init skipped: $e');
   }
 
-  runApp(
-    const ProviderScope(
-      child: GoMuseumApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: GoMuseumApp()));
   // 首帧后再查:Google 的更新小窗要盖在已渲染的界面上
   WidgetsBinding.instance.addPostFrameCallback((_) => checkForAppUpdate());
 }
