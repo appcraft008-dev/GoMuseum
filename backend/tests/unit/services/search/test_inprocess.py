@@ -119,7 +119,9 @@ def test_artist_substring_cross_language(session):
     out = rank(idx, "van gogh")
     qids = {e["qid"] for e, _ in out}
     assert {"Q45585", "Q_STUB"} <= qids
-    assert all(s in (inprocess._S_ARTIST_WORD, inprocess._S_ARTIST_FIRST) for _, s in out)
+    assert all(
+        s in (inprocess._S_ARTIST_WORD, inprocess._S_ARTIST_FIRST) for _, s in out
+    )
 
 
 def test_artist_zh_hits(session):
@@ -575,7 +577,18 @@ def test_tier_scores_match_full_scan(session):
     from app.services.matching.normalize import normalize, normalize_inv
 
     index = build_search_index(session)
-    for q in ["星", "星夜", "starry", "night", "the", "s", "gogh", "梵高", "vincent", "zz"]:
+    for q in [
+        "星",
+        "星夜",
+        "starry",
+        "night",
+        "the",
+        "s",
+        "gogh",
+        "梵高",
+        "vincent",
+        "zz",
+    ]:
         qn, qinv = normalize(q), normalize_inv(q)
         want = {e["id"]: s for e in index if (s := inprocess._score(e, qn, qinv)) > 0}
         got = {k: s for k, (_, s) in inprocess._tier_hits(index, qn, qinv).items()}
@@ -592,7 +605,9 @@ def test_tier_scores_common_substring_falls_back_to_scan(session, monkeypatch):
     monkeypatch.setattr(inprocess, "_score", lambda *a: calls.append(1) or real(*a))
     index = build_search_index(session)
     got = {k: s for k, (_, s) in inprocess._tier_scores(index, "night").items()}
-    want = {e["id"]: s for e in index if (s := real(e, "night", normalize_inv("night"))) > 0}
+    want = {
+        e["id"]: s for e in index if (s := real(e, "night", normalize_inv("night"))) > 0
+    }
     assert calls and got == want
 
 
@@ -629,12 +644,17 @@ def test_artist_whole_word_outranks_title_substring():
     assert rank(index, "莫奈")[0][0]["id"] == 4
     # 作者名里的片段/名(非姓)仍是作者子串档,不抬
     assert dict((e["id"], s) for e, s in rank(index, "mone"))[2] == inprocess._S_ARTIST
-    assert dict((e["id"], s) for e, s in rank(index, "claude"))[2] == inprocess._S_ARTIST
+    assert (
+        dict((e["id"], s) for e, s in rank(index, "claude"))[2] == inprocess._S_ARTIST
+    )
 
 
 def test_title_prefix_still_beats_artist_surname():
     """冷门画家的姓撞常用词(Jean-Baptiste Roman):搜「roman」《罗马废墟》仍排第一。"""
-    index = [_bare(1, {"roman ruins"}), _bare(2, {"death of euryalus"}, {"jean baptiste roman"})]
+    index = [
+        _bare(1, {"roman ruins"}),
+        _bare(2, {"death of euryalus"}, {"jean baptiste roman"}),
+    ]
     assert [e["id"] for e, _ in rank(index, "roman")] == [1, 2]
 
 
@@ -646,7 +666,9 @@ def test_refresh_skips_rebuild_when_catalog_unchanged(monkeypatch):
     from app.services.search import inprocess as ip
 
     built = []
-    monkeypatch.setattr(ip, "_build_global", lambda db: built.append(1) or [{"museum_id": 1}])
+    monkeypatch.setattr(
+        ip, "_build_global", lambda db: built.append(1) or [{"museum_id": 1}]
+    )
     monkeypatch.setattr(ip, "_warm_core", lambda index: None)
     fp = {"v": ("a",)}
     monkeypatch.setattr(ip, "_fingerprint", lambda db: fp["v"])
@@ -665,7 +687,10 @@ def test_refresh_skips_rebuild_when_catalog_unchanged(monkeypatch):
     assert len(built) == 2
 
     built_at = ip._index_cache[None][3]
-    ip._index_cache[None] = (*ip._index_cache[None][:3], built_at - ip._FULL_REBUILD_S - 1)
+    ip._index_cache[None] = (
+        *ip._index_cache[None][:3],
+        built_at - ip._FULL_REBUILD_S - 1,
+    )
     ip._refresh(None)  # 没变但太久没全量重建(兜底 psql 直改不动 updated_at)
     assert len(built) == 3
     ip._index_cache.clear()
