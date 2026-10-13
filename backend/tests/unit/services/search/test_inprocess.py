@@ -593,3 +593,10 @@ def test_tier_scores_common_substring_falls_back_to_scan(session, monkeypatch):
     got = {k: s for k, (_, s) in inprocess._tier_scores(index, "night").items()}
     want = {e["id"]: s for e in index if (s := real(e, "night", normalize_inv("night"))) > 0}
     assert calls and got == want
+
+
+def test_cjk_name_without_middle_dot_matches(session):
+    """中文译名「文森特·梵高」的 · 归一化成空格;用户不打点「文森特梵高」/「森特梵」也要搜到。"""
+    index = build_search_index(session)
+    for q in ["文森特梵高", "森特梵", "文森特·梵高", "文森特 梵高"]:
+        assert "Q45585" in [e["qid"] for e, _ in rank(index, q)], q

@@ -28,6 +28,15 @@ def is_cjk(tok: str) -> bool:
     return bool(_CJK.search(tok))
 
 
+_CJK_GAP = re.compile(rf"(?<={_CJK.pattern}) (?={_CJK.pattern})")
+
+
+def with_cjk_joined(names: set[str]) -> set[str]:
+    """已归一化名集 + 中文字之间去空格的写法。中文译名的「·」归一化成空格
+    (「列奥纳多 达 芬奇」),用户多半不打点(「达芬奇」)→ 两种写法都进索引。"""
+    return names | {_CJK_GAP.sub("", n) for n in names}
+
+
 def tokens(s: str) -> list[str]:
     """已归一化串 → 词。拉丁按空格;中日韩无空格,按二字组(单字保留)。"""
     out: list[str] = []
