@@ -19,7 +19,11 @@ def test_startup_runs_init_db_and_search_warmup():
             "app.services.recognition.vector_index.warm_vector_index",
             lambda: calls.append("warm_vec"),
         ),
+        patch(
+            "app.services.storage.get_object_storage",
+            lambda: calls.append("storage"),
+        ),
     ):
         with TestClient(main.app):
             pass
-    assert calls == ["init_db", "warm", "warm_vec"]
+    assert calls == ["init_db", "warm", "warm_vec", "storage"]

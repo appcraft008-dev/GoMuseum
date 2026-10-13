@@ -361,6 +361,7 @@ def test_cold_start_builds_synchronously(monkeypatch):
 
     ip._index_cache.clear()
     monkeypatch.setattr(ip, "_build_global", lambda db: [{"museum_id": 7}])
+    monkeypatch.setattr(ip, "_fingerprint", lambda db: ())
     out = ip.build_search_index(db=None)
     assert out == [{"museum_id": 7}]
     ip._index_cache.clear()
@@ -635,3 +636,36 @@ def test_title_prefix_still_beats_artist_surname():
     """冷门画家的姓撞常用词(Jean-Baptiste Roman):搜「roman」《罗马废墟》仍排第一。"""
     index = [_bare(1, {"roman ruins"}), _bare(2, {"death of euryalus"}, {"jean baptiste roman"})]
     assert [e["id"] for e, _ in rank(index, "roman")] == [1, 2]
+
+
+def test_refresh_skips_rebuild_when_catalog_unchanged(monkeypatch):
+    """目录没变就只续期、不重建:prod 每 10 分钟重建一次(建索引+倒排十几秒纯 Python)
+    会和请求线程抢 GIL,10-13 实测这十几秒里搜索慢 2–3 倍、最慢 2.9s。"""
+    import time as _t
+
+    from app.services.search import inprocess as ip
+
+    built = []
+    monkeypatch.setattr(ip, "_build_global", lambda db: built.append(1) or [{"museum_id": 1}])
+    monkeypatch.setattr(ip, "_warm_core", lambda index: None)
+    fp = {"v": ("a",)}
+    monkeypatch.setattr(ip, "_fingerprint", lambda db: fp["v"])
+    ip._index_cache.clear()
+
+    ip._refresh(None)  # 首建
+    first = ip._index_cache[None]
+    ip._index_cache[None] = (first[0] - ip._INDEX_TTL - 1, *first[1:])  # 过期
+    ip._refresh(None)  # 目录没变
+    assert len(built) == 1, "目录没变不该重建"
+    assert ip._index_cache[None][1] is first[1]
+    assert _t.time() - ip._index_cache[None][0] < ip._INDEX_TTL, "应续期"
+
+    fp["v"] = ("b",)  # 目录变了
+    ip._refresh(None)
+    assert len(built) == 2
+
+    built_at = ip._index_cache[None][3]
+    ip._index_cache[None] = (*ip._index_cache[None][:3], built_at - ip._FULL_REBUILD_S - 1)
+    ip._refresh(None)  # 没变但太久没全量重建(兜底 psql 直改不动 updated_at)
+    assert len(built) == 3
+    ip._index_cache.clear()

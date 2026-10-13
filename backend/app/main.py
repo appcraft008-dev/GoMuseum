@@ -65,6 +65,14 @@ def _startup() -> None:
         warm_vector_index()
     except Exception:
         logger.exception("Vector index warm-up failed (will load on first query)")
+    try:
+        # 存储客户端(R2 = boto3)首次创建 ~1.2s:不预建则每个 worker 第一个带图的请求
+        # (搜索/馆藏/讲解)都要等这一下(staging 10-13 实测搜索 0.93s)
+        from app.services.storage import get_object_storage
+
+        get_object_storage()
+    except Exception:
+        logger.exception("Object storage warm-up failed (will init on first use)")
 
 
 @asynccontextmanager

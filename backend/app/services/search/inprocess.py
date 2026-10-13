@@ -22,7 +22,7 @@ import time
 import unicodedata
 
 from rapidfuzz import fuzz
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from app.models.artist import Artist
 from app.models.museum import Museum
@@ -45,8 +45,9 @@ from app.services.museum_repo import (
 
 logger = logging.getLogger(__name__)
 
-_INDEX_TTL = 600  # 秒
-_index_cache: dict = {}  # 恒单键 None -> (ts, 全局索引)
+_INDEX_TTL = 600  # 秒:到期只查目录指纹,变了才重建
+_FULL_REBUILD_S = 6 * 3600  # 兜底:psql 直改不动 updated_at,最多 6h 也全量重建一次
+_index_cache: dict = {}  # 恒单键 None -> (ts, 全局索引, 目录指纹, 全量构建时刻)
 _refresh_lock = threading.Lock()
 _refreshing = False  # 后台重建中(防并发重复建)
 _INV_MIN = 3  # 归一化编号 <3 位不做精确匹配(防误伤)
@@ -166,6 +167,29 @@ def _warm_core(index) -> None:
         logger.exception("matching core build failed, search falls back to tiers")
 
 
+def _fingerprint(db) -> tuple:
+    """目录指纹:索引用到的四张表各自 (行数, 最近 updated_at)。增删改都会变(updated_at 带 onupdate)。"""
+    return tuple(
+        tuple(db.query(func.count(), func.max(m.updated_at)).one())
+        for m in (MuseumObject, ObjectImage, Artist, Museum)
+    )
+
+
+def _refresh(db) -> None:
+    """到期刷新:目录指纹没变且全量构建不满 6h → 只续期。prod 一次全量 ~12s 纯 Python
+    (建索引 7s + 倒排 4.5s),和请求线程抢 GIL,10-13 实测这段时间搜索慢 2–3 倍(最慢 2.9s)。"""
+    fp = _fingerprint(db)  # 先取指纹再建:构建期间的改动留给下一轮
+    now = time.time()
+    hit = _index_cache.get(None)
+    if hit and len(hit) > 3 and hit[2] == fp and now - hit[3] < _FULL_REBUILD_S:
+        _index_cache[None] = (now, *hit[1:])
+        return
+    index = _build_global(db)
+    _warm_core(index)  # 倒排同线程建好,请求线程不碰冷建
+    _index_cache[None] = (time.time(), index, fp, now)
+    logger.info("search index rebuilt: %d entries in %.1fs", len(index), time.time() - now)
+
+
 def _refresh_index_async() -> None:
     """后台重建索引(自带 session:不能跨线程用请求的 session)。失败留旧索引,
     下次过期再试——搜不到新件好过整条查询 5xx。"""
@@ -182,9 +206,7 @@ def _refresh_index_async() -> None:
 
             db2 = SessionLocal()
             try:
-                index = _build_global(db2)
-                _warm_core(index)  # 倒排同线程建好,请求线程不碰冷建
-                _index_cache[None] = (time.time(), index)
+                _refresh(db2)
             finally:
                 db2.close()
         except Exception:
@@ -208,9 +230,8 @@ def build_search_index(db, museum_id=None) -> list[dict]:
             _refresh_index_async()  # 本次仍用旧索引,不让用户等
         index = hit[1]
     else:
-        index = _build_global(db)  # 进程内首次:无旧索引可用,只能同步
-        _warm_core(index)
-        _index_cache[None] = (time.time(), index)
+        _refresh(db)  # 进程内首次:无旧索引可用,只能同步
+        index = _index_cache[None][1]
     if museum_id is None:
         return index
     return [e for e in index if e["museum_id"] == museum_id]
