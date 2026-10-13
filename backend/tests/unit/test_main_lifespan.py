@@ -26,9 +26,13 @@ def test_startup_runs_init_db_and_search_warmup(monkeypatch):
             "app.services.storage.get_object_storage",
             lambda: calls.append("storage"),
         ),
+        patch(
+            "app.services.recognition.embedder.warm_embedder",
+            lambda: calls.append("embedder"),
+        ),
     ):
         with TestClient(main.app):
             pass
-    assert calls == ["init_db", "warm", "warm_vec", "storage"]
+    assert calls == ["init_db", "warm", "warm_vec", "storage", "embedder"]
     # 在线服务进程的 AI 用量记成 xxx@app,与离线脚本分开(P3-14③)
     assert llm_usage.ORIGIN_SUFFIX == "@app"

@@ -98,3 +98,27 @@ def test_dinov3_preprocess_keeps_whole_image():
     assert x3.shape == x2.shape == (1, 3, 224, 224)
     assert x3[0, 0, :, 0].mean() > 1.5  # 白条在 v3 输入里
     assert x2[0, 0, :, 0].mean() < 0  # v2 中心裁掉了它
+
+
+def test_warm_runs_model_once_and_swallows_errors(monkeypatch):
+    """启动预热:加载模型并空跑一次推理(部署后首个识别 embed 曾 5.5s)。"""
+    ran = []
+
+    class _E:
+        def embed(self, img):
+            ran.append(img.size)
+
+    monkeypatch.setattr(emb, "get_embedder", lambda: _E())
+    emb._warm()
+    assert ran == [(224, 224)]
+
+    def boom():
+        raise RuntimeError("x")
+
+    monkeypatch.setattr(emb, "get_embedder", boom)
+    emb._warm()  # 失败只记日志,不抛
+
+
+def test_warm_skips_inference_when_engine_unavailable(monkeypatch):
+    monkeypatch.setattr(emb, "get_embedder", lambda: None)
+    emb._warm()  # 引擎不可用(降级 GPT 链)也不抛
