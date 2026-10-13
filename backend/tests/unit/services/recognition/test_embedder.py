@@ -122,3 +122,23 @@ def test_warm_runs_model_once_and_swallows_errors(monkeypatch):
 def test_warm_skips_inference_when_engine_unavailable(monkeypatch):
     monkeypatch.setattr(emb, "get_embedder", lambda: None)
     emb._warm()  # 引擎不可用(降级 GPT 链)也不抛
+
+
+def test_concurrent_workers_download_without_clobbering_tmp(monkeypatch, tmp_path):
+    """两个 worker 同时冷启动:另一个先把同名 .tmp 换走,本进程不该因此失败(10-13 prod)。"""
+    emb._reset_for_test()
+    blob = b"fake-onnx"
+    monkeypatch.setattr(emb, "_get_storage", lambda: _Storage(blob))
+    monkeypatch.setattr(emb.settings, "RECOG_MODEL_CACHE", str(tmp_path))
+    _pin_sha(monkeypatch, hashlib.sha256(blob).hexdigest())
+    monkeypatch.setattr(emb, "OnnxEmbedder", lambda path, preset: "ENGINE")
+    real_replace = emb.os.replace
+
+    def other_worker_wins(src, dst):
+        shared = tmp_path / "dinov2_vits14.tmp"  # 另一个 worker 用同一路径写完并换走
+        shared.write_bytes(blob)
+        real_replace(shared, dst)
+        real_replace(src, dst)
+
+    monkeypatch.setattr(emb.os, "replace", other_worker_wins)
+    assert emb.get_embedder() == "ENGINE"
