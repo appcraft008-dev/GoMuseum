@@ -424,6 +424,7 @@ def _compute(
     out = None
     vis = None
     shortlist_ranked: list = []  # 向量没决出时的前 5 名,交给 AI 做选择题(P1-7)
+    vector_top = None  # 埋点:定档用的前 3 名(P2-13)
     engine = "none"  # 埋点:决出结果的档位
     # --- 向量前置(仅 artwork;label 纯转写直走 GPT 链) ---
     if mode == "artwork":
@@ -461,6 +462,7 @@ def _compute(
                     ranked = _merge(ranked, crops)
                 clock.mark("crops")
             ranked = _drop_hidden(db, ranked, visible)
+            vector_top = [[q, round(sc, 4)] for q, sc in ranked[:3]]
             out = _vector_out(db, storage, ranked, language)
             clock.mark("vector_out")
             if out is None:
@@ -624,6 +626,7 @@ def _compute(
         duration_ms=clock.total_ms(),
         timings=clock.stages,
         text_trace=text_trace,
+        vector_top=vector_top,
     )
 
     if redis is not None:

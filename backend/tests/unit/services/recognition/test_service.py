@@ -592,6 +592,14 @@ def test_records_event_vector(session):
     assert ev.phash == out["phash"]
 
 
+def test_records_event_vector_top3(session):
+    """P2-13:0.80–0.85 段要按「第 1 名领先多少」评估直判,事件得留前 3 名分数。"""
+    vq = _FakeVQ([("Q334138", 0.83), ("Q152509", 0.74321), ("Qx", 0.6), ("Qy", 0.5)])
+    recognize(session, "orsay", _jpeg(), embed_fn=lambda b: "V", vector_query_fn=vq)
+    ev = session.query(RecognitionEvent).one()
+    assert ev.vector_top == [["Q334138", 0.83], ["Q152509", 0.7432], ["Qx", 0.6]]
+
+
 def test_records_event_vector_crops(session):
     # 全帧低分触发裁剪金字塔命中 → engine=vector_crops
     vq = _FakeVQ([("Q334138", 0.50)], [("Q334138", 0.90)])

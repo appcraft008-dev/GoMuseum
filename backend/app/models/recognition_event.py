@@ -48,6 +48,9 @@ class RecognitionEvent(Base):
     # 文字链复盘(2026-10-06):AI 读出的候选名/作者/说明牌文字 + 匹配前 5 名及分数。
     # 只有作品名和说明牌文字,无个人信息;向量路径为 NULL。匹配层评测集的原始材料。
     text_trace = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    # P2-13(2026-10-13):向量定档用的前 3 名 [[qid, score], ...](藏掉不可见馆之后)。
+    # 评估「第 1 名领先第 2 名多少才直判」的原始材料;GPT/label 路径为 NULL。
+    vector_top = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     __table_args__ = (
