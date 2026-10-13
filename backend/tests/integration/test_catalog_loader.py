@@ -130,3 +130,9 @@ def test_load_stubs_skips_inventory_collision_and_keeps_good(session=None):
     # A/B 原样不动(冲突件被回滚,没把 B 的号改成 INV1)
     assert s.query(MuseumObject).filter_by(qid="QA").one().inventory_number == "INV1"
     assert s.query(MuseumObject).filter_by(qid="QB").one().inventory_number == "INV2"
+
+
+def test_load_stubs_strips_own_inventory_from_title():
+    s = _session()
+    load_stubs(s, _museum(), [_stub("Q1", title="statue (Ma 2223)", inv="Ma 2223")])
+    assert s.query(MuseumObject).filter_by(qid="Q1").one().title_en == "statue"

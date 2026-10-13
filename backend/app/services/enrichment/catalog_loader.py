@@ -9,6 +9,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.models.museum_object import MuseumObject
+from app.services.enrichment.backfill import strip_inventory
 from app.services.enrichment.catalog_source import StubRecord
 from app.services.object_importer import find_object, upsert_museum, upsert_object
 from app.services.recognition.matcher import normalize_inv
@@ -72,7 +73,7 @@ def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:
                 art = {
                     "qid": s.qid,
                     "inventory_number": s.inventory_number,
-                    "title_en": s.title,
+                    "title_en": strip_inventory(s.title, s.inventory_number),
                     "artist_en": s.artist,
                     "year": s.year,
                     "category": s.category,
