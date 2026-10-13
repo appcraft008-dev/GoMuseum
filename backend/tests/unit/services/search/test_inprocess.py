@@ -567,3 +567,29 @@ def test_match_aliases_searchable(session):
     inprocess._index_cache.clear()
     idx = build_search_index(session, _mid(session))
     assert "Q_AIR" in {e["qid"] for e, _ in rank(idx, "evening air")}
+
+
+def test_tier_scores_match_full_scan(session):
+    """分档召回改走大串 find 后,与逐件 `_score` 全表扫逐条一致。"""
+    from app.services.matching.normalize import normalize, normalize_inv
+
+    index = build_search_index(session)
+    for q in ["星", "星夜", "starry", "night", "the", "s", "gogh", "梵高", "vincent", "zz"]:
+        qn, qinv = normalize(q), normalize_inv(q)
+        want = {e["id"]: s for e in index if (s := inprocess._score(e, qn, qinv)) > 0}
+        got = {k: s for k, (_, s) in inprocess._tier_scores(index, q).items()}
+        assert got == want, q
+
+
+def test_tier_scores_common_substring_falls_back_to_scan(session, monkeypatch):
+    """子串太常见时走逐件扫,结果不变。"""
+    from app.services.matching.normalize import normalize, normalize_inv
+
+    monkeypatch.setattr(inprocess, "_BLOB_MAX_OCC", 0)
+    calls = []
+    real = inprocess._score
+    monkeypatch.setattr(inprocess, "_score", lambda *a: calls.append(1) or real(*a))
+    index = build_search_index(session)
+    got = {k: s for k, (_, s) in inprocess._tier_scores(index, "night").items()}
+    want = {e["id"]: s for e in index if (s := real(e, "night", normalize_inv("night"))) > 0}
+    assert calls and got == want

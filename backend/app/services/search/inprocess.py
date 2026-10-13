@@ -221,6 +221,33 @@ def _score(entry: dict, qn: str, qinv: str) -> float:
 _S_TOKEN = 0.3  # 每个词都在标题/作者里命中(含拼错/跳词/姓+标题词),但不属于上面任何一档
 
 
+# prod 10-13 实测分界:出现 ≤1 万次 find 快 3–6 倍,~5 万次持平,单字母(30–60 万次)慢 3 倍
+_BLOB_MAX_OCC = 40_000
+
+
+def _tier_hits(index: list[dict], qn: str, qinv: str) -> dict | None:
+    """同 `_score` 逐件取最高档,但走匹配核心:编号查字典、标题/作者子串在大串里 find。
+    子串太常见时返回 None,由调用方逐件扫。"""
+    core, allowed = core_for(index)
+    if qn and core.blobs["title"].text.count(qn) > _BLOB_MAX_OCC:
+        return None  # 太常见的子串(单字母/de/an):逐命中 Python 循环比全表扫还慢
+    tiers: dict[int, float] = {}
+    if qn:
+        for i, pre in core.substr("title", qn).items():
+            tiers[i] = _S_PREFIX if pre else _S_SUBSTR
+        for i in core.substr("artist", qn):
+            tiers.setdefault(i, _S_ARTIST)
+    if len(qinv) >= _INV_MIN:
+        for i in core.by_inv.get(qinv, ()):
+            tiers[i] = _S_INV
+    ents = core.entries
+    return {
+        ents[i]["id"]: (ents[i], s)
+        for i, s in tiers.items()
+        if allowed is None or i in allowed
+    }
+
+
 def _tier_scores(index: list[dict], query: str) -> dict:
     """原分档(编号/数字编号/前缀/子串/作者子串)→ {id: (entry, score)}。query 已 NFKC。
 
@@ -228,7 +255,13 @@ def _tier_scores(index: list[dict], query: str) -> dict:
     再按「馆藏号只留数字」整串相等补一档 0.9 —— 说明牌上 `INV 779`,用户只敲了 `779`。"""
     qn = normalize(query)
     qinv = normalize_inv(query)
-    scored = {e["id"]: (e, s) for e in index if (s := _score(e, qn, qinv)) > 0}
+    try:
+        scored = _tier_hits(index, qn, qinv)
+    except Exception:  # 倒排不可用时退回逐件扫(慢 ~170ms,结果一致)
+        logger.exception("matching core unavailable, tier full scan")
+        scored = None
+    if scored is None:
+        scored = {e["id"]: (e, s) for e in index if (s := _score(e, qn, qinv)) > 0}
     qd = query.strip()
     if (
         qd.isdigit()

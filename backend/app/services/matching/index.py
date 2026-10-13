@@ -17,6 +17,42 @@ from app.services.matching.normalize import is_cjk, tokens
 
 _FUZZY_MIN = 4  # 拉丁词 ≥4 字母才容错
 _PREFIX_MIN = 2
+_SEP = "\x00"  # normalize 把控制符换成空格,名字里不会出现
+
+
+class _Blob:
+    """某字段全部名字拼成一条大串("\x00名1\x00名2…"),子串查找交给 C 层 str.find,
+    语义与逐件 `q in n` / `n.startswith(q)` 完全一致(搜索分档召回,原来逐件扫 2.7 万件 ~170ms)。"""
+
+    def __init__(self, entries: list[dict], key: str):
+        parts: list[str] = []
+        self.starts: list[int] = []  # 每个名字前 _SEP 的偏移
+        self.owner: list[int] = []  # 该名字属于哪个条目下标
+        off = 0
+        for i, e in enumerate(entries):
+            for n in sorted(e[key]):
+                self.starts.append(off)
+                self.owner.append(i)
+                parts.append(_SEP + n)
+                off += len(n) + 1
+        self.starts.append(off)  # 哨兵:末名字的结尾
+        self.text = "".join(parts)
+
+    def hits(self, q: str) -> dict[int, bool]:
+        """q 出现在哪些条目的名字里 → {条目下标: 是否某个名字以 q 开头}。"""
+        out: dict[int, bool] = {}
+        if not q or _SEP in q:
+            return out
+        text, starts, owner = self.text, self.starts, self.owner
+        j = text.find(q)
+        while j != -1:
+            k = bisect.bisect_right(starts, j) - 1
+            i = owner[k]
+            pre = j == starts[k] + 1
+            out[i] = out.get(i, False) or pre
+            # 同一名字只看首次出现(前缀只可能是首次),直接跳到下个名字
+            j = text.find(q, starts[k + 1])
+        return out
 
 
 class Core:
@@ -44,6 +80,22 @@ class Core:
             for f, p in self.post.items()
         }
         self.vocab = {f: sorted(p) for f, p in self.post.items()}
+        # OSA 距离 ≥ 长度差 → 容错只需比长度差 ≤k 的词;按长度分桶(桶内保持字母序)
+        self.by_len: dict[str, dict[int, list[str]]] = {}
+        for f, words in self.vocab.items():
+            b: dict[int, list[str]] = collections.defaultdict(list)
+            for w in words:
+                b[len(w)].append(w)
+            self.by_len[f] = b
+        self.by_inv: dict[str, list[int]] = collections.defaultdict(list)
+        for i, e in enumerate(entries):
+            if e.get("inv"):
+                self.by_inv[e["inv"]].append(i)
+        self.blobs = {"title": _Blob(entries, "names"), "artist": _Blob(entries, "artists")}
+
+    def substr(self, field: str, q: str) -> dict[int, bool]:
+        """field 里含 q 的条目 → {下标: 是否前缀}(搜索分档用)。"""
+        return self.blobs[field].hits(q)
 
     def expand(self, tok: str, field: str, prefix: bool = False) -> dict[str, float]:
         """查询词 → {库词: 相似度 0–1}。精确 1.0;拉丁 ≥4 字母按 OSA 容错;prefix=搜索框末词。"""
@@ -53,8 +105,13 @@ class Core:
             out[tok] = 1.0
         if len(tok) >= _FUZZY_MIN and not is_cjk(tok):
             k = 1 if len(tok) < 7 else 2
+            b = self.by_len[field]
+            # 合并后重排回字母序:同距离并列时 limit=8 取到的词与扫全词表一致
+            near = sorted(
+                w for n in range(len(tok) - k, len(tok) + k + 1) for w in b.get(n, ())
+            )
             for v, d, _ in process.extract(
-                tok, vocab, scorer=OSA.distance, score_cutoff=k, limit=8
+                tok, near, scorer=OSA.distance, score_cutoff=k, limit=8
             ):
                 out[v] = max(out.get(v, 0.0), 1 - d / max(len(tok), len(v)))
         if prefix and len(tok) >= _PREFIX_MIN:
