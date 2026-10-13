@@ -593,3 +593,18 @@ def test_tier_scores_common_substring_falls_back_to_scan(session, monkeypatch):
     got = {k: s for k, (_, s) in inprocess._tier_scores(index, "night").items()}
     want = {e["id"]: s for e in index if (s := real(e, "night", normalize_inv("night"))) > 0}
     assert calls and got == want
+
+
+def test_cjk_name_without_middle_dot_matches(session):
+    """中文译名「文森特·梵高」的 · 归一化成空格;用户不打点「文森特梵高」/「森特梵」也要搜到。"""
+    index = build_search_index(session)
+    for q in ["文森特梵高", "森特梵", "文森特·梵高", "文森特 梵高"]:
+        assert "Q45585" in [e["qid"] for e, _ in rank(index, q)], q
+
+
+def test_artist_name_written_without_spaces_matches(session):
+    """「vangogh」原来只能靠拼错容错碰上(prod 0 件);作者名去空格写法进索引后走作者子串档。"""
+    index = build_search_index(session)
+    hits = rank(index, "vangogh")
+    assert hits and hits[0][0]["qid"] == "Q45585"
+    assert hits[0][1] == inprocess._S_ARTIST

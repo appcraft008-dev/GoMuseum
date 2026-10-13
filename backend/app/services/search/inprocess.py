@@ -28,7 +28,13 @@ from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.matching.index import core_for
-from app.services.matching.normalize import normalize, normalize_inv, tokens
+from app.services.matching.normalize import (
+    artist_keys,
+    normalize,
+    normalize_inv,
+    tokens,
+    with_cjk_joined,
+)
 from app.services.museum_repo import (
     _resolve_name,
     _sized,
@@ -118,8 +124,8 @@ def _build_global(db) -> list[dict]:
                 "qid": qid,
                 "museum_id": mid,
                 "museum_slug": slug_by_museum.get(mid),
-                "names": names - {""},
-                "artists": artist_names - {""},
+                "names": with_cjk_joined(names - {""}),
+                "artists": artist_keys(artist_names - {""}),
                 "inv": normalize_inv(inv) or None,
                 "inv_digits": _NONDIGIT.sub("", inv or "") or None,
                 "inventory": inv,  # 原样展示,用户拿它对照说明牌
