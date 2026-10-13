@@ -290,3 +290,61 @@ def test_artist_names_never_get_title_en_stripping():
     传了会把「Jean-Baptiste 讓-巴蒂斯特」剥成半截。这里钉住默认不剥。"""
     v = {"zh-hant": "Jean-Baptiste 讓-巴蒂斯特"}
     assert _clean_i18n(v) == v
+
+
+# ── 本件馆藏号(prod 10-13 实测 ~1800 件:Wikidata 标签把馆藏号当消歧尾巴) ──
+# 判据是「与本件 inventory_number 归一化后相等」,不是「长得像编号」——
+# 白名单正则认不出 Ma 1078 / PPS222(C) / 226617 / -E 2558 这些形态。
+
+from app.services.enrichment.backfill import strip_inventory  # noqa: E402
+
+
+def test_strips_own_inventory_in_every_tail_shape():
+    cases = [
+        ("Buste de Caracalla (Ma 1078)", "Ma 1078", "Buste de Caracalla"),
+        ("Le Peintre (PPS222(C))", "PPS222(C)", "Le Peintre"),
+        ("Paysage (226617)", "226617", "Paysage"),
+        ("Lion head-E 2558", "E 2558", "Lion head"),
+        ("狮子头-E 2558", "E 2558", "狮子头"),
+        ("Androcephal bull AO 2752", "AO 2752", "Androcephal bull"),
+        ("Cat playing with kitten E5586", "E5586", "Cat playing with kitten"),
+        ("Vase, AO 29294", "AO 29294", "Vase"),
+        ("applique (Br\xa096)", "Br 96", "applique"),  # 标签里是不换行空格
+        ("勝利（ADUT280）", "ADUT280", "勝利"),
+    ]
+    for title, inv, want in cases:
+        assert strip_inventory(title, inv) == want, title
+
+
+def test_keeps_title_when_number_is_not_this_objects_inventory():
+    assert strip_inventory("olpé (E 648)", "E 647") == "olpé (E 648)"
+    assert strip_inventory("Vase E 25580", "E 2558") == "Vase E 25580"
+    assert strip_inventory("Statue AE 801", "E 801") == "Statue AE 801"
+    # 不在尾部的不动(Commons 式长标题,剥了反而断句)
+    t = "Cone fragment-AO 4442-AO 4597"
+    assert strip_inventory(t, "AO 4442") == t
+
+
+def test_inventory_strip_guards():
+    assert strip_inventory("E 801", "E 801") == "E 801"  # 剥完成空 → 不剥
+    assert strip_inventory("Paysage (12)", "12") == "Paysage (12)"  # 太短,撞年份/序号
+    assert strip_inventory("Paysage (226617)", None) == "Paysage (226617)"
+
+
+def test_clean_i18n_strips_inventory_in_all_languages():
+    got = _clean_i18n(
+        {"en": "Lion head-E 2558", "zh": "狮子头-E 2558", "fr": "Tête de lion"},
+        inventory_number="E 2558",
+    )
+    assert got == {"en": "Lion head", "zh": "狮子头", "fr": "Tête de lion"}
+
+
+def test_keeps_inventory_when_only_museum_name_would_remain():
+    # 「Louvre E 658」这类标签剥完只剩馆名,列表里 83 件同名比带号更难分
+    for t in (
+        "Louvre E 658",
+        "卢浮宫 E 658",
+        "Museo del Louvre E 658",
+        "ルーブル E 658",
+    ):
+        assert strip_inventory(t, "E 658") == t

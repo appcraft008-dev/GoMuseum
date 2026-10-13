@@ -14,6 +14,7 @@ from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
 from app.services.enrichment.material import authoritative_work_label
+from app.services.matching.normalize import normalize_inv
 
 logger = logging.getLogger(__name__)
 
@@ -380,6 +381,34 @@ def strip_disambiguator(value: str, artist_names=None) -> str:
     return stripped or value  # 剥完成空 → 宁可不剥
 
 
+# 「Louvre E 658」整条标签就是馆名+号,剥完只剩馆名(prod 83 件)→ 不剥。
+# ponytail: 只收了 prod 实测出现的卢浮宫各语写法,新馆出现同形再补
+_MUSEUM_ONLY = {
+    "louvre", "luwr", "museo del louvre", "卢浮宫", "羅浮宮",
+    "루브르", "ルーヴル", "ルーブル", "ルーヴル美術館", "ルーブル美術館",
+}  # fmt: skip
+
+
+def strip_inventory(value: str, inventory_number: str | None) -> str:
+    """剥掉显示名尾部的**本件馆藏号**:「statue (Ma 2223)」「Lion head-E 2558」。
+
+    Wikidata 标签常把馆藏号当消歧尾巴,翻译又把它带进全部语言(prod 10-13 实测
+    ~1800 件)。_DISAMB_CATALOG 只认「E 647」形,认不出 Ma 1078 / PPS222(C) / 226617。
+    判据是「与本件 inventory_number 归一化后相等」—— 对不上的号(别的件、年份)不动。
+    """
+    inv = normalize_inv(inventory_number)
+    if len(inv) < 3 or not value:  # 太短会撞年份/序号
+        return value
+    body = r"[\W_]*".join(map(re.escape, inv))
+    m = re.search(
+        rf"[\s,\-–—]*[（(]?\s*(?<![^\W_]){body}(?![^\W_])[\s)）]*$", value, re.I
+    )
+    stripped = value[: m.start()].strip() if m else ""
+    if not stripped or stripped.casefold() in _MUSEUM_ONLY:
+        return value  # 剥完成空或只剩馆名 → 宁可不剥
+    return stripped
+
+
 _QUOTES = "《》\"'“”‘’«»「」『』"
 
 
@@ -430,7 +459,7 @@ _NATIVE_SCRIPT = {
 }
 
 
-def _clean_i18n(i18n, artist_names=None, title_en=None) -> dict:
+def _clean_i18n(i18n, artist_names=None, title_en=None, inventory_number=None) -> dict:
     """清洗显示名:剥混入的英文原名 + 外层书名号/引号(旧翻译残留)+ 尾部消歧括号;
     非拉丁语言位无本族文字 = 翻译失败残留(如《Vue de toits》)→ 当缺失重解析。
 
@@ -442,6 +471,8 @@ def _clean_i18n(i18n, artist_names=None, title_en=None) -> dict:
     [title_en] 该作品的英文标题。给了才能剥掉上游标签里混进的整条英文原名
     (见 _strip_embedded_title_en)。清洗**作者名**时同样不传 ——
     作者的英文名与显示名重合是常态,传了会把「Jean-Baptiste 讓-巴蒂斯特」剥成半截。
+
+    [inventory_number] 本件馆藏号,剥尾部混入的本件号(见 strip_inventory)。
     """
     from app.services.enrichment.lang_detect import to_traditional
 
@@ -449,7 +480,7 @@ def _clean_i18n(i18n, artist_names=None, title_en=None) -> dict:
     for k, v in (i18n or {}).items():
         v = _strip_embedded_title_en(v or "", title_en, _NATIVE_SCRIPT.get(k))
         v = _strip_wrapping_quotes(v)
-        v = strip_disambiguator(v, artist_names)
+        v = strip_disambiguator(strip_inventory(v, inventory_number), artist_names)
         if k == "zh-hant":
             # 显示名不走"判否"那条路:标题缺 zh-hant 时 _resolve_name 会回退到
             # **英文标题**,比「蘇薩廢墟全景图」漏个简体字更伤。所以名字定点归一化。
@@ -594,6 +625,7 @@ def backfill_display_names(
                 attrs.get("title_i18n"),
                 _anames.get(attrs.get("artist_qid")),
                 o.title_en,
+                o.inventory_number,
             )
             if ti != (attrs.get("title_i18n") or {}):  # 仅清洗有变化(剥号/去坏值)也落库
                 attrs = {**attrs, "title_i18n": ti}
@@ -606,7 +638,10 @@ def backfill_display_names(
                         ti.pop(lang, None)
             need_fill = any(not ti.get(lang) for lang in langs)
             if need_fill or refresh_langs:
-                labels = _labels(o.qid)
+                labels = {  # 标签进库前剥本件馆藏号,否则它当轴心被翻进全部语言
+                    k: strip_inventory(v, o.inventory_number)
+                    for k, v in _labels(o.qid).items()
+                }
                 # refresh:该语言有权威标签则覆盖存量(繁→简修复);无标签保留(翻译值不动)
                 for lang in refresh_langs or []:
                     if labels.get(lang) and labels[lang] != ti.get(lang):
