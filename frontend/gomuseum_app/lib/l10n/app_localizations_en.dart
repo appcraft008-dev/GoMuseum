@@ -600,10 +600,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recThisIsIt => 'This is it';
 
   @override
-  String get recNotRecognized => 'Couldn\'t recognize this work';
+  String get recNotRecognized => 'Couldn\'t recognize it';
 
   @override
-  String get recNotInCatalog => 'This work isn\'t in our guide yet';
+  String get recNotInCatalog => 'Couldn\'t find this work';
 
   @override
   String get recShootLabelBtn => 'Photograph the wall label';
@@ -629,10 +629,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => 'Search using this text';
-
-  @override
-  String get recShootLabelHint =>
-      'Museum labels show the title and artist — snap it and we can identify the work';
 
   @override
   String get recViewfinderLabelHint => 'Aim at the label text, fill the frame';
@@ -1230,5 +1226,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Temporary exhibitions and some works aren\'t in our collection yet. Try the label next to the work, or search.';
+      'It may be a temporary exhibit or not in our guide yet. Snapping the label next to it usually works.';
+
+  @override
+  String get recLabelNoMatch =>
+      'It may be a temporary exhibit or not in our guide yet. Try another name or number.';
 }

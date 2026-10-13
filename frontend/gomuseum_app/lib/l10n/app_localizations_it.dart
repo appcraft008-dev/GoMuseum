@@ -607,7 +607,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recNotRecognized => 'Opera non riconosciuta';
 
   @override
-  String get recNotInCatalog => 'Quest\'opera non è ancora nella guida';
+  String get recNotInCatalog => 'Opera non trovata';
 
   @override
   String get recShootLabelBtn => 'Fotografa il cartellino';
@@ -633,10 +633,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get recSearchWithLabel => 'Cerca con questo testo';
-
-  @override
-  String get recShootLabelHint =>
-      'I cartellini del museo mostrano titolo e artista — fotografalo e potremo identificare l\'opera';
 
   @override
   String get recViewfinderLabelHint =>
@@ -1238,5 +1234,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Le mostre temporanee e alcune opere non sono ancora nella nostra raccolta. Prova la didascalia accanto all\'opera o la ricerca.';
+      'Forse è una mostra temporanea o non è ancora nella guida. Fotografare la didascalia accanto di solito funziona.';
+
+  @override
+  String get recLabelNoMatch =>
+      'Forse è una mostra temporanea o non è ancora nella guida. Prova un altro nome o numero.';
 }

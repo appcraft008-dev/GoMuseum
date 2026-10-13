@@ -180,7 +180,7 @@
   "recNoneOfThese": "Aucune de celles-ci",
   "recThisIsIt": "C'est celle-ci",
   "recNotRecognized": "Œuvre non reconnue",
-  "recNotInCatalog": "Cette œuvre n'est pas encore dans notre guide",
+  "recNotInCatalog": "Œuvre introuvable",
   "recShootLabelBtn": "Photographier le cartel",
   "recTypeNumberOrName": "Saisir le numéro ou le titre",
   "photoFbTitle": "Nous envoyer cette photo ?",
@@ -189,7 +189,6 @@
   "photoFbNoteHint": "Ajouter une remarque (facultatif)",
   "photoFbContinue": "Continuer",
   "recSearchWithLabel": "Rechercher avec ce texte",
-  "recShootLabelHint": "Le cartel du musée indique le titre et l'artiste — photographiez-le et nous pourrons identifier l'œuvre",
   "recViewfinderLabelHint": "Visez le texte du cartel, remplissez le cadre",
   "camRecognizeTitle": "Identifier l'œuvre",
   "camViewfinderHint": "Cadrez toute l'œuvre\nTournez le téléphone pour les œuvres larges",
@@ -369,5 +368,6 @@
   "collectionViewList": "Afficher en liste",
   "guideNotThisOne": "Ce n'est pas celle-ci ?",
   "guideNotThisOneNoted": "C'est noté. Essayez un autre angle, ou utilisez la recherche.",
-  "recMaybeNotCollected": "Les expositions temporaires et certaines œuvres ne sont pas encore dans notre collection. Essayez le cartel à côté de l'œuvre, ou la recherche."
+  "recMaybeNotCollected": "C'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Photographier le cartel aide souvent.",
+  "recLabelNoMatch": "C'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Essayez un autre nom ou numéro."
 }

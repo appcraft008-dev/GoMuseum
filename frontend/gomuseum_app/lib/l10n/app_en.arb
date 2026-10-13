@@ -340,8 +340,8 @@
   "@recThisIsIt": {
     "description": "Button in the full-screen candidate viewer: pick this candidate"
   },
-  "recNotRecognized": "Couldn't recognize this work",
-  "recNotInCatalog": "This work isn't in our guide yet",
+  "recNotRecognized": "Couldn't recognize it",
+  "recNotInCatalog": "Couldn't find this work",
   "recShootLabelBtn": "Photograph the wall label",
   "recTypeNumberOrName": "Type the number or title",
   "@recTypeNumberOrName": {
@@ -368,7 +368,6 @@
     "description": "The only button: continue regardless of the checkbox"
   },
   "recSearchWithLabel": "Search using this text",
-  "recShootLabelHint": "Museum labels show the title and artist — snap it and we can identify the work",
   "recViewfinderLabelHint": "Aim at the label text, fill the frame",
   "camRecognizeTitle": "Identify Artwork",
   "camViewfinderHint": "Fit the whole artwork in the frame\nTurn your phone sideways for wide works",
@@ -734,8 +733,12 @@
   "@guideNotThisOneNoted": {
     "description": "Snackbar after tapping 'Not this one?', back on the camera"
   },
-  "recMaybeNotCollected": "Temporary exhibitions and some works aren't in our collection yet. Try the label next to the work, or search.",
+  "recMaybeNotCollected": "It may be a temporary exhibit or not in our guide yet. Snapping the label next to it usually works.",
+  "recLabelNoMatch": "It may be a temporary exhibit or not in our guide yet. Try another name or number.",
   "@recMaybeNotCollected": {
-    "description": "Hint under 'not recognized' title: temporary exhibitions are never in the catalog"
+    "description": "Hint under 'not recognized' title (artwork photo): temporary exhibitions are never in the catalog; shooting the label helps"
+  },
+  "@recLabelNoMatch": {
+    "description": "Hint under 'couldn't find this work': label text was read but matched nothing; suggest another search, not shooting the label again"
   }
 }
