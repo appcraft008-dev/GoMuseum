@@ -579,3 +579,17 @@ def test_tier_scores_match_full_scan(session):
         want = {e["id"]: s for e in index if (s := inprocess._score(e, qn, qinv)) > 0}
         got = {k: s for k, (_, s) in inprocess._tier_scores(index, q).items()}
         assert got == want, q
+
+
+def test_tier_scores_common_substring_falls_back_to_scan(session, monkeypatch):
+    """子串太常见时走逐件扫,结果不变。"""
+    from app.services.matching.normalize import normalize, normalize_inv
+
+    monkeypatch.setattr(inprocess, "_BLOB_MAX_OCC", 0)
+    calls = []
+    real = inprocess._score
+    monkeypatch.setattr(inprocess, "_score", lambda *a: calls.append(1) or real(*a))
+    index = build_search_index(session)
+    got = {k: s for k, (_, s) in inprocess._tier_scores(index, "night").items()}
+    want = {e["id"]: s for e in index if (s := real(e, "night", normalize_inv("night"))) > 0}
+    assert calls and got == want
