@@ -508,6 +508,7 @@ def _compute(
             "label_text": _label_summary(vis),
             "reason": None,
         }
+        sure = None  # AI 把握高 + 标题与作者都在库里对上的那件(见下方 P1-7 例外)
         if not queries and not label_lines:
             out["reason"] = "no_candidates"
         else:
@@ -548,6 +549,10 @@ def _compute(
                 text_trace["hidden_imageless"] = list(hidden.values())
             # 原始前 5(含没过门槛的,附作者是否对上):文字链复盘与评测用
             text_trace["matched"] = raw
+            if vis.get("self_confidence") == "high":
+                sure = next(
+                    (q for q, sc, ok in raw if ok and sc >= 1.0 and q in img_ok), None
+                )
             # 影子统计,不改行为(10-10):只出 1 个候选且作者对上、标题 ≥0.9(raw 分含作者
             # 加分 0.1、封顶 1.0,故 ≥1.0)时,若放开直开会打开哪件。攒够确认/否定再决定放不放。
             shown = [q for q, s in results[:3] if s >= LOW]
@@ -591,6 +596,17 @@ def _compute(
                 out["outcome"], out["reason"] = "candidates", None
                 out["candidates"] = [
                     {**_summary(db, storage, o, language), "score": round(ps, 3)}
+                ]
+            elif sure:
+                # 例外(10-13 用户定):前 5 名里挑不中,但 AI 把握高、标题+作者都在库里对上
+                # → 仍给这件当候选(手机翻拍蒙娜丽莎:向量前 5 没有它,AI 认对了却被扔掉)。
+                # prod 回放:把握高的 3 次对 2、错 0;中/低 7 次已知错 2,所以只认「高」。
+                text_trace["sure_text_hit"] = sure
+                o = db.query(MuseumObject).filter_by(qid=sure).one()
+                score = next((sc for q, sc in results if q == sure), 1.0)
+                out["outcome"], out["reason"] = "candidates", None
+                out["candidates"] = [
+                    {**_summary(db, storage, o, language), "score": round(score, 3)}
                 ]
             else:
                 out["outcome"] = "unrecognized"

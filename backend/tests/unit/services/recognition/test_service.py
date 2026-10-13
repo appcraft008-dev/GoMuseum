@@ -106,14 +106,14 @@ class _FakeVQ:
         return self.returns[len(self.calls) - 1]
 
 
-def _vision(candidates=None, label=None, pick=None, seen=None):
+def _vision(candidates=None, label=None, pick=None, seen=None, confidence="medium"):
     def fake(image_b64, mode="artwork", complete=None, shortlist=None):
         if seen is not None:
             seen["shortlist"] = shortlist
         return {
             "candidates": candidates or [],
             "label_text": label,
-            "self_confidence": "medium",
+            "self_confidence": confidence,
             "pick": pick,
         }
 
@@ -353,6 +353,32 @@ def test_low_vector_ai_picks_none_is_unrecognized(session):
     out = _low_vector(session, identify)
     assert out["outcome"] == "unrecognized"
     assert out["candidates"] == []
+
+
+def test_sure_ai_guess_survives_when_shortlist_has_no_pick(session):
+    """10-13 用户定:前 5 名里挑不中,但 AI 把握高、标题+作者都在库里对上 → 仍给这件当候选
+    (手机翻拍蒙娜丽莎:向量前 5 没有它,AI 认对了却被扔掉)。只出候选,不直判。"""
+    identify = _vision(
+        [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+        pick=None,
+        confidence="high",
+    )
+    out = _low_vector(session, identify)
+    assert out["outcome"] == "candidates"
+    assert [c["qid"] for c in out["candidates"]] == ["Q334138"]
+    ev = session.query(RecognitionEvent).one()
+    assert ev.text_trace["sure_text_hit"] == "Q334138"
+
+
+def test_sure_rule_needs_artist_match(session):
+    """作者没对上(同名撞车)→ 照旧没认出。"""
+    identify = _vision(
+        [{"title": "The Origin of the World", "artist": "Someone Else"}],
+        pick=None,
+        confidence="high",
+    )
+    out = _low_vector(session, identify)
+    assert out["outcome"] == "unrecognized"
 
 
 def test_fullframe_high_skips_crop_pyramid(session):
