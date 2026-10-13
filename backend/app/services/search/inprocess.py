@@ -58,6 +58,16 @@ _NONDIGIT = re.compile(r"\D")
 _S_PREFIX = 0.8  # 标题前缀
 _S_SUBSTR = 0.6  # 标题子串
 _S_ARTIST = 0.4  # 作者子串
+# 查询正好是作者的姓/全名(作者名整词结尾:「monet」「莫奈」「van gogh」):用户在搜这个人,
+# 压过标题子串——不然「monet」前排全是法语标题含 monétaire 的硬币(prod 10-13)。
+# 只认结尾:名(charles/皮埃尔)几十位画家同名,抬了会把标题命中挤出前 20(评测实测)。
+# 低于标题前缀:冷门画家的姓撞常用词(jean/roman/saint/Cain)时,《贞德》《罗马废墟》仍在前。
+_S_ARTIST_WORD = 0.7
+_S_ARTIST_FIRST = 0.85  # 同上,但这个词更像在搜人(见 _tier_scores 末尾)
+
+
+def _artist_word(artists, qn: str) -> bool:
+    return any(f" {a}".endswith(f" {qn}") for a in artists)
 
 
 def _build_global(db) -> list[dict]:
@@ -217,6 +227,8 @@ def _score(entry: dict, qn: str, qinv: str) -> float:
         return _S_INV
     if any(n.startswith(qn) for n in entry["names"]):
         return _S_PREFIX
+    if _artist_word(entry["artists"], qn):
+        return _S_ARTIST_WORD
     if any(qn in n for n in entry["names"]):
         return _S_SUBSTR
     if any(qn in a for a in entry["artists"]):
@@ -242,7 +254,10 @@ def _tier_hits(index: list[dict], qn: str, qinv: str) -> dict | None:
         for i, pre in core.substr("title", qn).items():
             tiers[i] = _S_PREFIX if pre else _S_SUBSTR
         for i in core.substr("artist", qn):
-            tiers.setdefault(i, _S_ARTIST)
+            if _artist_word(core.entries[i]["artists"], qn):
+                tiers[i] = max(tiers.get(i, 0.0), _S_ARTIST_WORD)
+            else:
+                tiers.setdefault(i, _S_ARTIST)
     if len(qinv) >= _INV_MIN:
         for i in core.by_inv.get(qinv, ()):
             tiers[i] = _S_INV
@@ -278,6 +293,14 @@ def _tier_scores(index: list[dict], query: str) -> dict:
             if e["inv_digits"] == qd:
                 prev = scored.get(e["id"], (e, 0.0))[1]
                 scored[e["id"]] = (e, max(prev, _S_INV_DIGITS))
+    # 这个词更像在搜人还是搜标题:姓命中的件数多于标题前缀命中的件数(「monet」莫奈 90 件 vs
+    # 标题以 monet 开头的硬币几件)→ 作者档压过标题前缀;反之(「roman」J.-B. Roman 几件 vs
+    # 「罗马废墟」等几十件)留在前缀之下
+    vals = [s for _, s in scored.values()]
+    if vals.count(_S_ARTIST_WORD) > vals.count(_S_PREFIX):
+        for k, (e, s) in scored.items():
+            if s == _S_ARTIST_WORD:
+                scored[k] = (e, _S_ARTIST_FIRST)
     return scored
 
 
