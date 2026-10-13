@@ -7,6 +7,11 @@ from datetime import date
 
 logger = logging.getLogger(__name__)
 
+# 来源后缀(P3-14③):在线服务进程(懒生成/懒翻译/问答,用户触发)里记成 "translate@app",
+# 离线脚本照旧不带后缀。由 main._startup 置位。按进程分而不按调用链传标记:
+# 生成内部有线程池,contextvar 过不去。
+ORIGIN_SUFFIX = ""
+
 
 def _insert_for(db):
     """按方言选 insert 构造器(两家的 on_conflict_do_update API 相同)。
@@ -62,7 +67,9 @@ def record_llm_usage(
 
         db = SessionLocal()
     try:
-        db.execute(usage_upsert(db, channel, model, tokens_in, tokens_out))
+        db.execute(
+            usage_upsert(db, channel + ORIGIN_SUFFIX, model, tokens_in, tokens_out)
+        )
         db.commit()
     except Exception:  # 观测性永不破坏业务
         logger.warning("record_llm_usage failed (%s/%s)", channel, model, exc_info=True)

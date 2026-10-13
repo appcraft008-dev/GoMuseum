@@ -42,6 +42,10 @@ REGISTRY = {
         "/api/v1/content/tts/generate",
     ): "qid 分支已退役恒 410;ad-hoc 分支不按 qid 取任何内容",
     ("POST", "/api/v1/content/tts/info"): "只算文本哈希与时长,不读库",
+    (
+        "POST",
+        "/api/v1/museums/{slug}/objects/{qid}/viewed",
+    ): "只写不读:记一条埋点,恒 204 不回显任何馆/藏品内容",
 }
 
 

@@ -20,8 +20,11 @@ import 'package:gomuseum_app/features/auth/presentation/login_page.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
+import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart'
+    as rp;
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/app_theme.dart';
 
@@ -42,6 +45,16 @@ final _guest = User(
   isGuest: true,
   createdAt: DateTime(2026, 9, 29),
 );
+
+class _Noop implements HttpClientAdapter {
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options,
+          Stream<List<int>>? requestStream, Future? cancelFuture) async =>
+      ResponseBody.fromString('', 204);
+}
 
 void main() {
   testWidgets('冷启动点链接:登录态 loading 时去登录页,就绪后回到那件作品', (t) async {
@@ -67,6 +80,9 @@ void main() {
                 tabs: [],
                 suggestedQuestions: [],
               )),
+      // 讲解页进来会报一次 content_viewed:别真发网络(连接超时 Timer 会挂住测试)
+      rp.dioProvider.overrideWithValue(
+          Dio(BaseOptions(baseUrl: 'http://x'))..httpClientAdapter = _Noop()),
       entitlementsProvider.overrideWith((ref) async => Entitlements.unknown),
       museumEntitlementsProvider
           .overrideWith((ref, _) async => Entitlements.unknown),
@@ -99,5 +115,6 @@ void main() {
     final page = t.widget<GuidePage>(find.byType(GuidePage));
     expect(page.args.slug, 'orsay');
     expect(page.args.qid, 'Q1');
+    expect(page.args.entry, GuideEntry.link);
   });
 }

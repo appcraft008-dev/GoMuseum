@@ -538,3 +538,71 @@ def test_confirm_unknown_source_rejected():
         assert r.status_code == 422
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+# --- 识别漏斗埋点(P3-14):成功 = 直判命中,或候选首次被点选 ---
+
+
+def test_match_logs_success_and_museum_used(client, monkeypatch):
+    logged = []
+    monkeypatch.setattr(
+        "app.services.event_log.log_event",
+        lambda db, name, **kw: logged.append((name, kw.get("museum_slug"))),
+    )
+    monkeypatch.setattr(
+        "app.services.recognition.service.recognize_billed",
+        lambda db, slug, data, **kw: {
+            "outcome": "match",
+            "match": {"qid": "Q1", "museum": "orsay"},
+        },
+    )
+    r = client.post("/api/v1/recognize?device_id=dev-1", files=_img())
+    assert r.status_code == 200
+    assert logged == [("recognition_succeeded", "orsay"), ("museum_used", "orsay")]
+
+
+def test_candidates_log_nothing_until_confirmed(client, monkeypatch):
+    logged = []
+    monkeypatch.setattr(
+        "app.services.event_log.log_event",
+        lambda db, name, **kw: logged.append(name),
+    )
+    monkeypatch.setattr(
+        "app.services.recognition.service.recognize_billed",
+        lambda db, slug, data, **kw: {"outcome": "candidates", "candidates": []},
+    )
+    client.post("/api/v1/recognize?device_id=dev-1", files=_img())
+    assert logged == []
+
+
+def test_first_confirm_logs_success_once(monkeypatch):
+    from app.models.app_event import AppEvent
+
+    client, s = _confirm_client()
+    AppEvent.__table__.create(bind=s.get_bind())
+    try:
+        _event(s, "ph-ev")
+        for qid in ("Q1", "Q2"):  # 改选不算第二次成功
+            client.post(
+                "/api/v1/recognize/confirm", json={"phash": "ph-ev", "qid": qid}
+            )
+        names = [(e.name, e.museum_slug) for e in s.query(AppEvent)]
+        assert names == [("recognition_succeeded", "orsay"), ("museum_used", "orsay")]
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_search_confirm_is_not_a_recognition_success(monkeypatch):
+    from app.models.app_event import AppEvent
+
+    client, s = _confirm_client()
+    AppEvent.__table__.create(bind=s.get_bind())
+    try:
+        _event(s, "ph-se")
+        client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-se", "qid": "Q1", "source": "search"},
+        )
+        assert s.query(AppEvent).count() == 0
+    finally:
+        app.dependency_overrides.pop(get_db, None)

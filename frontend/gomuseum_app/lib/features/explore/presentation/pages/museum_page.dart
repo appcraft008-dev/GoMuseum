@@ -21,6 +21,7 @@ import 'package:gomuseum_app/features/content/data/models/object_list_model.dart
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/explore/presentation/providers/collection_view_provider.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
@@ -636,6 +637,7 @@ class _ObjectGrid extends ConsumerWidget {
           qid: item.qid,
           // 缩略图作生成中 hero 兜底（content 无图的冷门件）。
           imageUrl: item.thumbnail,
+          entry: GuideEntry.collection,
         ),
       );
 

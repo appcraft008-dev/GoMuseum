@@ -4,6 +4,7 @@
 """
 
 import logging
+from typing import Literal
 
 from fastapi import (
     APIRouter,
@@ -11,11 +12,14 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Path,
     Request,
+    Response,
     UploadFile,
 )
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.config import MAX_PAGE_LIMIT
@@ -172,6 +176,37 @@ def object_content(
     # 加法字段(2026-09-29 分享):null = 这件在这个语言下不可分享,App 不显示分享键
     data["share"] = share_info(db, slug, qid, language, data)
     return data
+
+
+class ViewedRequest(BaseModel):
+    # 讲解页入口:识别/搜索/馆藏列表/足迹/首页继续游览/分享链接
+    from_: Literal["recognition", "search", "collection", "history", "home", "link"] = (
+        Field(alias="from")
+    )
+
+
+@router.post("/{slug}/objects/{qid}/viewed", status_code=204)
+def object_viewed(
+    body: ViewedRequest,
+    slug: str = Path(max_length=64),
+    qid: str = Path(max_length=32),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> Response:
+    """App 进讲解页报一次 content_viewed(P3-14②,加法端点)。fire-and-forget 恒 204。
+    不挂在 /content 上:生成中那个接口每 4s 轮询,会重复计数。"""
+    from app.services.event_log import log_event
+
+    user = _caller(db, credentials)
+    log_event(
+        db,
+        "content_viewed",
+        user_id=str(user.id) if user else None,
+        museum_slug=slug,
+        qid=qid,
+        **{"from": body.from_},
+    )
+    return Response(status_code=204)
 
 
 @router.get("/{slug}/objects/{qid}/audio")
