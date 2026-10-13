@@ -26,6 +26,7 @@ def record_event(
     duration_ms=None,
     timings=None,
     text_trace=None,
+    vector_top=None,
 ) -> None:
     """记一次识别事件。独立小事务,失败回滚不影响主流程。
 
@@ -45,6 +46,7 @@ def record_event(
                 duration_ms=duration_ms,
                 timings=timings,
                 text_trace=text_trace,
+                vector_top=vector_top,
             )
         )
         db.commit()
