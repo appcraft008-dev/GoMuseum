@@ -34,6 +34,14 @@ def _no_recognition_redis(request, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _llm_usage_offline_origin(monkeypatch):
+    """启动钩子会把 AI 用量来源置成 @app(进程级);别让它从一个用例漏到下一个。"""
+    from app.services import llm_usage
+
+    monkeypatch.setattr(llm_usage, "ORIGIN_SUFFIX", "")
+
+
+@pytest.fixture(autouse=True)
 def _no_outbound_network(monkeypatch):
     """测试期间禁止连外网。
 

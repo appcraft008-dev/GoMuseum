@@ -45,6 +45,9 @@ set_record_only()
 def _startup() -> None:
     """Initialize database on startup"""
     logger.info("Starting up GoMuseum API...")
+    from app.services import llm_usage
+
+    llm_usage.ORIGIN_SUFFIX = "@app"  # 本进程的 AI 用量与离线脚本分开记(P3-14③)
     try:
         init_db()
         logger.info("Database initialized successfully")

@@ -7,7 +7,10 @@ from fastapi.testclient import TestClient
 import app.main as main
 
 
-def test_startup_runs_init_db_and_search_warmup():
+def test_startup_runs_init_db_and_search_warmup(monkeypatch):
+    from app.services import llm_usage
+
+    monkeypatch.setattr(llm_usage, "ORIGIN_SUFFIX", "")
     calls = []
     with (
         patch.object(main, "init_db", lambda: calls.append("init_db")),
@@ -27,3 +30,5 @@ def test_startup_runs_init_db_and_search_warmup():
         with TestClient(main.app):
             pass
     assert calls == ["init_db", "warm", "warm_vec", "storage"]
+    # 在线服务进程的 AI 用量记成 xxx@app,与离线脚本分开(P3-14③)
+    assert llm_usage.ORIGIN_SUFFIX == "@app"

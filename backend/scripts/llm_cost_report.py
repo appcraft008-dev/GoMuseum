@@ -36,7 +36,7 @@ def report(db, days: int) -> str:
     )
     lines = [f"LLM 用量 最近{days}天(截至 {date.today()})"]
     lines.append(
-        f"{'channel':10} {'model':18} {'calls':>8} {'in':>12} {'out':>10} {'~$':>8}"
+        f"{'channel':14} {'model':18} {'calls':>8} {'in':>12} {'out':>10} {'~$':>8}"
     )
     total = 0.0
     for ch, model, calls, tin, tout in sorted(rows, key=lambda r: r[0]):
@@ -45,9 +45,9 @@ def report(db, days: int) -> str:
         usd = tin / 1e6 * pin + tout / 1e6 * pout
         total += usd
         lines.append(
-            f"{ch:10} {model:18} {calls or 0:>8} {tin:>12} {tout:>10} {usd:>8.2f}"
+            f"{ch:14} {model:18} {calls or 0:>8} {tin:>12} {tout:>10} {usd:>8.2f}"
         )
-    lines.append(f"{'合计':>50} ~${total:.2f}(粗估,价目见 PRICES)")
+    lines.append(f"{'合计':>54} ~${total:.2f}(粗估,价目见 PRICES)")
     return "\n".join(lines)
 
 

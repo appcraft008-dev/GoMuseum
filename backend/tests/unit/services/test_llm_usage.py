@@ -96,3 +96,16 @@ def test_report_aggregates(session):
     record_llm_usage("gate", "gpt-4o-mini", 1000, 200, db=session)
     out = report(session, days=7)
     assert "tts" in out and "gate" in out and "合计" in out
+
+
+def test_serving_process_tags_channel_with_app(session, monkeypatch):
+    """在线服务里的调用(懒生成/问答,用户触发)与离线脚本分开记(P3-14③)。"""
+    from app.services import llm_usage
+
+    record_llm_usage("translate", "gpt-4o-mini", 1, 1, db=session)
+    monkeypatch.setattr(llm_usage, "ORIGIN_SUFFIX", "@app")
+    record_llm_usage("translate", "gpt-4o-mini", 1, 1, db=session)
+    assert {r.channel for r in session.query(LLMUsage)} == {
+        "translate",
+        "translate@app",
+    }
