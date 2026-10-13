@@ -3,10 +3,13 @@
 生成侧存的向量已单位化,点积即余弦(不再归一化)。
 纯 numpy 精确检索(spec:不上 FAISS/pgvector),2k 量级毫秒级。
 进程内 TTL 缓存:全库单矩阵一次加载,馆过滤用布尔掩码切片。
+过期不阻塞(同搜索索引):本次用旧矩阵、后台重载;进程内首次靠启动预热。
 """
 
 from __future__ import annotations
 
+import logging
+import threading
 import time
 
 import numpy as np
@@ -17,6 +20,9 @@ from app.services.recognition.embedder import MODEL_NAME
 
 _INDEX_TTL = 600  # 秒
 _cache: tuple | None = None  # (ts, mat, qids, museum_ids)
+_refresh_lock = threading.Lock()
+_refreshing = False
+logger = logging.getLogger(__name__)
 
 
 def invalidate() -> None:
@@ -41,9 +47,44 @@ def _load(db) -> tuple:
     return mat, qids, museum_ids
 
 
+def _refresh_async() -> None:
+    """后台重载(自带 session)。失败留旧矩阵,下次过期再试。"""
+    global _refreshing
+    with _refresh_lock:
+        if _refreshing:
+            return
+        _refreshing = True
+
+    def _run():
+        global _cache, _refreshing
+        try:
+            from app.core.database import SessionLocal
+
+            db2 = SessionLocal()
+            try:
+                _cache = (time.time(), *_load(db2))
+            finally:
+                db2.close()
+        except Exception:
+            logger.exception("vector index refresh failed, keeping stale index")
+        finally:
+            _refreshing = False
+
+    threading.Thread(target=_run, daemon=True, name="vector-index-refresh").start()
+
+
+def warm_vector_index() -> None:
+    """启动预热:prod 4 万条向量全量加载 ~2.3s,别让进程内第一个识别用户等。"""
+    _refresh_async()
+
+
 def _get(db) -> tuple:
+    """过期时返回旧矩阵并触发后台重载(prod 闲置 >10 分钟后首个识别 vq 曾 53/53 次 >1s)。
+    只有缓存为空(冷启/invalidate)才同步加载。"""
     global _cache
-    if _cache and time.time() - _cache[0] < _INDEX_TTL:
+    if _cache:
+        if time.time() - _cache[0] >= _INDEX_TTL:
+            _refresh_async()
         return _cache[1], _cache[2], _cache[3]
     mat, qids, museum_ids = _load(db)
     _cache = (time.time(), mat, qids, museum_ids)  # 空表也缓存,TTL 到期再刷
