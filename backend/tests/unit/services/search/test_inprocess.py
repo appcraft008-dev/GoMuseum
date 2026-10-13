@@ -119,7 +119,9 @@ def test_artist_substring_cross_language(session):
     out = rank(idx, "van gogh")
     qids = {e["qid"] for e, _ in out}
     assert {"Q45585", "Q_STUB"} <= qids
-    assert all(s == 0.4 for _, s in out)  # 作者子串档
+    assert all(
+        s in (inprocess._S_ARTIST_WORD, inprocess._S_ARTIST_FIRST) for _, s in out
+    )
 
 
 def test_artist_zh_hits(session):
@@ -361,6 +363,7 @@ def test_cold_start_builds_synchronously(monkeypatch):
 
     ip._index_cache.clear()
     monkeypatch.setattr(ip, "_build_global", lambda db: [{"museum_id": 7}])
+    monkeypatch.setattr(ip, "_fingerprint", lambda db: ())
     out = ip.build_search_index(db=None)
     assert out == [{"museum_id": 7}]
     ip._index_cache.clear()
@@ -567,3 +570,127 @@ def test_match_aliases_searchable(session):
     inprocess._index_cache.clear()
     idx = build_search_index(session, _mid(session))
     assert "Q_AIR" in {e["qid"] for e, _ in rank(idx, "evening air")}
+
+
+def test_tier_scores_match_full_scan(session):
+    """分档召回改走大串 find 后,与逐件 `_score` 全表扫逐条一致。"""
+    from app.services.matching.normalize import normalize, normalize_inv
+
+    index = build_search_index(session)
+    for q in [
+        "星",
+        "星夜",
+        "starry",
+        "night",
+        "the",
+        "s",
+        "gogh",
+        "梵高",
+        "vincent",
+        "zz",
+    ]:
+        qn, qinv = normalize(q), normalize_inv(q)
+        want = {e["id"]: s for e in index if (s := inprocess._score(e, qn, qinv)) > 0}
+        got = {k: s for k, (_, s) in inprocess._tier_hits(index, qn, qinv).items()}
+        assert got == want, q
+
+
+def test_tier_scores_common_substring_falls_back_to_scan(session, monkeypatch):
+    """子串太常见时走逐件扫,结果不变。"""
+    from app.services.matching.normalize import normalize, normalize_inv
+
+    monkeypatch.setattr(inprocess, "_BLOB_MAX_OCC", 0)
+    calls = []
+    real = inprocess._score
+    monkeypatch.setattr(inprocess, "_score", lambda *a: calls.append(1) or real(*a))
+    index = build_search_index(session)
+    got = {k: s for k, (_, s) in inprocess._tier_scores(index, "night").items()}
+    want = {
+        e["id"]: s for e in index if (s := real(e, "night", normalize_inv("night"))) > 0
+    }
+    assert calls and got == want
+
+
+def test_cjk_name_without_middle_dot_matches(session):
+    """中文译名「文森特·梵高」的 · 归一化成空格;用户不打点「文森特梵高」/「森特梵」也要搜到。"""
+    index = build_search_index(session)
+    for q in ["文森特梵高", "森特梵", "文森特·梵高", "文森特 梵高"]:
+        assert "Q45585" in [e["qid"] for e, _ in rank(index, q)], q
+
+
+def test_artist_name_written_without_spaces_matches(session):
+    """「vangogh」原来只能靠拼错容错碰上(prod 0 件);作者名去空格写法进索引后走作者子串档。"""
+    index = build_search_index(session)
+    hits = rank(index, "vangogh")
+    assert hits and hits[0][0]["qid"] == "Q45585"
+    assert hits[0][1] == inprocess._S_ARTIST
+
+
+def _bare(i, names, artists=(), pop=0):
+    return {"id": i, "qid": f"Q{i}", "museum_id": 1, "names": set(names),
+            "artists": set(artists), "inv": None, "inv_digits": None, "popularity": pop}  # fmt: skip
+
+
+def test_artist_whole_word_outranks_title_substring():
+    """搜「monet」:莫奈的作品排在法语标题含 monétaire 的硬币前面(prod 10-13 前排全是硬币)。"""
+    index = [
+        _bare(1, {"etalon monetaire au nom de umar", "monetary standard"}, pop=50),
+        _bare(5, {"impression sunrise"}, {"claude monet"}),
+        _bare(2, {"water lilies"}, {"claude monet"}),
+        _bare(3, {"画家莫奈像"}),
+        _bare(4, {"睡莲"}, {"克劳德 莫奈"}),
+    ]
+    assert {e["id"] for e, _ in rank(index, "monet")[:2]} == {2, 5}
+    assert rank(index, "莫奈")[0][0]["id"] == 4
+    # 作者名里的片段/名(非姓)仍是作者子串档,不抬
+    assert dict((e["id"], s) for e, s in rank(index, "mone"))[2] == inprocess._S_ARTIST
+    assert (
+        dict((e["id"], s) for e, s in rank(index, "claude"))[2] == inprocess._S_ARTIST
+    )
+
+
+def test_title_prefix_still_beats_artist_surname():
+    """冷门画家的姓撞常用词(Jean-Baptiste Roman):搜「roman」《罗马废墟》仍排第一。"""
+    index = [
+        _bare(1, {"roman ruins"}),
+        _bare(2, {"death of euryalus"}, {"jean baptiste roman"}),
+    ]
+    assert [e["id"] for e, _ in rank(index, "roman")] == [1, 2]
+
+
+def test_refresh_skips_rebuild_when_catalog_unchanged(monkeypatch):
+    """目录没变就只续期、不重建:prod 每 10 分钟重建一次(建索引+倒排十几秒纯 Python)
+    会和请求线程抢 GIL,10-13 实测这十几秒里搜索慢 2–3 倍、最慢 2.9s。"""
+    import time as _t
+
+    from app.services.search import inprocess as ip
+
+    built = []
+    monkeypatch.setattr(
+        ip, "_build_global", lambda db: built.append(1) or [{"museum_id": 1}]
+    )
+    monkeypatch.setattr(ip, "_warm_core", lambda index: None)
+    fp = {"v": ("a",)}
+    monkeypatch.setattr(ip, "_fingerprint", lambda db: fp["v"])
+    ip._index_cache.clear()
+
+    ip._refresh(None)  # 首建
+    first = ip._index_cache[None]
+    ip._index_cache[None] = (first[0] - ip._INDEX_TTL - 1, *first[1:])  # 过期
+    ip._refresh(None)  # 目录没变
+    assert len(built) == 1, "目录没变不该重建"
+    assert ip._index_cache[None][1] is first[1]
+    assert _t.time() - ip._index_cache[None][0] < ip._INDEX_TTL, "应续期"
+
+    fp["v"] = ("b",)  # 目录变了
+    ip._refresh(None)
+    assert len(built) == 2
+
+    built_at = ip._index_cache[None][3]
+    ip._index_cache[None] = (
+        *ip._index_cache[None][:3],
+        built_at - ip._FULL_REBUILD_S - 1,
+    )
+    ip._refresh(None)  # 没变但太久没全量重建(兜底 psql 直改不动 updated_at)
+    assert len(built) == 3
+    ip._index_cache.clear()

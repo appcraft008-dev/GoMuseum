@@ -13,13 +13,15 @@ import threading
 import time
 
 import numpy as np
+from sqlalchemy import func
 
 from app.models.museum_object import MuseumObject
 from app.models.object_embedding import ObjectEmbedding
 from app.services.recognition.embedder import MODEL_NAME
 
-_INDEX_TTL = 600  # 秒
-_cache: tuple | None = None  # (ts, mat, qids, museum_ids)
+_INDEX_TTL = 600  # 秒:到期只查指纹,变了才重载
+_FULL_RELOAD_S = 6 * 3600  # 兜底:最多 6h 也全量重载一次
+_cache: tuple | None = None  # (ts, mat, qids, museum_ids, 指纹, 全量加载时刻)
 _refresh_lock = threading.Lock()
 _refreshing = False
 logger = logging.getLogger(__name__)
@@ -47,6 +49,27 @@ def _load(db) -> tuple:
     return mat, qids, museum_ids
 
 
+def _fingerprint(db) -> tuple:
+    """向量只增删不原地改 → (行数, 最近 created_at);矩阵还带作品 qid/馆 → 加作品表指纹。"""
+    return (
+        tuple(db.query(func.count(), func.max(ObjectEmbedding.created_at)).one()),
+        tuple(db.query(func.count(), func.max(MuseumObject.updated_at)).one()),
+    )
+
+
+def _refresh(db) -> None:
+    """到期刷新:指纹没变且全量加载不满 6h → 只续期(prod 全量重载 CPU 1.55s,和请求抢 GIL)。"""
+    global _cache
+    fp = _fingerprint(db)
+    now = time.time()
+    c = _cache
+    if c and len(c) > 5 and c[4] == fp and now - c[5] < _FULL_RELOAD_S:
+        _cache = (now, *c[1:])
+        return
+    _cache = (time.time(), *_load(db), fp, now)
+    logger.info("vector index reloaded: %d in %.1fs", len(_cache[2]), time.time() - now)
+
+
 def _refresh_async() -> None:
     """后台重载(自带 session)。失败留旧矩阵,下次过期再试。"""
     global _refreshing
@@ -56,13 +79,13 @@ def _refresh_async() -> None:
         _refreshing = True
 
     def _run():
-        global _cache, _refreshing
+        global _refreshing
         try:
             from app.core.database import SessionLocal
 
             db2 = SessionLocal()
             try:
-                _cache = (time.time(), *_load(db2))
+                _refresh(db2)
             finally:
                 db2.close()
         except Exception:

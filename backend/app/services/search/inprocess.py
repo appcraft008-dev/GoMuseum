@@ -22,13 +22,19 @@ import time
 import unicodedata
 
 from rapidfuzz import fuzz
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.matching.index import core_for
-from app.services.matching.normalize import normalize, normalize_inv, tokens
+from app.services.matching.normalize import (
+    artist_keys,
+    normalize,
+    normalize_inv,
+    tokens,
+    with_cjk_joined,
+)
 from app.services.museum_repo import (
     _resolve_name,
     _sized,
@@ -39,8 +45,9 @@ from app.services.museum_repo import (
 
 logger = logging.getLogger(__name__)
 
-_INDEX_TTL = 600  # 秒
-_index_cache: dict = {}  # 恒单键 None -> (ts, 全局索引)
+_INDEX_TTL = 600  # 秒:到期只查目录指纹,变了才重建
+_FULL_REBUILD_S = 6 * 3600  # 兜底:psql 直改不动 updated_at,最多 6h 也全量重建一次
+_index_cache: dict = {}  # 恒单键 None -> (ts, 全局索引, 目录指纹, 全量构建时刻)
 _refresh_lock = threading.Lock()
 _refreshing = False  # 后台重建中(防并发重复建)
 _INV_MIN = 3  # 归一化编号 <3 位不做精确匹配(防误伤)
@@ -52,6 +59,16 @@ _NONDIGIT = re.compile(r"\D")
 _S_PREFIX = 0.8  # 标题前缀
 _S_SUBSTR = 0.6  # 标题子串
 _S_ARTIST = 0.4  # 作者子串
+# 查询正好是作者的姓/全名(作者名整词结尾:「monet」「莫奈」「van gogh」):用户在搜这个人,
+# 压过标题子串——不然「monet」前排全是法语标题含 monétaire 的硬币(prod 10-13)。
+# 只认结尾:名(charles/皮埃尔)几十位画家同名,抬了会把标题命中挤出前 20(评测实测)。
+# 低于标题前缀:冷门画家的姓撞常用词(jean/roman/saint/Cain)时,《贞德》《罗马废墟》仍在前。
+_S_ARTIST_WORD = 0.7
+_S_ARTIST_FIRST = 0.85  # 同上,但这个词更像在搜人(见 _tier_scores 末尾)
+
+
+def _artist_word(artists, qn: str) -> bool:
+    return any(f" {a}".endswith(f" {qn}") for a in artists)
 
 
 def _build_global(db) -> list[dict]:
@@ -118,8 +135,8 @@ def _build_global(db) -> list[dict]:
                 "qid": qid,
                 "museum_id": mid,
                 "museum_slug": slug_by_museum.get(mid),
-                "names": names - {""},
-                "artists": artist_names - {""},
+                "names": with_cjk_joined(names - {""}),
+                "artists": artist_keys(artist_names - {""}),
                 "inv": normalize_inv(inv) or None,
                 "inv_digits": _NONDIGIT.sub("", inv or "") or None,
                 "inventory": inv,  # 原样展示,用户拿它对照说明牌
@@ -150,6 +167,31 @@ def _warm_core(index) -> None:
         logger.exception("matching core build failed, search falls back to tiers")
 
 
+def _fingerprint(db) -> tuple:
+    """目录指纹:索引用到的四张表各自 (行数, 最近 updated_at)。增删改都会变(updated_at 带 onupdate)。"""
+    return tuple(
+        tuple(db.query(func.count(), func.max(m.updated_at)).one())
+        for m in (MuseumObject, ObjectImage, Artist, Museum)
+    )
+
+
+def _refresh(db) -> None:
+    """到期刷新:目录指纹没变且全量构建不满 6h → 只续期。prod 一次全量 ~12s 纯 Python
+    (建索引 7s + 倒排 4.5s),和请求线程抢 GIL,10-13 实测这段时间搜索慢 2–3 倍(最慢 2.9s)。"""
+    fp = _fingerprint(db)  # 先取指纹再建:构建期间的改动留给下一轮
+    now = time.time()
+    hit = _index_cache.get(None)
+    if hit and len(hit) > 3 and hit[2] == fp and now - hit[3] < _FULL_REBUILD_S:
+        _index_cache[None] = (now, *hit[1:])
+        return
+    index = _build_global(db)
+    _warm_core(index)  # 倒排同线程建好,请求线程不碰冷建
+    _index_cache[None] = (time.time(), index, fp, now)
+    logger.info(
+        "search index rebuilt: %d entries in %.1fs", len(index), time.time() - now
+    )
+
+
 def _refresh_index_async() -> None:
     """后台重建索引(自带 session:不能跨线程用请求的 session)。失败留旧索引,
     下次过期再试——搜不到新件好过整条查询 5xx。"""
@@ -166,9 +208,7 @@ def _refresh_index_async() -> None:
 
             db2 = SessionLocal()
             try:
-                index = _build_global(db2)
-                _warm_core(index)  # 倒排同线程建好,请求线程不碰冷建
-                _index_cache[None] = (time.time(), index)
+                _refresh(db2)
             finally:
                 db2.close()
         except Exception:
@@ -192,9 +232,8 @@ def build_search_index(db, museum_id=None) -> list[dict]:
             _refresh_index_async()  # 本次仍用旧索引,不让用户等
         index = hit[1]
     else:
-        index = _build_global(db)  # 进程内首次:无旧索引可用,只能同步
-        _warm_core(index)
-        _index_cache[None] = (time.time(), index)
+        _refresh(db)  # 进程内首次:无旧索引可用,只能同步
+        index = _index_cache[None][1]
     if museum_id is None:
         return index
     return [e for e in index if e["museum_id"] == museum_id]
@@ -211,6 +250,8 @@ def _score(entry: dict, qn: str, qinv: str) -> float:
         return _S_INV
     if any(n.startswith(qn) for n in entry["names"]):
         return _S_PREFIX
+    if _artist_word(entry["artists"], qn):
+        return _S_ARTIST_WORD
     if any(qn in n for n in entry["names"]):
         return _S_SUBSTR
     if any(qn in a for a in entry["artists"]):
@@ -221,6 +262,36 @@ def _score(entry: dict, qn: str, qinv: str) -> float:
 _S_TOKEN = 0.3  # 每个词都在标题/作者里命中(含拼错/跳词/姓+标题词),但不属于上面任何一档
 
 
+# prod 10-13 实测分界:出现 ≤1 万次 find 快 3–6 倍,~5 万次持平,单字母(30–60 万次)慢 3 倍
+_BLOB_MAX_OCC = 40_000
+
+
+def _tier_hits(index: list[dict], qn: str, qinv: str) -> dict | None:
+    """同 `_score` 逐件取最高档,但走匹配核心:编号查字典、标题/作者子串在大串里 find。
+    子串太常见时返回 None,由调用方逐件扫。"""
+    core, allowed = core_for(index)
+    if qn and core.blobs["title"].text.count(qn) > _BLOB_MAX_OCC:
+        return None  # 太常见的子串(单字母/de/an):逐命中 Python 循环比全表扫还慢
+    tiers: dict[int, float] = {}
+    if qn:
+        for i, pre in core.substr("title", qn).items():
+            tiers[i] = _S_PREFIX if pre else _S_SUBSTR
+        for i in core.substr("artist", qn):
+            if _artist_word(core.entries[i]["artists"], qn):
+                tiers[i] = max(tiers.get(i, 0.0), _S_ARTIST_WORD)
+            else:
+                tiers.setdefault(i, _S_ARTIST)
+    if len(qinv) >= _INV_MIN:
+        for i in core.by_inv.get(qinv, ()):
+            tiers[i] = _S_INV
+    ents = core.entries
+    return {
+        ents[i]["id"]: (ents[i], s)
+        for i, s in tiers.items()
+        if allowed is None or i in allowed
+    }
+
+
 def _tier_scores(index: list[dict], query: str) -> dict:
     """原分档(编号/数字编号/前缀/子串/作者子串)→ {id: (entry, score)}。query 已 NFKC。
 
@@ -228,7 +299,13 @@ def _tier_scores(index: list[dict], query: str) -> dict:
     再按「馆藏号只留数字」整串相等补一档 0.9 —— 说明牌上 `INV 779`,用户只敲了 `779`。"""
     qn = normalize(query)
     qinv = normalize_inv(query)
-    scored = {e["id"]: (e, s) for e in index if (s := _score(e, qn, qinv)) > 0}
+    try:
+        scored = _tier_hits(index, qn, qinv)
+    except Exception:  # 倒排不可用时退回逐件扫(慢 ~170ms,结果一致)
+        logger.exception("matching core unavailable, tier full scan")
+        scored = None
+    if scored is None:
+        scored = {e["id"]: (e, s) for e in index if (s := _score(e, qn, qinv)) > 0}
     qd = query.strip()
     if (
         qd.isdigit()
@@ -239,6 +316,14 @@ def _tier_scores(index: list[dict], query: str) -> dict:
             if e["inv_digits"] == qd:
                 prev = scored.get(e["id"], (e, 0.0))[1]
                 scored[e["id"]] = (e, max(prev, _S_INV_DIGITS))
+    # 这个词更像在搜人还是搜标题:姓命中的件数多于标题前缀命中的件数(「monet」莫奈 90 件 vs
+    # 标题以 monet 开头的硬币几件)→ 作者档压过标题前缀;反之(「roman」J.-B. Roman 几件 vs
+    # 「罗马废墟」等几十件)留在前缀之下
+    vals = [s for _, s in scored.values()]
+    if vals.count(_S_ARTIST_WORD) > vals.count(_S_PREFIX):
+        for k, (e, s) in scored.items():
+            if s == _S_ARTIST_WORD:
+                scored[k] = (e, _S_ARTIST_FIRST)
     return scored
 
 

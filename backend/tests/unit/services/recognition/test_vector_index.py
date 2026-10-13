@@ -118,7 +118,9 @@ def test_stale_cache_served_while_refreshing_in_background(monkeypatch):
 
     stale = (np.ones((1, 4), dtype=np.float32), ["Q1"], [1])
     vector_index._cache = (_t.time() - vector_index._INDEX_TTL - 1, *stale)
-    monkeypatch.setattr(vector_index, "_load", lambda db: pytest.fail("不该在请求线程里同步重载"))
+    monkeypatch.setattr(
+        vector_index, "_load", lambda db: pytest.fail("不该在请求线程里同步重载")
+    )
     spawned = []
     monkeypatch.setattr(vector_index, "_refresh_async", lambda: spawned.append(1))
 
@@ -143,4 +145,37 @@ def test_refresh_failure_keeps_stale_index(monkeypatch):
             break
         _t.sleep(0.02)
     assert vector_index._cache is stale, "重载失败应保留旧矩阵"
+    vector_index.invalidate()
+
+
+def test_refresh_skips_reload_when_unchanged(monkeypatch):
+    """向量没变就只续期:prod 全量重载 CPU 1.55s,每 10 分钟白干一次还和请求抢 GIL。"""
+    import time as _t
+
+    loads = []
+    monkeypatch.setattr(
+        vector_index,
+        "_load",
+        lambda db: loads.append(1) or (np.ones((1, 4)), ["Q1"], [1]),
+    )
+    fp = {"v": ("a",)}
+    monkeypatch.setattr(vector_index, "_fingerprint", lambda db: fp["v"])
+    vector_index.invalidate()
+
+    vector_index._refresh(None)
+    c = vector_index._cache
+    vector_index._cache = (c[0] - vector_index._INDEX_TTL - 1, *c[1:])
+    vector_index._refresh(None)
+    assert (
+        len(loads) == 1 and _t.time() - vector_index._cache[0] < vector_index._INDEX_TTL
+    )
+
+    fp["v"] = ("b",)
+    vector_index._refresh(None)
+    assert len(loads) == 2
+
+    c = vector_index._cache
+    vector_index._cache = (*c[:5], c[5] - vector_index._FULL_RELOAD_S - 1)
+    vector_index._refresh(None)
+    assert len(loads) == 3
     vector_index.invalidate()
