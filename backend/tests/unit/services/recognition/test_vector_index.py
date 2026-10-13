@@ -118,7 +118,9 @@ def test_stale_cache_served_while_refreshing_in_background(monkeypatch):
 
     stale = (np.ones((1, 4), dtype=np.float32), ["Q1"], [1])
     vector_index._cache = (_t.time() - vector_index._INDEX_TTL - 1, *stale)
-    monkeypatch.setattr(vector_index, "_load", lambda db: pytest.fail("不该在请求线程里同步重载"))
+    monkeypatch.setattr(
+        vector_index, "_load", lambda db: pytest.fail("不该在请求线程里同步重载")
+    )
     spawned = []
     monkeypatch.setattr(vector_index, "_refresh_async", lambda: spawned.append(1))
 
@@ -152,7 +154,9 @@ def test_refresh_skips_reload_when_unchanged(monkeypatch):
 
     loads = []
     monkeypatch.setattr(
-        vector_index, "_load", lambda db: loads.append(1) or (np.ones((1, 4)), ["Q1"], [1])
+        vector_index,
+        "_load",
+        lambda db: loads.append(1) or (np.ones((1, 4)), ["Q1"], [1]),
     )
     fp = {"v": ("a",)}
     monkeypatch.setattr(vector_index, "_fingerprint", lambda db: fp["v"])
@@ -162,7 +166,9 @@ def test_refresh_skips_reload_when_unchanged(monkeypatch):
     c = vector_index._cache
     vector_index._cache = (c[0] - vector_index._INDEX_TTL - 1, *c[1:])
     vector_index._refresh(None)
-    assert len(loads) == 1 and _t.time() - vector_index._cache[0] < vector_index._INDEX_TTL
+    assert (
+        len(loads) == 1 and _t.time() - vector_index._cache[0] < vector_index._INDEX_TTL
+    )
 
     fp["v"] = ("b",)
     vector_index._refresh(None)

@@ -91,7 +91,10 @@ class Core:
         for i, e in enumerate(entries):
             if e.get("inv"):
                 self.by_inv[e["inv"]].append(i)
-        self.blobs = {"title": _Blob(entries, "names"), "artist": _Blob(entries, "artists")}
+        self.blobs = {
+            "title": _Blob(entries, "names"),
+            "artist": _Blob(entries, "artists"),
+        }
 
     def substr(self, field: str, q: str) -> dict[int, bool]:
         """field 里含 q 的条目 → {下标: 是否前缀}(搜索分档用)。"""

@@ -187,7 +187,9 @@ def _refresh(db) -> None:
     index = _build_global(db)
     _warm_core(index)  # 倒排同线程建好,请求线程不碰冷建
     _index_cache[None] = (time.time(), index, fp, now)
-    logger.info("search index rebuilt: %d entries in %.1fs", len(index), time.time() - now)
+    logger.info(
+        "search index rebuilt: %d entries in %.1fs", len(index), time.time() - now
+    )
 
 
 def _refresh_index_async() -> None:
