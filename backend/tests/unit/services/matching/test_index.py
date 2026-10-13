@@ -52,6 +52,7 @@ def test_refresh_builds_core_in_background(monkeypatch):
     built = []
     monkeypatch.setattr(inprocess, "_index_cache", {})  # 测完还原,不污染别的用例
     monkeypatch.setattr(inprocess, "_build_global", lambda db: _idx())
+    monkeypatch.setattr(inprocess, "_fingerprint", lambda db: ())
     monkeypatch.setattr(mindex, "get_core", lambda ix, **kw: built.append(ix) or None)
 
     class _T:
