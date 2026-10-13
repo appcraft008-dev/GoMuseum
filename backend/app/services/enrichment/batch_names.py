@@ -34,7 +34,11 @@ def collect_missing(
     from app.models.artist import Artist
     from app.models.museum import Museum
     from app.models.museum_object import MuseumObject
-    from app.services.enrichment.backfill import _clean_i18n, _fetch_creators
+    from app.services.enrichment.backfill import (
+        _clean_i18n,
+        _fetch_creators,
+        strip_inventory,
+    )
     from app.services.enrichment.material import fetch_wikidata_labels_batch
 
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
@@ -75,7 +79,9 @@ def collect_missing(
     for i, o in enumerate(objs):
         attrs = dict(o.attributes or {})
         aq = attrs.get("artist_qid") or creators.get(o.qid)
-        ti = _clean_i18n(attrs.get("title_i18n"), _anames.get(aq), o.title_en)
+        ti = _clean_i18n(
+            attrs.get("title_i18n"), _anames.get(aq), o.title_en, o.inventory_number
+        )
         if aq:
             if attrs.get("artist_qid") != aq:
                 attrs = {**attrs, "artist_qid": aq}
@@ -91,7 +97,9 @@ def collect_missing(
                 continue
             for lg in langs:
                 if not ti.get(lg) and labels.get(lg):
-                    ti[lg] = labels[lg]  # 权威当场落库
+                    ti[lg] = strip_inventory(
+                        labels[lg], o.inventory_number
+                    )  # 权威当场落库
             if o.title_en and not ti.get("en"):
                 ti["en"] = o.title_en
             o.attributes = {**attrs, "title_i18n": ti}

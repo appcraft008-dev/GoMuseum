@@ -346,3 +346,22 @@ def test_collect_prefetches_labels_in_batch_not_per_object(session, monkeypatch)
     n_objects = session.query(MuseumObject).filter_by(museum_id=m.id).count()
     assert n_objects >= 30
     assert calls["n"] <= 2, f"批量预取未生效,调用了 {calls['n']} 次"
+
+
+def test_collect_strips_own_inventory_before_it_becomes_the_pivot(session):
+    m = session.query(Museum).one()
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "Q2", "inventory_number": "E 2558", "title_en": None, "category": "x"},
+    )
+    session.commit()
+    tasks = collect_missing(
+        session,
+        "louvre",
+        ["en", "zh"],
+        fetch_labels=lambda q, l: {"en": "Lion head-E 2558"} if q == "Q2" else {},
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q2").one()
+    assert o.attributes["title_i18n"]["en"] == "Lion head"
+    assert next(t for t in tasks if t.custom_id == "title|Q2|zh").name == "Lion head"
