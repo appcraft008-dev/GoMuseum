@@ -1,6 +1,8 @@
 """进程内搜索引擎:子串/前缀/编号/作者匹配 + 排序 + 全局/馆域过滤 + 无图 stub 可搜。
 契约由端点锁定;本层测匹配行为。离线 sqlite,fixture 抄 test_matcher。"""
 
+from datetime import datetime
+
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
@@ -694,3 +696,30 @@ def test_refresh_skips_rebuild_when_catalog_unchanged(monkeypatch):
     ip._refresh(None)  # 没变但太久没全量重建(兜底 psql 直改不动 updated_at)
     assert len(built) == 3
     ip._index_cache.clear()
+
+
+def test_fingerprint_ignores_lazy_generation_writes(session):
+    """懒生成只写看图描述/状态,不该触发 20s 全量重建(prod 10-13:每次有人看冷门件,
+    下一轮就重建,期间识别被拖到 13s)。标题等索引字段变了才变。"""
+    o = session.query(MuseumObject).filter_by(qid="Q45585").one()
+    fp0 = inprocess._fingerprint(session)
+    o.attributes["vision_description"] = "a swirling night sky"
+    o.content_status = "ready"
+    o.updated_at = datetime(2030, 1, 1)  # SQLite 同一秒内 onupdate 不变,显式推进
+    session.commit()
+    assert inprocess._fingerprint(session) == fp0
+    o.attributes["title_i18n"] = {"en": "The Starry Night", "zh": "星月夜"}
+    session.commit()
+    assert inprocess._fingerprint(session) != fp0
+
+
+def test_fingerprint_ignores_artist_bio_but_not_name(session):
+    a = session.query(Artist).filter_by(qid="Q5582").one()
+    fp0 = inprocess._fingerprint(session)
+    a.name_zh = "梵高"  # 不进索引的列(索引只用 name_en/name_i18n)
+    a.updated_at = datetime(2030, 1, 1)
+    session.commit()
+    assert inprocess._fingerprint(session) == fp0
+    a.name_i18n = {"zh": "文森特·凡·高"}
+    session.commit()
+    assert inprocess._fingerprint(session) != fp0

@@ -168,10 +168,33 @@ def _warm_core(index) -> None:
 
 
 def _fingerprint(db) -> tuple:
-    """目录指纹:索引用到的四张表各自 (行数, 最近 updated_at)。增删改都会变(updated_at 带 onupdate)。"""
-    return tuple(
-        tuple(db.query(func.count(), func.max(m.updated_at)).one())
-        for m in (MuseumObject, ObjectImage, Artist, Museum)
+    """目录指纹:作品/作者只摘要 _build_global 用到的列(懒生成写描述/状态不触发重建,
+    见 index_digest);图/馆仍按 (行数, 最近 updated_at)——懒补图是真变化。"""
+    from app.services.index_digest import column_digest
+
+    a = MuseumObject.attributes
+    return (
+        column_digest(
+            db,
+            MuseumObject.id,
+            MuseumObject.qid,
+            MuseumObject.museum_id,
+            MuseumObject.title_zh,
+            MuseumObject.title_en,
+            MuseumObject.artist_zh,
+            MuseumObject.artist_en,
+            MuseumObject.year,
+            MuseumObject.popularity,
+            MuseumObject.inventory_number,
+            a["title_i18n"],
+            a["match_aliases"],
+            a["artist_qid"],
+        ),
+        column_digest(db, Artist.qid, Artist.name_en, Artist.name_i18n),
+        *(
+            tuple(db.query(func.count(), func.max(m.updated_at)).one())
+            for m in (ObjectImage, Museum)
+        ),
     )
 
 
