@@ -103,7 +103,19 @@ def run_recognition(
         )
     if out is None:
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
+    m = out.get("match") or {}
+    if out.get("outcome") == "match" and m.get("qid"):
+        _log_success(db, m.get("museum"), user_id=user_id, device_id=device_id)
     return out
+
+
+def _log_success(db, museum_slug, **who) -> None:
+    """识别成功 = 直判命中,或候选首次被点选(P3-14)。museum_used 每次成功都记,
+    ops_report 按 (user, 馆) 去重算跨馆复用。"""
+    from app.services.event_log import log_event
+
+    log_event(db, "recognition_succeeded", museum_slug=museum_slug, **who)
+    log_event(db, "museum_used", museum_slug=museum_slug, **who)
 
 
 @router.post("/recognize")
@@ -172,6 +184,11 @@ def recognize_confirm(
     if body.source == "search":
         return Response(status_code=204)
     user_id = _user_id(db, credentials)
+    if first_time:
+        from app.services import entitlement_service as es
+
+        museum = es.museum_of_qid(db, body.qid)
+        _log_success(db, museum.slug if museum else None, user_id=user_id)
     # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。
     if first_time and user_id:
         from app.services import entitlement_service as es
