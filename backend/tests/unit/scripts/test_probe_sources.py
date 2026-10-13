@@ -66,3 +66,29 @@ def test_golden_sample_is_the_mona_lisa():
     """金标样本别被人随手换成冷门件 —— 冷门件下架会伪报成'源死了'。"""
     assert ps.GOLDEN_QID == "Q12418"
     assert ps.BROKEN.keys() == ps.PROBES.keys()  # 每个探针都要有坏样本
+
+
+# 非零退出要发邮件(10-13:原来只写进没人看的日志)
+
+
+@pytest.fixture()
+def mails(monkeypatch):
+    sent = []
+    monkeypatch.setattr(ps.ops_alert, "send", lambda s, b: sent.append((s, b)))
+    return sent
+
+
+def test_dead_source_mails_probe_output(probes, mails):
+    names = probes({"a": _ok, "b": _dead})
+    assert ps.main(names, selftest=False) == 1
+    assert len(mails) == 1 and "[FAIL] b" in mails[0][1]
+
+
+def test_all_alive_sends_nothing(probes, mails):
+    assert ps.main(probes({"a": _ok}), selftest=False) == 0
+    assert mails == []
+
+
+def test_probe_with_no_judgment_mails(probes, mails):
+    assert ps.main(probes({"a": _ok}), selftest=True) == 2
+    assert len(mails) == 1

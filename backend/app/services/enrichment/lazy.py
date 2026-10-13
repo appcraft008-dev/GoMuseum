@@ -10,6 +10,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 
 from app.models.museum_object import MuseumObject
+from app.services import ops_alert
 
 logger = logging.getLogger(__name__)
 
@@ -304,6 +305,15 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
+def _alert_fail_open() -> None:
+    ops_alert.alert_throttled(
+        "lazy-caps-redis",
+        "[GoMuseum] Redis 不可用:懒生成每账号/每 IP 额度已放行",
+        "懒生成额度检查连不上 Redis,正按 fail-open 放行,只剩全站上限兜底。\n"
+        "去查 Redis 容器;本进程 6 小时内不再重复发。",
+    )
+
+
 def _charge(user_id, ip, weight: int, redis=None) -> str | None:
     """按账号、按 IP 扣当日额度。None=放行;"user"/"ip"=该层超限(已全部回滚)。
 
@@ -323,6 +333,7 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
         logger.error(
             "lazy caps: redis unavailable, allowing (global cap still applies)"
         )
+        _alert_fail_open()
         return None
     try:
         pipe = r.pipeline()
@@ -336,6 +347,7 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
             return None
     except Exception:
         logger.exception("lazy caps: redis error, allowing (global cap still applies)")
+        _alert_fail_open()
         return None
     layer = "user" if "u" in over else "ip"
     logger.warning(

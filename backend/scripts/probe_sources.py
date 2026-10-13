@@ -25,12 +25,17 @@ None。走真链路 + 断言关键字段非空,才能同时探到"域名死了"�
     python scripts/probe_sources.py --self-test  # 自检:喂坏输入,断言探针会喊 FAIL
 
 退出码:0 = 全活   1 = 有源探不通   2 = 自检没通过(探针自己坏了,探活结果不可信)
+非零退出同时发邮件到 OPS_ALERT_EMAIL。
 """
 
 import argparse
+import contextlib
+import io
 import sys
 
 sys.path.insert(0, "/app")
+
+from app.services import ops_alert  # noqa: E402
 
 UA = "GoMuseumBot/0.1 (https://gomuseum.app; contact appcraft008@gmail.com)"
 
@@ -175,10 +180,34 @@ def self_test(names: list[str]) -> int:
     return 0
 
 
+class _Tee(io.StringIO):
+    def __init__(self, out):
+        super().__init__()
+        self.out = out
+
+    def write(self, s):
+        self.out.write(s)
+        return super().write(s)
+
+
+def main(names: list[str], selftest: bool) -> int:
+    """非零退出发邮件:只写日志等于没人看见(10-13 前就是这样)。"""
+    buf = _Tee(sys.stdout)
+    with contextlib.redirect_stdout(buf):
+        code = self_test(names) if selftest else run(names)
+    if code:
+        what = "探针自检没过,探活结果不可信" if code == 2 else "有源探不通"
+        try:
+            ops_alert.send(f"[GoMuseum] 数据源探活:{what}", buf.getvalue())
+        except Exception as e:
+            print(f"❌ 告警发送失败:{e}")
+    return code
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--self-test", action="store_true")
     p.add_argument("--only", help="只探某个源", choices=sorted(PROBES))
     a = p.parse_args()
     names = [a.only] if a.only else sorted(PROBES)
-    sys.exit(self_test(names) if a.self_test else run(names))
+    sys.exit(main(names, a.self_test))

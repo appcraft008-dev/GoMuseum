@@ -59,17 +59,24 @@ def test_missing_ip_only_counts_user(r):
     assert r.keys("lazy:ip:*") == []
 
 
-def test_redis_unavailable_fails_open(monkeypatch):
+def test_redis_unavailable_fails_open_and_alerts(monkeypatch):
+    sent = []
+    monkeypatch.setattr(lazy.ops_alert, "alert_throttled", lambda k, *a: sent.append(k))
     monkeypatch.setattr(lazy, "_redis", lambda: None)
     assert _charge("u1", "1.2.3.4", 8) is None
+    assert sent == ["lazy-caps-redis"]
 
 
-def test_redis_error_fails_open():
+def test_redis_error_fails_open_and_alerts(monkeypatch):
+    sent = []
+    monkeypatch.setattr(lazy.ops_alert, "alert_throttled", lambda k, *a: sent.append(k))
+
     class Boom:
         def pipeline(self):
             raise ConnectionError("down")
 
     assert _charge("u1", "1.2.3.4", 8, redis=Boom()) is None
+    assert sent == ["lazy-caps-redis"]
 
 
 def test_keys_are_per_utc_day(r, monkeypatch):
