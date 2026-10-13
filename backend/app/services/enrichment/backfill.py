@@ -565,9 +565,11 @@ def backfill_display_names(
     refresh_langs=None,
     retranslate_langs=None,
     limit=None,
+    qids=None,
 ) -> dict:
     """铺目录后回填显示名:title_i18n + artist_qid + Artist.name_i18n(名字行,bio 留给 generate)。
-    幂等:已齐语种的对象/作者跳过。limit=只处理前 N 件(staging 护栏小样本)。
+    幂等:已齐语种的对象/作者跳过。limit=只处理前 N 件(staging 护栏小样本);
+    qids=只处理这几件(按 qid 补收录,别顺带碰全馆)。
     契约:stub 一进目录就该有完整多语显示名。"""
     from app.services.enrichment.material import (
         fetch_artist_i18n_facts,
@@ -593,7 +595,10 @@ def backfill_display_names(
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return {"error": "unknown museum"}
-    objs = db.query(MuseumObject).filter_by(museum_id=m.id).all()
+    q = db.query(MuseumObject).filter_by(museum_id=m.id)
+    if qids:
+        q = q.filter(MuseumObject.qid.in_(qids))
+    objs = q.all()
     if limit:
         objs = objs[:limit]
     # ⚠️ 下面两步是**长时间静默**的批量外部查询(各自可能几分钟),打点标出边界:
