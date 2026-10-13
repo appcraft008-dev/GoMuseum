@@ -109,3 +109,38 @@ def test_cache_ttl_and_invalidate(session):
     vector_index.invalidate()
     got = {q for q, _ in vector_index.query_index(s, _unit([1, 0, 0, 0]))}
     assert got == {"Q1", "Q2"}
+
+
+def test_stale_cache_served_while_refreshing_in_background(monkeypatch):
+    """过期不阻塞(P2-12):prod 闲置 >10 分钟后首个识别 53/53 次 vq >1s(全量重载 ~2.3s)。
+    过期时本次用旧矩阵、后台重载。"""
+    import time as _t
+
+    stale = (np.ones((1, 4), dtype=np.float32), ["Q1"], [1])
+    vector_index._cache = (_t.time() - vector_index._INDEX_TTL - 1, *stale)
+    monkeypatch.setattr(vector_index, "_load", lambda db: pytest.fail("不该在请求线程里同步重载"))
+    spawned = []
+    monkeypatch.setattr(vector_index, "_refresh_async", lambda: spawned.append(1))
+
+    assert [q for q, _ in vector_index.query_index(None, _unit([1, 0, 0, 0]))] == ["Q1"]
+    assert spawned == [1]
+    vector_index.invalidate()
+
+
+def test_refresh_failure_keeps_stale_index(monkeypatch):
+    import time as _t
+
+    stale = (_t.time() - vector_index._INDEX_TTL - 1, np.ones((1, 4)), ["Q1"], [1])
+    vector_index._cache = stale
+
+    def _boom(db):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(vector_index, "_load", _boom)
+    vector_index._refresh_async()
+    for _ in range(50):
+        if not vector_index._refreshing:
+            break
+        _t.sleep(0.02)
+    assert vector_index._cache is stale, "重载失败应保留旧矩阵"
+    vector_index.invalidate()

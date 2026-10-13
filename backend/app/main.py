@@ -59,6 +59,12 @@ def _startup() -> None:
         logger.info("Search index warm-up started")
     except Exception:
         logger.exception("Search index warm-up failed (will build on first query)")
+    try:
+        from app.services.recognition.vector_index import warm_vector_index
+
+        warm_vector_index()
+    except Exception:
+        logger.exception("Vector index warm-up failed (will load on first query)")
 
 
 @asynccontextmanager
