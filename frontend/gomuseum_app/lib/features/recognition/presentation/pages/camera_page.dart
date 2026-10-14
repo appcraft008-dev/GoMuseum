@@ -297,11 +297,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
   Future<void> _shoot() async {
     final controller = _controller;
     if (controller == null || controller.value.isTakingPicture) return;
+    // 先拍再判额度/弹撕票(10-14 真机):先弹的话撕完票镜头早已不对着作品
+    final shot = await controller.takePicture();
     if (!_canRecognize() && !await _passActivatedIfPurchased()) {
       _showQuotaExhaustedSheet();
       return;
     }
-    final shot = await controller.takePicture();
     _saveShotToGallery(shot); // 不 await：见方法注释
     await _recognizeImage(shot, live: true);
   }
@@ -527,7 +528,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
       // 识别成功即自动播讲解:这是"保证送达的首体验",
       // 也是现场"边看边听"的产品形态。搜索路径没扣次解锁,自动播会立刻弹付费墙(S4)
       autoPlayAudio: !fromSearch,
-      rejectPhash: rejectPhash,
+      // 直判带 match 的 phash;候选点选也给(10-14 真机:点错了要能回头),搜索不给
+      rejectPhash: rejectPhash ?? (fromSearch ? null : _artworkPhash),
       entry: fromSearch ? GuideEntry.search : GuideEntry.recognition,
     );
     // 命中与选候选都 pushReplacement:返回一次就退出识别。候选原先 push 好让返回改选(S3),
