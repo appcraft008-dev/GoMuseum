@@ -1301,3 +1301,97 @@ def test_stored_hash_artist_qid_is_not_queried():
         "notable_works_i18n": {},
         "notable_works_labels": [],
     }
+
+
+# ── P518「只适用于某部分」(10-14 用户真机《三美神》)────────────────────────
+# 卢浮 Q18663545:P170 = 未知值(佚名) + 科尔迪耶(限定 P518=修复,1609)。旧代码丢掉未知值、
+# 不看 P518 → 修复者成了唯一作者,导览写出「1567 年生的人在 150 年创作了它」。
+# 但 P518 不全是修复:人物/花卉合作、底稿/织造常是真合作者,不能一律跳过。
+_RESTORATION = "Q217102"
+
+
+def _with_parts(st, *parts):
+    """给 P170 语句挂 P518 限定(形状照 P1480 限定改属性名,值为 QID 或 None=未知值)。"""
+    q0 = _copy.deepcopy(_E["Q64309678"]["claims"]["P170"][0]["qualifiers"]["P1480"][0])
+    quals = []
+    for p in parts:
+        q = _copy.deepcopy(q0)
+        q["property"] = "P518"
+        if p is None:
+            q["snaktype"] = "somevalue"
+            q.pop("datavalue", None)
+        else:
+            q["datavalue"]["value"]["id"] = p
+            q["datavalue"]["value"]["numeric-id"] = int(p[1:])
+        quals.append(q)
+    st.setdefault("qualifiers", {})["P518"] = quals
+    return st
+
+
+def test_creator_restorer_with_anonymous_whole_is_none():
+    """三美神:整件佚名 + 修复者 → 作者不详,不是修复者。"""
+    ents = _p170_entity(
+        _p170(None, snaktype="somevalue"),
+        _with_parts(_p170("Q3876426"), _RESTORATION),
+    )
+    assert _resolve(ents) is None
+
+
+def test_creator_restoration_only_is_none():
+    ents = _p170_entity(_with_parts(_p170("Q3876426", refs=3), _RESTORATION))
+    assert _resolve(ents) is None
+
+
+def test_creator_known_whole_and_partial_keep_old_ranking():
+    """整件 + 已知部分作者:不改旧择优(prod 10-14 全库对比:「整件优先」会选出铸造工、
+    换掉「习作」作者,得不偿失)。这里部分作者引用多 → 仍是它。"""
+    ents = _p170_entity(
+        _p170("Q1237940"),
+        _with_parts(_p170("Q148475", refs=9), "Q5448026"),  # figure painting
+    )
+    assert _resolve(ents) == "Q148475"
+
+
+def test_creator_partial_only_with_unknown_main_part_is_none():
+    """《沉睡的赫马佛洛狄忒斯》形状:本体(部分)作者未知 + 贝尼尼只做床垫 → 不详。"""
+    ents = _p170_entity(
+        _with_parts(_p170(None, snaktype="somevalue"), "Q193474"),
+        _with_parts(_p170("Q160538", refs=5), "Q1365497"),
+    )
+    assert _resolve(ents) is None
+
+
+def test_creator_partial_only_collaboration_still_picks_one():
+    """人物 + 花卉合作(全是已知的部分作者)→ 照旧按尺子挑一位,不弃权。"""
+    ents = _p170_entity(
+        _with_parts(_p170("Q1384115"), "Q12303833"),  # floral painting
+        _with_parts(_p170("Q1358136", refs=2), "Q5448026"),  # figure painting
+    )
+    assert _resolve(ents) == "Q1358136"
+
+
+def test_fetch_creators_batch_handles_partial_like_single():
+    """批量路径同一套 P518 规则(三美神 + 合作件)。"""
+    from app.services.enrichment.backfill import _fetch_creators
+
+    def row(item, aq, part=None, refs=0):
+        r = dict(
+            _creator_row(aq, refs=refs, var="creator"),
+            item={"value": f"http://www.wikidata.org/entity/{item}"},
+        )
+        if part:
+            r["part"] = {"value": f"http://www.wikidata.org/entity/{part}"}
+        return r
+
+    rows = [
+        row("Q18663545", "Q3876426", _RESTORATION),
+        dict(
+            row("Q18663545", "Q1"),
+            creator={"value": "http://www.wikidata.org/.well-known/genid/7ad693ef"},
+        ),
+        row("Q29644503", "Q1384115", "Q12303833"),
+        row("Q29644503", "Q1358136", "Q5448026", refs=2),
+    ]
+    assert _fetch_creators(["Q18663545", "Q29644503"], run_query=lambda s: rows) == {
+        "Q29644503": "Q1358136"
+    }
