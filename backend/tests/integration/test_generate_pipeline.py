@@ -2109,3 +2109,42 @@ def test_all_deep_sections_empty_keeps_ready_with_guide(session):
         )
     }
     assert codes == {"guide"}
+
+
+def test_guide_suspended_and_deep_sections_empty_marks_object_empty(session):
+    """10-14 P1-9B:guide 挂起、深度段又全留空 → 这件 empty(宁缺毋滥;匿名用户看不到空件)。"""
+    from app.models.museum_object import MuseumObject
+    from app.services.enrichment.pipeline import generate_object
+    from app.services.enrichment.quality import SectionQuality
+
+    class _Enr(_FakeEnricher):
+        def generate_default_guide(self, obj, facts, target_chars):
+            return "Guide hook."
+
+        def generate_canonical(self, obj, sections, guide=None):
+            return {code: None for code in sections}
+
+    class _G(_FakeGate):
+        def check_section(self, m, f, b):
+            return SectionQuality(
+                body=b,
+                status="needs_review",
+                grounding_ratio=0.2,
+                conflicts=[],
+                score=0.2,
+            )
+
+        def gate(self, m, f, draft):
+            return {c: self.check_section(m, f, b) for c, b in draft.items() if b}
+
+    generate_object(
+        session,
+        "Q1",
+        enricher=_Enr(),
+        gate=_G(),
+        translator=_FakeTranslator(),
+        target_langs=["en"],
+        model="m",
+    )
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    assert o.content_status == "empty"

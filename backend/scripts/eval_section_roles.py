@@ -24,9 +24,9 @@ sys.path.insert(0, "/app")
 from app.services.enrichment import category_config as cc  # noqa: E402
 
 SEED = 20261013
-TARGET = ("background", "analysis", "facts", "material-technique")
+TARGET = ("background", "analysis", "facts", "material-technique", "significance")
 
-# Task 1 改动前的原文(逐字),作为对照组
+# Task 1 / 1250ab96 改动前的原文(逐字),作为对照组
 OLD_ROLES = {
     "background": {
         "role": "The work's HISTORY as concrete events: when, who commissioned it, where shown, the reception as events, provenance. NOT why-it-matters (that's significance), NOT how-to-look (that's analysis).",
@@ -43,6 +43,19 @@ OLD_ROLES = {
     "material-technique": {
         "role": "Guided looking at how it was made: material and craft a visitor can notice.",
         "max_chars": 200,
+    },
+    "significance": {
+        "role": (
+            "LEGACY & standing — ONLY what the MATERIAL explicitly states: what the work "
+            "changed, whom it influenced, how its reputation developed, its recognised status "
+            "(e.g. called the artist's masterpiece, a national treasure, among the most visited "
+            "works). Every claim must be traceable to the material. If the material states none "
+            "of this, return an EMPTY STRING for this section — do NOT infer influence from style "
+            "or period, and do NOT write generic praise ('pivotal', 'influenced countless "
+            "artists', 'enduring impact', 'reshaped art'). Do NOT re-tell the scandal events "
+            "(that's background)."
+        ),
+        "max_chars": 240,
     },
 }
 
@@ -135,6 +148,15 @@ def _is_unsupported(r: dict) -> bool:
     )
 
 
+def _is_unquoted(r: dict) -> bool:
+    """判「有出处」但引文在材料里找不到:不算无出处,单独计数留给人工核。"""
+    return (
+        r["type"] in ("fact", "visual")
+        and r["verdict"] == "supported"
+        and not r["quote_found"]
+    )
+
+
 def run_pair(job, rep, enricher, gate, auditor, arms: dict) -> list[dict]:
     """一件一遍:生成一次 guide,两组共用;各组生成深度段 → 过闸 → 复核放行句。"""
     from app.services.enrichment.quality import _split_sentences
@@ -158,6 +180,7 @@ def run_pair(job, rep, enricher, gate, auditor, arms: dict) -> list[dict]:
                         status="empty",
                         kept=0,
                         unsupported=[],
+                        unquoted=0,
                     )
                 )
                 continue
@@ -173,6 +196,7 @@ def run_pair(job, rep, enricher, gate, auditor, arms: dict) -> list[dict]:
                     status=q.status,
                     kept=len(kept),
                     unsupported=[r["sentence"] for r in audit if _is_unsupported(r)],
+                    unquoted=sum(1 for r in audit if _is_unquoted(r)),
                     audit=audit,
                 )
             )
@@ -184,10 +208,17 @@ def summarize(records: list[dict]) -> dict:
     for r in records:
         c = out.setdefault(r["arm"], {}).setdefault(
             r["section"],
-            {"published": 0, "needs_review": 0, "empty": 0, "unsupported": 0},
+            {
+                "published": 0,
+                "needs_review": 0,
+                "empty": 0,
+                "unsupported": 0,
+                "unquoted": 0,
+            },
         )
         c[r["status"]] = c.get(r["status"], 0) + 1
         c["unsupported"] += len(r["unsupported"])
+        c["unquoted"] += r.get("unquoted", 0)
     return out
 
 

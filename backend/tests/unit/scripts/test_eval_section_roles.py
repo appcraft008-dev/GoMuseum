@@ -102,6 +102,8 @@ def test_run_pair_shares_one_guide_and_labels_status():
     assert by[("old", "facts")]["status"] == "published"
     assert by[("new", "facts")]["status"] == "empty"
     assert by[("old", "background")]["unsupported"] == ["It was well received."]
+    # 判「有出处」但引文在材料里找不到 → 单独计数,留给人工核
+    assert by[("old", "background")]["unquoted"] == 1
 
 
 def test_summarize_counts_per_arm_and_section():
@@ -140,10 +142,28 @@ def test_summarize_counts_per_arm_and_section():
         "needs_review": 0,
         "empty": 0,
         "unsupported": 1,
+        "unquoted": 0,
     }
     assert s["new"]["facts"] == {
         "published": 0,
         "needs_review": 1,
         "empty": 1,
         "unsupported": 1,
+        "unquoted": 0,
     }
+
+
+def test_summarize_counts_unquoted_supported():
+    recs = [
+        dict(arm="new", section="facts", status="published", unsupported=[], unquoted=2)
+    ]
+    assert ev.summarize(recs)["new"]["facts"]["unquoted"] == 2
+
+
+def test_old_roles_cover_significance():
+    """1250ab96 改了 significance;对照组要带它改前的原文,否则复跑测不出差异。"""
+    assert "significance" in ev.TARGET
+    assert set(ev.OLD_ROLES) == set(ev.TARGET)
+    assert ev.OLD_ROLES["significance"]["role"].startswith(
+        "LEGACY & standing — ONLY what the MATERIAL explicitly states: what the work"
+    )

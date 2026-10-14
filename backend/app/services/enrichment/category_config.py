@@ -310,11 +310,11 @@ SECTION_ROLES: dict[str, dict] = {
             "LEGACY & standing of THIS work — ONLY what the MATERIAL explicitly states about "
             "this work's standing, influence or later reputation. Each sentence must restate a "
             "specific sentence of the material that is about THIS work (not the artist in "
-            "general), and nothing else: no evaluative wrap-up ('significant', 'important', 'pivotal', 'its legacy "
-            "continues', 'solidified its status'), no carrying the ARTIST's general reputation "
-            "over to this work, no remark about what the material does not say. If the material "
-            "states none of this, return an EMPTY STRING for this section. Do NOT re-tell the "
-            "scandal events (that's background)."
+            "general), and nothing else: no evaluative wrap-up ('significant', "
+            "'important', 'pivotal', 'its legacy continues', 'solidified its status'), no "
+            "carrying the ARTIST's general reputation over to this work, no remark about what "
+            "the material does not say. If the material states none of this, return an EMPTY "
+            "STRING for this section. Do NOT re-tell the scandal events (that's background)."
         ),
         "max_chars": 240,
     },
