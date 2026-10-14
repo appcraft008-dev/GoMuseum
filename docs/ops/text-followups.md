@@ -27,7 +27,7 @@
 
 ---
 
-## 全视图（快照 2026-10-10，prod）
+## 全视图（快照 2026-10-15，prod）
 
 **口径**：各语言的已发布数。导览、问答按件数，深度段按段数，作者简介按作者数（只算有已发布 en 内容的件所关联的作者）。
 **粗体**表示比同馆 en 少，是缺口。深度段只标数，差几段不加粗。
@@ -36,37 +36,37 @@
 
 | 类型 | en | fr | de | es | it | zh | pl | ja | ko | zh-hant |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 标准导览(件) | 408 | **407** | **407** | **406** | 408 | **407** | 408 | **407** | **407** | **407** |
-| 深度段(段) | 1237 | 1235 | 1236 | 1237 | 1237 | 1235 | 1236 | 1236 | 1235 | 1237 |
-| 问答(件) | 380 | **377** | **376** | **377** | **376** | **377** | **377** | **377** | **376** | **376** |
-| 作者简介(位) | 151 | 151 | 151 | 151 | 151 | 151 | 151 | 151 | 151 | 151 |
+| 标准导览(件) | 461 | 461 | 461 | **460** | 461 | 461 | 461 | **459** | 461 | 461 |
+| 深度段(段) | 1333 | 1331 | 1332 | 1333 | 1333 | 1331 | 1333 | 1330 | 1329 | 1333 |
+| 问答(件) | 419 | **417** | **415** | **416** | **416** | **414** | **416** | **416** | **415** | **414** |
+| 作者简介(位) | 168 | 168 | 168 | 168 | 168 | 168 | 168 | 168 | 168 | 168 |
 
 ### orsay
 
 | 类型 | en | fr | de | es | it | zh | pl | ja | ko | zh-hant |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 标准导览(件) | 317 | 317 | 317 | **316** | 317 | 317 | 317 | 317 | 317 | **316** |
-| 深度段(段) | 999 | 997 | 999 | 997 | 998 | 996 | 999 | 997 | 999 | 998 |
-| 问答(件) | 282 | 282 | 282 | 282 | 282 | **279** | 282 | 282 | **281** | **281** |
-| 作者简介(位) | 105 | 105 | 105 | 105 | 105 | 105 | 105 | 105 | 105 | 105 |
+| 标准导览(件) | 353 | 353 | 353 | **351** | 353 | 353 | 353 | **352** | 353 | 353 |
+| 深度段(段) | 1081 | 1078 | 1081 | 1078 | 1080 | 1078 | 1081 | 1078 | 1080 | 1081 |
+| 问答(件) | 313 | 313 | 313 | 313 | **312** | **311** | **312** | 313 | **312** | **312** |
+| 作者简介(位) | 113 | 113 | 113 | 113 | 113 | 113 | 113 | 113 | 113 | 113 |
 
 ### orangerie
 
 | 类型 | en | fr | de | es | it | zh | pl | ja | ko | zh-hant |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 标准导览(件) | 79 | 79 | 79 | 79 | 79 | 79 | 79 | 79 | 79 | **78** |
-| 深度段(段) | 158 | 158 | 158 | 158 | 157 | 158 | 158 | 158 | 158 | 158 |
-| 问答(件) | 75 | **74** | **74** | 75 | 75 | 75 | **73** | 75 | 75 | **74** |
+| 标准导览(件) | 90 | 90 | 90 | 90 | 90 | 90 | 90 | 90 | 90 | 90 |
+| 深度段(段) | 182 | 182 | 182 | 182 | 181 | 183 | 182 | 182 | 182 | 179 |
+| 问答(件) | 86 | **85** | **85** | 86 | 86 | 86 | 86 | 86 | 86 | **85** |
 | 作者简介(位) | 12 | 12 | 12 | 12 | 12 | 12 | 12 | 12 | 12 | 12 |
 
 ### petit_palais
 
 | 类型 | en | fr | de | es | it | zh | pl | ja | ko | zh-hant |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 标准导览(件) | 112 | 112 | 112 | 112 | 112 | 112 | 112 | 112 | 112 | 112 |
-| 深度段(段) | 225 | 225 | 225 | 225 | 225 | 225 | 225 | 225 | 225 | 225 |
-| 问答(件) | 102 | 102 | **100** | 102 | **101** | **101** | 102 | **101** | 102 | **100** |
-| 作者简介(位) | 76 | 76 | 76 | 76 | 76 | 76 | 76 | 76 | 76 | 76 |
+| 标准导览(件) | 130 | 130 | 130 | 130 | **129** | 130 | 130 | 130 | 130 | 130 |
+| 深度段(段) | 262 | 262 | 262 | 262 | 262 | 261 | 262 | 262 | 262 | 261 |
+| 问答(件) | 120 | 120 | **118** | 120 | **119** | **118** | 120 | **118** | 120 | **118** |
+| 作者简介(位) | 86 | 86 | 86 | 86 | 86 | 86 | 86 | 86 | 86 | 86 |
 
 ### rijksmuseum（隐身演练馆，不对用户开放，不追缺口）
 
@@ -81,83 +81,96 @@
 
 ---
 
-## A. 缺口：忠实度闸连续未过（巴黎四馆，2026-10-10）
+## A. 缺口：忠实度闸未过（巴黎四馆，2026-10-15）
 
-**来由**：2026-10-10 对巴黎四馆跑 translate 补齐九种语言。段缺口 4438 → 32，问答缺口（件 × 语言）1470 → 48，作者简介缺口 538 → 0。
-剩下的条目在同一份 en 上重跑了三轮，救回率逐轮下降（段 55 → 40 → 32），已经不是随机波动。
-**用户定（2026-10-10）：先不清，记账。**
+**来由**：10-10 补齐后,懒生成只出 en+zh(偶有 fr),4 天里又积了 113 件新作品(109 件是运营账号识别触发)。10-14/15 对四馆再跑 translate:段缺口 2793 → 39,问答 828 → 50,作者简介 230 → 0。剩下的全是译文写了但没过忠实度闸(`needs_review`),没有整行缺失。
+**用户定（2026-10-10）：这类先不清，记账。** 懒生成后其余语言长期空着的根治方案在 backlog「等你拍板」。
 
-**已知原因**：`Q18663545`（卢浮宫《三美神》）的 en 导览原文写着 "created this piece in 150"，年份是坏的，所以各语言译文都过不了闸。
-要修得先重新生成 en，会让它的 en 音频作废。其余条目还没逐条查原因。
+**已知原因**：`Q18663545`（卢浮宫《三美神》）10-14 随作者修正整件重生成，7 组已全部发布，已出缺口表。其余条目还没逐条查原因；backlog 里「主讲解译文两次没过忠实度闸」一条在跟 guide 段。
 
 ### A1. 讲解段
 
-| 馆 | 件 | 类型 | 段 | 缺的语言 | 现有行状态 |
-| --- | --- | --- | --- | --- | --- |
-| louvre | `Q11770763` | 段 | significance | fr,pl | needs_review |
-| louvre | `Q16928482` | 段 | background | fr | needs_review |
-| louvre | `Q18663545` | 段 | guide | de,es,fr,ja,ko,zh,zh-hant | needs_review |
-| louvre | `Q19421105` | 段 | facts | ja,ko,zh | needs_review |
-| louvre | `Q24283` | 段 | background | ko | needs_review |
-| louvre | `Q29855229` | 段 | guide | es | needs_review |
-| louvre | `Q405814` | 段 | background | de | needs_review |
-| louvre | `Q87483677` | 段 | facts | zh | needs_review |
-| orangerie | `joconde-00000089441` | 段 | guide | zh-hant | needs_review |
-| orangerie | `joconde-00000089512` | 段 | analysis | it | needs_review |
-| orsay | `Q136029544` | 段 | background | ja | needs_review |
-| orsay | `Q14900433` | 段 | background | zh | needs_review |
-| orsay | `Q14900433` | 段 | guide | zh-hant | needs_review |
-| orsay | `Q16696928` | 段 | background | zh | needs_review |
-| orsay | `Q17493337` | 段 | facts | fr | needs_review |
-| orsay | `Q17493365` | 段 | guide | es | needs_review |
-| orsay | `Q17495459` | 段 | analysis | es | needs_review |
-| orsay | `Q17495513` | 段 | facts | zh-hant | needs_review |
-| orsay | `Q3563746` | 段 | background | ja | needs_review |
-| orsay | `Q5287337` | 段 | background | es,fr,it,zh | needs_review |
+| 馆 | 件 | 段 | 缺的语言 | 现有行状态 |
+| --- | --- | --- | --- | --- |
+| louvre | `Q115672481` | guide | ja | needs_review |
+| louvre | `Q11770763` | significance | fr | needs_review |
+| louvre | `Q15280947` | guide | ja | needs_review |
+| louvre | `Q16928482` | background | fr | needs_review |
+| louvre | `Q19005132` | background | ko | needs_review |
+| louvre | `Q19421105` | facts | ja,ko,zh | needs_review |
+| louvre | `Q24283` | background | ko | needs_review |
+| louvre | `Q29649084` | analysis | ja | needs_review |
+| louvre | `Q29649084` | facts | ja | needs_review |
+| louvre | `Q29855229` | guide | es | needs_review |
+| louvre | `Q29862653` | facts | ko | needs_review |
+| louvre | `Q405814` | background | de | needs_review |
+| louvre | `Q87483677` | facts | zh | needs_review |
+| orangerie | `joconde-00000089476` | facts | zh-hant | needs_review |
+| orangerie | `joconde-00000089512` | analysis | it | needs_review |
+| orangerie | `joconde-00000089566` | analysis | zh-hant | needs_review |
+| orangerie | `joconde-00000089566` | background | zh-hant | needs_review |
+| orsay | `Q136029544` | background | ja | needs_review |
+| orsay | `Q16696928` | background | zh | needs_review |
+| orsay | `Q17493337` | facts | fr | needs_review |
+| orsay | `Q17493365` | guide | es | needs_review |
+| orsay | `Q17495145` | facts | ja,zh | needs_review |
+| orsay | `Q17495459` | analysis | es | needs_review |
+| orsay | `Q3563746` | background | ja | needs_review |
+| orsay | `Q3766165` | guide | es | needs_review |
+| orsay | `Q3818018` | analysis | es,fr | needs_review |
+| orsay | `Q3820705` | guide | ja | needs_review |
+| orsay | `Q3985182` | facts | ko | needs_review |
+| orsay | `Q5287337` | background | es,fr,it,zh | needs_review |
+| petit_palais | `Q104445111` | guide | it | needs_review |
+| petit_palais | `Q104445393` | background | zh,zh-hant | needs_review |
 
-合计 32 段 / 19 件。
+合计 39 段 / 29 件（guide 7 段，深度段 32 段）。
 
 ### A2. 问答
 
 | 馆 | 件 | 缺的语言 | 现有行状态 |
 | --- | --- | --- | --- |
 | louvre | `Q115672867` | de,fr,it | needs_review |
+| louvre | `Q11931734` | ja,zh,zh-hant | needs_review |
+| louvre | `Q139564920` | pl,zh | needs_review |
 | louvre | `Q19005175` | zh,zh-hant | needs_review |
 | louvre | `Q19117698` | ko | needs_review |
 | louvre | `Q19308202` | ko | needs_review |
 | louvre | `Q21406865` | de,es,fr,it,pl | needs_review |
 | louvre | `Q29656195` | zh | needs_review |
+| louvre | `Q29839727` | ko | needs_review |
+| louvre | `Q29862653` | zh-hant | needs_review |
+| louvre | `Q29863003` | de,es | needs_review |
 | louvre | `Q29863311` | es,it,pl | needs_review |
 | louvre | `Q29864681` | de | needs_review |
 | louvre | `Q29864760` | ja | needs_review |
 | louvre | `Q55873828` | ja,ko,zh,zh-hant | needs_review |
 | louvre | `Q87456734` | zh-hant | needs_review |
-| orangerie | `joconde-00000089535` | pl | needs_review |
-| orangerie | `joconde-00000089551` | fr | needs_review |
-| orangerie | `joconde-00000089564` | pl | needs_review |
 | orangerie | `Q121160206` | de,zh-hant | needs_review |
+| orangerie | `joconde-00000089551` | fr | needs_review |
+| orsay | `Q17491841` | it,pl | needs_review |
 | orsay | `Q17494069` | zh | needs_review |
-| orsay | `Q3821388` | zh | needs_review |
+| orsay | `Q17495461` | zh-hant | needs_review |
 | orsay | `Q5745603` | ko | needs_review |
-| orsay | `Q76450701` | zh,zh-hant | needs_review |
+| orsay | `Q76450701` | zh | needs_review |
+| petit_palais | `Q104444056` | ja | needs_review |
 | petit_palais | `Q104445794` | de,zh-hant | needs_review |
 | petit_palais | `Q104445860` | ja,zh,zh-hant | needs_review |
 | petit_palais | `Q104454170` | de | needs_review |
 | petit_palais | `Q106462056` | it | needs_review |
+| petit_palais | `Q65784521` | zh | needs_review |
 
-合计 40 组 / 23 件（件 × 语言算一组）。缺口指该语言一条已发布的问答都没有。
+合计 50 组 / 29 件（件 × 语言算一组）。缺口指该语言一条已发布的问答都没有。
 
 ### A3. 作者简介
 
-无缺口（2026-10-10 补齐，538 → 0）。
+无缺口（10-15 补齐，230 → 0）。
 
 ---
 
 ## 不算缺口（SQL 第 ② 段会列出，但不归补语种）
 
-| 馆 | 件 | 现象 | 为什么不算 |
-| --- | --- | --- | --- |
-| louvre | `Q123234813`（陶罐） | en 问答已发布，其他 8 种语言没有问答行 | 它的 en 讲解段全是 `needs_review`，用户看不到这件的讲解；translate 只处理有已发布 en 段的件，按设计跳过。要救它得重新生成 en |
+目前没有。2026-10-10 记的 `Q123234813`（卢浮宫陶罐）现在有 1 段已发布 en，10-14 补语种时已一并翻译，出表。
 
 ---
 
@@ -166,3 +179,4 @@
 | 日期 | 范围 | 结论 |
 | --- | --- | --- |
 | 2026-10-10 | 巴黎四馆补语种 | 段 4406 / 问答 1422 组 / 作者简介 538 条补齐。音频作废 0 条；写前快照 `ops-snapshots/production/20261010T*_translate_<slug>.json.gz`；服务器日志在 `/opt/gomuseum/runs/translate_*.log` |
+| 2026-10-15 | 巴黎四馆补语种(第二次) | 段 2738 / 问答 1581 组 / 作者简介 230 条补齐(含奥赛 Q17495685 单件出错后单独补跑 ja/ko/pl/zh-hant)。音频作废 0 条;写前快照 `ops-snapshots/production/20261014T*_translate_<slug>.json.gz`;日志 `/opt/gomuseum/runs/translate_paris_1014.log`、`translate_orsay_1015.log` |
