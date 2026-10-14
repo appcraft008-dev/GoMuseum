@@ -116,6 +116,22 @@ def test_rejected_direct_match_is_not_evidence(session):
     assert counts == {"confirmed": 0, "likely": 0, "unknown": 1}
 
 
+def test_rejected_candidate_pick_is_not_evidence(session):
+    """候选点选后又被「不是这件?」否定(10-14):与足迹同一判据,不算在展证据。"""
+    s, m = session
+    upsert_object(s, m.id, {"qid": "Q1", "title_en": "A"})
+    s.commit()
+    _event(s, None, days_ago=1, outcome="candidates")
+    ev = s.query(RecognitionEvent).one()
+    ev.confirmed_qid = "Q1"
+    ev.rejected_qids = ["Q1"]
+    s.commit()
+
+    counts = recompute_display(s, "orsay")
+
+    assert counts == {"confirmed": 0, "likely": 0, "unknown": 1}
+
+
 def test_stale_event_outside_window_not_confirmed(session):
     """用例4: 事件在 40 天前(超30天窗) → 不算 confirmed(落到 UNKNOWN)。"""
     s, m = session

@@ -84,8 +84,8 @@ class GuideArgs {
   /// 藏品 qid（馆藏列表流程）
   final String? qid;
 
-  /// 直判进来时带识别照片的 phash → 显示「不是这件?」(10-12)。
-  /// 候选里自己点选的不给:那是用户确认过的。
+  /// 识别进来时带识别照片的 phash → 显示「不是这件?」(直判 10-12;候选点选 10-14 也给:
+  /// 候选常是同题材几个版本,点错了要能回头)。搜索进来的不给。
   final String? rejectPhash;
 
   /// 从哪进来(埋点 content_viewed)。null = 不报。
@@ -1264,7 +1264,7 @@ class _A5Body extends StatelessWidget {
   /// 识别路径进来 → 自动播主讲解(见 GuideArgs.autoPlayAudio)。
   final bool autoPlayAudio;
 
-  /// 非空 = 直判进来,墙签上方显示「不是这件?」(见 GuideArgs.rejectPhash)。
+  /// 非空 = 识别进来(直判或候选点选),墙签上方显示「不是这件?」(见 GuideArgs.rejectPhash)。
   final VoidCallback? onNotThisOne;
 
   @override
