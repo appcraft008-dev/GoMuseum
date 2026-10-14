@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.enrichment.category_config import DEFAULT_CATEGORY, category_for
 
 
@@ -216,3 +218,38 @@ def test_significance_only_from_material_or_empty():
     role = SECTION_ROLES["significance"]["role"]
     assert "ONLY what the MATERIAL explicitly states" in role
     assert "EMPTY STRING" in role
+
+
+@pytest.mark.parametrize(
+    "code", ["background", "analysis", "facts", "material-technique"]
+)
+def test_lane_only_from_material_or_empty(code):
+    """10-13 P1-9B:照 significance 的做法,材料没说就留空,不许用常识/风格补。"""
+    from app.services.enrichment.category_config import SECTION_ROLES
+
+    role = SECTION_ROLES[code]["role"]
+    assert "MATERIAL explicitly states" in role
+    assert "EMPTY STRING" in role
+
+
+def test_background_no_longer_demands_commission_and_reception():
+    """旧要求「who commissioned it… the reception」逼模型编委托和评价(摸底 B background 21 句)。"""
+    from app.services.enrichment.category_config import SECTION_ROLES
+
+    assert "who commissioned it" not in SECTION_ROLES["background"]["role"]
+
+
+def test_analysis_technique_only_when_stated():
+    """摸底 B:编外观 46 句里 42 句出自有看图描述的件——照片给不出笔触。"""
+    from app.services.enrichment.category_config import SECTION_ROLES
+
+    assert "NOT evidence of brushwork" in SECTION_ROLES["analysis"]["role"]
+
+
+def test_significance_no_artist_reputation_or_evaluative_wrapup():
+    """10-14 P1-9B:四段改完后这段写回「被公认为重要作品」——把作者名声套到这件、加评价收尾。"""
+    from app.services.enrichment.category_config import SECTION_ROLES
+
+    role = SECTION_ROLES["significance"]["role"]
+    assert "no carrying the ARTIST's general reputation" in role
+    assert "no evaluative wrap-up" in role

@@ -275,30 +275,58 @@ SECTION_ROLES: dict[str, dict] = {
         "max_chars": 260,
     },
     "background": {
-        "role": "The work's HISTORY as concrete events: when, who commissioned it, where shown, the reception as events, provenance. NOT why-it-matters (that's significance), NOT how-to-look (that's analysis).",
+        # 10-13 P1-9B:原文「who commissioned it… the reception as events」逼模型在材料没有时编委托/评价
+        # (摸底 B:闸放行的 background 无出处句 21 句)。照 significance 10-12 的做法改成材料没说就留空。
+        "role": (
+            "The work's HISTORY as concrete events — ONLY what the MATERIAL explicitly states: "
+            "when it was made, who commissioned or acquired it, where it was shown, how it was "
+            "received, provenance. Include only the items the material actually gives; do NOT "
+            "fill gaps from general knowledge, style or period (no guessed commissions, no "
+            "'well-received' or 'mixed reception' unless stated). If the material states none of "
+            "this, return an EMPTY STRING for this section. NOT why-it-matters (that's "
+            "significance), NOT how-to-look (that's analysis)."
+        ),
         "max_chars": 380,
     },
     "analysis": {
-        "role": "HOW it's painted — the craft: brushwork, paint handling, light & colour, composition structure, scale. Explain technique and the choices behind the effect. Do NOT re-list the symbols/subjects the headline guide already pointed out; go beyond naming them to how the painting achieves its impact.",
+        # 10-13 P1-9B:原文要求 brushwork/paint handling,照片描述给不出技法 → 编(摸底 B 37 句)。
+        "role": (
+            "HOW it looks and how it's made — ONLY what the MATERIAL explicitly states, "
+            "including the [VISIBLE IN THE ARTWORK] description: colours, composition, figures "
+            "and objects, light, scale. Describe technique (brushwork, paint handling, layering) "
+            "ONLY when the material states it; a photograph description is NOT evidence of "
+            "brushwork. Do NOT re-list the symbols/subjects the headline guide already pointed "
+            "out; go beyond naming them. If the material gives neither a visual description nor "
+            "technique, return an EMPTY STRING for this section."
+        ),
         "max_chars": 380,
     },
     "significance": {
         # 10-12 P1-9:原写法要「影响了谁/为何重要」,冷门件材料没有 → 模型写套话论断被闸删空
         # (9-07 起 388 段挂起里 370 段删空)。A/B 30 件:发布 9→16、挂起 21→5、主动留空 9。
+        # 10-14 P1-9B:四段都改成「材料没说就留空」后,这段不再被当成默认留空,又写回套话
+        # (30 件×3 遍:发布 32 段里判官标 12 句「被公认为重要作品」类)。约束写进「每句写什么」。
         "role": (
-            "LEGACY & standing — ONLY what the MATERIAL explicitly states: what the work "
-            "changed, whom it influenced, how its reputation developed, its recognised status "
-            "(e.g. called the artist's masterpiece, a national treasure, among the most visited "
-            "works). Every claim must be traceable to the material. If the material states none "
-            "of this, return an EMPTY STRING for this section — do NOT infer influence from style "
-            "or period, and do NOT write generic praise ('pivotal', 'influenced countless "
-            "artists', 'enduring impact', 'reshaped art'). Do NOT re-tell the scandal events "
-            "(that's background)."
+            "LEGACY & standing of THIS work — ONLY what the MATERIAL explicitly states about "
+            "this work's standing, influence or later reputation. Each sentence must restate a "
+            "specific sentence of the material that is about THIS work (not the artist in "
+            "general), and nothing else: no evaluative wrap-up ('significant', "
+            "'important', 'pivotal', 'its legacy continues', 'solidified its status'), no "
+            "carrying the ARTIST's general reputation over to this work, no remark about what "
+            "the material does not say. If the material states none of this, return an EMPTY "
+            "STRING for this section. Do NOT re-tell the scandal events (that's background)."
         ),
         "max_chars": 240,
     },
     "facts": {
-        "role": "ONE surprising anecdote/curiosity not covered by other lanes.",
+        # 10-13 P1-9B:「ONE surprising anecdote」在材料没有轶事时催出「Interestingly, …」加编造修饰
+        # (摸底 B facts 14/30 段被闸挂起)。
+        "role": (
+            "ONE surprising anecdote or curiosity that the MATERIAL explicitly states and no other "
+            "lane covers. If the material has no such specific fact, return an EMPTY STRING for "
+            "this section — do NOT write generic 'Interestingly, …' observations or embellish a "
+            "plain fact with unstated context."
+        ),
         "max_chars": 200,
     },
     "photographer": {
@@ -310,7 +338,12 @@ SECTION_ROLES: dict[str, dict] = {
         "max_chars": 180,
     },
     "material-technique": {
-        "role": "Guided looking at how it was made: material and craft a visitor can notice.",
+        "role": (
+            "Guided looking at how it was made — only the material and craft the MATERIAL "
+            "explicitly states (medium, technique, details in the [VISIBLE IN THE ARTWORK] "
+            "description). Do NOT infer technique from the medium alone. If the material states "
+            "none of this, return an EMPTY STRING for this section."
+        ),
         "max_chars": 200,
     },
     "context": {
