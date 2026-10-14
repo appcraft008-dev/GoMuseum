@@ -27,6 +27,18 @@ void main() {
     expect(picture, lessThan(gate), reason: '撕票提示必须在拍完照之后弹');
   });
 
+  test('快门:拍完立刻定格这张照片,不撕票再恢复取景', () {
+    // 10-14 V61 真机:撕票面板后面还是实时取景+提示语,看着像没拍
+    final shoot = _body('Future<void> _shoot()');
+    final picture = shoot.indexOf('takePicture()');
+    final freeze = shoot.indexOf('_captured = shot');
+    final gate = shoot.indexOf('_passActivatedIfPurchased(');
+    expect(freeze, greaterThan(picture));
+    expect(freeze, lessThan(gate), reason: '弹撕票前就要定格');
+    expect(shoot.indexOf('_captured = null'), greaterThan(gate),
+        reason: '没撕开要回到实时取景');
+  });
+
   test('候选点选进讲解页也带 phash', () {
     final goGuide = _body('Future<void> _goGuide(');
     expect(goGuide, contains('_artworkPhash'),

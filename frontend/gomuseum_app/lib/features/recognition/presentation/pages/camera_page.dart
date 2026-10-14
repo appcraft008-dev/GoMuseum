@@ -299,7 +299,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
     if (controller == null || controller.value.isTakingPicture) return;
     // 先拍再判额度/弹撕票(10-14 真机):先弹的话撕完票镜头早已不对着作品
     final shot = await controller.takePicture();
+    if (!mounted) return;
+    // 定格这张:撕票面板后面还是实时取景+提示语,看着像没拍(10-14 V61 真机)
+    setState(() => _captured = shot);
     if (!_canRecognize() && !await _passActivatedIfPurchased()) {
+      if (mounted) setState(() => _captured = null); // 没撕开 → 回到实时取景
       _showQuotaExhaustedSheet();
       return;
     }
