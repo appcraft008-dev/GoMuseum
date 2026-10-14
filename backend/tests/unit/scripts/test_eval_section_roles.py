@@ -15,6 +15,17 @@ def test_parse_audit_missing_items_are_not_supported():
     assert out[1]["verdict"] is None and out[1]["quote_found"] is False
 
 
+def test_parse_audit_matches_items_by_index_not_position():
+    """判官漏判中间一句时,按 i 对齐,不能把后面的判定整体前移到错的句子上。"""
+    items = [
+        {"i": 1, "type": "fact", "verdict": "supported", "quote": "A maid pours milk"},
+        {"i": 3, "type": "fact", "verdict": "unsupported"},
+    ]
+    out = ev.parse_audit(items, ["s1", "s2", "s3"], MAT)
+    assert out[1]["verdict"] is None
+    assert out[2]["verdict"] == "unsupported"
+
+
 def test_parse_audit_quote_must_be_in_material():
     items = [{"type": "fact", "verdict": "supported", "quote": "painted in Delft"}]
     assert ev.parse_audit(items, ["s"], MAT)[0]["quote_found"] is False

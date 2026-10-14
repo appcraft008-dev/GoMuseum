@@ -1,6 +1,6 @@
 """段落写作要求 A/B 评测(P1-9B,spec docs/superpowers/specs/2026-10-13-grounding-gate-reliability-design.md §5)。
 
-在 prod 容器里只读运行:同一批件,新旧写作要求各生成一遍深度段,**共用同一份 guide**,
+在 prod 容器里运行,不写业务数据(每次模型调用照常记一行 llm_usage 计费):同一批件,新旧写作要求各生成一遍深度段,**共用同一份 guide**,
 都过现行接地闸,再用 gpt-4o 判官逐句复核闸放行的句子。不调用任何 persist,不落库。
 
 判官要求每句给材料原文引文,程序核对引文确在材料里(quote_found)。判官标出的
@@ -75,9 +75,15 @@ def _norm(t) -> str:
 def parse_audit(items: list, sentences: list[str], material: str) -> list[dict]:
     """判官输出 → 每句一条。缺条目/非 dict → verdict None(绝不当成有出处)。"""
     m = _norm(material)
+    dicts = [it for it in items if isinstance(it, dict)]
+    # 判官给了 i 就按 i 对齐(漏判中间一句时不整体错位),没给才按位置
+    by_i = {it["i"]: it for it in dicts if isinstance(it.get("i"), int)}
     out = []
     for i, s in enumerate(sentences):
-        it = items[i] if i < len(items) and isinstance(items[i], dict) else {}
+        if by_i:
+            it = by_i.get(i + 1, {})
+        else:
+            it = items[i] if i < len(items) and isinstance(items[i], dict) else {}
         q = _norm(it.get("quote"))
         out.append(
             {
