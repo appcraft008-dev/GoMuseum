@@ -60,14 +60,12 @@ def _footprint_qid(ev: RecognitionEvent) -> Optional[str]:
     `candidates` 的 top_qid 是"还没定的几个猜测里分最高的那个",把它当成
     「你看过这件」是在替用户编经历。判据与 `coverage/display_state.py` 里
     那条展陈证据完全一致,别让两处漂开。"""
+    # 进讲解页后点了「不是这件?」(直判 10-12 / 候选点选 10-14)= 用户亲口否定,不算看过。
+    # 确认时 confirm_event 会把选中件移出 rejected,所以「已确认又在 rejected 里」只能是事后否定
+    rejected = ev.rejected_qids or []
     if ev.confirmed_qid:
-        return ev.confirmed_qid
-    # 直判后点了「不是这件?」(10-12)= 用户亲口否定,不算看过
-    if (
-        ev.outcome == "match"
-        and ev.top_qid
-        and ev.top_qid not in (ev.rejected_qids or [])
-    ):
+        return ev.confirmed_qid if ev.confirmed_qid not in rejected else None
+    if ev.outcome == "match" and ev.top_qid and ev.top_qid not in rejected:
         return ev.top_qid
     return None
 
