@@ -111,9 +111,17 @@ def _creator_rows(entity: dict) -> list[dict]:
     占位值复现;P1480「无值」旧查询不绑定 → 等同无限定。作者本身未知/无值 → 不产行。"""
     groups: dict = {}
     for st in ((entity or {}).get("claims") or {}).get("P170", []):
-        aq = _wa.entity_id(st)
-        if not aq:
-            continue
+        # 作者未知/无值也产一行(非 QID 占位,creator_candidate 不会选它):
+        # _drop_partial 要靠它判「整件/主体是佚名」(三美神,10-14)
+        aq = _wa.entity_id(st) or "_:unknown"
+        parts = [
+            (
+                q["datavalue"]["value"]["id"]
+                if q.get("snaktype") == "value"
+                else "_:unknown"
+            )
+            for q in (st.get("qualifiers") or {}).get("P518", [])
+        ]
         certs = []
         for q in (st.get("qualifiers") or {}).get("P1480", []):
             if q.get("snaktype") == "value":
@@ -123,9 +131,11 @@ def _creator_rows(entity: dict) -> list[dict]:
         rank = _RANK_IRI.get(st.get("rank"), "NormalRank")
         refs = len(st.get("references") or [])
         for cert in certs or [None]:
-            groups[(aq, rank, cert)] = groups.get((aq, rank, cert), 0) + refs
+            for part in parts or [None]:
+                key = (aq, rank, cert, part)
+                groups[key] = groups.get(key, 0) + refs
     rows = []
-    for (aq, rank, cert), n in groups.items():
+    for (aq, rank, cert, part), n in groups.items():
         row = {
             "artist": {"value": _ENTITY_IRI + aq},
             "rank": {"value": "http://wikiba.se/ontology#" + rank},
@@ -133,13 +143,52 @@ def _creator_rows(entity: dict) -> list[dict]:
         }
         if cert:
             row["cert"] = {"value": _ENTITY_IRI + cert}
+        if part:
+            row["part"] = {"value": _ENTITY_IRI + part}
         rows.append(row)
     return rows
 
 
+# P518「只适用于某部分」=修复(Q217102):修复者永远不是作者。
+_RESTORATION = "Q217102"
+
+
+def drop_partial_creators(rows, *, var="artist"):
+    """P170 行 → 去掉不该当「这件作品的作者」的行(单件/批量共用,10-14 三美神)。
+
+    只管两件事:①P518=修复的行丢掉;②整件(无 P518)语句全是未知值,或没有整件语句而某一部分
+    作者未知(古代本体 + 后人补的手臂/床垫)→ 作者不详,返回空。
+    ⚠️ 故意**不**让整件语句压过已知的部分作者:prod 10-14 全库对比,「整件优先」会把铸造工
+    (P2868=founder)选成作者、把「习作」作者卡贝换成执行大理石的人 —— P518 在合作件上用法
+    不一,已知合作者之间照旧交给 creator_candidate 择优。全库只这 6 件结果变化(都是古代件变不详)。
+    """
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    def tail(r, k):
+        return (r.get(k) or {}).get("value", "").rsplit("/", 1)[-1]
+
+    def known(r):
+        return is_wikidata_qid(tail(r, var))
+
+    live = [
+        r
+        for r in rows or []
+        if not tail(r, "rank").endswith("DeprecatedRank")
+        and tail(r, "part") != _RESTORATION
+    ]
+    whole = [r for r in live if not tail(r, "part")]
+    if whole and not any(known(r) for r in whole):
+        return []  # 整件佚名,部分修补者不能顶上
+    if not whole and not all(known(r) for r in live):
+        return []  # 主体部分佚名
+    return live
+
+
 def _creator_from_rows(rows) -> str | None:
-    """解析层(原 resolve_creator_qid 的择优,原样搬出)。"""
-    cands = [c for c in (creator_candidate(r) for r in rows or []) if c]
+    """解析层(原 resolve_creator_qid 的择优,原样搬出;先过 drop_partial_creators)。"""
+    cands = [
+        c for c in (creator_candidate(r) for r in drop_partial_creators(rows)) if c
+    ]
     return min(cands)[1] if cands else None
 
 
