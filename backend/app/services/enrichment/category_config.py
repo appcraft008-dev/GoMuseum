@@ -304,15 +304,17 @@ SECTION_ROLES: dict[str, dict] = {
     "significance": {
         # 10-12 P1-9:原写法要「影响了谁/为何重要」,冷门件材料没有 → 模型写套话论断被闸删空
         # (9-07 起 388 段挂起里 370 段删空)。A/B 30 件:发布 9→16、挂起 21→5、主动留空 9。
+        # 10-14 P1-9B:四段都改成「材料没说就留空」后,这段不再被当成默认留空,又写回套话
+        # (30 件×3 遍:发布 32 段里判官标 12 句「被公认为重要作品」类)。约束写进「每句写什么」。
         "role": (
-            "LEGACY & standing — ONLY what the MATERIAL explicitly states: what the work "
-            "changed, whom it influenced, how its reputation developed, its recognised status "
-            "(e.g. called the artist's masterpiece, a national treasure, among the most visited "
-            "works). Every claim must be traceable to the material. If the material states none "
-            "of this, return an EMPTY STRING for this section — do NOT infer influence from style "
-            "or period, and do NOT write generic praise ('pivotal', 'influenced countless "
-            "artists', 'enduring impact', 'reshaped art'). Do NOT re-tell the scandal events "
-            "(that's background)."
+            "LEGACY & standing of THIS work — ONLY what the MATERIAL explicitly states about "
+            "this work's standing, influence or later reputation. Each sentence must restate a "
+            "specific sentence of the material that is about THIS work (not the artist in "
+            "general), and nothing else: no evaluative wrap-up ('significant', 'important', 'pivotal', 'its legacy "
+            "continues', 'solidified its status'), no carrying the ARTIST's general reputation "
+            "over to this work, no remark about what the material does not say. If the material "
+            "states none of this, return an EMPTY STRING for this section. Do NOT re-tell the "
+            "scandal events (that's background)."
         ),
         "max_chars": 240,
     },

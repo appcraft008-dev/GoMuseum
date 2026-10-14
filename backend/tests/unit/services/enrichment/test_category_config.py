@@ -244,3 +244,12 @@ def test_analysis_technique_only_when_stated():
     from app.services.enrichment.category_config import SECTION_ROLES
 
     assert "NOT evidence of brushwork" in SECTION_ROLES["analysis"]["role"]
+
+
+def test_significance_no_artist_reputation_or_evaluative_wrapup():
+    """10-14 P1-9B:四段改完后这段写回「被公认为重要作品」——把作者名声套到这件、加评价收尾。"""
+    from app.services.enrichment.category_config import SECTION_ROLES
+
+    role = SECTION_ROLES["significance"]["role"]
+    assert "no carrying the ARTIST's general reputation" in role
+    assert "no evaluative wrap-up" in role
