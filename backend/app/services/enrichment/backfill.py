@@ -73,13 +73,14 @@ def backfill_content_status(db) -> dict:
 # 语句级(p:/ps:)而非 wdt:,才拿得到 rank / P1480 不确定性限定 / 引用数 ——
 # 多作者作品要靠这三样择优,不能"取查询返回的第一个"(见 material.creator_candidate)。
 _CREATORS_QUERY = """
-SELECT ?item ?creator ?rank ?cert (COUNT(?ref) AS ?refs) WHERE {{
+SELECT ?item ?creator ?rank ?cert ?part (COUNT(?ref) AS ?refs) WHERE {{
   VALUES ?item {{ {values} }}
   ?item p:P170 ?st .
   ?st ps:P170 ?creator ; wikibase:rank ?rank .
   OPTIONAL {{ ?st pq:P1480 ?cert . }}
+  OPTIONAL {{ ?st pq:P518 ?part . }}
   OPTIONAL {{ ?st prov:wasDerivedFrom ?ref . }}
-}} GROUP BY ?item ?creator ?rank ?cert
+}} GROUP BY ?item ?creator ?rank ?cert ?part
 """
 
 
@@ -97,11 +98,14 @@ def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
     import logging
     import time
 
-    from app.services.enrichment.material import creator_candidate
+    from app.services.enrichment.material import (
+        creator_candidate,
+        drop_partial_creators,
+    )
     from app.services.enrichment.sources.wikidata_catalog import _default_run_query
 
     run_query = run_query or _default_run_query
-    best: dict = {}
+    by_item: dict = {}
     qids = list(qids)
     for i in range(0, len(qids), _CREATORS_BATCH):
         batch = qids[i : i + _CREATORS_BATCH]
@@ -122,10 +126,21 @@ def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
             continue
         for row in rows:
             item = (row.get("item") or {}).get("value", "").rsplit("/", 1)[-1]
-            cand = creator_candidate(row, var="creator")
-            if item and cand and (item not in best or cand < best[item]):
-                best[item] = cand
-    return {item: cand[1] for item, cand in best.items()}
+            if item:
+                by_item.setdefault(item, []).append(row)
+    out = {}
+    for item, item_rows in by_item.items():
+        cands = [
+            c
+            for c in (
+                creator_candidate(r, var="creator")
+                for r in drop_partial_creators(item_rows, var="creator")
+            )
+            if c
+        ]
+        if cands:
+            out[item] = min(cands)[1]
+    return out
 
 
 def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> dict:
