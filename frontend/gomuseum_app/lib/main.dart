@@ -23,11 +23,11 @@ Future<void> main() async {
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
       !kDebugMode,
     );
-    // 界面层错误(图片加载失败、字体下载断线等)不会让 App 退出,按非致命上报;
+    // 界面层错误与异步错误(图片加载失败、字体下载断线等)不会让 App 退出,按非致命上报;
     // 真闪退由 Crashlytics 原生层抓
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
     PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: false);
       return true;
     };
     await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(!kDebugMode);
