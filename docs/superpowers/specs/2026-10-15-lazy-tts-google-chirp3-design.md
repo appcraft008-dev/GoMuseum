@@ -146,7 +146,7 @@ es 偏高全在 es_short:原文「Mme Vve Jean」被 Google 逐字母念出,whis
 ### 3.3 配置与依赖
 - `Settings` 新增 `GOOGLE_TTS_API_KEY: str = ""`;删 `OPENAI_TTS_MODEL`(若有声明)。`.env.example` 同步。
   ⚠️ 本机已实测:`backend/.env` 里有未声明的键时 `Settings()` 报 `extra_forbidden`。部署侧 compose 用 `env_file`
-  注入进程环境变量,是否同样报错未实测 —— 一律**先合代码再加 key**,最稳。
+  注入进程环境变量。10-15 核实 prod 容器内**没有** `/app/.env`,pydantic 只拒绝 dotenv 文件里的未声明键、不拒绝环境变量 → **先往服务器 env 加 key、再合代码**,避免合并后到加 key 之间懒生成全部失败。
 - 依赖:`google-cloud-texttospeech`、`lameenc`(10-15 在 prod 容器内 `pip download lameenc` 拿到
   `lameenc-1.8.4-cp313-cp313-manylinux…x86_64.whl`,即 Python 3.13 / x86_64 有现成 wheel)。
   `poetry add` 后 `poetry lock --check` 通过、CI 镜像构建通过才算数(enrichment-pipeline 教训)。会带进 `grpcio`。
@@ -177,11 +177,11 @@ es 偏高全在 es_short:原文「Mme Vve Jean」被 Google 逐字母念出,whis
 
 ## 5. 上线
 
-1. PR → staging(CI 绿)→ staging 自动部署后,你往 staging env 加 `GOOGLE_TTS_API_KEY`、重启。
+1. 你建正式 key → 往 staging 服务器 env 加 `GOOGLE_TTS_API_KEY` → PR 合 staging(CI 绿,自动部署,重建容器时带上 key)。
 2. staging 实测:中/英/法各点一段无音频的段落播放,确认首包、能播、R2 落库、`audio_engine` 标记、`llm_usage` 记账。
 3. **上 prod 前加测一轮(review I1)**:用合并后的代码对 zh/en/fr 各 ≥10 段 prod 正文生成,跑读音核对 + 逐句句尾核对,
    与 tts-1 同口径对比;句尾缺失多于 tts-1 就停下查。
-4. staging → main 由你合;prod env 加同一把 key、重启。合 main 前确认 prod 没有长任务在跑。
+4. prod 服务器 env 先加同一把 key,再由你合 staging → main。合 main 前确认 prod 没有长任务在跑。
 
 **回滚**:revert 本 PR 即回到 tts-1(2027-01-06 前有效)。新旧音频都在 R2,混存无害。
 
