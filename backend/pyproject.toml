@@ -46,7 +46,9 @@ dependencies = [
     "onnxruntime (>=1.27.0,<2.0.0)",
     "segno (>=1.6.6,<2.0.0)",
     "opencv-python-headless (>=4.10,<5.0)",
-    "rapidfuzz (>=3.14,<4.0)"
+    "rapidfuzz (>=3.14,<4.0)",
+    "google-cloud-texttospeech (>=2.38.0,<3.0.0)",
+    "lameenc (>=1.8.4,<2.0.0)"
 ]
 
 [tool.setuptools.packages.find]
@@ -149,6 +151,8 @@ exclude = [
 [[tool.mypy.overrides]]
 module = [
     "openai.*",
+    "google.cloud.*",
+    "lameenc",
     "anthropic.*",
     "pinecone.*",
     "redis.*",
