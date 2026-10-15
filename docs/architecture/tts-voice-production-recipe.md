@@ -936,6 +936,8 @@ ja 用 SEED_en 的理由本来就是「SEED_zh 浊音念错」，**两者失败�
 |---|---|
 | Chatterbox Multilingual | ❌ 淘汰：RTF 6.0（VoxCPM2 是 2-3.5）、**40 秒硬截断**导致跳读乱序（覆盖率仅 28%） |
 | VoxCPM2 官方修语速 | 指望不上：Issue #56（2025-10 提，已关闭未实现）、#297（2026-05 提，零回复） |
+| Google Chirp 3 HD REST 整段送中文（懒生成引擎） | ❌ 随机 400「sentences too long」，同一段时好时坏；只能走流式 |
+| Google Chirp 3 HD 流式，超长句一个 input | ❌ 不报错但**静默吞句尾**（81 字中文 9/9）；逗号处切开也被拼回去 —— 必须把切点改成句号（`tts_text.split_sentences`） |
 
 ### 批次健壮性类
 

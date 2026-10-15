@@ -78,7 +78,7 @@ class ExplanationResponse(BaseModel):
 class TTSRequest(BaseModel):
     """Request model for TTS generation"""
 
-    text: str = Field(..., description="Text to convert to speech")
+    text: str = Field(..., max_length=5000, description="Text to convert to speech")
     language: str = Field(default="en", description="Language code")
     voice: Optional[str] = Field(None, description="Voice name (optional)")
     speed: float = Field(default=1.0, ge=0.25, le=4.0, description="Speech speed")
