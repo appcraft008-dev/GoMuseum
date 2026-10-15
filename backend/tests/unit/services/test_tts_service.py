@@ -81,7 +81,7 @@ def test_sends_config_then_one_input_per_sentence(monkeypatch):
         "This painting is large.",
         "It hangs in the Louvre today.",
     ]
-    assert fake.timeout == 60
+    assert fake.timeout == 45  # 两次尝试合计 < 段级锁 2 分钟
 
 
 def test_generate_audio_returns_160k_mp3(monkeypatch):
@@ -101,7 +101,9 @@ def test_two_asyncio_run_calls_on_same_service(monkeypatch):
 
 
 def test_retry_once_when_failing_before_first_chunk(monkeypatch):
-    fake = _patch(monkeypatch, [RuntimeError("unavailable")], [_pcm(3.5)])
+    from google.api_core import exceptions as gexc
+
+    fake = _patch(monkeypatch, [gexc.ServiceUnavailable("unavailable")], [_pcm(3.5)])
     asyncio.run(TTSService().generate_audio(TEXT_EN, "en"))
     assert fake.calls == 2
 
@@ -203,3 +205,75 @@ def test_tts_generate_request_caps_text_length():
     TTSRequest(text="x" * 5000)
     with pytest.raises(pydantic.ValidationError):
         TTSRequest(text="x" * 5001)
+
+
+def test_no_retry_on_non_transient_error(monkeypatch):
+    # key 配错这类错误重试也没用,只会多等一倍
+    from google.api_core import exceptions as gexc
+
+    fake = _patch(monkeypatch, [gexc.PermissionDenied("bad key")], [_pcm(3.5)])
+    with pytest.raises(AIServiceException):
+        asyncio.run(TTSService().generate_audio(TEXT_EN, "en"))
+    assert fake.calls == 1
+
+
+def test_usage_recorded_per_attempt(monkeypatch):
+    # Google 按每次请求的字符计费:重试那次也要记
+    from google.api_core import exceptions as gexc
+
+    fake = _FakeClient([[gexc.ServiceUnavailable("x")], [_pcm(3.5)]])
+    seen = []
+    monkeypatch.setattr(tts_mod, "_get_client", lambda: fake)
+    monkeypatch.setattr(tts_mod, "record_llm_usage", lambda *a, **k: seen.append(a))
+    asyncio.run(TTSService().generate_audio(TEXT_EN, "en"))
+    assert seen == [("tts", ENGINE, len(TEXT_EN), 0)] * 2
+
+
+def test_short_text_skips_ratio_self_check(monkeypatch):
+    # "Hi." 期望 0.2s,Chirp 带首尾静音必超 2.2 倍 —— 极短文本不做时长比例自检
+    _patch(monkeypatch, [_pcm(2.0)])
+    r = asyncio.run(TTSService().generate_audio("Hi.", "en"))
+    assert r["size_bytes"] > 0
+
+
+def test_runs_on_dedicated_tts_threads(monkeypatch):
+    # 不占默认线程池(那里还有 _prepare_sync/_persist_sync 等 to_thread)
+    names = []
+
+    class _Named(_FakeClient):
+        def streaming_synthesize(self, requests, timeout=None):
+            names.append(threading.current_thread().name)
+            return super().streaming_synthesize(requests, timeout)
+
+    monkeypatch.setattr(tts_mod, "_get_client", lambda: _Named([[_pcm(3.5)]]))
+    monkeypatch.setattr(tts_mod, "record_llm_usage", lambda *a, **k: None)
+    asyncio.run(TTSService().generate_audio(TEXT_EN, "en"))
+    assert names and names[0].startswith("tts")
+
+
+def test_client_created_once_under_concurrency(monkeypatch):
+    import time as _t
+
+    from google.cloud import texttospeech
+
+    made = []
+
+    def slow_client(**kw):
+        _t.sleep(0.05)
+        made.append(1)
+        return object()
+
+    monkeypatch.setattr(tts_mod, "_client", None)
+    monkeypatch.setattr(tts_mod.settings, "GOOGLE_TTS_API_KEY", "k")
+    monkeypatch.setattr(texttospeech, "TextToSpeechClient", slow_client)
+    ts = [threading.Thread(target=tts_mod._get_client) for _ in range(4)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(made) == 1
+
+
+def test_drain_returns_quietly_when_loop_closed():
+    # asyncio.run 收尾后 worker 还在跑:往已关闭的 loop 投递不应抛到 executor future 里
+    loop = asyncio.new_event_loop()
+    loop.close()
+    tts_mod._drain(loop, asyncio.Queue(), lambda: iter([b"a", b"b"]), object())

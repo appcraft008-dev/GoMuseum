@@ -11,11 +11,17 @@
 import asyncio
 import hashlib
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import AsyncIterator, Callable, Dict, Iterator, Optional
 
 from app.core.config import settings
 from app.core.exceptions import AIServiceException
-from app.services.enrichment.audio_quality import check_audio, estimate_duration_sec
+from app.services.enrichment.audio_quality import (
+    check_audio,
+    estimate_duration_sec,
+    expected_duration_sec,
+)
 from app.services.llm_usage import record_llm_usage
 from app.services.tts_mp3 import Mp3Encoder
 from app.services.tts_text import split_sentences
@@ -23,7 +29,10 @@ from app.services.tts_text import split_sentences
 logger = logging.getLogger(__name__)
 
 ENGINE = "google-chirp3-hd"
-_DEADLINE_S = 60
+_DEADLINE_S = 45  # 每次尝试;两次合计 90s < 段级锁 2 分钟(实测整段最长 ~12s)
+_MIN_CHECK_S = 2.0  # 期望时长短于此不做比例自检:首尾静音会让 "Hi." 这类必判 too_long
+# 专用线程:不占默认线程池(那里有 _prepare_sync/_persist_sync 等 to_thread)
+_EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="tts")
 
 # 语言 → (locale, Chirp 3 HD 声音, speaking_rate)。用户 10-15 逐语言耳选,语速对齐 VoxCPM2 成品。
 # zh-hant 用 cmn-CN:Chirp 3 HD 没有 cmn-TW(tts-1 / VoxCPM2 也是普通话读繁体)。
@@ -41,20 +50,38 @@ VOICES: Dict[str, tuple] = {
 }
 
 _client = None
+_client_lock = threading.Lock()
 
 
 def _get_client():
-    """按进程懒建(测试打桩此处)。"""
+    """按进程懒建(测试打桩此处)。多个 tts 线程可能同时首次进来 → 加锁只建一个 channel。"""
     global _client
     if _client is None:
-        if not settings.GOOGLE_TTS_API_KEY:
-            raise AIServiceException("GOOGLE_TTS_API_KEY 未配置")
-        from google.cloud import texttospeech
+        with _client_lock:
+            if _client is None:
+                if not settings.GOOGLE_TTS_API_KEY:
+                    raise AIServiceException("GOOGLE_TTS_API_KEY 未配置")
+                from google.cloud import texttospeech
 
-        _client = texttospeech.TextToSpeechClient(
-            client_options={"api_key": settings.GOOGLE_TTS_API_KEY}
-        )
+                _client = texttospeech.TextToSpeechClient(
+                    client_options={"api_key": settings.GOOGLE_TTS_API_KEY}
+                )
     return _client
+
+
+def _is_transient(e: Exception) -> bool:
+    """只重试暂时性故障;key 配错/参数错重试也没用。"""
+    from google.api_core import exceptions as gexc
+
+    return isinstance(
+        e,
+        (
+            gexc.ServiceUnavailable,
+            gexc.DeadlineExceeded,
+            gexc.ResourceExhausted,
+            gexc.InternalServerError,
+        ),
+    )
 
 
 def _lang(language: str) -> str:
@@ -86,10 +113,12 @@ def _requests(sentences, language: str):
         yield tts.StreamingSynthesizeRequest(input=tts.StreamingSynthesisInput(text=s))
 
 
-def _pcm_chunks(sentences, language: str) -> Iterator[bytes]:
-    """同步迭代 PCM。首块到达前失败重试 1 次;吐过音频后失败不重试。"""
+def _pcm_chunks(sentences, language: str, chars: int) -> Iterator[bytes]:
+    """同步迭代 PCM。首块到达前的暂时性故障重试 1 次;吐过音频后失败不重试。
+    用量每次尝试都记(Google 按每次请求的字符计费)。"""
     for attempt in (1, 2):
         got = False
+        record_llm_usage("tts", ENGINE, chars, 0)
         try:
             stream = _get_client().streaming_synthesize(
                 _requests(sentences, language), timeout=_DEADLINE_S
@@ -102,7 +131,7 @@ def _pcm_chunks(sentences, language: str) -> Iterator[bytes]:
         except AIServiceException:
             raise
         except Exception as e:
-            if got or attempt == 2:
+            if got or attempt == 2 or not _is_transient(e):
                 raise AIServiceException(f"Google TTS 失败: {e}") from e
             logger.warning(f"Google TTS 首块前失败,重试一次: {e}")
 
@@ -114,16 +143,7 @@ async def _iterate_in_thread(
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue()
     done = object()
-
-    def worker():
-        try:
-            for item in make_iter():
-                loop.call_soon_threadsafe(queue.put_nowait, item)
-            loop.call_soon_threadsafe(queue.put_nowait, done)
-        except BaseException as e:  # 交给消费方抛
-            loop.call_soon_threadsafe(queue.put_nowait, e)
-
-    fut = loop.run_in_executor(None, worker)
+    fut = loop.run_in_executor(_EXECUTOR, _drain, loop, queue, make_iter, done)
     while True:
         item = await queue.get()
         if item is done:
@@ -132,6 +152,25 @@ async def _iterate_in_thread(
             raise item
         yield item
     await fut
+
+
+def _drain(loop, queue, make_iter, done) -> None:
+    """worker 线程:把同步迭代器的产出投回 loop。loop 已关(asyncio.run 收尾后)就安静停下。"""
+
+    def put(item) -> bool:
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, item)
+            return True
+        except RuntimeError:  # loop 已关闭:没人收了
+            return False
+
+    try:
+        for item in make_iter():
+            if not put(item):
+                return
+        put(done)
+    except BaseException as e:  # 交给消费方抛
+        put(e)
 
 
 class TTSService:
@@ -149,10 +188,11 @@ class TTSService:
         sentences = split_sentences(text, language)
         if not sentences:
             raise AIServiceException("TTS 正文为空")
-        record_llm_usage("tts", ENGINE, len(text), 0)
         enc = Mp3Encoder()
         out = bytearray()
-        async for pcm in _iterate_in_thread(lambda: _pcm_chunks(sentences, language)):
+        async for pcm in _iterate_in_thread(
+            lambda: _pcm_chunks(sentences, language, len(text))
+        ):
             mp3 = enc.encode(pcm)
             if mp3:
                 out += mp3
@@ -160,7 +200,7 @@ class TTSService:
         tail = enc.flush()
         out += tail
         verdict = check_audio(bytes(out), text=text, language=language)
-        if not verdict.ok:
+        if not verdict.ok and expected_duration_sec(text, language) >= _MIN_CHECK_S:
             raise AIServiceException(f"TTS 音频自检不过: {verdict.reason}")
         if tail:
             yield tail

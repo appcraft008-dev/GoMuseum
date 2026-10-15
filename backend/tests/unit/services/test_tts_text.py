@@ -110,3 +110,11 @@ def test_newline_lines_are_closed_and_not_merged():
         "画框的故事。",
         "它是镀金木框。",
     ]
+
+
+def test_korean_cuts_at_spaces_and_uses_period():
+    s = " ".join(["가나다라"] * 30)  # 149 字,无标点
+    out = split_sentences(s, "ko")
+    assert len(out) >= 2 and all(len(x) <= 95 for x in out)
+    assert all(x.endswith(".") for x in out)
+    assert all(w == "가나다라" for x in out for w in x.rstrip(".").split())

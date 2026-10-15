@@ -8,6 +8,7 @@ Google 流式合成会**静默吞掉超长句的句尾**(81 字中文句尾 6 �
 import re
 
 _CJK = {"zh", "zh-hant", "ja", "ko"}
+_CJK_NO_SPACE = {"zh", "zh-hant", "ja"}  # 硬切只能按字;韩语有空格,按词切
 _MAX = {"zh": 60, "zh-hant": 60, "ja": 95, "ko": 95}
 _DEFAULT_MAX = 270
 _MIN_LATIN = 12  # 更短的拉丁碎块多半是缩写断出来的,并入下一句
@@ -26,7 +27,7 @@ _END_MARKS = "。！？.!?"
 def split_sentences(text: str, language: str) -> list[str]:
     limit = _MAX.get(language, _DEFAULT_MAX)
     cjk = language in _CJK
-    stop = "。" if cjk else "."
+    stop = "。" if language in _CJK_NO_SPACE else "."  # 韩语句号是 "."
     out: list[str] = []
     for line in _LINES.split(text or ""):
         raw = [s.strip() for s in _SENT_END.split(line) if s and s.strip()]
@@ -34,7 +35,7 @@ def split_sentences(text: str, language: str) -> list[str]:
         if not cjk:
             raw = _merge_fragments(raw)
         for s in raw:
-            out.extend(_split_long(s, limit, stop, cjk))
+            out.extend(_split_long(s, limit, stop, language in _CJK_NO_SPACE))
     # 每句都要有句末标点:没句号的 input 会被 Google 拼进下一句,长了就吞句尾
     return [_close(s, stop) for s in out]
 
@@ -71,7 +72,7 @@ def _merge_fragments(parts: list[str]) -> list[str]:
     return out
 
 
-def _split_long(s: str, limit: int, stop: str, cjk: bool) -> list[str]:
+def _split_long(s: str, limit: int, stop: str, spaceless: bool) -> list[str]:
     if len(s) <= limit:
         return [s]
     room = limit - 1  # 给 _close 补的句号留一位
@@ -82,7 +83,7 @@ def _split_long(s: str, limit: int, stop: str, cjk: bool) -> list[str]:
             if cur:
                 chunks.append(cur)
                 cur = ""
-            space = -1 if cjk else p.rfind(" ", 0, room)
+            space = -1 if spaceless else p.rfind(" ", 0, room)
             cut = space if space > 0 else room
             chunks.append(p[:cut])
             p = p[cut:]
