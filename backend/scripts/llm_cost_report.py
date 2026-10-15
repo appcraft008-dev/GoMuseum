@@ -11,6 +11,7 @@ PRICES = {
     "gpt-4o": (2.50, 10.00),
     "gpt-4o@batch": (1.25, 5.00),  # Batch API 半价(成本工程②)
     "tts-1": (15.0, 0.0),  # $15/1M chars
+    "google-chirp3-hd": (30.0, 0.0),  # $30/1M chars(每月前 100 万字免费,报表不扣)
 }
 
 

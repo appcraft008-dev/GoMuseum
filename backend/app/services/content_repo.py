@@ -99,7 +99,7 @@ def persist_section_audio(
         object_id=obj.id, language=language, section_code=section_code
     )
     row.audio_key = key
-    # 记录生成引擎:自托管迁移要靠它筛"还有哪些是 tts-1 的"
+    # 记录生成引擎:VoxCPM2 队列靠它筛「还有哪些是懒生成引擎录的、待替换」
     row.audio_engine = engine or _current_tts_engine()
     db.add(row)
     db.commit()
@@ -107,10 +107,10 @@ def persist_section_audio(
 
 
 def _current_tts_engine() -> str:
-    """当前默认 TTS 引擎标识。别写死 —— 换模型时这里跟着变,历史记录才准。"""
-    from app.core.config import settings
+    """当前懒生成 TTS 引擎标识。别写死在调用方 —— 换引擎时这里跟着变,历史记录才准。"""
+    from app.services.tts_service import ENGINE
 
-    return getattr(settings, "OPENAI_TTS_MODEL", "tts-1")
+    return ENGINE
 
 
 def get_section_audio_key(

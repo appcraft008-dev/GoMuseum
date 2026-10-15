@@ -175,3 +175,20 @@ def test_supported_voices_shape():
         "default_voice": "fr-FR-Chirp3-HD-Callirrhoe",
         "available_voices": ["fr-FR-Chirp3-HD-Callirrhoe"],
     }
+
+
+def test_current_engine_marker_is_google():
+    from app.services.content_repo import _current_tts_engine
+
+    assert _current_tts_engine() == ENGINE == "google-chirp3-hd"
+
+
+def test_cost_report_has_google_price():
+    import importlib.util
+    import pathlib
+
+    p = pathlib.Path(__file__).resolve().parents[3] / "scripts" / "llm_cost_report.py"
+    spec = importlib.util.spec_from_file_location("llm_cost_report", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.PRICES["google-chirp3-hd"] == (30.0, 0.0)
