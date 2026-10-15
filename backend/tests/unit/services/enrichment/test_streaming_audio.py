@@ -61,6 +61,29 @@ async def test_error_persists_none_and_releases():
         raise RuntimeError("tts died")
 
     gen = await start_and_stream(bad_src, persist)
-    _ = [x async for x in gen]  # 消费到哨兵
+    try:
+        _ = [x async for x in gen]  # 消费到失败
+    except RuntimeError:
+        pass
     await asyncio.sleep(0.02)
     assert persisted["called"] and persisted["b"] is None  # 失败→释放锁不写key
+
+
+async def test_client_sees_error_when_source_fails():
+    """生成失败(含 TTS 结尾自检不过)时,客户端的流必须报错,不能像正常结束一样收尾
+    —— 否则用户会把截断的音频当成完整讲解听完。"""
+    import pytest
+
+    async def persist(b):
+        pass
+
+    async def bad_src():
+        yield b"a"
+        raise RuntimeError("self-check failed")
+
+    gen = await start_and_stream(bad_src, persist)
+    got = []
+    with pytest.raises(RuntimeError):
+        async for x in gen:
+            got.append(x)
+    assert got == [b"a"]

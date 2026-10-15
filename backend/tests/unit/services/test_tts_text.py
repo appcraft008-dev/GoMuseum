@@ -86,3 +86,27 @@ def test_hard_cut_without_commas():
 def test_empty_and_blank():
     assert split_sentences("", "en") == []
     assert split_sentences("  \n\n ", "zh") == []
+
+
+def test_punctuation_only_fragments_attach_to_previous():
+    # 「真的吗？！」不能切出单独的「！」送进 Google;纯标点文本按空处理
+    assert split_sentences("真的吗？！好的。", "zh") == ["真的吗？！", "好的。"]
+    assert split_sentences("他说：「好。」然后走了。", "zh") == [
+        "他说：「好。」",
+        "然后走了。",
+    ]
+    assert split_sentences("。。。!!", "zh") == []
+
+
+def test_newline_lines_are_closed_and_not_merged():
+    # 没有句末标点的独立一行(问答里的问题/小标题)要补句号,否则 Google 会把它和下一句拼成长句
+    assert split_sentences(
+        "Why blue?\n\nBecause the pigment was cheap at the time.", "en"
+    ) == ["Why blue?", "Because the pigment was cheap at the time."]
+    assert split_sentences(
+        "Tell me about the frame\n\nIt is gilded wood from the period.", "en"
+    ) == ["Tell me about the frame.", "It is gilded wood from the period."]
+    assert split_sentences("画框的故事\n\n它是镀金木框。", "zh") == [
+        "画框的故事。",
+        "它是镀金木框。",
+    ]

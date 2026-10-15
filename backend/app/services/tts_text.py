@@ -13,7 +13,10 @@ _DEFAULT_MAX = 270
 _MIN_LATIN = 12  # 更短的拉丁碎块多半是缩写断出来的,并入下一句
 
 # 句末:CJK 句末标点后;拉丁 .!? 后跟空白(排除省略号);换行
-_SENT_END = re.compile(r"(?<=[。！？])|(?<=[.!?])(?<!\.\.\.)\s+|\n+")
+_SENT_END = re.compile(r"(?<=[。！？])|(?<=[.!?])(?<!\.\.\.)\s+")
+_LINES = re.compile(r"\n+")  # 换行处必断,且各行单独补句号(不跨行合并)
+_LEAD_CLOSERS = re.compile(r"^[」』”’）)\]\"']+")
+_WORD = re.compile(r"\w")
 _CLAUSE = re.compile(r"(?<=[，；：、,;:])")
 _ABBR_END = re.compile(r"\b[A-Z][a-z]{0,2}\.$")  # St. / Mme. / Dr. / Vve.
 _CLAUSE_MARKS = "，；：、,;:"
@@ -24,12 +27,32 @@ def split_sentences(text: str, language: str) -> list[str]:
     limit = _MAX.get(language, _DEFAULT_MAX)
     cjk = language in _CJK
     stop = "。" if cjk else "."
-    raw = [s.strip() for s in _SENT_END.split(text or "") if s and s.strip()]
-    if not cjk:
-        raw = _merge_fragments(raw)
     out: list[str] = []
-    for s in raw:
-        out.extend(_split_long(s, limit, stop, cjk))
+    for line in _LINES.split(text or ""):
+        raw = [s.strip() for s in _SENT_END.split(line) if s and s.strip()]
+        raw = _attach_punctuation(raw)
+        if not cjk:
+            raw = _merge_fragments(raw)
+        for s in raw:
+            out.extend(_split_long(s, limit, stop, cjk))
+    # 每句都要有句末标点:没句号的 input 会被 Google 拼进下一句,长了就吞句尾
+    return [_close(s, stop) for s in out]
+
+
+def _attach_punctuation(parts: list[str]) -> list[str]:
+    """「好。」 的 」、「真的吗？！」 的 ！ 这类切出来的纯标点/前导收尾符并回前一句;
+    纯标点且没有前一句的直接丢(不发空 input)。"""
+    out: list[str] = []
+    for p in parts:
+        lead = _LEAD_CLOSERS.match(p)
+        if lead and out:
+            out[-1] += lead.group(0)
+            p = p[lead.end() :].strip()
+        if not _WORD.search(p):
+            if out and p:
+                out[-1] += p
+            continue
+        out.append(p)
     return out
 
 
@@ -75,6 +98,6 @@ def _split_long(s: str, limit: int, stop: str, cjk: bool) -> list[str]:
 def _close(c: str, stop: str) -> str:
     if c[-1] in _CLAUSE_MARKS:
         return c[:-1] + stop
-    if c[-1] in _END_MARKS:
+    if c.rstrip("」』”’）)]\"'")[-1:] in tuple(_END_MARKS):  # 「好。」 已有句号
         return c
     return c + stop

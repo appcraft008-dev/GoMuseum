@@ -192,3 +192,14 @@ def test_cost_report_has_google_price():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     assert mod.PRICES["google-chirp3-hd"] == (30.0, 0.0)
+
+
+def test_tts_generate_request_caps_text_length():
+    # 换 Google 后切句可吃任意长文本,tts-1 原有的 4096 字隐性闸没了 → 显式上限(prod 正文最长 2049)
+    import pydantic
+
+    from app.api.v1.endpoints.content import TTSRequest
+
+    TTSRequest(text="x" * 5000)
+    with pytest.raises(pydantic.ValidationError):
+        TTSRequest(text="x" * 5001)

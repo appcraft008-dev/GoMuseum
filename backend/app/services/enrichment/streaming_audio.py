@@ -32,19 +32,21 @@ async def start_and_stream(
 
     async def _producer() -> None:
         acc: list[bytes] = []
+        end: object = None  # 哨兵:None=正常结束;异常对象=失败,客户端流跟着报错
         try:
             async for chunk in chunk_source():  # 唯一一次 TTS 调用
                 acc.append(chunk)
                 await queue.put(chunk)
             await persist(b"".join(acc))  # 整段完 → R2
-        except Exception:  # 生成/落库失败:释放锁,不写 key
+        except Exception as e:  # 生成/落库失败(含 TTS 结尾自检不过):释放锁,不写 key
             logger.exception("streaming audio producer failed")
+            end = e
             try:
                 await persist(None)
             except Exception:
                 logger.exception("persist(None) cleanup failed")
         finally:
-            await queue.put(None)  # 哨兵:通知客户端结束
+            await queue.put(end)
 
     task = asyncio.create_task(_producer())
     _producers.add(task)
@@ -56,6 +58,9 @@ async def start_and_stream(
             item = await queue.get()
             if item is None:
                 break
+            if isinstance(item, Exception):
+                # 失败不能伪装成正常结束:客户端会把截断音频当完整讲解听完
+                raise item
             yield item
 
     return _client()
