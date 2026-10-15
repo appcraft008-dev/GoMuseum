@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o"
     OPENAI_TIMEOUT: int = 30
 
+    # Google Cloud TTS(懒生成音频,Chirp 3 HD)
+    GOOGLE_TTS_API_KEY: str = ""
+
     # Anthropic Claude (fallback)
     ANTHROPIC_API_KEY: Optional[str] = None
     ANTHROPIC_MODEL: str = (
