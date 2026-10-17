@@ -419,6 +419,8 @@ def test_lazy_generation_only_request_language(session, monkeypatch):
     monkeypatch.setattr(
         "app.services.enrichment.pipeline.generate_object", fake_generate_object
     )
+    # 本测试只验生成阶段的语言;补语言见 test_lazy_fanout
+    monkeypatch.setattr(lazy, "_run_fanout", lambda *a, **k: None)
     lazy.run_lazy_generation(
         qid="Q1", language="zh", session_factory=lambda: session, close=False
     )
