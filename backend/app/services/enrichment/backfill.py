@@ -284,6 +284,37 @@ def translate_scope(db, m, limit=None) -> list:
     return [oid for (oid,) in q.all()]
 
 
+def _backfill_bios(db, ids, langs, translator, ex) -> int:
+    """作者 bio 单独一轮:按作者去重,线程池只**翻**,主线程逐条写(写前重读、只补缺)。
+    作者跨件跨馆共享、bio 整 JSON 覆盖写:原先每件线程里各自补,同一作者的两件并发提交
+    会互相覆盖(纪律 37);同一作者的 bio 也被重复翻。"""
+    reps = {}  # artist_qid → 一件代表作(fill_artist_bio 按件找作者)
+    for o in db.query(MuseumObject).filter(MuseumObject.id.in_(ids)):
+        aqid = (o.attributes or {}).get("artist_qid")
+        if aqid:
+            reps.setdefault(aqid, o)
+    jobs = []
+    for o in reps.values():
+        bio_en, have = artist_bio_en(db, o)
+        if bio_en:
+            jobs += [(o, lang, bio_en) for lang in langs if lang not in have]
+
+    def _tr(job):
+        _o, lang, bio_en = job
+        try:
+            return translator.translate_section(bio_en, lang)
+        except Exception:
+            logger.warning("backfill_languages: bio 翻译失败 lang=%s", lang)
+            return None
+
+    n = 0
+    for (o, lang, _), text in zip(jobs, ex.map(_tr, jobs)):
+        if text and fill_artist_bio(db, o, lang, translator, refresh=True, text=text):
+            db.commit()
+            n += 1
+    return n
+
+
 def backfill_languages(
     db, slug, *, langs, translator, limit=None, model="gpt-4o-mini", workers=8
 ) -> dict:
@@ -321,7 +352,9 @@ def backfill_languages(
                 return None
             local = {"sections": 0, "qa": 0, "bios": 0}
             for lang in langs:
-                c = translate_object_language(s, o, lang, translator, model)
+                c = translate_object_language(
+                    s, o, lang, translator, model, include_bio=False
+                )
                 for k in local:
                     local[k] += c[k]
             s.commit()
@@ -355,6 +388,7 @@ def backfill_languages(
                     counts["qa"],
                     counts["errors"],
                 )
+        counts["bios"] += _backfill_bios(db, ids, langs, translator, ex)
     return counts
 
 
