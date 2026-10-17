@@ -905,7 +905,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
     eff_status = obj.content_status
     if not (guide_body and guide_body.strip()) and not tabs:
         eff_status = "empty"
-    from app.services.enrichment.lazy import lock_active
+    from app.services.enrichment.lazy import generating_for
 
     # 加法字段(2026-07-10):真实段落进度(诚实分数,非假百分比)。
     # expected=guide+该类目深度段(不含 artist 卡);published=已发布的 guide+深度段。
@@ -920,8 +920,8 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         "category": obj.category,
         "language": language,
         "status": eff_status,
-        # 加法字段(2026-07-04):前端三态精确信号——true=懒生成/懒翻译进行中
-        "generating": lock_active(obj),
+        # 加法字段(2026-07-04):前端三态精确信号——true=懒生成/懒翻译/该语言补语言进行中
+        "generating": generating_for(obj, language),
         # 加法字段(2026-07-10):懒生成进度分数(前端显 published/expected 段)
         "generation": generation,
         "title": _resolve_name(

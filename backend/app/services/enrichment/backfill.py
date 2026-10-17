@@ -143,10 +143,37 @@ def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
     return out
 
 
-def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> dict:
+def fill_artist_bio(db, o, lang, translator, *, refresh=False) -> int:
+    """该件作者缺 lang 的 bio → 从有效 en 纯翻译补上。**只补缺**(纪律 37:作者跨馆共享)。
+    返回补了几条(0/1),不 commit。
+    refresh=True:写前重读作者行。bio 是整 JSON 覆盖写,补语言阶段与同作者另一件的生成
+    可能同时改这一行,重读把丢更新的窗口压到最小(spec 2026-10-17 §4.2)。"""
+    aqid = (o.attributes or {}).get("artist_qid")
+    if not aqid:
+        return 0
+    art = db.query(Artist).filter_by(qid=aqid).first()
+    if art is None:
+        return 0
+    if refresh:
+        db.refresh(art)
+    # 坏 en(含汉字)不作轴心,防垃圾扩散;重生交给 generate 路径
+    bio_en = (art.bio or {}).get("en") if bio_en_usable(art.bio) else None
+    if not bio_en or (art.bio or {}).get(lang):
+        return 0
+    try:
+        art.bio = {**(art.bio or {}), lang: translator.translate_section(bio_en, lang)}
+    except Exception:
+        return 0
+    return 1
+
+
+def translate_object_language(
+    db, o, lang, translator, model="gpt-4o-mini", *, include_bio=True
+) -> dict:
     """单件单语言补语种原语(懒翻译与全馆 translate 命令共用):
     缺失段/问答/该件作者 bio 从已存 en **纯翻译**落库(忠实度校验继承接地,不重生成)。幂等。
-    返回 {"sections": n, "qa": n, "bios": n};对象无 en 轴心内容 → 全零(交给生成)。"""
+    返回 {"sections": n, "qa": n, "bios": n};对象无 en 轴心内容 → 全零(交给生成)。
+    include_bio=False:不碰作者行(补语言阶段多线程调用时由主线程统一补 bio)。"""
     from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
     from app.services.content_repo import (
         persist_gated_sections,
@@ -218,20 +245,8 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
             museum=_museums.get(lang),
         )
         counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
-    aqid = (o.attributes or {}).get("artist_qid")
-    if aqid:
-        art = db.query(Artist).filter_by(qid=aqid).first()
-        # 坏 en(含汉字)不作轴心,防垃圾扩散;重生交给 generate 路径
-        bio_en = (art.bio or {}).get("en") if art and bio_en_usable(art.bio) else None
-        if bio_en and not (art.bio or {}).get(lang):
-            try:
-                art.bio = {
-                    **(art.bio or {}),
-                    lang: translator.translate_section(bio_en, lang),
-                }
-                counts["bios"] += 1
-            except Exception:
-                pass
+    if include_bio:
+        counts["bios"] += fill_artist_bio(db, o, lang, translator)
     return counts
 
 
