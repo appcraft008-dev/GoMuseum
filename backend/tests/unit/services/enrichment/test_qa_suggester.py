@@ -48,7 +48,8 @@ class _Translator:
 def test_suggest_en_gates_answers_and_translates_published(monkeypatch):
     # 合成 [lang] 假译文非真语言,此测试验翻译流程非语言检测→屏蔽语言闸
     monkeypatch.setattr(
-        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+        "app.services.enrichment.lang_detect.text_in_language",
+        lambda t, l, s=None: True,
     )
     s = QASuggester(_Complete(), _Gate(), _Translator())
     out = s.suggest("material", "facts", "painting", ["en", "fr"])
@@ -206,7 +207,8 @@ def _one(tr, q, a="Answer text.", lang="zh", **kw):
 
 def test_question_translated_into_an_answer_is_held(monkeypatch):
     monkeypatch.setattr(
-        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+        "app.services.enrichment.lang_detect.text_in_language",
+        lambda t, l, s=None: True,
     )
     tr = _EchoTr(
         {
@@ -220,7 +222,8 @@ def test_question_translated_into_an_answer_is_held(monkeypatch):
 def test_question_that_fails_faithfulness_is_held(monkeypatch):
     """问句换了人(作者→画中人)只有问句的忠实度检查能抓到。"""
     monkeypatch.setattr(
-        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+        "app.services.enrichment.lang_detect.text_in_language",
+        lambda t, l, s=None: True,
     )
     tr = _EchoTr(
         {
@@ -236,7 +239,8 @@ def test_question_that_fails_faithfulness_is_held(monkeypatch):
 
 def test_abbreviations_and_dotted_titles_are_not_second_sentences(monkeypatch):
     monkeypatch.setattr(
-        "app.services.enrichment.lang_detect.text_in_language", lambda t, l: True
+        "app.services.enrichment.lang_detect.text_in_language",
+        lambda t, l, s=None: True,
     )
     title = "Le Repos au bord d'un ruisseau. Lisière de bois"
     for q in (

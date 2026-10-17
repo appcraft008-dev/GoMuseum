@@ -40,10 +40,49 @@ def _get_detector():
     return _detector
 
 
-def text_in_language(text: str, lang: str) -> bool:
+def _strip_source_names(text: str, source: str) -> str:
+    """剔除译文里**原样照抄自英文原文的外语专名**(机构名/人名)再判语言。
+
+    问答里夹着「Académie royale de peinture et de sculpture」「François Vincent
+    Mathieu Latil」这类法语专名,整句译文没问题,lingua 却因专名占比高判成法语。
+    规则:译文中逐字出现在 source 里的连续词串(≥2 词、含大写词)视为专名剔除;
+    **但 lingua 判它是英文的不剔** —— 否则整句没翻译的英文(原样照抄)会被当专名洗掉。"""
+
+    # 比较用词键:去首部缩合(dell'Académie→Académie)与首尾标点,不改要保留的原词
+    def key(w):
+        return re.sub(r"^\w{1,6}['’]", "", w).strip('.,;:!?¿¡()"«»')
+
+    words = text.split()
+    src = " " + " ".join(key(w) for w in source.split()) + " "
+    out, i = [], 0
+    while i < len(words):
+        j = i
+        while (
+            j < len(words)
+            and " " + " ".join(key(w) for w in words[i : j + 1]) + " " in src
+        ):
+            j += 1
+        span = words[i:j]
+        if len(span) >= 2 and any(key(w)[:1].isupper() for w in span):
+            conf = _get_detector().compute_language_confidence_values(" ".join(span))
+            if not (conf and conf[0].language.name == "ENGLISH"):
+                i = j
+                continue
+        out.append(words[i])
+        i += 1
+    return " ".join(out)
+
+
+def text_in_language(text: str, lang: str, source: str | None = None) -> bool:
+    """source=英文原文(可选):译文里照抄自它的外语专名不计入判别,见 _strip_source_names。"""
     t = (text or "").strip()
     if not t:
         return True
+    if source and lang in _LINGUA_CODE:
+        try:
+            t = _strip_source_names(t, source) or t
+        except Exception:
+            pass  # fail-open,同本模块其它检查
     try:
         alpha = re.findall(r"[^\W\d_]", t, re.UNICODE)  # 字母类字符
         latin = sum(1 for c in alpha if _LATIN.match(c)) if alpha else 0
