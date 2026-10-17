@@ -232,9 +232,9 @@ def test_only_objects_with_en_axis_enter_the_queue(session, monkeypatch):
     seen = []
     orig = bf.translate_object_language
 
-    def spy(db, o, lang, translator, model="gpt-4o-mini"):
+    def spy(db, o, lang, translator, model="gpt-4o-mini", **kw):
         seen.append(o.qid)
-        return orig(db, o, lang, translator, model)
+        return orig(db, o, lang, translator, model, **kw)
 
     monkeypatch.setattr(bf, "translate_object_language", spy)
     backfill_languages(session, "orsay", langs=["de"], translator=_Tr())
@@ -246,7 +246,7 @@ def test_single_object_failure_is_skipped_and_counted(session, monkeypatch):
     """单件失败跳过继续 + 计 errors(批处理纪律①),不炸掉整轮。"""
     import app.services.enrichment.backfill as bf
 
-    def boom(db, o, lang, translator, model="gpt-4o-mini"):
+    def boom(db, o, lang, translator, model="gpt-4o-mini", **kw):
         raise RuntimeError("translator exploded")
 
     monkeypatch.setattr(bf, "translate_object_language", boom)
@@ -294,3 +294,80 @@ def test_translate_passes_artist_english_name_and_museum_name(session):
     assert qa and all(
         x[1] == "Henri de Toulouse-Lautrec" and x[2] == "奥赛博物馆" for x in qa
     )
+
+
+def _two_objects_same_artist(s):
+    # Q1、Q3 同一作者,都有 en 内容
+    from app.models.artist import Artist
+
+    Artist.__table__.create(bind=s.get_bind(), checkfirst=True)
+    m = s.query(Museum).filter_by(slug="orsay").one()
+    upsert_object(s, m.id, {"qid": "Q3", "title_en": "C", "category": "painting"})
+    for qid in ("Q1", "Q3"):
+        o = s.query(MuseumObject).filter_by(qid=qid).one()
+        o.attributes = {"artist_qid": "Q34618"}
+        if qid == "Q3":
+            s.add(
+                ObjectContentSection(
+                    object_id=o.id,
+                    language="en",
+                    section_code="guide",
+                    body="EN guide 3.",
+                    status="published",
+                )
+            )
+    s.add(Artist(qid="Q34618", name_en="Courbet", bio={"en": "EN bio."}))
+    s.commit()
+
+
+def test_backfill_bio_translated_once_per_artist(session):
+    # 同一作者的两件:bio 每门只翻一次(原先每件各翻一次,且并发整 JSON 覆盖写)
+    from app.models.artist import Artist
+
+    _two_objects_same_artist(session)
+    tr = _Tr()
+    out = backfill_languages(
+        session, "orsay", langs=["de", "it"], translator=tr, workers=1
+    )
+    bio_calls = sorted(lang for k, lang, t in tr.calls if t == "EN bio.")
+    assert bio_calls == ["de", "it"]
+    art = session.query(Artist).filter_by(qid="Q34618").one()
+    assert art.bio == {"en": "EN bio.", "de": "EN bio._de", "it": "EN bio._it"}
+    assert out["bios"] == 2
+
+
+def test_backfill_artist_written_only_from_main_thread(session, monkeypatch):
+    # 共享作者行只许主线程写(线程里写会互相覆盖,纪律 37)
+    import threading
+
+    from app.services.enrichment import backfill
+
+    _two_objects_same_artist(session)
+    writers = []
+    real = backfill.fill_artist_bio
+
+    def spy(*a, **kw):
+        writers.append(threading.current_thread() is threading.main_thread())
+        return real(*a, **kw)
+
+    monkeypatch.setattr(backfill, "fill_artist_bio", spy)
+    backfill_languages(session, "orsay", langs=["de"], translator=_Tr(), workers=1)
+    assert writers and all(writers)
+
+
+def test_backfill_bio_failure_keeps_other_languages(session):
+    from app.models.artist import Artist
+
+    _two_objects_same_artist(session)
+
+    class _TrFail(_Tr):
+        def translate_section(self, text, lang, **kw):
+            if text == "EN bio." and lang == "de":
+                raise RuntimeError("llm down")
+            return super().translate_section(text, lang, **kw)
+
+    backfill_languages(
+        session, "orsay", langs=["de", "it"], translator=_TrFail(), workers=1
+    )
+    art = session.query(Artist).filter_by(qid="Q34618").one()
+    assert art.bio == {"en": "EN bio.", "it": "EN bio._it"}

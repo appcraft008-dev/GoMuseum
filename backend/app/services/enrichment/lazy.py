@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 
 from app.models.museum_object import MuseumObject
@@ -15,6 +16,18 @@ from app.services import ops_alert
 logger = logging.getLogger(__name__)
 
 _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
+# 补语言阶段(spec 2026-10-17):懒生成完成后按语言并行补齐该馆其余语言。
+# 标记 attributes.lazy_fanout = {"at": 心跳时刻, "pending": [还没补完的语言]}。
+# 心跳 = 每补完一门刷新 at:慢任务不会过期;进程被部署杀掉后最多空等 5 分钟。
+_FANOUT_TTL = timedelta(minutes=5)
+# ponytail: 进程级同时最多 2 件补语言,满了跳过不排队(其余语言回到按请求懒翻译)
+_FANOUT_SEM = threading.Semaphore(2)
+_FANOUT_WORKERS = 4  # 每件按语言并行;2 件 × 4 = 最多 8 路 mini 调用
+# 补语言写的段打自己的来源,不挤占懒生成日上限(计入的话 1000 段只够约 31 件/天);
+# 但要有自己的上限,不靠"只跟在生成后面"推理封顶:en 用户触发时每件要补的语言更多。
+# 3000 段 ÷ 每门约 3 段 ≈ 1000 门次 × $0.0035 ≈ 最坏 $3.5/天(spec §4.4)。
+FANOUT_SOURCE = "ai_lazy_fanout"
+_FANOUT_DAILY_SECTION_CAP = 3000
 # ponytail: 进程级并发上限2,保护 API 响应与 LLM 限速;多 worker/量大再上队列
 _SEM = threading.Semaphore(2)
 # 全局日上限(2026-09-20 安全审计):当天已生成段数达此值就不再点火。
@@ -47,6 +60,76 @@ def lock_active(obj: MuseumObject) -> bool:
         return datetime.now(timezone.utc) - datetime.fromisoformat(at) < _LOCK_TTL
     except ValueError:
         return False  # 坏时间戳当过期
+
+
+def fanout_pending(obj: MuseumObject) -> list[str]:
+    """补语言进行中、还没补完的语言;无标记/心跳超时/坏值 → []。"""
+    f = (obj.attributes or {}).get("lazy_fanout") or {}
+    try:
+        if datetime.now(timezone.utc) - datetime.fromisoformat(f["at"]) >= _FANOUT_TTL:
+            return []
+    except (KeyError, TypeError, ValueError):
+        return []
+    return list(f.get("pending") or [])
+
+
+def generating_for(obj: MuseumObject, language) -> bool:
+    """端点 generating 字段:整件在懒生成/懒翻译,或这门语言还在补语言阶段的 pending 里。
+    ⚠️ 必须是"这门语言整门翻完前一直 true":App 在 false 时 keepAlive 缓存结果
+    (catalog_providers.dart),只有 guide 就报 false 会让深度段永远看不到。"""
+    return lock_active(obj) or language in fanout_pending(obj)
+
+
+# 补语言期间有人打开的语言(Redis 集合,跨 uvicorn worker 共享):下一个空出来的线程先补它。
+# 放 Redis 不放 attributes:请求路径上写 attributes 会和补语言的心跳互相覆盖。
+_WANT_TTL_S = 600
+
+
+def _want_key(qid: str) -> str:
+    return f"lazy:fanout_want:{qid}"
+
+
+def record_fanout_want(qid: str, language: str, redis=None) -> None:
+    """记一笔"有人在等这门语言";Redis 不可用就算了(只是少了插队,语言照样会补)。"""
+    r = redis if redis is not None else _redis()
+    if r is None:
+        return
+    try:
+        r.pipeline().sadd(_want_key(qid), language).expire(
+            _want_key(qid), _WANT_TTL_S
+        ).execute()
+    except Exception:
+        logger.warning("lazy fanout: 记录优先语言失败 qid=%s", qid, exc_info=True)
+
+
+def _fanout_wanted(qid: str, redis) -> set:
+    if redis is None:
+        return set()
+    try:
+        return set(redis.smembers(_want_key(qid)))
+    except Exception:
+        return set()
+
+
+def _set_fanout(db, obj: MuseumObject, pending) -> None:
+    # 写前重读:音频锁也在同一个 attributes JSON 里读改写(lazy_audio),压小覆盖窗口
+    db.refresh(obj)
+    obj.attributes = {
+        **(obj.attributes or {}),
+        "lazy_fanout": {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "pending": list(pending),
+        },
+    }
+    db.commit()
+
+
+def _clear_fanout(db, obj: MuseumObject) -> None:
+    db.refresh(obj)
+    attrs = dict(obj.attributes or {})
+    attrs.pop("lazy_fanout", None)
+    obj.attributes = attrs
+    db.commit()
 
 
 def try_acquire_lock(db, obj: MuseumObject, require_status=("stub",)) -> bool:
@@ -114,7 +197,7 @@ def _translate(db, qid: str, language: str) -> dict:
     return out
 
 
-def _tag_lazy_rows(db, obj: MuseumObject, since) -> None:
+def _tag_lazy_rows(db, obj: MuseumObject, since, source=LAZY_SOURCE) -> None:
     """把本次懒任务写的段标成 LAZY_SOURCE(日上限只数这些)。
 
     ponytail: 按「该件 + 本次开始后生成」圈行,不往写入咽喉里穿参数;
@@ -124,7 +207,7 @@ def _tag_lazy_rows(db, obj: MuseumObject, since) -> None:
     db.query(ObjectContentSection).filter(
         ObjectContentSection.object_id == obj.id,
         ObjectContentSection.generated_at >= since,
-    ).update({"source": LAZY_SOURCE}, synchronize_session=False)
+    ).update({"source": source}, synchronize_session=False)
     db.commit()
 
 
@@ -171,7 +254,8 @@ def _run_locked(
 def run_lazy_generation(
     qid: str, language: str | None = None, *, session_factory=None, close=True
 ) -> None:
-    """stub 首访 → 生成英语轴心 + 请求语言(省成本;其余语言走 run_lazy_translation)。"""
+    """stub 首访 → 生成英语轴心 + 请求语言;完成后补语言阶段补齐该馆其余语言
+    (此时 _SEM 与 lazy_lock_at 都已释放,首屏和请求者自己的语言不受影响)。"""
     _run_locked(
         qid,
         lambda db: _generate(db, qid, language),
@@ -179,6 +263,182 @@ def run_lazy_generation(
         session_factory=session_factory,
         close=close,
     )
+    _run_fanout(qid, session_factory=session_factory, close=close)
+
+
+def _museum_languages(db, obj: MuseumObject) -> list[str]:
+    """该馆配置的语言集(museums.yaml 馆级覆盖,否则全局默认)——不写死语言个数。"""
+    from app.models.museum import Museum
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+    from app.services.enrichment.lang_config import resolve_languages
+
+    slug = db.query(Museum.slug).filter_by(id=obj.museum_id).scalar()
+    return resolve_languages(MuseumCatalog.from_file(CATALOG_PATH).get(slug).languages)
+
+
+def _fanout_langs(db, obj: MuseumObject, langs) -> list[str]:
+    """要补的语言 = 配置语言集里这件**一行都还没有**的(en 轴心除外)。幂等,跑两次不重复花钱;
+    有 needs_review 行的语言也不补(不碰已有段)。"""
+    from app.models.content import ObjectContentSection
+
+    have = {
+        lang
+        for (lang,) in db.query(ObjectContentSection.language)
+        .filter(ObjectContentSection.object_id == obj.id)
+        .distinct()
+    }
+    return [lang for lang in langs if lang != "en" and lang not in have]
+
+
+def _fanout(
+    db,
+    qid: str,
+    *,
+    langs=None,
+    translator=None,
+    session_factory=None,
+    close=True,
+    executor=None,
+    redis=None,
+) -> dict:
+    """补语言阶段(spec 2026-10-17):懒生成完成后,把该馆其余语言的段/问答/作者 bio 补齐。
+    不占 _SEM 和 lazy_lock_at;按语言的进行中标记见 fanout_pending。
+    前置条件不满足(未 ready / 无 en / 无可补语言 / 自己的日上限 / 名额满)→ 返回 {},
+    其余语言回到按请求懒翻译。测试注入 langs/translator/session_factory/executor/redis。"""
+    o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
+    if o is None or o.content_status != "ready" or not _has_published(db, o.id, "en"):
+        return {}
+    remaining = _fanout_langs(
+        db, o, langs if langs is not None else _museum_languages(db, o)
+    )
+    if not remaining:
+        return {}
+    if daily_budget_exhausted(db, _FANOUT_DAILY_SECTION_CAP, FANOUT_SOURCE):
+        logger.warning("lazy fanout: 当日补语言预算用尽,跳过 qid=%s", qid)
+        return {}
+    if not _FANOUT_SEM.acquire(blocking=False):
+        return {}
+    # acquire 后紧跟 try:之后任何一步抛异常都要还名额、清标记
+    t0 = datetime.now(timezone.utc)
+    out: dict = {}
+    try:
+        pending = list(remaining)
+        # 先写标记再做其它初始化:首轮生成已清 lazy_lock_at,这之间别的语言用户打开会
+        # 另起一路懒翻译。标记越早写,这个窗口越小(剩几条查询的时长,见 Ruling)。
+        _set_fanout(db, o, pending)
+        from app.services.enrichment.backfill import (
+            artist_bio_en,
+            fill_artist_bio,
+            translate_object_language,
+        )
+
+        if translator is None:
+            from app.services.enrichment.factory import build_translator
+
+            translator = build_translator("translate")
+        if session_factory is None:
+            from app.core.database import guarded_sessionmaker
+
+            # 带音频损失闸(纪律 37);绑同一个 engine,同 backfill_languages
+            session_factory = guarded_sessionmaker(bind=db.get_bind())
+        if redis is None:
+            redis = _redis()
+        bio_en, bio_have = artist_bio_en(db, o)
+        oid = o.id
+
+        def _one(lang):
+            s = session_factory()  # 线程内独立 session:session 非线程安全
+            try:
+                c = translate_object_language(
+                    s, s.get(MuseumObject, oid), lang, translator, include_bio=False
+                )
+                s.commit()  # 保险:persist_* 已逐段提交,这里通常是空操作
+            finally:
+                if close:
+                    s.close()
+            # 作者 bio 只在线程里**翻**(并行,原先主线程串行 8 门约 33 秒);
+            # 写由主线程做:bio 是跨馆共享行、整 JSON 覆盖写,线程里写会互相覆盖
+            bio = None
+            if bio_en and lang not in bio_have:
+                try:
+                    bio = translator.translate_section(bio_en, lang)
+                except Exception:
+                    logger.warning("lazy fanout bio failed: %s/%s", qid, lang)
+            return c, bio
+
+        queue = list(remaining)
+
+        def _next():
+            # 有人在等的语言插队;否则按原顺序
+            want = _fanout_wanted(qid, redis)
+            return queue.pop(next((i for i, x in enumerate(queue) if x in want), 0))
+
+        pool = executor or ThreadPoolExecutor(max_workers=_FANOUT_WORKERS)
+        running: dict = {}
+        try:
+            # 只把空闲线程数那么多门交给线程池,其余留在 queue:每空出一个才挑下一门,
+            # 这样补到一半有人打开的语言也能插队
+            while queue or running:
+                while queue and len(running) < _FANOUT_WORKERS:
+                    lang = _next()
+                    running[pool.submit(_one, lang)] = lang
+                done, _ = wait(running, return_when=FIRST_COMPLETED)
+                for f in done:
+                    lang = running.pop(f)
+                    try:
+                        c, bio = f.result()
+                        out[lang] = c
+                        if bio and fill_artist_bio(
+                            db, o, lang, translator, refresh=True, text=bio
+                        ):
+                            c["bios"] = 1
+                            db.commit()
+                    except Exception:
+                        logger.exception("lazy fanout failed: %s/%s", qid, lang)
+                    pending.remove(lang)
+                    # 每完成一门:打来源标签(进程被杀也已计入补语言日上限)+ 心跳,
+                    # 这门语言的 generating 随之转 false
+                    _tag_lazy_rows(db, o, t0, FANOUT_SOURCE)
+                    _set_fanout(db, o, pending)
+        finally:
+            # BaseException(如进程关闭时的 SystemExit;web 进程音频闸只记账不拦,AudioLossBlocked
+            # 只在脚本直接调用时可能出现)从 result() 冒出来时,别的语言还在跑或排队:
+            # 取消排队的、等在跑的结束,**之后**才清标记还名额 —— 否则孤儿线程在标记清掉后
+            # 继续写,generating 提前转 false、懒翻译重复点火(独立审查实测)
+            pool.shutdown(wait=True, cancel_futures=True)
+    finally:
+        try:
+            db.rollback()  # 之前的写都已提交;BaseException 后会话可能处于失败态
+            _tag_lazy_rows(db, o, t0, FANOUT_SOURCE)
+            _clear_fanout(db, o)
+        finally:
+            _FANOUT_SEM.release()
+            try:
+                if redis is not None:
+                    redis.delete(_want_key(qid))
+            except Exception:
+                pass
+    return out
+
+
+def _run_fanout(qid: str, *, session_factory=None, close=True) -> None:
+    """补语言后台骨架:自带会话,失败只记日志(其余语言回到按请求懒翻译)。"""
+    if session_factory is None:
+        from app.core.database import SessionLocal
+
+        session_factory = SessionLocal
+    db = session_factory()
+    try:
+        out = _fanout(db, qid)
+        if out:
+            logger.info("lazy fanout done: %s -> %s", qid, out)
+    except Exception:
+        db.rollback()
+        logger.exception("lazy fanout failed: %s", qid)
+    finally:
+        if close:
+            db.close()
 
 
 def run_lazy_translation(
@@ -251,22 +511,34 @@ def _has_published(db, object_id, lang) -> bool:
     )
 
 
-def _has_any_section(db, object_id, lang) -> bool:
-    """该语言有任何段落(含 needs_review)= 已尝试过翻译。用于防死循环重触发。"""
-    from app.models.content import ObjectContentSection
+def _has_missing_section(db, object_id, lang) -> bool:
+    """en 已发布的段里,有该语言**一行都没有**的(任何状态都算有)。
+    取代原「该语言有任一段就不再触发」:那个判据下,半途失败(有 guide、缺深度段)的语言
+    永远补不齐,补语言阶段会把这种半成品放大(spec 2026-10-17 §七)。
+    needs_review 也算有 → 翻不过闸的段不会被反复点火烧钱。"""
+    from app.models.content import ObjectContentSection as S
 
-    return (
-        db.query(ObjectContentSection)
-        .filter(
-            ObjectContentSection.object_id == object_id,
-            ObjectContentSection.language == lang,
+    en = {
+        c
+        for (c,) in db.query(S.section_code).filter(
+            S.object_id == object_id,
+            S.language == "en",
+            S.status == "published",
+            S.body.isnot(None),
         )
-        .first()
-        is not None
-    )
+    }
+    have = {
+        c
+        for (c,) in db.query(S.section_code).filter(
+            S.object_id == object_id, S.language == lang
+        )
+    }
+    return bool(en - have)
 
 
-def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
+def daily_budget_exhausted(
+    db, cap: int = _LAZY_DAILY_SECTION_CAP, source: str = LAZY_SOURCE
+) -> bool:
     """今天已生成的段数是否已达上限。**这是钱包止损，不是权限检查。**
 
     身份闸（端点侧：匿名不点火）把"任何人无限刷"变成"注册一个号就能刷"——
@@ -277,6 +549,7 @@ def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
     只数懒任务写的段(`source == LAZY_SOURCE`)。原先刻意不分来源、管当天总花费,
     代价是批量跑的那天用户点开新语言全被跳过 —— 2026-09-28 实际发生(见 LAZY_SOURCE)。
     批量是运营者看着跑的,不需要这道止损。
+    source=FANOUT_SOURCE 时管补语言自己的日上限(spec 2026-10-17 §4.4)。
     """
     from app.models.content import ObjectContentSection
 
@@ -287,7 +560,7 @@ def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
         db.query(ObjectContentSection)
         .filter(
             ObjectContentSection.generated_at >= start,
-            ObjectContentSection.source == LAZY_SOURCE,
+            ObjectContentSection.source == source,
         )
         .count()
         >= cap
@@ -416,9 +689,12 @@ def maybe_trigger(
         o.content_status == "ready"
         and language
         and language != "en"
-        and not _has_any_section(db, o.id, language)
+        and language not in fanout_pending(o)
+        and _has_missing_section(db, o.id, language)
         and _has_published(db, o.id, "en")
     )
+    if language and language != "en" and generating_for(o, language):
+        record_fanout_want(qid, language, redis)  # 补语言阶段先补有人在等的语言
     if not (wants_generation or wants_translation):
         return
     if wants_generation and imageless_stub(db, o):

@@ -143,10 +143,50 @@ def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
     return out
 
 
-def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> dict:
+def fill_artist_bio(db, o, lang, translator, *, refresh=False, text=None) -> int:
+    """该件作者缺 lang 的 bio → 从有效 en 纯翻译补上。**只补缺**(纪律 37:作者跨馆共享)。
+    返回补了几条(0/1),不 commit。
+    refresh=True:写前重读作者行。bio 是整 JSON 覆盖写,补语言阶段与同作者另一件的生成
+    可能同时改这一行,重读把丢更新的窗口压到最小(spec 2026-10-17 §4.2)。
+    text:已在别处翻好的译文(补语言阶段在线程里翻、主线程写),给了就不再调 translator。"""
+    aqid = (o.attributes or {}).get("artist_qid")
+    if not aqid:
+        return 0
+    art = db.query(Artist).filter_by(qid=aqid).first()
+    if art is None:
+        return 0
+    if refresh:
+        db.refresh(art)
+    # 坏 en(含汉字)不作轴心,防垃圾扩散;重生交给 generate 路径
+    bio_en = (art.bio or {}).get("en") if bio_en_usable(art.bio) else None
+    if not bio_en or (art.bio or {}).get(lang):
+        return 0
+    try:
+        art.bio = {
+            **(art.bio or {}),
+            lang: text or translator.translate_section(bio_en, lang),
+        }
+    except Exception:
+        return 0
+    return 1
+
+
+def artist_bio_en(db, o) -> tuple[str | None, set]:
+    """该件作者可作轴心的 en bio 与已有 bio 的语言;无作者/坏 en → (None, set())。只读。"""
+    aqid = (o.attributes or {}).get("artist_qid")
+    art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
+    if art is None or not bio_en_usable(art.bio):
+        return None, set()
+    return (art.bio or {}).get("en") or None, {k for k, v in art.bio.items() if v}
+
+
+def translate_object_language(
+    db, o, lang, translator, model="gpt-4o-mini", *, include_bio=True
+) -> dict:
     """单件单语言补语种原语(懒翻译与全馆 translate 命令共用):
     缺失段/问答/该件作者 bio 从已存 en **纯翻译**落库(忠实度校验继承接地,不重生成)。幂等。
-    返回 {"sections": n, "qa": n, "bios": n};对象无 en 轴心内容 → 全零(交给生成)。"""
+    返回 {"sections": n, "qa": n, "bios": n};对象无 en 轴心内容 → 全零(交给生成)。
+    include_bio=False:不碰作者行(补语言阶段多线程调用时由主线程统一补 bio)。"""
     from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
     from app.services.content_repo import (
         persist_gated_sections,
@@ -218,20 +258,8 @@ def translate_object_language(db, o, lang, translator, model="gpt-4o-mini") -> d
             museum=_museums.get(lang),
         )
         counts["qa"] += persist_suggested_questions(db, o.qid, lang, items, model)
-    aqid = (o.attributes or {}).get("artist_qid")
-    if aqid:
-        art = db.query(Artist).filter_by(qid=aqid).first()
-        # 坏 en(含汉字)不作轴心,防垃圾扩散;重生交给 generate 路径
-        bio_en = (art.bio or {}).get("en") if art and bio_en_usable(art.bio) else None
-        if bio_en and not (art.bio or {}).get(lang):
-            try:
-                art.bio = {
-                    **(art.bio or {}),
-                    lang: translator.translate_section(bio_en, lang),
-                }
-                counts["bios"] += 1
-            except Exception:
-                pass
+    if include_bio:
+        counts["bios"] += fill_artist_bio(db, o, lang, translator)
     return counts
 
 
@@ -254,6 +282,37 @@ def translate_scope(db, m, limit=None) -> list:
     if limit:
         q = q.limit(limit)
     return [oid for (oid,) in q.all()]
+
+
+def _backfill_bios(db, ids, langs, translator, ex) -> int:
+    """作者 bio 单独一轮:按作者去重,线程池只**翻**,主线程逐条写(写前重读、只补缺)。
+    作者跨件跨馆共享、bio 整 JSON 覆盖写:原先每件线程里各自补,同一作者的两件并发提交
+    会互相覆盖(纪律 37);同一作者的 bio 也被重复翻。"""
+    reps = {}  # artist_qid → 一件代表作(fill_artist_bio 按件找作者)
+    for o in db.query(MuseumObject).filter(MuseumObject.id.in_(ids)):
+        aqid = (o.attributes or {}).get("artist_qid")
+        if aqid:
+            reps.setdefault(aqid, o)
+    jobs = []
+    for o in reps.values():
+        bio_en, have = artist_bio_en(db, o)
+        if bio_en:
+            jobs += [(o, lang, bio_en) for lang in langs if lang not in have]
+
+    def _tr(job):
+        _o, lang, bio_en = job
+        try:
+            return translator.translate_section(bio_en, lang)
+        except Exception:
+            logger.warning("backfill_languages: bio 翻译失败 lang=%s", lang)
+            return None
+
+    n = 0
+    for (o, lang, _), text in zip(jobs, ex.map(_tr, jobs)):
+        if text and fill_artist_bio(db, o, lang, translator, refresh=True, text=text):
+            db.commit()
+            n += 1
+    return n
 
 
 def backfill_languages(
@@ -293,7 +352,9 @@ def backfill_languages(
                 return None
             local = {"sections": 0, "qa": 0, "bios": 0}
             for lang in langs:
-                c = translate_object_language(s, o, lang, translator, model)
+                c = translate_object_language(
+                    s, o, lang, translator, model, include_bio=False
+                )
                 for k in local:
                     local[k] += c[k]
             s.commit()
@@ -327,6 +388,7 @@ def backfill_languages(
                     counts["qa"],
                     counts["errors"],
                 )
+        counts["bios"] += _backfill_bios(db, ids, langs, translator, ex)
     return counts
 
 
