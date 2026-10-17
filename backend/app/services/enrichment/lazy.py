@@ -294,19 +294,29 @@ def _has_published(db, object_id, lang) -> bool:
     )
 
 
-def _has_any_section(db, object_id, lang) -> bool:
-    """该语言有任何段落(含 needs_review)= 已尝试过翻译。用于防死循环重触发。"""
-    from app.models.content import ObjectContentSection
+def _has_missing_section(db, object_id, lang) -> bool:
+    """en 已发布的段里,有该语言**一行都没有**的(任何状态都算有)。
+    取代原「该语言有任一段就不再触发」:那个判据下,半途失败(有 guide、缺深度段)的语言
+    永远补不齐,补语言阶段会把这种半成品放大(spec 2026-10-17 §七)。
+    needs_review 也算有 → 翻不过闸的段不会被反复点火烧钱。"""
+    from app.models.content import ObjectContentSection as S
 
-    return (
-        db.query(ObjectContentSection)
-        .filter(
-            ObjectContentSection.object_id == object_id,
-            ObjectContentSection.language == lang,
+    en = {
+        c
+        for (c,) in db.query(S.section_code).filter(
+            S.object_id == object_id,
+            S.language == "en",
+            S.status == "published",
+            S.body.isnot(None),
         )
-        .first()
-        is not None
-    )
+    }
+    have = {
+        c
+        for (c,) in db.query(S.section_code).filter(
+            S.object_id == object_id, S.language == lang
+        )
+    }
+    return bool(en - have)
 
 
 def daily_budget_exhausted(db, cap: int = _LAZY_DAILY_SECTION_CAP) -> bool:
@@ -459,7 +469,8 @@ def maybe_trigger(
         o.content_status == "ready"
         and language
         and language != "en"
-        and not _has_any_section(db, o.id, language)
+        and language not in fanout_pending(o)
+        and _has_missing_section(db, o.id, language)
         and _has_published(db, o.id, "en")
     )
     if not (wants_generation or wants_translation):

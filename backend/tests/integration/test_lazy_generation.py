@@ -690,3 +690,61 @@ def test_set_fanout_keeps_other_attribute_keys(session):
     other.commit()
     lazy._set_fanout(session, o, ["de"])
     assert _obj(session).attributes.get("audio_lock") == {"en:guide": "x"}
+
+
+def _ready(s):
+    o = _obj(s)
+    o.content_status = "ready"
+    s.commit()
+
+
+def _trigger(s, language):
+    scheduled = []
+    maybe_trigger(
+        s,
+        "Q1",
+        schedule=lambda fn, *a: scheduled.append((fn.__name__, a)),
+        environment="staging",
+        language=language,
+    )
+    return [x for x in scheduled if x[0] == "run_lazy_translation"]
+
+
+def test_half_done_language_retriggers_translation(session):
+    # Review Focus 2:de 有 guide、缺 en 已发布的 background(半途失败)→ 懒翻译能补齐
+    _ready(session)
+    _publish(session, "Q1", "en")
+    _publish(session, "Q1", "en", code="background")
+    _publish(session, "Q1", "de")
+    assert _trigger(session, "de") == [("run_lazy_translation", ("Q1", "de"))]
+
+
+def test_gated_only_gap_does_not_retrigger(session):
+    # de 的 background 存在但翻不过闸(needs_review)→ 算"有",不反复点火烧钱
+    _ready(session)
+    _publish(session, "Q1", "en")
+    _publish(session, "Q1", "en", code="background")
+    _publish(session, "Q1", "de")
+    o = _obj(session)
+    session.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="de",
+            section_code="background",
+            body="x",
+            status="needs_review",
+        )
+    )
+    session.commit()
+    assert _trigger(session, "de") == []
+
+
+def test_no_translation_while_language_pending_in_fanout(session):
+    # 补语言阶段正在补 de → 不再另起一路懒翻译(防重复翻译、覆盖段、作废音频)
+    from app.services.enrichment import lazy
+
+    _ready(session)
+    _publish(session, "Q1", "en")
+    lazy._set_fanout(session, _obj(session), ["de"])
+    assert _trigger(session, "de") == []
+    assert _trigger(session, "it") == [("run_lazy_translation", ("Q1", "it"))]
