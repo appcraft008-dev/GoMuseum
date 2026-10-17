@@ -938,6 +938,8 @@ ja 用 SEED_en 的理由本来就是「SEED_zh 浊音念错」，**两者失败�
 | VoxCPM2 官方修语速 | 指望不上：Issue #56（2025-10 提，已关闭未实现）、#297（2026-05 提，零回复） |
 | Google Chirp 3 HD REST 整段送中文（懒生成引擎） | ❌ 随机 400「sentences too long」，同一段时好时坏；只能走流式 |
 | Google Chirp 3 HD 流式，超长句一个 input | ❌ 不报错但**静默吞句尾**（81 字中文 9/9）；逗号处切开也被拼回去 —— 必须把切点改成句号（`tts_text.split_sentences`） |
+| Google Chirp 3 HD 流式，**整段一个 input**（为了更自然，2026-10-17） | ❌ 30 个 cmn-CN 声音 15 次吞掉最长段的末句（46 字，念出一两个字就跳段），同一声音一次完整一次吞；整段送更自然正是因为长，长就是吞的条件。段间停顿改用 markup `[pause long]` 加在**按句切**后的段首句上（`tts_service._sentences`） |
+| 换 Google 声音去贴 VoxCPM2 音色 | ❌ 30 个 cmn-CN 声音按 25 维指纹对 VoxCPM2 成品排序，最近也有 7.5（VoxCPM2 入选种子 0–6.5），同一声音三次合成 7.46/8.39/9.14 波动与声音间差距同量级 —— Google 音色上限，靠选声音换不来 |
 
 ### 批次健壮性类
 
