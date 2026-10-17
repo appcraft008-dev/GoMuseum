@@ -81,7 +81,7 @@ class _Tr:
 
         lang = target_langs[0]
         if lang in self.base_fail_langs:
-            raise _Abort  # BaseException 的代表(AudioLossBlocked 同类)
+            raise _Abort  # BaseException 的代表(进程关闭的 SystemExit 等)
         if lang in self.fail_langs:
             raise RuntimeError("llm down")
         if self.delay:

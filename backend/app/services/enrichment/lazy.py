@@ -343,7 +343,8 @@ def _fanout(
                 _tag_lazy_rows(db, o, t0, FANOUT_SOURCE)
                 _set_fanout(db, o, pending)
         finally:
-            # BaseException(如 AudioLossBlocked)从 result() 冒出来时,别的语言还在跑或排队:
+            # BaseException(如进程关闭时的 SystemExit;web 进程音频闸只记账不拦,AudioLossBlocked
+            # 只在脚本直接调用时可能出现)从 result() 冒出来时,别的语言还在跑或排队:
             # 取消排队的、等在跑的结束,**之后**才清标记还名额 —— 否则孤儿线程在标记清掉后
             # 继续写,generating 提前转 false、懒翻译重复点火(独立审查实测)
             pool.shutdown(wait=True, cancel_futures=True)

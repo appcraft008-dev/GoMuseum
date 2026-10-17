@@ -116,7 +116,9 @@ remaining = resolve_languages(museum.languages)   # 该馆配置的语言集
   因为音频锁也在同一个 JSON 里做读改写(`lazy_audio.py`)。
 - 标记的 TTL 是 **5 分钟,按心跳算**:`at` 在开始时写一次,之后每完成一门语言刷新一次。
   所以慢任务只要还在推进就不会过期;进程被部署杀掉后,最多空等 5 分钟就自动失效。
-- 清标记放在 `finally` 里,`BaseException`(例如 `AudioLossBlocked`)也要能清掉。
+- 清标记放在 `finally` 里,`BaseException`(例如进程关闭时的 `SystemExit`)也要能清掉。
+  注意 web 进程启动时 `set_record_only()`,音频损失闸只记账不抛 `AudioLossBlocked`;
+  只有脚本直接调用 `run_lazy_generation` 时才可能遇到它。
   线程里的普通异常在 `future.result()` 处兜住,只记日志。`BaseException` 冒出来时,先取消
   排队的语言、等在跑的结束,**之后**才清标记、还名额;否则孤儿线程会在标记清掉后继续写
   (计划审查时用真实线程池复现过)。
