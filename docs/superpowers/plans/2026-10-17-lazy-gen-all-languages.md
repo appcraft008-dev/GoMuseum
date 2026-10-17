@@ -860,14 +860,27 @@ def test_fanout_threads_never_write_artist(session):
     assert bio["de"] == f"de:{BIO_EN}"
 
 
-def test_fanout_bio_refresh_keeps_concurrent_write(session):
-    # 补语言主线程写 bio 前必须重读:同作者另一件的生成刚补了 es
-    held = session.query(Artist).filter_by(qid="Q296").one()
-    assert "es" not in held.bio  # 作者行留在本会话 identity map(旧值)
-    other = sessionmaker(bind=session.get_bind())()
-    art = other.query(Artist).filter_by(qid="Q296").one()
-    art.bio = {**art.bio, "es": "Bio ES."}
-    other.commit()
+def test_fanout_bio_refresh_keeps_concurrent_write(session, monkeypatch):
+    # 补语言主线程写 bio 前必须重读:同作者另一件的生成刚补了 es。
+    # 并发写要放在 _set_fanout **之后**:它的 commit 会让会话里的对象全部过期,
+    # 之前写的话不 refresh 也能读到新值(复审实测的假测试)。
+    real = lazy._set_fanout
+    done = []
+
+    def set_then_race(db, obj, pending):
+        real(db, obj, pending)
+        if done:
+            return
+        done.append(1)
+        held = db.query(Artist).filter_by(qid="Q296").one()
+        assert "es" not in held.bio  # 本会话载入旧值并持有
+        other = sessionmaker(bind=db.get_bind())()
+        art = other.query(Artist).filter_by(qid="Q296").one()
+        art.bio = {**art.bio, "es": "Bio ES."}
+        other.commit()
+        set_then_race.held = held  # 持有引用,防 identity map 弱引用回收
+
+    monkeypatch.setattr(lazy, "_set_fanout", set_then_race)
     _run(session, ["en", "fr", "de"])
     bio = session.query(Artist).filter_by(qid="Q296").one().bio
     assert bio["es"] == "Bio ES."
