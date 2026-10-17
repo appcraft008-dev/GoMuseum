@@ -85,7 +85,10 @@ class GuideAudioPlayer extends ConsumerStatefulWidget {
 }
 
 class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
-  final AudioPlayer _player = AudioPlayer();
+  // ⚠️ 带 headers 时 just_audio 默认走本机 http://127.0.0.1 代理,Android 正式包
+  // 禁明文 → 流式 setUrl 秒失败、静默回落 legacy(2026-07-29~10-15 流式全程失效)。
+  // 关代理改用 ExoPlayer 原生 headers。
+  final AudioPlayer _player = AudioPlayer(useProxyForRequestHeaders: false);
   _Ui _ui = _Ui.idle;
 
   static const List<double> _speeds = [1.0, 1.5, 2.0, 0.75];
