@@ -143,11 +143,12 @@ def _fetch_creators(qids, *, run_query=None, retry_wait=5) -> dict:
     return out
 
 
-def fill_artist_bio(db, o, lang, translator, *, refresh=False) -> int:
+def fill_artist_bio(db, o, lang, translator, *, refresh=False, text=None) -> int:
     """该件作者缺 lang 的 bio → 从有效 en 纯翻译补上。**只补缺**(纪律 37:作者跨馆共享)。
     返回补了几条(0/1),不 commit。
     refresh=True:写前重读作者行。bio 是整 JSON 覆盖写,补语言阶段与同作者另一件的生成
-    可能同时改这一行,重读把丢更新的窗口压到最小(spec 2026-10-17 §4.2)。"""
+    可能同时改这一行,重读把丢更新的窗口压到最小(spec 2026-10-17 §4.2)。
+    text:已在别处翻好的译文(补语言阶段在线程里翻、主线程写),给了就不再调 translator。"""
     aqid = (o.attributes or {}).get("artist_qid")
     if not aqid:
         return 0
@@ -161,10 +162,22 @@ def fill_artist_bio(db, o, lang, translator, *, refresh=False) -> int:
     if not bio_en or (art.bio or {}).get(lang):
         return 0
     try:
-        art.bio = {**(art.bio or {}), lang: translator.translate_section(bio_en, lang)}
+        art.bio = {
+            **(art.bio or {}),
+            lang: text or translator.translate_section(bio_en, lang),
+        }
     except Exception:
         return 0
     return 1
+
+
+def artist_bio_en(db, o) -> tuple[str | None, set]:
+    """该件作者可作轴心的 en bio 与已有 bio 的语言;无作者/坏 en → (None, set())。只读。"""
+    aqid = (o.attributes or {}).get("artist_qid")
+    art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
+    if art is None or not bio_en_usable(art.bio):
+        return None, set()
+    return (art.bio or {}).get("en") or None, {k for k, v in art.bio.items() if v}
 
 
 def translate_object_language(
