@@ -166,6 +166,19 @@
 
 无缺口（10-15 补齐，230 → 0）。
 
+### A4. 2026-10-17 收尾后剩余（用户批准用 gpt-4o 判官/重译，缺口 106 → 6）
+
+**以下为 10-17 收尾后的手记，上面 A1/A2 的明细与全视图仍是 10-15 快照，下次重跑 SQL 时整体替换。**
+
+| 馆 | 件 | 段/语言 | 原因 | 处理 |
+| --- | --- | --- | --- | --- |
+| louvre | `Q29863311` | 问答 es/it/pl | 问句夹法语机构名，语言检测误判 | PR #992 已修检测；**上 prod 后补跑 translate** |
+| louvre | `Q115672867` | 问答 it | 答案法语人名多，同上 | 同上 |
+| orsay | `Q3820705` | guide ja | gpt-4o 固定把 "muted blues" 译成「mutedな青」，残留英文被正确拦下 | 真缺陷，待定：改翻译提示词，或接受缺这一种语言 |
+| louvre | `Q11770763` | significance fr | 判官不认「guerre d'indépendance espagnole」= Peninsular War（误判）；**en 原文也残缺**，"Instead, Goya imbues them…" 没有前文 | 根在 en：要修得重生成 en 意义段，会作废 en 音频，动手前先查有没有音频并问用户 |
+
+另：`GAP_BIO` 里的 Q213612、Q541976 是 rijksmuseum 件，非巴黎缺口（SQL 第 ③ 段未按馆过滤）。
+
 ---
 
 ## 不算缺口（SQL 第 ② 段会列出，但不归补语种）
@@ -180,3 +193,4 @@
 | --- | --- | --- |
 | 2026-10-10 | 巴黎四馆补语种 | 段 4406 / 问答 1422 组 / 作者简介 538 条补齐。音频作废 0 条；写前快照 `ops-snapshots/production/20261010T*_translate_<slug>.json.gz`；服务器日志在 `/opt/gomuseum/runs/translate_*.log` |
 | 2026-10-15 | 巴黎四馆补语种(第二次) | 段 2738 / 问答 1581 组 / 作者简介 230 条补齐(含奥赛 Q17495685 单件出错后单独补跑 ja/ko/pl/zh-hant)。音频作废 0 条;写前快照 `ops-snapshots/production/20261014T*_translate_<slug>.json.gz`;日志 `/opt/gomuseum/runs/translate_paris_1014.log`、`translate_orsay_1015.log` |
+| 2026-10-17 | 巴黎四馆补齐收尾(用户批准) | 106 处 → 6 处：Q5287337 en 末尾残句已删并重译 9 语（作废 1 条 en 音频，经批准）；26 段 needs_review 中 21 段 gpt-4o 判官连判两次通过发布；其余与缺问答的用 gpt-4o 重译补约 50 组。写前备份 `/opt/gomuseum/backups/pre-fixgaps-{sections,qa}-20261017.csv`；日志 `/opt/gomuseum/runs/fix_gaps_bc_1017.log`。剩余 6 处见 A4 |

@@ -277,3 +277,19 @@ def test_drain_returns_quietly_when_loop_closed():
     loop = asyncio.new_event_loop()
     loop.close()
     tts_mod._drain(loop, asyncio.Queue(), lambda: iter([b"a", b"b"]), object())
+
+
+def test_zh_slower_with_long_pause_between_paragraphs(monkeypatch):
+    """10-17 用户耳选 C 版:zh 语速 0.92、段间 [pause long];仍按句送(整段送会吞句)。"""
+    fake = _patch(monkeypatch, [_pcm(6.0)])
+    text = "蒙娜丽莎是一幅肖像。她在微笑。\n\n画家是达·芬奇。"
+    asyncio.run(TTSService().generate_audio(text, "zh"))
+    reqs = fake.sent[0]
+    assert (
+        abs(reqs[0].streaming_config.streaming_audio_config.speaking_rate - 0.92) < 1e-6
+    )
+    assert [r.input.markup for r in reqs[1:]] == [
+        "蒙娜丽莎是一幅肖像。",
+        "她在微笑。",
+        "[pause long] 画家是达·芬奇。",
+    ]
