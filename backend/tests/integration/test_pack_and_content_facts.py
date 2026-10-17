@@ -746,3 +746,14 @@ def test_humanize_medium_salted_paper(session):
 
     assert _humanize_medium("salted paper", "zh") == "盐纸法"
     assert _humanize_medium("salted paper print", "en") == "Salted paper"
+
+
+def test_content_generating_follows_fanout_pending(session):
+    # 补语言阶段(spec 2026-10-17 §4.3):只对还在 pending 的语言报 generating=true
+    from app.services.enrichment.lazy import _set_fanout
+    from app.services.museum_repo import get_object_content
+
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    _set_fanout(session, o, ["de"])
+    assert get_object_content(session, "orsay", "Q1", "de")["generating"] is True
+    assert get_object_content(session, "orsay", "Q1", "zh")["generating"] is False

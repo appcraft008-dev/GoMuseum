@@ -624,3 +624,69 @@ def test_imageless_ready_still_lazy_translates(session):
     )
     assert reason is None
     assert scheduled == ["run_lazy_translation"]
+
+
+# ── 补语言阶段的按语言标记(spec 2026-10-17 §4.3)──────────────────────
+
+
+def test_fanout_pending_and_generating_for(session):
+    from app.services.enrichment import lazy
+
+    o = _obj(session)
+    assert lazy.fanout_pending(o) == []
+    lazy._set_fanout(session, o, ["de", "it"])
+    o = _obj(session)
+    assert lazy.fanout_pending(o) == ["de", "it"]
+    assert lazy.generating_for(o, "de") is True
+    assert lazy.generating_for(o, "zh") is False  # 不在 pending:已补完或不归这次补
+    lazy._clear_fanout(session, o)
+    assert lazy.fanout_pending(_obj(session)) == []
+
+
+def test_generating_true_while_pending_even_with_guide(session):
+    # Review Focus 1:de 的 guide 已落库但深度段没翻完 → 仍算生成中,
+    # 否则 App 在 generating=false 时 keepAlive,用户这次会话再也看不到深度段
+    from app.services.enrichment import lazy
+
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    _publish(session, "Q1", "de")
+    lazy._set_fanout(session, _obj(session), ["de"])
+    assert lazy.generating_for(_obj(session), "de") is True
+
+
+def test_fanout_marker_expires_without_heartbeat(session):
+    from app.services.enrichment import lazy
+
+    o = _obj(session)
+    stale = (datetime.now(timezone.utc) - timedelta(minutes=6)).isoformat()
+    o.attributes = {
+        **(o.attributes or {}),
+        "lazy_fanout": {"at": stale, "pending": ["de"]},
+    }
+    session.commit()
+    assert lazy.fanout_pending(_obj(session)) == []
+    assert lazy.generating_for(_obj(session), "de") is False
+
+
+def test_fanout_marker_bad_value_treated_as_absent(session):
+    from app.services.enrichment import lazy
+
+    o = _obj(session)
+    o.attributes = {**(o.attributes or {}), "lazy_fanout": {"at": "garbage"}}
+    session.commit()
+    assert lazy.fanout_pending(_obj(session)) == []
+
+
+def test_set_fanout_keeps_other_attribute_keys(session):
+    # 音频锁也在同一个 attributes JSON 里读改写:写标记前重读,不能抹掉别的键
+    from app.services.enrichment import lazy
+
+    o = _obj(session)
+    other = sessionmaker(bind=session.get_bind())()
+    oo = other.query(MuseumObject).filter_by(qid="Q1").one()
+    oo.attributes = {**(oo.attributes or {}), "audio_lock": {"en:guide": "x"}}
+    other.commit()
+    lazy._set_fanout(session, o, ["de"])
+    assert _obj(session).attributes.get("audio_lock") == {"en:guide": "x"}

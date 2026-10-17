@@ -15,6 +15,10 @@ from app.services import ops_alert
 logger = logging.getLogger(__name__)
 
 _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
+# 补语言阶段(spec 2026-10-17):懒生成完成后按语言并行补齐该馆其余语言。
+# 标记 attributes.lazy_fanout = {"at": 心跳时刻, "pending": [还没补完的语言]}。
+# 心跳 = 每补完一门刷新 at:慢任务不会过期;进程被部署杀掉后最多空等 5 分钟。
+_FANOUT_TTL = timedelta(minutes=5)
 # ponytail: 进程级并发上限2,保护 API 响应与 LLM 限速;多 worker/量大再上队列
 _SEM = threading.Semaphore(2)
 # 全局日上限(2026-09-20 安全审计):当天已生成段数达此值就不再点火。
@@ -47,6 +51,45 @@ def lock_active(obj: MuseumObject) -> bool:
         return datetime.now(timezone.utc) - datetime.fromisoformat(at) < _LOCK_TTL
     except ValueError:
         return False  # 坏时间戳当过期
+
+
+def fanout_pending(obj: MuseumObject) -> list[str]:
+    """补语言进行中、还没补完的语言;无标记/心跳超时/坏值 → []。"""
+    f = (obj.attributes or {}).get("lazy_fanout") or {}
+    try:
+        if datetime.now(timezone.utc) - datetime.fromisoformat(f["at"]) >= _FANOUT_TTL:
+            return []
+    except (KeyError, TypeError, ValueError):
+        return []
+    return list(f.get("pending") or [])
+
+
+def generating_for(obj: MuseumObject, language) -> bool:
+    """端点 generating 字段:整件在懒生成/懒翻译,或这门语言还在补语言阶段的 pending 里。
+    ⚠️ 必须是"这门语言整门翻完前一直 true":App 在 false 时 keepAlive 缓存结果
+    (catalog_providers.dart),只有 guide 就报 false 会让深度段永远看不到。"""
+    return lock_active(obj) or language in fanout_pending(obj)
+
+
+def _set_fanout(db, obj: MuseumObject, pending) -> None:
+    # 写前重读:音频锁也在同一个 attributes JSON 里读改写(lazy_audio),压小覆盖窗口
+    db.refresh(obj)
+    obj.attributes = {
+        **(obj.attributes or {}),
+        "lazy_fanout": {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "pending": list(pending),
+        },
+    }
+    db.commit()
+
+
+def _clear_fanout(db, obj: MuseumObject) -> None:
+    db.refresh(obj)
+    attrs = dict(obj.attributes or {})
+    attrs.pop("lazy_fanout", None)
+    obj.attributes = attrs
+    db.commit()
 
 
 def try_acquire_lock(db, obj: MuseumObject, require_status=("stub",)) -> bool:
