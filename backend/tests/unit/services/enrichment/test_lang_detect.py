@@ -118,3 +118,59 @@ def test_to_traditional(src, want):
     from app.services.enrichment.lang_detect import to_traditional
 
     assert to_traditional(src) == want
+
+
+# ---- 译文里照抄自英文原文的外语专名不计入判别(10-17 巴黎四馆 QA 误判) ----
+_EN_Q = "What was the importance of the Académie royale de peinture et de sculpture in Philippe de Champaigne's career?"
+_EN_A = "François Vincent Mathieu Latil married the artist Eugénie Henry in 1833."
+
+
+@pytest.mark.parametrize(
+    "lang,text,source",
+    [
+        (
+            "es",
+            "¿Cuál fue la importancia de la Académie royale de peinture et de sculpture en la carrera de Philippe de Champaigne?",
+            _EN_Q,
+        ),
+        (
+            "it",
+            "Qual è stata l'importanza dell'Académie royale de peinture et de sculpture nella carriera di Philippe de Champaigne?",
+            _EN_Q,
+        ),
+        (
+            "pl",
+            "Jakie znaczenie miała Académie royale de peinture et de sculpture w karierze Philippe'a de Champaigne'a?",
+            _EN_Q,
+        ),
+        (
+            "it",
+            "François Vincent Mathieu Latil sposò l'artista Eugénie Henry nel 1833.",
+            _EN_A,
+        ),
+    ],
+)
+def test_source_names_not_counted(lang, text, source):
+    assert not text_in_language(text, lang)  # 不给 source = 旧行为(误判)
+    assert text_in_language(text, lang, source)
+
+
+@pytest.mark.parametrize(
+    "lang,text,source",
+    [
+        # 整句没翻译、原样照抄英文:不能被当专名洗掉
+        (
+            "it",
+            "The painting shows a woman holding a basket of fruit.",
+            "The painting shows a woman holding a basket of fruit.",
+        ),
+        # 译成了法语(不是目标语 it):专名不在原文里,照判
+        (
+            "it",
+            "Le tableau montre une femme tenant un panier de fruits près de la fenêtre.",
+            "The painting shows a woman holding a basket of fruit.",
+        ),
+    ],
+)
+def test_source_names_do_not_launder_wrong_language(lang, text, source):
+    assert not text_in_language(text, lang, source)

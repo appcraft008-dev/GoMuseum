@@ -73,7 +73,9 @@ def translate_qa_items(
         from app.services.enrichment.lang_detect import text_in_language
 
         # 语言闸:问句或答案不是目标语(混英文等)→ 不发布
-        lang_ok = text_in_language(ta, lang) and text_in_language(tq, lang)
+        lang_ok = text_in_language(ta, lang, it["answer"]) and text_in_language(
+            tq, lang, it["question"]
+        )
         out.append(
             {
                 "question": tq,
