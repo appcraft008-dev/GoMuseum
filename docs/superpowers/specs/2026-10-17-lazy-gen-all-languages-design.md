@@ -24,10 +24,13 @@
 **不新增任何语言列表。** 要补的语言 = 该馆配置的语言集 − 这件已有内容的语言:
 
 ```
-remaining = resolve_languages(museum.languages)   # factory 已算好:c["target_langs"]
-            − {"en", 请求语言}
+remaining = resolve_languages(museum.languages)   # 该馆配置的语言集
+            − {"en"}
             − 该件已有任一段落的语言              # 幂等,跑两次不重复花钱
 ```
+
+请求语言正常情况下已有段落,自然被排除;如果它在生成阶段一行都没落成,补语言阶段顺手补上
+(实施计划 Task 4 的 Ruling)。
 
 `resolve_languages` 读 `museums.yaml` 的馆级覆盖,没有就用 `lang_config.DEFAULT_LANGUAGES`
 (现为 10 门)。以后加一门语言,照契约里的"加语言 checklist"把它加进 `DEFAULT_LANGUAGES` /
@@ -92,11 +95,11 @@ remaining = resolve_languages(museum.languages)   # factory 已算好:c["target_
 ### 4.2 并发与锁
 
 - `_FANOUT_SEM = threading.Semaphore(2)`,非阻塞获取,满了就跳过、不排队。代价只是这件的
-  其余语言回到按请求懒翻译。
+  其余语言回到按请求懒翻译。它和现有的 `_SEM` 一样是**进程级**的:prod 是 uvicorn
+  `--workers 2`,所以实际最多 2 进程 × 2 件 × 4 线程 = 16 路 mini 调用。
 - 补语言阶段跑在 FastAPI BackgroundTasks 的线程里,会多占这条线程几分钟。线程池默认
   40 个名额,和所有同步接口共用;因为 `_FANOUT_SEM` 最多 2 个,影响很小。
-- 每件按语言开 `ThreadPoolExecutor(max_workers=4)`。最坏同时 2 件 × 4 线程 = 8 路
-  gpt-4o-mini 调用。
+- 每件按语言开 `ThreadPoolExecutor(max_workers=4)`。
 - 每个线程用 `guarded_sessionmaker(bind=db.get_bind())` 建自己的 session,和
   `backfill_languages` 一样。`translate_object_language` 自己不做最后的 commit,所以线程尾部
   要 `s.commit()`。线程之间写的行不重叠:段和问答都按 `(object_id, language)` 分开。
@@ -114,7 +117,10 @@ remaining = resolve_languages(museum.languages)   # factory 已算好:c["target_
 - 标记的 TTL 是 **5 分钟,按心跳算**:`at` 在开始时写一次,之后每完成一门语言刷新一次。
   所以慢任务只要还在推进就不会过期;进程被部署杀掉后,最多空等 5 分钟就自动失效。
 - 清标记放在 `finally` 里,`BaseException`(例如 `AudioLossBlocked`)也要能清掉。
-  线程里的异常在 `future.result()` 处兜住,只记日志。
+  线程里的普通异常在 `future.result()` 处兜住,只记日志。`BaseException` 冒出来时,先取消
+  排队的语言、等在跑的结束,**之后**才清标记、还名额;否则孤儿线程会在标记清掉后继续写
+  (计划审查时用真实线程池复现过)。
+- 每完成一门语言就打一次 `ai_lazy_fanout` 标签,进程被杀时已落库的段也已计入补语言日上限。
 
 ### 4.3 `generating` 与重复触发
 
@@ -293,6 +299,10 @@ staging 验收(Google TTS key 只认 VPS IP,所以在 staging 上做):
 - 英语用户触发补 9 门、bio 调用漏算:并入成本估算。
 - 时延低估:问答每次调用从 2 秒改按 6 秒算,标记 TTL 改为心跳续期的 5 分钟。
 - bio 和标记写前 refresh;清标记放 `finally`;结果为 `empty` 不开线程。
+
+实施计划审查(2026-10-17,Sonnet 5.5 与 Fable 各一份,都在副本里实跑了计划代码)带回 spec 的改动:
+`remaining` 不再单独排除请求语言;`BaseException` 时先停线程再清标记;每完成一门打标签;
+并发数按进程级如实写明。
 - 单元测试用串行执行器,真并发留给 staging 验收。
 
 未采纳:审查者怀疑段数应按 4.9 段算。prod 复查已发布的 en 段均值是 2.97,维持 3 段。

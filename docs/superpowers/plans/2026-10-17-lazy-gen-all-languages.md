@@ -31,8 +31,8 @@
 
 1. 补语言进行中 App 打开某门还在 `pending` 的语言、且该语言 guide 已落库 → `generating` 必须仍为 true(否则 App `keepAlive` 永久缓存半成品)。Task 2 测试 `test_generating_true_while_pending_even_with_guide`。
 2. 半途失败的语言(有 guide、缺深度段)→ 下次请求必须能被懒翻译补齐;只缺"翻不过闸(needs_review)"的段时不能反复点火。Task 3 两个测试。
-3. 线程里抛 `BaseException`(如 `AudioLossBlocked`)→ 标记仍被清掉、`_FANOUT_SEM` 仍被释放。Task 4 `test_fanout_clears_marker_and_releases_sem_on_base_exception`。
-4. 预置作者某语言 bio → 补语言阶段不覆盖它;多门语言 bio 都补上、互不丢失。Task 1 + Task 4。
+3. 线程里抛 `BaseException`(如 `AudioLossBlocked`)→ 排队的语言被取消、在跑的等完,**之后**才清标记、还名额;函数返回后不再有段落库。Task 4 `test_fanout_clears_marker_and_releases_sem_on_base_exception` + `test_fanout_base_exception_stops_other_languages_before_cleanup`(真实线程池)。
+4. 预置作者某语言 bio → 补语言阶段不覆盖它;另一会话同时补的语言不被整 JSON 覆盖丢掉;线程里不写作者行。Task 1 + Task 4(`test_fanout_bio_refresh_keeps_concurrent_write`、`test_fanout_threads_never_write_artist`)。
 5. 请求语言是 en → 其余语言全部补上(不少补一门)。Task 4 `test_fanout_after_en_request_fills_all_other_languages`。
 
 ---
@@ -169,7 +169,10 @@ def test_fill_artist_bio_never_overwrites_existing(session):
 
 def test_fill_artist_bio_refresh_keeps_concurrent_write(session):
     # 另一条会话(同作者另一件的生成)先补了 it;refresh=True 写 de 时不能把 it 覆盖掉
-    _bio(session)  # 先把作者行载入本会话:不重读就会拿这份旧值整 JSON 覆盖
+    # 持有引用:作者行留在本会话 identity map 里(否则弱引用被回收、query 本来就重读库,
+    # 去掉 refresh 也能过 —— 独立审查实测抓到的假测试)
+    held = session.query(Artist).filter_by(qid="Q296").one()
+    assert "it" not in held.bio
     other = sessionmaker(bind=session.get_bind())()
     art = other.query(Artist).filter_by(qid="Q296").one()
     art.bio = {**art.bio, "it": "Bio IT."}
@@ -595,7 +598,9 @@ git commit -m "fix(lazy): 懒翻译按 en 段逐个查缺,半途失败的语言�
   - `_fanout(db, qid, *, langs=None, translator=None, session_factory=None, close=True, executor=None) -> dict`:返回 `{lang: translate_object_language 的计数}`;前置条件不满足返回 `{}`
   - `_run_fanout(qid, *, session_factory=None, close=True) -> None`
 
-**Ruling(写计划时已定):** `_fanout_langs` 只排除 en 和"这件已有任一行"的语言,不单独排除请求语言。请求语言正常情况下已有行,自然被排除;如果它在生成阶段一行都没落成,补上它是对的。和 spec 的 `remaining` 定义在正常路径上等价。
+**Ruling(写计划时已定,spec 第二节/4.1 已同步):**
+- `_fanout_langs` 只排除 en 和"这件已有任一行"的语言,不单独排除请求语言。请求语言正常已有行,自然被排除;它在生成阶段一行都没落成时,补上它是对的。
+- 首轮生成清 `lazy_lock_at` 到 `_set_fanout` 之间仍有几条查询长的窗口(`_has_published`、`_fanout_langs`、读馆目录、预算 count)。窗口内另一门语言的用户打开会另起一路懒翻译,和补语言重复翻同一门。代价是多花一次翻译费;覆盖段会清掉该段音频,但新段几秒前才写、来不及有人点播生成音频。不为此把补语言的准备挪进 `_run_locked`(那会占着 `_SEM`)。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -673,9 +678,11 @@ class _Abort(BaseException):
 
 
 class _Tr:
-    def __init__(self, fail_langs=(), base_fail_langs=()):
+    def __init__(self, fail_langs=(), base_fail_langs=(), bio_fail_once=(), delay=0):
+        self.delay = delay  # 每段翻译的耗时(秒),真线程池测试用来制造"还在排队"
         self.fail_langs = set(fail_langs)
         self.base_fail_langs = set(base_fail_langs)
+        self.bio_fail_once = set(bio_fail_once)
         self.langs = []
 
     def translate_object(self, en_sections, target_langs, **_kw):
@@ -686,6 +693,10 @@ class _Tr:
             raise _Abort  # BaseException 的代表(AudioLossBlocked 同类)
         if lang in self.fail_langs:
             raise RuntimeError("llm down")
+        if self.delay:
+            import time
+
+            time.sleep(self.delay)
         self.langs.append(lang)
         return {
             lang: {
@@ -701,6 +712,9 @@ class _Tr:
         }
 
     def translate_section(self, text, lang, **_kw):
+        if text == BIO_EN and lang in self.bio_fail_once:
+            self.bio_fail_once.discard(lang)
+            raise RuntimeError("bio llm blip")
         return f"{lang}:{text}"
 
     def check_faithfulness(self, en, translated, lang, **_kw):
@@ -714,11 +728,11 @@ class _Serial:
         f = Future()
         try:
             f.set_result(fn(*a))
-        except Exception as e:
+        except BaseException as e:  # 同真实 ThreadPoolExecutor:异常进 future,在 result() 处抛
             f.set_exception(e)
         return f
 
-    def shutdown(self, wait=True):
+    def shutdown(self, wait=True, cancel_futures=False):
         pass
 
 
@@ -837,6 +851,54 @@ def test_fanout_fills_bios_in_main_thread_without_overwrite(session):
     assert bio["it"] == f"it:{BIO_EN}"
 
 
+def test_fanout_threads_never_write_artist(session):
+    # include_bio=False 接线:主线程补 it 的 bio 时失败一次 → 线程里不得再补
+    # (线程写共享作者行会互相覆盖)。若线程传了 include_bio=True,it 会被补上。
+    _run(session, ["en", "fr", "de", "it"], _Tr(bio_fail_once={"it"}))
+    bio = session.query(Artist).filter_by(qid="Q296").one().bio
+    assert "it" not in bio
+    assert bio["de"] == f"de:{BIO_EN}"
+
+
+def test_fanout_bio_refresh_keeps_concurrent_write(session):
+    # 补语言主线程写 bio 前必须重读:同作者另一件的生成刚补了 es
+    held = session.query(Artist).filter_by(qid="Q296").one()
+    assert "es" not in held.bio  # 作者行留在本会话 identity map(旧值)
+    other = sessionmaker(bind=session.get_bind())()
+    art = other.query(Artist).filter_by(qid="Q296").one()
+    art.bio = {**art.bio, "es": "Bio ES."}
+    other.commit()
+    _run(session, ["en", "fr", "de"])
+    bio = session.query(Artist).filter_by(qid="Q296").one().bio
+    assert bio["es"] == "Bio ES."
+    assert bio["de"] == f"de:{BIO_EN}"
+
+
+def test_fanout_base_exception_stops_other_languages_before_cleanup(session):
+    # 真实线程池(1 个 worker):第一门抛 BaseException 后,排队的语言必须被取消,
+    # 函数返回后不能再有段落库(否则标记已清、名额已还,孤儿线程还在写)
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    with pytest.raises(_Abort):
+        lazy._fanout(
+            session,
+            "Q1",
+            langs=["en", "fr", "de", "it", "es", "pl"],
+            translator=_Tr(base_fail_langs={"de"}, delay=0.2),
+            session_factory=lambda: session,
+            close=False,
+            executor=ThreadPoolExecutor(max_workers=1),
+        )
+    after = _langs_with_guide(session)
+    # remaining 顺序 de,it,es,pl:de 抛错时 worker 可能已开始 it(会被等完),
+    # es/pl 还在排队 → 必须被取消
+    assert not ({"es", "pl"} & after)
+    time.sleep(1.0)
+    assert _langs_with_guide(session) == after  # 返回后再无落库
+    assert (_obj(session).attributes or {}).get("lazy_fanout") is None
+
+
 def test_fanout_tags_rows_with_own_source(session):
     _run(session, ["en", "fr", "de"])
     o = _obj(session)
@@ -881,8 +943,15 @@ def test_fanout_skipped_unless_ready(session, status):
 
 
 def test_museum_languages_reads_catalog(session):
-    # orsay 在 museums.yaml 里没有语言覆盖 → 全局默认
-    assert lazy._museum_languages(session, _obj(session)) == DEFAULT_LANGUAGES
+    # 走馆目录配置(有覆盖用覆盖,否则全局默认);不对 orsay 是否有覆盖做假设
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+    from app.services.enrichment.lang_config import resolve_languages
+
+    cfg = MuseumCatalog.from_file(CATALOG_PATH).get("orsay")
+    got = lazy._museum_languages(session, _obj(session))
+    assert got == resolve_languages(cfg.languages)
+    assert got  # 非空;无覆盖时即 DEFAULT_LANGUAGES
 
 
 def test_run_lazy_generation_runs_fanout_after_lock_cleared(session, monkeypatch):
@@ -987,14 +1056,19 @@ def _fanout(
         return {}
     if not _FANOUT_SEM.acquire(blocking=False):
         return {}
-    from app.services.enrichment.backfill import (
-        fill_artist_bio,
-        translate_object_language,
-    )
-
+    # acquire 后紧跟 try:之后任何一步抛异常都要还名额、清标记
     t0 = datetime.now(timezone.utc)
     out: dict = {}
     try:
+        pending = list(remaining)
+        # 先写标记再做其它初始化:首轮生成已清 lazy_lock_at,这之间别的语言用户打开会
+        # 另起一路懒翻译。标记越早写,这个窗口越小(剩几条查询的时长,见 Ruling)。
+        _set_fanout(db, o, pending)
+        from app.services.enrichment.backfill import (
+            fill_artist_bio,
+            translate_object_language,
+        )
+
         if translator is None:
             from app.services.enrichment.factory import build_translator
 
@@ -1004,8 +1078,6 @@ def _fanout(
 
             # 带音频损失闸(纪律 37);绑同一个 engine,同 backfill_languages
             session_factory = guarded_sessionmaker(bind=db.get_bind())
-        pending = list(remaining)
-        _set_fanout(db, o, pending)
         # 作者 bio 是跨馆共享行、整 JSON 覆盖写:线程里写会互相覆盖。主线程先逐语言补,
         # 写前重读、写完即提交(纪律 37 只补缺)。
         for lang in remaining:
@@ -1019,7 +1091,7 @@ def _fanout(
                 c = translate_object_language(
                     s, s.get(MuseumObject, oid), lang, translator, include_bio=False
                 )
-                s.commit()
+                s.commit()  # 保险:persist_* 已逐段提交,这里通常是空操作
                 return c
             finally:
                 if close:
@@ -1035,9 +1107,15 @@ def _fanout(
                 except Exception:
                     logger.exception("lazy fanout failed: %s/%s", qid, lang)
                 pending.remove(lang)
-                _set_fanout(db, o, pending)  # 心跳;这门语言的 generating 转 false
+                # 每完成一门:打来源标签(进程被杀也已计入补语言日上限)+ 心跳,
+                # 这门语言的 generating 随之转 false
+                _tag_lazy_rows(db, o, t0, FANOUT_SOURCE)
+                _set_fanout(db, o, pending)
         finally:
-            pool.shutdown(wait=False)
+            # BaseException(如 AudioLossBlocked)从 result() 冒出来时,别的语言还在跑或排队:
+            # 取消排队的、等在跑的结束,**之后**才清标记还名额 —— 否则孤儿线程在标记清掉后
+            # 继续写,generating 提前转 false、懒翻译重复点火(独立审查实测)
+            pool.shutdown(wait=True, cancel_futures=True)
     finally:
         try:
             db.rollback()  # 之前的写都已提交;BaseException 后会话可能处于失败态
@@ -1089,6 +1167,8 @@ def run_lazy_generation(
 `monkeypatch.setattr(lazy, "_run_fanout", lambda *a, **k: None)  # 本测试只验生成阶段的语言;补语言见 test_lazy_fanout`。
 否则它会走真实翻译器打网络。
 
+实现时逐行核对两处"签名 + 函数体"成对的改动(`_tag_lazy_rows` 和 `daily_budget_exhausted` 都是签名加参数、函数体里把 `LAZY_SOURCE` 换成参数),只改签名不改函数体时测试报的是断言失败而不是 ImportError,不好定位。
+
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `cd backend && poetry run pytest tests/integration/test_lazy_fanout.py tests/integration/test_lazy_generation.py tests/integration/test_fill_artist_bio.py tests/integration/test_backfill_languages.py tests/integration/test_object_content_endpoint.py -q --no-cov`
@@ -1120,7 +1200,9 @@ Expected: 全部 PASS。有失败就读完整 `full.txt`,按 systematic-debuggin
 
 ```python
 """staging 懒生成测量:选 N 件有图 stub,用 LANG 触发,打印首屏/全部完成时长、各语言 guide、
-翻译调用增量。用法:docker exec -i -w /app -e PYTHONPATH=/app gomuseum_staging_backend python - N LANG < measure_lazy.py"""
+翻译调用增量(只数脚本进程的 channel='translate',不混 App 的 translate@app)。
+用法:先 docker cp 到容器 /tmp/measure_lazy.py,再
+docker exec -w /app -e PYTHONPATH=/app gomuseum_staging_backend python /tmp/measure_lazy.py N LANG"""
 import sys
 from datetime import datetime, timezone
 
@@ -1134,11 +1216,12 @@ from app.services.must_see import has_image_clause
 
 N, LANG = int(sys.argv[1]), sys.argv[2]
 db = SessionLocal()
+# generated_at 是无时区 DateTime(存的是 UTC):t0 也用裸 UTC,否则相减抛 TypeError
 
 
 def calls():
     return db.execute(
-        text("select coalesce(sum(calls),0) from llm_usage where day=current_date and channel like 'translate%'")
+        text("select coalesce(sum(calls),0) from llm_usage where day=current_date and channel='translate'")
     ).scalar()
 
 
@@ -1152,7 +1235,7 @@ objs = (
 c0 = calls()
 for o in objs:
     assert lazy.try_acquire_lock(db, o)
-    t0 = datetime.now(timezone.utc)
+    t0 = datetime.now(timezone.utc).replace(tzinfo=None)
     lazy.run_lazy_generation(o.qid, LANG)
     db.expire_all()
     rows = db.query(S).filter(S.object_id == o.id).all()
@@ -1174,7 +1257,8 @@ print("translate_calls_delta", calls() - c0, "objects", len(objs))
 先 `ssh -i ~/.ssh/deepmeeting_deploy root@38.242.207.219 'cd /opt/gomuseum/staging && git log --oneline -1'`(或查容器镜像)确认 staging 还没有本分支代码,然后:
 
 ```bash
-ssh -i ~/.ssh/deepmeeting_deploy root@38.242.207.219 'docker exec -i -w /app -e PYTHONPATH=/app gomuseum_staging_backend python - 3 zh' < <scratchpad>/measure_lazy.py | tee <scratchpad>/baseline.txt
+scp -i ~/.ssh/deepmeeting_deploy <scratchpad>/measure_lazy.py root@38.242.207.219:/tmp/measure_lazy.py
+ssh -i ~/.ssh/deepmeeting_deploy root@38.242.207.219 'docker cp /tmp/measure_lazy.py gomuseum_staging_backend:/tmp/measure_lazy.py && docker exec -w /app -e PYTHONPATH=/app gomuseum_staging_backend python /tmp/measure_lazy.py 3 zh' | tee <scratchpad>/baseline.txt
 ```
 
 Expected: 3 行,每行 `guide_langs` 只有 `['en','zh']`,记下 `ttfc_s`。
@@ -1195,12 +1279,14 @@ gh pr create --base staging --title "feat(lazy): 懒生成后补齐该馆全部�
 - [ ] **Step 1: 改后测量**
 
 ```bash
-ssh -i ~/.ssh/deepmeeting_deploy root@38.242.207.219 'docker exec -i -w /app -e PYTHONPATH=/app gomuseum_staging_backend python - 3 zh' < <scratchpad>/measure_lazy.py | tee <scratchpad>/after.txt
+scp -i ~/.ssh/deepmeeting_deploy <scratchpad>/measure_lazy.py root@38.242.207.219:/tmp/measure_lazy.py
+ssh -i ~/.ssh/deepmeeting_deploy root@38.242.207.219 'docker cp /tmp/measure_lazy.py gomuseum_staging_backend:/tmp/measure_lazy.py && docker exec -w /app -e PYTHONPATH=/app gomuseum_staging_backend python /tmp/measure_lazy.py 3 zh' | tee <scratchpad>/after.txt
 ```
 
 Expected:
 - `ttfc_s` 和 baseline 同量级,中位数不比基线慢 20% 以上(否则停下来查);
 - 每件 `guide_langs` = 该馆配置的全部语言,`total_s` ≤ 约 330 秒;
+- 从后端日志 `lazy fanout done` 前后的时间,记下最长的单门语言耗时(心跳 TTL 5 分钟只在单门超过 5 分钟时才会提前过期);
 - `translate_calls_delta / objects` 和 spec 4.4 对比:每件约 128 次补语言调用 + 生成阶段原有调用(以 baseline 的每件增量为参照);补语言部分偏差超过 2 倍就停下来查。
 
 - [ ] **Step 2: generating 按语言转换**
@@ -1210,7 +1296,7 @@ Expected:de 在整门翻完前一直 true(即使 de guide 已出现),之后变 f
 
 - [ ] **Step 3: 崩溃自愈**
 
-再选 1 件 stub,后台跑 `measure_lazy.py 1 zh`,看到 zh guide 落库后约 30 秒,在 VPS 上 `pkill -f "python -"`(只杀这个测量进程,别动 uvicorn)。
+再选 1 件 stub,后台跑 `measure_lazy.py 1 zh`,看到 zh guide 落库后约 30 秒,`ssh ... 'docker exec gomuseum_staging_backend pkill -f measure_lazy.py'`。⚠️ 不要用 `pkill -f "python -"`:uvicorn `--workers 2` 的 worker 命令行是 `python -c ...`,会被一起杀掉。
 Expected:
 - 5 分钟内 `fanout_pending` 变 `[]`;
 - 对还缺段的语言调 `maybe_trigger(db, qid, schedule=..., environment="staging", language=<该语言>, exempt=True)`,能调度 `run_lazy_translation`。
