@@ -11,6 +11,7 @@
 import asyncio
 import hashlib
 import logging
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import AsyncIterator, Callable, Dict, Iterator, Optional
@@ -37,7 +38,7 @@ _EXECUTOR = ThreadPoolExecutor(max_workers=8, thread_name_prefix="tts")
 # 语言 → (locale, Chirp 3 HD 声音, speaking_rate)。用户 10-15 逐语言耳选,语速对齐 VoxCPM2 成品。
 # zh-hant 用 cmn-CN:Chirp 3 HD 没有 cmn-TW(tts-1 / VoxCPM2 也是普通话读繁体)。
 VOICES: Dict[str, tuple] = {
-    "zh": ("cmn-CN", "Laomedeia", 1.03),
+    "zh": ("cmn-CN", "Laomedeia", 0.92),  # 10-17 用户耳选 C 版:原 1.03 偏快
     "zh-hant": ("cmn-CN", "Despina", 1.02),
     "en": ("en-US", "Autonoe", 1.05),
     "fr": ("fr-FR", "Callirrhoe", 0.90),
@@ -48,6 +49,10 @@ VOICES: Dict[str, tuple] = {
     "ja": ("ja-JP", "Aoede", 0.99),
     "ko": ("ko-KR", "Erinome", 0.98),
 }
+
+# 段间加长停顿的语言(markup [pause long])。仍按句送:整段送 Google 会随机吞长句(10-17 30 声音 15 次漏读)
+_PARA_PAUSE = {"zh"}
+_PARAS = re.compile(r"\n\s*\n")
 
 _client = None
 _client_lock = threading.Lock()
@@ -109,8 +114,26 @@ def _requests(sentences, language: str):
             ),
         )
     )
+    markup = language in _PARA_PAUSE
     for s in sentences:
-        yield tts.StreamingSynthesizeRequest(input=tts.StreamingSynthesisInput(text=s))
+        inp = (
+            tts.StreamingSynthesisInput(markup=s)
+            if markup
+            else tts.StreamingSynthesisInput(text=s)
+        )
+        yield tts.StreamingSynthesizeRequest(input=inp)
+
+
+def _sentences(text: str, language: str) -> list[str]:
+    if language not in _PARA_PAUSE:
+        return split_sentences(text, language)
+    out: list[str] = []
+    for para in _PARAS.split(text or ""):
+        ss = split_sentences(para, language)
+        if ss and out:
+            ss[0] = "[pause long] " + ss[0]
+        out += ss
+    return out
 
 
 def _pcm_chunks(sentences, language: str, chars: int) -> Iterator[bytes]:
@@ -185,7 +208,7 @@ class TTSService:
         speed: float = 1.0,
     ) -> AsyncIterator[bytes]:
         language = _lang(language)
-        sentences = split_sentences(text, language)
+        sentences = _sentences(text, language)
         if not sentences:
             raise AIServiceException("TTS 正文为空")
         enc = Mp3Encoder()
