@@ -750,3 +750,48 @@ def test_no_translation_while_language_pending_in_fanout(session):
     lazy._set_fanout(session, _obj(session), ["de"])
     assert _trigger(session, "de") == []
     assert _trigger(session, "it") == [("run_lazy_translation", ("Q1", "it"))]
+
+
+def test_maybe_trigger_records_want_while_generating(session):
+    # 生成中/补语言中有人打开某门语言 → 记进 Redis,补语言阶段优先补它
+    import fakeredis
+
+    from app.services.enrichment import lazy
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+
+    def trig(lang):
+        maybe_trigger(
+            session,
+            "Q1",
+            schedule=lambda *a: None,
+            environment="staging",
+            language=lang,
+            redis=r,
+        )
+
+    _ready(session)
+    _publish(session, "Q1", "en")
+    lazy._set_fanout(session, _obj(session), ["de", "it"])
+    trig("de")
+    trig("fr")  # 不在 pending:不记
+    trig("en")
+    assert r.smembers("lazy:fanout_want:Q1") == {"de"}
+    assert 0 < r.ttl("lazy:fanout_want:Q1") <= 600
+
+
+def test_maybe_trigger_records_want_during_first_phase(session):
+    # 首轮生成(锁还在)时用户切到 zh:补语言开始时 zh 排第一批
+    import fakeredis
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+    assert try_acquire_lock(session, _obj(session)) is True
+    maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda *a: None,
+        environment="staging",
+        language="zh",
+        redis=r,
+    )
+    assert r.smembers("lazy:fanout_want:Q1") == {"zh"}

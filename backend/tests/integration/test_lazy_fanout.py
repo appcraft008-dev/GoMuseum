@@ -379,3 +379,105 @@ def test_run_lazy_generation_runs_fanout_after_lock_cleared(session, monkeypatch
     lazy.try_acquire_lock(session, _obj(session), require_status=("ready",))
     lazy.run_lazy_generation("Q1", "zh", session_factory=lambda: session, close=False)
     assert calls == [False]  # 跑了一次,且 lazy_lock_at 已清
+
+
+# --- 技术债 10-17:用户打开的语言优先补;作者 bio 并入各语言任务并行翻 ---
+import fakeredis  # noqa: E402
+
+
+class _Inside(_Serial):
+    """串行执行器,记录当前是否在某个语言任务里(判断 bio 是不是在任务里翻的)。"""
+
+    inside = False
+
+    def submit(self, fn, *a):
+        _Inside.inside = True
+        try:
+            return super().submit(fn, *a)
+        finally:
+            _Inside.inside = False
+
+
+def test_fanout_starts_wanted_language_first(session):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    lazy.record_fanout_want("Q1", "es", redis=r)
+    tr = _Tr()
+    lazy._fanout(
+        session,
+        "Q1",
+        langs=["en", "fr", "de", "it", "es"],
+        translator=tr,
+        session_factory=lambda: session,
+        close=False,
+        executor=_Serial(),
+        redis=r,
+    )
+    assert list(dict.fromkeys(tr.langs)) == ["es", "de", "it"]
+    assert not r.exists("lazy:fanout_want:Q1")  # 补完清掉
+
+
+def test_fanout_wanted_mid_run_jumps_queue(session, monkeypatch):
+    # 1 路并行:de 补完时用户打开了 pl → 下一门补 pl,不按原顺序补 it
+    monkeypatch.setattr(lazy, "_FANOUT_WORKERS", 1)
+    r = fakeredis.FakeRedis(decode_responses=True)
+
+    class _Tr2(_Tr):
+        def translate_object(self, en_sections, target_langs, **kw):
+            out = super().translate_object(en_sections, target_langs, **kw)
+            if target_langs[0] == "de":
+                lazy.record_fanout_want("Q1", "pl", redis=r)
+            return out
+
+    tr = _Tr2()
+    lazy._fanout(
+        session,
+        "Q1",
+        langs=["en", "fr", "de", "it", "es", "pl"],
+        translator=tr,
+        session_factory=lambda: session,
+        close=False,
+        executor=_Serial(),
+        redis=r,
+    )
+    assert list(dict.fromkeys(tr.langs)) == ["de", "pl", "it", "es"]
+
+
+def test_fanout_bio_translated_inside_language_jobs(session):
+    # bio 不再在线程池启动前串行翻(实测 8 门约 33 秒):翻译在各语言任务里,写入仍在主线程
+    calls = []
+
+    class _Tr3(_Tr):
+        def translate_section(self, text, lang, **kw):
+            if text == BIO_EN:
+                calls.append((lang, _Inside.inside))
+            return super().translate_section(text, lang, **kw)
+
+    _run_ex = lazy._fanout(
+        session,
+        "Q1",
+        langs=["en", "fr", "de", "it"],
+        translator=_Tr3(),
+        session_factory=lambda: session,
+        close=False,
+        executor=_Inside(),
+    )
+    assert set(_run_ex) == {"de", "it"}
+    assert sorted(calls) == [("de", True), ("it", True)]
+    bio = session.query(Artist).filter_by(qid="Q296").one().bio
+    assert bio["de"] == f"de:{BIO_EN}" and bio["it"] == f"it:{BIO_EN}"
+
+
+def test_fanout_bio_not_retranslated_when_present(session):
+    art = session.query(Artist).filter_by(qid="Q296").one()
+    art.bio = {**art.bio, "de": "Bio DE."}
+    session.commit()
+    calls = []
+
+    class _Tr4(_Tr):
+        def translate_section(self, text, lang, **kw):
+            if text == BIO_EN:
+                calls.append(lang)
+            return super().translate_section(text, lang, **kw)
+
+    _run(session, ["en", "fr", "de", "it"], _Tr4())
+    assert calls == ["it"]

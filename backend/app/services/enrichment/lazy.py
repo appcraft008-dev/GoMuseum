@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 
 from app.models.museum_object import MuseumObject
@@ -78,6 +78,37 @@ def generating_for(obj: MuseumObject, language) -> bool:
     ⚠️ 必须是"这门语言整门翻完前一直 true":App 在 false 时 keepAlive 缓存结果
     (catalog_providers.dart),只有 guide 就报 false 会让深度段永远看不到。"""
     return lock_active(obj) or language in fanout_pending(obj)
+
+
+# 补语言期间有人打开的语言(Redis 集合,跨 uvicorn worker 共享):下一个空出来的线程先补它。
+# 放 Redis 不放 attributes:请求路径上写 attributes 会和补语言的心跳互相覆盖。
+_WANT_TTL_S = 600
+
+
+def _want_key(qid: str) -> str:
+    return f"lazy:fanout_want:{qid}"
+
+
+def record_fanout_want(qid: str, language: str, redis=None) -> None:
+    """记一笔"有人在等这门语言";Redis 不可用就算了(只是少了插队,语言照样会补)。"""
+    r = redis if redis is not None else _redis()
+    if r is None:
+        return
+    try:
+        r.pipeline().sadd(_want_key(qid), language).expire(
+            _want_key(qid), _WANT_TTL_S
+        ).execute()
+    except Exception:
+        logger.warning("lazy fanout: 记录优先语言失败 qid=%s", qid, exc_info=True)
+
+
+def _fanout_wanted(qid: str, redis) -> set:
+    if redis is None:
+        return set()
+    try:
+        return set(redis.smembers(_want_key(qid)))
+    except Exception:
+        return set()
 
 
 def _set_fanout(db, obj: MuseumObject, pending) -> None:
@@ -269,11 +300,12 @@ def _fanout(
     session_factory=None,
     close=True,
     executor=None,
+    redis=None,
 ) -> dict:
     """补语言阶段(spec 2026-10-17):懒生成完成后,把该馆其余语言的段/问答/作者 bio 补齐。
     不占 _SEM 和 lazy_lock_at;按语言的进行中标记见 fanout_pending。
     前置条件不满足(未 ready / 无 en / 无可补语言 / 自己的日上限 / 名额满)→ 返回 {},
-    其余语言回到按请求懒翻译。测试注入 langs/translator/session_factory/executor。"""
+    其余语言回到按请求懒翻译。测试注入 langs/translator/session_factory/executor/redis。"""
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if o is None or o.content_status != "ready" or not _has_published(db, o.id, "en"):
         return {}
@@ -296,6 +328,7 @@ def _fanout(
         # 另起一路懒翻译。标记越早写,这个窗口越小(剩几条查询的时长,见 Ruling)。
         _set_fanout(db, o, pending)
         from app.services.enrichment.backfill import (
+            artist_bio_en,
             fill_artist_bio,
             translate_object_language,
         )
@@ -309,11 +342,9 @@ def _fanout(
 
             # 带音频损失闸(纪律 37);绑同一个 engine,同 backfill_languages
             session_factory = guarded_sessionmaker(bind=db.get_bind())
-        # 作者 bio 是跨馆共享行、整 JSON 覆盖写:线程里写会互相覆盖。主线程先逐语言补,
-        # 写前重读、写完即提交(纪律 37 只补缺)。
-        for lang in remaining:
-            if fill_artist_bio(db, o, lang, translator, refresh=True):
-                db.commit()
+        if redis is None:
+            redis = _redis()
+        bio_en, bio_have = artist_bio_en(db, o)
         oid = o.id
 
         def _one(lang):
@@ -323,25 +354,53 @@ def _fanout(
                     s, s.get(MuseumObject, oid), lang, translator, include_bio=False
                 )
                 s.commit()  # 保险:persist_* 已逐段提交,这里通常是空操作
-                return c
             finally:
                 if close:
                     s.close()
+            # 作者 bio 只在线程里**翻**(并行,原先主线程串行 8 门约 33 秒);
+            # 写由主线程做:bio 是跨馆共享行、整 JSON 覆盖写,线程里写会互相覆盖
+            bio = None
+            if bio_en and lang not in bio_have:
+                try:
+                    bio = translator.translate_section(bio_en, lang)
+                except Exception:
+                    logger.warning("lazy fanout bio failed: %s/%s", qid, lang)
+            return c, bio
+
+        queue = list(remaining)
+
+        def _next():
+            # 有人在等的语言插队;否则按原顺序
+            want = _fanout_wanted(qid, redis)
+            return queue.pop(next((i for i, x in enumerate(queue) if x in want), 0))
 
         pool = executor or ThreadPoolExecutor(max_workers=_FANOUT_WORKERS)
+        running: dict = {}
         try:
-            futs = {pool.submit(_one, lang): lang for lang in remaining}
-            for f in as_completed(futs):
-                lang = futs[f]
-                try:
-                    out[lang] = f.result()
-                except Exception:
-                    logger.exception("lazy fanout failed: %s/%s", qid, lang)
-                pending.remove(lang)
-                # 每完成一门:打来源标签(进程被杀也已计入补语言日上限)+ 心跳,
-                # 这门语言的 generating 随之转 false
-                _tag_lazy_rows(db, o, t0, FANOUT_SOURCE)
-                _set_fanout(db, o, pending)
+            # 只把空闲线程数那么多门交给线程池,其余留在 queue:每空出一个才挑下一门,
+            # 这样补到一半有人打开的语言也能插队
+            while queue or running:
+                while queue and len(running) < _FANOUT_WORKERS:
+                    lang = _next()
+                    running[pool.submit(_one, lang)] = lang
+                done, _ = wait(running, return_when=FIRST_COMPLETED)
+                for f in done:
+                    lang = running.pop(f)
+                    try:
+                        c, bio = f.result()
+                        out[lang] = c
+                        if bio and fill_artist_bio(
+                            db, o, lang, translator, refresh=True, text=bio
+                        ):
+                            c["bios"] = 1
+                            db.commit()
+                    except Exception:
+                        logger.exception("lazy fanout failed: %s/%s", qid, lang)
+                    pending.remove(lang)
+                    # 每完成一门:打来源标签(进程被杀也已计入补语言日上限)+ 心跳,
+                    # 这门语言的 generating 随之转 false
+                    _tag_lazy_rows(db, o, t0, FANOUT_SOURCE)
+                    _set_fanout(db, o, pending)
         finally:
             # BaseException(如进程关闭时的 SystemExit;web 进程音频闸只记账不拦,AudioLossBlocked
             # 只在脚本直接调用时可能出现)从 result() 冒出来时,别的语言还在跑或排队:
@@ -355,6 +414,11 @@ def _fanout(
             _clear_fanout(db, o)
         finally:
             _FANOUT_SEM.release()
+            try:
+                if redis is not None:
+                    redis.delete(_want_key(qid))
+            except Exception:
+                pass
     return out
 
 
@@ -629,6 +693,8 @@ def maybe_trigger(
         and _has_missing_section(db, o.id, language)
         and _has_published(db, o.id, "en")
     )
+    if language and language != "en" and generating_for(o, language):
+        record_fanout_want(qid, language, redis)  # 补语言阶段先补有人在等的语言
     if not (wants_generation or wants_translation):
         return
     if wants_generation and imageless_stub(db, o):
