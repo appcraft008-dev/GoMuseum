@@ -1187,6 +1187,15 @@ def run_lazy_generation(
 Run: `cd backend && poetry run pytest tests/integration/test_lazy_fanout.py tests/integration/test_lazy_generation.py tests/integration/test_fill_artist_bio.py tests/integration/test_backfill_languages.py tests/integration/test_object_content_endpoint.py -q --no-cov`
 Expected: 全部 PASS
 
+- [ ] **Step 4b: 变异验证(防假测试)**
+
+逐项临时改坏、跑 `tests/integration/test_lazy_fanout.py`、确认有测试失败、再改回(用 `git stash` 或手动还原,改回后重跑全绿):
+1. `_fanout` 里 `fill_artist_bio(..., refresh=True)` 去掉 `refresh=True` → `test_fanout_bio_refresh_keeps_concurrent_write` 失败
+2. `include_bio=False` 去掉 → `test_fanout_threads_never_write_artist` 失败
+3. `pool.shutdown(wait=True, cancel_futures=True)` 改成 `wait=False` → `test_fanout_base_exception_stops_other_languages_before_cleanup` 失败
+
+任何一项改坏后测试仍全过 = 测试是假的,先修测试再继续。
+
 - [ ] **Step 5: 格式化并提交**
 
 ```bash
