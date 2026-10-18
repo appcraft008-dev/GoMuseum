@@ -73,6 +73,7 @@ def _default_complete(system: str, user_content, model: str = "gpt-4o-mini") -> 
     import asyncio
 
     from app.services.content_generation_service import _get_openai_client
+    from app.services.openai_models import create_kwargs
 
     client = _get_openai_client()
     if client is None:
@@ -80,12 +81,14 @@ def _default_complete(system: str, user_content, model: str = "gpt-4o-mini") -> 
 
     async def _run():
         resp = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_content},
-            ],
-            timeout=30,
+            **create_kwargs(
+                model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_content},
+                ],
+                timeout=30,
+            )
         )
         return resp.choices[0].message.content or ""
 

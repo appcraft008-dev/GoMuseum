@@ -91,8 +91,9 @@ def _parse_json(text: str) -> dict:
     try:
         return json.loads(t)
     except Exception:
-        m = re.search(r"\{.*\}", t, re.DOTALL)
-        return json.loads(m.group(0)) if m else {}
+        # 取第一个完整对象:Luna 偶尔连吐两段 JSON,贪婪 {.*} 会吞成一串报 Extra data
+        i = t.find("{")
+        return json.JSONDecoder().raw_decode(t[i:])[0] if i >= 0 else {}
 
 
 class ContentEnricher:
@@ -172,15 +173,19 @@ def default_complete(
     if client is None:
         raise RuntimeError("OpenAI client 不可用")
 
+    from app.services.openai_models import create_kwargs
+
+    kw = create_kwargs(
+        model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        temperature=temperature,
+    )
+
     async def _run():
-        resp = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=temperature,
-        )
+        resp = await client.chat.completions.create(**kw)
         u = getattr(resp, "usage", None)
         return resp.choices[0].message.content, u
 
@@ -189,7 +194,7 @@ def default_complete(
 
     record_llm_usage(
         channel,
-        model,
+        kw["model"],
         getattr(usage, "prompt_tokens", 0),
         getattr(usage, "completion_tokens", 0),
     )

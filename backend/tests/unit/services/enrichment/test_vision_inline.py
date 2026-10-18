@@ -46,7 +46,10 @@ def test_writes_description_and_provenance_when_missing(monkeypatch):
     assert vision.ensure_description(_DB(), o) is True
     assert len(calls) == 1
     assert o.attributes[vision.KEY] == "A donkey."
-    assert o.attributes[vision.VIA_KEY] == f"{vision.MODEL}/{vision.DETAIL}"
+    assert (
+        o.attributes[vision.VIA_KEY]
+        == f"{vision.resolve(vision.MODEL)}/{vision.DETAIL}"
+    )
     assert o.attributes["medium_fr"] == "huile", "不能把原有属性冲掉"
 
 

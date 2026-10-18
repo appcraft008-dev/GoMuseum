@@ -20,6 +20,8 @@ from app.services.must_see import has_image_clause, must_see_order
 logger = logging.getLogger(__name__)
 
 # 标"Creation year"消歧：避免 fact-consistency 判官把首展/收购/修复年误判为与创作年冲突。
+GUIDE_DRAFTS = 3  # 主讲解最多写几稿(含首稿)
+
 _FACT_KEYS = [("Title", "title_en"), ("Artist", "artist_en"), ("Creation year", "year")]
 
 
@@ -462,34 +464,34 @@ def generate_object(
     sections = sections_for(o.category)
 
     # 头条(默认讲解)先生成,作为模块去重锚:模块带着头条去重,避免与头条重复。
-    guide_text = (
-        enricher.generate_default_guide(obj, facts, guide_target_chars(o.popularity))
-        if hasattr(enricher, "generate_default_guide")
-        else None
-    )
-
     # 结尾交代「现藏于本馆」→ 删掉那一句(为什么不重写/不改写:见 drop_museum_ending)。
-    if guide_text:
-        from app.services.enrichment.quality import drop_museum_ending
-        from app.services.museum_repo import museum_name
+    from app.services.enrichment.quality import drop_museum_ending
+    from app.services.museum_repo import museum_name
 
-        _m = db.get(Museum, o.museum_id)
-        guide_text = drop_museum_ending(
-            guide_text, museum_name(_m, "en") if _m else None
+    _m = db.get(Museum, o.museum_id)
+    _mname = museum_name(_m, "en") if _m else None
+
+    def _draft_guide():
+        g = enricher.generate_default_guide(
+            obj, facts, guide_target_chars(o.popularity)
         )
+        return drop_museum_ending(g, _mname) if g else g
+
+    guide_text = _draft_guide() if hasattr(enricher, "generate_default_guide") else None
 
     en_published: dict = {}
     # 流式先出:guide 先 gate+落库(先于深度模块),前端轮询中途即可显示主讲解。
     if guide_text:
         gq = gate.check_section(material, facts, guide_text)
-        # 闸删句后剩下的正文悬空(「To his left…」而沃拉尔那句已被删)→ 重写一次。
-        # 只对 guide:它是作品页的主讲解,挂起=这件没有讲解;深度段挂起就挂起(宁缺)。
-        # 生成有随机性,重写一次多半不再撞上同一处删句;仍悬空就照常挂起。
-        if getattr(gq, "orphaned", False):
-            logger.info("guide orphaned after gate, regenerating once: %s", qid)
-            retry = enricher.generate_default_guide(
-                obj, facts, guide_target_chars(o.popularity)
-            )
+        # 没过闸(悬空/存活率不够)→ 重写,最多共 GUIDE_DRAFTS 稿。只对 guide:它是作品页
+        # 主讲解,挂起=这件没有讲解;深度段挂起就挂起(宁缺)。重写稿照样逐句过闸,
+        # 闸删的句子一句也放不出来。10-18 实测(换 Luna):失败多是随机的,9 件最难的
+        # 各写 4 稿单稿过闸 28/36,同件重写多半能过;3 稿还不过就照常挂起。
+        for _ in range(GUIDE_DRAFTS - 1):
+            if gq.status == "published":
+                break
+            logger.info("guide held after gate, regenerating: %s", qid)
+            retry = _draft_guide()
             if retry:
                 gq = gate.check_section(material, facts, retry)
         persist_gated_sections(db, qid, "en", {"guide": gq}, model)

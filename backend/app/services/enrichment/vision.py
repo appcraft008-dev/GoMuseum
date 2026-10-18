@@ -35,7 +35,9 @@ import re
 
 logger = logging.getLogger(__name__)
 
-MODEL = "gpt-4o"
+from app.services.openai_models import VISION, create_kwargs, resolve
+
+MODEL = VISION  # 真实模型见 settings.OPENAI_VISION_MODEL
 DETAIL = "high"
 
 # 描述写进哪个键。前缀 `visual_description_` 会被 build_material 收进
@@ -98,7 +100,7 @@ def ensure_description(db, obj, describe=None) -> bool:
         text = strip_signatures(text, _artist_names(db, obj))
     from sqlalchemy.orm.attributes import flag_modified
 
-    obj.attributes = {**attrs, KEY: text, VIA_KEY: f"{MODEL}/{DETAIL}"}
+    obj.attributes = {**attrs, KEY: text, VIA_KEY: f"{resolve(MODEL)}/{DETAIL}"}
     flag_modified(obj, "attributes")
     db.flush()
     return True
@@ -152,18 +154,21 @@ def _classify_signatures(names: list[str], quoted: list[str]) -> list[bool]:
 
     async def _run():
         return await client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": _SIGNATURE_SYSTEM},
-                {
-                    "role": "user",
-                    "content": json.dumps(
-                        {"artist": names, "quoted_texts": quoted}, ensure_ascii=False
-                    ),
-                },
-            ],
+            **create_kwargs(
+                "gpt-4o-mini",
+                temperature=0,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": _SIGNATURE_SYSTEM},
+                    {
+                        "role": "user",
+                        "content": json.dumps(
+                            {"artist": names, "quoted_texts": quoted},
+                            ensure_ascii=False,
+                        ),
+                    },
+                ],
+            )
         )
 
     resp = asyncio.run(_run())
@@ -172,7 +177,7 @@ def _classify_signatures(names: list[str], quoted: list[str]) -> list[bool]:
     usage = getattr(resp, "usage", None)
     record_llm_usage(
         "vision",
-        "gpt-4o-mini",
+        resolve("gpt-4o-mini"),
         getattr(usage, "prompt_tokens", 0),
         getattr(usage, "completion_tokens", 0),
     )
@@ -308,9 +313,9 @@ def describe_image(
 
     async def _run():
         resp = await client.chat.completions.create(
-            model=model,
-            messages=build_vision_messages(image_url, detail),
-            temperature=0,
+            **create_kwargs(
+                model, messages=build_vision_messages(image_url, detail), temperature=0
+            )
         )
         return resp.choices[0].message.content, getattr(resp, "usage", None)
 
@@ -331,7 +336,7 @@ def describe_image(
 
     record_llm_usage(
         channel,
-        model,
+        resolve(model),
         getattr(usage, "prompt_tokens", 0),
         getattr(usage, "completion_tokens", 0),
     )

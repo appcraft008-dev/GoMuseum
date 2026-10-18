@@ -13,12 +13,12 @@ from dataclasses import dataclass
 
 from app.services.enrichment.translator import strip_name
 from app.services.llm_usage import record_llm_usage
+from app.services.openai_models import create_kwargs, resolve
 
 logger = logging.getLogger(__name__)
 
-MODEL = "gpt-4o"
+MODEL = "gpt-4o"  # 档位名,真实模型见 settings.OPENAI_STRONG_MODEL
 MAX_BATCH_REQUESTS = 50_000  # OpenAI Batch 单 job 硬上限,超了提交即拒(不是软限流)
-USAGE_MODEL = "gpt-4o@batch"
 
 
 @dataclass
@@ -155,14 +155,14 @@ def _jsonl(tasks):
                     "custom_id": t.custom_id,
                     "method": "POST",
                     "url": "/v1/chat/completions",
-                    "body": {
-                        "model": MODEL,
-                        "messages": [
+                    "body": create_kwargs(
+                        MODEL,
+                        messages=[
                             {"role": "system", "content": system},
                             {"role": "user", "content": user},
                         ],
-                        "temperature": 0.3,
-                    },
+                        temperature=0.3,
+                    ),
                 },
                 ensure_ascii=False,
             )
@@ -212,7 +212,7 @@ def apply(db, lines) -> dict:
             u = body.get("usage") or {}
             record_llm_usage(
                 "names",
-                USAGE_MODEL,
+                f"{resolve(MODEL)}@batch",
                 u.get("prompt_tokens", 0),
                 u.get("completion_tokens", 0),
             )
