@@ -174,14 +174,18 @@ def test_label_mode_uses_gpt4o_high_detail(monkeypatch):
 
     seen = []
 
-    def fake(system, user_content, model="gpt-4o-mini"):
-        seen.append((model, user_content[0]["image_url"].get("detail")))
+    def fake(system, user_content, model="gpt-4o-mini", channel=None):
+        seen.append((model, user_content[0]["image_url"].get("detail"), channel))
         return '{"candidates": [], "label_text": null}'
 
     monkeypatch.setattr(vision, "_default_complete", fake)
     vision.identify("b64", mode="label")
     vision.identify("b64", mode="artwork")
-    assert seen == [("gpt-4o", "high"), ("gpt-4o-mini", None)]
+    # 通路名让墙签(Haiku)和识别兜底(Luna)各配各的模型
+    assert seen == [
+        ("gpt-4o", "high", "label"),
+        ("gpt-4o-mini", None, "recognition"),
+    ]
 
 
 # ---- P1-7(10-12):向量低分时 AI 在向量前 5 名里选 ----

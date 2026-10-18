@@ -160,42 +160,23 @@ def default_complete(
     结论;换 0 后两遍一致率升到 **95%**。⚠️ 不是 100%:OpenAI 的 temperature=0 不保证
     确定性,所以**批量重判仍须多遍取交集**,别指望这个参数根治(契约纪律 21)。
     """
-    import asyncio
-
-    from app.services.content_generation_service import _get_openai_client
+    from app.services.openai_models import chat
 
     # 成本可观测:强模型(非默认 mini)每次触发都打一条可 grep 日志(闸失败频率信号)
     # 统计: docker logs <backend> | grep -c 'STRONG_MODEL_USE'
     if model != "gpt-4o-mini":
         logger.info("STRONG_MODEL_USE model=%s", model)
 
-    client = _get_openai_client()
-    if client is None:
-        raise RuntimeError("OpenAI client 不可用")
-
-    from app.services.openai_models import create_kwargs
-
-    kw = create_kwargs(
+    text, real, tin, tout = chat(
         model,
-        messages=[
+        [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
+        channel=channel,
         temperature=temperature,
     )
-
-    async def _run():
-        resp = await client.chat.completions.create(**kw)
-        u = getattr(resp, "usage", None)
-        return resp.choices[0].message.content, u
-
-    text, usage = asyncio.run(_run())
     from app.services.llm_usage import record_llm_usage
 
-    record_llm_usage(
-        channel,
-        kw["model"],
-        getattr(usage, "prompt_tokens", 0),
-        getattr(usage, "completion_tokens", 0),
-    )
+    record_llm_usage(channel, real, tin, tout)
     return text
