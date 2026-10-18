@@ -75,3 +75,45 @@ def test_still_leaking_after_retranslation_is_held():
     t = ContentTranslator(f.mini, complete_strong=f.strong)
     out = t.translate_object({"guide": "An ornate urn stands behind."}, ["zh"])
     assert out["zh"]["guide"].status == "needs_review"
+
+
+class _JudgeFlaky(_Fake):
+    """译文本身干净,但判官前两次误判不忠实(10-18 实测 Luna 判官单次误判好译文 4.5%,
+    《草地上的午餐》zh guide 两稿都被误判 → 接口 empty,中文用户什么都看不到)。"""
+
+    def __init__(self, fails):
+        super().__init__()
+        self.fails = fails
+
+    def mini(self, system, user):
+        if "fact judge" in system.lower():
+            self.fails -= 1
+            ok = "false" if self.fails >= 0 else "true"
+            return '{"faithful": %s, "issues": ["x"]}' % ok
+        self.mini_calls += 1
+        return "背景中华丽的骨灰瓮和宏伟的柱子构成对比。"
+
+
+def test_guide_gets_a_third_draft_when_judge_rejects_twice():
+    f = _JudgeFlaky(fails=2)
+    t = ContentTranslator(f.mini, complete_strong=f.strong)
+    out = t.translate_object({"guide": "An ornate urn stands behind."}, ["zh"])
+    assert f.strong_calls == 2
+    assert out["zh"]["guide"].status == "published"
+
+
+def test_guide_is_held_after_three_rejected_drafts():
+    f = _JudgeFlaky(fails=3)
+    t = ContentTranslator(f.mini, complete_strong=f.strong)
+    out = t.translate_object({"guide": "An ornate urn stands behind."}, ["zh"])
+    assert f.strong_calls == 2
+    assert out["zh"]["guide"].status == "needs_review"
+
+
+def test_deep_sections_keep_two_drafts():
+    """只有主讲解多给一稿;深度段挂起就挂起(宁缺)。"""
+    f = _JudgeFlaky(fails=2)
+    t = ContentTranslator(f.mini, complete_strong=f.strong)
+    out = t.translate_object({"background": "An ornate urn stands behind."}, ["zh"])
+    assert f.strong_calls == 1
+    assert out["zh"]["background"].status == "needs_review"
