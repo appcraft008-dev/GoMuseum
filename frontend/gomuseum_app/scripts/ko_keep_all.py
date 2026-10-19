@@ -17,9 +17,7 @@ ARB = Path(__file__).resolve().parent.parent / "lib/l10n/app_ko.arb"
 WJ = "\u2060"
 _H = "\uac00-\ud7a3"
 # 占位符两侧也连上：{count}일 渲染成 "7일"，不连会断成 "7|일"。
-_JOIN = re.compile(
-    rf"(?<=[{_H}])(?=[{_H}0-9A-Za-z{{])|(?<=[0-9A-Za-z}}])(?=[{_H}])"
-)
+_JOIN = re.compile(rf"(?<=[{_H}])(?=[{_H}0-9A-Za-z{{])|(?<=[0-9A-Za-z}}])(?=[{_H}])")
 
 
 def keep_all(s: str) -> str:
