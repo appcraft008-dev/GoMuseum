@@ -15,11 +15,13 @@ import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 /// 拉起全屏画廊。[images] 非空；[initialIndex] 为进入时定位的图。
 ///
 /// [footerBuilder]:调用方的底部插槽(候选比对放标题 +「就是这件」),按当前页渲染。
+/// [trailingPage]:接在最后一张图后面的一页(候选比对放「都不是」);尾页不显示页码与底栏。
 Future<void> showImageGallery(
   BuildContext context, {
   required List<ObjectImage> images,
   int initialIndex = 0,
   Widget Function(BuildContext context, int index)? footerBuilder,
+  Widget? trailingPage,
 }) {
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
@@ -28,17 +30,22 @@ Future<void> showImageGallery(
       pageBuilder: (_, __, ___) => _ImageGallery(
           images: images,
           initialIndex: initialIndex,
-          footerBuilder: footerBuilder),
+          footerBuilder: footerBuilder,
+          trailingPage: trailingPage),
     ),
   );
 }
 
 class _ImageGallery extends StatefulWidget {
   const _ImageGallery(
-      {required this.images, required this.initialIndex, this.footerBuilder});
+      {required this.images,
+      required this.initialIndex,
+      this.footerBuilder,
+      this.trailingPage});
   final List<ObjectImage> images;
   final int initialIndex;
   final Widget Function(BuildContext context, int index)? footerBuilder;
+  final Widget? trailingPage;
 
   @override
   State<_ImageGallery> createState() => _ImageGalleryState();
@@ -55,6 +62,28 @@ class _ImageGalleryState extends State<_ImageGallery> {
     _pc = PageController(initialPage: _i);
   }
 
+  static const _flip = Duration(milliseconds: 250);
+
+  Widget _arrow(Key key, Alignment at, GmIcons icon, VoidCallback onTap) =>
+      Align(
+        alignment: at,
+        child: GestureDetector(
+          key: key,
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                  color: Colors.black38, shape: BoxShape.circle),
+              child: GmIcon(icon, size: 20, color: Colors.white),
+            ),
+          ),
+        ),
+      );
+
   @override
   void dispose() {
     _pc.dispose();
@@ -64,7 +93,9 @@ class _ImageGalleryState extends State<_ImageGallery> {
   @override
   Widget build(BuildContext context) {
     final images = widget.images;
-    final credit = images[_i].credit;
+    final pages = images.length + (widget.trailingPage == null ? 0 : 1);
+    final onTrailing = _i >= images.length;
+    final credit = onTrailing ? null : images[_i].credit;
     final multi = images.length > 1;
     final creditWidget = credit != null && credit.trim().isNotEmpty
         ? Padding(
@@ -88,28 +119,38 @@ class _ImageGalleryState extends State<_ImageGallery> {
           // 需引 photo_view 依赖，非必要不加。
           PageView.builder(
             controller: _pc,
-            itemCount: images.length,
+            itemCount: pages,
             onPageChanged: (i) => setState(() => _i = i),
-            itemBuilder: (_, i) => _ZoomablePage(
-              onTapAtRest: () => Navigator.of(context).maybePop(),
-              child: Center(
-                child: Image.network(
-                  // R2 直链原样透传；Wikimedia 兜底则取 1600px 档。
-                  sizedImageUrl(images[i].url, 1600),
-                  headers: kImageRequestHeaders,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : const Center(
-                          child: CircularProgressIndicator(
-                              color: Colors.white24, strokeWidth: 2)),
-                  errorBuilder: (_, __, ___) => const Center(
-                      child: Icon(Icons.broken_image_outlined,
-                          color: Colors.white30, size: 44)),
-                ),
-              ),
-            ),
+            itemBuilder: (_, i) => i >= images.length
+                ? SafeArea(child: Center(child: widget.trailingPage))
+                : _ZoomablePage(
+                    onTapAtRest: () => Navigator.of(context).maybePop(),
+                    child: Center(
+                      child: Image.network(
+                        // R2 直链原样透传；Wikimedia 兜底则取 1600px 档。
+                        sizedImageUrl(images[i].url, 1600),
+                        headers: kImageRequestHeaders,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (_, child, progress) => progress == null
+                            ? child
+                            : const Center(
+                                child: CircularProgressIndicator(
+                                    color: Colors.white24, strokeWidth: 2)),
+                        errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image_outlined,
+                                color: Colors.white30, size: 44)),
+                      ),
+                    ),
+                  ),
           ),
+
+          // 左右箭头:提示能滑,也是放大后换一张的唯一途径(放大时拖动是平移)
+          if (pages > 1 && _i > 0)
+            _arrow(const Key('galPrev'), Alignment.centerLeft, GmIcons.back,
+                () => _pc.previousPage(duration: _flip, curve: Curves.easeOut)),
+          if (pages > 1 && _i < pages - 1)
+            _arrow(const Key('galNext'), Alignment.centerRight, GmIcons.chevR,
+                () => _pc.nextPage(duration: _flip, curve: Curves.easeOut)),
 
           // 关闭（放大状态下点击不响应，这里是唯一出口）
           SafeArea(
@@ -131,7 +172,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
           ),
 
           // 页码 i/n
-          if (multi)
+          if (multi && !onTrailing)
             SafeArea(
               child: Align(
                 alignment: Alignment.topCenter,
@@ -161,7 +202,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
             ),
 
           // 调用方底部插槽:与署名同一列(footer 在上、署名在下),署名两行也不压线
-          if (widget.footerBuilder != null)
+          if (widget.footerBuilder != null && !onTrailing)
             Positioned(
               left: 16,
               right: 16,
