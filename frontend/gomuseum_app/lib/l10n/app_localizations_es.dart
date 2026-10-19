@@ -91,11 +91,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeSlogan => 'Acércate a una obra,\nescucha su historia.';
 
   @override
-  String get homeCtaRecognize => 'Fotografía para reconocer y escuchar';
+  String get homeCtaRecognize => 'Fotografía y escucha';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count escaneos gratis restantes · Mejora para acceso completo';
+    return 'Te quedan $count escaneos · Mejora a acceso completo';
   }
 
   @override
@@ -617,7 +617,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recShootLabelBtn => 'Fotografía la cartela';
 
   @override
-  String get recTypeNumberOrName => 'Escribir el número o el título';
+  String get recTypeNumberOrName => 'Número o título';
 
   @override
   String get photoFbTitle => '¿Nos envías esta foto?';

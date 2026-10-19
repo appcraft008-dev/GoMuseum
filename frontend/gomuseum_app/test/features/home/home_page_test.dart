@@ -292,7 +292,7 @@ void main() {
     await tester.pump();
 
     for (final finder in [
-      find.textContaining('Approchez-vous'),
+      find.textContaining('Approchez une'),
       find.textContaining('scans gratuits', findRichText: true),
     ]) {
       final r = tester.getRect(finder.first);

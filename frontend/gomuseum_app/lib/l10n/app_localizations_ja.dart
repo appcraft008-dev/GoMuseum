@@ -599,7 +599,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recShootLabelBtn => '解説プレートを撮影';
 
   @override
-  String get recTypeNumberOrName => '番号か作品名を入力';
+  String get recTypeNumberOrName => '番号か作品名';
 
   @override
   String get photoFbTitle => 'この写真を送りますか?';

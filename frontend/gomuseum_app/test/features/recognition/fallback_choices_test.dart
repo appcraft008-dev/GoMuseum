@@ -3,12 +3,15 @@
 // 输入编号(左)与重拍作品(右)并排同级。真实用户 17 次没认出 11 次直接放弃、0 次拍说明牌。
 // 10-11:已拍过墙签时主按钮换成输入编号(墙签文字已预填),不再给拍说明牌(重拍同一张墙签结果一样);
 // 次按钮文字放不下(大字号/德语)时缩小到一行,不换行。
+// 10-19 用户改定:不缩字(德语曾缩到 0.57 倍),放不下换两行、两个按钮等高。
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/recognition/presentation/pages/camera_page.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
+
+import '../../i18n/real_fonts.dart';
 
 Future<List<String>> _pump(WidgetTester t,
     {bool labelSeen = false,
@@ -83,14 +86,25 @@ void main() {
   });
 
   for (final seen in [false, true]) {
-    testWidgets('次按钮文字一行放下:德语 + 1.5 倍字号(labelSeen=$seen)', (t) async {
+    testWidgets('次按钮德语 + 1.5 倍字号:不缩字、不截断、等高(labelSeen=$seen)', (t) async {
       await _pump(t,
           labelSeen: seen, locale: const Locale('de'), textScale: 1.5);
-      for (final key in [if (!seen) 'fbSearch', 'fbRetake']) {
-        final p = t.renderObject<RenderParagraph>(find.descendant(
-            of: find.byKey(Key(key)), matching: find.byType(RichText)));
-        expect(p.maxLines, 1, reason: key);
+      await loadRealFonts(t); // 方块测试字体把拉丁文宽度放大约 2 倍，换不换行判不准
+      await t.pump();
+      final keys = [if (!seen) 'fbSearch', 'fbRetake'];
+      for (final key in keys) {
+        final text = find.descendant(
+            of: find.byKey(Key(key)), matching: find.byType(RichText));
+        final p = t.renderObject<RenderParagraph>(text);
+        expect(p.maxLines, 2, reason: key);
         expect(p.didExceedMaxLines, isFalse, reason: key);
+        expect(find.ancestor(of: text, matching: find.byType(FittedBox)),
+            findsNothing,
+            reason: key);
+      }
+      if (!seen) {
+        expect(t.getSize(find.byKey(const Key('fbSearch'))).height,
+            t.getSize(find.byKey(const Key('fbRetake'))).height);
       }
       expect(t.takeException(), isNull);
     });

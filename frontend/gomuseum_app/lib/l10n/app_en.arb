@@ -30,7 +30,7 @@
   "all": "All",
   "homePocketGuide": "Pocket Museum Guide",
   "homeSlogan": "Step closer to one work,\nhear the story behind it.",
-  "homeCtaRecognize": "Snap to Recognize & Listen",
+  "homeCtaRecognize": "Snap & Listen",
   "homeFreeLeft": "{count} free scans left · Upgrade for full access",
   "@homeFreeLeft": {
     "placeholders": {
@@ -343,7 +343,7 @@
   "recNotRecognized": "Couldn't recognize it",
   "recNotInCatalog": "Couldn't find this work",
   "recShootLabelBtn": "Photograph the wall label",
-  "recTypeNumberOrName": "Type the number or title",
+  "recTypeNumberOrName": "Number or title",
   "@recTypeNumberOrName": {
     "description": "Primary button on the not-recognized choice card: type the inventory number or the title from the wall label"
   },

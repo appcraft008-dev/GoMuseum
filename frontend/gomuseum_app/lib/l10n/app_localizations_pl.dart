@@ -90,7 +90,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get homeSlogan => 'Podejdź bliżej dzieła,\nposłuchaj jego historii.';
 
   @override
-  String get homeCtaRecognize => 'Zrób zdjęcie, aby rozpoznać i słuchać';
+  String get homeCtaRecognize => 'Zrób zdjęcie i słuchaj';
 
   @override
   String homeFreeLeft(Object count) {
@@ -616,7 +616,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recShootLabelBtn => 'Sfotografuj tabliczkę';
 
   @override
-  String get recTypeNumberOrName => 'Wpisz numer lub tytuł';
+  String get recTypeNumberOrName => 'Numer lub tytuł';
 
   @override
   String get photoFbTitle => 'Wysłać nam to zdjęcie?';

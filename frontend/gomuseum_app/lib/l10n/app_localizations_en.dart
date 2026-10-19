@@ -91,7 +91,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Step closer to one work,\nhear the story behind it.';
 
   @override
-  String get homeCtaRecognize => 'Snap to Recognize & Listen';
+  String get homeCtaRecognize => 'Snap & Listen';
 
   @override
   String homeFreeLeft(Object count) {
@@ -609,7 +609,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recShootLabelBtn => 'Photograph the wall label';
 
   @override
-  String get recTypeNumberOrName => 'Type the number or title';
+  String get recTypeNumberOrName => 'Number or title';
 
   @override
   String get photoFbTitle => 'Send us this photo?';

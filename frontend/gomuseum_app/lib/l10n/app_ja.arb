@@ -182,7 +182,7 @@
   "recNotRecognized": "認識できませんでした",
   "recNotInCatalog": "作品が見つかりませんでした",
   "recShootLabelBtn": "解説プレートを撮影",
-  "recTypeNumberOrName": "番号か作品名を入力",
+  "recTypeNumberOrName": "番号か作品名",
   "photoFbTitle": "この写真を送りますか?",
   "photoFbBody": "未収録の作品の追加と認識の改善にのみ使います。保存は最長 90 日で、誰にも公開しません。",
   "photoFbConsent": "この写真を送る",

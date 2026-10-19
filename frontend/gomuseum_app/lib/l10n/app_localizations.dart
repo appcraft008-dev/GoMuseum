@@ -278,7 +278,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeCtaRecognize.
   ///
   /// In en, this message translates to:
-  /// **'Snap to Recognize & Listen'**
+  /// **'Snap & Listen'**
   String get homeCtaRecognize;
 
   /// No description provided for @homeFreeLeft.
@@ -1208,7 +1208,7 @@ abstract class AppLocalizations {
   /// Primary button on the not-recognized choice card: type the inventory number or the title from the wall label
   ///
   /// In en, this message translates to:
-  /// **'Type the number or title'**
+  /// **'Number or title'**
   String get recTypeNumberOrName;
 
   /// Photo feedback dialog title (S5): ask the user whether to send the artwork photo

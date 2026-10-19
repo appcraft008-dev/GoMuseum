@@ -87,11 +87,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get homePocketGuide => 'Museumsführer für die Tasche';
 
   @override
-  String get homeSlogan =>
-      'Treten Sie näher an ein Werk,\nhören Sie seine Geschichte.';
+  String get homeSlogan => 'Ein Werk vor Augen,\nseine Geschichte im Ohr.';
 
   @override
-  String get homeCtaRecognize => 'Fotografieren, erkennen & hören';
+  String get homeCtaRecognize => 'Fotografieren & hören';
 
   @override
   String homeFreeLeft(Object count) {
@@ -618,7 +617,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recShootLabelBtn => 'Wandschild fotografieren';
 
   @override
-  String get recTypeNumberOrName => 'Nummer oder Titel eingeben';
+  String get recTypeNumberOrName => 'Nr. oder Titel';
 
   @override
   String get photoFbTitle => 'Uns dieses Foto senden?';
