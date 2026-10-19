@@ -1156,8 +1156,6 @@ class _TagSearchSheet extends ConsumerStatefulWidget {
 class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
   String _q = '';
   Timer? _timer;
-  late final TextEditingController _ctrl =
-      TextEditingController(text: widget.initialQuery ?? '');
 
   @override
   void initState() {
@@ -1167,7 +1165,6 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
 
   @override
   void dispose() {
-    _ctrl.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -1200,24 +1197,9 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
           const SizedBox(height: 6),
           Text(l10n.camTagHint, style: GmText.sans(size: 12, color: gm.sub)),
           const SizedBox(height: 14),
-          TextField(
-            controller: _ctrl,
-            autofocus: true,
-            style: GmText.sans(size: 13.5),
-            decoration: InputDecoration(
-              hintText: l10n.camTagExample,
-              hintStyle: GmText.sans(size: 13.5, color: gm.faint),
-              filled: true,
-              fillColor: gm.surface,
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: gm.line),
-                borderRadius: BorderRadius.zero,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: gm.accent),
-                borderRadius: BorderRadius.zero,
-              ),
-            ),
+          LabelSearchField(
+            initialQuery: widget.initialQuery,
+            hint: l10n.camTagExample,
             onChanged: _onChanged,
           ),
           if (_q.isNotEmpty)
@@ -1237,6 +1219,78 @@ class _TagSearchSheetState extends ConsumerState<_TagSearchSheet> {
           const SizedBox(height: 14),
         ],
       ),
+    );
+  }
+}
+
+/// 墙签检索输入框。预填(墙签 OCR)整段全选:一打字就整段替换,不想改就直接看结果;
+/// 右侧 × 一点清空(10-19 用户定)。原先光标停在长串末尾,搜不到想换词只能逐字删。
+class LabelSearchField extends StatefulWidget {
+  const LabelSearchField(
+      {super.key,
+      required this.initialQuery,
+      required this.hint,
+      required this.onChanged});
+
+  final String? initialQuery;
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<LabelSearchField> createState() => _LabelSearchFieldState();
+}
+
+class _LabelSearchFieldState extends State<LabelSearchField> {
+  late final TextEditingController _ctrl = TextEditingController.fromValue(
+    TextEditingValue(
+      text: widget.initialQuery ?? '',
+      selection: TextSelection(
+          baseOffset: 0, extentOffset: (widget.initialQuery ?? '').length),
+    ),
+  );
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gm = context.gm;
+    return TextField(
+      controller: _ctrl,
+      autofocus: true,
+      style: GmText.sans(size: 13.5),
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        hintStyle: GmText.sans(size: 13.5, color: gm.faint),
+        filled: true,
+        fillColor: gm.surface,
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: gm.line),
+          borderRadius: BorderRadius.zero,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: gm.accent),
+          borderRadius: BorderRadius.zero,
+        ),
+        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _ctrl,
+          builder: (context, v, _) => v.text.isEmpty
+              ? const SizedBox.shrink()
+              : IconButton(
+                  key: const Key('labelSearchClear'),
+                  tooltip: MaterialLocalizations.of(context).clearButtonTooltip,
+                  icon: GmIcon(GmIcons.close, size: 18, color: gm.sub),
+                  onPressed: () {
+                    _ctrl.clear();
+                    widget.onChanged('');
+                  },
+                ),
+        ),
+      ),
+      onChanged: widget.onChanged,
     );
   }
 }
