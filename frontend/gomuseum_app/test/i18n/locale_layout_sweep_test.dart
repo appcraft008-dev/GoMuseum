@@ -42,6 +42,7 @@ import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/app_theme.dart';
+import 'package:gomuseum_app/theme/gm_tokens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'real_fonts.dart';
@@ -282,6 +283,11 @@ void main() {
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: AppTheme.lightTheme(),
+                builder: (context, child) {
+                  GmText.locale =
+                      Localizations.localeOf(context); // 同 main.dart
+                  return child!;
+                },
                 home: entry.value.page,
               ),
             ),
