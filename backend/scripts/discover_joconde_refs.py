@@ -135,7 +135,12 @@ def _same_kind(row: dict, category: str | None) -> bool:
 
 
 def lookup_ref(
-    get_json, rid: str, inv: str, locations: list[str], category: str | None = None
+    get_json,
+    rid: str,
+    inv: str,
+    locations: list[str],
+    category: str | None = None,
+    shared: bool = False,
 ) -> tuple:
     """馆藏号 → (ref, 原因)。ref 为 None 时原因说明为什么没采纳。
 
@@ -162,6 +167,9 @@ def lookup_ref(
         return None, "上游无此号"
     if used_variant and len(mine) == 1 and not _same_kind(mine[0], category):
         return None, "后缀变体命中但品类对不上(号在两个部门重复使用?)"
+    # 库里同馆同号两件(奥赛油画/雕塑两套 RF 编号):精确命中也分不清是哪件的,要核品类
+    if shared and len(mine) == 1 and not _same_kind(mine[0], category):
+        return None, "本馆同号多件且品类对不上"
     if not mine:
         return None, "命中但在别馆(寄存?)"
     if len(mine) > 1:
@@ -295,12 +303,21 @@ def main(
         todo = todo[:limit]
     print(f"待反查 {len(todo)} 件(已有 P347 的跳过)", flush=True)
 
+    inv_count: dict = {}
+    for o in objs:
+        if o.inventory_number:
+            inv_count[o.inventory_number] = inv_count.get(o.inventory_number, 0) + 1
     found = 0
     reasons: dict = {}
     for i, o in enumerate(todo):
         try:
             ref, why = lookup_ref(
-                _get_json, rid, o.inventory_number, locations, o.category
+                _get_json,
+                rid,
+                o.inventory_number,
+                locations,
+                o.category,
+                shared=inv_count[o.inventory_number] > 1,
             )
         except Exception as e:  # 单件网络失败跳过,幂等重跑再补(纪律①)
             ref, why = None, f"请求失败({type(e).__name__})"

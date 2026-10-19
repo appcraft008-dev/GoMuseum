@@ -55,23 +55,36 @@ class InventoryCollision(ValueError):
     pass
 
 
-def _guard_renumber(db: Session, obj: MuseumObject, inv: str | None) -> None:
-    """已有行不许改号改到同馆别的行占着的号上(唯一约束放开后由这里接手)。
-    prod 实证:Wikidata 重复条目按 qid 命中 B 行、却带着 A 行的号。新行同号是 find_object
-    判过的另一件作品,放行。load_stubs 的 SAVEPOINT 接住异常、跳过该件。"""
-    if obj.id is None or not inv or inv == obj.inventory_number:
+def _creator_set(attrs: dict | None) -> set:
+    attrs = attrs or {}
+    return (set(attrs.get("creator_qids") or ()) | {attrs.get("artist_qid")}) - {None}
+
+
+def _guard_inventory(db: Session, obj: MuseumObject, art: dict) -> None:
+    """唯一约束 (馆, 馆藏号) 放开后(v9u4)由这里接手挡「同一件作品占两行」:
+    - 已有行不许改号改到同馆别行占着的号(prod 实证:Wikidata 重复条目按 qid 命中 B 行、
+      却带着 A 行的号);
+    - 新行要占已有的号,必须双方作者都已知且毫无交集(奥赛油画/雕塑两套 RF 编号撞号);
+      作者有交集或未知 = 多半是重复条目,拒绝。
+    load_stubs 的 SAVEPOINT 接住异常、跳过该件。"""
+    inv = art.get("inventory_number")
+    if not inv or (obj.id is not None and inv == obj.inventory_number):
         return
-    taken = (
-        db.query(MuseumObject.id)
-        .filter(
-            MuseumObject.museum_id == obj.museum_id,
-            MuseumObject.inventory_number == inv,
-            MuseumObject.id != obj.id,
-        )
-        .first()
+    q = db.query(MuseumObject).filter(
+        MuseumObject.museum_id == obj.museum_id,
+        MuseumObject.inventory_number == inv,
     )
-    if taken:
-        raise InventoryCollision(f"{obj.qid}: 馆藏号 {inv} 已被同馆另一行占用")
+    if obj.id is not None:
+        if q.filter(MuseumObject.id != obj.id).first():
+            raise InventoryCollision(f"{obj.qid}: 馆藏号 {inv} 已被同馆另一行占用")
+        return
+    mine = _creator_set(art.get("attributes"))
+    for other in q.all():
+        theirs = _creator_set(other.attributes)
+        if not mine or not theirs or mine & theirs:
+            raise InventoryCollision(
+                f"{art.get('qid')}: 馆藏号 {inv} 已属 {other.qid},作者无法区分为两件"
+            )
 
 
 def _both_wikidata(a, b) -> bool:
@@ -90,7 +103,7 @@ def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
         )
     else:
         obj.museum_id = museum_id
-    _guard_renumber(db, obj, art.get("inventory_number"))
+    _guard_inventory(db, obj, art)
     for k in (
         "qid",
         "inventory_number",

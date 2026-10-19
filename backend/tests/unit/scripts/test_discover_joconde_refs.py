@@ -422,3 +422,15 @@ def test_suffix_variant_rejected_when_our_kind_is_unknown():
     )
     assert lookup_ref(g, "rid", "INV 8195", [LOC], "unknown")[0] is None
     assert lookup_ref(g, "rid", "INV 8195", [LOC], None)[0] is None
+
+
+def test_shared_inventory_exact_hit_must_match_kind():
+    """同馆同号两件(奥赛 RF 166 油画 + 雕塑):原值精确命中也要核品类,
+    否则雕塑那行会拿到油画的 Joconde ref,灌进别人作品的资料(Fable 审查 10-19)。"""
+    row = {"Reference": "M1", "Localisation": LOC, "Domaine": "peinture"}
+    g = _getter([row])
+    assert lookup_ref(g, "rid", "RF 166", [LOC], "sculpture", shared=True)[0] is None
+    assert lookup_ref(g, "rid", "RF 166", [LOC], "painting", shared=True) == (
+        "M1",
+        "采纳",
+    )

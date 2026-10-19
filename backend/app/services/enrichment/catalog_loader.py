@@ -44,8 +44,8 @@ def filter_new_stubs(
 
 def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:
     """StubRecord 列 → stub 对象。返回 {loaded, stub, errors}。
-    批处理纪律:①单件 SAVEPOINT 隔离——一件冲突(如 Wikidata 重复条目撞
-    UNIQUE(museum,inventory))只回滚该件、跳过继续,不炸整批;②每 200 件 commit,
+    批处理纪律:①单件 SAVEPOINT 隔离——一件冲突(如 Wikidata 重复条目占同馆同号,
+    见 object_importer._guard_inventory)只回滚该件、跳过继续,不炸整批;②每 200 件 commit,
     崩溃/重跑不丢已落进度。"""
     m = upsert_museum(db, museum)
     db.commit()
@@ -70,6 +70,9 @@ def load_stubs(db: Session, museum: dict, stubs: list[StubRecord]) -> dict:
                 attrs["wiki_titles"] = s.wiki_titles or {}
                 if s.raw.get("p276_qid"):
                     attrs["p276"] = s.raw["p276_qid"]
+                # 同馆同号判两件要比作者(object_importer._guard_inventory)
+                if s.raw.get("creator_qids"):
+                    attrs["creator_qids"] = s.raw["creator_qids"]
                 art = {
                     "qid": s.qid,
                     "inventory_number": s.inventory_number,

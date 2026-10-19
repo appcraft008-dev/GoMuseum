@@ -101,6 +101,7 @@ def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
         "inventory_number": "RF 166",
         "artist_en": "Henri Regnault",
         "image": "https://example.org/regnault.jpg",
+        "attributes": {"creator_qids": ["Q553571"]},
     }
     upsert_object(session, m.id, painting)
     session.commit()
@@ -110,6 +111,7 @@ def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
         "title_en": "Joan of Arc at Domrémy",
         "artist_en": "Henri Chapu",
         "image": "https://example.org/chapu.jpg",
+        "attributes": {"creator_qids": ["Q654201"]},
     }
     assert find_object(session, m.id, sculpture) is None
     upsert_object(session, m.id, sculpture)
@@ -125,3 +127,40 @@ def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
     assert find_object(session, m.id, sculpture).qid == "Q76465029"
     assert find_object(session, m.id, painting).qid == "Q17491121"
     assert find_object(session, m.id, {"inventory_number": "RF 166"}) is None
+
+
+def _existing_rf1(session, attrs):
+    m = upsert_museum(session, {"slug": "orsay", "name_en": "Orsay"})
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "QA", "inventory_number": "RF 1", "attributes": attrs},
+    )
+    session.commit()
+    return m
+
+
+@pytest.mark.parametrize(
+    "existing,incoming",
+    [
+        ({"creator_qids": ["C1"]}, ["C1"]),  # 作者有交集 = Wikidata 重复条目
+        ({"artist_qid": "C1"}, ["C1", "C2"]),  # 老行只有 artist_qid 也认
+        ({"creator_qids": ["C1"]}, None),  # 新件作者未知 → 不敢当两件
+        ({}, ["C2"]),  # 老行作者未知 → 不敢当两件
+    ],
+)
+def test_new_row_on_taken_inventory_needs_disjoint_creators(
+    session, existing, incoming
+):
+    """唯一约束放开后,同号新行只给「作者毫无交集」的另一件作品(Fable 审查 10-19):
+    否则重复条目按 qid 找不到旧行、会新建出同一件作品的第二行。"""
+    from app.services.object_importer import InventoryCollision
+
+    m = _existing_rf1(session, existing)
+    art = {"qid": "QB", "inventory_number": "RF 1"}
+    if incoming:
+        art["attributes"] = {"creator_qids": incoming}
+    with pytest.raises(InventoryCollision):
+        upsert_object(session, m.id, art)
+    session.rollback()
+    assert [o.qid for o in session.query(MuseumObject).all()] == ["QA"]
