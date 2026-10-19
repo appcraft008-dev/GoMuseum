@@ -4,6 +4,7 @@
 // 10-11:已拍过墙签时主按钮换成输入编号(墙签文字已预填),不再给拍说明牌(重拍同一张墙签结果一样);
 // 次按钮文字放不下(大字号/德语)时缩小到一行,不换行。
 // 10-19 用户改定:不缩字(德语曾缩到 0.57 倍),放不下换两行、两个按钮等高。
+// 10-19 V64 真机:大字号下并排折成两行难看 → 任一个一行放不下就上下各占整行。
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +59,8 @@ void main() {
 
   testWidgets('输入编号在左、重拍在右,并排同高', (t) async {
     final taps = await _pump(t);
+    await loadRealFonts(t); // 方块字体会误判成放不下而改成上下排
+    await t.pump();
     final search = find.byKey(const Key('fbSearch'));
     final retake = find.byKey(const Key('fbRetake'));
     expect(t.getTopLeft(search).dx, lessThan(t.getTopLeft(retake).dx));
@@ -102,11 +105,38 @@ void main() {
             findsNothing,
             reason: key);
       }
-      if (!seen) {
-        expect(t.getSize(find.byKey(const Key('fbSearch'))).height,
-            t.getSize(find.byKey(const Key('fbRetake'))).height);
-      }
       expect(t.takeException(), isNull);
     });
   }
+
+  testWidgets('英文 1.5 倍字号放不下:上下各占整行,每个一行', (t) async {
+    await _pump(t, textScale: 1.5);
+    await loadRealFonts(t);
+    await t.pump();
+    final search = find.byKey(const Key('fbSearch'));
+    final retake = find.byKey(const Key('fbRetake'));
+    expect(t.getSize(search).width, 360);
+    expect(t.getSize(retake).width, 360);
+    expect(t.getTopLeft(retake).dy, greaterThan(t.getTopLeft(search).dy));
+    for (final b in [search, retake]) {
+      final p = t.renderObject<RenderParagraph>(
+          find.descendant(of: b, matching: find.byType(RichText)));
+      expect(
+          p
+              .getBoxesForSelection(TextSelection(
+                  baseOffset: 0, extentOffset: p.text.toPlainText().length))
+              .map((r) => r.top)
+              .toSet()
+              .length,
+          1);
+    }
+  });
+
+  testWidgets('英文 1.0 倍字号:仍并排', (t) async {
+    await _pump(t);
+    await loadRealFonts(t);
+    await t.pump();
+    expect(t.getTopLeft(find.byKey(const Key('fbSearch'))).dy,
+        t.getTopLeft(find.byKey(const Key('fbRetake'))).dy);
+  });
 }

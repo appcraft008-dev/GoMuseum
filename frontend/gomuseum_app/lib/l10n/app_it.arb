@@ -184,7 +184,7 @@
   "recShootLabelBtn": "Fotografa il cartellino",
   "recTypeNumberOrName": "Numero o titolo",
   "photoFbTitle": "Ci invii questa foto?",
-  "photoFbBody": "Usata solo per aggiungere opere mancanti e migliorare il riconoscimento. Conservata al massimo 90 giorni, mai mostrata a nessuno.",
+  "photoFbBody": "Solo per aggiungere opere mancanti e migliorare il riconoscimento. Conservata max 90 giorni, mai pubblica.",
   "photoFbConsent": "Invia questa foto",
   "photoFbNoteHint": "Aggiungi una nota (facoltativa)",
   "photoFbContinue": "Continua",
@@ -213,8 +213,8 @@
   "camViewUpgrade": "Vedi i piani",
   "camCantPhoto": "Non puoi fotografare? Inserisci il numero di cartellino",
   "camRecognizing": "Riconoscimento…",
-  "camComparing": "L'IA confronta con collezioni e banche dati d'arte pubbliche",
-  "recWaitSlow": "Ci vuole un po' più del solito, stiamo ancora cercando",
+  "camComparing": "L'IA consulta musei e archivi d'arte",
+  "recWaitSlow": "Più lento del solito, cerchiamo ancora",
   "recWaitSwitchApp": "Puoi passare a un'altra app: il risultato sarà qui al tuo ritorno",
   "camConfirmPrompt": "Riconoscimento completato, conferma l'opera",
   "camConfidence": "Affidabilità",
@@ -368,6 +368,6 @@
   "collectionViewList": "Mostra come elenco",
   "guideNotThisOne": "Non è questa?",
   "guideNotThisOneNoted": "Annotato. Prova un'altra angolazione o usa la ricerca.",
-  "recMaybeNotCollected": "Forse è una mostra temporanea o non è ancora nella guida. Fotografare la didascalia accanto di solito funziona.",
-  "recLabelNoMatch": "Forse è una mostra temporanea o non è ancora nella guida. Prova un altro nome o numero."
+  "recMaybeNotCollected": "Mostra temporanea o non ancora in guida? Fotografa la didascalia: spesso aiuta.",
+  "recLabelNoMatch": "Mostra temporanea o non ancora in guida? Prova un altro nome o numero."
 }

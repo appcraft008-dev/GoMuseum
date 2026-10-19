@@ -623,7 +623,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get photoFbBody =>
-      'Wird nur genutzt, um fehlende Werke zu ergänzen und die Erkennung zu verbessern. Höchstens 90 Tage gespeichert, niemandem gezeigt.';
+      'Nur für fehlende Werke und bessere Erkennung. Max. 90 Tage gespeichert, nie öffentlich.';
 
   @override
   String get photoFbConsent => 'Dieses Foto senden';
@@ -715,15 +715,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get camRecognizing => 'Erkenne…';
 
   @override
-  String get camComparing =>
-      'KI vergleicht mit Sammlungen und öffentlichen Kunstdatenbanken';
+  String get camComparing => 'KI prüft Museums- und Kunstdatenbanken';
 
   @override
-  String get recWaitSlow => 'Dauert etwas länger als sonst – wir suchen noch';
+  String get recWaitSlow => 'Dauert etwas länger – wir suchen noch';
 
   @override
   String get recWaitSwitchApp =>
-      'Du kannst zu einer anderen App wechseln – das Ergebnis ist da, wenn du zurückkommst';
+      'Du kannst die App wechseln – das Ergebnis wartet auf dich';
 
   @override
   String get camConfirmPrompt =>
@@ -1237,9 +1236,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Vielleicht eine Sonderausstellung oder noch nicht im Guide. Ein Foto des Schilds daneben hilft meist.';
+      'Sonderschau oder noch nicht im Guide? Ein Foto vom Schild hilft meist.';
 
   @override
   String get recLabelNoMatch =>
-      'Vielleicht eine Sonderausstellung oder noch nicht im Guide. Versuche einen anderen Namen oder eine Nummer.';
+      'Sonderschau oder noch nicht im Guide? Probier anderen Namen oder Nummer.';
 }

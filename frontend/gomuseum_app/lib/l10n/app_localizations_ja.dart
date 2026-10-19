@@ -605,7 +605,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get photoFbTitle => 'この写真を送りますか?';
 
   @override
-  String get photoFbBody => '未収録の作品の追加と認識の改善にのみ使います。保存は最長 90 日で、誰にも公開しません。';
+  String get photoFbBody => '未収録作品の追加と認識の改善にのみ使います。保存は最長 90 日で、誰にも公開しません。';
 
   @override
   String get photoFbConsent => 'この写真を送る';
@@ -692,10 +692,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get camRecognizing => '認識中…';
 
   @override
-  String get camComparing => 'AIがコレクションと公開美術データベースと照合中';
+  String get camComparing => 'AIが美術館・美術データベースと照合中';
 
   @override
-  String get recWaitSlow => 'いつもより少し時間がかかっています。検索を続けています';
+  String get recWaitSlow => 'いつもより時間がかかっています。検索中';
 
   @override
   String get recWaitSwitchApp => 'ほかのアプリに切り替えても大丈夫です。戻ったときに結果が表示されます';
@@ -1181,9 +1181,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guideNotThisOneNoted => '記録しました。角度を変えて撮り直すか、検索で探してください。';
 
   @override
-  String get recMaybeNotCollected =>
-      '企画展か、まだ収録されていない作品かもしれません。横の解説パネルを撮ると認識しやすくなります。';
+  String get recMaybeNotCollected => '企画展か未収録の作品かもしれません。横の解説を撮ると認識しやすくなります。';
 
   @override
-  String get recLabelNoMatch => '企画展か、まだ収録されていない作品かもしれません。別の名前や番号で検索してみてください。';
+  String get recLabelNoMatch => '企画展か未収録の作品かもしれません。別の名前や番号で探してみてください。';
 }

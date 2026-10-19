@@ -620,7 +620,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get photoFbBody =>
-      'Usata solo per aggiungere opere mancanti e migliorare il riconoscimento. Conservata al massimo 90 giorni, mai mostrata a nessuno.';
+      'Solo per aggiungere opere mancanti e migliorare il riconoscimento. Conservata max 90 giorni, mai pubblica.';
 
   @override
   String get photoFbConsent => 'Invia questa foto';
@@ -714,12 +714,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get camRecognizing => 'Riconoscimento…';
 
   @override
-  String get camComparing =>
-      'L\'IA confronta con collezioni e banche dati d\'arte pubbliche';
+  String get camComparing => 'L\'IA consulta musei e archivi d\'arte';
 
   @override
-  String get recWaitSlow =>
-      'Ci vuole un po\' più del solito, stiamo ancora cercando';
+  String get recWaitSlow => 'Più lento del solito, cerchiamo ancora';
 
   @override
   String get recWaitSwitchApp =>
@@ -1233,9 +1231,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Forse è una mostra temporanea o non è ancora nella guida. Fotografare la didascalia accanto di solito funziona.';
+      'Mostra temporanea o non ancora in guida? Fotografa la didascalia: spesso aiuta.';
 
   @override
   String get recLabelNoMatch =>
-      'Forse è una mostra temporanea o non è ancora nella guida. Prova un altro nome o numero.';
+      'Mostra temporanea o non ancora in guida? Prova un altro nome o numero.';
 }

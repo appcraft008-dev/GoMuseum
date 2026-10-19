@@ -1220,7 +1220,7 @@ abstract class AppLocalizations {
   /// Photo feedback dialog purpose line. Must keep both promises: kept at most 90 days, never shown publicly
   ///
   /// In en, this message translates to:
-  /// **'Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.'**
+  /// **'Only to add missing works and improve recognition. Kept up to 90 days, never public.'**
   String get photoFbBody;
 
   /// Checkbox label, unchecked by default
@@ -1394,19 +1394,19 @@ abstract class AppLocalizations {
   /// No description provided for @camComparing.
   ///
   /// In en, this message translates to:
-  /// **'AI is comparing with collections and public art databases'**
+  /// **'AI is checking museum & art databases'**
   String get camComparing;
 
   /// Recognition loading hint shown after ~10s
   ///
   /// In en, this message translates to:
-  /// **'Taking a bit longer than usual — still looking'**
+  /// **'Taking a bit longer — still looking'**
   String get recWaitSlow;
 
   /// Recognition loading hint shown after ~20s; promises only switching apps, not leaving the page
   ///
   /// In en, this message translates to:
-  /// **'You can switch to another app — the result will be here when you come back'**
+  /// **'You can switch apps — the result will be here when you\'re back'**
   String get recWaitSwitchApp;
 
   /// No description provided for @camConfirmPrompt.
@@ -2234,13 +2234,13 @@ abstract class AppLocalizations {
   /// Hint under 'not recognized' title (artwork photo): temporary exhibitions are never in the catalog; shooting the label helps
   ///
   /// In en, this message translates to:
-  /// **'It may be a temporary exhibit or not in our guide yet. Snapping the label next to it usually works.'**
+  /// **'Temporary show or not in our guide yet? Snapping its label usually helps.'**
   String get recMaybeNotCollected;
 
   /// Hint under 'couldn't find this work': label text was read but matched nothing; suggest another search, not shooting the label again
   ///
   /// In en, this message translates to:
-  /// **'It may be a temporary exhibit or not in our guide yet. Try another name or number.'**
+  /// **'Temporary show or not in our guide yet? Try another name or number.'**
   String get recLabelNoMatch;
 }
 

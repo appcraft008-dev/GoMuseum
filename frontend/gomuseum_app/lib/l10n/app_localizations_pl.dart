@@ -623,7 +623,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get photoFbBody =>
-      'Służy wyłącznie do uzupełniania brakujących dzieł i poprawy rozpoznawania. Przechowujemy je najwyżej 90 dni i nikomu nie pokazujemy.';
+      'Tylko do uzupełniania dzieł i lepszego rozpoznawania. Maks. 90 dni, nigdy publicznie.';
 
   @override
   String get photoFbConsent => 'Wyślij to zdjęcie';
@@ -715,15 +715,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get camRecognizing => 'Rozpoznawanie…';
 
   @override
-  String get camComparing =>
-      'AI porównuje z kolekcjami i publicznymi bazami dzieł sztuki';
+  String get camComparing => 'AI porównuje z bazami muzeów i sztuki';
 
   @override
-  String get recWaitSlow => 'Trwa to trochę dłużej niż zwykle — wciąż szukamy';
+  String get recWaitSlow => 'Trwa dłużej niż zwykle — szukamy';
 
   @override
   String get recWaitSwitchApp =>
-      'Możesz przełączyć się na inną aplikację — wynik będzie czekał po powrocie';
+      'Możesz przełączyć aplikację — wynik poczeka na Twój powrót';
 
   @override
   String get camConfirmPrompt => 'Rozpoznano, potwierdź dzieło';
@@ -1236,9 +1235,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Zdjęcie opisu obok zwykle pomaga.';
+      'Wystawa czasowa lub jeszcze nie w przewodniku? Zdjęcie opisu zwykle pomaga.';
 
   @override
   String get recLabelNoMatch =>
-      'Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Spróbuj innej nazwy lub numeru.';
+      'Wystawa czasowa lub jeszcze nie w przewodniku? Spróbuj innej nazwy lub numeru.';
 }
