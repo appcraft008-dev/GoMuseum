@@ -94,7 +94,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count darmowych skanów · Ulepsz, aby uzyskać pełny dostęp';
+    return 'Pozostałe darmowe skany: $count · Odblokuj wszystko';
   }
 
   @override
@@ -143,7 +143,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get exploreTitle => 'Odkrywaj';
 
   @override
-  String get searchCityMuseumArtwork => 'Szukaj miast, muzeów lub dzieł';
+  String get searchCityMuseumArtwork => 'Miasta, muzea lub dzieła';
 
   @override
   String get searchMuseumsSection => 'Muzea';

@@ -284,7 +284,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeFreeLeft.
   ///
   /// In en, this message translates to:
-  /// **'{count} free scans left · Upgrade for full access'**
+  /// **'Free scans left: {count} · Upgrade for full access'**
   String homeFreeLeft(Object count);
 
   /// No description provided for @homePassActive.
@@ -362,7 +362,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchCityMuseumArtwork.
   ///
   /// In en, this message translates to:
-  /// **'Search cities, museums or artworks'**
+  /// **'Cities, museums, artworks'**
   String get searchCityMuseumArtwork;
 
   /// No description provided for @searchMuseumsSection.

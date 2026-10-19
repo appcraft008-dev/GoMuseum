@@ -31,7 +31,7 @@
   "homePocketGuide": "Pocket Museum Guide",
   "homeSlogan": "Step closer to one work,\nhear the story behind it.",
   "homeCtaRecognize": "Snap & Listen",
-  "homeFreeLeft": "{count} free scans left · Upgrade for full access",
+  "homeFreeLeft": "Free scans left: {count} · Upgrade for full access",
   "@homeFreeLeft": {
     "placeholders": {
       "count": {
@@ -79,7 +79,7 @@
   "homeContinue": "Pick up where you left off",
   "statusOpen": "Open",
   "exploreTitle": "Explore",
-  "searchCityMuseumArtwork": "Search cities, museums or artworks",
+  "searchCityMuseumArtwork": "Cities, museums, artworks",
   "searchMuseumsSection": "Museums",
   "searchArtworksSection": "Artworks",
   "searchNoResults": "No results found",

@@ -91,11 +91,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeSlogan => 'Acércate a una obra,\nescucha su historia.';
 
   @override
-  String get homeCtaRecognize => 'Fotografía y escucha';
+  String get homeCtaRecognize => 'Haz una foto y escucha';
 
   @override
   String homeFreeLeft(Object count) {
-    return 'Te quedan $count escaneos · Mejora a acceso completo';
+    return 'Escaneos gratis restantes: $count · Accede a todo';
   }
 
   @override
@@ -144,7 +144,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exploreTitle => 'Explorar';
 
   @override
-  String get searchCityMuseumArtwork => 'Buscar ciudades, museos u obras';
+  String get searchCityMuseumArtwork => 'Ciudades, museos u obras';
 
   @override
   String get searchMuseumsSection => 'Museos';

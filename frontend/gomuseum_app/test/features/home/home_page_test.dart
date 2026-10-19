@@ -293,7 +293,7 @@ void main() {
 
     for (final finder in [
       find.textContaining('Approchez une'),
-      find.textContaining('scans gratuits', findRichText: true),
+      find.textContaining('Scans gratuits', findRichText: true),
     ]) {
       final r = tester.getRect(finder.first);
       expect(r.left, greaterThan(0), reason: '左边贴着屏幕边了');

@@ -90,11 +90,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeSlogan => '一つの作品に近づいて、\nその物語を聴こう。';
 
   @override
-  String get homeCtaRecognize => '撮影して認識・再生';
+  String get homeCtaRecognize => '撮影して解説を聴く';
 
   @override
   String homeFreeLeft(Object count) {
-    return '無料スキャン残り$count回 · アップグレードで全機能';
+    return '無料スキャン残り$count回 · 全館聴き放題へ';
   }
 
   @override

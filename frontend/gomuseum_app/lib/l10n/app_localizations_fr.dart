@@ -95,7 +95,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count scans gratuits restants · Passez à l\'offre complète';
+    return 'Scans gratuits restants : $count · Offre complète';
   }
 
   @override
