@@ -34,17 +34,44 @@ def find_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject | 
         if hit:
             return hit
     if art.get("inventory_number"):
-        hit = (
+        rows = (
             db.query(MuseumObject)
             .filter_by(museum_id=museum_id, inventory_number=art["inventory_number"])
-            .one_or_none()
+            .all()
         )
         # 同馆同号却是另一个 Wikidata 条目 = 另一件作品(奥赛油画/雕塑两套 RF 编号),
-        # 不能并进这行;交给唯一约束拒绝,load_stubs 的 SAVEPOINT 会跳过并记日志
-        if hit and _both_wikidata(hit.qid, art.get("qid")) and hit.qid != art["qid"]:
-            return None
-        return hit
+        # 不能并进那行,让调用方新建一行
+        rows = [
+            r
+            for r in rows
+            if not (_both_wikidata(r.qid, art.get("qid")) and r.qid != art["qid"])
+        ]
+        # 同号多件又没有 qid 可分辨 → 不猜
+        return rows[0] if len(rows) == 1 else None
     return None
+
+
+class InventoryCollision(ValueError):
+    pass
+
+
+def _guard_renumber(db: Session, obj: MuseumObject, inv: str | None) -> None:
+    """已有行不许改号改到同馆别的行占着的号上(唯一约束放开后由这里接手)。
+    prod 实证:Wikidata 重复条目按 qid 命中 B 行、却带着 A 行的号。新行同号是 find_object
+    判过的另一件作品,放行。load_stubs 的 SAVEPOINT 接住异常、跳过该件。"""
+    if obj.id is None or not inv or inv == obj.inventory_number:
+        return
+    taken = (
+        db.query(MuseumObject.id)
+        .filter(
+            MuseumObject.museum_id == obj.museum_id,
+            MuseumObject.inventory_number == inv,
+            MuseumObject.id != obj.id,
+        )
+        .first()
+    )
+    if taken:
+        raise InventoryCollision(f"{obj.qid}: 馆藏号 {inv} 已被同馆另一行占用")
 
 
 def _both_wikidata(a, b) -> bool:
@@ -63,6 +90,7 @@ def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
         )
     else:
         obj.museum_id = museum_id
+    _guard_renumber(db, obj, art.get("inventory_number"))
     for k in (
         "qid",
         "inventory_number",

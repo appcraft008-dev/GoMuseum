@@ -91,9 +91,8 @@ def test_category_not_overwritten_when_absent(session):
 def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
     """奥赛油画与雕塑两套编号都叫 RF n:RF 166 既是 Regnault 油画 Q17491121
     又是 Chapu 雕塑 Q76465029。按馆藏号兜底不能把另一个 Wikidata 条目并进这行
-    (否则 qid/署名/图被改写、缺的字段留旧值 → 一行混两件,2026-10-19 查出 10 行)。"""
-    from sqlalchemy.exc import IntegrityError
-
+    (否则 qid/署名/图被改写、缺的字段留旧值 → 一行混两件,2026-10-19 查出 10 行);
+    唯一约束放开后(10-19)两件各占一行。"""
     from app.services.object_importer import find_object
 
     m = upsert_museum(session, {"slug": "orsay", "name_en": "Orsay"})
@@ -113,13 +112,16 @@ def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
         "image": "https://example.org/chapu.jpg",
     }
     assert find_object(session, m.id, sculpture) is None
-    with pytest.raises(IntegrityError):  # 撞唯一约束 → 由 load_stubs 的 SAVEPOINT 跳过
-        upsert_object(session, m.id, sculpture)
-    session.rollback()
-    obj = session.query(MuseumObject).one()
-    assert (obj.qid, obj.artist_en, obj.title_en) == (
-        "Q17491121",
+    upsert_object(session, m.id, sculpture)
+    session.commit()
+    rows = {o.qid: o for o in session.query(MuseumObject).all()}
+    assert set(rows) == {"Q17491121", "Q76465029"}
+    assert (rows["Q17491121"].artist_en, rows["Q17491121"].title_en) == (
         "Henri Regnault",
         None,
     )
-    assert session.query(ObjectImage).one().source_url.endswith("regnault.jpg")
+    assert rows["Q76465029"].artist_en == "Henri Chapu"
+    # 两件都在后,按 qid 重导仍各回各行;无 qid 按号兜底有歧义 → 不猜
+    assert find_object(session, m.id, sculpture).qid == "Q76465029"
+    assert find_object(session, m.id, painting).qid == "Q17491121"
+    assert find_object(session, m.id, {"inventory_number": "RF 166"}) is None

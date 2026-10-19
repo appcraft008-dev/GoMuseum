@@ -184,3 +184,24 @@ def test_wikidata_catalog_retries_empty_page_before_stop():
     out = list(WikidataCatalog(run_query=fake).list(_Cfg()))
     assert {r.qid for r in out} == {"Q1", "Q2"}  # 空页重试后仍收到 Q2
     assert calls["n"] >= 5  # 页2空+重试, 尾部空页也要连空3次才停
+
+
+def test_wikidata_catalog_collects_all_creator_qids():
+    # 撞号判同要看作者集合(merge_stubs):多作者每人一行,按 qid 归并时累积
+    rows = [_row("Q1", "A", 5), _row("Q1", "A", 5)]
+    rows[0]["creator"] = {"value": "http://www.wikidata.org/entity/Q10"}
+    rows[1]["creator"] = {"value": "http://www.wikidata.org/entity/Q11"}
+    calls = {"n": 0}
+
+    def fake(sparql):
+        calls["n"] += 1
+        return rows if calls["n"] == 1 else []
+
+    out = list(WikidataCatalog(run_query=fake).list(_Cfg()))
+    assert out[0].raw["creator_qids"] == ["Q10", "Q11"]
+
+
+def test_wikidata_query_selects_creator_qid():
+    from app.services.enrichment.sources import wikidata as _wd
+
+    assert "?creator " in _wd.QUERY.split("WHERE")[0]

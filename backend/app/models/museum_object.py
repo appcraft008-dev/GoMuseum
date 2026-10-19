@@ -7,10 +7,10 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
-    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -21,10 +21,9 @@ from app.core.database import Base
 
 class MuseumObject(Base):
     __tablename__ = "museum_objects"
+    # 同馆同号可以是两件(奥赛油画/雕塑两套 RF 编号撞号),只建普通索引;身份靠 qid
     __table_args__ = (
-        UniqueConstraint(
-            "museum_id", "inventory_number", name="uq_object_museum_inventory"
-        ),
+        Index("ix_object_museum_inventory", "museum_id", "inventory_number"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
