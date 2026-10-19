@@ -55,6 +55,28 @@ class _ImageGalleryState extends State<_ImageGallery> {
     _pc = PageController(initialPage: _i);
   }
 
+  static const _flip = Duration(milliseconds: 250);
+
+  Widget _arrow(Key key, Alignment at, GmIcons icon, VoidCallback onTap) =>
+      Align(
+        alignment: at,
+        child: GestureDetector(
+          key: key,
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                  color: Colors.black38, shape: BoxShape.circle),
+              child: GmIcon(icon, size: 20, color: Colors.white),
+            ),
+          ),
+        ),
+      );
+
   @override
   void dispose() {
     _pc.dispose();
@@ -110,6 +132,14 @@ class _ImageGalleryState extends State<_ImageGallery> {
               ),
             ),
           ),
+
+          // 左右箭头:提示能滑,也是放大后换一张的唯一途径(放大时拖动是平移)
+          if (multi && _i > 0)
+            _arrow(const Key('galPrev'), Alignment.centerLeft, GmIcons.back,
+                () => _pc.previousPage(duration: _flip, curve: Curves.easeOut)),
+          if (multi && _i < images.length - 1)
+            _arrow(const Key('galNext'), Alignment.centerRight, GmIcons.chevR,
+                () => _pc.nextPage(duration: _flip, curve: Curves.easeOut)),
 
           // 关闭（放大状态下点击不响应，这里是唯一出口）
           SafeArea(

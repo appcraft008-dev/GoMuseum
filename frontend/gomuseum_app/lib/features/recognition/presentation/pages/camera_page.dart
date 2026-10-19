@@ -553,7 +553,6 @@ class _CameraPageState extends ConsumerState<CameraPage>
     final st = ref.read(recognitionNotifierProvider);
     if (st is! RecognitionCandidates) return;
     final cands = st.candidates;
-    final l10n = AppLocalizations.of(context)!;
     showImageGallery(
       context,
       images: [
@@ -561,23 +560,17 @@ class _CameraPageState extends ConsumerState<CameraPage>
           ObjectImage(url: c.image ?? c.thumbnail ?? '', credit: c.credit),
       ],
       initialIndex: cands.indexOf(tapped).clamp(0, cands.length - 1),
-      footerBuilder: (ctx, i) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(cands[i].title,
-              textAlign: TextAlign.center,
-              style: GmText.serif(
-                  size: 16, weight: FontWeight.w600, color: Colors.white)),
-          const SizedBox(height: 10),
-          GmTicketButton(
-            label: l10n.recThisIsIt,
-            icon: GmIcons.chevR,
-            onTap: () {
-              Navigator.of(ctx).pop();
-              _goGuide(cands[i].museum!, cands[i].qid);
-            },
-          ),
-        ],
+      footerBuilder: (ctx, i) => CandidateViewerFooter(
+        title: cands[i].title,
+        isLast: i == cands.length - 1,
+        onPick: () {
+          Navigator.of(ctx).pop();
+          _goGuide(cands[i].museum!, cands[i].qid);
+        },
+        onNone: () {
+          Navigator.of(ctx).pop();
+          _rejectCandidates();
+        },
       ),
     );
   }
@@ -1038,6 +1031,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ];
   }
 
+  void _rejectCandidates() {
+    ref.read(recognitionNotifierProvider.notifier).rejectCandidates();
+    _reachedChoice = true; // 「都不是」= 走到选择页(S5)
+  }
+
   /// 候选确认卡「是这件吗？」——点选跳该 qid 详情，都不是走未收录。
   List<Widget> _candidatesContent(GmPalette gm, RecognitionCandidates state) {
     final l10n = AppLocalizations.of(context)!;
@@ -1057,10 +1055,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       const SizedBox(height: 4),
       Center(
         child: GestureDetector(
-          onTap: () {
-            ref.read(recognitionNotifierProvider.notifier).rejectCandidates();
-            _reachedChoice = true; // 「都不是」= 走到选择页(S5)
-          },
+          onTap: _rejectCandidates,
           child: Text(l10n.recNoneOfThese,
               style: GmText.sans(size: 12.5, color: gm.accent)),
         ),
@@ -1320,6 +1315,50 @@ class CandidateRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 候选全屏比对的底栏:标题 +「就是这件」;滑到最后一个候选才出「都不是」(10-19 用户定),
+/// 比对完不用退回候选页再点。不做「滑过头自动跳」——误触即丢候选、退不回。
+class CandidateViewerFooter extends StatelessWidget {
+  const CandidateViewerFooter(
+      {super.key,
+      required this.title,
+      required this.isLast,
+      required this.onPick,
+      required this.onNone});
+
+  final String title;
+  final bool isLast;
+  final VoidCallback onPick;
+  final VoidCallback onNone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(title,
+            textAlign: TextAlign.center,
+            style: GmText.serif(
+                size: 16, weight: FontWeight.w600, color: Colors.white)),
+        const SizedBox(height: 10),
+        GmTicketButton(
+            label: l10n.recThisIsIt, icon: GmIcons.chevR, onTap: onPick),
+        if (isLast)
+          GestureDetector(
+            key: const Key('viewerNone'),
+            onTap: onNone,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              child: Text(l10n.recNoneOfThese,
+                  style: GmText.sans(size: 13.5, color: Colors.white70)),
+            ),
+          ),
+      ],
     );
   }
 }
