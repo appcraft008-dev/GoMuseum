@@ -184,7 +184,7 @@
   "recShootLabelBtn": "Fotografía la cartela",
   "recTypeNumberOrName": "Número o título",
   "photoFbTitle": "¿Nos envías esta foto?",
-  "photoFbBody": "Solo se usa para añadir obras que faltan y mejorar el reconocimiento. Se guarda 90 días como máximo y nunca se muestra a nadie.",
+  "photoFbBody": "Solo para añadir obras que faltan y mejorar el reconocimiento. Se guarda 90 días máx., nunca se publica.",
   "photoFbConsent": "Enviar esta foto",
   "photoFbNoteHint": "Añadir una nota (opcional)",
   "photoFbContinue": "Continuar",
@@ -213,8 +213,8 @@
   "camViewUpgrade": "Ver planes de mejora",
   "camCantPhoto": "¿No puedes hacer foto? Introduce el número de cartela",
   "camRecognizing": "Reconociendo…",
-  "camComparing": "La IA compara con colecciones y bases de datos de arte públicas",
-  "recWaitSlow": "Está tardando un poco más de lo normal; seguimos buscando",
+  "camComparing": "La IA consulta museos y bases de arte",
+  "recWaitSlow": "Tarda un poco más; seguimos buscando",
   "recWaitSwitchApp": "Puedes cambiar a otra app: el resultado seguirá aquí cuando vuelvas",
   "camConfirmPrompt": "Reconocimiento completado, confirma la obra",
   "camConfidence": "Confianza",
@@ -368,6 +368,6 @@
   "collectionViewList": "Ver como lista",
   "guideNotThisOne": "¿No es esta?",
   "guideNotThisOneNoted": "Anotado. Prueba con otro ángulo o usa la búsqueda.",
-  "recMaybeNotCollected": "Puede ser una exposición temporal o aún no estar en la guía. Fotografiar la cartela suele funcionar.",
-  "recLabelNoMatch": "Puede ser una exposición temporal o aún no estar en la guía. Prueba otro nombre o número."
+  "recMaybeNotCollected": "¿Expo temporal o aún no en la guía? Una foto de la cartela suele ayudar.",
+  "recLabelNoMatch": "¿Expo temporal o aún no en la guía? Prueba otro nombre o número."
 }

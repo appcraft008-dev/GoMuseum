@@ -184,7 +184,7 @@
   "recShootLabelBtn": "Wandschild fotografieren",
   "recTypeNumberOrName": "Nr. oder Titel",
   "photoFbTitle": "Uns dieses Foto senden?",
-  "photoFbBody": "Wird nur genutzt, um fehlende Werke zu ergänzen und die Erkennung zu verbessern. Höchstens 90 Tage gespeichert, niemandem gezeigt.",
+  "photoFbBody": "Nur für fehlende Werke und bessere Erkennung. Max. 90 Tage gespeichert, nie öffentlich.",
   "photoFbConsent": "Dieses Foto senden",
   "photoFbNoteHint": "Anmerkung hinzufügen (optional)",
   "photoFbContinue": "Weiter",
@@ -213,9 +213,9 @@
   "camViewUpgrade": "Upgrade-Optionen ansehen",
   "camCantPhoto": "Kein Foto möglich? Schildnummer eingeben",
   "camRecognizing": "Erkenne…",
-  "camComparing": "KI vergleicht mit Sammlungen und öffentlichen Kunstdatenbanken",
-  "recWaitSlow": "Dauert etwas länger als sonst – wir suchen noch",
-  "recWaitSwitchApp": "Du kannst zu einer anderen App wechseln – das Ergebnis ist da, wenn du zurückkommst",
+  "camComparing": "KI prüft Museums- und Kunstdatenbanken",
+  "recWaitSlow": "Dauert etwas länger – wir suchen noch",
+  "recWaitSwitchApp": "Du kannst die App wechseln – das Ergebnis wartet auf dich",
   "camConfirmPrompt": "Erkennung abgeschlossen, bitte Werk bestätigen",
   "camConfidence": "Sicherheit",
   "camConfirmStart": "Bestätigen & Führung starten",
@@ -368,6 +368,6 @@
   "collectionViewList": "Als Liste anzeigen",
   "guideNotThisOne": "Nicht dieses Werk?",
   "guideNotThisOneNoted": "Notiert. Versuche einen anderen Winkel oder nutze die Suche.",
-  "recMaybeNotCollected": "Vielleicht eine Sonderausstellung oder noch nicht im Guide. Ein Foto des Schilds daneben hilft meist.",
-  "recLabelNoMatch": "Vielleicht eine Sonderausstellung oder noch nicht im Guide. Versuche einen anderen Namen oder eine Nummer."
+  "recMaybeNotCollected": "Sonderschau oder noch nicht im Guide? Ein Foto vom Schild hilft meist.",
+  "recLabelNoMatch": "Sonderschau oder noch nicht im Guide? Probier anderen Namen oder Nummer."
 }

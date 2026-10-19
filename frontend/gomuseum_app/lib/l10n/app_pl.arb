@@ -184,7 +184,7 @@
   "recShootLabelBtn": "Sfotografuj tabliczkę",
   "recTypeNumberOrName": "Numer lub tytuł",
   "photoFbTitle": "Wysłać nam to zdjęcie?",
-  "photoFbBody": "Służy wyłącznie do uzupełniania brakujących dzieł i poprawy rozpoznawania. Przechowujemy je najwyżej 90 dni i nikomu nie pokazujemy.",
+  "photoFbBody": "Tylko do uzupełniania dzieł i lepszego rozpoznawania. Maks. 90 dni, nigdy publicznie.",
   "photoFbConsent": "Wyślij to zdjęcie",
   "photoFbNoteHint": "Dodaj uwagę (opcjonalnie)",
   "photoFbContinue": "Dalej",
@@ -213,9 +213,9 @@
   "camViewUpgrade": "Zobacz plany",
   "camCantPhoto": "Nie możesz zrobić zdjęcia? Wpisz numer tabliczki",
   "camRecognizing": "Rozpoznawanie…",
-  "camComparing": "AI porównuje z kolekcjami i publicznymi bazami dzieł sztuki",
-  "recWaitSlow": "Trwa to trochę dłużej niż zwykle — wciąż szukamy",
-  "recWaitSwitchApp": "Możesz przełączyć się na inną aplikację — wynik będzie czekał po powrocie",
+  "camComparing": "AI porównuje z bazami muzeów i sztuki",
+  "recWaitSlow": "Trwa dłużej niż zwykle — szukamy",
+  "recWaitSwitchApp": "Możesz przełączyć aplikację — wynik poczeka na Twój powrót",
   "camConfirmPrompt": "Rozpoznano, potwierdź dzieło",
   "camConfidence": "Pewność",
   "camConfirmStart": "Potwierdź i rozpocznij przewodnik",
@@ -368,6 +368,6 @@
   "collectionViewList": "Pokaż jako listę",
   "guideNotThisOne": "To nie to dzieło?",
   "guideNotThisOneNoted": "Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania.",
-  "recMaybeNotCollected": "Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Zdjęcie opisu obok zwykle pomaga.",
-  "recLabelNoMatch": "Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Spróbuj innej nazwy lub numeru."
+  "recMaybeNotCollected": "Wystawa czasowa lub jeszcze nie w przewodniku? Zdjęcie opisu zwykle pomaga.",
+  "recLabelNoMatch": "Wystawa czasowa lub jeszcze nie w przewodniku? Spróbuj innej nazwy lub numeru."
 }

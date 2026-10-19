@@ -1345,38 +1345,34 @@ class FallbackChoices extends StatelessWidget {
   Widget build(BuildContext context) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
+    final labelStyle = GmText.sans(
+        size: 13.5, weight: FontWeight.w600, color: gm.accent, height: 1.25);
     Widget secondary(Key key, GmIcons icon, String label, VoidCallback onTap) =>
-        Expanded(
-          child: GestureDetector(
-            key: key,
-            onTap: onTap,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 48),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                border: Border.all(color: gm.accent),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GmIcon(icon, size: 16, color: gm.accent),
-                  const SizedBox(width: 6),
-                  // 放不下就换两行、不缩字(用户 10-19 定,取代 10-11 的"缩小不换行":
-                  // 缩放让德语缩到 0.57 倍,英文也只剩 0.68)
-                  Flexible(
-                    child: Text(label,
-                        maxLines: 2,
-                        textAlign: TextAlign.center,
-                        style: GmText.sans(
-                            size: 13.5,
-                            weight: FontWeight.w600,
-                            color: gm.accent,
-                            height: 1.25)),
-                  ),
-                ],
-              ),
+        GestureDetector(
+          key: key,
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: gm.accent),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GmIcon(icon, size: 16, color: gm.accent),
+                const SizedBox(width: 6),
+                // 放不下就换两行、不缩字(用户 10-19 定,取代 10-11 的"缩小不换行":
+                // 缩放让德语缩到 0.57 倍,英文也只剩 0.68)
+                Flexible(
+                  child: Text(label,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      style: labelStyle),
+                ),
+              ],
             ),
           ),
         );
@@ -1392,20 +1388,49 @@ class FallbackChoices extends StatelessWidget {
           onTap: labelSeen ? onSearch : onShootLabel,
         ),
         const SizedBox(height: 10),
-        // 一个换成两行时另一个跟着等高
-        IntrinsicHeight(
-            child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 已读出墙签:重拍同一张墙签结果一样,改字走主按钮的预填搜索(用户 10-11 定)
-            if (!labelSeen) ...[
-              secondary(const Key('fbSearch'), GmIcons.search,
-                  l10n.recTypeNumberOrName, onSearch),
-              const SizedBox(width: 10),
-            ],
-            retake,
-          ],
-        )),
+        // 已读出墙签:重拍同一张墙签结果一样,改字走主按钮的预填搜索(用户 10-11 定)
+        if (labelSeen)
+          retake
+        else
+          // 字体是运行时下载的(google_fonts),到货后要重新量
+          ListenableBuilder(
+            listenable: PaintingBinding.instance.systemFonts,
+            builder: (context, _) => LayoutBuilder(builder: (context, c) {
+              final search = secondary(const Key('fbSearch'), GmIcons.search,
+                  l10n.recTypeNumberOrName, onSearch);
+              // 并排时文字可用宽 = 半宽 − 内边距 16 − 描边 2 − 图标 16 − 间距 6。
+              // 大字号下任一个一行放不下就上下各占整行(10-19 真机:并排折成两行难看)
+              final room = (c.maxWidth - 10) / 2 - 40;
+              final scaler = MediaQuery.textScalerOf(context);
+              final fits =
+                  [l10n.recTypeNumberOrName, l10n.camRetake].every((t) {
+                final tp = TextPainter(
+                    text: TextSpan(text: t, style: labelStyle),
+                    textScaler: scaler,
+                    textDirection: Directionality.of(context))
+                  ..layout();
+                final w = tp.width;
+                tp.dispose();
+                return w <= room;
+              });
+              if (!fits) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [search, const SizedBox(height: 10), retake],
+                );
+              }
+              // 一个换成两行时另一个跟着等高
+              return IntrinsicHeight(
+                  child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: search),
+                  const SizedBox(width: 10),
+                  Expanded(child: retake),
+                ],
+              ));
+            }),
+          ),
       ],
     );
   }

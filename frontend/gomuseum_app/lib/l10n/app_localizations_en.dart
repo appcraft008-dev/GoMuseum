@@ -616,7 +616,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get photoFbBody =>
-      'Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.';
+      'Only to add missing works and improve recognition. Kept up to 90 days, never public.';
 
   @override
   String get photoFbConsent => 'Send this photo';
@@ -708,15 +708,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get camRecognizing => 'Recognizing…';
 
   @override
-  String get camComparing =>
-      'AI is comparing with collections and public art databases';
+  String get camComparing => 'AI is checking museum & art databases';
 
   @override
-  String get recWaitSlow => 'Taking a bit longer than usual — still looking';
+  String get recWaitSlow => 'Taking a bit longer — still looking';
 
   @override
   String get recWaitSwitchApp =>
-      'You can switch to another app — the result will be here when you come back';
+      'You can switch apps — the result will be here when you\'re back';
 
   @override
   String get camConfirmPrompt => 'Recognition done, please confirm the work';
@@ -1226,9 +1225,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'It may be a temporary exhibit or not in our guide yet. Snapping the label next to it usually works.';
+      'Temporary show or not in our guide yet? Snapping its label usually helps.';
 
   @override
   String get recLabelNoMatch =>
-      'It may be a temporary exhibit or not in our guide yet. Try another name or number.';
+      'Temporary show or not in our guide yet? Try another name or number.';
 }

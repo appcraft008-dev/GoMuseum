@@ -625,7 +625,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get photoFbBody =>
-      'Utilisée uniquement pour ajouter les œuvres manquantes et améliorer la reconnaissance. Conservée 90 jours au maximum, jamais montrée à personne.';
+      'Sert uniquement à ajouter les œuvres manquantes et à mieux reconnaître. Gardée 90 jours max., jamais publiée.';
 
   @override
   String get photoFbConsent => 'Envoyer cette photo';
@@ -719,16 +719,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get camRecognizing => 'Reconnaissance…';
 
   @override
-  String get camComparing =>
-      'L\'IA compare avec les collections et les bases d\'art publiques';
+  String get camComparing => 'L\'IA consulte musées et bases d\'art';
 
   @override
-  String get recWaitSlow =>
-      'Un peu plus long que d\'habitude — on cherche encore';
+  String get recWaitSlow => 'Plus long que d\'habitude — on cherche';
 
   @override
   String get recWaitSwitchApp =>
-      'Vous pouvez passer à une autre app : le résultat sera là à votre retour';
+      'Vous pouvez changer d\'app : le résultat sera là à votre retour';
 
   @override
   String get camConfirmPrompt =>
@@ -1241,9 +1239,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'C\'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Photographier le cartel aide souvent.';
+      'Expo temporaire ou pas encore au guide ? Le cartel en photo aide souvent.';
 
   @override
   String get recLabelNoMatch =>
-      'C\'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Essayez un autre nom ou numéro.';
+      'Expo temporaire ou pas encore au guide ? Essayez un autre nom ou numéro.';
 }

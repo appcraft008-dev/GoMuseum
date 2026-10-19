@@ -612,7 +612,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get photoFbBody =>
-      '빠⁠진 작⁠품⁠을 추⁠가⁠하⁠고 인⁠식⁠을 개⁠선⁠하⁠는 데⁠만 사⁠용⁠합⁠니⁠다. 최⁠대 90⁠일 보⁠관⁠하⁠며 누⁠구⁠에⁠게⁠도 공⁠개⁠하⁠지 않⁠습⁠니⁠다.';
+      '빠⁠진 작⁠품 추⁠가⁠와 인⁠식 개⁠선⁠에⁠만 써⁠요. 최⁠대 90⁠일 보⁠관⁠하⁠며 공⁠개⁠하⁠지 않⁠아⁠요.';
 
   @override
   String get photoFbConsent => '이 사⁠진 보⁠내⁠기';
@@ -702,10 +702,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get camRecognizing => '인⁠식 중…';
 
   @override
-  String get camComparing => 'AI⁠가 컬⁠렉⁠션 및 공⁠개 미⁠술 데⁠이⁠터⁠베⁠이⁠스⁠와 대⁠조 중';
+  String get camComparing => 'AI⁠가 소⁠장⁠품·미⁠술 DB⁠와 대⁠조 중';
 
   @override
-  String get recWaitSlow => '평⁠소⁠보⁠다 조⁠금 오⁠래 걸⁠리⁠고 있⁠어⁠요. 계⁠속 찾⁠는 중⁠입⁠니⁠다';
+  String get recWaitSlow => '평⁠소⁠보⁠다 오⁠래 걸⁠려⁠요. 계⁠속 찾⁠는 중';
 
   @override
   String get recWaitSwitchApp =>
@@ -1205,9 +1205,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      '특⁠별⁠전⁠이⁠거⁠나 아⁠직 수⁠록⁠되⁠지 않⁠은 작⁠품⁠일 수 있⁠습⁠니⁠다. 옆⁠의 설⁠명⁠판⁠을 찍⁠으⁠면 더 잘 인⁠식⁠됩⁠니⁠다.';
+      '특⁠별⁠전⁠이⁠거⁠나 미⁠수⁠록 작⁠품⁠일 수 있⁠어⁠요. 옆 설⁠명⁠판⁠을 찍⁠으⁠면 더 잘 인⁠식⁠돼⁠요.';
 
   @override
   String get recLabelNoMatch =>
-      '특⁠별⁠전⁠이⁠거⁠나 아⁠직 수⁠록⁠되⁠지 않⁠은 작⁠품⁠일 수 있⁠습⁠니⁠다. 다⁠른 이⁠름⁠이⁠나 번⁠호⁠로 검⁠색⁠해 보⁠세⁠요.';
+      '특⁠별⁠전⁠이⁠거⁠나 미⁠수⁠록 작⁠품⁠일 수 있⁠어⁠요. 다⁠른 이⁠름⁠이⁠나 번⁠호⁠로 찾⁠아⁠보⁠세⁠요.';
 }

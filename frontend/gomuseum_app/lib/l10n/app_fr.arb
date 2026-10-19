@@ -184,7 +184,7 @@
   "recShootLabelBtn": "Photographier le cartel",
   "recTypeNumberOrName": "Numéro ou titre",
   "photoFbTitle": "Nous envoyer cette photo ?",
-  "photoFbBody": "Utilisée uniquement pour ajouter les œuvres manquantes et améliorer la reconnaissance. Conservée 90 jours au maximum, jamais montrée à personne.",
+  "photoFbBody": "Sert uniquement à ajouter les œuvres manquantes et à mieux reconnaître. Gardée 90\u00a0jours max., jamais publiée.",
   "photoFbConsent": "Envoyer cette photo",
   "photoFbNoteHint": "Ajouter une remarque (facultatif)",
   "photoFbContinue": "Continuer",
@@ -213,9 +213,9 @@
   "camViewUpgrade": "Voir les offres",
   "camCantPhoto": "Impossible de photographier ? Saisissez le numéro de cartel",
   "camRecognizing": "Reconnaissance…",
-  "camComparing": "L'IA compare avec les collections et les bases d'art publiques",
-  "recWaitSlow": "Un peu plus long que d'habitude — on cherche encore",
-  "recWaitSwitchApp": "Vous pouvez passer à une autre app : le résultat sera là à votre retour",
+  "camComparing": "L'IA consulte musées et bases d'art",
+  "recWaitSlow": "Plus long que d'habitude — on cherche",
+  "recWaitSwitchApp": "Vous pouvez changer d'app\u00a0: le résultat sera là à votre retour",
   "camConfirmPrompt": "Reconnaissance terminée, veuillez confirmer l'œuvre",
   "camConfidence": "Confiance",
   "camConfirmStart": "Confirmer & démarrer le guide",
@@ -368,6 +368,6 @@
   "collectionViewList": "Afficher en liste",
   "guideNotThisOne": "Ce n'est pas celle-ci ?",
   "guideNotThisOneNoted": "C'est noté. Essayez un autre angle, ou utilisez la recherche.",
-  "recMaybeNotCollected": "C'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Photographier le cartel aide souvent.",
-  "recLabelNoMatch": "C'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Essayez un autre nom ou numéro."
+  "recMaybeNotCollected": "Expo temporaire ou pas encore au guide\u00a0? Le cartel en photo aide souvent.",
+  "recLabelNoMatch": "Expo temporaire ou pas encore au guide\u00a0? Essayez un autre nom ou numéro."
 }

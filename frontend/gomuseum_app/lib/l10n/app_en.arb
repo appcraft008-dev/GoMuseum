@@ -351,7 +351,7 @@
   "@photoFbTitle": {
     "description": "Photo feedback dialog title (S5): ask the user whether to send the artwork photo"
   },
-  "photoFbBody": "Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.",
+  "photoFbBody": "Only to add missing works and improve recognition. Kept up to 90 days, never public.",
   "@photoFbBody": {
     "description": "Photo feedback dialog purpose line. Must keep both promises: kept at most 90 days, never shown publicly"
   },
@@ -392,12 +392,12 @@
   "camViewUpgrade": "View upgrade plans",
   "camCantPhoto": "Can't take a photo? Enter the label number",
   "camRecognizing": "Recognizing…",
-  "camComparing": "AI is comparing with collections and public art databases",
-  "recWaitSlow": "Taking a bit longer than usual — still looking",
+  "camComparing": "AI is checking museum & art databases",
+  "recWaitSlow": "Taking a bit longer — still looking",
   "@recWaitSlow": {
     "description": "Recognition loading hint shown after ~10s"
   },
-  "recWaitSwitchApp": "You can switch to another app — the result will be here when you come back",
+  "recWaitSwitchApp": "You can switch apps — the result will be here when you're back",
   "@recWaitSwitchApp": {
     "description": "Recognition loading hint shown after ~20s; promises only switching apps, not leaving the page"
   },
@@ -733,8 +733,8 @@
   "@guideNotThisOneNoted": {
     "description": "Snackbar after tapping 'Not this one?', back on the camera"
   },
-  "recMaybeNotCollected": "It may be a temporary exhibit or not in our guide yet. Snapping the label next to it usually works.",
-  "recLabelNoMatch": "It may be a temporary exhibit or not in our guide yet. Try another name or number.",
+  "recMaybeNotCollected": "Temporary show or not in our guide yet? Snapping its label usually helps.",
+  "recLabelNoMatch": "Temporary show or not in our guide yet? Try another name or number.",
   "@recMaybeNotCollected": {
     "description": "Hint under 'not recognized' title (artwork photo): temporary exhibitions are never in the catalog; shooting the label helps"
   },
