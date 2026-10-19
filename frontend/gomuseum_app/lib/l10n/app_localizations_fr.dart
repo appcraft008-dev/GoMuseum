@@ -88,15 +88,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homePocketGuide => 'Guide de musée de poche';
 
   @override
-  String get homeSlogan =>
-      'Approchez-vous d\'une œuvre,\nécoutez son histoire.';
+  String get homeSlogan => 'Approchez une œuvre,\nécoutez son histoire.';
 
   @override
-  String get homeCtaRecognize => 'Photographier pour reconnaître & écouter';
+  String get homeCtaRecognize => 'Photographiez, écoutez';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count scans gratuits restants · Passez à l\'offre complète';
+    return 'Scans gratuits restants : $count · Offre complète';
   }
 
   @override
@@ -145,7 +144,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exploreTitle => 'Explorer';
 
   @override
-  String get searchCityMuseumArtwork => 'Rechercher villes, musées ou œuvres';
+  String get searchCityMuseumArtwork => 'Villes, musées ou œuvres';
 
   @override
   String get searchMuseumsSection => 'Musées';
@@ -619,7 +618,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recShootLabelBtn => 'Photographier le cartel';
 
   @override
-  String get recTypeNumberOrName => 'Saisir le numéro ou le titre';
+  String get recTypeNumberOrName => 'Numéro ou titre';
 
   @override
   String get photoFbTitle => 'Nous envoyer cette photo ?';

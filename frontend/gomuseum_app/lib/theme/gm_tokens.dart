@@ -61,14 +61,28 @@ class GmColors {
 class GmText {
   GmText._();
 
-  /// CJK 回退字体族名（懒加载注册）。拉丁字形由主字体渲染，
-  /// 中日韩字形自动回退到这些 …SC 字体——按字形选字体、无需判断语言。
-  static final String _serifCjkFamily = GoogleFonts.notoSerifSc().fontFamily!;
-  static final String _sansCjkFamily = GoogleFonts.notoSansSc().fontFamily!;
+  /// 当前 UI 语言，由 `MaterialApp.builder` 写入（main.dart）。
+  ///
+  /// 拉丁字形由主字体渲染，中日韩字形回退到 Noto CJK。同一个汉字在简/繁/日
+  /// 的标准写法不同（汉字统一码），所以回退字体要按语言选：ja→JP、ko→KR、
+  /// zh-Hant→TC，其余（含简中与非中日韩界面）→SC。
+  // ponytail: 全局静态而非 InheritedWidget —— GmText 是 259 处无 context 的静态调用。
+  static Locale? locale;
+
+  static String _cjkFamily({required bool serif}) {
+    final style = switch ((locale?.languageCode, locale?.scriptCode)) {
+      ('ja', _) => serif ? GoogleFonts.notoSerifJp() : GoogleFonts.notoSansJp(),
+      ('ko', _) => serif ? GoogleFonts.notoSerifKr() : GoogleFonts.notoSansKr(),
+      ('zh', 'Hant') =>
+        serif ? GoogleFonts.notoSerifTc() : GoogleFonts.notoSansTc(),
+      _ => serif ? GoogleFonts.notoSerifSc() : GoogleFonts.notoSansSc(),
+    };
+    return style.fontFamily!;
+  }
 
   /// 衬线标题样式
   ///
-  /// 拉丁字母用 **Noto Serif**（优雅拉丁衬线），中文自动回退 **Noto Serif SC**，
+  /// 拉丁字母用 **Noto Serif**（优雅拉丁衬线），中日韩回退见 [locale]，
   /// 解决「中英共用 SC 体导致拉丁字母不好看」。
   /// `color` 缺省 null —— 不烘焙固定色，随主题 `DefaultTextStyle`(ink) 切换明暗。
   static TextStyle serif({
@@ -84,10 +98,10 @@ class GmText {
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    ).copyWith(fontFamilyFallback: [_serifCjkFamily]);
+    ).copyWith(fontFamilyFallback: [_cjkFamily(serif: true)]);
   }
 
-  /// 无衬线正文样式：拉丁用 **Noto Sans**，中文回退 **Noto Sans SC**。
+  /// 无衬线正文样式：拉丁用 **Noto Sans**，中日韩回退见 [locale]。
   /// `color` 缺省 null —— 同 [serif]，随主题继承。
   static TextStyle sans({
     double size = 14,
@@ -102,7 +116,7 @@ class GmText {
       color: color,
       letterSpacing: letterSpacing,
       height: height,
-    ).copyWith(fontFamilyFallback: [_sansCjkFamily]);
+    ).copyWith(fontFamilyFallback: [_cjkFamily(serif: false)]);
   }
 
   /// 小标签（GMEyebrow）：11px / 字距 2.2 / sub 色

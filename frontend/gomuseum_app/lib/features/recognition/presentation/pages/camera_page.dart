@@ -1351,8 +1351,8 @@ class FallbackChoices extends StatelessWidget {
             onTap: onTap,
             behavior: HitTestBehavior.opaque,
             child: Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 border: Border.all(color: gm.accent),
                 borderRadius: BorderRadius.circular(4),
@@ -1362,17 +1362,17 @@ class FallbackChoices extends StatelessWidget {
                 children: [
                   GmIcon(icon, size: 16, color: gm.accent),
                   const SizedBox(width: 6),
-                  // 放不下(大字号/长语言)就缩小,不换行(用户 10-11 定)
+                  // 放不下就换两行、不缩字(用户 10-19 定,取代 10-11 的"缩小不换行":
+                  // 缩放让德语缩到 0.57 倍,英文也只剩 0.68)
                   Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(label,
-                          maxLines: 1,
-                          style: GmText.sans(
-                              size: 13.5,
-                              weight: FontWeight.w600,
-                              color: gm.accent)),
-                    ),
+                    child: Text(label,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        style: GmText.sans(
+                            size: 13.5,
+                            weight: FontWeight.w600,
+                            color: gm.accent,
+                            height: 1.25)),
                   ),
                 ],
               ),
@@ -1391,7 +1391,10 @@ class FallbackChoices extends StatelessWidget {
           onTap: labelSeen ? onSearch : onShootLabel,
         ),
         const SizedBox(height: 10),
-        Row(
+        // 一个换成两行时另一个跟着等高
+        IntrinsicHeight(
+            child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 已读出墙签:重拍同一张墙签结果一样,改字走主按钮的预填搜索(用户 10-11 定)
             if (!labelSeen) ...[
@@ -1401,7 +1404,7 @@ class FallbackChoices extends StatelessWidget {
             ],
             retake,
           ],
-        ),
+        )),
       ],
     );
   }

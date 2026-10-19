@@ -224,19 +224,18 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _slogan(AppLocalizations l10n) {
-    // 标语本身带 `\n`（本意 2 行）。法语首行较长、27px 会被迫再折成 3 行；
-    // FittedBox.scaleDown 把整块按可用宽度等比缩小到恰好 2 行（英/中已够宽、不缩）。
-    // ⚠️ 必须给横向边距：scaleDown 缩到的是**可用宽度**，不留边距就等于缩到
-    // 满屏宽、左右零留白贴着屏幕边——法语首页上肉眼可见（同页其它元素都是 26）。
+    // 标语本身带 `\n`（本意 2 行）。字号固定、不再 FittedBox 缩放（德/法曾缩到
+    // 0.74 倍）：拉丁衬线 24px（英文此前缩放后实际约 24.6，观感不变），中日韩 27。
+    // 各语言每行按 360dp 屏一行写（ARB 有长度预算），超了自然折行兜底。
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: _pagePadding),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          l10n.homeSlogan,
-          textAlign: TextAlign.center,
-          style: GmText.serif(size: 27, weight: FontWeight.w700, height: 1.55),
-        ),
+      child: Text(
+        l10n.homeSlogan,
+        textAlign: TextAlign.center,
+        style: GmText.serif(
+            size: context.isCjk ? 27 : 24,
+            weight: FontWeight.w700,
+            height: 1.55),
       ),
     );
   }
@@ -252,14 +251,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => context.push('/benefits'),
-      // 各语言长度差异大（德语/波兰语明显长于中日韩），FittedBox 保证单行不换行，
-      // 与上方 _slogan 用同一手法——包括那里的横向边距，同样的理由。
+      // 各语言长度差异大（德语/波兰语明显长于中日韩）：字号固定，放不下折成两行，
+      // 不再 FittedBox 缩字（与上方 _slogan 同一原则）。
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: _pagePadding),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(text, style: GmText.sans(size: 12, color: gm.sub)),
-        ),
+        child: Text(text,
+            textAlign: TextAlign.center,
+            style: GmText.sans(size: 12, color: gm.sub)),
       ),
     );
   }

@@ -90,11 +90,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeSlogan => '一つの作品に近づいて、\nその物語を聴こう。';
 
   @override
-  String get homeCtaRecognize => '撮影して認識・再生';
+  String get homeCtaRecognize => '撮影して解説を聴く';
 
   @override
   String homeFreeLeft(Object count) {
-    return '無料スキャン残り$count回 · アップグレードで全機能';
+    return '無料スキャン残り$count回 · 全館聴き放題へ';
   }
 
   @override
@@ -599,7 +599,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recShootLabelBtn => '解説プレートを撮影';
 
   @override
-  String get recTypeNumberOrName => '番号か作品名を入力';
+  String get recTypeNumberOrName => '番号か作品名';
 
   @override
   String get photoFbTitle => 'この写真を送りますか?';

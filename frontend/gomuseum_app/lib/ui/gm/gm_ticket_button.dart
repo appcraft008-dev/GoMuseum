@@ -45,8 +45,9 @@ class GmTicketButton extends StatelessWidget {
         padding: const EdgeInsets.all(7),
         child: CustomPaint(
           painter: _DashedBorderPainter(color: gm.ctaDash),
-          child: SizedBox(
-            height: height,
+          // 最小高度：放不下时换成两行、按钮跟着长高（字号各语言一致，不缩字）。
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: height),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -65,18 +66,21 @@ class GmTicketButton extends StatelessWidget {
                   GmIcon(icon!, size: fontSize + 8, color: gm.ctaInk),
                   const SizedBox(width: 11),
                 ],
-                // Flexible + scaleDown：拉丁文较长时整体缩放，不溢出/不截断。
+                // 不用 FittedBox 缩字：法语曾缩到 0.57 倍，各语言字号忽大忽小。
+                // 文案按一行写（ARB 有长度预算），超了才换第二行（用户 10-19 定）。
                 Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(
                       label,
-                      maxLines: 1,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
                       style: GmText.serif(
                         size: fontSize,
                         weight: FontWeight.w600,
                         color: gm.ctaInk,
                         letterSpacing: context.gmLetterSpacing(1.8),
+                        height: 1.25,
                       ),
                     ),
                   ),

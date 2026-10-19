@@ -91,11 +91,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Step closer to one work,\nhear the story behind it.';
 
   @override
-  String get homeCtaRecognize => 'Snap to Recognize & Listen';
+  String get homeCtaRecognize => 'Snap & Listen';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count free scans left · Upgrade for full access';
+    return 'Free scans left: $count · Upgrade for full access';
   }
 
   @override
@@ -143,7 +143,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreTitle => 'Explore';
 
   @override
-  String get searchCityMuseumArtwork => 'Search cities, museums or artworks';
+  String get searchCityMuseumArtwork => 'Cities, museums, artworks';
 
   @override
   String get searchMuseumsSection => 'Museums';
@@ -609,7 +609,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recShootLabelBtn => 'Photograph the wall label';
 
   @override
-  String get recTypeNumberOrName => 'Type the number or title';
+  String get recTypeNumberOrName => 'Number or title';
 
   @override
   String get photoFbTitle => 'Send us this photo?';

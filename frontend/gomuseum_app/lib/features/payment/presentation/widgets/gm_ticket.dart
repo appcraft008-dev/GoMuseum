@@ -359,7 +359,10 @@ class GmTicketFace extends StatelessWidget {
             ),
             if (price != null) ...[
               const SizedBox(width: 12),
-              Column(
+              // Flexible：价格列最多占半行。不限宽时法语「Achat unique · sans
+              // abonnement」把标题挤成一字一行（i18n 扫描抓到）。
+              Flexible(
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
@@ -375,10 +378,11 @@ class GmTicketFace extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(priceNote!,
+                          textAlign: TextAlign.end,
                           style: GmText.sans(size: 10, color: gm.faint)),
                     ),
                 ],
-              ),
+              )),
             ],
           ],
         ),

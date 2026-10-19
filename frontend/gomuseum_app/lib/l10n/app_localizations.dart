@@ -278,13 +278,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeCtaRecognize.
   ///
   /// In en, this message translates to:
-  /// **'Snap to Recognize & Listen'**
+  /// **'Snap & Listen'**
   String get homeCtaRecognize;
 
   /// No description provided for @homeFreeLeft.
   ///
   /// In en, this message translates to:
-  /// **'{count} free scans left · Upgrade for full access'**
+  /// **'Free scans left: {count} · Upgrade for full access'**
   String homeFreeLeft(Object count);
 
   /// No description provided for @homePassActive.
@@ -362,7 +362,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchCityMuseumArtwork.
   ///
   /// In en, this message translates to:
-  /// **'Search cities, museums or artworks'**
+  /// **'Cities, museums, artworks'**
   String get searchCityMuseumArtwork;
 
   /// No description provided for @searchMuseumsSection.
@@ -1208,7 +1208,7 @@ abstract class AppLocalizations {
   /// Primary button on the not-recognized choice card: type the inventory number or the title from the wall label
   ///
   /// In en, this message translates to:
-  /// **'Type the number or title'**
+  /// **'Number or title'**
   String get recTypeNumberOrName;
 
   /// Photo feedback dialog title (S5): ask the user whether to send the artwork photo
