@@ -48,7 +48,7 @@ def run_sparql(sparql: str) -> list[dict]:
 
 
 QUERY = """
-SELECT ?item ?label_zh ?label_en ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl ?p276 WHERE {{
+SELECT ?item ?label_zh ?label_en ?creator ?creator_zh ?creator_en ?year ?image ?links ?inventory ?p31 ?joconde ?sitelink_en ?sitelink_cl ?p276 WHERE {{
   VALUES ?mus {{ {mus_values} }}
   ?item wdt:P195 ?mus . ?item wdt:P31 ?p31 .
   {cat_filter}

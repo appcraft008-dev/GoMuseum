@@ -59,8 +59,13 @@ class WikidataCatalog(CatalogSource):
             for row in rows:
                 qid = row["item"]["value"].rsplit("/", 1)[-1]
                 p31 = (row.get("p31", {}) or {}).get("value", "").rsplit("/", 1)[-1]
+                cre = (_wd._v(row, "creator") or "").rsplit("/", 1)[-1] or None
                 if qid in records:
                     prev = records[qid]
+                    # 多作者每人一行:累积作者集合,撞号判同用(identity._distinct_work)
+                    cqs = prev.raw.setdefault("creator_qids", [])
+                    if cre and cre not in cqs:
+                        cqs.append(cre)
                     if prev.category == category_for(None):  # unknown → 可升级
                         cat = category_for(p31)
                         if cat != category_for(None):
@@ -83,6 +88,7 @@ class WikidataCatalog(CatalogSource):
                 first_img = _wd._v(row, "image")
                 p276 = (_wd._v(row, "p276") or "").rsplit("/", 1)[-1] or None
                 row["p276_qid"] = p276
+                row["creator_qids"] = [cre] if cre else []
                 records[qid] = StubRecord(
                     inventory_number=_wd._v(row, "inventory"),
                     qid=qid,

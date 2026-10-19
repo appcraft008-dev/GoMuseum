@@ -579,6 +579,20 @@ class _CameraPageState extends ConsumerState<CameraPage>
           ),
         ],
       ),
+      // 末个候选后一页「都不是」(10-19 用户定):比对完不用退回候选页再点。
+      // 要点按钮才走——滑到这页只是看到出口,滑回去照常比对。
+      trailingPage: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: GmTicketButton(
+          key: const Key('viewerNone'),
+          label: l10n.recNoneOfThese,
+          icon: GmIcons.chevR,
+          onTap: () {
+            Navigator.of(context).pop();
+            _rejectCandidates();
+          },
+        ),
+      ),
     );
   }
 
@@ -1038,6 +1052,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
     ];
   }
 
+  void _rejectCandidates() {
+    ref.read(recognitionNotifierProvider.notifier).rejectCandidates();
+    _reachedChoice = true; // 「都不是」= 走到选择页(S5)
+  }
+
   /// 候选确认卡「是这件吗？」——点选跳该 qid 详情，都不是走未收录。
   List<Widget> _candidatesContent(GmPalette gm, RecognitionCandidates state) {
     final l10n = AppLocalizations.of(context)!;
@@ -1057,10 +1076,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
       const SizedBox(height: 4),
       Center(
         child: GestureDetector(
-          onTap: () {
-            ref.read(recognitionNotifierProvider.notifier).rejectCandidates();
-            _reachedChoice = true; // 「都不是」= 走到选择页(S5)
-          },
+          onTap: _rejectCandidates,
           child: Text(l10n.recNoneOfThese,
               style: GmText.sans(size: 12.5, color: gm.accent)),
         ),

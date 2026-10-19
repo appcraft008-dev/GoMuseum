@@ -91,9 +91,8 @@ def test_category_not_overwritten_when_absent(session):
 def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
     """奥赛油画与雕塑两套编号都叫 RF n:RF 166 既是 Regnault 油画 Q17491121
     又是 Chapu 雕塑 Q76465029。按馆藏号兜底不能把另一个 Wikidata 条目并进这行
-    (否则 qid/署名/图被改写、缺的字段留旧值 → 一行混两件,2026-10-19 查出 10 行)。"""
-    from sqlalchemy.exc import IntegrityError
-
+    (否则 qid/署名/图被改写、缺的字段留旧值 → 一行混两件,2026-10-19 查出 10 行);
+    唯一约束放开后(10-19)两件各占一行。"""
     from app.services.object_importer import find_object
 
     m = upsert_museum(session, {"slug": "orsay", "name_en": "Orsay"})
@@ -102,6 +101,7 @@ def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
         "inventory_number": "RF 166",
         "artist_en": "Henri Regnault",
         "image": "https://example.org/regnault.jpg",
+        "attributes": {"creator_qids": ["Q553571"]},
     }
     upsert_object(session, m.id, painting)
     session.commit()
@@ -111,15 +111,56 @@ def test_inventory_fallback_does_not_merge_different_wikidata_items(session):
         "title_en": "Joan of Arc at Domrémy",
         "artist_en": "Henri Chapu",
         "image": "https://example.org/chapu.jpg",
+        "attributes": {"creator_qids": ["Q654201"]},
     }
     assert find_object(session, m.id, sculpture) is None
-    with pytest.raises(IntegrityError):  # 撞唯一约束 → 由 load_stubs 的 SAVEPOINT 跳过
-        upsert_object(session, m.id, sculpture)
-    session.rollback()
-    obj = session.query(MuseumObject).one()
-    assert (obj.qid, obj.artist_en, obj.title_en) == (
-        "Q17491121",
+    upsert_object(session, m.id, sculpture)
+    session.commit()
+    rows = {o.qid: o for o in session.query(MuseumObject).all()}
+    assert set(rows) == {"Q17491121", "Q76465029"}
+    assert (rows["Q17491121"].artist_en, rows["Q17491121"].title_en) == (
         "Henri Regnault",
         None,
     )
-    assert session.query(ObjectImage).one().source_url.endswith("regnault.jpg")
+    assert rows["Q76465029"].artist_en == "Henri Chapu"
+    # 两件都在后,按 qid 重导仍各回各行;无 qid 按号兜底有歧义 → 不猜
+    assert find_object(session, m.id, sculpture).qid == "Q76465029"
+    assert find_object(session, m.id, painting).qid == "Q17491121"
+    assert find_object(session, m.id, {"inventory_number": "RF 166"}) is None
+
+
+def _existing_rf1(session, attrs):
+    m = upsert_museum(session, {"slug": "orsay", "name_en": "Orsay"})
+    upsert_object(
+        session,
+        m.id,
+        {"qid": "QA", "inventory_number": "RF 1", "attributes": attrs},
+    )
+    session.commit()
+    return m
+
+
+@pytest.mark.parametrize(
+    "existing,incoming",
+    [
+        ({"creator_qids": ["C1"]}, ["C1"]),  # 作者有交集 = Wikidata 重复条目
+        ({"artist_qid": "C1"}, ["C1", "C2"]),  # 老行只有 artist_qid 也认
+        ({"creator_qids": ["C1"]}, None),  # 新件作者未知 → 不敢当两件
+        ({}, ["C2"]),  # 老行作者未知 → 不敢当两件
+    ],
+)
+def test_new_row_on_taken_inventory_needs_disjoint_creators(
+    session, existing, incoming
+):
+    """唯一约束放开后,同号新行只给「作者毫无交集」的另一件作品(Fable 审查 10-19):
+    否则重复条目按 qid 找不到旧行、会新建出同一件作品的第二行。"""
+    from app.services.object_importer import InventoryCollision
+
+    m = _existing_rf1(session, existing)
+    art = {"qid": "QB", "inventory_number": "RF 1"}
+    if incoming:
+        art["attributes"] = {"creator_qids": incoming}
+    with pytest.raises(InventoryCollision):
+        upsert_object(session, m.id, art)
+    session.rollback()
+    assert [o.qid for o in session.query(MuseumObject).all()] == ["QA"]

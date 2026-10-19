@@ -136,3 +136,29 @@ def test_load_stubs_strips_own_inventory_from_title():
     s = _session()
     load_stubs(s, _museum(), [_stub("Q1", title="statue (Ma 2223)", inv="Ma 2223")])
     assert s.query(MuseumObject).filter_by(qid="Q1").one().title_en == "statue"
+
+
+def test_load_stubs_keeps_both_works_on_shared_inventory_with_disjoint_creators():
+    """奥赛 RF 166 油画/雕塑:作者集合随 stub 落进 attributes,同号两件各占一行。"""
+    s = _session()
+    out = load_stubs(
+        s,
+        _museum(),
+        [
+            _stub("Q17491121", inv="RF 166", raw={"creator_qids": ["Q553571"]}),
+            _stub("Q76465029", inv="RF 166", raw={"creator_qids": ["Q654201"]}),
+        ],
+    )
+    assert out["loaded"] == 2 and out["errors"] == 0
+    o = s.query(MuseumObject).filter_by(qid="Q76465029").one()
+    assert o.attributes["creator_qids"] == ["Q654201"]
+
+
+def test_load_stubs_skips_wikidata_duplicate_on_shared_inventory():
+    s = _session()
+    load_stubs(s, _museum(), [_stub("QA", inv="RF 9", raw={"creator_qids": ["C1"]})])
+    out = load_stubs(
+        s, _museum(), [_stub("QB", inv="RF 9", raw={"creator_qids": ["C1"]})]
+    )
+    assert out["errors"] == 1
+    assert s.query(MuseumObject).count() == 1
