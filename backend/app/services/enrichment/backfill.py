@@ -769,14 +769,17 @@ def backfill_display_names(
             if art is None:
                 art = Artist(qid=aqid)
                 db.add(art)
+            alabels = None
             if not art.name_en:
-                art.name_en = en_name
+                # 该 QID 自己的标签优先:多作者件的作品行署名可能是另一位合作者
+                alabels = _labels(aqid)
+                art.name_en = alabels.get("en") or en_name
             ni = _clean_i18n(art.name_i18n)
             if ni != (art.name_i18n or {}):
                 art.name_i18n = ni
             need_fill_a = any(not ni.get(lang) for lang in langs)
             if need_fill_a or refresh_langs:
-                alabels = _labels(aqid)
+                alabels = alabels if alabels is not None else _labels(aqid)
                 for lang in refresh_langs or []:
                     if alabels.get(lang) and alabels[lang] != ni.get(lang):
                         ni = {**ni, lang: alabels[lang]}

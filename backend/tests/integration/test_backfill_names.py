@@ -166,6 +166,21 @@ def test_backfill_fills_artist_qid_and_artist_names(session):
     assert session.query(Artist).filter_by(qid="Q296").one().name_en == "Manet"
 
 
+def test_backfill_new_artist_name_en_prefers_wikidata_label(session):
+    # 多作者件:作品行署名是另一位合作者(卢浮 Q28840036 署弟弟 Jérôme,
+    # artist_qid 却是哥哥 François Q960381)→ 作者卡英文名必须取该 QID 自己的标签
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "zh"],
+        fetch_labels=_labels({"Q34618": {"en": "François Duquesnoy"}}),
+        fetch_creators=lambda qids: {"Q1": "Q34618"},
+    )
+    art = session.query(Artist).filter_by(qid="Q34618").one()
+    assert art.name_en == "François Duquesnoy"
+
+
 def test_backfill_merges_existing_artist_langs(session):
     # 已有 Artist 行:补缺失语种,不覆盖已有
     session.add(Artist(qid="Q296", name_en="Manet", name_i18n={"zh": "马奈"}))
