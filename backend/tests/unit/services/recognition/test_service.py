@@ -381,6 +381,32 @@ def test_sure_rule_needs_artist_match(session):
     assert out["outcome"] == "unrecognized"
 
 
+def test_label_photo_title_and_artist_hit_survives_without_high_confidence(session):
+    """10-20:普通模式拍到的是墙签(AI 读出墙签文字)→ 向量前 5 是乱的;墙签印着的标题+作者
+    都对上即是强证据,不再要求 AI 把握高(prod 10-19《画家的工作室》×3、莫奈《马车》被扔掉)。"""
+    identify = _vision(
+        [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+        label="Gustave Courbet\nL'Origine du monde\n1866",
+        pick=None,
+        confidence="medium",
+    )
+    out = _low_vector(session, identify)
+    assert out["outcome"] == "candidates"
+    assert [c["qid"] for c in out["candidates"]] == ["Q334138"]
+
+
+def test_placeholder_label_text_is_not_a_label_photo(session):
+    """旧模型会把 label_text 填成字符串 "null"——那不是墙签照片,照旧要求把握高。"""
+    identify = _vision(
+        [{"title": "The Origin of the World", "artist": "Gustave Courbet"}],
+        label="null",
+        pick=None,
+        confidence="medium",
+    )
+    out = _low_vector(session, identify)
+    assert out["outcome"] == "unrecognized"
+
+
 def test_fullframe_high_skips_crop_pyramid(session):
     # 快路径:全帧已 ≥ HIGH → 不跑金字塔(embed_crops_fn 不被调用)
     crops = _Counter(_one_crop)

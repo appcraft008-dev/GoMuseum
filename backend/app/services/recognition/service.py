@@ -549,7 +549,9 @@ def _compute(
                 text_trace["hidden_imageless"] = list(hidden.values())
             # 原始前 5(含没过门槛的,附作者是否对上):文字链复盘与评测用
             text_trace["matched"] = raw
-            if vis.get("self_confidence") == "high":
+            # 拍到的是墙签(读出了墙签文字)时不要求把握高:印着的标题+作者都对上即是强证据,
+            # 照片是墙签所以向量前 5 是乱的(prod 回放 10-12~10-19:救回 5、误伤 0)
+            if vis.get("self_confidence") == "high" or is_named(vis.get("label_text")):
                 sure = next(
                     (q for q, sc, ok in raw if ok and sc >= 1.0 and q in img_ok), None
                 )
