@@ -48,4 +48,55 @@ void main() {
     expect(find.byKey(_prev), findsNothing);
     expect(find.byKey(_next), findsNothing);
   });
+
+  trailingPageTests();
+}
+
+// 候选比对(10-19 用户定):最后一个候选后面多一页「都不是」,滑过去就到,滑回来能撤。
+void trailingPageTests() {
+  Future<void> openWithTrailing(WidgetTester t) async {
+    await t.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (ctx) => TextButton(
+          onPressed: () => showImageGallery(
+            ctx,
+            images: const [
+              ObjectImage(url: 'a.jpg', credit: null),
+              ObjectImage(url: 'b.jpg', credit: null),
+            ],
+            footerBuilder: (_, i) => Text('footer $i'),
+            trailingPage: const Text('none page'),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    ));
+    await t.tap(find.text('open'));
+    await t.pumpAndSettle();
+  }
+
+  testWidgets('末张图仍有右箭头,翻过去是尾页:无页码、无底栏、无右箭头', (t) async {
+    await openWithTrailing(t);
+    await t.tap(find.byKey(_next));
+    await t.pumpAndSettle();
+    expect(find.text('2/2'), findsOneWidget);
+    await t.tap(find.byKey(_next));
+    await t.pumpAndSettle();
+    expect(find.text('none page'), findsOneWidget);
+    expect(find.textContaining('/2'), findsNothing);
+    expect(find.textContaining('footer'), findsNothing);
+    expect(find.byKey(_next), findsNothing);
+  });
+
+  testWidgets('尾页左滑回来,回到最后一张图', (t) async {
+    await openWithTrailing(t);
+    await t.tap(find.byKey(_next));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(_next));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(_prev));
+    await t.pumpAndSettle();
+    expect(find.text('2/2'), findsOneWidget);
+    expect(find.text('footer 1'), findsOneWidget);
+  });
 }
