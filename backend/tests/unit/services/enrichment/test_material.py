@@ -1395,3 +1395,58 @@ def test_fetch_creators_batch_handles_partial_like_single():
     assert _fetch_creators(["Q18663545", "Q29644503"], run_query=lambda s: rows) == {
         "Q29644503": "Q1358136"
     }
+
+
+# ── 作者只采信注册账号版本(10-19,《喜鹊》Q4429116:临时账号把莫奈改成毕加索 3 个月) ──
+_MONET, _PICASSO = "Q296", "Q5593"
+_VANDAL = {"revid": 30, "user": "~2026-24823-27", "temp": ""}
+_EDITOR = {"revid": 20, "user": "Shonagon"}
+
+
+def _resolve_hist(current, revs, old=None, at_calls=None):
+    from app.services.enrichment.material import resolve_creator_qid
+
+    def at(revid):
+        (at_calls if at_calls is not None else []).append(revid)
+        return old
+
+    return resolve_creator_qid(
+        _WORK_QID,
+        get_entities=lambda ids, **k: _p170_entity(_p170(current)),
+        get_revisions=lambda q: revs,
+        get_entity_at=at,
+    )
+
+
+def test_creator_vandal_period_uses_last_registered_revision():
+    calls = []
+    old = _p170_entity(_p170(_MONET))[_WORK_QID]
+    assert _resolve_hist(_PICASSO, [_VANDAL, _EDITOR], old, calls) == _MONET
+    assert calls == [20]
+
+
+def test_creator_latest_registered_edit_uses_current_without_extra_fetch():
+    calls = []
+    assert _resolve_hist(_MONET, [_EDITOR, _VANDAL], None, calls) == _MONET
+    assert calls == []
+
+
+def test_creator_no_registered_revision_in_window_abstains():
+    assert _resolve_hist(_PICASSO, [_VANDAL, {**_VANDAL, "revid": 29}]) is None
+
+
+def test_creator_revision_lookup_failure_falls_back_to_current():
+    from app.services.enrichment.material import resolve_creator_qid
+    from app.services.enrichment.wikidata_api import WikidataApiError
+
+    def boom(q):
+        raise WikidataApiError("HTTP 503")
+
+    assert (
+        resolve_creator_qid(
+            _WORK_QID,
+            get_entities=lambda ids, **k: _p170_entity(_p170(_MONET)),
+            get_revisions=boom,
+        )
+        == _MONET
+    )

@@ -7,6 +7,7 @@ spec 2026-10-10-wikidata-action-api:生成流程里「查一个实体的几项�
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -39,8 +40,8 @@ def _retry_after(resp) -> float | None:
         return None
 
 
-def _get(params: dict, http_get, sleep) -> dict:
-    """一次 wbgetentities(带重试)。返回 entities 字典。
+def _get(params: dict, http_get, sleep, key: str = "entities") -> dict:
+    """一次 Action API 调用(带重试)。返回响应体的 key 字段(默认 entities)。
 
     不带 maxlag 参数:它跟的是 WDQS 复制延迟,只读请求带上会在 WDQS 慢时被全部拒掉
     (10-10 实测 7.9s/23.9s)。保留对 maxlag 错误的重试只为兜底。
@@ -81,10 +82,10 @@ def _get(params: dict, http_get, sleep) -> dict:
                             )
                         last = WikidataApiError("maxlag")
                         wait = min(_retry_after(r) or wait, _MAX_WAIT)
-                    elif "entities" not in body:
-                        raise WikidataApiError("response has no entities")
+                    elif key not in body:
+                        raise WikidataApiError(f"response has no {key}")
                     else:
-                        return body["entities"]
+                        return body[key]
         except (requests.Timeout, requests.ConnectionError) as e:
             last = e
         if attempt < _TRIES - 1:
@@ -111,6 +112,44 @@ def get_entities(
             if "missing" not in e:
                 out[q] = e
     return out
+
+
+def _revisions(params, http_get, sleep) -> list[dict]:
+    q = _get(
+        {"action": "query", "format": "json", "prop": "revisions", **params},
+        http_get,
+        sleep,
+        key="query",
+    )
+    return next(iter((q.get("pages") or {}).values()), {}).get("revisions") or []
+
+
+def recent_revisions(
+    qid, *, limit=50, http_get=requests.get, sleep=time.sleep
+) -> list[dict]:
+    """条目最近 limit 次修改,新→旧;每项 {revid, user, temp?/anon?/userhidden?}。"""
+    return _revisions(
+        {"titles": qid, "rvlimit": limit, "rvprop": "ids|user|flags"},
+        http_get,
+        sleep,
+    )
+
+
+def entity_at(revid, *, http_get=requests.get, sleep=time.sleep) -> dict | None:
+    """某个历史版本的完整实体(同 wbgetentities 单实体形状);内容被隐藏 → None。"""
+    revs = _revisions(
+        {"revids": revid, "rvprop": "content", "rvslots": "main"}, http_get, sleep
+    )
+    raw = revs and (revs[0].get("slots") or {}).get("main", {}).get("*")
+    return json.loads(raw) if raw else None
+
+
+def untrusted_editor(rev: dict) -> bool:
+    """临时账号(temp / ~ 开头)、IP、被隐藏的编者 → 不采信其改动。"""
+    return bool(
+        {"temp", "anon", "userhidden"} & rev.keys()
+        or rev.get("user", "").startswith("~")
+    )
 
 
 def best_statements(entity: dict, pid: str) -> list[dict]:

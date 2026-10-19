@@ -249,3 +249,37 @@ def test_non_json_200_is_retried():
         ["Q1"], props="claims", http_get=get, sleep=waits.append
     ) == {"Q1": {}}
     assert len(calls) == 2
+
+
+def _page(revs):
+    return _Resp(body={"query": {"pages": {"1": {"title": "Q1", "revisions": revs}}}})
+
+
+def test_recent_revisions_newest_first_with_user_flags():
+    """真实形状(Q18572451 10-19):临时账号带 temp 键、名字以 ~ 开头。"""
+    revs = [
+        {"revid": 3, "user": "~2026-50953-52", "temp": ""},
+        {"revid": 2, "user": "Bot"},
+    ]
+    get, calls = _seq(_page(revs))
+    assert wa.recent_revisions("Q1", http_get=get) == revs
+    assert calls[0]["titles"] == "Q1" and calls[0]["rvprop"] == "ids|user|flags"
+
+
+def test_entity_at_parses_main_slot_json():
+    content = '{"id": "Q1", "claims": {"P170": []}}'
+    get, calls = _seq(_page([{"slots": {"main": {"*": content}}}]))
+    assert wa.entity_at(7, http_get=get) == {"id": "Q1", "claims": {"P170": []}}
+    assert calls[0]["revids"] == 7
+
+
+def test_entity_at_hidden_content_is_none():
+    get, _ = _seq(_page([{"slots": {"main": {"texthidden": ""}}}]))
+    assert wa.entity_at(7, http_get=get) is None
+
+
+def test_untrusted_editor_temp_ip_or_hidden():
+    assert wa.untrusted_editor({"user": "~2026-1-1", "temp": ""})
+    assert wa.untrusted_editor({"user": "1.2.3.4", "anon": ""})
+    assert wa.untrusted_editor({"userhidden": ""})
+    assert not wa.untrusted_editor({"user": "Shonagon"})
