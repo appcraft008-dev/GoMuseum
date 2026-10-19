@@ -109,8 +109,8 @@ void main() {
     });
   }
 
-  testWidgets('英文 1.5 倍字号放不下:上下各占整行,每个一行', (t) async {
-    await _pump(t, textScale: 1.5);
+  testWidgets('英文 2 倍字号放不下:上下各占整行,每个一行', (t) async {
+    await _pump(t, textScale: 2.0);
     await loadRealFonts(t);
     await t.pump();
     final search = find.byKey(const Key('fbSearch'));
@@ -132,8 +132,8 @@ void main() {
     }
   });
 
-  testWidgets('英文 1.0 倍字号:仍并排', (t) async {
-    await _pump(t);
+  testWidgets('英文 1.5 倍字号:「No. or title」仍并排(10-19 用户定缩写)', (t) async {
+    await _pump(t, textScale: 1.5);
     await loadRealFonts(t);
     await t.pump();
     expect(t.getTopLeft(find.byKey(const Key('fbSearch'))).dy,

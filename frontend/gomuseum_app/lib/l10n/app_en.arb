@@ -343,7 +343,7 @@
   "recNotRecognized": "Couldn't recognize it",
   "recNotInCatalog": "Couldn't find this work",
   "recShootLabelBtn": "Photograph the wall label",
-  "recTypeNumberOrName": "Number or title",
+  "recTypeNumberOrName": "No. or title",
   "@recTypeNumberOrName": {
     "description": "Primary button on the not-recognized choice card: type the inventory number or the title from the wall label"
   },
