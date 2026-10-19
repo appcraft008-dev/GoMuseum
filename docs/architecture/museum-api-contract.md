@@ -1685,7 +1685,7 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 
 响应:`{query, museums:[{slug,name,city}](仅全局), objects:[{qid,title,artist,year,thumbnail,museum,has_image}]}`。`title/artist` 走既有显示名规则(`_resolve_name`,全语种);~~无图 stub 照常在 `objects`~~(2026-10-11 起不返回;`has_image` 恒为 true,只有 view 图的件 `thumbnail:null`);`museum`=归属馆 slug(点击跳讲解页,与识别 match 同款导航);空 `q`/无结果 → 诚实空态 `objects:[]`。全语种搜(藏品 `title_i18n`+作者 `name_i18n` 全语种进索引,中文界面打 Van Gogh 也中)。
 
-**稳定契约 + 可替换引擎**(照搬识别架构):用户可感知行为由契约锁定、跨引擎不变;引擎可插拔。**首发=进程内索引**(`search/inprocess.py`,单一真相源=Postgres、零同步,馆域索引 TTL 600s 缓存;三路匹配:编号精确 1.0>标题前缀 0.8>标题子串 0.6>作者子串 0.4,同分按 popularity)。**规模触发换引擎**(藏品越过 ~5-10 万件/卢浮+蓬皮杜级别,或实测延迟退化)→ 自托管 Meilisearch/Typesense(CJK 分词好、百万级即时);换引擎只换 `search()` 实现,**契约与前端零改**,唯排序权重可微差、"能搜到什么"一致。
+**稳定契约 + 可替换引擎**(照搬识别架构):用户可感知行为由契约锁定、跨引擎不变;引擎可插拔。**首发=进程内索引**(`search/inprocess.py`,单一真相源=Postgres、零同步,馆域索引 TTL 600s 缓存;三路匹配:编号精确 1.0>纯数字按馆藏号数字 0.9>编号前缀 0.85(输入须同时含字母和数字,「RF1984」出 RF 1984 164;只输「RF」或纯数字不做,10-19)>标题前缀 0.8>标题子串 0.6>作者子串 0.4,同分按 popularity)。**规模触发换引擎**(藏品越过 ~5-10 万件/卢浮+蓬皮杜级别,或实测延迟退化)→ 自托管 Meilisearch/Typesense(CJK 分词好、百万级即时);换引擎只换 `search()` 实现,**契约与前端零改**,唯排序权重可微差、"能搜到什么"一致。
 
 **识别未收录→搜索闭环**:相机识别兜底的「展签检索」sheet 即全局即时搜索,命中点选→讲解页(识别与搜索兜底互通)。
 

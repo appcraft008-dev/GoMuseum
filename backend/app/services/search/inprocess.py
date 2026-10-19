@@ -56,6 +56,11 @@ _INV_MIN = 3  # 归一化编号 <3 位不做精确匹配(防误伤)
 _S_INV = 1.0  # 编号精确
 _S_INV_DIGITS = 0.9  # 只输数字时按馆藏号数字匹配(S4):高于标题前缀,低于整串精确
 _NONDIGIT = re.compile(r"\D")
+_S_INV_PREFIX = (
+    0.85  # 编号前缀(10-19):「RF1984」也出 RF 1984 164;低于整串/数字退路,高于标题前缀
+)
+_ALPHA = re.compile(r"[a-z]")
+_DIGIT = re.compile(r"\d")
 _S_PREFIX = 0.8  # 标题前缀
 _S_SUBSTR = 0.6  # 标题子串
 _S_ARTIST = 0.4  # 作者子串
@@ -339,6 +344,14 @@ def _tier_scores(index: list[dict], query: str) -> dict:
             if e["inv_digits"] == qd:
                 prev = scored.get(e["id"], (e, 0.0))[1]
                 scored[e["id"]] = (e, max(prev, _S_INV_DIGITS))
+    # 编号前缀:要字母+数字都有——只输「RF」奥赛几千件全中等于没筛,纯数字像年份(走上面 S4)
+    if len(qinv) >= _INV_MIN and _ALPHA.search(qinv) and _DIGIT.search(qinv):
+        # ponytail: 逐件 startswith,2.7 万件约毫秒级;上 15 万件换引擎时一起换
+        for e in index:
+            inv = e["inv"]
+            if inv and inv != qinv and inv.startswith(qinv):
+                prev = scored.get(e["id"], (e, 0.0))[1]
+                scored[e["id"]] = (e, max(prev, _S_INV_PREFIX))
     # 这个词更像在搜人还是搜标题:姓命中的件数多于标题前缀命中的件数(「monet」莫奈 90 件 vs
     # 标题以 monet 开头的硬币几件)→ 作者档压过标题前缀;反之(「roman」J.-B. Roman 几件 vs
     # 「罗马废墟」等几十件)留在前缀之下
