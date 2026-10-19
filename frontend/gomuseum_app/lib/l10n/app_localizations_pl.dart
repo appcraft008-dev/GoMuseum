@@ -638,15 +638,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recSearchWithLabel => 'Szukaj tym tekstem';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Wyceluj w tekst tabliczki, wypełnij kadr';
+  String get recViewfinderLabelHint => 'Celuj w tabliczkę, wypełnij kadr';
 
   @override
   String get camRecognizeTitle => 'Rozpoznaj dzieło';
 
   @override
   String get camViewfinderHint =>
-      'Zmieść całe dzieło w kadrze\nSzerokie dzieła: obróć telefon poziomo';
+      'Zmieść całe dzieło w kadrze\nSzerokie dzieła: telefon poziomo';
 
   @override
   String get camRecentGallery => 'Ostatnie';

@@ -635,15 +635,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recSearchWithLabel => 'Cerca con questo testo';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Inquadra il testo del cartellino, riempi lo schermo';
+  String get recViewfinderLabelHint => 'Riempi lo schermo col cartellino';
 
   @override
   String get camRecognizeTitle => 'Identifica opera';
 
   @override
   String get camViewfinderHint =>
-      'Inquadra tutta l\'opera\nRuota il telefono per le opere larghe';
+      'Inquadra tutta l\'opera\nOpere larghe: ruota il telefono';
 
   @override
   String get camRecentGallery => 'Recenti';

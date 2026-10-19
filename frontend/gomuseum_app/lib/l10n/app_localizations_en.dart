@@ -631,14 +631,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recSearchWithLabel => 'Search using this text';
 
   @override
-  String get recViewfinderLabelHint => 'Aim at the label text, fill the frame';
+  String get recViewfinderLabelHint => 'Aim at the label, fill the frame';
 
   @override
   String get camRecognizeTitle => 'Identify Artwork';
 
   @override
   String get camViewfinderHint =>
-      'Fit the whole artwork in the frame\nTurn your phone sideways for wide works';
+      'Frame the whole artwork\nRotate your phone for wide works';
 
   @override
   String get camRecentGallery => 'Recent';

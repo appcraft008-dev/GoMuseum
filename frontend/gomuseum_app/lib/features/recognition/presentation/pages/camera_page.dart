@@ -773,12 +773,13 @@ class _CameraPageState extends ConsumerState<CameraPage>
             Align(
               alignment: Alignment.center,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 40),
+                margin: const EdgeInsets.symmetric(horizontal: 24),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                 decoration: BoxDecoration(
                   color: const Color(0x8C171310),
-                  borderRadius: BorderRadius.circular(999),
+                  // 大字号下会折行，胶囊圆角会变成椭圆团，改用固定圆角
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   _labelMode
