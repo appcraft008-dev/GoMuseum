@@ -145,7 +145,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exploreTitle => 'Explorer';
 
   @override
-  String get searchCityMuseumArtwork => 'Rechercher villes, musées ou œuvres';
+  String get searchCityMuseumArtwork => 'Villes, musées ou œuvres';
 
   @override
   String get searchMuseumsSection => 'Musées';
