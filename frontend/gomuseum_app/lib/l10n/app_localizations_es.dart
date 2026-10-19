@@ -639,8 +639,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recSearchWithLabel => 'Buscar con este texto';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Apunta al texto de la cartela, llena el encuadre';
+  String get recViewfinderLabelHint => 'Llena el encuadre con la cartela';
 
   @override
   String get camRecognizeTitle => 'Identificar obra';

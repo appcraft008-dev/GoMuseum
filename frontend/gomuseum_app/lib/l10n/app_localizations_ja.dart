@@ -620,7 +620,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recSearchWithLabel => 'このテキストで検索';
 
   @override
-  String get recViewfinderLabelHint => 'プレートの文字を画面いっぱいに写してください';
+  String get recViewfinderLabelHint => 'プレートの文字を画面いっぱいに';
 
   @override
   String get camRecognizeTitle => '作品を識別';

@@ -368,9 +368,9 @@
     "description": "The only button: continue regardless of the checkbox"
   },
   "recSearchWithLabel": "Search using this text",
-  "recViewfinderLabelHint": "Aim at the label text, fill the frame",
+  "recViewfinderLabelHint": "Aim at the label, fill the frame",
   "camRecognizeTitle": "Identify Artwork",
-  "camViewfinderHint": "Fit the whole artwork in the frame\nTurn your phone sideways for wide works",
+  "camViewfinderHint": "Frame the whole artwork\nRotate your phone for wide works",
   "camRecentGallery": "Recent",
   "camAllAlbums": "All albums",
   "camGallery": "Gallery",

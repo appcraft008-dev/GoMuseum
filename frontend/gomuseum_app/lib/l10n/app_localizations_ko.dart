@@ -634,7 +634,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get camViewfinderHint =>
-      '작⁠품 전⁠체⁠를 화⁠면⁠에 담⁠으⁠세⁠요\n가⁠로⁠로 긴 작⁠품⁠은 휴⁠대⁠폰⁠을 가⁠로⁠로 드⁠세⁠요';
+      '작⁠품 전⁠체⁠를 화⁠면⁠에 담⁠으⁠세⁠요\n넓⁠은 작⁠품⁠은 가⁠로⁠로 찍⁠으⁠세⁠요';
 
   @override
   String get camRecentGallery => '최⁠근';

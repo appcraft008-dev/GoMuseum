@@ -1250,7 +1250,7 @@ abstract class AppLocalizations {
   /// No description provided for @recViewfinderLabelHint.
   ///
   /// In en, this message translates to:
-  /// **'Aim at the label text, fill the frame'**
+  /// **'Aim at the label, fill the frame'**
   String get recViewfinderLabelHint;
 
   /// No description provided for @camRecognizeTitle.
@@ -1262,7 +1262,7 @@ abstract class AppLocalizations {
   /// No description provided for @camViewfinderHint.
   ///
   /// In en, this message translates to:
-  /// **'Fit the whole artwork in the frame\nTurn your phone sideways for wide works'**
+  /// **'Frame the whole artwork\nRotate your phone for wide works'**
   String get camViewfinderHint;
 
   /// No description provided for @camRecentGallery.

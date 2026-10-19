@@ -640,15 +640,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recSearchWithLabel => 'Rechercher avec ce texte';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Visez le texte du cartel, remplissez le cadre';
+  String get recViewfinderLabelHint => 'Visez le cartel, remplissez le cadre';
 
   @override
   String get camRecognizeTitle => 'Identifier l\'œuvre';
 
   @override
   String get camViewfinderHint =>
-      'Cadrez toute l\'œuvre\nTournez le téléphone pour les œuvres larges';
+      'Cadrez toute l\'œuvre\nŒuvre large ? Passez en paysage';
 
   @override
   String get camRecentGallery => 'Récents';

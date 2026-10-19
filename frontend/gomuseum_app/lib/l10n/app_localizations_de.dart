@@ -638,15 +638,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recSearchWithLabel => 'Mit diesem Text suchen';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Auf den Schildtext zielen, Rahmen ausfüllen';
+  String get recViewfinderLabelHint => 'Schild anvisieren, Rahmen füllen';
 
   @override
   String get camRecognizeTitle => 'Werk erkennen';
 
   @override
   String get camViewfinderHint =>
-      'Das ganze Werk in den Rahmen\nFür breite Werke das Handy quer halten';
+      'Das ganze Werk in den Rahmen\nBreite Werke: Handy quer halten';
 
   @override
   String get camRecentGallery => 'Zuletzt';
