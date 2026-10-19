@@ -192,6 +192,12 @@ def build_translation_prompt(
             f"to the work by name, use EXACTLY this title, do not invent an "
             f"alternative rendering. Punctuate it with {lang}'s own quotation "
             f"conventions; never copy the tags themselves."
+            # 10-19 Q29855229:标题里含另一件作品名(「X 的习作」)时,模型把原文提到的
+            # 那件大作也换成本件整标题;忠实度闸拿到同一个规范标题,照样放行
+            f" Apply that title ONLY to this artwork. Other works mentioned in the "
+            f"text (e.g. the larger composition a study was made for, the original a "
+            f"copy is after) are DIFFERENT works: translate their own titles, never "
+            f"replace them with this artwork's title."
         )
     if artist:
         # 作者译名一致性(标题真相唯一化的姊妹):正文称呼作者一律用作者卡规范名
