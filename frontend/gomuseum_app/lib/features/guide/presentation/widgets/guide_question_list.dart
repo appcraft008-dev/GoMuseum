@@ -88,7 +88,7 @@ class _GuideQuestionListState extends State<GuideQuestionList> {
               children: [
                 Text(q.answer!,
                     style: GmText.sans(size: 13, height: 1.9, color: gm.sub),
-                    textAlign: TextAlign.justify),
+                    textAlign: context.gmBodyAlign),
                 if (_canPlay && q.sort != null)
                   GuideAudioPlayer(
                     slug: widget.slug!,

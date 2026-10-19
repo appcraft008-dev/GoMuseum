@@ -646,7 +646,7 @@ class _GuidePageState extends ConsumerState<GuidePage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(intro, style: paragraphStyle, textAlign: TextAlign.justify),
+        Text(intro, style: paragraphStyle, textAlign: context.gmBodyAlign),
         if (highlight.isNotEmpty) ...[
           const SizedBox(height: 11),
           Row(children: [
@@ -657,7 +657,8 @@ class _GuidePageState extends ConsumerState<GuidePage>
             const Expanded(child: GmHairline()),
           ]),
           const SizedBox(height: 9),
-          Text(highlight, style: paragraphStyle, textAlign: TextAlign.justify),
+          Text(highlight,
+              style: paragraphStyle, textAlign: context.gmBodyAlign),
         ],
       ],
     );
@@ -1328,7 +1329,7 @@ class _A5Body extends StatelessWidget {
           if (layer.hasHero)
             Text(layer.heroBody,
                 style: GmText.sans(size: 13.5, height: context.gmBodyHeight),
-                textAlign: TextAlign.justify)
+                textAlign: context.gmBodyAlign)
           else if (deepGenerating)
             // 生成中：hero/标题/墙签已在上方呈现，讲解区显「正在撰写」占位。
             Padding(
