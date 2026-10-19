@@ -61,7 +61,7 @@ class GuideArtistCard extends StatelessWidget {
           ),
           Text(artist.bio!,
               style: GmText.sans(size: 13.5, height: 1.9),
-              textAlign: TextAlign.justify),
+              textAlign: context.gmBodyAlign),
         ],
       ],
     );
