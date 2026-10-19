@@ -1605,12 +1605,27 @@ def test_orphaned_guide_is_regenerated_once(session):
     assert row.body == second
 
 
-def test_guide_held_for_low_grounding_is_not_regenerated(session):
-    """对照组:存活率不够(脑补多)而挂起的 guide **不**重写 —— 重写只为悬空,
-    否则就成了「换着花样生成直到过闸」,闸的意义没了。"""
-    draft = "Vollard sits by the fire. He was born in 1700. He owned a castle."
-    row, n = _guide_run(session, [draft, "unused"], lambda user: [True, False, False])
-    assert n == 1
+def test_guide_held_for_low_grounding_is_regenerated(session):
+    """存活率不够而挂起的 guide 也重写:guide 是作品页主讲解,挂起=这件没讲解。
+    换 Luna 后 10-18 实测失败多是随机的(同件重写多半能过);重写稿照样逐句过闸,
+    闸删的句子一句也不会放出来。"""
+    bad = "Vollard sits by the fire. He was born in 1700. He owned a castle."
+    good = "Vollard sits by the fire. A cat sleeps. The room is warm."
+    row, n = _guide_run(
+        session,
+        [bad, good],
+        lambda user: [True, False, False] if "1700" in user else [True] * 3,
+    )
+    assert n == 2
+    assert row.status == "published"
+    assert row.body == good
+
+
+def test_guide_gives_up_after_three_drafts(session):
+    """封顶 3 稿,还过不了就照常挂起 —— 不无限烧钱、不无限拖首屏。"""
+    bad = "Vollard sits by the fire. He was born in 1700. He owned a castle."
+    row, n = _guide_run(session, [bad] * 4, lambda user: [True, False, False])
+    assert n == 3
     assert row.status == "needs_review"
 
 

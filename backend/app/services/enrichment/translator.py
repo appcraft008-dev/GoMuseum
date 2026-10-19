@@ -206,9 +206,12 @@ class ContentTranslator:
                 translated = self.translate_section(en_body, lang, **names)
                 ok, issues = self.check_faithfulness(en_body, translated, lang, **names)
                 lang_ok = _lang_ok(translated, lang)
-                if (not ok or not lang_ok) and self._complete_strong:
-                    # 不忠实 或 语言不符 → 强模型(gpt-4o)重译一次并采用
-                    # (总比 mini 的坏译好;顽固少数才付费,语言无关靠闸信号触发)
+                # 不忠实 或 语言不符 → 强模型重译并采用(语言无关靠闸信号触发)。
+                # 主讲解多给一稿:挂起=这门语言的作品页没讲解;10-18 实测 Luna 判官
+                # 单次误判好译文 4.5%,《草地上的午餐》zh guide 两稿都被误判 → 接口 empty。
+                for _ in range(2 if code == "guide" else 1):
+                    if (ok and lang_ok) or not self._complete_strong:
+                        break
                     translated = self.translate_section(
                         en_body, lang, strong=True, **names
                     )

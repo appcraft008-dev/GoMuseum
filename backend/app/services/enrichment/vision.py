@@ -35,7 +35,9 @@ import re
 
 logger = logging.getLogger(__name__)
 
-MODEL = "gpt-4o"
+from app.services.openai_models import VISION, chat, resolve
+
+MODEL = VISION  # 真实模型见 settings.OPENAI_VISION_MODEL
 DETAIL = "high"
 
 # 描述写进哪个键。前缀 `visual_description_` 会被 build_material 收进
@@ -98,7 +100,7 @@ def ensure_description(db, obj, describe=None) -> bool:
         text = strip_signatures(text, _artist_names(db, obj))
     from sqlalchemy.orm.attributes import flag_modified
 
-    obj.attributes = {**attrs, KEY: text, VIA_KEY: f"{MODEL}/{DETAIL}"}
+    obj.attributes = {**attrs, KEY: text, VIA_KEY: f"{resolve(MODEL)}/{DETAIL}"}
     flag_modified(obj, "attributes")
     db.flush()
     return True
@@ -141,42 +143,29 @@ def _artist_names(db, obj) -> list[str]:
 
 
 def _classify_signatures(names: list[str], quoted: list[str]) -> list[bool]:
-    import asyncio
     import json
 
-    from app.services.content_generation_service import _get_openai_client
+    from app.services.enrichment.content_enricher import _parse_json
 
-    client = _get_openai_client()
-    if client is None:
-        raise RuntimeError("OpenAI client 不可用")
-
-    async def _run():
-        return await client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": _SIGNATURE_SYSTEM},
-                {
-                    "role": "user",
-                    "content": json.dumps(
-                        {"artist": names, "quoted_texts": quoted}, ensure_ascii=False
-                    ),
-                },
-            ],
-        )
-
-    resp = asyncio.run(_run())
+    text, real, tin, tout = chat(
+        "gpt-4o-mini",
+        [
+            {"role": "system", "content": _SIGNATURE_SYSTEM},
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {"artist": names, "quoted_texts": quoted}, ensure_ascii=False
+                ),
+            },
+        ],
+        channel="vision",
+        temperature=0,
+        response_format={"type": "json_object"},
+    )
     from app.services.llm_usage import record_llm_usage
 
-    usage = getattr(resp, "usage", None)
-    record_llm_usage(
-        "vision",
-        "gpt-4o-mini",
-        getattr(usage, "prompt_tokens", 0),
-        getattr(usage, "completion_tokens", 0),
-    )
-    flags = json.loads(resp.choices[0].message.content).get("signature") or []
+    record_llm_usage("vision", real, tin, tout)
+    flags = _parse_json(text).get("signature") or []
     return [bool(f) for f in flags]
 
 
@@ -298,26 +287,15 @@ def describe_image(
     attempts:OpenAI 侧取图偶发超时(实测 `invalid_image_url:
     Unable to download content ... before the timeout`),CDN 抖动而已,重试即可。
     """
-    import asyncio
-
-    from app.services.content_generation_service import _get_openai_client
-
-    client = _get_openai_client()
-    if client is None:
-        raise RuntimeError("OpenAI client 不可用")
-
-    async def _run():
-        resp = await client.chat.completions.create(
-            model=model,
-            messages=build_vision_messages(image_url, detail),
-            temperature=0,
-        )
-        return resp.choices[0].message.content, getattr(resp, "usage", None)
-
     last = None
     for i in range(attempts):
         try:
-            text, usage = asyncio.run(_run())
+            text, real, tin, tout = chat(
+                model,
+                build_vision_messages(image_url, detail),
+                channel=channel,
+                temperature=0,
+            )
             break
         except Exception as e:  # noqa: BLE001 — 重试后仍失败会原样抛出
             last = e
@@ -329,12 +307,7 @@ def describe_image(
 
     from app.services.llm_usage import record_llm_usage
 
-    record_llm_usage(
-        channel,
-        model,
-        getattr(usage, "prompt_tokens", 0),
-        getattr(usage, "completion_tokens", 0),
-    )
+    record_llm_usage(channel, real, tin, tout)
     text = (text or "").strip()
     if not text:
         raise RuntimeError(f"视觉描述为空: {image_url}")

@@ -67,29 +67,21 @@ _LABEL_SYSTEM = (
 )
 
 
-def _default_complete(system: str, user_content, model: str = "gpt-4o-mini") -> str:
-    """真实视觉调用(30s 超时)。客户端是 AsyncOpenAI——必须 asyncio.run
-    (staging 教训:漏 await 时 create() 返回协程,identify 静默空结果)。"""
-    import asyncio
+def _default_complete(
+    system: str, user_content, model: str = "gpt-4o-mini", channel: str | None = None
+) -> str:
+    """真实视觉调用(30s 超时),按 channel 分发到 OpenAI / Anthropic(见 openai_models.chat)。"""
+    from app.services.openai_models import chat
 
-    from app.services.content_generation_service import _get_openai_client
-
-    client = _get_openai_client()
-    if client is None:
-        raise RuntimeError("OpenAI client unavailable")
-
-    async def _run():
-        resp = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_content},
-            ],
-            timeout=30,
-        )
-        return resp.choices[0].message.content or ""
-
-    return asyncio.run(_run())
+    return chat(
+        model,
+        [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_content},
+        ],
+        channel=channel,
+        timeout=30,
+    )[0]
 
 
 def _pick(raw, n: int):
@@ -120,7 +112,13 @@ def identify(
         model = "gpt-4o" if label else "gpt-4o-mini"
 
         def complete(system, user_content):
-            return _default_complete(system, user_content, model=model)
+            # 通路名让墙签/识别兜底能各配各的模型(LLM_CHANNEL_MODELS)
+            return _default_complete(
+                system,
+                user_content,
+                model=model,
+                channel="label" if label else "recognition",
+            )
 
     shortlist = None if label else shortlist
     system = _LABEL_SYSTEM if label else _ARTWORK_SYSTEM

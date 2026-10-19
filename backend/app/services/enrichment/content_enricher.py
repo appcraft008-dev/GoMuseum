@@ -91,8 +91,9 @@ def _parse_json(text: str) -> dict:
     try:
         return json.loads(t)
     except Exception:
-        m = re.search(r"\{.*\}", t, re.DOTALL)
-        return json.loads(m.group(0)) if m else {}
+        # 取第一个完整对象:Luna 偶尔连吐两段 JSON,贪婪 {.*} 会吞成一串报 Extra data
+        i = t.find("{")
+        return json.JSONDecoder().raw_decode(t[i:])[0] if i >= 0 else {}
 
 
 class ContentEnricher:
@@ -159,38 +160,23 @@ def default_complete(
     结论;换 0 后两遍一致率升到 **95%**。⚠️ 不是 100%:OpenAI 的 temperature=0 不保证
     确定性,所以**批量重判仍须多遍取交集**,别指望这个参数根治(契约纪律 21)。
     """
-    import asyncio
-
-    from app.services.content_generation_service import _get_openai_client
+    from app.services.openai_models import chat
 
     # 成本可观测:强模型(非默认 mini)每次触发都打一条可 grep 日志(闸失败频率信号)
     # 统计: docker logs <backend> | grep -c 'STRONG_MODEL_USE'
     if model != "gpt-4o-mini":
         logger.info("STRONG_MODEL_USE model=%s", model)
 
-    client = _get_openai_client()
-    if client is None:
-        raise RuntimeError("OpenAI client 不可用")
-
-    async def _run():
-        resp = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=temperature,
-        )
-        u = getattr(resp, "usage", None)
-        return resp.choices[0].message.content, u
-
-    text, usage = asyncio.run(_run())
+    text, real, tin, tout = chat(
+        model,
+        [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        channel=channel,
+        temperature=temperature,
+    )
     from app.services.llm_usage import record_llm_usage
 
-    record_llm_usage(
-        channel,
-        model,
-        getattr(usage, "prompt_tokens", 0),
-        getattr(usage, "completion_tokens", 0),
-    )
+    record_llm_usage(channel, real, tin, tout)
     return text

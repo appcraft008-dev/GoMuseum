@@ -381,3 +381,11 @@ def test_translator_judge_defaults_to_complete():
     tr = ContentTranslator(fake)
     assert tr.check_faithfulness("en", "zh 译文", "zh")[0] is True
     assert len(calls) == 1
+
+
+def test_parse_json_takes_first_object_when_model_emits_two():
+    """Luna 偶尔连吐两段 JSON(10-18 端到端 2/58):贪婪 {.*} 会吞成一串报 Extra data。"""
+    from app.services.enrichment.content_enricher import _parse_json
+
+    assert _parse_json('{"guide": "a"}\n{"facts": "b"}') == {"guide": "a"}
+    assert _parse_json('Here:\n```json\n{"x": {"y": 1}}\n```') == {"x": {"y": 1}}

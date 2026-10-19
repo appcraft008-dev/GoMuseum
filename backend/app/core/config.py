@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     # OpenAI
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o"
+    # 4o 系 2027-01-14 退役:代码里写档位名(gpt-4o-mini / gpt-4o / vision),
+    # 发请求前由 app.services.openai_models.resolve 换成这里的真实模型;env 不配 = 现状。
+    OPENAI_FAST_MODEL: str = "gpt-4o-mini"  # 生成/闸/翻译/识别兜底
+    OPENAI_STRONG_MODEL: str = "gpt-4o"  # 强模型重译/人名/墙签
+    OPENAI_VISION_MODEL: str = "gpt-4o"  # 看图写外观描述
+    # 按用量通路覆盖档位(JSON),值以 claude- 开头的走 Anthropic。prod/staging 现配:
+    # {"generate","gate","qa","label"} → claude-haiku-5-5(10-18 对照,见 openai_models)
+    LLM_CHANNEL_MODELS: dict[str, str] = {}
     OPENAI_TIMEOUT: int = 30
 
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
