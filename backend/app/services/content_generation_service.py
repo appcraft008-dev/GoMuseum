@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 # Lazy import OpenAI。client 按线程本地缓存:httpx 连接池不跨线程安全——
 # 并发生成线程(lazy _SEM=2、qa‖翻译)共享单例会撞池报 APIConnectionError(staging 实证);
-# 线程内顺序复用(每调用 asyncio.run 换 loop)已被 prod 大量调用证明可行。
+# 线程内顺序复用(每调用 asyncio.run 换 loop)可行,但必须关 keep-alive:池里的连接挂在
+# 上一个已关的 loop 上,复用即连接错误 → SDK 等 ~0.5s 重试(prod 297 次调用 275 次重试)。
+# 调用方都是一次 asyncio.run 只发一个请求,keep-alive 本无收益。
 _openai_tl = threading.local()
 
 
@@ -27,9 +29,15 @@ def _get_openai_client():
     """Lazy load OpenAI client(每线程一个实例)"""
     if getattr(_openai_tl, "client", None) is None:
         try:
-            from openai import AsyncOpenAI
+            import httpx
+            from openai import AsyncOpenAI, DefaultAsyncHttpxClient
 
-            _openai_tl.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            _openai_tl.client = AsyncOpenAI(
+                api_key=settings.OPENAI_API_KEY,
+                http_client=DefaultAsyncHttpxClient(
+                    limits=httpx.Limits(max_keepalive_connections=0)
+                ),
+            )
             logger.info("OpenAI client initialized for content generation")
         except ImportError:
             logger.warning("openai package not installed")
