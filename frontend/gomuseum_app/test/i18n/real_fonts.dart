@@ -8,8 +8,7 @@
 // 同一份字体文件；google_fonts 自己的网络加载在测试里会失败，但同名字体已在引擎里，
 // 渲染照样用上。字体从 fonts.gstatic.com 下载一次，缓存到 .dart_tool/（不进 git）。
 //
-// 中日韩：只下载 Noto Sans SC 一份，注册到所有 CJK 家族名下 —— 汉字/假名/谚文
-// 在这些字体里都是 1em 等宽，量宽度足够准；字形差异（日韩繁写法）不影响溢出判断。
+// 中日韩：按地区取真实字体（见 _cjk），截图里各语言字形是对的。
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -31,11 +30,28 @@ const _latin = {
     '1cff8098b873570abf5e194f781e85078d6b250ef5b95eb1e03c390f2ab223e2',
   ],
 };
-const _cjk = 'a0ecca1c67a4da5a89857703b84a44eba9fce7d7b5941bf4285e8c0a8346cf60';
-const _cjkFamilies = [
-  'NotoSansSC', 'NotoSerifSC', 'NotoSansJP', 'NotoSerifJP', //
-  'NotoSansKR', 'NotoSerifKR', 'NotoSansTC', 'NotoSerifTC',
-];
+
+/// 中日韩按地区各取 w400 一份，注册到该地区所有字重名下（粗体由引擎合成）：
+/// SC 里没有谚文，韩文落到 SC 会显示成豆腐块。衬线 SC 单独取 —— 简中标题用它。
+const _cjk = {
+  'NotoSansSC':
+      'a0ecca1c67a4da5a89857703b84a44eba9fce7d7b5941bf4285e8c0a8346cf60',
+  'NotoSerifSC':
+      '5fbd8ebc1678279307a49822f08015acb572dcdc282c38653a0449890f603db6',
+  'NotoSansJP':
+      '0eba77a9f62df60eda7b56719cf57bbfbd8434583f2a137a9b91d4d67cf420c0',
+  'NotoSansKR':
+      '65f278fc677a3a0128c733af662c3eb31b910c9bce81e046ccc3c6d3ede879e2',
+  'NotoSansTC':
+      '17d9b1bfc0eb614c5947422e575e4bf664afc809def6cdcd7760d76c71928e50',
+};
+
+/// 日韩繁的衬线体各 7–14MB，测试里用同地区无衬线代替（宽度一致，字形不同）。
+const _cjkAlias = {
+  'NotoSerifJP': 'NotoSansJP',
+  'NotoSerifKR': 'NotoSansKR',
+  'NotoSerifTC': 'NotoSansTC',
+};
 const _variants = ['regular', '500', '600', '700'];
 
 class _RealHttp extends HttpOverrides {}
@@ -74,10 +90,12 @@ Future<void> loadRealFonts(WidgetTester tester) async {
         await _register('${e.key}_${_variants[i]}', await _fetch(e.value[i]));
       }
     }
-    final cjk = await _fetch(_cjk);
-    for (final fam in _cjkFamilies) {
+    final bytes = {
+      for (final e in _cjk.entries) e.key: await _fetch(e.value),
+    };
+    for (final fam in [..._cjk.keys, ..._cjkAlias.keys]) {
       for (final v in _variants) {
-        await _register('${fam}_$v', cjk);
+        await _register('${fam}_$v', bytes[_cjkAlias[fam] ?? fam]!);
       }
     }
   });

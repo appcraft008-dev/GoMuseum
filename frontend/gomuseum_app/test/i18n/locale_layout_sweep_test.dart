@@ -3,6 +3,7 @@
 // 多语言排版扫描：主要页面 × 全部 UI 语言，在 360dp 窄屏 + 真实字体下渲染，
 //   - **溢出**（RenderFlex overflowed 等布局错误）→ 失败；
 //   - **被截断的文本**（maxLines 到顶、出省略号）→ 只记录不失败（有些是刻意设计）；
+//   - **被 FittedBox 缩小的文字**（<0.97）→ 只记录；不溢出，但字号随语言忽大忽小；
 //   - **单词被拦腰断行**（窄 Expanded 把德语长词切成 "Anmelde|n"）→ 只记录；
 //     这类不报布局错误，查溢出抓不到，却是多语言最丑的形态。
 //   报告写到 build/i18n_sweep/report.tsv；
@@ -17,6 +18,7 @@ import 'dart:ui' as ui;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/auth/data/auth_repository.dart';
@@ -38,6 +40,10 @@ import 'package:gomuseum_app/features/payment/data/pass_product.dart';
 import 'package:gomuseum_app/features/payment/domain/entities/user_benefits.dart';
 import 'package:gomuseum_app/features/payment/presentation/pages/benefits_page.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
+import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
+import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
+import 'package:gomuseum_app/features/recognition/presentation/pages/camera_page.dart';
+import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -118,6 +124,27 @@ class _Benefits extends BenefitsState {
         totalQuota: 8,
         totalUsed: 2,
       );
+}
+
+/// 拍照页的识别状态钉死在某一态（resetState 也不回到初始态）。
+class _FixedRec extends RecognitionNotifier {
+  _FixedRec(this.fixed);
+  final RecognitionState fixed;
+  @override
+  RecognitionState build() => fixed;
+  @override
+  void resetState() {}
+}
+
+List<RecognizedItem> _candidates(Locale l) {
+  final c = _cjk(l);
+  RecognizedItem i(String q, String zh, String lat, String a) => RecognizedItem(
+      qid: q, title: c ? zh : lat, artist: a, thumbnail: null, score: 0.8);
+  return [
+    i('Q1', '在阿尔勒的卧室', 'The Bedroom in Arles', 'Vincent van Gogh'),
+    i('Q2', '星夜', 'The Starry Night Over the Rhône', 'Vincent van Gogh'),
+    i('Q3', '草地上的午餐', 'Le Déjeuner sur l\'herbe', 'Édouard Manet'),
+  ];
 }
 
 class _NoHistory extends History {
@@ -211,6 +238,44 @@ final Map<String, _Page> _pages = {
     overrides: (l) => _common(l, _free(l)),
     page: const Scaffold(body: SettingsPage())
   ),
+  'camera': (overrides: (l) => _common(l, _free(l)), page: const CameraPage()),
+  'rec_candidates': (
+    overrides: (l) => [
+          ..._common(l, _free(l)),
+          recognitionNotifierProvider.overrideWith(() =>
+              _FixedRec(RecognitionCandidates(_candidates(l), null, 'orsay'))),
+        ],
+    page: const CameraPage()
+  ),
+  'rec_unrecognized': (
+    overrides: (l) => [
+          ..._common(l, _free(l)),
+          recognitionNotifierProvider.overrideWith(() =>
+              _FixedRec(const RecognitionUnrecognized(null, null, 'orsay'))),
+        ],
+    page: const CameraPage()
+  ),
+  'rec_error': (
+    overrides: (l) => [
+          ..._common(l, _free(l)),
+          recognitionNotifierProvider
+              .overrideWith(() => _FixedRec(const RecognitionError('timeout'))),
+        ],
+    page: const CameraPage()
+  ),
+  'rec_quota': (
+    overrides: (l) => [
+          ..._common(l, _free(l)),
+          recognitionNotifierProvider
+              .overrideWith(() => _FixedRec(const RecognitionQuotaExceeded())),
+        ],
+    page: const CameraPage()
+  ),
+  'paywall': (
+    overrides: (l) => _common(l, _free(l)),
+    page: const Scaffold(
+        body: SingleChildScrollView(child: PaywallSheetContent()))
+  ),
   'settings_active': (
     overrides: (l) => _common(l, _active(l)),
     page: const Scaffold(body: SettingsPage())
@@ -261,6 +326,14 @@ void main() {
         final cell = scale == 1.0 ? tag : '$tag@${scale}x';
         testWidgets('${entry.key} · $cell · 不溢出', (t) async {
           await loadRealFonts(t);
+          // 测试里没有相机插件：取景页按「没有相机」那一态渲染。
+          t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              const MethodChannel('plugins.flutter.io/camera'),
+              (call) async => call.method == 'availableCameras' ? [] : null);
+          // 「最近图库」条：相册权限按拒绝处理（2 = PermissionState.denied），静默不显示。
+          t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+              const MethodChannel('com.fluttercandies/photo_manager'),
+              (call) async => 2);
           // 页面里按 languageProvider 取请求语言；它从这个 key 读用户选择。
           SharedPreferences.setMockInitialValues(
               {'selected_language': localeTag(locale)});
@@ -298,6 +371,25 @@ void main() {
 
           final paras = t.allRenderObjects.whereType<RenderParagraph>().toSet();
           final key = '${entry.key} · $cell';
+          for (final f
+              in t.allRenderObjects.whereType<RenderFittedBox>().toSet()) {
+            final c = f.child;
+            if (c == null || !c.hasSize || c.size.isEmpty) continue;
+            final k = (f.size.width / c.size.width)
+                .clamp(0.0, f.size.height / c.size.height);
+            if (k >= 0.97) continue;
+            final texts = <String>[];
+            void visit(RenderObject o) {
+              if (o is RenderParagraph) texts.add(o.text.toPlainText());
+              o.visitChildren(visit);
+            }
+
+            visit(c);
+            if (texts.isNotEmpty) {
+              _report
+                  .add('$key\t缩放\t${k.toStringAsFixed(2)}\t${texts.join(' ')}');
+            }
+          }
           for (final p in paras) {
             final text = p.text.toPlainText();
             if (p.didExceedMaxLines) {
