@@ -438,7 +438,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     return GestureDetector(
       onTap: () => context.push('/museum/${museum.slug}'),
       child: Container(
-        height: 58,
+        // 最小高度而非固定高度：大字号/长馆名下两行字会撑破 58（i18n 扫描抓到）
+        constraints: const BoxConstraints(minHeight: 58),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: gm.line)),
         ),

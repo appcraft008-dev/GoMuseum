@@ -88,15 +88,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homePocketGuide => 'Guide de musée de poche';
 
   @override
-  String get homeSlogan =>
-      'Approchez-vous d\'une œuvre,\nécoutez son histoire.';
+  String get homeSlogan => 'Approchez une œuvre,\nécoutez son histoire.';
 
   @override
-  String get homeCtaRecognize => 'Photographier pour reconnaître & écouter';
+  String get homeCtaRecognize => 'Photographiez, écoutez';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count scans gratuits restants · Passez à l\'offre complète';
+    return 'Scans gratuits restants : $count · Offre complète';
   }
 
   @override
@@ -145,7 +144,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exploreTitle => 'Explorer';
 
   @override
-  String get searchCityMuseumArtwork => 'Rechercher villes, musées ou œuvres';
+  String get searchCityMuseumArtwork => 'Villes, musées ou œuvres';
 
   @override
   String get searchMuseumsSection => 'Musées';
@@ -619,14 +618,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recShootLabelBtn => 'Photographier le cartel';
 
   @override
-  String get recTypeNumberOrName => 'Saisir le numéro ou le titre';
+  String get recTypeNumberOrName => 'Numéro ou titre';
 
   @override
   String get photoFbTitle => 'Nous envoyer cette photo ?';
 
   @override
   String get photoFbBody =>
-      'Utilisée uniquement pour ajouter les œuvres manquantes et améliorer la reconnaissance. Conservée 90 jours au maximum, jamais montrée à personne.';
+      'Sert uniquement à ajouter les œuvres manquantes et à mieux reconnaître. Gardée 90 jours max., jamais publiée.';
 
   @override
   String get photoFbConsent => 'Envoyer cette photo';
@@ -641,15 +640,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get recSearchWithLabel => 'Rechercher avec ce texte';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Visez le texte du cartel, remplissez le cadre';
+  String get recViewfinderLabelHint => 'Visez le cartel, remplissez le cadre';
 
   @override
   String get camRecognizeTitle => 'Identifier l\'œuvre';
 
   @override
   String get camViewfinderHint =>
-      'Cadrez toute l\'œuvre\nTournez le téléphone pour les œuvres larges';
+      'Cadrez toute l\'œuvre\nŒuvre large ? Passez en paysage';
 
   @override
   String get camRecentGallery => 'Récents';
@@ -721,16 +719,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get camRecognizing => 'Reconnaissance…';
 
   @override
-  String get camComparing =>
-      'L\'IA compare avec les collections et les bases d\'art publiques';
+  String get camComparing => 'L\'IA consulte musées et bases d\'art';
 
   @override
-  String get recWaitSlow =>
-      'Un peu plus long que d\'habitude — on cherche encore';
+  String get recWaitSlow => 'Plus long que d\'habitude — on cherche';
 
   @override
   String get recWaitSwitchApp =>
-      'Vous pouvez passer à une autre app : le résultat sera là à votre retour';
+      'Vous pouvez changer d\'app : le résultat sera là à votre retour';
 
   @override
   String get camConfirmPrompt =>
@@ -1243,9 +1239,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'C\'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Photographier le cartel aide souvent.';
+      'Expo temporaire ou pas encore au guide ? Le cartel en photo aide souvent.';
 
   @override
   String get recLabelNoMatch =>
-      'C\'est peut-être une exposition temporaire ou une œuvre pas encore dans notre guide. Essayez un autre nom ou numéro.';
+      'Expo temporaire ou pas encore au guide ? Essayez un autre nom ou numéro.';
 }

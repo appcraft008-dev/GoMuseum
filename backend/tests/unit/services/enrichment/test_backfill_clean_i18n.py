@@ -348,3 +348,90 @@ def test_keeps_inventory_when_only_museum_name_would_remain():
         "ルーブル E 658",
     ):
         assert strip_inventory(t, "E 658") == t
+
+
+# ── 10-19 剩余形态(prod 卢浮 322 件):号后接部门名 / 号在句中 / 中日韩紧贴 / 短号 ──
+
+
+def test_strips_inventory_followed_by_department_clause():
+    cases = [
+        (
+            "Sandal, AO 28297, Department of Near Eastern Antiquities of the Louvre",
+            "Sandal",
+        ),
+        ("Sandał, AO 28297, Dział Starożytności Bliskiego Wschodu Luwru", "Sandał"),
+        ("サンダル、AO 28297、ルーヴル美術館近東古代部門", "サンダル"),
+        ("샌들, AO 28297, 루브르 박물관 근동 고대 유물 부서", "샌들"),
+    ]
+    for title, want in cases:
+        assert strip_inventory(title, "AO 28297") == want, title
+
+
+def test_strips_inventory_in_the_middle_and_glued_to_cjk():
+    cases = [
+        ("达内尔史诗AO17323", "AO 17323", "达内尔史诗"),
+        ("マレタラト-E 10302の印章", "E 10302", "マレタラトの印章"),
+        ("말레타라트-E 10302의 인장", "E 10302", "말레타라트의 인장"),
+        ("奥努里塞拉特受到儿子E 13065的致敬", "E 13065", "奥努里塞拉特受到儿子的致敬"),
+        (
+            "Bouteille animaux passant OA7485 Iran",
+            "OA 7485",
+            "Bouteille animaux passant Iran",
+        ),
+    ]
+    for title, inv, want in cases:
+        assert strip_inventory(title, inv) == want, title
+
+
+def test_short_inventory_only_at_tail_and_only_letter_plus_digit():
+    assert strip_inventory("Sekhmet-A 3", "A 3") == "Sekhmet"
+    assert strip_inventory("Cat with kitten E3", "E 3") == "Cat with kitten"
+    assert strip_inventory("Stele of Senousret-C 4", "C4") == "Stele of Senousret"
+    assert strip_inventory("G 5 轿跑车", "G 5") == "G 5 轿跑车"  # 不在尾部
+    assert strip_inventory("Psalm 23", "23") == "Psalm 23"  # 纯数字短号撞序号
+
+
+def test_mid_strip_keeps_lists_of_several_numbers():
+    t = "Textile, AO 29013; AO 28444 36, Department of Near Eastern Antiquities"
+    assert strip_inventory(t, "AO 29013") == t
+
+
+def test_mid_strip_leaves_titles_where_number_would_be_half_removed():
+    """prod dry-run 10-19 抓到的误剥:号段/子编号/并列号只剥一半比不剥更糟。"""
+    for title, inv in [
+        ("컵을 들고 있는 인물-AM 2190-2191", "AM 2190"),
+        ("Viertelstern vom sogenannten Rumi-Typ (AD 14914/1)", "AD 14914"),
+        ("Dagger - Louvre - Accession numbers R 890 and OA 7891", "R 890"),
+    ]:
+        assert strip_inventory(title, inv) == title, title
+    assert strip_inventory("ルーブル美術館所蔵作品番号MN705", "MN 705") == (
+        "ルーブル美術館所蔵作品番号MN705"
+    )
+
+
+def test_cjk_number_suffix_particle_and_middle_dot():
+    cases = [
+        ("AO 21091号石板", "AO 21091", "石板"),
+        ("卢浮宫E 812号双耳瓶", "E 812", "卢浮宫双耳瓶"),
+        ("OA 5994の壁面タイル", "OA 5994", "壁面タイル"),
+        ("フイ・C 86の石碑", "C 86", "フイの石碑"),
+        ("牆畫，AO 32466 D，盧浮宮近東古物部", "AO 32466 D", "牆畫"),
+    ]
+    for title, inv, want in cases:
+        assert strip_inventory(title, inv) == want, title
+
+
+def test_second_dry_run_misstrips_are_kept():
+    """prod dry-run 第二轮 10-19:续号/年/世/编号字样/并列号 + 部门名。"""
+    for title, inv in [
+        ("Deux fragments de décor de clef de voûte - RF 529 A-B", "RF 529 A"),
+        ("祈る男-N 1593年", "N 1593"),
+        ("サタトール夫人とその父セヌスレトC22世", "C 22"),
+        ("伊斯法罕 - 羅浮宮博物館 - 庫存編號OA 3340", "OA 3340"),
+        (
+            "Cornice, AO 29013; AO 16631, Department of Near Eastern Antiquities of the Louvre",
+            "AO 16631",
+        ),
+        ("盧浮宮K 3437", "K 3437"),
+    ]:
+        assert strip_inventory(title, inv) == title, title

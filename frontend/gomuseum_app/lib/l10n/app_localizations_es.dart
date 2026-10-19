@@ -91,11 +91,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeSlogan => 'Acércate a una obra,\nescucha su historia.';
 
   @override
-  String get homeCtaRecognize => 'Fotografía para reconocer y escuchar';
+  String get homeCtaRecognize => 'Haz una foto y escucha';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count escaneos gratis restantes · Mejora para acceso completo';
+    return 'Escaneos gratis restantes: $count · Accede a todo';
   }
 
   @override
@@ -144,7 +144,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exploreTitle => 'Explorar';
 
   @override
-  String get searchCityMuseumArtwork => 'Buscar ciudades, museos u obras';
+  String get searchCityMuseumArtwork => 'Ciudades, museos u obras';
 
   @override
   String get searchMuseumsSection => 'Museos';
@@ -617,14 +617,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recShootLabelBtn => 'Fotografía la cartela';
 
   @override
-  String get recTypeNumberOrName => 'Escribir el número o el título';
+  String get recTypeNumberOrName => 'Número o título';
 
   @override
   String get photoFbTitle => '¿Nos envías esta foto?';
 
   @override
   String get photoFbBody =>
-      'Solo se usa para añadir obras que faltan y mejorar el reconocimiento. Se guarda 90 días como máximo y nunca se muestra a nadie.';
+      'Solo para añadir obras que faltan y mejorar el reconocimiento. Se guarda 90 días máx., nunca se publica.';
 
   @override
   String get photoFbConsent => 'Enviar esta foto';
@@ -639,8 +639,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recSearchWithLabel => 'Buscar con este texto';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Apunta al texto de la cartela, llena el encuadre';
+  String get recViewfinderLabelHint => 'Llena el encuadre con la cartela';
 
   @override
   String get camRecognizeTitle => 'Identificar obra';
@@ -718,12 +717,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get camRecognizing => 'Reconociendo…';
 
   @override
-  String get camComparing =>
-      'La IA compara con colecciones y bases de datos de arte públicas';
+  String get camComparing => 'La IA consulta museos y bases de arte';
 
   @override
-  String get recWaitSlow =>
-      'Está tardando un poco más de lo normal; seguimos buscando';
+  String get recWaitSlow => 'Tarda un poco más; seguimos buscando';
 
   @override
   String get recWaitSwitchApp =>
@@ -1237,9 +1234,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Puede ser una exposición temporal o aún no estar en la guía. Fotografiar la cartela suele funcionar.';
+      '¿Expo temporal o aún no en la guía? Una foto de la cartela suele ayudar.';
 
   @override
   String get recLabelNoMatch =>
-      'Puede ser una exposición temporal o aún no estar en la guía. Prueba otro nombre o número.';
+      '¿Expo temporal o aún no en la guía? Prueba otro nombre o número.';
 }

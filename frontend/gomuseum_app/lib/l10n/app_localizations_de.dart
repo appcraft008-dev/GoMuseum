@@ -36,7 +36,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chooseFromGallery => 'Aus Galerie wählen';
 
   @override
-  String get selectImagePrompt => 'Wählen Sie ein Bild zur Kunstwerk-Erkennung';
+  String get selectImagePrompt => 'Wähle ein Bild zur Kunstwerk-Erkennung';
 
   @override
   String get error => 'Fehler';
@@ -87,15 +87,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get homePocketGuide => 'Museumsführer für die Tasche';
 
   @override
-  String get homeSlogan =>
-      'Treten Sie näher an ein Werk,\nhören Sie seine Geschichte.';
+  String get homeSlogan => 'Ein Werk vor Augen,\nseine Geschichte im Ohr.';
 
   @override
-  String get homeCtaRecognize => 'Fotografieren, erkennen & hören';
+  String get homeCtaRecognize => 'Fotografieren & hören';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count Gratis-Scans übrig · Upgrade für vollen Zugang';
+    return 'Gratis-Scans übrig: $count · Alles freischalten';
   }
 
   @override
@@ -144,7 +143,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get exploreTitle => 'Entdecken';
 
   @override
-  String get searchCityMuseumArtwork => 'Städte, Museen oder Werke suchen';
+  String get searchCityMuseumArtwork => 'Städte, Museen, Werke';
 
   @override
   String get searchMuseumsSection => 'Museen';
@@ -201,7 +200,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get guideGenFailed => 'Erstellung der Erklärung fehlgeschlagen';
 
   @override
-  String get guideWriting => 'Ihre Erklärung wird geschrieben…';
+  String get guideWriting => 'Deine Erklärung entsteht…';
 
   @override
   String get guideHighlight => 'Höhepunkt';
@@ -219,14 +218,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get guideQ2 => 'Was durchlebte der Künstler damals?';
 
   @override
-  String get guideAskHint => 'Fragen Sie zu diesem Gemälde…';
+  String get guideAskHint => 'Frag etwas zu diesem Gemälde…';
 
   @override
   String get guideAskShort => 'Zu diesem Gemälde fragen';
 
   @override
-  String get guideVoiceComingSoon =>
-      'Sprach-Fragen kommen bald, tippen Sie vorerst';
+  String get guideVoiceComingSoon => 'Sprachfragen kommen bald, tipp vorerst';
 
   @override
   String get guideGenerating => 'Inhalt wird erstellt · etwa 1–3 Min.';
@@ -250,7 +248,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get guideDeepContent => 'Vertiefung';
 
   @override
-  String get guideAskPlaceholder => 'Fragen Sie etwas…';
+  String get guideAskPlaceholder => 'Frag etwas…';
 
   @override
   String get guideArtist => 'Künstler';
@@ -311,7 +309,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Erkannte Werke werden hier automatisch gespeichert';
 
   @override
-  String get footprintGoRecognize => 'Erkennen Sie Ihr erstes Werk';
+  String get footprintGoRecognize => 'Erkenne dein erstes Werk';
 
   @override
   String itemsCount(Object count) {
@@ -383,7 +381,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get secSupport => 'Support & Recht';
 
   @override
-  String get encourageUs => 'Unterstützen Sie uns';
+  String get encourageUs => 'Unterstütze uns';
 
   @override
   String get appStoreRating => 'App-Store-Bewertung';
@@ -451,7 +449,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get deleteAccountBody =>
-      'Dies löscht Ihr Kontoprofil und das verbleibende Kontingent. Diese Aktion kann nicht rückgängig gemacht werden.';
+      'Dein Kontoprofil und dein restliches Kontingent werden gelöscht. Das lässt sich nicht rückgängig machen.';
 
   @override
   String get deleteAccountBodyPass =>
@@ -468,7 +466,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get confirmLogout => 'Abmeldung bestätigen';
 
   @override
-  String get confirmLogoutBody => 'Möchten Sie sich wirklich abmelden?';
+  String get confirmLogoutBody => 'Möchtest du dich wirklich abmelden?';
 
   @override
   String get confirmYes => 'Bestätigen';
@@ -477,16 +475,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get authEmailHint => 'E-Mail';
 
   @override
-  String get authEmailRequired => 'Bitte geben Sie Ihre E-Mail ein';
+  String get authEmailRequired => 'Bitte gib deine E-Mail ein';
 
   @override
-  String get authEmailInvalid => 'Bitte geben Sie eine gültige E-Mail ein';
+  String get authEmailInvalid => 'Bitte gib eine gültige E-Mail ein';
 
   @override
   String get authPasswordHint => 'Passwort';
 
   @override
-  String get authPasswordRequired => 'Bitte geben Sie Ihr Passwort ein';
+  String get authPasswordRequired => 'Bitte gib dein Passwort ein';
 
   @override
   String get authPasswordMin6 =>
@@ -551,7 +549,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get authLoginFailed =>
-      'Anmeldung fehlgeschlagen, prüfen Sie E-Mail und Passwort';
+      'Anmeldung fehlgeschlagen, prüf E-Mail und Passwort';
 
   @override
   String get authRegisterFailed =>
@@ -569,11 +567,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get authGoogleNotConfigured =>
-      'Google-Anmeldung nicht konfiguriert, wenden Sie sich an den Administrator';
+      'Google-Anmeldung nicht konfiguriert, wende dich an den Administrator';
 
   @override
   String get authGoogleNetworkError =>
-      'Google-Anmeldung Netzwerkfehler, prüfen Sie Ihre Verbindung';
+      'Google-Anmeldung: Netzwerkfehler, prüf deine Verbindung';
 
   @override
   String get authAppleOnlyApple =>
@@ -618,14 +616,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recShootLabelBtn => 'Wandschild fotografieren';
 
   @override
-  String get recTypeNumberOrName => 'Nummer oder Titel eingeben';
+  String get recTypeNumberOrName => 'Nr. oder Titel';
 
   @override
   String get photoFbTitle => 'Uns dieses Foto senden?';
 
   @override
   String get photoFbBody =>
-      'Wird nur genutzt, um fehlende Werke zu ergänzen und die Erkennung zu verbessern. Höchstens 90 Tage gespeichert, niemandem gezeigt.';
+      'Nur für fehlende Werke und bessere Erkennung. Max. 90 Tage gespeichert, nie öffentlich.';
 
   @override
   String get photoFbConsent => 'Dieses Foto senden';
@@ -640,15 +638,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recSearchWithLabel => 'Mit diesem Text suchen';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Auf den Schildtext zielen, Rahmen ausfüllen';
+  String get recViewfinderLabelHint => 'Schild anvisieren, Rahmen füllen';
 
   @override
   String get camRecognizeTitle => 'Werk erkennen';
 
   @override
   String get camViewfinderHint =>
-      'Das ganze Werk in den Rahmen\nFür breite Werke das Handy quer halten';
+      'Das ganze Werk in den Rahmen\nBreite Werke: Handy quer halten';
 
   @override
   String get camRecentGallery => 'Zuletzt';
@@ -718,15 +715,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get camRecognizing => 'Erkenne…';
 
   @override
-  String get camComparing =>
-      'KI vergleicht mit Sammlungen und öffentlichen Kunstdatenbanken';
+  String get camComparing => 'KI prüft Museums- und Kunstdatenbanken';
 
   @override
-  String get recWaitSlow => 'Dauert etwas länger als sonst – wir suchen noch';
+  String get recWaitSlow => 'Dauert etwas länger – wir suchen noch';
 
   @override
   String get recWaitSwitchApp =>
-      'Sie können zu einer anderen App wechseln – das Ergebnis ist da, wenn Sie zurückkommen';
+      'Du kannst die App wechseln – das Ergebnis wartet auf dich';
 
   @override
   String get camConfirmPrompt =>
@@ -975,7 +971,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get benefitsSecPurchases => 'Käufe';
 
   @override
-  String get benefitsSecCurrentQuota => 'Ihr aktuelles Kontingent';
+  String get benefitsSecCurrentQuota => 'Aktuelles Kontingent';
 
   @override
   String get benefitsSecBuyAnother => 'Noch ein Pass';
@@ -1030,7 +1026,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String benefitsNotStartedBody(String days) {
-    return 'Wenn Sie im Museum zum ersten Mal den Audiokommentar oder die Erkennung nutzen, bitten wir Sie um eine Bestätigung. Ab diesem Moment laufen Ihre $days Tage.';
+    return 'Wenn du im Museum zum ersten Mal den Audiokommentar oder die Erkennung nutzt, bitten wir dich um eine Bestätigung. Ab diesem Moment laufen deine $days Tage.';
   }
 
   @override
@@ -1040,11 +1036,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get benefitsStartNowNote =>
-      'Wenn Sie noch nicht im Museum sind, warten Sie besser';
+      'Wenn du noch nicht im Museum bist, warte lieber';
 
   @override
   String benefitsExpiredBody(String days) {
-    return 'Ihre $days Tage sind vorbei. Das kostenlose Kontingent ist zurück, der Textkommentar bleibt vollständig.';
+    return 'Deine $days Tage sind um. Das kostenlose Kontingent ist zurück, der Textkommentar bleibt vollständig.';
   }
 
   @override
@@ -1079,22 +1075,22 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get edgeUnknownHead => 'Ihr Pass ist gerade nicht lesbar';
+  String get edgeUnknownHead => 'Dein Pass: gerade nicht lesbar';
 
   @override
   String get edgeUnknownBody =>
-      'Ohne Verbindung können wir weder bestätigen, dass Sie bereits einen Pass haben, noch einen Kauf sicher starten.';
+      'Ohne Verbindung können wir weder bestätigen, dass du schon einen Pass hast, noch einen Kauf sicher starten.';
 
   @override
   String get edgeUnknownNote =>
-      'Falls Sie schon einen gekauft haben, kommt er online automatisch zurück. Doppelt belastet werden Sie nicht.';
+      'Falls du schon einen gekauft hast, kommt er online automatisch zurück. Doppelt zahlen musst du nicht.';
 
   @override
   String get edgeSignedOutHead => 'Der Pass gehört zu einem Konto';
 
   @override
   String get edgeSignedOutBody =>
-      'Melden Sie sich vor dem Kauf an — dann übersteht der Pass ein neues Handy oder eine Neuinstallation.';
+      'Melde dich vor dem Kauf an — dann übersteht der Pass ein neues Handy oder eine Neuinstallation.';
 
   @override
   String get edgeConflictTitle => 'Dieser Pass gehört zu einem anderen Konto';
@@ -1111,7 +1107,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get edgeConflictHelp =>
-      'Melden Sie sich mit dem Konto an, mit dem Sie gekauft haben. Wenn Sie nicht mehr wissen, welches das war, oder das für einen Fehler halten, schreiben Sie uns — wir schauen nach.';
+      'Melde dich mit dem Konto an, mit dem du gekauft hast. Wenn du nicht mehr weißt, welches das war, oder es für einen Fehler hältst, schreib uns — wir schauen nach.';
 
   @override
   String get edgeSwitchAccount => 'Konto wechseln';
@@ -1127,7 +1123,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get drawerLockedCta => 'Pass ansehen';
 
   @override
-  String get purchaseSuccess => 'Gekauft. Ihr Pass ist bereit.';
+  String get purchaseSuccess => 'Gekauft. Dein Pass ist da.';
 
   @override
   String get purchaseVerifyPending =>
@@ -1236,13 +1232,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get guideNotThisOneNoted =>
-      'Notiert. Versuchen Sie einen anderen Winkel oder nutzen Sie die Suche.';
+      'Notiert. Versuche einen anderen Winkel oder nutze die Suche.';
 
   @override
   String get recMaybeNotCollected =>
-      'Vielleicht eine Sonderausstellung oder noch nicht im Guide. Ein Foto des Schilds daneben hilft meist.';
+      'Sonderschau oder noch nicht im Guide? Ein Foto vom Schild hilft meist.';
 
   @override
   String get recLabelNoMatch =>
-      'Vielleicht eine Sonderausstellung oder noch nicht im Guide. Versuchen Sie einen anderen Namen oder eine Nummer.';
+      'Sonderschau oder noch nicht im Guide? Probier anderen Namen oder Nummer.';
 }

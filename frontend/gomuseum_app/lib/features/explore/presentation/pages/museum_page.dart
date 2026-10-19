@@ -553,7 +553,7 @@ class _CoverTabBody extends StatelessWidget {
                   Text(
                     desc,
                     style: GmText.sans(size: 13.5, height: 1.85, color: gm.ink),
-                    textAlign: TextAlign.justify,
+                    textAlign: context.gmBodyAlign,
                   ),
                 if (desc != null && hasInfo) ...[
                   const SizedBox(height: 18),

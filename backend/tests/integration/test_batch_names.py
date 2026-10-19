@@ -316,6 +316,32 @@ def test_collect_prefers_authoritative_artist_labels(session):
     assert not any(t.custom_id.startswith("artist|Q33477") for t in tasks)  # 无需翻译
 
 
+def test_collect_new_artist_name_en_prefers_wikidata_label(session):
+    # 多作者件:作品行署名是另一位合作者 → 新建作者卡英文名取该 QID 自己的标签
+    from app.models.artist import Artist
+    from app.models.museum import Museum
+    from app.services.enrichment import batch_names as bn
+
+    m = session.query(Museum).one()
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Jerôme Duquesnoy the Younger"
+    o.attributes = {}
+    session.commit()
+
+    bn.collect_missing(
+        session,
+        m.slug,
+        ["en", "zh"],
+        fetch_labels=lambda qid, langs: (
+            {"en": "François Duquesnoy"} if qid == "Q960381" else {}
+        ),
+        fetch_creators=lambda qids: {"Q1": "Q960381"},
+    )
+    session.commit()
+    art = session.query(Artist).filter_by(qid="Q960381").one()
+    assert art.name_en == "François Duquesnoy"
+
+
 def test_collect_prefetches_labels_in_batch_not_per_object(session, monkeypatch):
     """上大馆硬前提:标签必须批量取。此前每件一次 SPARQL(卢浮宫 17283 件 ~5h,
     CPU 仅 12%,全在等网络)。这里断言"网络调用次数 << 件数"。"""

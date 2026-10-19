@@ -91,11 +91,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Step closer to one work,\nhear the story behind it.';
 
   @override
-  String get homeCtaRecognize => 'Snap to Recognize & Listen';
+  String get homeCtaRecognize => 'Snap & Listen';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count free scans left · Upgrade for full access';
+    return 'Free scans left: $count · Upgrade for full access';
   }
 
   @override
@@ -143,7 +143,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreTitle => 'Explore';
 
   @override
-  String get searchCityMuseumArtwork => 'Search cities, museums or artworks';
+  String get searchCityMuseumArtwork => 'Cities, museums, artworks';
 
   @override
   String get searchMuseumsSection => 'Museums';
@@ -609,14 +609,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recShootLabelBtn => 'Photograph the wall label';
 
   @override
-  String get recTypeNumberOrName => 'Type the number or title';
+  String get recTypeNumberOrName => 'No. or title';
 
   @override
   String get photoFbTitle => 'Send us this photo?';
 
   @override
   String get photoFbBody =>
-      'Used only to add missing works and improve recognition. Kept up to 90 days, never shown to anyone.';
+      'Only to add missing works and improve recognition. Kept up to 90 days, never public.';
 
   @override
   String get photoFbConsent => 'Send this photo';
@@ -631,14 +631,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recSearchWithLabel => 'Search using this text';
 
   @override
-  String get recViewfinderLabelHint => 'Aim at the label text, fill the frame';
+  String get recViewfinderLabelHint => 'Aim at the label, fill the frame';
 
   @override
   String get camRecognizeTitle => 'Identify Artwork';
 
   @override
   String get camViewfinderHint =>
-      'Fit the whole artwork in the frame\nTurn your phone sideways for wide works';
+      'Frame the whole artwork\nRotate your phone for wide works';
 
   @override
   String get camRecentGallery => 'Recent';
@@ -708,15 +708,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get camRecognizing => 'Recognizing…';
 
   @override
-  String get camComparing =>
-      'AI is comparing with collections and public art databases';
+  String get camComparing => 'AI is checking museum & art databases';
 
   @override
-  String get recWaitSlow => 'Taking a bit longer than usual — still looking';
+  String get recWaitSlow => 'Taking a bit longer — still looking';
 
   @override
   String get recWaitSwitchApp =>
-      'You can switch to another app — the result will be here when you come back';
+      'You can switch apps — the result will be here when you\'re back';
 
   @override
   String get camConfirmPrompt => 'Recognition done, please confirm the work';
@@ -1226,9 +1225,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'It may be a temporary exhibit or not in our guide yet. Snapping the label next to it usually works.';
+      'Temporary show or not in our guide yet? Snapping its label usually helps.';
 
   @override
   String get recLabelNoMatch =>
-      'It may be a temporary exhibit or not in our guide yet. Try another name or number.';
+      'Temporary show or not in our guide yet? Try another name or number.';
 }

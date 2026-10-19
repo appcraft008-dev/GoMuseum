@@ -90,11 +90,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get homeSlogan => 'Podejdź bliżej dzieła,\nposłuchaj jego historii.';
 
   @override
-  String get homeCtaRecognize => 'Zrób zdjęcie, aby rozpoznać i słuchać';
+  String get homeCtaRecognize => 'Zrób zdjęcie i słuchaj';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count darmowych skanów · Ulepsz, aby uzyskać pełny dostęp';
+    return 'Pozostałe darmowe skany: $count · Odblokuj wszystko';
   }
 
   @override
@@ -143,7 +143,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get exploreTitle => 'Odkrywaj';
 
   @override
-  String get searchCityMuseumArtwork => 'Szukaj miast, muzeów lub dzieł';
+  String get searchCityMuseumArtwork => 'Miasta, muzea lub dzieła';
 
   @override
   String get searchMuseumsSection => 'Muzea';
@@ -616,14 +616,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recShootLabelBtn => 'Sfotografuj tabliczkę';
 
   @override
-  String get recTypeNumberOrName => 'Wpisz numer lub tytuł';
+  String get recTypeNumberOrName => 'Numer lub tytuł';
 
   @override
   String get photoFbTitle => 'Wysłać nam to zdjęcie?';
 
   @override
   String get photoFbBody =>
-      'Służy wyłącznie do uzupełniania brakujących dzieł i poprawy rozpoznawania. Przechowujemy je najwyżej 90 dni i nikomu nie pokazujemy.';
+      'Tylko do uzupełniania dzieł i lepszego rozpoznawania. Maks. 90 dni, nigdy publicznie.';
 
   @override
   String get photoFbConsent => 'Wyślij to zdjęcie';
@@ -638,15 +638,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get recSearchWithLabel => 'Szukaj tym tekstem';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Wyceluj w tekst tabliczki, wypełnij kadr';
+  String get recViewfinderLabelHint => 'Celuj w tabliczkę, wypełnij kadr';
 
   @override
   String get camRecognizeTitle => 'Rozpoznaj dzieło';
 
   @override
   String get camViewfinderHint =>
-      'Zmieść całe dzieło w kadrze\nSzerokie dzieła: obróć telefon poziomo';
+      'Zmieść całe dzieło w kadrze\nSzerokie dzieła: telefon poziomo';
 
   @override
   String get camRecentGallery => 'Ostatnie';
@@ -716,15 +715,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get camRecognizing => 'Rozpoznawanie…';
 
   @override
-  String get camComparing =>
-      'AI porównuje z kolekcjami i publicznymi bazami dzieł sztuki';
+  String get camComparing => 'AI porównuje z bazami muzeów i sztuki';
 
   @override
-  String get recWaitSlow => 'Trwa to trochę dłużej niż zwykle — wciąż szukamy';
+  String get recWaitSlow => 'Trwa dłużej niż zwykle — szukamy';
 
   @override
   String get recWaitSwitchApp =>
-      'Możesz przełączyć się na inną aplikację — wynik będzie czekał po powrocie';
+      'Możesz przełączyć aplikację — wynik poczeka na Twój powrót';
 
   @override
   String get camConfirmPrompt => 'Rozpoznano, potwierdź dzieło';
@@ -1237,9 +1235,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Zdjęcie opisu obok zwykle pomaga.';
+      'Wystawa czasowa lub jeszcze nie w przewodniku? Zdjęcie opisu zwykle pomaga.';
 
   @override
   String get recLabelNoMatch =>
-      'Może to wystawa czasowa albo dzieła jeszcze nie ma w przewodniku. Spróbuj innej nazwy lub numeru.';
+      'Wystawa czasowa lub jeszcze nie w przewodniku? Spróbuj innej nazwy lub numeru.';
 }

@@ -91,11 +91,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String get homeSlogan => 'Avvicinati a un\'opera,\nascolta la sua storia.';
 
   @override
-  String get homeCtaRecognize => 'Fotografa per riconoscere e ascoltare';
+  String get homeCtaRecognize => 'Scatta e ascolta';
 
   @override
   String homeFreeLeft(Object count) {
-    return '$count scansioni gratuite rimaste · Passa all\'accesso completo';
+    return 'Scansioni gratis rimaste: $count · Sblocca tutto';
   }
 
   @override
@@ -144,7 +144,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get exploreTitle => 'Esplora';
 
   @override
-  String get searchCityMuseumArtwork => 'Cerca città, musei o opere';
+  String get searchCityMuseumArtwork => 'Città, musei o opere';
 
   @override
   String get searchMuseumsSection => 'Musei';
@@ -613,14 +613,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recShootLabelBtn => 'Fotografa il cartellino';
 
   @override
-  String get recTypeNumberOrName => 'Inserisci numero o titolo';
+  String get recTypeNumberOrName => 'Numero o titolo';
 
   @override
   String get photoFbTitle => 'Ci invii questa foto?';
 
   @override
   String get photoFbBody =>
-      'Usata solo per aggiungere opere mancanti e migliorare il riconoscimento. Conservata al massimo 90 giorni, mai mostrata a nessuno.';
+      'Solo per aggiungere opere mancanti e migliorare il riconoscimento. Conservata max 90 giorni, mai pubblica.';
 
   @override
   String get photoFbConsent => 'Invia questa foto';
@@ -635,15 +635,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get recSearchWithLabel => 'Cerca con questo testo';
 
   @override
-  String get recViewfinderLabelHint =>
-      'Inquadra il testo del cartellino, riempi lo schermo';
+  String get recViewfinderLabelHint => 'Riempi lo schermo col cartellino';
 
   @override
   String get camRecognizeTitle => 'Identifica opera';
 
   @override
   String get camViewfinderHint =>
-      'Inquadra tutta l\'opera\nRuota il telefono per le opere larghe';
+      'Inquadra tutta l\'opera\nOpere larghe: ruota il telefono';
 
   @override
   String get camRecentGallery => 'Recenti';
@@ -715,12 +714,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get camRecognizing => 'Riconoscimento…';
 
   @override
-  String get camComparing =>
-      'L\'IA confronta con collezioni e banche dati d\'arte pubbliche';
+  String get camComparing => 'L\'IA consulta musei e archivi d\'arte';
 
   @override
-  String get recWaitSlow =>
-      'Ci vuole un po\' più del solito, stiamo ancora cercando';
+  String get recWaitSlow => 'Più lento del solito, cerchiamo ancora';
 
   @override
   String get recWaitSwitchApp =>
@@ -1234,9 +1231,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get recMaybeNotCollected =>
-      'Forse è una mostra temporanea o non è ancora nella guida. Fotografare la didascalia accanto di solito funziona.';
+      'Mostra temporanea o non ancora in guida? Fotografa la didascalia: spesso aiuta.';
 
   @override
   String get recLabelNoMatch =>
-      'Forse è una mostra temporanea o non è ancora nella guida. Prova un altro nome o numero.';
+      'Mostra temporanea o non ancora in guida? Prova un altro nome o numero.';
 }

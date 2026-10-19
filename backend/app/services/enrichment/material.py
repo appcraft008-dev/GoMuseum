@@ -192,18 +192,39 @@ def _creator_from_rows(rows) -> str | None:
     return min(cands)[1] if cands else None
 
 
-def resolve_creator_qid(qid, *, get_entities=None) -> str | None:
+def resolve_creator_qid(
+    qid, *, get_entities=None, get_revisions=None, get_entity_at=None
+) -> str | None:
     """作品 QID → **唯一**作者 QID。多值时按 (rank, 不确定性限定词, 引用数) 择优。
 
     全流程只应调这一次,结果传给 fetch_artist_facts / fetch_artist_material。
     无作者、或 P170 是"未知值"→ None(宁缺毋滥,不猜)。非 Wikidata 编号 → None,不发请求。
+
+    只采信**最近一次注册账号保存的版本**(10-19):《喜鹊》Q4429116 被临时账号把莫奈改成
+    毕加索,挂了 3 个月(04-23→07-30),其间现查的都抄进毕加索。改回莫奈的**也是临时账号**,
+    所以不能"临时账号改过就不信",而是退回最近的注册账号版本 —— 被改期、改回后都取到莫奈。
+    最近 50 次全是临时账号/IP → 弃权;修改记录查不到 → 照旧用现值(偶发网络故障不该让
+    名作丢作者)。ponytail: 注册账号的蓄意篡改拦不住,靠用户反馈兜底。
     """
     from app.services.enrichment.identity import is_wikidata_qid
 
     if not is_wikidata_qid(qid):
         return None
+    if get_entities is not None and get_revisions is None:
+        get_revisions = lambda q: []  # noqa: E731 只注入实体的旧测试不触网
     get_entities = get_entities or _wa.get_entities
+    get_revisions = get_revisions or _wa.recent_revisions
+    get_entity_at = get_entity_at or _wa.entity_at
     ent = get_entities([qid], props="claims").get(qid)
+    try:
+        revs = get_revisions(qid)
+    except _wa.WikidataApiError as e:
+        logger.warning("creator: revisions of %s unavailable: %r", qid, e)
+        revs = []
+    if revs and _wa.untrusted_editor(revs[0]):
+        trusted = next((r for r in revs if not _wa.untrusted_editor(r)), None)
+        logger.info("creator: %s latest edit untrusted, using rev %s", qid, trusted)
+        ent = get_entity_at(trusted["revid"]) if trusted else None
     return _creator_from_rows(_creator_rows(ent))
 
 

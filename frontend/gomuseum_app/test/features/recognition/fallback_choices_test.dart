@@ -3,12 +3,16 @@
 // 输入编号(左)与重拍作品(右)并排同级。真实用户 17 次没认出 11 次直接放弃、0 次拍说明牌。
 // 10-11:已拍过墙签时主按钮换成输入编号(墙签文字已预填),不再给拍说明牌(重拍同一张墙签结果一样);
 // 次按钮文字放不下(大字号/德语)时缩小到一行,不换行。
+// 10-19 用户改定:不缩字(德语曾缩到 0.57 倍),放不下换两行、两个按钮等高。
+// 10-19 V64 真机:大字号下并排折成两行难看 → 任一个一行放不下就上下各占整行。
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gomuseum_app/features/recognition/presentation/pages/camera_page.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
+
+import '../../i18n/real_fonts.dart';
 
 Future<List<String>> _pump(WidgetTester t,
     {bool labelSeen = false,
@@ -55,6 +59,8 @@ void main() {
 
   testWidgets('输入编号在左、重拍在右,并排同高', (t) async {
     final taps = await _pump(t);
+    await loadRealFonts(t); // 方块字体会误判成放不下而改成上下排
+    await t.pump();
     final search = find.byKey(const Key('fbSearch'));
     final retake = find.byKey(const Key('fbRetake'));
     expect(t.getTopLeft(search).dx, lessThan(t.getTopLeft(retake).dx));
@@ -83,16 +89,54 @@ void main() {
   });
 
   for (final seen in [false, true]) {
-    testWidgets('次按钮文字一行放下:德语 + 1.5 倍字号(labelSeen=$seen)', (t) async {
+    testWidgets('次按钮德语 + 1.5 倍字号:不缩字、不截断、等高(labelSeen=$seen)', (t) async {
       await _pump(t,
           labelSeen: seen, locale: const Locale('de'), textScale: 1.5);
-      for (final key in [if (!seen) 'fbSearch', 'fbRetake']) {
-        final p = t.renderObject<RenderParagraph>(find.descendant(
-            of: find.byKey(Key(key)), matching: find.byType(RichText)));
-        expect(p.maxLines, 1, reason: key);
+      await loadRealFonts(t); // 方块测试字体把拉丁文宽度放大约 2 倍，换不换行判不准
+      await t.pump();
+      final keys = [if (!seen) 'fbSearch', 'fbRetake'];
+      for (final key in keys) {
+        final text = find.descendant(
+            of: find.byKey(Key(key)), matching: find.byType(RichText));
+        final p = t.renderObject<RenderParagraph>(text);
+        expect(p.maxLines, 2, reason: key);
         expect(p.didExceedMaxLines, isFalse, reason: key);
+        expect(find.ancestor(of: text, matching: find.byType(FittedBox)),
+            findsNothing,
+            reason: key);
       }
       expect(t.takeException(), isNull);
     });
   }
+
+  testWidgets('英文 2 倍字号放不下:上下各占整行,每个一行', (t) async {
+    await _pump(t, textScale: 2.0);
+    await loadRealFonts(t);
+    await t.pump();
+    final search = find.byKey(const Key('fbSearch'));
+    final retake = find.byKey(const Key('fbRetake'));
+    expect(t.getSize(search).width, 360);
+    expect(t.getSize(retake).width, 360);
+    expect(t.getTopLeft(retake).dy, greaterThan(t.getTopLeft(search).dy));
+    for (final b in [search, retake]) {
+      final p = t.renderObject<RenderParagraph>(
+          find.descendant(of: b, matching: find.byType(RichText)));
+      expect(
+          p
+              .getBoxesForSelection(TextSelection(
+                  baseOffset: 0, extentOffset: p.text.toPlainText().length))
+              .map((r) => r.top)
+              .toSet()
+              .length,
+          1);
+    }
+  });
+
+  testWidgets('英文 1.5 倍字号:「No. or title」仍并排(10-19 用户定缩写)', (t) async {
+    await _pump(t, textScale: 1.5);
+    await loadRealFonts(t);
+    await t.pump();
+    expect(t.getTopLeft(find.byKey(const Key('fbSearch'))).dy,
+        t.getTopLeft(find.byKey(const Key('fbRetake'))).dy);
+  });
 }

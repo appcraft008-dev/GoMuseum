@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'theme/app_theme.dart';
+import 'theme/gm_tokens.dart';
 import 'core/router/app_router.dart';
 import 'core/services/app_update_service.dart';
 import 'core/theme/theme_mode_provider.dart';
@@ -70,6 +71,12 @@ class GoMuseumApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: kAppLocalesInResolutionOrder,
+      // builder 在 Localizations 之内，换语言时先于页面重建 → GmText 的
+      // 中日韩回退字体（JP/KR/TC/SC）跟着切。
+      builder: (context, child) {
+        GmText.locale = Localizations.localeOf(context);
+        return child!;
+      },
 
       // 调试配置
       debugShowCheckedModeBanner: false,

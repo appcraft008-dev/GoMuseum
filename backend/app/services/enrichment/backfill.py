@@ -461,28 +461,69 @@ def strip_disambiguator(value: str, artist_names=None) -> str:
 # 「Louvre E 658」整条标签就是馆名+号,剥完只剩馆名(prod 83 件)→ 不剥。
 # ponytail: 只收了 prod 实测出现的卢浮宫各语写法,新馆出现同形再补
 _MUSEUM_ONLY = {
-    "louvre", "luwr", "museo del louvre", "卢浮宫", "羅浮宮",
+    "louvre", "luwr", "museo del louvre", "卢浮宫", "羅浮宮", "盧浮宮",
     "루브르", "ルーヴル", "ルーブル", "ルーヴル美術館", "ルーブル美術館",
 }  # fmt: skip
 
 
+# 号后面跟的是馆内部门/馆名(「Sandal, AO 28297, Department of … of the Louvre」)
+_MUSEUM_WORD = re.compile(r"louvre|luwr|卢浮|羅浮|盧浮|루브르|ルーヴル|ルーブル", re.I)
+# 号后面紧跟续号/另一个号(RF 529 A-B、AO 4442-AO 4597)或「年/世」(号被译成了年份/
+# 世代)→ 不动,剥了只剩半截
+_CONTINUES = re.compile(r"^\s*(?:[-/]\s*[A-Za-z0-9]|[;,]\s*[A-Za-z]{1,5}\s?\d|[年世])")
+# 剥完以「编号」字样结尾(「庫存編號OA 3340」「所蔵作品番号MN705」)= 号本身就是内容
+_NUMBER_LABEL = re.compile(
+    r"(編號|编号|番号|号码|numbers?|nummern?|numéros?|números?|numeri)\s*[:：]?$", re.I
+)
+
+
 def strip_inventory(value: str, inventory_number: str | None) -> str:
-    """剥掉显示名尾部的**本件馆藏号**:「statue (Ma 2223)」「Lion head-E 2558」。
+    """剥掉显示名里混入的**本件馆藏号**:「statue (Ma 2223)」「Lion head-E 2558」。
 
     Wikidata 标签常把馆藏号当消歧尾巴,翻译又把它带进全部语言(prod 10-13 实测
     ~1800 件)。_DISAMB_CATALOG 只认「E 647」形,认不出 Ma 1078 / PPS222(C) / 226617。
     判据是「与本件 inventory_number 归一化后相等」—— 对不上的号(别的件、年份)不动。
+
+    10-19 补三种形态(prod 卢浮剩 322 件):号后接部门名 → 连部门名一起剥;号在句中
+    (「マレタラト-E 10302の印章」)→ 只剥号(连同紧跟的「号/號」,句首时连「の/的/의」);
+    号紧贴中日韩字(「史诗AO17323」)—— 边界改成只看 ASCII 字母数字,原先的词边界把
+    汉字当词内字符。短号(<3 位)只剥尾部、且须字母+数字(「Sekhmet-A 3」)。
+    句中/部门名两种剥完还剩数字 → 不剥(号段、子编号、并列号只剥一半比不剥更糟)。
     """
     inv = normalize_inv(inventory_number)
-    if len(inv) < 3 or not value:  # 太短会撞年份/序号
+    if not value or not inv:
+        return value
+    short = len(inv) < 3
+    if short and not (re.search(r"[a-z]", inv) and re.search(r"\d", inv)):
         return value
     body = r"[\W_]*".join(map(re.escape, inv))
-    m = re.search(
-        rf"[\s,\-–—]*[（(]?\s*(?<![^\W_]){body}(?![^\W_])[\s)）]*$", value, re.I
-    )
-    stripped = value[: m.start()].strip() if m else ""
-    if not stripped or stripped.casefold() in _MUSEUM_ONLY:
-        return value  # 剥完成空或只剩馆名 → 宁可不剥
+    tok = rf"(?<![A-Za-z0-9]){body}(?![A-Za-z0-9])"
+    sep = r"[\s,，、・·\-–—]*"
+    m = re.search(rf"{sep}[（(]?\s*{tok}[\s)）]*$", value, re.I)
+    if m:
+        stripped = value[: m.start()].strip()
+    elif short:
+        return value
+    else:
+        m = re.search(rf"{sep}{tok}\s*[,，、;；]\s*(.*)$", value, re.I)
+        if m and _MUSEUM_WORD.search(m.group(1)):
+            stripped = value[: m.start()].strip()
+        else:
+            m = re.search(rf"{sep}[（(]?{tok}[)）]?(?:\s*[号號])?", value, re.I)
+            if not m or _CONTINUES.match(value[m.end() :]):
+                return value
+            rest = value[m.end() :]
+            if m.start() == 0:
+                rest = rest.lstrip().lstrip("の的의")
+            stripped = (value[: m.start()] + rest).strip()
+        if re.search(r"\d", stripped):
+            return value
+    if (
+        not stripped
+        or stripped.casefold() in _MUSEUM_ONLY
+        or _NUMBER_LABEL.search(stripped)
+    ):
+        return value  # 剥完成空、只剩馆名或「编号」字样 → 宁可不剥
     return stripped
 
 
@@ -769,14 +810,17 @@ def backfill_display_names(
             if art is None:
                 art = Artist(qid=aqid)
                 db.add(art)
+            alabels = None
             if not art.name_en:
-                art.name_en = en_name
+                # 该 QID 自己的标签优先:多作者件的作品行署名可能是另一位合作者
+                alabels = _labels(aqid)
+                art.name_en = alabels.get("en") or en_name
             ni = _clean_i18n(art.name_i18n)
             if ni != (art.name_i18n or {}):
                 art.name_i18n = ni
             need_fill_a = any(not ni.get(lang) for lang in langs)
             if need_fill_a or refresh_langs:
-                alabels = _labels(aqid)
+                alabels = alabels if alabels is not None else _labels(aqid)
                 for lang in refresh_langs or []:
                     if alabels.get(lang) and alabels[lang] != ni.get(lang):
                         ni = {**ni, lang: alabels[lang]}

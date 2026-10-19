@@ -21,6 +21,10 @@ extension GmThemeX on BuildContext {
   /// 正文行高：中文字密、需大行高(1.9)才透气；拉丁文 1.9 反而行间松散、
   /// 段落"散架"，收到 1.6（拉丁常规书籍值）。
   double get gmBodyHeight => isCjk ? 1.9 : 1.6;
+
+  /// 正文对齐：方块字两端对齐整齐；拉丁文没有自动断字，窄屏两端对齐会把
+  /// 词距拉出大空洞（V65 真机英文讲解），改左对齐（10-19 用户定）。
+  TextAlign get gmBodyAlign => isCjk ? TextAlign.justify : TextAlign.start;
 }
 
 /// 不随主题切换的硬编码值（handoff「特殊规则」章节）。

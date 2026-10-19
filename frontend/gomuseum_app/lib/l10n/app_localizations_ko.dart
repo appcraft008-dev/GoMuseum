@@ -12,332 +12,332 @@ class AppLocalizationsKo extends AppLocalizations {
   String get home => '홈';
 
   @override
-  String get explore => '탐색';
+  String get explore => '탐⁠색';
 
   @override
-  String get capture => '카메라';
+  String get capture => '카⁠메⁠라';
 
   @override
-  String get footprints => '발자취';
+  String get footprints => '발⁠자⁠취';
 
   @override
-  String get settings => '설정';
+  String get settings => '설⁠정';
 
   @override
-  String get navScan => '스캔';
+  String get navScan => '스⁠캔';
 
   @override
-  String get artworkRecognition => '작품 인식';
+  String get artworkRecognition => '작⁠품 인⁠식';
 
   @override
-  String get takePhoto => '사진 촬영';
+  String get takePhoto => '사⁠진 촬⁠영';
 
   @override
-  String get chooseFromGallery => '갤러리에서 선택';
+  String get chooseFromGallery => '갤⁠러⁠리⁠에⁠서 선⁠택';
 
   @override
-  String get selectImagePrompt => '작품을 인식할 이미지를 선택하세요';
+  String get selectImagePrompt => '작⁠품⁠을 인⁠식⁠할 이⁠미⁠지⁠를 선⁠택⁠하⁠세⁠요';
 
   @override
-  String get error => '오류';
+  String get error => '오⁠류';
 
   @override
-  String get comingSoon => '곧 제공';
+  String get comingSoon => '곧 제⁠공';
 
   @override
-  String get comingSoonShort => '곧 제공';
+  String get comingSoonShort => '곧 제⁠공';
 
   @override
-  String get language => '언어';
+  String get language => '언⁠어';
 
   @override
-  String get languageFollowSystem => '시스템 설정 따름';
+  String get languageFollowSystem => '시⁠스⁠템 설⁠정 따⁠름';
 
   @override
-  String get selectLanguage => '언어 선택';
+  String get selectLanguage => '언⁠어 선⁠택';
 
   @override
-  String get retry => '다시 시도';
+  String get retry => '다⁠시 시⁠도';
 
   @override
-  String get cancel => '취소';
+  String get cancel => '취⁠소';
 
   @override
-  String get delete => '삭제';
+  String get delete => '삭⁠제';
 
   @override
-  String get confirm => '확인';
+  String get confirm => '확⁠인';
 
   @override
-  String get loadFailed => '불러오기 실패';
+  String get loadFailed => '불⁠러⁠오⁠기 실⁠패';
 
   @override
-  String get loadFailedRetry => '불러오기 실패, 다시 시도하세요';
+  String get loadFailedRetry => '불⁠러⁠오⁠기 실⁠패, 다⁠시 시⁠도⁠하⁠세⁠요';
 
   @override
-  String get toBeRefined => '준비 중';
+  String get toBeRefined => '준⁠비 중';
 
   @override
-  String get viewAll => '모두 보기 →';
+  String get viewAll => '모⁠두 보⁠기 →';
 
   @override
-  String get all => '전체';
+  String get all => '전⁠체';
 
   @override
-  String get homePocketGuide => '포켓 미술관 가이드';
+  String get homePocketGuide => '포⁠켓 미⁠술⁠관 가⁠이⁠드';
 
   @override
-  String get homeSlogan => '한 작품에 다가가\n그 이야기를 들어보세요.';
+  String get homeSlogan => '한 작⁠품⁠에 다⁠가⁠가\n그 이⁠야⁠기⁠를 들⁠어⁠보⁠세⁠요.';
 
   @override
-  String get homeCtaRecognize => '촬영해 인식하고 감상';
+  String get homeCtaRecognize => '촬⁠영⁠해 인⁠식⁠하⁠고 감⁠상';
 
   @override
   String homeFreeLeft(Object count) {
-    return '무료 스캔 $count회 남음 · 업그레이드로 전체 이용';
+    return '무⁠료 스⁠캔 $count⁠회 남⁠음 · 업⁠그⁠레⁠이⁠드⁠로 전⁠체 이⁠용';
   }
 
   @override
-  String get homePassActive => '패스 이용 중 · 전체 이용 가능';
+  String get homePassActive => '패⁠스 이⁠용 중 · 전⁠체 이⁠용 가⁠능';
 
   @override
-  String get homePassPending => '패스 구매 완료 · 탭하여 활성화';
+  String get homePassPending => '패⁠스 구⁠매 완⁠료 · 탭⁠하⁠여 활⁠성⁠화';
 
   @override
   String homePassActiveNamed(String name) {
-    return '$name 이용 중';
+    return '$name 이⁠용 중';
   }
 
   @override
   String homePassPendingNamed(String name) {
-    return '$name 구매 완료 · 탭하여 활성화';
+    return '$name 구⁠매 완⁠료 · 탭⁠하⁠여 활⁠성⁠화';
   }
 
   @override
   String homePassActiveCount(int count) {
-    return '패스 $count개 이용 중';
+    return '패⁠스 $count⁠개 이⁠용 중';
   }
 
   @override
   String homePassPendingCount(int count) {
-    return '패스 $count개 구매 완료 · 탭하여 활성화';
+    return '패⁠스 $count⁠개 구⁠매 완⁠료 · 탭⁠하⁠여 활⁠성⁠화';
   }
 
   @override
-  String get homeNearby => '근처 미술관';
+  String get homeNearby => '근⁠처 미⁠술⁠관';
 
   @override
-  String get homeMuseums => '박물관·미술관';
+  String get homeMuseums => '박⁠물⁠관·미⁠술⁠관';
 
   @override
-  String get homeEnableLocation => '위치를 켜면 가까운 미술관을 보여 드려요';
+  String get homeEnableLocation => '위⁠치⁠를 켜⁠면 가⁠까⁠운 미⁠술⁠관⁠을 보⁠여 드⁠려⁠요';
 
   @override
-  String get homeContinue => '이어서 보기';
+  String get homeContinue => '이⁠어⁠서 보⁠기';
 
   @override
-  String get statusOpen => '개관 중';
+  String get statusOpen => '개⁠관 중';
 
   @override
-  String get exploreTitle => '탐색';
+  String get exploreTitle => '탐⁠색';
 
   @override
-  String get searchCityMuseumArtwork => '도시, 미술관 또는 작품 검색';
+  String get searchCityMuseumArtwork => '도⁠시, 미⁠술⁠관 또⁠는 작⁠품 검⁠색';
 
   @override
-  String get searchMuseumsSection => '박물관';
+  String get searchMuseumsSection => '박⁠물⁠관';
 
   @override
-  String get searchArtworksSection => '작품';
+  String get searchArtworksSection => '작⁠품';
 
   @override
-  String get searchNoResults => '결과 없음';
+  String get searchNoResults => '결⁠과 없⁠음';
 
   @override
   String museumCount(Object count) {
-    return '미술관 $count곳';
+    return '미⁠술⁠관 $count⁠곳';
   }
 
   @override
-  String get noMuseums => '미술관이 없습니다';
+  String get noMuseums => '미⁠술⁠관⁠이 없⁠습⁠니⁠다';
 
   @override
-  String get noMatchedMuseums => '일치하는 미술관이 없습니다';
+  String get noMatchedMuseums => '일⁠치⁠하⁠는 미⁠술⁠관⁠이 없⁠습⁠니⁠다';
 
   @override
   String artworkCountLabel(Object count) {
-    return '작품 $count점';
+    return '작⁠품 $count⁠점';
   }
 
   @override
   String recordedCount(Object count) {
-    return '소장 $count점';
+    return '소⁠장 $count⁠점';
   }
 
   @override
   String museumCatalogNumbers(Object catalog, Object archive) {
-    return '온라인 도록 $catalog점 · 아카이브 $archive건 (인식/검색 가능)';
+    return '온⁠라⁠인 도⁠록 $catalog⁠점 · 아⁠카⁠이⁠브 $archive⁠건 (인⁠식/검⁠색 가⁠능)';
   }
 
   @override
-  String get noArtworks => '작품이 없습니다';
+  String get noArtworks => '작⁠품⁠이 없⁠습⁠니⁠다';
 
   @override
   String loadingShown(Object shown, Object total) {
-    return '불러오는 중 · $shown/$total 표시';
+    return '불⁠러⁠오⁠는 중 · $shown/$total 표⁠시';
   }
 
   @override
   String allLoaded(Object total) {
-    return '모두 불러옴 · 총 $total점';
+    return '모⁠두 불⁠러⁠옴 · 총 $total⁠점';
   }
 
   @override
-  String get guideVoiceGuide => '오디오 가이드';
+  String get guideVoiceGuide => '오⁠디⁠오 가⁠이⁠드';
 
   @override
-  String get guideGenFailed => '해설 생성 실패';
+  String get guideGenFailed => '해⁠설 생⁠성 실⁠패';
 
   @override
-  String get guideWriting => '해설을 작성 중…';
+  String get guideWriting => '해⁠설⁠을 작⁠성 중…';
 
   @override
-  String get guideHighlight => '감상 포인트';
+  String get guideHighlight => '감⁠상 포⁠인⁠트';
 
   @override
   String get guideQa => 'Q&A';
 
   @override
-  String get guideThinking => '생각 중…';
+  String get guideThinking => '생⁠각 중…';
 
   @override
-  String get guideQ1 => '이 그림의 특별한 점은?';
+  String get guideQ1 => '이 그⁠림⁠의 특⁠별⁠한 점⁠은?';
 
   @override
-  String get guideQ2 => '그때 작가는 무엇을 겪고 있었나요?';
+  String get guideQ2 => '그⁠때 작⁠가⁠는 무⁠엇⁠을 겪⁠고 있⁠었⁠나⁠요?';
 
   @override
-  String get guideAskHint => '이 그림에 대해 질문…';
+  String get guideAskHint => '이 그⁠림⁠에 대⁠해 질⁠문…';
 
   @override
-  String get guideAskShort => '이 그림에 대해 질문';
+  String get guideAskShort => '이 그⁠림⁠에 대⁠해 질⁠문';
 
   @override
-  String get guideVoiceComingSoon => '음성 Q&A는 곧 제공됩니다. 지금은 입력하세요';
+  String get guideVoiceComingSoon => '음⁠성 Q&A⁠는 곧 제⁠공⁠됩⁠니⁠다. 지⁠금⁠은 입⁠력⁠하⁠세⁠요';
 
   @override
-  String get guideGenerating => '콘텐츠 생성 중 · 약 1~3분';
+  String get guideGenerating => '콘⁠텐⁠츠 생⁠성 중 · 약 1~3⁠분';
 
   @override
-  String get guideEmpty => '아직 근거 있는 해설이 없습니다 (준비 중)';
+  String get guideEmpty => '아⁠직 근⁠거 있⁠는 해⁠설⁠이 없⁠습⁠니⁠다 (준⁠비 중)';
 
   @override
-  String get guideInfo => '작품 정보';
+  String get guideInfo => '작⁠품 정⁠보';
 
   @override
-  String get guideStandardTour => '표준 투어';
+  String get guideStandardTour => '표⁠준 투⁠어';
 
   @override
-  String get guideListen => '듣기';
+  String get guideListen => '듣⁠기';
 
   @override
-  String get guideDiveIn => '더 알고 싶나요? 아래를 탭';
+  String get guideDiveIn => '더 알⁠고 싶⁠나⁠요? 아⁠래⁠를 탭';
 
   @override
-  String get guideDeepContent => '자세히';
+  String get guideDeepContent => '자⁠세⁠히';
 
   @override
-  String get guideAskPlaceholder => '무엇이든 질문…';
+  String get guideAskPlaceholder => '무⁠엇⁠이⁠든 질⁠문…';
 
   @override
-  String get guideArtist => '작가';
+  String get guideArtist => '작⁠가';
 
   @override
-  String get guideArtistTab => '작가';
+  String get guideArtistTab => '작⁠가';
 
   @override
-  String get guideNotableWorks => '대표작';
+  String get guideNotableWorks => '대⁠표⁠작';
 
   @override
-  String get guideNoAnswer => '(답변 없음)';
+  String get guideNoAnswer => '(답⁠변 없⁠음)';
 
   @override
-  String get guideAnswerFailed => '답변 실패, 나중에 다시 시도하세요.';
+  String get guideAnswerFailed => '답⁠변 실⁠패, 나⁠중⁠에 다⁠시 시⁠도⁠하⁠세⁠요.';
 
   @override
-  String get factInventory => '소장 번호';
+  String get factInventory => '소⁠장 번⁠호';
 
   @override
-  String get factLocation => '위치';
+  String get factLocation => '위⁠치';
 
   @override
-  String get factProvenance => '출처';
+  String get factProvenance => '출⁠처';
 
   @override
-  String get factExhibitions => '전시';
+  String get factExhibitions => '전⁠시';
 
   @override
-  String get factBibliography => '참고 문헌';
+  String get factBibliography => '참⁠고 문⁠헌';
 
   @override
-  String get factArtist => '작가';
+  String get factArtist => '작⁠가';
 
   @override
-  String get factNone => '상세 정보 없음';
+  String get factNone => '상⁠세 정⁠보 없⁠음';
 
   @override
-  String get footprintTitle => '발자취';
+  String get footprintTitle => '발⁠자⁠취';
 
   @override
-  String get footprintNoMuseum => '장소 미상';
+  String get footprintNoMuseum => '장⁠소 미⁠상';
 
   @override
-  String get noFootprints => '발자취가 없습니다';
+  String get noFootprints => '발⁠자⁠취⁠가 없⁠습⁠니⁠다';
 
   @override
   String footprintStat(Object count, Object days) {
-    return '작품 $count점 · $days일';
+    return '작⁠품 $count⁠점 · $days⁠일';
   }
 
   @override
-  String get footprintLoadFailed => '발자취 불러오기 실패';
+  String get footprintLoadFailed => '발⁠자⁠취 불⁠러⁠오⁠기 실⁠패';
 
   @override
-  String get footprintEmptyHint => '인식한 작품은 여기에 자동으로 기록됩니다';
+  String get footprintEmptyHint => '인⁠식⁠한 작⁠품⁠은 여⁠기⁠에 자⁠동⁠으⁠로 기⁠록⁠됩⁠니⁠다';
 
   @override
-  String get footprintGoRecognize => '첫 작품을 인식하세요';
+  String get footprintGoRecognize => '첫 작⁠품⁠을 인⁠식⁠하⁠세⁠요';
 
   @override
   String itemsCount(Object count) {
-    return '작품 $count점';
+    return '작⁠품 $count⁠점';
   }
 
   @override
   String ticketDurationDays(String days) {
-    return '$days일';
+    return '$days⁠일';
   }
 
   @override
   String yearBefore(String year) {
-    return '$year년 이전';
+    return '$year⁠년 이⁠전';
   }
 
   @override
   String yearAfter(String year) {
-    return '$year년 이후';
+    return '$year⁠년 이⁠후';
   }
 
   @override
   String yearBce(String year) {
-    return '기원전 $year년';
+    return '기⁠원⁠전 $year⁠년';
   }
 
   @override
-  String get today => '오늘';
+  String get today => '오⁠늘';
 
   @override
-  String get yesterday => '어제';
+  String get yesterday => '어⁠제';
 
   @override
   String dateMonthDay(Object month, Object day) {
@@ -350,503 +350,517 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get deleteFootprintQ => '이 발자취를 삭제할까요?';
+  String get deleteFootprintQ => '이 발⁠자⁠취⁠를 삭⁠제⁠할⁠까⁠요?';
 
   @override
-  String get settingsTitle => '설정';
+  String get settingsTitle => '설⁠정';
 
   @override
-  String get secGeneral => '일반';
+  String get secGeneral => '일⁠반';
 
   @override
-  String get guideLanguage => '가이드 언어';
+  String get guideLanguage => '가⁠이⁠드 언⁠어';
 
   @override
-  String get offlinePacks => '오프라인 미술관 팩';
+  String get offlinePacks => '오⁠프⁠라⁠인 미⁠술⁠관 팩';
 
   @override
-  String get autoSavePhoto => '사진 자동 저장';
+  String get autoSavePhoto => '사⁠진 자⁠동 저⁠장';
 
   @override
-  String get autoSavePhotoNeedsAccess => '사진을 저장하려면 사진 보관함 접근 권한이 필요합니다';
+  String get autoSavePhotoNeedsAccess =>
+      '사⁠진⁠을 저⁠장⁠하⁠려⁠면 사⁠진 보⁠관⁠함 접⁠근 권⁠한⁠이 필⁠요⁠합⁠니⁠다';
 
   @override
-  String get secAccount => '계정';
+  String get secAccount => '계⁠정';
 
   @override
-  String get secSupport => '지원 및 법적 고지';
+  String get secSupport => '지⁠원 및 법⁠적 고⁠지';
 
   @override
-  String get encourageUs => '응원하기';
+  String get encourageUs => '응⁠원⁠하⁠기';
 
   @override
-  String get appStoreRating => 'App Store 평가';
+  String get appStoreRating => 'App Store 평⁠가';
 
   @override
-  String get privacyPolicy => '개인정보 처리방침';
+  String get privacyPolicy => '개⁠인⁠정⁠보 처⁠리⁠방⁠침';
 
   @override
-  String get freeQuota => '무료 스캔 한도';
+  String get freeQuota => '무⁠료 스⁠캔 한⁠도';
 
   @override
   String quotaValue(Object remain, Object total) {
-    return '$remain / $total 남음';
+    return '$remain / $total 남⁠음';
   }
 
   @override
-  String get upgrade => '업그레이드';
+  String get upgrade => '업⁠그⁠레⁠이⁠드';
 
   @override
-  String get loginBind => '로그인 / 계정 연결';
+  String get loginBind => '로⁠그⁠인 / 계⁠정 연⁠결';
 
   @override
-  String get notLoggedIn => '로그인되지 않음';
+  String get notLoggedIn => '로⁠그⁠인⁠되⁠지 않⁠음';
 
   @override
-  String get userDefault => '사용자';
+  String get userDefault => '사⁠용⁠자';
 
   @override
-  String get guestPrefix => '게스트_';
+  String get guestPrefix => '게⁠스⁠트_';
 
   @override
-  String get noEmailBound => '연결된 이메일 없음';
+  String get noEmailBound => '연⁠결⁠된 이⁠메⁠일 없⁠음';
 
   @override
-  String get logout => '로그아웃';
+  String get logout => '로⁠그⁠아⁠웃';
 
   @override
-  String get deleteAccount => '계정 삭제';
+  String get deleteAccount => '계⁠정 삭⁠제';
 
   @override
-  String get loadingShort => '불러오는 중…';
+  String get loadingShort => '불⁠러⁠오⁠는 중…';
 
   @override
-  String get appearance => '화면';
+  String get appearance => '화⁠면';
 
   @override
-  String get themeLight => '라이트';
+  String get themeLight => '라⁠이⁠트';
 
   @override
-  String get themeDark => '다크';
+  String get themeDark => '다⁠크';
 
   @override
-  String get themeSystem => '시스템';
+  String get themeSystem => '시⁠스⁠템';
 
   @override
   String featureComingSoon(String feature) {
-    return '$feature 곧 제공';
+    return '$feature 곧 제⁠공';
   }
 
   @override
-  String get privacyLinkCopied => '링크가 복사되었습니다';
+  String get privacyLinkCopied => '링⁠크⁠가 복⁠사⁠되⁠었⁠습⁠니⁠다';
 
   @override
-  String get deleteAccountQ => '계정을 영구 삭제할까요?';
+  String get deleteAccountQ => '계⁠정⁠을 영⁠구 삭⁠제⁠할⁠까⁠요?';
 
   @override
-  String get deleteAccountBody => '계정 프로필과 남은 한도가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.';
+  String get deleteAccountBody =>
+      '계⁠정 프⁠로⁠필⁠과 남⁠은 한⁠도⁠가 삭⁠제⁠됩⁠니⁠다. 이 작⁠업⁠은 되⁠돌⁠릴 수 없⁠습⁠니⁠다.';
 
   @override
   String get deleteAccountBodyPass =>
-      '구매한 패스는 즉시 무효가 되며 복원할 수 없습니다. 다시 가입해도 돌아오지 않으므로 새로 구매해야 합니다.';
+      '구⁠매⁠한 패⁠스⁠는 즉⁠시 무⁠효⁠가 되⁠며 복⁠원⁠할 수 없⁠습⁠니⁠다. 다⁠시 가⁠입⁠해⁠도 돌⁠아⁠오⁠지 않⁠으⁠므⁠로 새⁠로 구⁠매⁠해⁠야 합⁠니⁠다.';
 
   @override
-  String get permanentDelete => '영구 삭제';
+  String get permanentDelete => '영⁠구 삭⁠제';
 
   @override
-  String get deleteFailed => '삭제 실패, 나중에 다시 시도하세요';
+  String get deleteFailed => '삭⁠제 실⁠패, 나⁠중⁠에 다⁠시 시⁠도⁠하⁠세⁠요';
 
   @override
-  String get confirmLogout => '로그아웃 확인';
+  String get confirmLogout => '로⁠그⁠아⁠웃 확⁠인';
 
   @override
-  String get confirmLogoutBody => '정말 로그아웃하시겠습니까?';
+  String get confirmLogoutBody => '정⁠말 로⁠그⁠아⁠웃⁠하⁠시⁠겠⁠습⁠니⁠까?';
 
   @override
-  String get confirmYes => '확인';
+  String get confirmYes => '확⁠인';
 
   @override
-  String get authEmailHint => '이메일';
+  String get authEmailHint => '이⁠메⁠일';
 
   @override
-  String get authEmailRequired => '이메일을 입력하세요';
+  String get authEmailRequired => '이⁠메⁠일⁠을 입⁠력⁠하⁠세⁠요';
 
   @override
-  String get authEmailInvalid => '유효한 이메일을 입력하세요';
+  String get authEmailInvalid => '유⁠효⁠한 이⁠메⁠일⁠을 입⁠력⁠하⁠세⁠요';
 
   @override
-  String get authPasswordHint => '비밀번호';
+  String get authPasswordHint => '비⁠밀⁠번⁠호';
 
   @override
-  String get authPasswordRequired => '비밀번호를 입력하세요';
+  String get authPasswordRequired => '비⁠밀⁠번⁠호⁠를 입⁠력⁠하⁠세⁠요';
 
   @override
-  String get authPasswordMin6 => '비밀번호는 6자 이상이어야 합니다';
+  String get authPasswordMin6 => '비⁠밀⁠번⁠호⁠는 6⁠자 이⁠상⁠이⁠어⁠야 합⁠니⁠다';
 
   @override
-  String get authConfirmPasswordHint => '비밀번호 확인';
+  String get authConfirmPasswordHint => '비⁠밀⁠번⁠호 확⁠인';
 
   @override
-  String get authPasswordMismatch => '비밀번호가 일치하지 않습니다';
+  String get authPasswordMismatch => '비⁠밀⁠번⁠호⁠가 일⁠치⁠하⁠지 않⁠습⁠니⁠다';
 
   @override
-  String get authUsernameOptionalHint => '사용자 이름 (선택)';
+  String get authUsernameOptionalHint => '사⁠용⁠자 이⁠름 (선⁠택)';
 
   @override
-  String get authLoginButton => '로그인';
+  String get authLoginButton => '로⁠그⁠인';
 
   @override
-  String get authRegisterButton => '가입';
+  String get authRegisterButton => '가⁠입';
 
   @override
-  String get authForgotPassword => '비밀번호를 잊으셨나요?';
+  String get authForgotPassword => '비⁠밀⁠번⁠호⁠를 잊⁠으⁠셨⁠나⁠요?';
 
   @override
-  String get authResetTitle => '비밀번호 재설정';
+  String get authResetTitle => '비⁠밀⁠번⁠호 재⁠설⁠정';
 
   @override
   String get authResetPrompt =>
-      '가입할 때 사용한 이메일을 입력하세요. 새 비밀번호를 설정할 수 있는 링크를 보내드립니다.';
+      '가⁠입⁠할 때 사⁠용⁠한 이⁠메⁠일⁠을 입⁠력⁠하⁠세⁠요. 새 비⁠밀⁠번⁠호⁠를 설⁠정⁠할 수 있⁠는 링⁠크⁠를 보⁠내⁠드⁠립⁠니⁠다.';
 
   @override
-  String get authResetSend => '링크 보내기';
+  String get authResetSend => '링⁠크 보⁠내⁠기';
 
   @override
-  String get authResetSent => '해당 이메일이 등록되어 있다면 링크가 발송되었습니다. 스팸함도 확인해 보세요.';
+  String get authResetSent =>
+      '해⁠당 이⁠메⁠일⁠이 등⁠록⁠되⁠어 있⁠다⁠면 링⁠크⁠가 발⁠송⁠되⁠었⁠습⁠니⁠다. 스⁠팸⁠함⁠도 확⁠인⁠해 보⁠세⁠요.';
 
   @override
-  String get authResetFailed => '이메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  String get authResetFailed =>
+      '이⁠메⁠일⁠을 보⁠내⁠지 못⁠했⁠습⁠니⁠다. 잠⁠시 후 다⁠시 시⁠도⁠해 주⁠세⁠요.';
 
   @override
-  String get authNoAccount => '계정이 없나요? 가입';
+  String get authNoAccount => '계⁠정⁠이 없⁠나⁠요? 가⁠입';
 
   @override
-  String get authHaveAccount => '계정이 있나요? 로그인';
+  String get authHaveAccount => '계⁠정⁠이 있⁠나⁠요? 로⁠그⁠인';
 
   @override
-  String get authCreateAccount => '계정 만들기';
+  String get authCreateAccount => '계⁠정 만⁠들⁠기';
 
   @override
-  String get authGoogleLogin => 'Google로 로그인';
+  String get authGoogleLogin => 'Google⁠로 로⁠그⁠인';
 
   @override
-  String get authAppleLogin => 'Apple로 로그인';
+  String get authAppleLogin => 'Apple⁠로 로⁠그⁠인';
 
   @override
-  String get authOr => '또는';
+  String get authOr => '또⁠는';
 
   @override
-  String get authGuestLogin => '게스트로 계속';
+  String get authGuestLogin => '게⁠스⁠트⁠로 계⁠속';
 
   @override
-  String get authLoginFailed => '로그인 실패, 이메일과 비밀번호를 확인하세요';
+  String get authLoginFailed => '로⁠그⁠인 실⁠패, 이⁠메⁠일⁠과 비⁠밀⁠번⁠호⁠를 확⁠인⁠하⁠세⁠요';
 
   @override
-  String get authRegisterFailed => '가입 실패, 이메일이 이미 사용 중일 수 있습니다';
+  String get authRegisterFailed => '가⁠입 실⁠패, 이⁠메⁠일⁠이 이⁠미 사⁠용 중⁠일 수 있⁠습⁠니⁠다';
 
   @override
-  String get authGoogleCancelled => 'Google 로그인이 취소되었습니다';
+  String get authGoogleCancelled => 'Google 로⁠그⁠인⁠이 취⁠소⁠되⁠었⁠습⁠니⁠다';
 
   @override
-  String get authGoogleFailed => 'Google 로그인 실패, 다시 시도하세요';
+  String get authGoogleFailed => 'Google 로⁠그⁠인 실⁠패, 다⁠시 시⁠도⁠하⁠세⁠요';
 
   @override
-  String get authGoogleError => 'Google 로그인 오류';
+  String get authGoogleError => 'Google 로⁠그⁠인 오⁠류';
 
   @override
-  String get authGoogleNotConfigured => 'Google 로그인이 설정되지 않았습니다. 관리자에게 문의하세요';
+  String get authGoogleNotConfigured =>
+      'Google 로⁠그⁠인⁠이 설⁠정⁠되⁠지 않⁠았⁠습⁠니⁠다. 관⁠리⁠자⁠에⁠게 문⁠의⁠하⁠세⁠요';
 
   @override
-  String get authGoogleNetworkError => 'Google 로그인 네트워크 오류, 연결을 확인하세요';
+  String get authGoogleNetworkError =>
+      'Google 로⁠그⁠인 네⁠트⁠워⁠크 오⁠류, 연⁠결⁠을 확⁠인⁠하⁠세⁠요';
 
   @override
-  String get authAppleOnlyApple => 'Apple 로그인은 iOS와 macOS에서만 지원됩니다';
+  String get authAppleOnlyApple => 'Apple 로⁠그⁠인⁠은 iOS⁠와 macOS⁠에⁠서⁠만 지⁠원⁠됩⁠니⁠다';
 
   @override
-  String get authAppleCancelled => 'Apple 로그인이 취소되었습니다';
+  String get authAppleCancelled => 'Apple 로⁠그⁠인⁠이 취⁠소⁠되⁠었⁠습⁠니⁠다';
 
   @override
-  String get authAppleFailed => 'Apple 로그인 실패, 다시 시도하세요';
+  String get authAppleFailed => 'Apple 로⁠그⁠인 실⁠패, 다⁠시 시⁠도⁠하⁠세⁠요';
 
   @override
-  String get authAppleError => 'Apple 로그인 오류';
+  String get authAppleError => 'Apple 로⁠그⁠인 오⁠류';
 
   @override
-  String get authAppleNotConfigured => 'Apple 로그인이 설정되지 않았습니다';
+  String get authAppleNotConfigured => 'Apple 로⁠그⁠인⁠이 설⁠정⁠되⁠지 않⁠았⁠습⁠니⁠다';
 
   @override
-  String get authGuestFailed => '게스트 로그인 실패, 다시 시도하세요';
+  String get authGuestFailed => '게⁠스⁠트 로⁠그⁠인 실⁠패, 다⁠시 시⁠도⁠하⁠세⁠요';
 
   @override
-  String get authGuestError => '게스트 로그인 오류';
+  String get authGuestError => '게⁠스⁠트 로⁠그⁠인 오⁠류';
 
   @override
-  String get recCandidatesTitle => '이 작품인가요?';
+  String get recCandidatesTitle => '이 작⁠품⁠인⁠가⁠요?';
 
   @override
-  String get recNoneOfThese => '모두 아님';
+  String get recNoneOfThese => '모⁠두 아⁠님';
 
   @override
-  String get recThisIsIt => '이 작품이에요';
+  String get recThisIsIt => '이 작⁠품⁠이⁠에⁠요';
 
   @override
-  String get recNotRecognized => '인식하지 못했습니다';
+  String get recNotRecognized => '인⁠식⁠하⁠지 못⁠했⁠습⁠니⁠다';
 
   @override
-  String get recNotInCatalog => '작품을 찾지 못했습니다';
+  String get recNotInCatalog => '작⁠품⁠을 찾⁠지 못⁠했⁠습⁠니⁠다';
 
   @override
-  String get recShootLabelBtn => '설명판 촬영';
+  String get recShootLabelBtn => '설⁠명⁠판 촬⁠영';
 
   @override
-  String get recTypeNumberOrName => '번호나 작품명 입력';
+  String get recTypeNumberOrName => '번⁠호·작⁠품⁠명';
 
   @override
-  String get photoFbTitle => '이 사진을 보내 주시겠어요?';
+  String get photoFbTitle => '이 사⁠진⁠을 보⁠내 주⁠시⁠겠⁠어⁠요?';
 
   @override
   String get photoFbBody =>
-      '빠진 작품을 추가하고 인식을 개선하는 데만 사용합니다. 최대 90일 보관하며 누구에게도 공개하지 않습니다.';
+      '빠⁠진 작⁠품 추⁠가⁠와 인⁠식 개⁠선⁠에⁠만 써⁠요. 최⁠대 90⁠일 보⁠관⁠하⁠며 공⁠개⁠하⁠지 않⁠아⁠요.';
 
   @override
-  String get photoFbConsent => '이 사진 보내기';
+  String get photoFbConsent => '이 사⁠진 보⁠내⁠기';
 
   @override
-  String get photoFbNoteHint => '메모 추가(선택)';
+  String get photoFbNoteHint => '메⁠모 추⁠가(선⁠택)';
 
   @override
-  String get photoFbContinue => '계속';
+  String get photoFbContinue => '계⁠속';
 
   @override
-  String get recSearchWithLabel => '이 텍스트로 검색';
+  String get recSearchWithLabel => '이 텍⁠스⁠트⁠로 검⁠색';
 
   @override
-  String get recViewfinderLabelHint => '설명판 글자를 화면에 가득 채우세요';
+  String get recViewfinderLabelHint => '설⁠명⁠판 글⁠자⁠를 화⁠면⁠에 가⁠득 채⁠우⁠세⁠요';
 
   @override
-  String get camRecognizeTitle => '작품 식별';
+  String get camRecognizeTitle => '작⁠품 식⁠별';
 
   @override
-  String get camViewfinderHint => '작품 전체를 화면에 담으세요\n가로로 긴 작품은 휴대폰을 가로로 드세요';
+  String get camViewfinderHint =>
+      '작⁠품 전⁠체⁠를 화⁠면⁠에 담⁠으⁠세⁠요\n넓⁠은 작⁠품⁠은 가⁠로⁠로 찍⁠으⁠세⁠요';
 
   @override
-  String get camRecentGallery => '최근';
+  String get camRecentGallery => '최⁠근';
 
   @override
-  String get camAllAlbums => '모든 앨범';
+  String get camAllAlbums => '모⁠든 앨⁠범';
 
   @override
-  String get camGallery => '갤러리';
+  String get camGallery => '갤⁠러⁠리';
 
   @override
-  String get camSearch => '검색';
+  String get camSearch => '검⁠색';
 
   @override
-  String get guideUnavailable => '이 작품은 아직 이 언어로 된 가이드가 없습니다';
+  String get guideUnavailable => '이 작⁠품⁠은 아⁠직 이 언⁠어⁠로 된 가⁠이⁠드⁠가 없⁠습⁠니⁠다';
 
   @override
-  String get guideNotGenerated => '아직 가이드가 생성되지 않았습니다';
+  String get guideNotGenerated => '아⁠직 가⁠이⁠드⁠가 생⁠성⁠되⁠지 않⁠았⁠습⁠니⁠다';
 
   @override
-  String get guideDailyCap => '오늘의 가이드 생성 한도에 도달했습니다. 내일 다시 확인해 주세요';
+  String get guideDailyCap =>
+      '오⁠늘⁠의 가⁠이⁠드 생⁠성 한⁠도⁠에 도⁠달⁠했⁠습⁠니⁠다. 내⁠일 다⁠시 확⁠인⁠해 주⁠세⁠요';
 
   @override
-  String get audioNotReady => '해설 생성 후 들을 수 있습니다';
+  String get audioNotReady => '해⁠설 생⁠성 후 들⁠을 수 있⁠습⁠니⁠다';
 
   @override
-  String get audioFailed => '오디오를 사용할 수 없습니다. 다시 시도하세요';
+  String get audioFailed => '오⁠디⁠오⁠를 사⁠용⁠할 수 없⁠습⁠니⁠다. 다⁠시 시⁠도⁠하⁠세⁠요';
 
   @override
-  String get deepGenerating => '심층 콘텐츠 생성 중…';
+  String get deepGenerating => '심⁠층 콘⁠텐⁠츠 생⁠성 중…';
 
   @override
-  String get camNoCamera => '사용 가능한 카메라가 없습니다';
+  String get camNoCamera => '사⁠용 가⁠능⁠한 카⁠메⁠라⁠가 없⁠습⁠니⁠다';
 
   @override
-  String get camInitFailed => '카메라 초기화 실패';
+  String get camInitFailed => '카⁠메⁠라 초⁠기⁠화 실⁠패';
 
   @override
-  String get camTagSearch => '설명판 검색';
+  String get camTagSearch => '설⁠명⁠판 검⁠색';
 
   @override
-  String get camTagHint => '촬영 불가 구역에서는 설명판 번호, 제목 또는 작가를 입력하세요';
+  String get camTagHint =>
+      '촬⁠영 불⁠가 구⁠역⁠에⁠서⁠는 설⁠명⁠판 번⁠호, 제⁠목 또⁠는 작⁠가⁠를 입⁠력⁠하⁠세⁠요';
 
   @override
-  String get camTagExample => '예: INV 3692 / 침실';
+  String get camTagExample => '예: INV 3692 / 침⁠실';
 
   @override
-  String get camPackComingSoon => '컬렉션 검색은 오프라인 팩 제공 후 이용 가능';
+  String get camPackComingSoon => '컬⁠렉⁠션 검⁠색⁠은 오⁠프⁠라⁠인 팩 제⁠공 후 이⁠용 가⁠능';
 
   @override
-  String get camQuotaUsedUp => '무료 스캔을 모두 사용했습니다';
+  String get camQuotaUsedUp => '무⁠료 스⁠캔⁠을 모⁠두 사⁠용⁠했⁠습⁠니⁠다';
 
   @override
-  String get camUpgradeHint => '업그레이드하여 미술관 전체에서 계속 감상하세요';
+  String get camUpgradeHint => '업⁠그⁠레⁠이⁠드⁠하⁠여 미⁠술⁠관 전⁠체⁠에⁠서 계⁠속 감⁠상⁠하⁠세⁠요';
 
   @override
-  String get camViewUpgrade => '요금제 보기';
+  String get camViewUpgrade => '요⁠금⁠제 보⁠기';
 
   @override
-  String get camCantPhoto => '촬영할 수 없나요? 설명판 번호를 입력하세요';
+  String get camCantPhoto => '촬⁠영⁠할 수 없⁠나⁠요? 설⁠명⁠판 번⁠호⁠를 입⁠력⁠하⁠세⁠요';
 
   @override
-  String get camRecognizing => '인식 중…';
+  String get camRecognizing => '인⁠식 중…';
 
   @override
-  String get camComparing => 'AI가 컬렉션 및 공개 미술 데이터베이스와 대조 중';
+  String get camComparing => 'AI⁠가 소⁠장⁠품·미⁠술 DB⁠와 대⁠조 중';
 
   @override
-  String get recWaitSlow => '평소보다 조금 오래 걸리고 있어요. 계속 찾는 중입니다';
+  String get recWaitSlow => '평⁠소⁠보⁠다 오⁠래 걸⁠려⁠요. 계⁠속 찾⁠는 중';
 
   @override
-  String get recWaitSwitchApp => '다른 앱으로 전환해도 괜찮아요. 돌아오면 결과가 그대로 있어요';
+  String get recWaitSwitchApp =>
+      '다⁠른 앱⁠으⁠로 전⁠환⁠해⁠도 괜⁠찮⁠아⁠요. 돌⁠아⁠오⁠면 결⁠과⁠가 그⁠대⁠로 있⁠어⁠요';
 
   @override
-  String get camConfirmPrompt => '인식 완료, 작품을 확인하세요';
+  String get camConfirmPrompt => '인⁠식 완⁠료, 작⁠품⁠을 확⁠인⁠하⁠세⁠요';
 
   @override
-  String get camConfidence => '신뢰도';
+  String get camConfidence => '신⁠뢰⁠도';
 
   @override
-  String get camConfirmStart => '확인하고 가이드 시작';
+  String get camConfirmStart => '확⁠인⁠하⁠고 가⁠이⁠드 시⁠작';
 
   @override
-  String get camNoneSearch => '해당 없음? 제목이나 설명판 번호로 검색 →';
+  String get camNoneSearch => '해⁠당 없⁠음? 제⁠목⁠이⁠나 설⁠명⁠판 번⁠호⁠로 검⁠색 →';
 
   @override
-  String get camRecognizeFailed => '인식 실패';
+  String get camRecognizeFailed => '인⁠식 실⁠패';
 
   @override
-  String get camRetake => '다시 촬영';
+  String get camRetake => '다⁠시 촬⁠영';
 
   @override
-  String get museumCoverTab => '표지';
+  String get museumCoverTab => '표⁠지';
 
   @override
-  String get museumCollectionTab => '컬렉션';
+  String get museumCollectionTab => '컬⁠렉⁠션';
 
   @override
-  String get museumOpeningHours => '운영 시간';
+  String get museumOpeningHours => '운⁠영 시⁠간';
 
   @override
-  String get museumOfficialSite => '공식 웹사이트';
+  String get museumOfficialSite => '공⁠식 웹⁠사⁠이⁠트';
 
   @override
-  String get museumIntroComingSoon => '박물관 소개 준비 중입니다';
+  String get museumIntroComingSoon => '박⁠물⁠관 소⁠개 준⁠비 중⁠입⁠니⁠다';
 
   @override
   String paywallTitle(String label, String days) {
-    return '$label $days일 패스';
+    return '$label $days⁠일 패⁠스';
   }
 
   @override
   String paywallPitch(String museums) {
-    return '사진 인식 무제한, $museums의 음성 해설을 들을 수 있습니다.';
+    return '사⁠진 인⁠식 무⁠제⁠한, $museums⁠의 음⁠성 해⁠설⁠을 들⁠을 수 있⁠습⁠니⁠다.';
   }
 
   @override
-  String get paywallPitchGeneric => '사진 인식 무제한, 음성 해설을 들을 수 있습니다.';
+  String get paywallPitchGeneric => '사⁠진 인⁠식 무⁠제⁠한, 음⁠성 해⁠설⁠을 들⁠을 수 있⁠습⁠니⁠다.';
 
   @override
-  String get passNotOnSale => '이 미술관의 패스는 아직 판매하지 않습니다.';
+  String get passNotOnSale => '이 미⁠술⁠관⁠의 패⁠스⁠는 아⁠직 판⁠매⁠하⁠지 않⁠습⁠니⁠다.';
 
   @override
-  String get paywallFreeAlways => '둘러보기, 검색, 전체 텍스트 해설은 언제나 무료입니다.';
+  String get paywallFreeAlways =>
+      '둘⁠러⁠보⁠기, 검⁠색, 전⁠체 텍⁠스⁠트 해⁠설⁠은 언⁠제⁠나 무⁠료⁠입⁠니⁠다.';
 
   @override
-  String get paywallBuy => '패스 구매';
+  String get paywallBuy => '패⁠스 구⁠매';
 
   @override
-  String get paywallRestore => '결제했는데 패스가 없나요?';
+  String get paywallRestore => '결⁠제⁠했⁠는⁠데 패⁠스⁠가 없⁠나⁠요?';
 
   @override
-  String get restoreInProgress => '복원 중…';
+  String get restoreInProgress => '복⁠원 중…';
 
   @override
-  String get restoreNothingFound => '미완료 결제를 찾지 못했습니다';
+  String get restoreNothingFound => '미⁠완⁠료 결⁠제⁠를 찾⁠지 못⁠했⁠습⁠니⁠다';
 
   @override
-  String get restoreSucceeded => '패스를 복원했습니다';
+  String get restoreSucceeded => '패⁠스⁠를 복⁠원⁠했⁠습⁠니⁠다';
 
   @override
-  String get audioFreePreview => '무료 체험';
+  String get audioFreePreview => '무⁠료 체⁠험';
 
   @override
   String audioLockedHint(String days) {
-    return '음성 해설은 패스가 필요합니다. 사진으로 인식한 작품은 $days일 동안 무료로 들을 수 있습니다.';
+    return '음⁠성 해⁠설⁠은 패⁠스⁠가 필⁠요⁠합⁠니⁠다. 사⁠진⁠으⁠로 인⁠식⁠한 작⁠품⁠은 $days⁠일 동⁠안 무⁠료⁠로 들⁠을 수 있⁠습⁠니⁠다.';
   }
 
   @override
   String audioFreePreviewDays(String days) {
-    return '무료 청취 · $days일 남음';
+    return '무⁠료 청⁠취 · $days⁠일 남⁠음';
   }
 
   @override
-  String get audioFreeExpiredHint => '이 작품의 무료 청취가 끝났습니다. 계속 들으려면 패스가 필요합니다.';
+  String get audioFreeExpiredHint =>
+      '이 작⁠품⁠의 무⁠료 청⁠취⁠가 끝⁠났⁠습⁠니⁠다. 계⁠속 들⁠으⁠려⁠면 패⁠스⁠가 필⁠요⁠합⁠니⁠다.';
 
   @override
-  String get audioPassExpiredHint => '패스가 만료되었습니다. 계속 들으려면 새 패스를 구매하세요.';
+  String get audioPassExpiredHint =>
+      '패⁠스⁠가 만⁠료⁠되⁠었⁠습⁠니⁠다. 계⁠속 들⁠으⁠려⁠면 새 패⁠스⁠를 구⁠매⁠하⁠세⁠요.';
 
   @override
-  String get quotaExhausted => '무료 인식 횟수를 모두 사용했습니다.';
+  String get quotaExhausted => '무⁠료 인⁠식 횟⁠수⁠를 모⁠두 사⁠용⁠했⁠습⁠니⁠다.';
 
   @override
-  String get activateLater => '나중에';
+  String get activateLater => '나⁠중⁠에';
 
   @override
-  String get paywallLoginToBuy => '로그인 후 구매';
+  String get paywallLoginToBuy => '로⁠그⁠인 후 구⁠매';
 
   @override
-  String get paywallLoginWhy => '패스는 계정에 연결되어 새 휴대폰에서도 유지됩니다.';
+  String get paywallLoginWhy => '패⁠스⁠는 계⁠정⁠에 연⁠결⁠되⁠어 새 휴⁠대⁠폰⁠에⁠서⁠도 유⁠지⁠됩⁠니⁠다.';
 
   @override
-  String get passActive => '패스 사용 중';
+  String get passActive => '패⁠스 사⁠용 중';
 
   @override
   String passExpiresOn(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
 
-    return '$dateString 만료';
+    return '$dateString 만⁠료';
   }
 
   @override
-  String get passPendingActivation => '구매함 · 미활성화';
+  String get passPendingActivation => '구⁠매⁠함 · 미⁠활⁠성⁠화';
 
   @override
-  String get passActivateHint => '첫 재생 시 시작됩니다';
+  String get passActivateHint => '첫 재⁠생 시 시⁠작⁠됩⁠니⁠다';
 
   @override
-  String get viewBenefits => '혜택 보기';
+  String get viewBenefits => '혜⁠택 보⁠기';
 
   @override
-  String get unlimited => '무제한';
+  String get unlimited => '무⁠제⁠한';
 
   @override
-  String get paywallPriceNote => '1회 결제 · 구독 아님';
+  String get paywallPriceNote => '1⁠회 결⁠제 · 구⁠독 아⁠님';
 
   @override
-  String get paywallClockHead => '구매 시점에는 시간이 흐르지 않습니다';
+  String get paywallClockHead => '구⁠매 시⁠점⁠에⁠는 시⁠간⁠이 흐⁠르⁠지 않⁠습⁠니⁠다';
 
   @override
   String paywallClockBody(String days) {
-    return '프리미엄 기능을 처음 사용하고 확인한 때부터 $days일이 시작됩니다. 미리 사 두고 미술관에서 시작하세요.';
+    return '프⁠리⁠미⁠엄 기⁠능⁠을 처⁠음 사⁠용⁠하⁠고 확⁠인⁠한 때⁠부⁠터 $days⁠일⁠이 시⁠작⁠됩⁠니⁠다. 미⁠리 사 두⁠고 미⁠술⁠관⁠에⁠서 시⁠작⁠하⁠세⁠요.';
   }
 
   @override
-  String get paywallLapseNote => '활성화하지 않은 패스는 구매 후 30일이 지나면 만료됩니다.';
+  String get paywallLapseNote =>
+      '활⁠성⁠화⁠하⁠지 않⁠은 패⁠스⁠는 구⁠매 후 30⁠일⁠이 지⁠나⁠면 만⁠료⁠됩⁠니⁠다.';
 
   @override
-  String get ticketStub => '반권';
+  String get ticketStub => '반⁠권';
 
   @override
-  String get ticketStubPending => '만료일 미기재';
+  String get ticketStubPending => '만⁠료⁠일 미⁠기⁠재';
 
   @override
-  String get ticketStubUntorn => '미사용';
+  String get ticketStubUntorn => '미⁠사⁠용';
 
   @override
-  String get ticketValidUntil => '유효 기간';
+  String get ticketValidUntil => '유⁠효 기⁠간';
 
   @override
   String ticketDateTime(DateTime date, DateTime time) {
@@ -860,12 +874,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String ticketDaysLeft(int days) {
-    return '$days일 남음';
+    return '$days⁠일 남⁠음';
   }
 
   @override
   String activateSheetTitle(String days) {
-    return '지금 $days일을 시작할까요?';
+    return '지⁠금 $days⁠일⁠을 시⁠작⁠할⁠까⁠요?';
   }
 
   @override
@@ -875,126 +889,128 @@ class AppLocalizationsKo extends AppLocalizations {
     final intl.DateFormat timeDateFormat = intl.DateFormat.Hm(localeName);
     final String timeString = timeDateFormat.format(time);
 
-    return '확인하면 시간이 시작되어 $dateString $timeString에 종료됩니다. 되돌릴 수 없습니다.';
+    return '확⁠인⁠하⁠면 시⁠간⁠이 시⁠작⁠되⁠어 $dateString $timeString⁠에 종⁠료⁠됩⁠니⁠다. 되⁠돌⁠릴 수 없⁠습⁠니⁠다.';
   }
 
   @override
-  String get activateTear => '뜯고 시작하기';
+  String get activateTear => '뜯⁠고 시⁠작⁠하⁠기';
 
   @override
-  String get activateWaiting => '확인하는 중…';
+  String get activateWaiting => '확⁠인⁠하⁠는 중…';
 
   @override
-  String get activateWaitingNote => '티켓은 아직 뜯지 않았습니다. 확인된 뒤에 시작됩니다';
+  String get activateWaitingNote =>
+      '티⁠켓⁠은 아⁠직 뜯⁠지 않⁠았⁠습⁠니⁠다. 확⁠인⁠된 뒤⁠에 시⁠작⁠됩⁠니⁠다';
 
   @override
-  String get activateDoneTitle => '패스가 시작되었습니다';
+  String get activateDoneTitle => '패⁠스⁠가 시⁠작⁠되⁠었⁠습⁠니⁠다';
 
   @override
-  String get activateDoneBody => '음성 해설과 무제한 인식이 열렸습니다.';
+  String get activateDoneBody => '음⁠성 해⁠설⁠과 무⁠제⁠한 인⁠식⁠이 열⁠렸⁠습⁠니⁠다.';
 
   @override
-  String get activateDoneCta => '계속';
+  String get activateDoneCta => '계⁠속';
 
   @override
-  String get activateFailTitle => '확인하지 못했습니다. 티켓은 사용되지 않았습니다';
+  String get activateFailTitle => '확⁠인⁠하⁠지 못⁠했⁠습⁠니⁠다. 티⁠켓⁠은 사⁠용⁠되⁠지 않⁠았⁠습⁠니⁠다';
 
   @override
   String activateFailBody(String days) {
-    return '연결되지 않아 $days일이 시작되지 않았습니다. 패스는 그대로입니다. 다시 시도하세요.';
+    return '연⁠결⁠되⁠지 않⁠아 $days⁠일⁠이 시⁠작⁠되⁠지 않⁠았⁠습⁠니⁠다. 패⁠스⁠는 그⁠대⁠로⁠입⁠니⁠다. 다⁠시 시⁠도⁠하⁠세⁠요.';
   }
 
   @override
-  String get activateRetry => '다시 시도';
+  String get activateRetry => '다⁠시 시⁠도';
 
   @override
-  String get benefitsMyPass => '내 패스';
+  String get benefitsMyPass => '내 패⁠스';
 
   @override
-  String get benefitsSecFreeQuota => '무료 이용량';
+  String get benefitsSecFreeQuota => '무⁠료 이⁠용⁠량';
 
   @override
-  String get benefitsSecFeatures => '기능';
+  String get benefitsSecFeatures => '기⁠능';
 
   @override
-  String get benefitsSecBuyable => '구매 가능';
+  String get benefitsSecBuyable => '구⁠매 가⁠능';
 
   @override
-  String get benefitsSecIncluded => '포함 사항';
+  String get benefitsSecIncluded => '포⁠함 사⁠항';
 
   @override
-  String get benefitsSecUnlocked => '잠금 해제됨';
+  String get benefitsSecUnlocked => '잠⁠금 해⁠제⁠됨';
 
   @override
-  String get benefitsSecPurchases => '구매 내역';
+  String get benefitsSecPurchases => '구⁠매 내⁠역';
 
   @override
-  String get benefitsSecCurrentQuota => '현재 이용량';
+  String get benefitsSecCurrentQuota => '현⁠재 이⁠용⁠량';
 
   @override
   String get benefitsSecBuyAnother => '한 장 더';
 
   @override
-  String get benefitsRecognition => '사진 인식';
+  String get benefitsRecognition => '사⁠진 인⁠식';
 
   @override
   String get benefitsFreeAudioNote =>
-      '촬영해서 인식한 작품은 주요 음성 해설을 무료로 들을 수 있습니다. 그 밖의 작품도 무료 횟수 1회로 잠금 해제할 수 있습니다.';
+      '촬⁠영⁠해⁠서 인⁠식⁠한 작⁠품⁠은 주⁠요 음⁠성 해⁠설⁠을 무⁠료⁠로 들⁠을 수 있⁠습⁠니⁠다. 그 밖⁠의 작⁠품⁠도 무⁠료 횟⁠수 1⁠회⁠로 잠⁠금 해⁠제⁠할 수 있⁠습⁠니⁠다.';
 
   @override
-  String get benefitsFeatBrowse => '둘러보기, 검색, 텍스트 해설 전문';
+  String get benefitsFeatBrowse => '둘⁠러⁠보⁠기, 검⁠색, 텍⁠스⁠트 해⁠설 전⁠문';
 
   @override
-  String get benefitsFeatPresetQa => '추천 질문에 대한 답변';
+  String get benefitsFeatPresetQa => '추⁠천 질⁠문⁠에 대⁠한 답⁠변';
 
   @override
-  String get benefitsFeatRecognition => '무제한 사진 인식';
+  String get benefitsFeatRecognition => '무⁠제⁠한 사⁠진 인⁠식';
 
   @override
-  String get benefitsFeatAllAudio => '패스에 포함된 미술관의 음성 해설';
+  String get benefitsFeatAllAudio => '패⁠스⁠에 포⁠함⁠된 미⁠술⁠관⁠의 음⁠성 해⁠설';
 
   @override
-  String get benefitsFeatDeepAudio => '심화 콘텐츠 음성';
+  String get benefitsFeatDeepAudio => '심⁠화 콘⁠텐⁠츠 음⁠성';
 
   @override
-  String get benefitsNeedsPass => '패스 필요';
+  String get benefitsNeedsPass => '패⁠스 필⁠요';
 
   @override
-  String get benefitsNotStartedHead => '아직 시간이 시작되지 않았습니다';
+  String get benefitsNotStartedHead => '아⁠직 시⁠간⁠이 시⁠작⁠되⁠지 않⁠았⁠습⁠니⁠다';
 
   @override
-  String get benefitsPassNotActivated => '미활성';
+  String get benefitsPassNotActivated => '미⁠활⁠성';
 
   @override
-  String get benefitsPassStartsOnFirstUse => '박물관에서 처음 사용할 때 시작됩니다';
+  String get benefitsPassStartsOnFirstUse => '박⁠물⁠관⁠에⁠서 처⁠음 사⁠용⁠할 때 시⁠작⁠됩⁠니⁠다';
 
   @override
   String benefitsPassVoidAfter(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
 
-    return '$dateString까지 활성화하지 않으면 만료됩니다';
+    return '$dateString⁠까⁠지 활⁠성⁠화⁠하⁠지 않⁠으⁠면 만⁠료⁠됩⁠니⁠다';
   }
 
   @override
-  String get benefitsOtherMuseumsRecognition => '다른 박물관 사진 인식';
+  String get benefitsOtherMuseumsRecognition => '다⁠른 박⁠물⁠관 사⁠진 인⁠식';
 
   @override
   String benefitsNotStartedBody(String days) {
-    return '미술관에서 음성 해설이나 인식을 처음 사용할 때 한 번 확인을 요청합니다. $days일은 그 순간부터 시작됩니다.';
+    return '미⁠술⁠관⁠에⁠서 음⁠성 해⁠설⁠이⁠나 인⁠식⁠을 처⁠음 사⁠용⁠할 때 한 번 확⁠인⁠을 요⁠청⁠합⁠니⁠다. $days⁠일⁠은 그 순⁠간⁠부⁠터 시⁠작⁠됩⁠니⁠다.';
   }
 
   @override
   String benefitsStartNow(String days) {
-    return '지금 $days일 시작하기';
+    return '지⁠금 $days⁠일 시⁠작⁠하⁠기';
   }
 
   @override
-  String get benefitsStartNowNote => '아직 미술관이 아니라면 도착한 뒤에 시작하는 편이 좋습니다';
+  String get benefitsStartNowNote =>
+      '아⁠직 미⁠술⁠관⁠이 아⁠니⁠라⁠면 도⁠착⁠한 뒤⁠에 시⁠작⁠하⁠는 편⁠이 좋⁠습⁠니⁠다';
 
   @override
   String benefitsExpiredBody(String days) {
-    return '$days일이 모두 지났습니다. 무료 이용량은 복구되었고 텍스트 해설은 그대로 전부 볼 수 있습니다.';
+    return '$days⁠일⁠이 모⁠두 지⁠났⁠습⁠니⁠다. 무⁠료 이⁠용⁠량⁠은 복⁠구⁠되⁠었⁠고 텍⁠스⁠트 해⁠설⁠은 그⁠대⁠로 전⁠부 볼 수 있⁠습⁠니⁠다.';
   }
 
   @override
@@ -1004,21 +1020,21 @@ class AppLocalizationsKo extends AppLocalizations {
     final intl.DateFormat endDateFormat = intl.DateFormat.yMMMd(localeName);
     final String endString = endDateFormat.format(end);
 
-    return '이전 패스 사용 완료 · $startString – $endString';
+    return '이⁠전 패⁠스 사⁠용 완⁠료 · $startString – $endString';
   }
 
   @override
-  String get benefitsEndedAt => '종료일';
+  String get benefitsEndedAt => '종⁠료⁠일';
 
   @override
-  String get benefitsLapsedHead => '이 패스는 사용이 시작되지 않았습니다';
+  String get benefitsLapsedHead => '이 패⁠스⁠는 사⁠용⁠이 시⁠작⁠되⁠지 않⁠았⁠습⁠니⁠다';
 
   @override
   String get benefitsLapsedBody =>
-      '구매 후 30일 이내에 사용하지 않아 만료되었습니다. 무료 횟수는 복구되었고, 텍스트 해설은 그대로 이용할 수 있습니다.';
+      '구⁠매 후 30⁠일 이⁠내⁠에 사⁠용⁠하⁠지 않⁠아 만⁠료⁠되⁠었⁠습⁠니⁠다. 무⁠료 횟⁠수⁠는 복⁠구⁠되⁠었⁠고, 텍⁠스⁠트 해⁠설⁠은 그⁠대⁠로 이⁠용⁠할 수 있⁠습⁠니⁠다.';
 
   @override
-  String get benefitsBoughtOn => '구매일';
+  String get benefitsBoughtOn => '구⁠매⁠일';
 
   @override
   String benefitsDateOnly(DateTime date) {
@@ -1029,164 +1045,169 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get edgeUnknownHead => '지금은 권한을 확인할 수 없습니다';
+  String get edgeUnknownHead => '지⁠금⁠은 권⁠한⁠을 확⁠인⁠할 수 없⁠습⁠니⁠다';
 
   @override
   String get edgeUnknownBody =>
-      '연결이 없어 이미 패스가 있는지 확인할 수 없고, 구매도 안전하게 시작할 수 없습니다.';
+      '연⁠결⁠이 없⁠어 이⁠미 패⁠스⁠가 있⁠는⁠지 확⁠인⁠할 수 없⁠고, 구⁠매⁠도 안⁠전⁠하⁠게 시⁠작⁠할 수 없⁠습⁠니⁠다.';
 
   @override
   String get edgeUnknownNote =>
-      '이미 구매하셨다면 온라인에 연결되는 즉시 자동으로 복구됩니다. 이중으로 청구되지 않습니다.';
+      '이⁠미 구⁠매⁠하⁠셨⁠다⁠면 온⁠라⁠인⁠에 연⁠결⁠되⁠는 즉⁠시 자⁠동⁠으⁠로 복⁠구⁠됩⁠니⁠다. 이⁠중⁠으⁠로 청⁠구⁠되⁠지 않⁠습⁠니⁠다.';
 
   @override
-  String get edgeSignedOutHead => '패스는 계정에 연결됩니다';
+  String get edgeSignedOutHead => '패⁠스⁠는 계⁠정⁠에 연⁠결⁠됩⁠니⁠다';
 
   @override
-  String get edgeSignedOutBody => '로그인한 뒤 구매하면 기기를 바꾸거나 재설치해도 잃지 않습니다.';
+  String get edgeSignedOutBody =>
+      '로⁠그⁠인⁠한 뒤 구⁠매⁠하⁠면 기⁠기⁠를 바⁠꾸⁠거⁠나 재⁠설⁠치⁠해⁠도 잃⁠지 않⁠습⁠니⁠다.';
 
   @override
-  String get edgeConflictTitle => '이 패스는 다른 계정에 연결되어 있습니다';
+  String get edgeConflictTitle => '이 패⁠스⁠는 다⁠른 계⁠정⁠에 연⁠결⁠되⁠어 있⁠습⁠니⁠다';
 
   @override
   String get edgeConflictBody =>
-      '이 구매는 다른 GoMuseum 계정의 것입니다. 하나의 패스를 두 계정이 함께 쓸 수 없어 여기서는 복구할 수 없습니다.';
+      '이 구⁠매⁠는 다⁠른 GoMuseum 계⁠정⁠의 것⁠입⁠니⁠다. 하⁠나⁠의 패⁠스⁠를 두 계⁠정⁠이 함⁠께 쓸 수 없⁠어 여⁠기⁠서⁠는 복⁠구⁠할 수 없⁠습⁠니⁠다.';
 
   @override
-  String get edgeConflictBound => '연결된 계정';
+  String get edgeConflictBound => '연⁠결⁠된 계⁠정';
 
   @override
-  String get edgeConflictOther => '다른 계정';
+  String get edgeConflictOther => '다⁠른 계⁠정';
 
   @override
   String get edgeConflictHelp =>
-      '구매할 때 사용한 계정으로 로그인해 주세요. 어떤 계정인지 모르겠거나 잘못된 것 같다면 문의해 주시면 저희가 확인해 드립니다.';
+      '구⁠매⁠할 때 사⁠용⁠한 계⁠정⁠으⁠로 로⁠그⁠인⁠해 주⁠세⁠요. 어⁠떤 계⁠정⁠인⁠지 모⁠르⁠겠⁠거⁠나 잘⁠못⁠된 것 같⁠다⁠면 문⁠의⁠해 주⁠시⁠면 저⁠희⁠가 확⁠인⁠해 드⁠립⁠니⁠다.';
 
   @override
-  String get edgeSwitchAccount => '계정 전환';
+  String get edgeSwitchAccount => '계⁠정 전⁠환';
 
   @override
-  String get edgeContactSupport => '문의하기';
+  String get edgeContactSupport => '문⁠의⁠하⁠기';
 
   @override
-  String get drawerLockedHint => '심화 콘텐츠의 음성에는 패스가 필요합니다. 텍스트는 모두 무료입니다.';
+  String get drawerLockedHint =>
+      '심⁠화 콘⁠텐⁠츠⁠의 음⁠성⁠에⁠는 패⁠스⁠가 필⁠요⁠합⁠니⁠다. 텍⁠스⁠트⁠는 모⁠두 무⁠료⁠입⁠니⁠다.';
 
   @override
-  String get drawerLockedCta => '패스 보기';
+  String get drawerLockedCta => '패⁠스 보⁠기';
 
   @override
-  String get purchaseSuccess => '구매가 완료되어 패스가 준비되었습니다.';
+  String get purchaseSuccess => '구⁠매⁠가 완⁠료⁠되⁠어 패⁠스⁠가 준⁠비⁠되⁠었⁠습⁠니⁠다.';
 
   @override
-  String get purchaseVerifyPending => '아직 구매를 확인하지 못했습니다. 앱을 다시 열면 재시도합니다.';
+  String get purchaseVerifyPending =>
+      '아⁠직 구⁠매⁠를 확⁠인⁠하⁠지 못⁠했⁠습⁠니⁠다. 앱⁠을 다⁠시 열⁠면 재⁠시⁠도⁠합⁠니⁠다.';
 
   @override
-  String get purchaseFailed => '구매가 완료되지 않았습니다. 다시 시도해 주세요.';
+  String get purchaseFailed => '구⁠매⁠가 완⁠료⁠되⁠지 않⁠았⁠습⁠니⁠다. 다⁠시 시⁠도⁠해 주⁠세⁠요.';
 
   @override
-  String get ticketPaid => '결제 완료';
+  String get ticketPaid => '결⁠제 완⁠료';
 
   @override
-  String get ticketVoid => '종료됨';
+  String get ticketVoid => '종⁠료⁠됨';
 
   @override
   String edgeSupportCopied(String email) {
-    return '지원 이메일을 복사했습니다: $email';
+    return '지⁠원 이⁠메⁠일⁠을 복⁠사⁠했⁠습⁠니⁠다: $email';
   }
 
   @override
-  String get fbTitleObject => '내용 신고';
+  String get fbTitleObject => '내⁠용 신⁠고';
 
   @override
-  String get fbTitleApp => '의견 보내기';
+  String get fbTitleApp => '의⁠견 보⁠내⁠기';
 
   @override
-  String get fbContentWrong => '내용 오류';
+  String get fbContentWrong => '내⁠용 오⁠류';
 
   @override
-  String get fbAudioBad => '발음이 이상함';
+  String get fbAudioBad => '발⁠음⁠이 이⁠상⁠함';
 
   @override
-  String get fbAudioMissing => '음성 없음';
+  String get fbAudioMissing => '음⁠성 없⁠음';
 
   @override
-  String get fbAppCrash => '앱 튕김·버벅임';
+  String get fbAppCrash => '앱 튕⁠김·버⁠벅⁠임';
 
   @override
-  String get fbRecognitionBad => '인식 부정확';
+  String get fbRecognitionBad => '인⁠식 부⁠정⁠확';
 
   @override
-  String get fbFeatureRequest => '기능 제안';
+  String get fbFeatureRequest => '기⁠능 제⁠안';
 
   @override
-  String get fbOther => '기타';
+  String get fbOther => '기⁠타';
 
   @override
-  String get fbTextHint => '더 알려주실 내용이 있나요? (선택 · 개인정보는 입력하지 마세요)';
+  String get fbTextHint =>
+      '더 알⁠려⁠주⁠실 내⁠용⁠이 있⁠나⁠요? (선⁠택 · 개⁠인⁠정⁠보⁠는 입⁠력⁠하⁠지 마⁠세⁠요)';
 
   @override
-  String get fbSubmit => '보내기';
+  String get fbSubmit => '보⁠내⁠기';
 
   @override
-  String get fbThanks => '접수되었습니다. 감사합니다';
+  String get fbThanks => '접⁠수⁠되⁠었⁠습⁠니⁠다. 감⁠사⁠합⁠니⁠다';
 
   @override
-  String get fbFailed => '보내지 못했습니다. 연결을 확인해 주세요';
+  String get fbFailed => '보⁠내⁠지 못⁠했⁠습⁠니⁠다. 연⁠결⁠을 확⁠인⁠해 주⁠세⁠요';
 
   @override
-  String get fbRetry => '다시 시도';
+  String get fbRetry => '다⁠시 시⁠도';
 
   @override
-  String get unlockAudioTitle => '무료 횟수를 1회 사용할까요?';
+  String get unlockAudioTitle => '무⁠료 횟⁠수⁠를 1⁠회 사⁠용⁠할⁠까⁠요?';
 
   @override
   String unlockAudioBody(int left) {
-    return '이 작품의 음성 해설을 잠금 해제합니다. $left회 남게 됩니다.';
+    return '이 작⁠품⁠의 음⁠성 해⁠설⁠을 잠⁠금 해⁠제⁠합⁠니⁠다. $left⁠회 남⁠게 됩⁠니⁠다.';
   }
 
   @override
-  String get unlockAudioCta => '잠금 해제하고 재생';
+  String get unlockAudioCta => '잠⁠금 해⁠제⁠하⁠고 재⁠생';
 
   @override
-  String get guideShare => '공유';
+  String get guideShare => '공⁠유';
 
   @override
-  String get authUseEmail => '이메일로 로그인 / 가입';
+  String get authUseEmail => '이⁠메⁠일⁠로 로⁠그⁠인 / 가⁠입';
 
   @override
   String authConsent(String terms, String privacy) {
-    return '계속하면 $terms 및 $privacy에 동의하는 것으로 간주됩니다';
+    return '계⁠속⁠하⁠면 $terms 및 $privacy⁠에 동⁠의⁠하⁠는 것⁠으⁠로 간⁠주⁠됩⁠니⁠다';
   }
 
   @override
-  String get authTermsOfService => '서비스 약관';
+  String get authTermsOfService => '서⁠비⁠스 약⁠관';
 
   @override
-  String get authConsentPrivacy => '개인정보 처리방침';
+  String get authConsentPrivacy => '개⁠인⁠정⁠보 처⁠리⁠방⁠침';
 
   @override
-  String get updateReady => '새 버전이 준비되었습니다';
+  String get updateReady => '새 버⁠전⁠이 준⁠비⁠되⁠었⁠습⁠니⁠다';
 
   @override
-  String get updateRestart => '다시 시작';
+  String get updateRestart => '다⁠시 시⁠작';
 
   @override
-  String get collectionViewGrid => '큰 이미지로 보기';
+  String get collectionViewGrid => '큰 이⁠미⁠지⁠로 보⁠기';
 
   @override
-  String get collectionViewList => '목록으로 보기';
+  String get collectionViewList => '목⁠록⁠으⁠로 보⁠기';
 
   @override
-  String get guideNotThisOne => '이 작품이 아닌가요?';
+  String get guideNotThisOne => '이 작⁠품⁠이 아⁠닌⁠가⁠요?';
 
   @override
-  String get guideNotThisOneNoted => '기록했습니다. 다른 각도로 다시 찍거나 검색으로 찾아보세요.';
+  String get guideNotThisOneNoted =>
+      '기⁠록⁠했⁠습⁠니⁠다. 다⁠른 각⁠도⁠로 다⁠시 찍⁠거⁠나 검⁠색⁠으⁠로 찾⁠아⁠보⁠세⁠요.';
 
   @override
   String get recMaybeNotCollected =>
-      '특별전이거나 아직 수록되지 않은 작품일 수 있습니다. 옆의 설명판을 찍으면 더 잘 인식됩니다.';
+      '특⁠별⁠전⁠이⁠거⁠나 미⁠수⁠록 작⁠품⁠일 수 있⁠어⁠요. 옆 설⁠명⁠판⁠을 찍⁠으⁠면 더 잘 인⁠식⁠돼⁠요.';
 
   @override
   String get recLabelNoMatch =>
-      '특별전이거나 아직 수록되지 않은 작품일 수 있습니다. 다른 이름이나 번호로 검색해 보세요.';
+      '특⁠별⁠전⁠이⁠거⁠나 미⁠수⁠록 작⁠품⁠일 수 있⁠어⁠요. 다⁠른 이⁠름⁠이⁠나 번⁠호⁠로 찾⁠아⁠보⁠세⁠요.';
 }

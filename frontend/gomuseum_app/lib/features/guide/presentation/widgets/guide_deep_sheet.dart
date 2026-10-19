@@ -298,7 +298,7 @@ class _GuideDeepSheetContentState extends State<GuideDeepSheetContent> {
               size: 13.5,
               height: context.gmBodyHeight,
               color: hasBody ? gm.ink : gm.faint),
-          textAlign: TextAlign.justify,
+          textAlign: context.gmBodyAlign,
         ),
       ],
     );
