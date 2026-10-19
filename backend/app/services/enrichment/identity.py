@@ -29,14 +29,33 @@ def _key(r: StubRecord):
     return ("uid", id(r))
 
 
+def _creators(r: StubRecord) -> set:
+    return set((r.raw or {}).get("creator_qids") or ())
+
+
+def _distinct_work(a: StubRecord, b: StubRecord) -> bool:
+    """同馆同号的两条是不是两件作品:都是 Wikidata 条目、qid 不同、作者都已知且毫无交集。
+    奥赛油画/雕塑两套 RF 编号撞号(RF 166 = Regnault 油画 = Chapu 雕塑)走这条;
+    作者有交集的多是 Wikidata 重复条目或同一画布正反面,仍当一件。"""
+    ca, cb = _creators(a), _creators(b)
+    return bool(
+        is_wikidata_qid(a.qid)
+        and is_wikidata_qid(b.qid)
+        and a.qid != b.qid
+        and ca
+        and cb
+        and not ca & cb
+    )
+
+
 def merge_stubs(records: list[StubRecord]) -> list[StubRecord]:
-    """强键去重（(馆,馆藏号)>qid），首条胜。无重复时原样返回。"""
+    """强键去重（(馆,馆藏号)>qid），首条胜;同号但确属另一件作品的不并(见 _distinct_work)。"""
     seen: dict = {}
     out: list[StubRecord] = []
     for r in records:
         k = _key(r)
-        if k in seen:
+        if any(not _distinct_work(p, r) for p in seen.get(k, ())):
             continue
-        seen[k] = r
+        seen.setdefault(k, []).append(r)
         out.append(r)
     return out

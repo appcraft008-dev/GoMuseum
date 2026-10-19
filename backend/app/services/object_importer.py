@@ -34,17 +34,57 @@ def find_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject | 
         if hit:
             return hit
     if art.get("inventory_number"):
-        hit = (
+        rows = (
             db.query(MuseumObject)
             .filter_by(museum_id=museum_id, inventory_number=art["inventory_number"])
-            .one_or_none()
+            .all()
         )
         # 同馆同号却是另一个 Wikidata 条目 = 另一件作品(奥赛油画/雕塑两套 RF 编号),
-        # 不能并进这行;交给唯一约束拒绝,load_stubs 的 SAVEPOINT 会跳过并记日志
-        if hit and _both_wikidata(hit.qid, art.get("qid")) and hit.qid != art["qid"]:
-            return None
-        return hit
+        # 不能并进那行,让调用方新建一行
+        rows = [
+            r
+            for r in rows
+            if not (_both_wikidata(r.qid, art.get("qid")) and r.qid != art["qid"])
+        ]
+        # 同号多件又没有 qid 可分辨 → 不猜
+        return rows[0] if len(rows) == 1 else None
     return None
+
+
+class InventoryCollision(ValueError):
+    pass
+
+
+def _creator_set(attrs: dict | None) -> set:
+    attrs = attrs or {}
+    return (set(attrs.get("creator_qids") or ()) | {attrs.get("artist_qid")}) - {None}
+
+
+def _guard_inventory(db: Session, obj: MuseumObject, art: dict) -> None:
+    """唯一约束 (馆, 馆藏号) 放开后(v9u4)由这里接手挡「同一件作品占两行」:
+    - 已有行不许改号改到同馆别行占着的号(prod 实证:Wikidata 重复条目按 qid 命中 B 行、
+      却带着 A 行的号);
+    - 新行要占已有的号,必须双方作者都已知且毫无交集(奥赛油画/雕塑两套 RF 编号撞号);
+      作者有交集或未知 = 多半是重复条目,拒绝。
+    load_stubs 的 SAVEPOINT 接住异常、跳过该件。"""
+    inv = art.get("inventory_number")
+    if not inv or (obj.id is not None and inv == obj.inventory_number):
+        return
+    q = db.query(MuseumObject).filter(
+        MuseumObject.museum_id == obj.museum_id,
+        MuseumObject.inventory_number == inv,
+    )
+    if obj.id is not None:
+        if q.filter(MuseumObject.id != obj.id).first():
+            raise InventoryCollision(f"{obj.qid}: 馆藏号 {inv} 已被同馆另一行占用")
+        return
+    mine = _creator_set(art.get("attributes"))
+    for other in q.all():
+        theirs = _creator_set(other.attributes)
+        if not mine or not theirs or mine & theirs:
+            raise InventoryCollision(
+                f"{art.get('qid')}: 馆藏号 {inv} 已属 {other.qid},作者无法区分为两件"
+            )
 
 
 def _both_wikidata(a, b) -> bool:
@@ -63,6 +103,7 @@ def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
         )
     else:
         obj.museum_id = museum_id
+    _guard_inventory(db, obj, art)
     for k in (
         "qid",
         "inventory_number",
