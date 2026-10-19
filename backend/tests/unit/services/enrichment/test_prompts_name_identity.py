@@ -34,3 +34,15 @@ def test_faithfulness_knows_the_injected_museum_name():
     """纪律 22:翻译侧注入了馆名,检查侧必须知道,否则规范馆名会被判成错译。"""
     _, user = build_faithfulness_prompt("x", "y", "zh", museum="小皇宫美术馆")
     assert "museum -> 「小皇宫美术馆」" in user
+
+
+def test_translation_prompt_ties_canonical_title_to_this_work_only():
+    """10-19《荷马的脚,〈荷马的神化〉习作》Q29855229:原文提到「更大的构图《荷马的神化》」,
+    西/法/日把它换成了本件整标题、简中/韩换成「…习作」,忠实度闸 3/3 放行。"""
+    system, _ = build_translation_prompt(
+        'A study for "The Apotheosis of Homer".',
+        "es",
+        title="Los pies de Homero, estudio para La apoteosis de Homero",
+    )
+    assert "ONLY to this artwork" in system
+    assert "DIFFERENT works" in system
