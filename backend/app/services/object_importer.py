@@ -34,12 +34,21 @@ def find_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject | 
         if hit:
             return hit
     if art.get("inventory_number"):
-        return (
+        hit = (
             db.query(MuseumObject)
             .filter_by(museum_id=museum_id, inventory_number=art["inventory_number"])
             .one_or_none()
         )
+        # 同馆同号却是另一个 Wikidata 条目 = 另一件作品(奥赛油画/雕塑两套 RF 编号),
+        # 不能并进这行;交给唯一约束拒绝,load_stubs 的 SAVEPOINT 会跳过并记日志
+        if hit and _both_wikidata(hit.qid, art.get("qid")) and hit.qid != art["qid"]:
+            return None
+        return hit
     return None
+
+
+def _both_wikidata(a, b) -> bool:
+    return bool(a and b and a.startswith("Q") and b.startswith("Q"))
 
 
 def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
