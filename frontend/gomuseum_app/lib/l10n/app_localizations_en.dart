@@ -609,7 +609,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recShootLabelBtn => 'Photograph the wall label';
 
   @override
-  String get recTypeNumberOrName => 'Number or title';
+  String get recTypeNumberOrName => 'No. or title';
 
   @override
   String get photoFbTitle => 'Send us this photo?';
