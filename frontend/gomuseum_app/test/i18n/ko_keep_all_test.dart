@@ -7,10 +7,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'real_fonts.dart';
+import 'package:gomuseum_app/core/utils/keep_all.dart';
 
-final _missing = RegExp(
-    r'(?<=[\uAC00-\uD7A3])(?=[\uAC00-\uD7A30-9A-Za-z{])|(?<=[0-9A-Za-z}])(?=[\uAC00-\uD7A3])');
+import 'real_fonts.dart';
 
 void main() {
   test('app_ko.arb 每条文案词内都有 WORD JOINER', () {
@@ -20,17 +19,21 @@ void main() {
       for (final e in arb.entries)
         if (!e.key.startsWith('@') &&
             e.value is String &&
-            _missing.hasMatch(e.value as String))
+            keepAll(e.value as String) != e.value)
           e.key,
     ];
     expect(bad, isEmpty, reason: '跑 python3 scripts/ko_keep_all.py');
   });
 
+  test('运行时拼出的日期也按词连上（intl 的 "2026년 10월 25일"）', () {
+    expect(keepAll('2026년 10월 25일'), '2026\u2060년 10\u2060월 25\u2060일');
+    expect(keepAll('Oct 25, 2026'), 'Oct 25, 2026'); // 不含谚文原样返回
+  });
+
   testWidgets('WORD JOINER 让韩文只在空格处断行、且不占宽度', (t) async {
     await loadRealFonts(t);
     const plain = '미술관에서 처음 사용할 때부터 시작됩니다';
-    final joined = plain.replaceAllMapped(
-        RegExp(r'(?<=[\uAC00-\uD7A3])(?=[\uAC00-\uD7A3])'), (_) => '\u2060');
+    final joined = keepAll(plain);
     TextPainter p(String s, [double? w]) => TextPainter(
         text: TextSpan(
             text: s,

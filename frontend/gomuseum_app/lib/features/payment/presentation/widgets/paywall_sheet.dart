@@ -18,6 +18,7 @@
 /// 撕开只在后端确认成功后原地发生(见 [GmTicket] 的注释)。
 library;
 
+import 'package:gomuseum_app/core/utils/keep_all.dart';
 import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -478,7 +479,7 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
                   weight: FontWeight.w700,
                   letterSpacing: context.gmLetterSpacing(0.5))),
           const SizedBox(height: 7),
-          Text(l10n.activateSheetBody(_projectedEnd, _projectedEnd),
+          Text(keepAll(l10n.activateSheetBody(_projectedEnd, _projectedEnd)),
               style: GmText.sans(size: 13, color: gm.sub, height: 1.7)),
         ];
       case ActivateStep.done:
@@ -525,7 +526,7 @@ class _ActivatePassSheetState extends ConsumerState<ActivatePassSheet> {
             (exp.difference(DateTime.now()).inHours / 24).ceil().clamp(0, 999);
         return BenStubDate(
           label: l10n.ticketValidUntil,
-          value: l10n.ticketDateTime(exp, exp),
+          value: keepAll(l10n.ticketDateTime(exp, exp)),
           trailing: l10n.ticketDaysLeft(daysLeft),
         );
     }

@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/utils/keep_all.dart';
 import 'package:gomuseum_app/core/theme/theme_mode_provider.dart';
 import 'package:gomuseum_app/core/utils/open_url.dart';
 import 'package:gomuseum_app/features/auth/domain/user.dart';
@@ -170,7 +171,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       // expires_at 理论上必有,但契约要求不裸取:缺了就只显示状态、不显示日期。
       value = ent.expiresAt == null
           ? l10n.passActive
-          : l10n.passExpiresOn(ent.expiresAt!);
+          : keepAll(l10n.passExpiresOn(ent.expiresAt!));
     } else if (ent != null && ent.isPurchasedNotActivated) {
       label = l10n.passPendingActivation;
       value = l10n.passActivateHint;

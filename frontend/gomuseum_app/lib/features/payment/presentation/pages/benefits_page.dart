@@ -13,6 +13,7 @@
 /// 重做顺带补齐十语 —— App 支持十种语言,这一页却只有中文。
 library;
 
+import 'package:gomuseum_app/core/utils/keep_all.dart';
 import 'package:gomuseum_app/core/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -431,7 +432,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           ? GmTicketStubLine(label: l10n.ticketValidUntil, value: '—')
           : BenStubDate(
               label: l10n.ticketValidUntil,
-              value: l10n.ticketDateTime(exp, exp),
+              value: keepAll(l10n.ticketDateTime(exp, exp)),
               trailing: l10n.ticketDaysLeft(
                   (exp.difference(DateTime.now()).inHours / 24)
                       .ceil()
@@ -448,7 +449,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
           if (p.activateBy != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text(l10n.benefitsPassVoidAfter(p.activateBy!),
+              child: Text(keepAll(l10n.benefitsPassVoidAfter(p.activateBy!)),
                   style: GmText.sans(size: 11, color: gm.faint)),
             ),
         ],
@@ -491,7 +492,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
             ? null
             : BenStubDate(
                 label: l10n.benefitsBoughtOn,
-                value: l10n.ticketDateTime(bought, bought),
+                value: keepAll(l10n.ticketDateTime(bought, bought)),
                 muted: true,
               ),
         // 不写 pitch:见 GmTicketFace.pitch
@@ -541,7 +542,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         voidStamp: l10n.ticketVoid,
         stub: BenStubDate(
           label: l10n.benefitsEndedAt,
-          value: l10n.ticketDateTime(used.expiresAt!, used.expiresAt!),
+          value: keepAll(l10n.ticketDateTime(used.expiresAt!, used.expiresAt!)),
           muted: true,
         ),
         // 不写 pitch:见 GmTicketFace.pitch
@@ -804,7 +805,7 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 11),
           child: Text(
-            '${l10n.benefitsDateOnly(r.purchasedAt!)} · ${_titleFor(l10n, ent, r.productId, _daysOf(r))}',
+            '${keepAll(l10n.benefitsDateOnly(r.purchasedAt!))} · ${_titleFor(l10n, ent, r.productId, _daysOf(r))}',
             style: GmText.sans(size: 12.5, color: gm.sub),
           ),
         ),
