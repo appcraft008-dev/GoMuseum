@@ -453,10 +453,14 @@ def test_digit_fallback_tier_order(inv_session):
     assert qids.index("Q_RF779") < qids.index("Q_T779")
 
 
-def test_full_inventory_query_returns_one(inv_session):
+def test_full_inventory_query_exact_first_then_prefix(inv_session):
+    """整串精确 1.0 在前;同前缀的更长编号(边打字边搜可能要的那件)0.85 跟在后面。"""
     idx = build_search_index(inv_session, _mid(inv_session))
     out = rank(idx, "INV 779")
-    assert [(e["qid"], s) for e, s in out] == [("Q_INV779", 1.0)]
+    assert [(e["qid"], s) for e, s in out] == [
+        ("Q_INV779", 1.0),
+        ("Q_INV7790", 0.85),
+    ]
 
 
 def test_alnum_query_no_digit_fallback(inv_session):
@@ -489,6 +493,59 @@ def test_fullwidth_digits(inv_session):
     idx = build_search_index(inv_session, _mid(inv_session))
     out = {e["qid"]: s for e, s in rank(idx, "７７９")}
     assert out.get("Q_INV779") == 0.9
+
+
+# --- 编号前缀(10-19 用户定):搜「RF1984」也出《喜鹊》RF 1984 164 ---
+
+
+@pytest.fixture()
+def rf_session(session):
+    mid = _mid(session)
+    for qid, title, inv in [
+        ("Q_CAFE", "Au café", "RF 1984"),
+        ("Q_PIE", "La Pie", "RF 1984 164"),
+        ("Q_OTHER", "Other", "RF 1877"),
+        ("Q_TITLE", "RF1984 exhibition poster", None),  # 标题前缀也是 rf1984
+    ]:
+        upsert_object(
+            session,
+            mid,
+            {
+                "qid": qid,
+                "title_en": title,
+                "inventory_number": inv,
+                "image": f"https://example.com/{qid}.jpg",
+            },
+        )
+    session.commit()
+    inprocess._index_cache.clear()
+    return session
+
+
+def test_inventory_prefix_tier_between_exact_and_title_prefix(rf_session):
+    idx = build_search_index(rf_session, _mid(rf_session))
+    out = [(e["qid"], s) for e, s in rank(idx, "RF1984")]
+    assert out[:3] == [("Q_CAFE", 1.0), ("Q_PIE", 0.85), ("Q_TITLE", 0.8)]
+    assert "Q_OTHER" not in dict(out)
+
+
+def test_inventory_prefix_narrows_while_typing(rf_session):
+    idx = build_search_index(rf_session, _mid(rf_session))
+    mine = {"Q_CAFE", "Q_PIE", "Q_OTHER", "Q_TITLE"}  # 基础夹具另有 RF 号件,只看本组
+
+    def hits(q):
+        return {e["qid"] for e, s in rank(idx, q) if s == 0.85} & mine
+
+    assert hits("RF19") == {"Q_CAFE", "Q_PIE"}
+    assert hits("RF18") == {"Q_OTHER"}
+    assert hits("RF 1984 1") == {"Q_PIE"}
+
+
+def test_inventory_prefix_needs_letters_and_digits(rf_session):
+    """只输字母(RF → 奥赛几千件)或只输数字(像年份,走 S4 数字退路)都不做编号前缀。"""
+    idx = build_search_index(rf_session, _mid(rf_session))
+    assert not any(s == 0.85 for _, s in rank(idx, "RF"))
+    assert not any(s == 0.85 for _, s in rank(idx, "1984"))
 
 
 def test_search_result_carries_inventory(inv_session):
