@@ -68,6 +68,9 @@
 | 一致性闸把 CJK 同音字(她/它、ヴィ/ビ)判成不一致 | 低优先级;方向是改成拼音 / 音素层面比对，不是调阈值 | 9-08 |
 | 先有 Joconde 行、后有同号 Wikidata 另一件时会并进 Joconde 行 | `find_object` 只排除「另一个 Wikidata qid」,Joconde 合成 qid 的行照样按号命中,另一件作品会并进来(Fable 审查 #1021)。需 Joconde 先于 Wikidata 导入同号件才会出现,现存馆都是 Wikidata 先导入。出现再修:Joconde 行也比作者 | 10-19 |
 | 3 件作者由 Wikidata 临时账号改过(用户 10-14 定先不改) | 《耶稣诞生》Q18572451 库里卡拉奇→现阿尔巴尼(09-21);《孩子与狗》Q115674693 委罗内塞→不详(08-22);《玛格丽特公主像》Q106316021 委拉斯开兹→不详+另一位(09-28,卢浮常标「工作室」,可能是对的)。三件都还没生成内容 | 10-14 |
+| 作者英文名列会存成合作者的名字(10-20 已修数据,根因未修) | 建作者行时 `name_en = Wikidata 英文标签 or 作品行署名`(`backfill.py:817` / `pipeline.py:358` / `batch_names.py:128`):标签没取到就退回作品行上的署名,而多作者件的署名可能是合作者。10-20 prod 查出 45 位(如 Q314814 Philippe de Champaigne 被存成 Jean-Charles Tardieu),界面走 `name_i18n` 显示没错,但搜索、识别别名、兜底显示会用错名。已按 Wikidata 核对后改正(备份 `/opt/gomuseum/backups/artist_name_backup_20261020.json`)。**修法**:取不到 QID 自己的英文标签就留空待重试,不拿作品行署名填;加一条巡检「name_en ≠ name_i18n.en」 | 10-20 会话 |
+| `fill_artist_i18n_facts` 让 Wikidata 标签压过已有值(违纪律 37) | 作者是共享实体,但 `backfill.py` 里国籍/代表作是「权威标签覆盖已有」,`names` 重跑会改掉别的语言已有值。10-20 补 92 位作者国籍/代表作时没跑它,另写了只补缺脚本。另外两个坑:①Wikidata 缺某语言标签时会回退作品原文(van Huysum 德/波代表作是荷兰语)②作者有多个国籍时各语言可能取到不同的那个(波兰语 Lorraine→Francja)。**修法**:改成只补缺;权威标签采用前先核对与库里 en 是同一个国籍/同一批作品 | 10-20 会话 |
+| 材质 24 件未命中翻译表,十语都显示源串 | 全库 13732 件有材质、24 件(18 种)未命中:Eau-forte 5、composite material 2、galvanoplastie;métal;dorure 2、Faïence、Biscuit、Ardoise、soapstone、brick、limewood 等;其中 6 件已有讲解。补进 `_MEDIUM_NORM` + `_MEDIUM_I18N` 即可(测试会强制六语配齐)。另:#1030 的六语材质译名是我译的、未经母语审 | 10-20 会话 |
 
 ## 四、内容 / 音频积压
 
