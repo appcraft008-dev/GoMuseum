@@ -25,6 +25,18 @@ def _clean_question(q: str):
     return q[: min(idx) + 1].strip()
 
 
+def _merge_split_question(src: str, raw: str) -> str:
+    """英文是一个复合问句("Who was X, and why …?"),译文拆成两个问句("X是谁?为什么…?")时,
+    把前面的问号并回逗号。否则 _clean_question 截到第一个问号会丢后半句,
+    忠实度闸判「遗漏」(2026-10-20 Q17491064 / Q3209857 的 zh、zh-hant 反复卡 needs_review)。"""
+    marks = list(re.finditer(r"[?？]", raw or ""))
+    if len(marks) < 2 or len(re.findall(r"[?？]", src)) != 1:
+        return raw
+    for m in reversed(marks[:-1]):
+        raw = raw[: m.start()] + ("，" if m.group() == "？" else ",") + raw[m.end() :]
+    return raw
+
+
 # 问句里出现第二句 = 翻译模型把问题「答」了(2026-09-28 小皇宫 TOP50:
 # 「库尔贝晚年因政治参与遭遇了什么?」→ 中文成了一段「……被迫流亡到瑞士……?」)。
 # 拉丁/韩文只认「完整小写词或韩文 + 句点 + 大写/韩文」:德语「Ludwig XIV.」「Dr. Paul」
@@ -50,7 +62,9 @@ def translate_qa_items(
     names = dict(title=title, artist=artist, artist_en=artist_en, museum=museum)
     out = []
     for it in en_items:
-        raw_q = translator.translate_section(it["question"], lang, **names)
+        raw_q = _merge_split_question(
+            it["question"], translator.translate_section(it["question"], lang, **names)
+        )
         tq = _clean_question(raw_q)
         ta = translator.translate_section(it["answer"], lang, **names)
         if not tq:

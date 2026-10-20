@@ -145,6 +145,35 @@ def test_translate_qa_appends_qmark_not_english_fallback():
     assert "What" not in q  # 没回退英文
 
 
+def test_translate_qa_merges_split_compound_question():
+    # 英文是一个复合问句,中文译成两个问句:并回一句,不能截掉后半
+    from app.services.enrichment.qa_suggester import (
+        _merge_split_question,
+        translate_qa_items,
+    )
+
+    class _Tr:
+        def translate_section(self, text, lang, **_kw):
+            if text.endswith("?"):
+                return "保罗·加歇医生是谁？为什么他的名字会出现在这幅画的历史中？"
+            return "答案。"
+
+        def check_faithfulness(self, en, tr, lang, **_kw):
+            return True, []
+
+    src = "Who was Dr Paul Gachet, and why does his name appear in this history?"
+    out = translate_qa_items(_Tr(), [{"question": src, "answer": "A."}], "zh")
+    assert (
+        out[0]["question"]
+        == "保罗·加歇医生是谁，为什么他的名字会出现在这幅画的历史中？"
+    )
+    # 英文本来就是两个问号 → 不动
+    two = "Who was he? Why does it matter?"
+    assert _merge_split_question(two, "他是谁？为什么重要？") == "他是谁？为什么重要？"
+    # 译文只有一个问号 → 不动
+    assert _merge_split_question(src, "A, b？") == "A, b？"
+
+
 def test_qa_gates_wrong_language():
     from app.services.enrichment.qa_suggester import translate_qa_items
 
