@@ -389,6 +389,27 @@ def _labels_from_rows(rows, langs: list) -> dict:
     return _collapse_variants(raw, langs)
 
 
+# en 列只放拉丁字母名:没有 en 标签时按这个顺序借该 QID 自己的其它标签
+_LATIN_LABEL_ORDER = ("en", "fr", "de", "es", "it", "pl")
+
+
+def artist_name_en(qid, labels, work_artist_en):
+    """作者卡英文名:只认该 QID **自己的**标签,永不拿作品行署名填。
+
+    多作者件的作品行署名可能是另一位合作者 —— 2026-10-20 prod 查出 45 位作者
+    name_en 是合作者名(Q314814 Philippe de Champaigne 被写成 Jean-Charles Tardieu),
+    全是「标签没取到 → 退回作品行署名」造成的。取不到就返回 None,重跑再补;
+    显示层本就按每件作品自己的署名兜底,不会空着。
+    非 Wikidata 把手(joconde-…)无标签可查,作品署名是唯一来源。
+    """
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return work_artist_en
+    labels = labels or {}
+    return next((labels[k] for k in _LATIN_LABEL_ORDER if labels.get(k)), None)
+
+
 def fetch_wikidata_labels(qid: str, langs: list, *, get_entities=None) -> dict:
     """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
     zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。

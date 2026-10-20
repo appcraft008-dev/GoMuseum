@@ -690,6 +690,7 @@ def backfill_display_names(
     qids=只处理这几件(按 qid 补收录,别顺带碰全馆)。
     契约:stub 一进目录就该有完整多语显示名。"""
     from app.services.enrichment.material import (
+        artist_name_en as name_en_for,
         fetch_artist_i18n_facts,
         fetch_wikidata_labels,
     )
@@ -814,7 +815,7 @@ def backfill_display_names(
             if not art.name_en:
                 # 该 QID 自己的标签优先:多作者件的作品行署名可能是另一位合作者
                 alabels = _labels(aqid)
-                art.name_en = alabels.get("en") or en_name
+                art.name_en = name_en_for(aqid, alabels, en_name)
             ni = _clean_i18n(art.name_i18n)
             if ni != (art.name_i18n or {}):
                 art.name_i18n = ni

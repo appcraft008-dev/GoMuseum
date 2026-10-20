@@ -1450,3 +1450,24 @@ def test_creator_revision_lookup_failure_falls_back_to_current():
         )
         == _MONET
     )
+
+
+def test_artist_name_en_never_takes_work_credit_for_wikidata_qid():
+    """作者英文名只认该 QID 自己的标签。10-20 prod 45 位作者 name_en 存成了合作者
+    (Q314814 Philippe de Champaigne 被写成 Jean-Charles Tardieu):标签没取到时
+    退回作品行署名,而多作者件的署名可能是另一个人。"""
+    from app.services.enrichment.material import artist_name_en
+
+    assert artist_name_en("Q314814", {"en": "Philippe de Champaigne"}, "X") == (
+        "Philippe de Champaigne"
+    )
+    # 没有 en → 用该 QID 自己的拉丁字母标签,不用作品署名
+    assert artist_name_en("Q1", {"fr": "Jean Dupont", "zh": "让"}, "Collab") == (
+        "Jean Dupont"
+    )
+    # 一个标签都没有(含抓取失败)→ 留空待重跑,绝不填作品署名
+    assert artist_name_en("Q314814", {}, "Jean-Charles Tardieu") is None
+    assert artist_name_en("Q314814", None, "Jean-Charles Tardieu") is None
+    assert artist_name_en("Q1", {"zh": "让"}, "Collab") is None  # 非拉丁不进 en 列
+    # 非 Wikidata 把手(joconde-…)没有标签可查,作品署名是唯一来源
+    assert artist_name_en("joconde-123", {}, "Jean Dupont") == "Jean Dupont"
