@@ -141,7 +141,10 @@ def test_authoritative_facts_override_stored_ones():
         "nationality_i18n": {"zh": "法国"},
         "notable_works_i18n": {"zh": ["奥林匹亚", "草地上的午餐", "吹笛少年"]},
     }
-    changed = fill_artist_i18n_facts(art, ["zh"], translator=None, data=data)
+    # 作者是共享实体(纪律 37):覆盖已有只能走显式刷新(names --refresh-langs)
+    changed = fill_artist_i18n_facts(
+        art, ["zh"], translator=None, data=data, refresh_langs=["zh"]
+    )
     assert changed
     assert art.nationality_i18n["zh"] == "法国"
     assert art.notable_works_i18n["zh"] == ["奥林匹亚", "草地上的午餐", "吹笛少年"]
@@ -162,6 +165,62 @@ def test_stored_language_kept_when_authority_has_none():
     fill_artist_i18n_facts(art, ["ko"], translator=None, data={})
     assert art.notable_works_i18n["ko"] == ["올랭피아"]
     assert art.nationality_i18n["ko"] == "프랑스"
+
+
+def test_stored_language_not_overwritten_by_default():
+    """纪律 37:作者是共享实体,默认只补缺。2026-10-20 前权威标签默认压过已有,
+    names 重跑会改掉别的馆早已显示的国籍/代表作。"""
+    from types import SimpleNamespace
+
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art = SimpleNamespace(
+        nationality="France",
+        nationality_i18n={"en": "France", "zh": "法國"},
+        notable_works=["Olympia"],
+        notable_works_i18n={"en": ["Olympia"], "zh": ["奥林匹亚"]},
+    )
+    data = {
+        "nationality_i18n": {"en": "France", "zh": "法国", "de": "Frankreich"},
+        "notable_works_i18n": {
+            "en": ["Olympia"],
+            "zh": ["奥林匹娅"],
+            "de": ["Olympia"],
+        },
+        "notable_works_labels": [{"en": "Olympia", "zh": "奥林匹娅", "de": "Olympia"}],
+    }
+    fill_artist_i18n_facts(art, ["en", "zh", "de"], translator=None, data=data)
+    assert art.nationality_i18n["zh"] == "法國"  # 已有不动
+    assert art.notable_works_i18n["zh"] == ["奥林匹亚"]
+    assert art.nationality_i18n["de"] == "Frankreich"  # 缺的补
+    assert art.notable_works_i18n["de"] == ["Olympia"]
+
+
+def test_authority_ignored_when_it_describes_a_different_nationality_or_works():
+    """权威标签的 en 与库里 en 不是同一个国籍/同一批作品 → 不用,只翻库里的 en。
+    否则新补的语言和已有语言各说各的(作者卡换个语言就换了国籍/作品)。"""
+    from types import SimpleNamespace
+
+    from app.services.enrichment.backfill import fill_artist_i18n_facts
+
+    art = SimpleNamespace(
+        nationality="Kingdom of France",
+        nationality_i18n={"en": "Kingdom of France"},
+        notable_works=["Vanitas"],
+        notable_works_i18n={"en": ["Vanitas"]},
+    )
+    data = {
+        "nationality_i18n": {
+            "en": "Southern Netherlands",
+            "de": "Südliche Niederlande",
+        },
+        "notable_works_i18n": {"en": ["Ex-Voto"], "de": ["Ex-Voto"]},
+        "notable_works_labels": [{"en": "Ex-Voto", "de": "Ex-Voto"}],
+    }
+    tr = _Tr()
+    fill_artist_i18n_facts(art, ["en", "de"], tr, data)
+    assert art.nationality_i18n["de"] == "译<Kingdom of France>"
+    assert art.notable_works_i18n["de"] == ["译<Vanitas>"]
 
 
 class _Tr:
