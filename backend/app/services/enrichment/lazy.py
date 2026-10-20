@@ -73,6 +73,19 @@ def fanout_pending(obj: MuseumObject) -> list[str]:
     return list(f.get("pending") or [])
 
 
+def fanout_stale(obj: MuseumObject) -> bool:
+    """有补语言标记但心跳已超时 = 进程中途死了(部署重启等);正常结束会清标记。"""
+    f = (obj.attributes or {}).get("lazy_fanout")
+    if not f:
+        return False
+    try:
+        return (
+            datetime.now(timezone.utc) - datetime.fromisoformat(f["at"]) >= _FANOUT_TTL
+        )
+    except (KeyError, TypeError, ValueError):
+        return True
+
+
 def generating_for(obj: MuseumObject, language) -> bool:
     """端点 generating 字段:整件在懒生成/懒翻译,或这门语言还在补语言阶段的 pending 里。
     ⚠️ 必须是"这门语言整门翻完前一直 true":App 在 false 时 keepAlive 缓存结果
@@ -278,17 +291,35 @@ def _museum_languages(db, obj: MuseumObject) -> list[str]:
 
 
 def _fanout_langs(db, obj: MuseumObject, langs) -> list[str]:
-    """要补的语言 = 配置语言集里这件**一行都还没有**的(en 轴心除外)。幂等,跑两次不重复花钱;
-    有 needs_review 行的语言也不补(不碰已有段)。"""
-    from app.models.content import ObjectContentSection
+    """要补的语言 = 配置语言集里这件还有 en 段/问答**没有已发布版本**的(en 轴心除外)。
+    含半途失败(只有部分段)和被闸挡成 needs_review 的语言:补语言一件只跑一次(生成后/
+    中断后恢复),重试的成本有界;按请求懒翻译的判据(_has_missing_section)仍把 needs_review
+    算有,不在这里改。幂等:全发布后返回 []。"""
+    from app.models.content import ObjectContentSection as S
+    from app.models.content import ObjectSuggestedQuestion as Q
 
-    have = {
+    def _pub(model, col, lang):
+        return {
+            c
+            for (c,) in db.query(col).filter(
+                model.object_id == obj.id,
+                model.language == lang,
+                model.status == "published",
+                model.body.isnot(None) if model is S else model.answer.isnot(None),
+            )
+        }
+
+    en_secs = _pub(S, S.section_code, "en")
+    en_has_qa = bool(_pub(Q, Q.id, "en"))
+    return [
         lang
-        for (lang,) in db.query(ObjectContentSection.language)
-        .filter(ObjectContentSection.object_id == obj.id)
-        .distinct()
-    }
-    return [lang for lang in langs if lang != "en" and lang not in have]
+        for lang in langs
+        if lang != "en"
+        and (
+            en_secs - _pub(S, S.section_code, lang)
+            or (en_has_qa and not _pub(Q, Q.id, lang))
+        )
+    ]
 
 
 def _fanout(
@@ -309,6 +340,8 @@ def _fanout(
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if o is None or o.content_status != "ready" or not _has_published(db, o.id, "en"):
         return {}
+    if (o.attributes or {}).get("lazy_fanout") and not fanout_stale(o):
+        return {}  # 另一路补语言正在跑(并发的恢复请求);标记过期才接手
     remaining = _fanout_langs(
         db, o, langs if langs is not None else _museum_languages(db, o)
     )
@@ -318,6 +351,7 @@ def _fanout(
         logger.warning("lazy fanout: 当日补语言预算用尽,跳过 qid=%s", qid)
         return {}
     if not _FANOUT_SEM.acquire(blocking=False):
+        logger.info("lazy fanout: 名额已满,跳过 qid=%s", qid)
         return {}
     # acquire 后紧跟 try:之后任何一步抛异常都要还名额、清标记
     t0 = datetime.now(timezone.utc)
@@ -353,6 +387,11 @@ def _fanout(
                 c = translate_object_language(
                     s, s.get(MuseumObject, oid), lang, translator, include_bio=False
                 )
+                # 判官有随机性(同一段重试多半能过):被挡的段/问答再试一次,仅此一次
+                for k, v in translate_object_language(
+                    s, s.get(MuseumObject, oid), lang, translator, include_bio=False
+                ).items():
+                    c[k] += v
                 s.commit()  # 保险:persist_* 已逐段提交,这里通常是空操作
             finally:
                 if close:
@@ -704,6 +743,8 @@ def maybe_trigger(
     )
     if language and language != "en" and generating_for(o, language):
         record_fanout_want(qid, language, redis)  # 补语言阶段先补有人在等的语言
+    if o.content_status == "ready" and fanout_stale(o) and not lock_active(o):
+        schedule(_run_fanout, qid)  # 补语言进程中途死了(如部署重启):接着补
     if not (wants_generation or wants_translation):
         return
     if wants_generation and imageless_stub(db, o):

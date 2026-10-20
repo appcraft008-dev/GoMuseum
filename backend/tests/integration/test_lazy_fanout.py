@@ -50,7 +50,12 @@ def session():
     o.content_status = "ready"
     o.attributes = {**(o.attributes or {}), "artist_qid": "Q296"}
     s.add(Artist(qid="Q296", name_en="Claude Monet", bio={"en": BIO_EN}))
-    for lang, code in (("en", "guide"), ("en", "background"), ("fr", "guide")):
+    for lang, code in (
+        ("en", "guide"),
+        ("en", "background"),
+        ("fr", "guide"),
+        ("fr", "background"),
+    ):
         s.add(
             ObjectContentSection(
                 object_id=o.id,
@@ -156,10 +161,26 @@ def _run(s, langs, tr=None):
 
 
 def test_fanout_fills_only_languages_without_rows(session):
-    # 语言集不写死:配置 3 门、fr 已有 → 只补 de
+    # 语言集不写死:配置 3 门、fr 已补完 → 只补 de
     out = _run(session, ["en", "fr", "de"])
     assert set(out) == {"de"}
     assert _langs_with_guide(session) == {"en", "fr", "de"}
+
+
+def test_fanout_completes_half_done_language(session):
+    # 半途失败(fr 只有 guide、缺 background)也算没补完,接着补
+    o = _obj(session)
+    session.query(ObjectContentSection).filter_by(
+        object_id=o.id, language="fr", section_code="background"
+    ).delete()
+    session.commit()
+    assert set(_run(session, ["en", "fr"])) == {"fr"}
+    assert (
+        session.query(ObjectContentSection)
+        .filter_by(object_id=o.id, language="fr", status="published")
+        .count()
+        == 2
+    )
 
 
 def test_fanout_language_set_is_configurable(session):
@@ -185,7 +206,7 @@ def test_fanout_is_idempotent(session):
     assert tr.langs == []
 
 
-def test_fanout_skips_language_with_needs_review_rows(session):
+def test_fanout_retries_language_with_needs_review_rows(session):
     o = _obj(session)
     session.add(
         ObjectContentSection(
@@ -198,7 +219,103 @@ def test_fanout_skips_language_with_needs_review_rows(session):
     )
     session.commit()
     tr = _Tr()
-    assert _run(session, ["en", "fr", "de"], tr) == {}
+    assert "de" in _run(session, ["en", "de"], tr)
+    assert "de" in _langs_with_guide(session)
+
+
+def test_fanout_retries_blocked_section_once(session):
+    # 判官随机:第一遍 de 的 guide 被挡成 needs_review,第二遍过
+    from app.services.enrichment.quality import SectionQuality
+
+    class _Flaky(_Tr):
+        calls = 0
+
+        def translate_object(self, en_sections, target_langs, **kw):
+            res = super().translate_object(en_sections, target_langs, **kw)
+            type(self).calls += 1
+            if type(self).calls == 1:
+                for q in res[target_langs[0]].values():
+                    q.status = "needs_review"
+            return res
+
+    _run(session, ["en", "de"], _Flaky())
+    assert "de" in _langs_with_guide(session)
+
+
+def test_fanout_gives_up_after_one_retry(session):
+    class _Never(_Tr):
+        n = 0
+
+        def translate_object(self, en_sections, target_langs, **kw):
+            res = super().translate_object(en_sections, target_langs, **kw)
+            type(self).n += 1
+            for q in res[target_langs[0]].values():
+                q.status = "needs_review"
+            return res
+
+    _run(session, ["en", "de"], _Never())
+    assert "de" not in _langs_with_guide(session)
+    assert _Never.n == 4  # 2 段 × (首遍 + 重试一遍)
+
+
+def test_maybe_trigger_resumes_stale_fanout(session):
+    from datetime import datetime, timedelta, timezone
+
+    o = _obj(session)
+    old = datetime.now(timezone.utc) - timedelta(minutes=30)
+    o.attributes = {
+        **o.attributes,
+        "lazy_fanout": {"at": old.isoformat(), "pending": ["de"]},
+    }
+    session.commit()
+    calls = []
+    lazy.maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: calls.append((fn, a)),
+        environment="production",
+        language="en",
+    )
+    assert (lazy._run_fanout, ("Q1",)) in calls
+
+
+def test_maybe_trigger_leaves_fresh_fanout_alone(session):
+    from datetime import datetime, timezone
+
+    o = _obj(session)
+    o.attributes = {
+        **o.attributes,
+        "lazy_fanout": {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "pending": ["de"],
+        },
+    }
+    session.commit()
+    calls = []
+    lazy.maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda fn, *a: calls.append(fn),
+        environment="production",
+        language="en",
+    )
+    assert lazy._run_fanout not in calls
+
+
+def test_fanout_skipped_while_marker_fresh(session):
+    from datetime import datetime, timezone
+
+    o = _obj(session)
+    o.attributes = {
+        **o.attributes,
+        "lazy_fanout": {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "pending": ["de"],
+        },
+    }
+    session.commit()
+    tr = _Tr()
+    assert _run(session, ["en", "de"], tr) == {}
     assert tr.langs == []
 
 
