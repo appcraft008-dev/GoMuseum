@@ -1450,3 +1450,67 @@ def test_creator_revision_lookup_failure_falls_back_to_current():
         )
         == _MONET
     )
+
+
+def test_artist_name_en_never_takes_work_credit_for_wikidata_qid():
+    """作者英文名只认该 QID 自己的标签。10-20 prod 45 位作者 name_en 存成了合作者
+    (Q314814 Philippe de Champaigne 被写成 Jean-Charles Tardieu):标签没取到时
+    退回作品行署名,而多作者件的署名可能是另一个人。"""
+    from app.services.enrichment.material import artist_name_en
+
+    assert artist_name_en("Q314814", {"en": "Philippe de Champaigne"}, "X") == (
+        "Philippe de Champaigne"
+    )
+    # 没有 en → 用该 QID 自己的拉丁字母标签,不用作品署名
+    assert artist_name_en("Q1", {"fr": "Jean Dupont", "zh": "让"}, "Collab") == (
+        "Jean Dupont"
+    )
+    # 一个标签都没有(含抓取失败)→ 留空待重跑,绝不填作品署名
+    assert artist_name_en("Q314814", {}, "Jean-Charles Tardieu") is None
+    assert artist_name_en("Q314814", None, "Jean-Charles Tardieu") is None
+    assert artist_name_en("Q1", {"zh": "让"}, "Collab") is None  # 非拉丁不进 en 列
+    # 非 Wikidata 把手(joconde-…)没有标签可查,作品署名是唯一来源
+    assert artist_name_en("joconde-123", {}, "Jean Dupont") == "Jean Dupont"
+
+
+def test_work_label_copied_from_dutch_original_is_not_authoritative():
+    """Wikidata 常把作品原名照抄进别的语言标签:van Huysum《Fruit Still Life》
+    de/pl 标签就是荷兰语原名 "Stilleven met fruit"。照抄的不算该语言的权威译名。"""
+    from app.services.enrichment.material import authoritative_work_label
+
+    labels = {
+        "en": "Fruit Still Life",
+        "nl": "Stilleven met fruit",
+        "de": "Stilleven met fruit",
+        "it": "Natura morta con frutta",
+    }
+    assert authoritative_work_label(labels, "de") is None
+    assert authoritative_work_label(labels, "it") == "Natura morta con frutta"
+    # 专名各语言同形(也等于 en)仍是权威
+    same = {"en": "Olympia", "nl": "Olympia", "de": "Olympia"}
+    assert authoritative_work_label(same, "de") == "Olympia"
+
+
+def test_nationality_labels_all_from_one_entity():
+    """作者有多个 P27(Ambrosius Bosschaert:哈布斯堡尼德兰 + 荷兰共和国)时,
+    每种语言曾各取「第一个有该语言标签的」→ 波兰语卡上是另一个国家。
+    十语必须来自同一个国籍实体,缺的语言留给翻译。"""
+    from app.services.enrichment.material import _artist_i18n_from_rows
+
+    def nat(q, lang, v):
+        return {
+            "nat": {"value": "http://www.wikidata.org/entity/" + q},
+            "natLabel": {"xml:lang": lang, "value": v},
+        }
+
+    rows = [
+        nat("Q1", "en", "Habsburg Netherlands"),
+        nat("Q1", "de", "Habsburgische Niederlande"),
+        nat("Q2", "en", "Dutch Republic"),
+        nat("Q2", "pl", "Republika Zjednoczonych Prowincji"),
+    ]
+    out = _artist_i18n_from_rows(rows, ["en", "de", "pl"])
+    assert out["nationality_i18n"] == {
+        "en": "Habsburg Netherlands",
+        "de": "Habsburgische Niederlande",
+    }

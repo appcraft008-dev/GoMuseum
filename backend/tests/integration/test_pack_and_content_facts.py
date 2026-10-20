@@ -757,3 +757,66 @@ def test_content_generating_follows_fanout_pending(session):
     _set_fanout(session, o, ["de"])
     assert get_object_content(session, "orsay", "Q1", "de")["generating"] is True
     assert get_object_content(session, "orsay", "Q1", "zh")["generating"] is False
+
+
+def test_humanize_medium_all_ten_languages():
+    """材质表原本只有 zh/en/fr,其余七语全回退英文(德语界面显示 "Oil on canvas")。
+
+    2026-10-20 prod 实测:13708 件命中材质表的作品,在 de/es/it/ja/ko/pl/zh-hant
+    七语下全部显示英文。这里钉:十语每一语都不回退成英文,承载物按各语言惯用式拼接。
+    """
+    from app.services.museum_repo import _MEDIUM_I18N, _MEDIUM_NORM, _humanize_medium
+
+    canvas = "peinture à l'huile;toile"
+    assert _humanize_medium(canvas, "de") == "Öl auf Leinwand"
+    assert _humanize_medium(canvas, "es") == "Óleo sobre lienzo"
+    assert _humanize_medium(canvas, "it") == "Olio su tela"
+    assert _humanize_medium(canvas, "pl") == "Olej na płótnie"  # 方位格,不是 płótno
+    assert _humanize_medium(canvas, "ja") == "カンヴァスに油彩"
+    assert _humanize_medium(canvas, "ko") == "캔버스에 유채"
+    assert _humanize_medium(canvas, "zh-hant") == "布面油畫"
+    # 《蒙娜丽莎》:承载物是杨木板
+    poplar = "peinture à l'huile;peuplier"
+    assert _humanize_medium(poplar, "de") == "Öl auf Pappelholz"
+    assert _humanize_medium(poplar, "it") == "Olio su tavola di pioppo"
+    assert _humanize_medium(poplar, "pl") == "Olej na desce topolowej"
+    # 《米洛的维纳斯》:只有媒介
+    assert _humanize_medium("marble", "de") == "Marmor"
+    assert _humanize_medium("marble", "ja") == "大理石"
+    # 未命中仍原样(不替源串编译文)
+    assert _humanize_medium("technique inconnue", "de") == "technique inconnue"
+
+    # 以后往 _MEDIUM_NORM 加词忘了配六语,这里会红
+    missing = {m["en"] for m in _MEDIUM_NORM.values()} - _MEDIUM_I18N.keys()
+    assert not missing, missing
+
+
+def test_humanize_medium_prod_unmatched_terms_1020():
+    """2026-10-20 prod 全库 13732 件有材质、24 件未命中表(十语都显示源串)。
+    技法词(ronde bosse/galvanoplastie)与单独的 "or"(多为 fond d'or 金底)仍有意不收。"""
+    from app.services.museum_repo import _humanize_medium
+
+    cases = {
+        "Eau-forte": "蚀刻版画",
+        "composite material": "复合材料",
+        "galvanoplastie;métal;dorure": "金属",
+        "metal, beeswax": "蜂蜡",
+        "Biscuit": "素瓷",
+        "Faïence;Email (technique céramique)": "彩釉陶",
+        "Ardoise": "板岩",
+        "limewood, polychromy": "椴木",
+        "or;ambre": "琥珀",
+        "soapstone": "皂石",
+        "brick": "砖",
+        "Bas-relief;taille;tilleul;polychromie": "椴木",
+        "Bas-relief;taille;acajou;polychromie": "桃花心木",
+        "fonte;cuivré": "铸铁",
+        # 全库新旧对比揪出的回归:金属尖笔素描不能变成「纸本金属」
+        "pointe de métal;papier (préparé, bleu clair);blanc (rehaut)": "纸本金属尖笔",
+    }
+    for raw, zh in cases.items():
+        assert _humanize_medium(raw, "zh") == zh, raw
+    assert _humanize_medium("Eau-forte", "de") == "Radierung"
+    assert _humanize_medium("ronde bosse", "zh") == "ronde bosse"  # 技法,不收
+    # 失蜡铸铜仍归青铜,不被新加的 fonte 抢走
+    assert _humanize_medium("fonte à la cire perdue;bronze;patine", "zh") == "青铜"

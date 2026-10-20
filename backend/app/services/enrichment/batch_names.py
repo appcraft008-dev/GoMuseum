@@ -39,6 +39,7 @@ def collect_missing(
         _fetch_creators,
         strip_inventory,
     )
+    from app.services.enrichment.material import artist_name_en as name_en_for
     from app.services.enrichment.material import fetch_wikidata_labels_batch
 
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
@@ -122,10 +123,10 @@ def collect_missing(
             # 该 QID 自己的标签优先:多作者件的作品行署名可能是另一位合作者
             # (卢浮 Q28840036 署弟弟,artist_qid 是哥哥 → 哥哥卡被写成弟弟名)
             try:
-                en = (_labels(aq) or {}).get("en")
+                labels = _labels(aq) or {}
             except Exception:
-                en = None
-            art.name_en = en or artist_name_en.get(aq)
+                labels = {}
+            art.name_en = name_en_for(aq, labels, artist_name_en.get(aq))
         ni = _clean_i18n(art.name_i18n)
         # 权威标签优先(名家在 Wikidata 多语齐全,免翻译且更准)
         if any(not ni.get(lg) for lg in langs):

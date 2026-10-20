@@ -617,24 +617,45 @@ def _tr_or_keep(tr, value, lang):
         return value
 
 
-def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
-    """作者国籍/代表作多语填充(交接③):权威标签优先→已有保留→翻译兜底。
+def fill_artist_i18n_facts(art, langs, translator, data, refresh_langs=()) -> bool:
+    """作者国籍/代表作多语填充(交接③):已有保留→权威标签→翻译兜底。
     代表作的兜底是**逐件**的:某件在该语言有权威标签就原样用,没有才翻。
     data=fetch_artist_i18n_facts 结果(含 notable_works_labels 逐件标签)。
-    幂等只补缺;返回是否有变更。"""
-    # ⚠️ 权威标签**压过**库里已有 —— 顺序曾经是反的(已有在后、赢),于是某语言
-    # 第一次抓到 1 条就永久锁死,后续 names 重跑再也修不好(实测 zh 卡在 1 条,
-    # 而 Wikidata 有 4 条)。docstring 一直写的是「权威标签优先」,代码没照做。
-    nat = {**(art.nationality_i18n or {}), **(data.get("nationality_i18n") or {})}
-    works = {**(art.notable_works_i18n or {}), **(data.get("notable_works_i18n") or {})}
-    if not nat.get("en") and art.nationality:
-        nat["en"] = art.nationality
-    if not works.get("en") and art.notable_works:
-        works["en"] = list(art.notable_works)
+    返回是否有变更。
+
+    ⚠️ 作者是共享实体(纪律 37):**默认只补缺**,已有语言不动。2026-10-20 前是
+    「权威标签压过已有」—— names 重跑会改掉各馆早已显示的值。要刷新陈旧值
+    (曾经 zh 代表作卡在 1 条)走显式的 refresh_langs(names --refresh-langs)。
+    权威标签与库里 en 说的不是同一个国籍/同一批作品时不用,只翻库里的 en,
+    否则新补的语言和已有语言各说各的。"""
+    old_nat, old_works = art.nationality_i18n or {}, art.notable_works_i18n or {}
+    auth_nat = dict(data.get("nationality_i18n") or {})
+    auth_works = dict(data.get("notable_works_i18n") or {})
+    per_work = data.get("notable_works_labels") or []
+    en_nat = old_nat.get("en") or art.nationality
+    en_works = old_works.get("en") or (
+        list(art.notable_works) if art.notable_works else None
+    )
+    if en_nat and auth_nat.get("en") not in (None, en_nat):
+        auth_nat = {}
+    if en_works and auth_works.get("en") not in (None, en_works):
+        auth_works, per_work = {}, []
+    nat = {**auth_nat, **{k: v for k, v in old_nat.items() if v}}
+    works = {**auth_works, **{k: v for k, v in old_works.items() if v}}
+    for k in refresh_langs or ():  # 显式刷新:权威源有值才换,没有就留着原值
+        if auth_nat.get(k):
+            nat[k] = auth_nat[k]
+        if auth_works.get(k):
+            works[k] = auth_works[k]
+    if not nat.get("en") and en_nat:
+        nat["en"] = en_nat
+    if not works.get("en") and en_works:
+        works["en"] = list(en_works)
+    # 逐件兜底只作用于**本次从权威标签新填**的语言,已有语言不动
+    fresh = {k for k in works if works[k] is auth_works.get(k)}
     tr = getattr(translator, "translate_name", None) or getattr(
         translator, "translate_section", None
     )
-    per_work = data.get("notable_works_labels") or []
     for lang in langs:
         if not nat.get(lang) and nat.get("en") and tr:
             try:
@@ -646,7 +667,7 @@ def fill_artist_i18n_facts(art, langs, translator, data) -> bool:
                 works[lang] = [tr(w, lang) for w in works["en"]]
             except Exception:
                 pass
-        elif tr and lang != "en":
+        elif tr and lang != "en" and lang in fresh:
             # **逐件**兜底,不是整语言全翻或全不翻:有权威译名的必须原样保留
             # (那才是真相源),只把 fetch 回退成英文/原名的那几件翻过来。
             # 否则中日韩用户看到的是"5 件里 3 件外文"的半截列表。
@@ -689,6 +710,7 @@ def backfill_display_names(
     幂等:已齐语种的对象/作者跳过。limit=只处理前 N 件(staging 护栏小样本);
     qids=只处理这几件(按 qid 补收录,别顺带碰全馆)。
     契约:stub 一进目录就该有完整多语显示名。"""
+    from app.services.enrichment.material import artist_name_en as name_en_for
     from app.services.enrichment.material import (
         fetch_artist_i18n_facts,
         fetch_wikidata_labels,
@@ -814,7 +836,7 @@ def backfill_display_names(
             if not art.name_en:
                 # 该 QID 自己的标签优先:多作者件的作品行署名可能是另一位合作者
                 alabels = _labels(aqid)
-                art.name_en = alabels.get("en") or en_name
+                art.name_en = name_en_for(aqid, alabels, en_name)
             ni = _clean_i18n(art.name_i18n)
             if ni != (art.name_i18n or {}):
                 art.name_i18n = ni
@@ -839,9 +861,13 @@ def backfill_display_names(
                 if not (art.nationality_i18n or {}).get(lang)
                 or not (art.notable_works_i18n or {}).get(lang)
             ]
-            if need:
+            if need or refresh_langs:
                 fill_artist_i18n_facts(
-                    art, langs, translator, fetch_artist_facts_i18n(aqid, langs)
+                    art,
+                    langs,
+                    translator,
+                    fetch_artist_facts_i18n(aqid, langs),
+                    refresh_langs=refresh_langs,
                 )
         except Exception:
             import logging
