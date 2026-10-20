@@ -587,8 +587,12 @@ def _alert_fail_open() -> None:
     )
 
 
-def _charge(user_id, ip, weight: int, redis=None) -> str | None:
+def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
     """按账号、按 IP 扣当日额度。None=放行;"user"/"ip"=该层超限(已全部回滚)。
+
+    item(如 "gen:Q1"/"tr:Q1:de"):同一人同一动作当天只扣一次。生成名额满时后台放弃并清锁,
+    App 每 4s 轮询又点火一次;按次扣的话 ~80s 就把用户当天额度烧光而一个字没生成(10-20 复现)。
+    ponytail: 失败后当天重试也不再扣,只靠全站上限兜底;失败率真高了再按结果退额度。
 
     先 INCRBY 再判断:INCRBY 原子,两个 worker 并发也不会越线(先查后加会)。
     超限就把本次加上的全部退回,被拒的请求不占额度。
@@ -608,7 +612,10 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
         )
         _alert_fail_open()
         return None
+    paid = f"lazy:paid:{user_id or ip}:{item}:{_today()}" if item else None
     try:
+        if paid and not r.set(paid, 1, nx=True, ex=_CAP_TTL_S):
+            return None  # 今天已为这件付过
         pipe = r.pipeline()
         for _, key, _cap in layers:
             pipe.incrby(key, weight)
@@ -632,6 +639,8 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
         pipe = r.pipeline()
         for _, key, _cap in layers:
             pipe.decrby(key, weight)
+        if paid:
+            pipe.delete(paid)  # 被拒不算付过
         pipe.execute()
     except Exception:
         logger.exception("lazy caps: rollback failed, keys over-counted by %s", weight)
@@ -711,13 +720,17 @@ def maybe_trigger(
         return "daily_cap"
     if wants_generation:
         if try_acquire_lock(db, o):
-            if not exempt and _charge(user_id, ip, WEIGHT_GENERATION, redis):
+            if not exempt and _charge(
+                user_id, ip, WEIGHT_GENERATION, redis, item=f"gen:{qid}"
+            ):
                 _clear_lock(db, o)
                 return "daily_cap"
             schedule(run_lazy_generation, qid, language)
         return
     if try_acquire_lock(db, o, require_status=("ready",)):
-        if not exempt and _charge(user_id, ip, WEIGHT_TRANSLATION, redis):
+        if not exempt and _charge(
+            user_id, ip, WEIGHT_TRANSLATION, redis, item=f"tr:{qid}:{language}"
+        ):
             _clear_lock(db, o)
             return "daily_cap"
         schedule(run_lazy_translation, qid, language)
