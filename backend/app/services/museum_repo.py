@@ -687,7 +687,8 @@ def _humanize_medium(raw, lang):
     if lang == "zh-hant":
         from app.services.enrichment.lang_detect import _cc
 
-        return _cc("s2t").convert(_humanize_medium(raw, "zh"))
+        # 「巖」统一成「岩」:opencc 只把閃長岩转成巖,同表花崗岩/石灰岩不转,同屏不一致
+        return _cc("s2t").convert(_humanize_medium(raw, "zh")).replace("巖", "岩")
     low = raw.lower()
     _, med, span = _scan_medium(low, _SUPPORT_KEYS, want_support=False)
     rest = low[: span[0]] + " " + low[span[1] :] if span else low
