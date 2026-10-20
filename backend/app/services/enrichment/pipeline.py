@@ -14,7 +14,7 @@ from app.services.content_repo import (
 )
 from app.services.enrichment.category_config import guide_target_chars, sections_for
 from app.services.enrichment.content_enricher import build_material
-from app.services.enrichment.material import fetch_object_material
+from app.services.enrichment.material import artist_name_en, fetch_object_material
 from app.services.must_see import has_image_clause, must_see_order
 
 logger = logging.getLogger(__name__)
@@ -355,7 +355,7 @@ def generate_object(
                     alabels = {}
                 # 已有作者:以下字段**已有就不动**,只补缺(同纪律 37)。
                 if not art.name_en:
-                    art.name_en = alabels.get("en") or o.artist_en
+                    art.name_en = artist_name_en(aqid, alabels, o.artist_en)
                 # 中文名缺 → Wikidata zh 标签优先,没有才翻译补,同标题机制
                 if not art.name_zh:
                     name_zh = alabels.get("zh") or o.artist_zh

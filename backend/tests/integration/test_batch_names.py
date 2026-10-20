@@ -275,7 +275,10 @@ def test_collect_resolves_creators_and_creates_artist_rows(session):
         session,
         m.slug,
         ["en", "zh"],
-        fetch_labels=lambda qid, langs: {},  # 无权威标签 → 该出翻译任务
+        # 只有 en 标签、缺 zh → 该出中文翻译任务
+        fetch_labels=lambda qid, langs: (
+            {"en": "Eugène Delacroix"} if qid == "Q33477" else {}
+        ),
         fetch_creators=lambda qids: {"Q1": "Q33477"},  # P170 → 德拉克罗瓦
     )
     session.commit()
@@ -283,7 +286,7 @@ def test_collect_resolves_creators_and_creates_artist_rows(session):
         "artist_qid"
     ) == "Q33477"  # 解析结果落库
     art = session.query(Artist).filter_by(qid="Q33477").one()
-    assert art.name_en == "Eugène Delacroix"  # 新馆首跑建行,轴心取自作品行
+    assert art.name_en == "Eugène Delacroix"  # 新馆首跑建行,英文名取该 QID 自己的标签
     assert any(t.custom_id == "artist|Q33477|zh" for t in tasks)  # 出中文翻译任务
 
 
@@ -340,6 +343,31 @@ def test_collect_new_artist_name_en_prefers_wikidata_label(session):
     session.commit()
     art = session.query(Artist).filter_by(qid="Q960381").one()
     assert art.name_en == "François Duquesnoy"
+
+
+def test_collect_new_artist_name_en_not_from_work_credit_when_no_label(session):
+    # 标签缺失时不拿作品行署名(可能是合作者)当作者英文名,留空待重跑
+    from app.models.artist import Artist
+    from app.models.museum import Museum
+    from app.services.enrichment import batch_names as bn
+
+    m = session.query(Museum).one()
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Jean-Charles Tardieu"
+    o.attributes = {}
+    session.commit()
+
+    tasks = bn.collect_missing(
+        session,
+        m.slug,
+        ["en", "zh"],
+        fetch_labels=lambda qid, langs: {},
+        fetch_creators=lambda qids: {"Q1": "Q314814"},
+    )
+    session.commit()
+    art = session.query(Artist).filter_by(qid="Q314814").one()
+    assert art.name_en is None
+    assert not any(t.custom_id.startswith("artist|Q314814") for t in tasks)
 
 
 def test_collect_prefetches_labels_in_batch_not_per_object(session, monkeypatch):

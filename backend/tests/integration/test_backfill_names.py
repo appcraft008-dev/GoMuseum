@@ -152,7 +152,9 @@ def test_backfill_fills_artist_qid_and_artist_names(session):
         "orsay",
         translator=tr,
         langs=["en", "zh"],
-        fetch_labels=_labels({"Q34618": {"zh": "居斯塔夫·库尔贝"}}),
+        fetch_labels=_labels(
+            {"Q34618": {"en": "Gustave Courbet", "zh": "居斯塔夫·库尔贝"}}
+        ),
         fetch_creators=lambda qids: {"Q1": "Q34618"},
     )
     o = session.query(MuseumObject).filter_by(qid="Q1").one()
@@ -163,7 +165,9 @@ def test_backfill_fills_artist_qid_and_artist_names(session):
     assert art.name_zh == "居斯塔夫·库尔贝"
     # Q2 已带 artist_qid(Q296)但无 Artist 行 → 也补名字行(共 2)
     assert out["artists"] == 2
-    assert session.query(Artist).filter_by(qid="Q296").one().name_en == "Manet"
+    # 但 Q296 没有标签,
+    # name_en 不拿作品行署名 "Manet" 填(那可能是合作者,10-20 prod 45 位就是这么错的)
+    assert session.query(Artist).filter_by(qid="Q296").one().name_en is None
 
 
 def test_backfill_new_artist_name_en_prefers_wikidata_label(session):
@@ -573,3 +577,22 @@ def test_backfill_qids_limits_scope(session):
     q = session.query(MuseumObject)
     assert (q.filter_by(qid="Q3").one().attributes or {}).get("title_i18n")
     assert not (q.filter_by(qid="Q1").one().attributes or {}).get("title_i18n")
+
+
+def test_backfill_new_artist_name_en_not_from_work_credit_when_no_label(session):
+    # 标签取不到(抓取失败/缺)时,作者卡英文名留空待重跑,不能用作品行署名:
+    # 多作者件的署名可能是合作者(Q314814 尚帕涅曾被写成 Tardieu)
+    o = session.query(MuseumObject).filter_by(qid="Q1").one()
+    o.artist_en = "Jean-Charles Tardieu"
+    session.commit()
+    backfill_display_names(
+        session,
+        "orsay",
+        translator=_Translator(),
+        langs=["en", "zh"],
+        fetch_labels=_labels({}),
+        fetch_creators=lambda qids: {"Q1": "Q314814"},
+    )
+    art = session.query(Artist).filter_by(qid="Q314814").one()
+    assert art.name_en is None
+    assert "Jean-Charles Tardieu" not in (art.name_i18n or {}).values()

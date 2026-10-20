@@ -389,6 +389,27 @@ def _labels_from_rows(rows, langs: list) -> dict:
     return _collapse_variants(raw, langs)
 
 
+# en 列只放拉丁字母名:没有 en 标签时按这个顺序借该 QID 自己的其它标签
+_LATIN_LABEL_ORDER = ("en", "fr", "de", "es", "it", "pl")
+
+
+def artist_name_en(qid, labels, work_artist_en):
+    """作者卡英文名:只认该 QID **自己的**标签,永不拿作品行署名填。
+
+    多作者件的作品行署名可能是另一位合作者 —— 2026-10-20 prod 查出 45 位作者
+    name_en 是合作者名(Q314814 Philippe de Champaigne 被写成 Jean-Charles Tardieu),
+    全是「标签没取到 → 退回作品行署名」造成的。取不到就返回 None,重跑再补;
+    显示层本就按每件作品自己的署名兜底,不会空着。
+    非 Wikidata 把手(joconde-…)无标签可查,作品署名是唯一来源。
+    """
+    from app.services.enrichment.identity import is_wikidata_qid
+
+    if not is_wikidata_qid(qid):
+        return work_artist_en
+    labels = labels or {}
+    return next((labels[k] for k in _LATIN_LABEL_ORDER if labels.get(k)), None)
+
+
 def fetch_wikidata_labels(qid: str, langs: list, *, get_entities=None) -> dict:
     """Wikidata 实体在 langs 的官方标签 → {lang: label}(只含有的)。
     zh 按 zh-hans > zh-cn > zh 取(修繁简混杂:愛德華·馬奈类)。
@@ -505,10 +526,26 @@ def fetch_artist_material(
     }
 
 
+# 作品原名常被照抄进别的语言标签(van Huysum 的 de/pl 标签就是荷兰语原名)。
+# 为了认出这种照抄,代表作标签额外取这些语言(不展示,只作比对)。
+# ponytail: 只收了实测出现的 nl;别的原文语言(pt/ru…)照抄出现了再加。
+_ORIGINAL_TITLE_LANGS = ("nl",)
+
+
+def _copied_original(labels: dict, lang: str) -> bool:
+    """该语言标签 == 某原文语言标签,且 ≠ en(专名各语言同形如 Olympia 不算照抄)。"""
+    v = labels[lang]
+    return v != labels.get("en") and any(
+        labels.get(o) == v for o in _ORIGINAL_TITLE_LANGS
+    )
+
+
 def authoritative_work_label(labels: dict, lang: str) -> str | None:
     """一件作品在某语言下的**权威**显示名:本语言标签 → 字形变体链(繁体取简体转)。
     都没有 → None,由调用方决定是翻译还是回退原文(见 fill_artist_i18n_facts)。"""
     if labels.get(lang):
+        if lang not in _ORIGINAL_TITLE_LANGS and _copied_original(labels, lang):
+            return None
         return labels[lang]
     for src in (_SCRIPT_VARIANTS.get(lang) or ((), None))[0]:
         if labels.get(src):
@@ -531,7 +568,11 @@ def _i18n_wanted(langs) -> list:
     # 请求 zh-hant 而没请求 zh 时链就断了、只能掉到英文。
     return list(
         dict.fromkeys(
-            [*langs, *(v for x in langs for v in (_SCRIPT_VARIANTS.get(x) or ((),))[0])]
+            [
+                *langs,
+                *(v for x in langs for v in (_SCRIPT_VARIANTS.get(x) or ((),))[0]),
+                *_ORIGINAL_TITLE_LANGS,  # 只作照抄比对,不进输出(输出按 langs 取)
+            ]
         )
     )
 
@@ -544,7 +585,12 @@ def _artist_i18n_rows(entity: dict, wanted: list, fetch) -> list[dict]:
     rows = []
     for q in nats:
         for lang, v in (labels.get(q) or {}).items():
-            rows.append({"natLabel": {"xml:lang": lang, "value": v}})
+            rows.append(
+                {
+                    "nat": {"value": _ENTITY_IRI + q},
+                    "natLabel": {"xml:lang": lang, "value": v},
+                }
+            )
     for q in works:
         for lang, v in (labels.get(q) or {}).items():
             rows.append(
@@ -561,7 +607,19 @@ def _artist_i18n_from_rows(rows, langs) -> dict:
     wanted = _i18n_wanted(langs)
     nat_i18n: dict = {}
     works: dict = {}  # 作品 qid -> {lang: label}
+    # 多个 P27 时只取**第一个**国籍实体的各语言标签:曾每种语言各取「第一个有该语言
+    # 标签的」,Bosschaert 的波兰语卡就成了另一个国家。缺的语言留给翻译从 en 补。
+    nat_q = next(
+        (
+            r["nat"]["value"]
+            for r in rows
+            if (r.get("nat") or {}).get("value") and r.get("natLabel")
+        ),
+        None,
+    )
     for row in rows:
+        if nat_q and (row.get("nat") or {}).get("value") not in (None, nat_q):
+            row = {k: v for k, v in row.items() if k not in ("nat", "natLabel")}
         nl = row.get("natLabel") or {}
         wl = row.get("workLabel") or {}
         nlang, nv = nl.get("xml:lang") or nl.get("lang"), nl.get("value")
