@@ -37,6 +37,7 @@
 - **单人首屏提速**（新模型下 p50 约 22 秒，主因是接地闸重写草稿）：另开专题。
 - 问答音频、作者简介音频（非流式接口，篇幅短）：不改。
 - 离线 CLI 脚本（onboard / generate / translate）：不进队列，行为不变。
+- VoxCPM2 定期替换懒生成音频（`audio_queue_cli` 导出 → Mac 生成 → `audio_ingest_cli` 写回）：不受影响。它只读写 `audio_key` / `audio_engine`，不碰本设计替换掉的锁和并发机制；落库函数 `persist_section_audio` 不变。
 
 ## 1. 现状与已查实的瓶颈
 
