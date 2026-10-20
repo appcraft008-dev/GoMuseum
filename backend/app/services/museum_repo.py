@@ -337,6 +337,30 @@ _MEDIUM_NORM = {
     # 上游真实取值:"peinture à l'huile;carton" 116 条、panneau 见于多馆嵌板画
     "carton": {"zh": "卡纸", "en": "Cardboard", "fr": "Carton"},
     "panneau": {"zh": "木板", "en": "Panel", "fr": "Panneau"},
+    # 2026-10-20 prod 全库未命中的 24 件(18 种)补收。fonte 排在 bronze 后:
+    # "fonte à la cire perdue;bronze"(失蜡铸铜)必须仍归青铜。
+    # beeswax 排在 metal 前:"metal, beeswax"(蜡像)取更具体的那个。
+    "eau-forte": {"zh": "蚀刻版画", "en": "Etching", "fr": "Eau-forte"},
+    "composite": {
+        "zh": "复合材料",
+        "en": "Composite material",
+        "fr": "Matériau composite",
+    },
+    "beeswax": {"zh": "蜂蜡", "en": "Beeswax", "fr": "Cire d'abeille"},
+    "biscuit": {"zh": "素瓷", "en": "Biscuit porcelain", "fr": "Biscuit"},
+    "faïence": {"zh": "彩釉陶", "en": "Faience", "fr": "Faïence"},
+    "ardoise": {"zh": "板岩", "en": "Slate", "fr": "Ardoise"},
+    "limewood": {"zh": "椴木", "en": "Limewood", "fr": "Tilleul"},
+    "tilleul": {"zh": "椴木", "en": "Limewood", "fr": "Tilleul"},
+    "acajou": {"zh": "桃花心木", "en": "Mahogany", "fr": "Acajou"},
+    "ambre": {"zh": "琥珀", "en": "Amber", "fr": "Ambre"},
+    "soapstone": {"zh": "皂石", "en": "Soapstone", "fr": "Stéatite"},
+    "brick": {"zh": "砖", "en": "Brick", "fr": "Brique"},
+    "fonte": {"zh": "铸铁", "en": "Cast iron", "fr": "Fonte"},
+    # "pointe de métal"(金属尖笔素描)必须在 métal 前,否则会显示成「纸本金属」
+    "pointe de métal": {"zh": "金属尖笔", "en": "Metalpoint", "fr": "Pointe de métal"},
+    "métal": {"zh": "金属", "en": "Metal", "fr": "Métal"},
+    "metal": {"zh": "金属", "en": "Metal", "fr": "Métal"},
 }
 # 有意不收的词:
 # - 技法而非材质(bas-relief/haut-relief/modelage/taille/fond d'or/grisaille/
@@ -609,6 +633,61 @@ _MEDIUM_I18N = {
     "Sanguine": ("Rötel", "Sanguina", "Sanguigna", "サンギーヌ", "상긴", "Sangwina"),
     "Wash": ("Lavierung", "Aguada", "Acquerellatura", "淡彩", "담채", "Laweta"),
     "Pen": ("Feder", "Pluma", "Penna", "ペン", "펜", "Pióro"),
+    "Etching": (
+        "Radierung",
+        "Aguafuerte",
+        "Acquaforte",
+        "エッチング",
+        "에칭",
+        "Akwaforta",
+    ),
+    "Composite material": (
+        "Verbundwerkstoff",
+        "Material compuesto",
+        "Materiale composito",
+        "複合材料",
+        "복합 재료",
+        "Materiał kompozytowy",
+    ),
+    "Beeswax": (
+        "Bienenwachs",
+        "Cera de abejas",
+        "Cera d'api",
+        "蜜蝋",
+        "밀랍",
+        "Wosk pszczeli",
+    ),
+    "Biscuit porcelain": (
+        "Biskuitporzellan",
+        "Bizcocho",
+        "Biscuit",
+        "ビスク",
+        "비스크",
+        "Biskwit",
+    ),
+    "Faience": ("Fayence", "Loza", "Maiolica", "ファイアンス", "파양스", "Fajans"),
+    "Slate": ("Schiefer", "Pizarra", "Ardesia", "スレート", "슬레이트", "Łupek"),
+    "Limewood": (
+        "Lindenholz",
+        "Madera de tilo",
+        "Legno di tiglio",
+        "菩提樹材",
+        "피나무",
+        "Drewno lipowe",
+    ),
+    "Mahogany": ("Mahagoni", "Caoba", "Mogano", "マホガニー", "마호가니", "Mahoń"),
+    "Amber": ("Bernstein", "Ámbar", "Ambra", "琥珀", "호박", "Bursztyn"),
+    "Soapstone": ("Speckstein", "Esteatita", "Steatite", "石鹸石", "동석", "Steatyt"),
+    "Brick": ("Ziegel", "Ladrillo", "Mattone", "煉瓦", "벽돌", "Cegła"),
+    "Metal": ("Metall", "Metal", "Metallo", "金属", "금속", "Metal"),
+    "Metalpoint": (
+        "Metallstift",
+        "Punta de metal",
+        "Punta metallica",
+        "金属尖筆",
+        "금속 첨필",
+        "Metalowy rysik",
+    ),
 }
 
 # 承载物在拼接式里的形态,与单独出现时不同的才列(按 en 名)。
