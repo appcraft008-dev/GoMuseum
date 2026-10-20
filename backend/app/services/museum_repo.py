@@ -394,8 +394,264 @@ _ZH_ATTR = {
     "parchemin": "羊皮纸",
 }
 
-# 媒介 + 承载物的拼接式。其余语言回退英式(与 _MEDIUM_NORM 的英语回退一致)。
-_MEDIUM_JOIN = {"en": "{m} on {s}", "fr": "{m} sur {s}", "zh": "{s}{m}"}
+# 媒介 + 承载物的拼接式(各语言博物馆展签惯用式)。zh-hant 由 zh 结果转繁,不在此表。
+_MEDIUM_JOIN = {
+    "en": "{m} on {s}",
+    "fr": "{m} sur {s}",
+    "zh": "{s}{m}",
+    "de": "{m} auf {s}",
+    "es": "{m} sobre {s}",
+    "it": "{m} su {s}",
+    "pl": "{m} na {s}",
+    "ja": "{s}に{m}",
+    "ko": "{s}에 {m}",
+}
+
+# _MEDIUM_NORM 只写了 zh/en/fr;其余六语按 en 名查这张表(同一 en 名只译一次,
+# huile/oil 等同义键自动共用)。列序:de, es, it, ja, ko, pl。
+# 2026-10-20 前缺这张表,13708 件作品在德/西/意/日/韩/波/繁中界面显示英文材质。
+_MEDIUM_I18N_LANGS = ("de", "es", "it", "ja", "ko", "pl")
+_MEDIUM_I18N = {
+    "Oil": ("Öl", "Óleo", "Olio", "油彩", "유채", "Olej"),
+    "Bronze": ("Bronze", "Bronce", "Bronzo", "ブロンズ", "청동", "Brąz"),
+    "Marble": ("Marmor", "Mármol", "Marmo", "大理石", "대리석", "Marmur"),
+    "Watercolour": ("Aquarell", "Acuarela", "Acquerello", "水彩", "수채", "Akwarela"),
+    "Pastel": ("Pastell", "Pastel", "Pastello", "パステル", "파스텔", "Pastel"),
+    "Gouache": ("Gouache", "Gouache", "Guazzo", "グアッシュ", "과슈", "Gwasz"),
+    "Charcoal": ("Kohle", "Carboncillo", "Carboncino", "木炭", "목탄", "Węgiel"),
+    "Plaster": ("Gips", "Yeso", "Gesso", "石膏", "석고", "Gips"),
+    "Salted paper": (
+        "Salzpapier",
+        "Papel salado",
+        "Carta salata",
+        "ソルトプリント",
+        "솔트 프린트",
+        "Papier solny",
+    ),
+    "Albumen print": (
+        "Albuminabzug",
+        "Copia a la albúmina",
+        "Stampa all'albumina",
+        "鶏卵紙プリント",
+        "알부민 프린트",
+        "Odbitka albuminowa",
+    ),
+    "Gelatin silver print": (
+        "Silbergelatineabzug",
+        "Gelatina de plata",
+        "Stampa ai sali d'argento",
+        "ゼラチン・シルバー・プリント",
+        "젤라틴 실버 프린트",
+        "Odbitka żelatynowo-srebrowa",
+    ),
+    "Ink": ("Tinte", "Tinta", "Inchiostro", "インク", "잉크", "Atrament"),
+    "Pencil": ("Bleistift", "Lápiz", "Matita", "鉛筆", "연필", "Ołówek"),
+    "Terracotta": (
+        "Terrakotta",
+        "Terracota",
+        "Terracotta",
+        "テラコッタ",
+        "테라코타",
+        "Terakota",
+    ),
+    "Black chalk": (
+        "Schwarze Kreide",
+        "Piedra negra",
+        "Pietra nera",
+        "黒チョーク",
+        "검은 분필",
+        "Czarna kreda",
+    ),
+    "Graphite": ("Graphit", "Grafito", "Grafite", "黒鉛", "흑연", "Grafit"),
+    "Unfired clay": (
+        "Ungebrannter Ton",
+        "Arcilla cruda",
+        "Argilla cruda",
+        "未焼成粘土",
+        "굽지 않은 점토",
+        "Glina niewypalana",
+    ),
+    "Tempera": ("Tempera", "Temple", "Tempera", "テンペラ", "템페라", "Tempera"),
+    "Distemper": (
+        "Leimfarbe",
+        "Temple de cola",
+        "Tempera a colla",
+        "膠彩",
+        "디스템퍼",
+        "Farba klejowa",
+    ),
+    "Fresco": ("Fresko", "Fresco", "Affresco", "フレスコ", "프레스코", "Fresk"),
+    "Lithograph": (
+        "Lithografie",
+        "Litografía",
+        "Litografia",
+        "リトグラフ",
+        "석판화",
+        "Litografia",
+    ),
+    "Porcelain": ("Porzellan", "Porcelana", "Porcellana", "磁器", "자기", "Porcelana"),
+    "Enamel": ("Email", "Esmalte", "Smalto", "エナメル", "에나멜", "Emalia"),
+    "Ivory": ("Elfenbein", "Marfil", "Avorio", "象牙", "상아", "Kość słoniowa"),
+    "Alabaster": (
+        "Alabaster",
+        "Alabastro",
+        "Alabastro",
+        "アラバスター",
+        "설화석고",
+        "Alabaster",
+    ),
+    "Limestone": (
+        "Kalkstein",
+        "Piedra caliza",
+        "Calcare",
+        "石灰岩",
+        "석회암",
+        "Wapień",
+    ),
+    "Stone": ("Stein", "Piedra", "Pietra", "石", "석재", "Kamień"),
+    "Silver": ("Silber", "Plata", "Argento", "銀", "은", "Srebro"),
+    "Brass": ("Messing", "Latón", "Ottone", "真鍮", "황동", "Mosiądz"),
+    "Zinc": ("Zink", "Zinc", "Zinco", "亜鉛", "아연", "Cynk"),
+    "Glass": ("Glas", "Vidrio", "Vetro", "ガラス", "유리", "Szkło"),
+    "Vellum": ("Velin", "Vitela", "Velino", "ヴェラム", "벨럼", "Welin"),
+    "Wax": ("Wachs", "Cera", "Cera", "蝋", "밀랍", "Wosk"),
+    "Walnut": ("Nussbaumholz", "Nogal", "Noce", "クルミ材", "호두나무", "Orzech"),
+    "Wood": ("Holz", "Madera", "Legno", "木", "나무", "Drewno"),
+    "Canvas": ("Leinwand", "Lienzo", "Tela", "カンヴァス", "캔버스", "Płótno"),
+    "Serpentinite": (
+        "Serpentinit",
+        "Serpentinita",
+        "Serpentinite",
+        "蛇紋岩",
+        "사문암",
+        "Serpentynit",
+    ),
+    "Sandstone": ("Sandstein", "Arenisca", "Arenaria", "砂岩", "사암", "Piaskowiec"),
+    "Cast iron": ("Gusseisen", "Hierro fundido", "Ghisa", "鋳鉄", "주철", "Żeliwo"),
+    "Basalt": ("Basalt", "Basalto", "Basalto", "玄武岩", "현무암", "Bazalt"),
+    "Granite": ("Granit", "Granito", "Granito", "花崗岩", "화강암", "Granit"),
+    "Diorite": ("Diorit", "Diorita", "Diorite", "閃緑岩", "섬록암", "Dioryt"),
+    "Porphyry": ("Porphyr", "Pórfido", "Porfido", "斑岩", "반암", "Porfir"),
+    "Quartzite": ("Quarzit", "Cuarcita", "Quarzite", "珪岩", "규암", "Kwarcyt"),
+    "Flint": ("Feuerstein", "Sílex", "Selce", "燧石", "부싯돌", "Krzemień"),
+    "Photogravure": (
+        "Heliogravüre",
+        "Fotograbado",
+        "Fotoincisione",
+        "フォトグラビア",
+        "포토그라비어",
+        "Fotograwiura",
+    ),
+    "Parchment": (
+        "Pergament",
+        "Pergamino",
+        "Pergamena",
+        "羊皮紙",
+        "양피지",
+        "Pergamin",
+    ),
+    "Ormolu": (
+        "Feuervergoldete Bronze",
+        "Bronce dorado",
+        "Bronzo dorato",
+        "金銅",
+        "금동",
+        "Złocony brąz",
+    ),
+    "Copper": ("Kupfer", "Cobre", "Rame", "銅", "구리", "Miedź"),
+    "Gold": ("Gold", "Oro", "Oro", "金", "금", "Złoto"),
+    "Lead": ("Blei", "Plomo", "Piombo", "鉛", "납", "Ołów"),
+    "Diamond": (
+        "Diamant",
+        "Diamante",
+        "Diamante",
+        "ダイヤモンド",
+        "다이아몬드",
+        "Diament",
+    ),
+    "Velvet": ("Samt", "Terciopelo", "Velluto", "ベルベット", "벨벳", "Aksamit"),
+    "Clay": ("Ton", "Arcilla", "Argilla", "粘土", "점토", "Glina"),
+    "Poplar": ("Pappelholz", "Álamo", "Pioppo", "ポプラ材", "포플러", "Topola"),
+    "Oak": ("Eichenholz", "Roble", "Quercia", "オーク材", "참나무", "Dąb"),
+    "Panel": ("Holztafel", "Tabla", "Tavola", "板", "패널", "Deska"),
+    "Cardboard": ("Karton", "Cartón", "Cartone", "厚紙", "판지", "Tektura"),
+    "Paper": ("Papier", "Papel", "Carta", "紙", "종이", "Papier"),
+    "Maple": ("Ahornholz", "Arce", "Acero", "カエデ材", "단풍나무", "Klon"),
+    "Sequoia": (
+        "Mammutbaumholz",
+        "Secuoya",
+        "Sequoia",
+        "セコイア材",
+        "세쿼이아",
+        "Sekwoja",
+    ),
+    "Elm": ("Ulmenholz", "Olmo", "Olmo", "ニレ材", "느릅나무", "Wiąz"),
+    "Willow": ("Weidenholz", "Sauce", "Salice", "ヤナギ材", "버드나무", "Wierzba"),
+    "Alloy": ("Legierung", "Aleación", "Lega", "合金", "합금", "Stop metali"),
+    "Stucco": ("Stuck", "Estuco", "Stucco", "スタッコ", "스투코", "Stiuk"),
+    "Plaster ground": (
+        "Putzgrund",
+        "Enlucido",
+        "Intonaco",
+        "漆喰下地",
+        "회반죽 바탕",
+        "Tynk",
+    ),
+    "Mortar": ("Mörtel", "Mortero", "Malta", "モルタル", "모르타르", "Zaprawa"),
+    "Plasticine": (
+        "Plastilin",
+        "Plastilina",
+        "Plastilina",
+        "油粘土",
+        "유토",
+        "Plastelina",
+    ),
+    "Sanguine": ("Rötel", "Sanguina", "Sanguigna", "サンギーヌ", "상긴", "Sangwina"),
+    "Wash": ("Lavierung", "Aguada", "Acquerellatura", "淡彩", "담채", "Laweta"),
+    "Pen": ("Feder", "Pluma", "Penna", "ペン", "펜", "Pióro"),
+}
+
+# 承载物在拼接式里的形态,与单独出现时不同的才列(按 en 名)。
+# 波兰语 "na" 要方位格(płótno → na płótnie);德/西/意/日/韩的「木板」展签惯用说法
+# (Öl auf Holz / óleo sobre tabla / olio su tavola di pioppo / 銅板に油彩)。
+_SUPPORT_FORM = {
+    "de": {"Panel": "Holz"},
+    "es": {
+        "Poplar": "tabla de álamo",
+        "Oak": "tabla de roble",
+        "Walnut": "tabla de nogal",
+    },
+    "it": {
+        "Poplar": "tavola di pioppo",
+        "Oak": "tavola di quercia",
+        "Walnut": "tavola di noce",
+    },
+    "pl": {
+        "Canvas": "płótnie",
+        "Wood": "drewnie",
+        "Panel": "desce",
+        "Poplar": "desce topolowej",
+        "Oak": "desce dębowej",
+        "Walnut": "desce orzechowej",
+        "Paper": "papierze",
+        "Cardboard": "tekturze",
+        "Copper": "miedzi",
+        "Vellum": "welinie",
+        "Parchment": "pergaminie",
+    },
+    "ja": {
+        "Poplar": "ポプラ板",
+        "Oak": "オーク板",
+        "Walnut": "クルミ板",
+        "Copper": "銅板",
+    },
+    "ko": {
+        "Poplar": "포플러 패널",
+        "Oak": "참나무 패널",
+        "Walnut": "호두나무 패널",
+        "Copper": "동판",
+    },
+}
 
 
 def _scan_medium(low, keys, *, want_support):
@@ -428,16 +684,27 @@ def _humanize_medium(raw, lang):
     """
     if not raw:
         return None
+    if lang == "zh-hant":
+        from app.services.enrichment.lang_detect import _cc
+
+        return _cc("s2t").convert(_humanize_medium(raw, "zh"))
     low = raw.lower()
     _, med, span = _scan_medium(low, _SUPPORT_KEYS, want_support=False)
     rest = low[: span[0]] + " " + low[span[1] :] if span else low
     sup_kw, sup, _ = _scan_medium(rest, _SUPPORT_KEYS, want_support=True)
 
     def _t(entry):
+        if lang in _MEDIUM_I18N_LANGS and entry["en"] in _MEDIUM_I18N:
+            return _MEDIUM_I18N[entry["en"]][_MEDIUM_I18N_LANGS.index(lang)]
         return entry.get(lang) or entry.get("en")
 
     if med and sup:
-        s = _ZH_ATTR.get(sup_kw, _t(sup)) if lang == "zh" else _t(sup).lower()
+        if lang == "zh":
+            s = _ZH_ATTR.get(sup_kw, _t(sup))
+        elif sup["en"] in _SUPPORT_FORM.get(lang, {}):
+            s = _SUPPORT_FORM[lang][sup["en"]]
+        else:  # 德语名词首字母大写,不能 lower
+            s = _t(sup) if lang == "de" else _t(sup).lower()
         return _MEDIUM_JOIN.get(lang, _MEDIUM_JOIN["en"]).format(m=_t(med), s=s)
     if med:
         return _t(med)
