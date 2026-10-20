@@ -127,3 +127,18 @@ def test_rollback_failure_still_refuses(r):
             return self.real.pipeline()
 
     assert _charge("u1", None, 8, redis=FlakyRollback(r)) == "user"
+
+
+def test_same_item_charged_once_per_day(r):
+    assert _charge("u1", "1.2.3.4", 8, redis=r, item="gen:Q1") is None
+    assert _charge("u1", "1.2.3.4", 8, redis=r, item="gen:Q1") is None
+    assert _used(r, "u", "u1") == 8
+    assert _charge("u1", "1.2.3.4", 3, redis=r, item="tr:Q1:de") is None
+    assert _used(r, "u", "u1") == 11  # 别的动作照扣
+
+
+def test_rejected_item_is_not_marked_paid(r):
+    """超限被拒的那次不算付过:否则第二天之前再点同一件会白放行。"""
+    r.set(f"lazy:u:u1:{lazy._today()}", CAP_PER_USER)
+    assert _charge("u1", None, 8, redis=r, item="gen:Q9") == "user"
+    assert _charge("u1", None, 8, redis=r, item="gen:Q9") == "user"
