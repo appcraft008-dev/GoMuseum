@@ -370,13 +370,8 @@ def generate_object(
                             name_zh = None
                     art.name_zh = name_zh
                 try:
-                    # 轴心同 name_en:不拿作品行署名(可能是合作者)
                     art.name_i18n = _fill_i18n(
-                        art.name_i18n,
-                        artist_name_en(aqid, alabels, o.artist_en),
-                        alabels,
-                        target_langs,
-                        translator,
+                        art.name_i18n, o.artist_en, alabels, target_langs, translator
                     )
                 except Exception:
                     pass

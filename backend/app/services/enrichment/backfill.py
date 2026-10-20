@@ -710,8 +710,8 @@ def backfill_display_names(
     幂等:已齐语种的对象/作者跳过。limit=只处理前 N 件(staging 护栏小样本);
     qids=只处理这几件(按 qid 补收录,别顺带碰全馆)。
     契约:stub 一进目录就该有完整多语显示名。"""
+    from app.services.enrichment.material import artist_name_en as name_en_for
     from app.services.enrichment.material import (
-        artist_name_en as name_en_for,
         fetch_artist_i18n_facts,
         fetch_wikidata_labels,
     )
