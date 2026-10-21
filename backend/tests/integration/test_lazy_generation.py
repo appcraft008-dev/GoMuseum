@@ -795,3 +795,36 @@ def test_maybe_trigger_records_want_during_first_phase(session):
         redis=r,
     )
     assert r.smembers("lazy:fanout_want:Q1") == {"zh"}
+
+
+def test_slots_full_retries_do_not_burn_user_quota(session):
+    """全进程生成名额满时后台放弃并清锁,App 每 4s 轮询又点火一次。
+    曾经每次都扣 8 段:21 次轮询(~80s)后用户当天额度用尽,作品一个字没生成。"""
+    from app.services.enrichment import lazy
+    from app.services.enrichment.lazy import WEIGHT_GENERATION, _today
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+
+    def schedule(fn, *a):
+        fn(*a, session_factory=lambda: session, close=False)
+
+    lazy._SEM.acquire()
+    lazy._SEM.acquire()  # 另外两件正在生成
+    try:
+        for _ in range(40):
+            reason = maybe_trigger(
+                session,
+                "Q1",
+                schedule=schedule,
+                environment="staging",
+                language="zh",
+                user_id="u3",
+                ip="museum-wifi",
+                redis=r,
+            )
+            assert reason is None
+    finally:
+        lazy._SEM.release()
+        lazy._SEM.release()
+    assert r.get(f"lazy:u:u3:{_today()}") == str(WEIGHT_GENERATION)
+    assert r.get(f"lazy:ip:museum-wifi:{_today()}") == str(WEIGHT_GENERATION)

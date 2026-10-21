@@ -73,6 +73,19 @@ def fanout_pending(obj: MuseumObject) -> list[str]:
     return list(f.get("pending") or [])
 
 
+def fanout_stale(obj: MuseumObject) -> bool:
+    """有补语言标记但心跳已超时 = 进程中途死了(部署重启等);正常结束会清标记。"""
+    f = (obj.attributes or {}).get("lazy_fanout")
+    if not f:
+        return False
+    try:
+        return (
+            datetime.now(timezone.utc) - datetime.fromisoformat(f["at"]) >= _FANOUT_TTL
+        )
+    except (KeyError, TypeError, ValueError):
+        return True
+
+
 def generating_for(obj: MuseumObject, language) -> bool:
     """端点 generating 字段:整件在懒生成/懒翻译,或这门语言还在补语言阶段的 pending 里。
     ⚠️ 必须是"这门语言整门翻完前一直 true":App 在 false 时 keepAlive 缓存结果
@@ -278,17 +291,35 @@ def _museum_languages(db, obj: MuseumObject) -> list[str]:
 
 
 def _fanout_langs(db, obj: MuseumObject, langs) -> list[str]:
-    """要补的语言 = 配置语言集里这件**一行都还没有**的(en 轴心除外)。幂等,跑两次不重复花钱;
-    有 needs_review 行的语言也不补(不碰已有段)。"""
-    from app.models.content import ObjectContentSection
+    """要补的语言 = 配置语言集里这件还有 en 段/问答**没有已发布版本**的(en 轴心除外)。
+    含半途失败(只有部分段)和被闸挡成 needs_review 的语言:补语言一件只跑一次(生成后/
+    中断后恢复),重试的成本有界;按请求懒翻译的判据(_has_missing_section)仍把 needs_review
+    算有,不在这里改。幂等:全发布后返回 []。"""
+    from app.models.content import ObjectContentSection as S
+    from app.models.content import ObjectSuggestedQuestion as Q
 
-    have = {
+    def _pub(model, col, lang):
+        return {
+            c
+            for (c,) in db.query(col).filter(
+                model.object_id == obj.id,
+                model.language == lang,
+                model.status == "published",
+                model.body.isnot(None) if model is S else model.answer.isnot(None),
+            )
+        }
+
+    en_secs = _pub(S, S.section_code, "en")
+    en_has_qa = bool(_pub(Q, Q.id, "en"))
+    return [
         lang
-        for (lang,) in db.query(ObjectContentSection.language)
-        .filter(ObjectContentSection.object_id == obj.id)
-        .distinct()
-    }
-    return [lang for lang in langs if lang != "en" and lang not in have]
+        for lang in langs
+        if lang != "en"
+        and (
+            en_secs - _pub(S, S.section_code, lang)
+            or (en_has_qa and not _pub(Q, Q.id, lang))
+        )
+    ]
 
 
 def _fanout(
@@ -309,6 +340,8 @@ def _fanout(
     o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
     if o is None or o.content_status != "ready" or not _has_published(db, o.id, "en"):
         return {}
+    if (o.attributes or {}).get("lazy_fanout") and not fanout_stale(o):
+        return {}  # 另一路补语言正在跑(并发的恢复请求);标记过期才接手
     remaining = _fanout_langs(
         db, o, langs if langs is not None else _museum_languages(db, o)
     )
@@ -318,6 +351,7 @@ def _fanout(
         logger.warning("lazy fanout: 当日补语言预算用尽,跳过 qid=%s", qid)
         return {}
     if not _FANOUT_SEM.acquire(blocking=False):
+        logger.info("lazy fanout: 名额已满,跳过 qid=%s", qid)
         return {}
     # acquire 后紧跟 try:之后任何一步抛异常都要还名额、清标记
     t0 = datetime.now(timezone.utc)
@@ -353,6 +387,11 @@ def _fanout(
                 c = translate_object_language(
                     s, s.get(MuseumObject, oid), lang, translator, include_bio=False
                 )
+                # 判官有随机性(同一段重试多半能过):被挡的段/问答再试一次,仅此一次
+                for k, v in translate_object_language(
+                    s, s.get(MuseumObject, oid), lang, translator, include_bio=False
+                ).items():
+                    c[k] += v
                 s.commit()  # 保险:persist_* 已逐段提交,这里通常是空操作
             finally:
                 if close:
@@ -587,8 +626,12 @@ def _alert_fail_open() -> None:
     )
 
 
-def _charge(user_id, ip, weight: int, redis=None) -> str | None:
+def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
     """按账号、按 IP 扣当日额度。None=放行;"user"/"ip"=该层超限(已全部回滚)。
+
+    item(如 "gen:Q1"/"tr:Q1:de"):同一人同一动作当天只扣一次。生成名额满时后台放弃并清锁,
+    App 每 4s 轮询又点火一次;按次扣的话 ~80s 就把用户当天额度烧光而一个字没生成(10-20 复现)。
+    ponytail: 失败后当天重试也不再扣,只靠全站上限兜底;失败率真高了再按结果退额度。
 
     先 INCRBY 再判断:INCRBY 原子,两个 worker 并发也不会越线(先查后加会)。
     超限就把本次加上的全部退回,被拒的请求不占额度。
@@ -608,7 +651,10 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
         )
         _alert_fail_open()
         return None
+    paid = f"lazy:paid:{user_id or ip}:{item}:{_today()}" if item else None
     try:
+        if paid and not r.set(paid, 1, nx=True, ex=_CAP_TTL_S):
+            return None  # 今天已为这件付过
         pipe = r.pipeline()
         for _, key, _cap in layers:
             pipe.incrby(key, weight)
@@ -632,6 +678,8 @@ def _charge(user_id, ip, weight: int, redis=None) -> str | None:
         pipe = r.pipeline()
         for _, key, _cap in layers:
             pipe.decrby(key, weight)
+        if paid:
+            pipe.delete(paid)  # 被拒不算付过
         pipe.execute()
     except Exception:
         logger.exception("lazy caps: rollback failed, keys over-counted by %s", weight)
@@ -695,6 +743,8 @@ def maybe_trigger(
     )
     if language and language != "en" and generating_for(o, language):
         record_fanout_want(qid, language, redis)  # 补语言阶段先补有人在等的语言
+    if o.content_status == "ready" and fanout_stale(o) and not lock_active(o):
+        schedule(_run_fanout, qid)  # 补语言进程中途死了(如部署重启):接着补
     if not (wants_generation or wants_translation):
         return
     if wants_generation and imageless_stub(db, o):
@@ -711,13 +761,17 @@ def maybe_trigger(
         return "daily_cap"
     if wants_generation:
         if try_acquire_lock(db, o):
-            if not exempt and _charge(user_id, ip, WEIGHT_GENERATION, redis):
+            if not exempt and _charge(
+                user_id, ip, WEIGHT_GENERATION, redis, item=f"gen:{qid}"
+            ):
                 _clear_lock(db, o)
                 return "daily_cap"
             schedule(run_lazy_generation, qid, language)
         return
     if try_acquire_lock(db, o, require_status=("ready",)):
-        if not exempt and _charge(user_id, ip, WEIGHT_TRANSLATION, redis):
+        if not exempt and _charge(
+            user_id, ip, WEIGHT_TRANSLATION, redis, item=f"tr:{qid}:{language}"
+        ):
             _clear_lock(db, o)
             return "daily_cap"
         schedule(run_lazy_translation, qid, language)

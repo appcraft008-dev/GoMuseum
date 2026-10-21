@@ -547,8 +547,25 @@ class AuthService:
         db.commit()
         db.refresh(user)
 
-        # 绑定设备指纹，新设备初始化默认额度
-        db.add(UserBenefits(user_id=str(user.id), device_id=device_id))
+        # 绑定设备指纹。该设备已有断链行(删号后留下的 / 先匿名用过的)就接上它,
+        # 剩余次数照旧;多行取剩得最少的。只有真正的新设备才发默认额度。
+        orphan = (
+            db.query(UserBenefits)
+            .filter(
+                UserBenefits.device_id == device_id,
+                UserBenefits.user_id.is_(None),
+            )
+            .order_by(
+                UserBenefits.recognition_quota + UserBenefits.referral_bonus_quota
+            )
+            .first()
+            if device_id
+            else None
+        )
+        if orphan:
+            orphan.user_id = str(user.id)
+        else:
+            db.add(UserBenefits(user_id=str(user.id), device_id=device_id))
         # 可观测:新游客账号=发出一份免费额度。刷额度的形态是"同 IP 大量新游客",
         # 靠这条在 ops_report 里看得见,而不是等收入对不上才发现。
         try:
@@ -738,8 +755,10 @@ class AuthService:
         - **Purchase 保留但匿名化**。财务记录有会计/税务留存义务,不能删;
           但 receipt_payload 属个人数据,清空;user_id 换成墓碑值切断关联。
 
-        ⚠️ 已知取舍:删号重注册会拿到新的免费额度(新账号=新额度)。
-        这条与"换 device_id 刷额度"同源,靠 Play Integrity 才能根治,MVP 接受。
+        - **额度行断链不删**:带设备号的 user_benefits 行清掉 user_id 与已解锁作品清单,
+          留设备号与剩余次数 —— 否则同一设备再游客登录查不到旧行,又发一份免费额度。
+          隐私政策已写明为防滥用保留设备标识。堵不住的是换设备号(恢复出厂),
+          那要靠 Play Integrity。
         """
         from app.models.auth_token import AuthToken
         from app.models.feedback import Feedback
@@ -803,6 +822,9 @@ class AuthService:
             p.user_id = tomb
             p.receipt_payload = None  # 个人数据清除,金额/时间等财务字段保留
 
+        db.query(UserBenefits).filter(
+            UserBenefits.user_id == uid, UserBenefits.device_id.isnot(None)
+        ).update({"user_id": None, "free_audio_qids": None}, synchronize_session=False)
         db.query(UserBenefits).filter(UserBenefits.user_id == uid).delete(
             synchronize_session=False
         )

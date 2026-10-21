@@ -391,3 +391,55 @@ def test_export_includes_photo_metadata_and_link(client_db, monkeypatch):
     assert p["photo_stored"] is True
     assert p["photo_url"] == "https://signed/recognition-feedback/a.jpg?e=3600"
     assert "image_key" not in p
+
+
+def _guest(client, device):
+    resp = client.post("/api/v1/auth/guest", json={"device_id": device})
+    assert resp.status_code == 200, resp.text
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+def _quota(client, headers, device):
+    return client.get(
+        f"/api/v1/payment/benefits?device_id={device}", headers=headers
+    ).json()["total_quota"]
+
+
+def test_游客删号再游客登录不重发免费额度(client):
+    """删号曾把 user_benefits 整行删掉,同一设备再游客登录查不到旧行就新发一份额度。"""
+    h = _guest(client, "dev-del")
+    assert (
+        client.post("/api/v1/payment/consume?device_id=dev-del", headers=h).status_code
+        == 200
+    )
+    left = _quota(client, h, "dev-del")
+    assert client.delete("/api/v1/auth/me", headers=h).status_code == 204
+
+    h2 = _guest(client, "dev-del")
+    assert _quota(client, h2, "dev-del") == left
+
+    # 删号断链:剩下的设备行不再指向任何人,也不留已解锁作品清单
+    db = next(app.dependency_overrides[get_db]())
+    rows = db.query(UserBenefits).filter(UserBenefits.device_id == "dev-del").all()
+    assert len(rows) == 1 and rows[0].free_audio_qids is None
+
+
+def test_删号断链的设备行只留额度不留作品清单(client):
+    h = _guest(client, "dev-qids")
+    db = next(app.dependency_overrides[get_db]())
+    row = db.query(UserBenefits).filter(UserBenefits.device_id == "dev-qids").one()
+    row.free_audio_qids = ["Q12418"]
+    db.commit()
+    assert client.delete("/api/v1/auth/me", headers=h).status_code == 204
+    db.expire_all()
+    row = db.query(UserBenefits).filter(UserBenefits.device_id == "dev-qids").one()
+    assert row.user_id is None and row.free_audio_qids is None
+
+
+def test_先匿名用过再游客登录不多发一份(client):
+    """匿名请求按设备建的行(user_id 为空),游客登录要接上它而不是另建满额新行。"""
+    db = next(app.dependency_overrides[get_db]())
+    db.add(UserBenefits(device_id="dev-anon", recognition_quota=2))
+    db.commit()
+    h = _guest(client, "dev-anon")
+    assert _quota(client, h, "dev-anon") == 2
