@@ -1,9 +1,9 @@
 # 弹性可扩容架构 设计
 
 - 日期：2026-10-21
-- 状态：v5。已按 Fable 四轮独立评审修订，待用户审阅
+- 状态：v6。已按 Fable 五轮独立评审修订，待第六轮复核（§3.3）和用户审阅
 - 来源：10-20 staging 多用户压测（backlog #1041），以及 10-20/21 brainstorm 的逐段确认
-- 评审处理记录：v1→v2 见 §13.1，v2→v3 见 §13.2，v3→v4 见 §13.3，v4→v5 见 §13.4
+- 评审处理记录：v1→v2 见 §13.1，v2→v3 见 §13.2，v3→v4 见 §13.3，v4→v5 见 §13.4，v5→v6 见 §13.5
 
 ## 0. 目标与原则
 
@@ -241,39 +241,42 @@ RETURNING j.*;
 
 **作者行等共享实体（纪律 37）：**
 
-作者行（`artists`）上有 `bio`、`name_i18n`、`nationality_i18n`、`notable_works_i18n` 这几个多语言 JSONB 字段，同时会被两类任务写：首屏的作者块（pipeline.py:314-432），以及翻译任务补写作者简介。
+`artists` 行由所有引用这位作者的作品共用，会被多个任务并发写入。v6 的做法：**所有在线写入都走同一个小函数，用行锁、ORM 赋值、只补缺**。这样不写原生 SQL 合并语句，音频损失闸也能照常看见每一次写入。v5 的原生 SQL 方案已作废：闸只挂在 ORM 的 `before_flush` 上，原生 SQL 会绕过它，既不拦截也不记损失账（database.py:62-74，audio_guard 的 docstring 里也写明「管不到批量语句」）。
 
-- **网络调用放在锁外。** 作者块分两步执行：
-  1. 不持锁：完成所有网络调用（`generate_artist_bio`、Wikidata 标签、`fill_artist_i18n_facts`、简介翻译），结果先放在内存里。
-  2. 持锁（`pg_advisory_xact_lock(hashtext(artist_qid))`）：重读作者行，只补缺地合并写入，**然后马上提交**，不拖到 pipeline.py:541。
-- 持锁期间只有几条 SQL，耗时是毫秒级，不会碰到 `statement_timeout=30s`。
-- 同一位作者的多个首屏会排队等锁，但只等几毫秒。
-- **按字段的结构分别写合并 SQL**（以 models/artist.py 为准）。首屏和翻译任务都用这一套，不再用 ORM 整块覆盖：
+**`locked_artist(db, qid) -> Artist`**（新增，放在 `app/services/artist_write.py`）
 
-  | 字段 | 结构 | 判断「缺失」的条件 |
-  |---|---|---|
-  | `bio`、`name_i18n`、`nationality_i18n` | `{lang: str}` | `NULLIF(f->>:lang, '') IS NULL` |
-  | `notable_works_i18n` | `{lang: [str]}` | `jsonb_typeof(f->:lang) IS DISTINCT FROM 'array' OR jsonb_array_length(f->:lang) = 0`（空列表也算缺失，与现有的真值判断一致） |
+- 新建作者行：`postgresql.insert(Artist).values(qid=…).on_conflict_do_nothing()`（SQLite 按方言分支处理，写法同 `llm_usage.py`）。
+- 重读并加锁：`db.query(Artist).filter_by(qid=qid).with_for_update().populate_existing().one()`。
+  - `populate_existing` 让会话里缓存的旧对象被数据库的最新值覆盖，不会拿到旧快照。
+  - 拿到的是行锁，同一行的其他写入者会排队。不再用 advisory lock：行锁已经够用，也少一个可能死锁的地方。
+- 函数本身**不提交**。调用方的规则是：拿到锁之后不能再发起任何网络调用；在 Python 里只补缺地赋值完，**立即提交**，提交时释放锁。持锁时间是毫秒级，远低于 `statement_timeout=30s`。
 
-  ```sql
-  -- 通用写法：f 为字段名，:v 由调用方传 json.dumps(值)
-  UPDATE artists SET f = (CASE WHEN jsonb_typeof(f)='object' THEN f ELSE '{}'::jsonb END)
-                         || jsonb_build_object(:lang, CAST(:v AS jsonb))
-  WHERE qid = :q AND <上表中的缺失条件>;
-  ```
+**规则：先把网络上的事做完，再加锁写入。** 所有要写的内容（作者简介、多语言名字、国籍、代表作、各语言翻译）都先在锁外算好，放在内存里。加锁后，对**刚刚重读出来的值**判断缺失，只补缺失的部分：
+  - 字符串：空串和 None 都算缺失。
+  - 列表：空列表和 None 都算缺失。
+  - dict 字段：先确认是 dict，JSON null 按空 dict 处理。
+  - 判断「缺失」用的是现有代码的真值判断方式，保持一致。
 
-  - 第三轮实测：`'null'::jsonb || …` 得到的是数组，所以要用 `jsonb_typeof` 判断类型。
-  - 写完后对 ORM 对象执行 `expire`。
-  - `fill_artist_i18n_facts` 现在返回整张新 dict，要改成只返回新增的键，再由持锁段逐个键合并。
-- **标量列**：`name_en`、`name_zh`、`birth`、`death`、`nationality`、`notable_works` 在持锁段里各自执行 `UPDATE … WHERE col IS NULL OR col = ''` 补缺。
-- **修复坏值（保留现有行为，做成显式分支）**：
-  - 作者简介 `en` 位是坏值时（老 bug 留下的中文等，由 `bio_en_usable` 判定），现有代码会重新生成并覆盖，同时清掉这门语言的作者音频。这个行为保留，但改用 compare-and-set：`UPDATE … WHERE bio->>'en' = :读到的旧坏值`。
-  - 同一条语句里，同步删除 `bio_audio[lang]` 和 `bio_audio_engine[lang]`。
-  - 按纪律 37，这是「可能让作者音频失效」的写入，走音频损失闸。worker 和 web 一样处于 record-only 模式：只记账，由每日盘点兜底。
-  - 只补缺的写入不会让任何音频失效；只有这个分支会。
+**写入点清单**（第五轮评审逐一列出，W1–W13）：
 
-- **新建作者：** 用 `postgresql.insert(Artist).on_conflict_do_nothing()`，然后再查出这一行。测试跑在 SQLite 上，按方言分支处理，做法与 `llm_usage.py` 相同。
-- 离线脚本调用的是同一批函数，也一起受益。
+| # | 位置 | v6 的处理 |
+|---|---|---|
+| W1 | pipeline `_enrich_artist_and_titles` 新建作者 | 用 `locked_artist` 新建；删除原来的 `db.add(Artist(...))` |
+| W2–W5 | 同上：`name_en`、`name_zh`、`birth`、`death`、`nationality`、`notable_works` | 加锁后对重读值补缺。`notable_works` 是 JSONB 列表，SQL NULL、JSON null、`[]` 都算缺失 |
+| W4 | 同上：`name_i18n = _fill_i18n(...)` | `_fill_i18n` 在锁外算出候选值，加锁后只合并缺失的语言 |
+| W6、W7 | 同上：作者简介英文是坏值时重新生成，并覆盖 `target_langs` 各语言、清掉这些语言的作者音频 | **保留现有行为，不改语义**。新的简介文本在锁外生成好；加锁重读后，如果英文仍然是那条坏值（compare-and-set），就用 ORM 覆盖各语言简介，并清掉对应语言的 `bio_audio`/`bio_audio_engine`。走 ORM 写入，**音频损失闸能看见**：脚本进程里没有额度就拦下（`AudioLossBlocked`）；web/worker 是 record-only，写入并记 `audio_invalidations`，孤儿 GC 会保留这些 key。重读后如果英文已经被别人修好，本次不写 |
+| W6' | 作者简介英文缺失（不是坏值） | 走补缺，不走 compare-and-set |
+| W8 | `fill_artist_i18n_facts`：`nationality_i18n`、`notable_works_i18n` | 补缺模式：锁外算好，加锁后只合并缺失的语言。**`--refresh-langs` 显式刷新模式保持不变**，仍然直接用 ORM 替换已有值，由闸管控 |
+| W9 | pipeline 里补写作者简介的各语言 | 锁外翻译好，加锁后只补缺 |
+| W10 | `backfill.fill_artist_bio` | 改为「锁外翻译，再调用 `locked_artist` 补缺」。它有三个调用方（backfill ×2、lazy），调用方都在调用后立即提交，没有其他待提交的写入，这一点要在实施时逐个核实 |
+| W11 | `lazy_audio.get_or_make_artist_bio_audio_url` 写 `bio_audio`/`bio_audio_engine` | 合成完成后，`locked_artist` 重读。**作者简介这门语言的文本没变**才写入，只合并自己这门语言的 key。文本已经变了，说明这段音频是用旧文本合成的，丢弃不写，交给孤儿 GC 清理。两种语言并发合成时，两个 key 都会保留 |
+| W12 | `backfill_display_names`（离线脚本，整块赋值） | 不在本设计范围。离线脚本由人工执行，走 ORM，闸能看见 |
+| W13 | `audio_ingest_cli`、`rescan_language` 写 `bio_audio` | 不在本设计范围。离线脚本走 ORM，闸能看见 |
+
+**提交边界**：
+
+- 首屏里的作者块位于 guide 落库之后。guide 的 `persist_gated_sections` 内部已经提交过一次，所以作者块这里立即提交，只会把作者行的改动带进去。
+- 调用 `locked_artist` 的代码，从拿到锁到提交之间，不能有其他 ORM 对象的未提交改动。测试里用断言检查这一点：拿锁时 `db.dirty` 必须为空。
 
 ### 3.4 worker 进程
 
@@ -738,12 +741,21 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
 
 **纪律 37**
 
-- 两个首屏同时遇到同一位新作者时，不会主键冲突，作者行也不会丢更新。
-- 首屏的作者块和 9 个翻译任务同时写同一位作者时，最终各字段的所有语言都在。
-- 作者块持锁期间不发起任何网络调用（测试中用会阻塞的假网络验证，锁等待时间 < 1 秒）。
-- `bio` 是 JSON null 时，补写后得到对象，而不是数组。
-- `notable_works_i18n` 按列表补写；已有空列表时视为缺失。
-- 坏值 `en` 简介会被 compare-and-set 修好，同时清掉对应的作者音频并记入音频损失账；并发时只有一方修成功。
+- 两个首屏同时遇到同一位新作者：不出现主键冲突，作者行不丢更新。
+- 首屏的作者块和 9 个翻译任务同时写同一位作者：最后各字段的所有语言都在。
+- 持锁期间不发起网络调用：用会阻塞的假网络测试，锁等待 < 1 秒；拿锁时 `db.dirty` 为空。
+- 先把 `art` 加载进会话，再由另一个会话修改 bio，然后跑作者块：断言另一个会话的修改没有被回滚。
+- `bio`、`bio_audio`、`bio_audio_engine` 各自为 SQL NULL、JSON null、`{}` 时，补缺和修坏值都不报错。
+- `notable_works` 为 SQL NULL、JSON null、`[]` 时会被补上；非空时不会被覆盖。`notable_works_i18n` 的空列表视为缺失。
+- 修坏值：
+  - 脚本进程里，额度为 0 时抛 `AudioLossBlocked`，数据库无任何改动。
+  - web 或 worker 的 record-only 模式下，写入成功，并且 `audio_invalidations` 里有对应记录。
+  - 两个进程并发修同一条坏值时，只有一方写入。
+  - 作者简介英文是缺失而不是坏值时，走补缺。
+- `lazy_audio`：
+  - 合成期间英文被修坏值改写了：不挂上用旧文本合成的音频。
+  - 两种语言并发合成：两个 key 都在。
+- `names --refresh-langs` 仍能替换已有值，并且由闸管控。
 - resume：绕过 exists 早退；已有的深度段不传给 canonical；已有英文问答时，请求语言的问答来自翻译。
 - 9 个翻译任务并发补写简介时，最后 9 门语言都在。
 - 简介值为 `""` 或 `null` 时会被视为缺失并补写。
@@ -842,4 +854,18 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
 | 9 translate_object_language 遇异常中断整门 | 改：外面包逐段容错，§3.4 |
 | 10 问答和翻译的先后顺序 | 改：先补英文问答，再跑翻译；接受请求语言问答来自翻译，§3.4 |
 | 11 行号引用有偏差 | 实施计划里改按函数名引用 |
+
+### 13.5 v5 → v6（第五轮，§3.3）
+
+| 评审条目 | 处理 |
+|---|---|
+| 1 修坏值用原生 SQL 绕过了音频损失闸（阻断） | 改：放弃原生 SQL 合并方案，统一改为「行锁 + `populate_existing` + ORM 只补缺」，闸照常生效 |
+| 2 JSONB 标量列写成 `= ''` 会报错（阻断） | 改：缺失判断移到 Python 里做，`notable_works` 的三种空值都算缺失 |
+| 3 修坏值时其他语言怎么处理没写 | 改：保留现有行为（覆盖 target_langs，清掉对应音频，走闸），并区分「缺失」和「坏值」 |
+| 4 漏掉了 lazy_audio 的写入 | 改：纳入 W11，写入前检查文本一致 |
+| 5 重读和 expire 的时机 | 改：重读用 `populate_existing`，拿锁时 `db.dirty` 必须为空 |
+| 6 `--refresh-langs` 和 `backfill_display_names` | 改：refresh 模式保持 ORM 不变；离线写入点声明为不在本设计范围 |
+| 7 fill_artist_bio 的提交边界 | 改：W10 写明，实施时逐个核实三个调用方 |
+| 8 advisory lock 多余 | 改：删除，只用行锁 |
+| 测试清单 | 补充评审给出的 7 条 |
 
