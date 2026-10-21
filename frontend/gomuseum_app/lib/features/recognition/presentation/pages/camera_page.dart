@@ -820,7 +820,8 @@ class _CameraPageState extends ConsumerState<CameraPage>
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          // 底边留 40:按钮离屏幕底边太近,单手持握时拇指够不着快门(10-21 真机)。
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
