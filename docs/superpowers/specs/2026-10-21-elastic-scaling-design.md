@@ -1,9 +1,9 @@
 # 弹性可扩容架构 设计
 
 - 日期：2026-10-21
-- 状态：v4。已按 Fable 三轮独立评审修订，等待第四轮评审（只审 P2）和用户审阅
+- 状态：v5。已按 Fable 四轮独立评审修订，待用户审阅
 - 来源：10-20 staging 多用户压测（backlog #1041），以及 10-20/21 brainstorm 的逐段确认
-- 评审处理记录：v1→v2 见 §13.1，v2→v3 见 §13.2，v3→v4 见 §13.3
+- 评审处理记录：v1→v2 见 §13.1，v2→v3 见 §13.2，v3→v4 见 §13.3，v4→v5 见 §13.4
 
 ## 0. 目标与原则
 
@@ -145,7 +145,7 @@ prod 上已有的死代码不在本设计范围内：`/chat/ask` 开头就直接
 
 所有函数都接收调用方传入的 `db`，**内部不提交事务**，由调用方决定事务边界（§3.6 的「无空窗」依赖这一点）。
 
-**`enqueue(db, kind, qid, language, priority, lang_priority=None, mark_rerun=False) -> (Job | None, inserted: bool)`**
+**`enqueue(db, kind, qid, language, priority, lang_priority=None, mark_rerun=False, from_fanout=False) -> (Job | None, inserted: bool)`**
 
 `mark_rerun` 只在首屏 finish 时为补齐任务传 true，轮询路径一律传 false。
 
@@ -153,10 +153,12 @@ prod 上已有的死代码不在本设计范围内：`/chat/ask` 开头就直接
    - 已有 `running` 的任务：抬高正在跑的任务的优先级没有意义。没有传 `mark_rerun=True` 时，不写库，直接返回 `(job, False)`。
    - 已有 `queued` 的任务，并且优先级不低于本次请求：不写，直接返回。
    - 这一步是为了避免每 4 秒一次的轮询都写库。
-2. **不和首屏重复**：`kind=translate`，并且目标语言等于本件活跃首屏任务的 `lang_priority` 时，直接返回 `(首屏任务, False)`，不入队。这门语言由首屏自己翻译（pipeline.py:507）。
-3. **失败冷却**：同一个 (kind, qid, language) 在 `JOB_FAIL_COOLDOWN_H`（默认 6）小时内有过 `failed`，就返回 `(None, False)`，调用方按「暂不可用」处理（§3.6）。
+2. **不和首屏重复**（只针对轮询路径；首屏 finish 时的补齐入队传 `from_fanout=True`，跳过这一步）：`kind=translate`，并且目标语言等于本件活跃首屏任务的 `lang_priority` 时，直接返回 `(首屏任务, False)`，不入队。这门语言由首屏自己翻译（pipeline.py:507）。
+3. **没有依赖就不入队**：`kind=translate`，本件既没有活跃的首屏任务，也没有任何已发布的英文段时，返回 `(None, False)`。判断条件和清理线程取消孤儿任务时用的是同一个，避免出现「入队→被取消→再入队」的反复。
+4. **预算**：只有轮询路径（优先级 10）在预算耗尽时返回 `daily_cap`。补齐入队和 `mark_rerun` 不受预算影响，照常入队，什么时候执行由 claim 的预算条件决定。这样预算恢复后，之前排队的工作不会丢。
+5. **失败冷却**：同一个 (kind, qid, language) 在 `JOB_FAIL_COOLDOWN_H`（默认 6）小时内有过 `failed`，就返回 `(None, False)`，调用方按「暂不可用」处理（§3.6）。
    - 这是一处行为变化：冷却期内，App 上的「重试」也不会触发生成。
-4. **写入**：
+6. **写入**：
    ```sql
    INSERT INTO generation_jobs (kind, qid, language, lang_priority, priority, status)
    VALUES (:kind, :qid, :lang, :lp, :prio, 'queued')
@@ -232,7 +234,7 @@ RETURNING j.*;
 | 首屏生成 | web 的 BackgroundTasks 调用 `maybe_trigger` | `enqueue(first_screen, qid, '', 10, lang_priority=请求语言)` | 10 |
 | 首屏进行中，另一种语言的用户打开 | 首屏完成后再插队 | `enqueue(translate, qid, 他的语言, 10)`，英文主讲解一发布就开跑 | 10 |
 | 已有内容的作品缺少请求语言（懒翻译） | BackgroundTasks | `enqueue(translate, qid, lang, 10)` | 10 |
-| 首屏完成后补齐其余语言 | 首屏线程接着跑 fanout | 每门缺失的语言 `enqueue(translate, qid, lang, 0, mark_rerun=True)`，与首屏的 `finish(done)` 放在 **jobs 层单独开的同一个事务**里提交（`persist_gated_sections` 内部会自己 commit，不能和它混用）。如果某门语言已有 running 的翻译任务，就把它的 rerun 置为 true，确保之后发布的深度段也会被翻译 | 0 |
+| 首屏完成后补齐其余语言（**包括 `lang_priority` 这门**：首屏里它的翻译可能被闸挡下或失败，所以照样入队兜底；已经翻完的话，翻译任务会按缺口直接完成） | 首屏线程接着跑 fanout | 每门缺失的语言 `enqueue(translate, qid, lang, 0, mark_rerun=True, from_fanout=True)`，与首屏的 `finish(done)` 放在 **jobs 层单独开的同一个事务**里提交。事务内顺序：先把首屏行改成 done，再入队（`persist_gated_sections` 内部会自己 commit，不能和它混用）。如果某门语言已有 running 的翻译任务，就把它的 rerun 置为 true，确保之后发布的深度段也会被翻译 | 0 |
 | 用户浏览时缺图补图 | 后台线程，立即执行 | `enqueue(image, qid, '', 10)`，由独立的 `WORKER_IMAGE_THREADS`（默认 2）领取，不占首屏线程 | 10 |
 | 语音流式合成 | web 进程 | **不变** | — |
 | 搜索和向量索引重建 | 进程内 | **不变** | — |
@@ -246,17 +248,30 @@ RETURNING j.*;
   2. 持锁（`pg_advisory_xact_lock(hashtext(artist_qid))`）：重读作者行，只补缺地合并写入，**然后马上提交**，不拖到 pipeline.py:541。
 - 持锁期间只有几条 SQL，耗时是毫秒级，不会碰到 `statement_timeout=30s`。
 - 同一位作者的多个首屏会排队等锁，但只等几毫秒。
-- **所有作者多语言字段统一用同一种合并 SQL 写入**，首屏和翻译任务都一样，不再用 ORM 整块覆盖：
+- **按字段的结构分别写合并 SQL**（以 models/artist.py 为准）。首屏和翻译任务都用这一套，不再用 ORM 整块覆盖：
+
+  | 字段 | 结构 | 判断「缺失」的条件 |
+  |---|---|---|
+  | `bio`、`name_i18n`、`nationality_i18n` | `{lang: str}` | `NULLIF(f->>:lang, '') IS NULL` |
+  | `notable_works_i18n` | `{lang: [str]}` | `jsonb_typeof(f->:lang) IS DISTINCT FROM 'array' OR jsonb_array_length(f->:lang) = 0`（空列表也算缺失，与现有的真值判断一致） |
+
   ```sql
-  UPDATE artists SET bio = (CASE WHEN jsonb_typeof(bio)='object' THEN bio ELSE '{}'::jsonb END)
-                           || jsonb_build_object(:lang, :txt)
-  WHERE qid = :q
-    AND NULLIF((CASE WHEN jsonb_typeof(bio)='object' THEN bio ELSE '{}'::jsonb END)->>:lang, '') IS NULL;
+  -- 通用写法：f 为字段名，:v 由调用方传 json.dumps(值)
+  UPDATE artists SET f = (CASE WHEN jsonb_typeof(f)='object' THEN f ELSE '{}'::jsonb END)
+                         || jsonb_build_object(:lang, CAST(:v AS jsonb))
+  WHERE qid = :q AND <上表中的缺失条件>;
   ```
-  - 第三轮实测发现，`'null'::jsonb || …` 会得到数组，`COALESCE` 对 JSON null 不起作用，所以用 `jsonb_typeof` 判断。
-  - 写完之后，对应的 ORM 对象要 `expire`。
-  - 其他三个字段用同样的写法。
-- 只补缺意味着：已有的语言不会被改写，因此也就不会触发作者简介音频失效（pipeline.py:389-395）。
+
+  - 第三轮实测：`'null'::jsonb || …` 得到的是数组，所以要用 `jsonb_typeof` 判断类型。
+  - 写完后对 ORM 对象执行 `expire`。
+  - `fill_artist_i18n_facts` 现在返回整张新 dict，要改成只返回新增的键，再由持锁段逐个键合并。
+- **标量列**：`name_en`、`name_zh`、`birth`、`death`、`nationality`、`notable_works` 在持锁段里各自执行 `UPDATE … WHERE col IS NULL OR col = ''` 补缺。
+- **修复坏值（保留现有行为，做成显式分支）**：
+  - 作者简介 `en` 位是坏值时（老 bug 留下的中文等，由 `bio_en_usable` 判定），现有代码会重新生成并覆盖，同时清掉这门语言的作者音频。这个行为保留，但改用 compare-and-set：`UPDATE … WHERE bio->>'en' = :读到的旧坏值`。
+  - 同一条语句里，同步删除 `bio_audio[lang]` 和 `bio_audio_engine[lang]`。
+  - 按纪律 37，这是「可能让作者音频失效」的写入，走音频损失闸。worker 和 web 一样处于 record-only 模式：只记账，由每日盘点兜底。
+  - 只补缺的写入不会让任何音频失效；只有这个分支会。
+
 - **新建作者：** 用 `postgresql.insert(Artist).on_conflict_do_nothing()`，然后再查出这一行。测试跑在 SQLite 上，按方言分支处理，做法与 `llm_usage.py` 相同。
 - 离线脚本调用的是同一批函数，也一起受益。
 
@@ -287,13 +302,15 @@ RETURNING j.*;
 
 | 步骤 | 已做的判据 | resume 时的做法 |
 |---|---|---|
-| 取数（材料、看图、标题、作者解析） | `attributes` 里已有对应的键 | 已有就跳过（现有逻辑就是这样） |
+| 入口 | — | 跳过开头「已有已发布英文就返回 `skipped: exists`」的早退 |
+| 装载状态 | — | `en_published` 从数据库装载**全部**已发布的英文段（guide 加上已有的深度段），而不只是本次生成的。下游的问答 `covered`、逐语言翻译都依赖它 |
+| 取数（材料、看图、标题、作者解析） | `attributes` 里已有对应的键 | 现在 `f_lab`（多语标题）和 `f_amat`（作者材料）是无条件抓取的。resume 时改为：`attributes` 里缺 `title_i18n` 或作者材料对应的键时才抓。数据本身是幂等的，这样改只是不再白付调用费用 |
 | 英文 guide | `en/guide` 已发布 | 已有：从数据库读出 `guide_text`，不重新生成（后面的 canonical 要用它去重） |
 | 请求语言 guide | 该语言的 guide 已发布 | 已有就跳过 |
 | 作者块 | 字段是否缺失 | 本身已经是只补缺（见 §3.3） |
-| canonical（深度段） | 各段是否已有行（任何状态都算） | **只生成和送闸缺的那几段**。现在的 `generate_canonical` 一次返回全部段，要改成生成完先按缺口过滤再落库；或者把缺的段名传进去，只生成这些。已有的段不会经过 `_upsert_section`，所以不会清音频，也不会让译文降级 |
-| 翻译 | 该语言该段已发布 | **改为调用 `translate_object_language(include_bio=False)`**（backfill.py:200-236）。它本身是幂等的，只翻缺的段。首屏里原来 591-621 行那段无条件 upsert 的循环，在 resume 模式下不再使用 |
-| 问答 | 该语言已有已发布的问答 | **只为没有问答的语言生成**。`persist_suggested_questions` 会先整组删除再插入，删除时会带走已有的问答音频，所以已有问答的语言绝不能再调用它 |
+| canonical（深度段） | 各段是否已有行（任何状态都算） | **把缺的段名作为 `sections` 传给 `generate_canonical`**（content_enricher.py:103 本来就按传入的段生成，`gate.gate` 也只处理传入的段，不用改接口）。去重锚 `guide_text` 用库里已过闸的 guide body。已有的段不经过 `_upsert_section`，不会清音频，也不会让译文降级。已知代价：新补的段看不到已有深度段的内容，段与段之间的去重会弱一些 |
+| 翻译 | 该语言该段已发布 | **改为调用 `translate_object_language(include_bio=False)`**。在外面包一层逐段容错：它内部一段出错会中断整门语言，而首屏原来的做法是跳过这一段、继续下一段（backfill.py:200-236）。它本身是幂等的，只翻缺的段。首屏里原来 591-621 行那段无条件 upsert 的循环，在 resume 模式下不再使用 |
+| 问答 | 该语言已有已发布的问答 | 顺序：**先补齐英文问答，再跑翻译**；翻译会顺带把请求语言的问答也翻出来，所以请求语言的问答来自翻译，不再用 `suggest()` 直接生成。这个来源差异可以接受。**只为没有问答的语言生成**。`persist_suggested_questions` 会先整组删除再插入，删除时会带走已有的问答音频，所以已有问答的语言绝不能再调用它 |
 
 - `have` 只统计已发布的段。所以续跑或 rerun 时，needs_review 的段会被再翻一次。按「宁缺毋滥」的原则，这样做是有界的：每次续跑最多重试一次。
 - 续跑模式也用来修复存量的「只有主讲解」的半成品（backlog 筛查项）。
@@ -369,7 +386,7 @@ backlog 里的待定项 (a) 由这一节吸收。
 
 | 账 | channel | 到 100% 时 | 配置 |
 |---|---|---|---|
-| 内容生成 | generate、gate、translate、qa、vision | **停止**：worker 不领生成任务；`enqueue` 直接返回 `daily_cap` | `BUDGET_GEN_DAILY_USD=30`、`BUDGET_GEN_MONTHLY_USD=300` |
+| 内容生成 | generate、gate、translate、qa、vision | **停止**：worker 不领生成任务；用户触发的 `enqueue` 返回 `daily_cap`（补齐入队不受影响，见 §3.2） | `BUDGET_GEN_DAILY_USD=30`、`BUDGET_GEN_MONTHLY_USD=300` |
 | 语音 | tts | 只告警 | `ALERT_TTS_DAILY_USD` |
 | 识别兜底 | recognition、label | 只告警 | `ALERT_RECOG_DAILY_USD` |
 
@@ -699,6 +716,9 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
   - `priority_at` 超过 10 分钟的任务被降级；降级后用户重新打开会抬回 10，下一轮清理不会再把它降回去；
   - 首屏过闸失败后，孤儿翻译任务被置为 cancelled，`generating` 变为 false。
 - 和首屏请求语言相同的翻译不入队；只有补齐路径会置 rerun，轮询路径不会。
+- 首屏里请求语言的翻译失败后，finish 之后仍有这门语言的翻译任务。
+- 预算耗尽时，补齐入队和 rerun 照常写入，claim 不领；预算恢复后照常执行。
+- 没有已发布的英文段、也没有活跃首屏时，轮询不入队，`generating` 稳定为 false，不在 true 和 false 之间来回跳。
 - `finish`：
   - rerun 为 true 时重新排队；
   - `retry=False` 时直接置为 failed。
@@ -722,6 +742,9 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
 - 首屏的作者块和 9 个翻译任务同时写同一位作者时，最终各字段的所有语言都在。
 - 作者块持锁期间不发起任何网络调用（测试中用会阻塞的假网络验证，锁等待时间 < 1 秒）。
 - `bio` 是 JSON null 时，补写后得到对象，而不是数组。
+- `notable_works_i18n` 按列表补写；已有空列表时视为缺失。
+- 坏值 `en` 简介会被 compare-and-set 修好，同时清掉对应的作者音频并记入音频损失账；并发时只有一方修成功。
+- resume：绕过 exists 早退；已有的深度段不传给 canonical；已有英文问答时，请求语言的问答来自翻译。
 - 9 个翻译任务并发补写简介时，最后 9 门语言都在。
 - 简介值为 `""` 或 `null` 时会被视为缺失并补写。
 
@@ -803,4 +826,20 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
 | 16 被拒次数会被重试放大 | 改：按 qid 去重统计，§7 |
 | §9.2 低优先级公式漏了 k | 用户定 A：目标改为「平常 ≤5 分钟，高峰后 30 分钟清空」，§0.2、§7、§9.2 |
 | §9.2 Haiku TPM | 改：采用评审的估算（约占上限的 6%），§9.2 |
+
+### 13.4 v4 → v5（第四轮，只审 P2）
+
+| 评审条目 | 处理 |
+|---|---|
+| 1 「只补缺」和修复坏值互相冲突（阻断） | 改：保留修复坏值的行为，改用 compare-and-set，同一条语句清掉作者音频，走音频损失闸，§3.3 |
+| 2 notable_works_i18n 是列表（阻断） | 改：按字段结构分别写缺失条件，值统一用 jsonb；fill_artist_i18n_facts 改为只返回新增键；标量列单独补缺，§3.3 |
+| 3 续跑漏了入口早退和状态装载 | 改：补上这两行，§3.4 |
+| 4 canonical 的写法 | 改：只保留「传入缺的段名」，写明去重变弱的代价，§3.4 |
+| 5 「取数已有就跳过」写得不准 | 改：如实写明现状和 resume 时的条件，§3.4 |
+| 6 同一事务内补齐被「不与首屏重复」吞掉 | 改：新增 from_fanout，先置 done 再入队，lang_priority 这门也入队兜底，§3.2、§3.3 |
+| 7 预算耗尽时补齐入队和 rerun 丢失 | 改：只在用户触发的路径返回 daily_cap，§3.2、§4.1 |
+| 8 孤儿任务反复入队、取消 | 改：enqueue 和清理用同一个判断条件，§3.2 |
+| 9 translate_object_language 遇异常中断整门 | 改：外面包逐段容错，§3.4 |
+| 10 问答和翻译的先后顺序 | 改：先补英文问答，再跑翻译；接受请求语言问答来自翻译，§3.4 |
+| 11 行号引用有偏差 | 实施计划里改按函数名引用 |
 
