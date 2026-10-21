@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.app_event import AppEvent
 from app.models.feedback import Feedback
 from app.models.purchase import Entitlement, Purchase
 from app.models.recognition_event import RecognitionEvent
@@ -443,3 +444,26 @@ def test_先匿名用过再游客登录不多发一份(client):
     db.commit()
     h = _guest(client, "dev-anon")
     assert _quota(client, h, "dev-anon") == 2
+
+
+def test_删号断开使用事件里的账号与设备号但留下事件本身(client_db):
+    """app_events 带 user_id/device_id(打开作品、付费墙、购买、激活通票),
+    隐私政策写「删号后与账号断开」—— 此前删号漏了这张表。事件本身留着做产品统计,
+    只清能指回这个人的两列;别人的事件不动。"""
+    client, db = client_db
+    tokens = _register(client, "ev-del@test.com")
+    uid = tokens["user"]["id"]
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    db.add(AppEvent(name="content_viewed", user_id=uid, device_id="dev-mine"))
+    db.add(AppEvent(name="pass_activated", user_id=uid, device_id=None))
+    db.add(AppEvent(name="content_viewed", user_id="someone-else", device_id="dev-x"))
+    db.commit()
+
+    assert client.delete("/api/v1/auth/me", headers=headers).status_code == 204
+
+    db.expire_all()
+    mine = db.query(AppEvent).filter(AppEvent.user_id.is_(None)).all()
+    assert sorted(e.name for e in mine) == ["content_viewed", "pass_activated"]
+    assert all(e.device_id is None for e in mine), "还指着一台设备就不算断开"
+    other = db.query(AppEvent).filter(AppEvent.user_id == "someone-else").one()
+    assert other.device_id == "dev-x", "别人的事件不能碰"
