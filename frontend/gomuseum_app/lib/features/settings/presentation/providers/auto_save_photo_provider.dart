@@ -14,6 +14,12 @@ const String kAutoSaveRelativePath = 'Pictures/GoMuseum';
 /// 设置页开关的 UI 镜像。
 const String kAutoSavePhotoKey = 'auto_save_photo';
 
+/// 打开自动存相册前要不要先向系统要权限。Android 10(API 29)+ 走 MediaStore
+/// 写自己的照片不需要权限;而 Play 政策不许声明 READ_MEDIA_IMAGES(10-21 送审被拦),
+/// 在 13+ 上去要只会被拒、开关永远打不开。9 及以下要旧存储权限,iOS 要「加入」权限。
+bool autoSaveNeedsPermission({required bool isAndroid, required int sdkInt}) =>
+    !isAndroid || sdkInt < 29;
+
 /// 拍完是否自动把照片存进系统相册。
 ///
 /// **默认关**：往用户自己的相册里写东西必须是他主动选的。

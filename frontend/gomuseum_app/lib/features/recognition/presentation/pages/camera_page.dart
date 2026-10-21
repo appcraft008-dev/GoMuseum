@@ -147,7 +147,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
   }
 
   /// 拉「最近图库」缩略图（相册未授权/无图 → 静默留空，仅不显示缩略图条）。
+  /// Android 不显示：读相册要 READ_MEDIA_IMAGES，Play 政策不许（10-21 送审被拦）。
   Future<void> _loadRecentAssets() async {
+    if (Platform.isAndroid) return;
     final ps = await PhotoManager.requestPermissionExtend();
     if (!ps.hasAccess) return;
     final paths = await PhotoManager.getAssetPathList(
