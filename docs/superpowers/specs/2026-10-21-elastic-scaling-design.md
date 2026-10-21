@@ -690,7 +690,7 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
 | 阶段 | 内容 | 依赖 |
 |---|---|---|
 | P1 | 连接池改为配置项（默认值不变）、`max_connections` 调到 400；流式语音接口提前释放会话；记账改用独立连接池；向量检索第 ① 档；防滥用的身份分档；slowapi 改存 Redis（含降级）；nginx 限流；`TTS_CONCURRENCY`；语音合成槽位和条件落库（§6） | 无 |
-| P2 | 补记账、价目表、三笔账；任务表和 worker；**`generate_object` 续跑模式**；作者块串行化和简介原子补写；`chat()` 统一处理 429；回滚开关；**worker 存活告警**；被拒打开次数的记录 | P1 |
+| P2 | 补记账、价目表、三笔账；任务表和 worker；**`generate_object` 续跑模式**；作者行写入统一走 `locked_artist`（行锁 + ORM 只补缺，§3.3）；`chat()` 统一处理 429；回滚开关；**worker 存活告警**；被拒打开次数的记录 | P1 |
 | P2b | `queue_position` / `eta_seconds` | P2；与前端一起排期 |
 | P3 | recognizer 容器、nginx 分流、recognizer 线程池和连接池、staging 资源上限 | P1 |
 | P4 | 其余 ops-check 项、ops_report | P2 |
