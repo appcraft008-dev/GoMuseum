@@ -1,9 +1,9 @@
 # 弹性可扩容架构 设计
 
 - 日期：2026-10-21
-- 状态：v6。已按 Fable 五轮独立评审修订，待第六轮复核（§3.3）和用户审阅
+- 状态：v7。已按 Fable 六轮独立评审修订，待用户审阅
 - 来源：10-20 staging 多用户压测（backlog #1041），以及 10-20/21 brainstorm 的逐段确认
-- 评审处理记录：v1→v2 见 §13.1，v2→v3 见 §13.2，v3→v4 见 §13.3，v4→v5 见 §13.4，v5→v6 见 §13.5
+- 评审处理记录：v1→v2 见 §13.1，v2→v3 见 §13.2，v3→v4 见 §13.3，v4→v5 见 §13.4，v5→v6 见 §13.5，v6→v7 见 §13.6
 
 ## 0. 目标与原则
 
@@ -251,6 +251,16 @@ RETURNING j.*;
   - 拿到的是行锁，同一行的其他写入者会排队。不再用 advisory lock：行锁已经够用，也少一个可能死锁的地方。
 - 函数本身**不提交**。调用方的规则是：拿到锁之后不能再发起任何网络调用；在 Python 里只补缺地赋值完，**立即提交**，提交时释放锁。持锁时间是毫秒级，远低于 `statement_timeout=30s`。
 
+**调用方的固定三步**（作者块、`fill_artist_bio`、`lazy_audio` 都按这三步写）：
+
+1. **无锁读快照**：读出作者行当前各字段的值，其中包括 `bio_en` 快照。
+2. **锁外全部算完**：根据快照判断缺什么，联网把所有候选值算好，得到 `{字段: {语言: 值}}`。作者块原来是「读一点、判断一点、联网一次、赋值一次」交替进行，现在要整体改成这个形状，所以**一次加锁、一次提交**，不按字段分多次拿锁。
+3. **加锁只补缺，然后提交**：调用 `locked_artist`，对重读出来的值逐项补缺。**前置条件**：凡是从 `bio_en` 翻译出来的值（W6/W7 的各语言简介、W9 补写的语言、W10 补写的语言），只有在 `art.bio["en"] == 快照 bio_en` 时才写入，否则这一批全部丢弃。这样不会出现「英文是 A，法文却是从旧英文 B 翻出来的」这种混搭。
+
+`fill_artist_i18n_facts` 拆成两个入口：
+- 补缺用的新纯函数：`compute_artist_i18n_facts(snapshot: dict, langs, translator) -> dict[str, dict[str, Any]]`。它不接收 ORM 对象，只返回新增的键。
+- `--refresh-langs` 继续使用原来的 ORM 入口，行为不变，由闸管控。
+
 **规则：先把网络上的事做完，再加锁写入。** 所有要写的内容（作者简介、多语言名字、国籍、代表作、各语言翻译）都先在锁外算好，放在内存里。加锁后，对**刚刚重读出来的值**判断缺失，只补缺失的部分：
   - 字符串：空串和 None 都算缺失。
   - 列表：空列表和 None 都算缺失。
@@ -264,18 +274,19 @@ RETURNING j.*;
 | W1 | pipeline `_enrich_artist_and_titles` 新建作者 | 用 `locked_artist` 新建；删除原来的 `db.add(Artist(...))` |
 | W2–W5 | 同上：`name_en`、`name_zh`、`birth`、`death`、`nationality`、`notable_works` | 加锁后对重读值补缺。`notable_works` 是 JSONB 列表，SQL NULL、JSON null、`[]` 都算缺失 |
 | W4 | 同上：`name_i18n = _fill_i18n(...)` | `_fill_i18n` 在锁外算出候选值，加锁后只合并缺失的语言 |
-| W6、W7 | 同上：作者简介英文是坏值时重新生成，并覆盖 `target_langs` 各语言、清掉这些语言的作者音频 | **保留现有行为，不改语义**。新的简介文本在锁外生成好；加锁重读后，如果英文仍然是那条坏值（compare-and-set），就用 ORM 覆盖各语言简介，并清掉对应语言的 `bio_audio`/`bio_audio_engine`。走 ORM 写入，**音频损失闸能看见**：脚本进程里没有额度就拦下（`AudioLossBlocked`）；web/worker 是 record-only，写入并记 `audio_invalidations`，孤儿 GC 会保留这些 key。重读后如果英文已经被别人修好，本次不写 |
+| W6、W7 | 同上：作者简介英文是坏值时重新生成，并覆盖 `target_langs` 各语言、清掉这些语言的作者音频 | **沿用现有行为，已知接受**：移到 worker 之后，一次首屏仍可能清掉多门语言的作者音频，由闸记账。新的简介文本在锁外生成好；加锁重读后，如果英文仍然是那条坏值（compare-and-set），就用 ORM 覆盖各语言简介，并清掉对应语言的 `bio_audio`/`bio_audio_engine`。走 ORM 写入，**音频损失闸能看见**：脚本进程里没有额度就拦下（`AudioLossBlocked`）；web/worker 是 record-only，写入并记 `audio_invalidations`，孤儿 GC 会保留这些 key。重读后如果英文已经被别人修好，本次不写 |
 | W6' | 作者简介英文缺失（不是坏值） | 走补缺，不走 compare-and-set |
 | W8 | `fill_artist_i18n_facts`：`nationality_i18n`、`notable_works_i18n` | 补缺模式：锁外算好，加锁后只合并缺失的语言。**`--refresh-langs` 显式刷新模式保持不变**，仍然直接用 ORM 替换已有值，由闸管控 |
 | W9 | pipeline 里补写作者简介的各语言 | 锁外翻译好，加锁后只补缺 |
-| W10 | `backfill.fill_artist_bio` | 改为「锁外翻译，再调用 `locked_artist` 补缺」。它有三个调用方（backfill ×2、lazy），调用方都在调用后立即提交，没有其他待提交的写入，这一点要在实施时逐个核实 |
-| W11 | `lazy_audio.get_or_make_artist_bio_audio_url` 写 `bio_audio`/`bio_audio_engine` | 合成完成后，`locked_artist` 重读。**作者简介这门语言的文本没变**才写入，只合并自己这门语言的 key。文本已经变了，说明这段音频是用旧文本合成的，丢弃不写，交给孤儿 GC 清理。两种语言并发合成时，两个 key 都会保留 |
-| W12 | `backfill_display_names`（离线脚本，整块赋值） | 不在本设计范围。离线脚本由人工执行，走 ORM，闸能看见 |
-| W13 | `audio_ingest_cli`、`rescan_language` 写 `bio_audio` | 不在本设计范围。离线脚本走 ORM，闸能看见 |
+| W10 | `backfill.fill_artist_bio` | 改为「锁外翻译，再调用 `locked_artist` 补缺」（带 `bio_en` 前置条件）。第六轮评审已核实三个调用方都满足「调用后立即提交、此前没有未写入的改动」：`_backfill_bios`、lazy fanout 和 `translate_object_language`；后者的调用方 lazy `_translate` 和 rescan 脚本都紧接着 `db.commit()` |
+| W11 | `lazy_audio.get_or_make_artist_bio_audio_url` 写 `bio_audio`/`bio_audio_engine` | 合成完成后用 `locked_artist` 重读，按顺序判断三条：① 合成时用的文本 `text` 与重读出来的 `art.bio[language]` 不相等（字符串比较）→ 丢弃，返回 `(None, "busy")`，前端稍后重试时会用新文本重新合成；② `bio_audio[language]` 已经被别人写入（同一作者的两件作品并发点播放）→ 丢弃自己的，返回已有的 key；③ 否则写入，只合并这门语言的 key。被丢弃的文件交给孤儿 GC，**不会把无人引用的 URL 交给用户**。两门语言并发合成时，两个 key 都会保留 |
+| W12 | 离线整块写入：`backfill_display_names`、`batch_names.py`（onboard names，新建 Artist 并整块写 `name_i18n`）、`scripts/fix_hant_script.py`（`name_i18n`、`bio`）、`scripts/fix_title_i18n.py`（`name_i18n`） | 不在本设计范围：走 ORM，闸能看见。**残余风险**：和在线任务并发时仍可能丢更新。**运维约定**：运行这些脚本之前先停 worker 容器（`docker compose stop worker`），跑完再启动。这条写进脚本的 docstring 和运维文档 |
+| W13 | `audio_ingest_cli`、`rescan_language` 写 `bio_audio` | 不在本设计范围：离线脚本，走 ORM，闸能看见。并发风险和运维约定同 W12 |
 
 **提交边界**：
 
-- 首屏里的作者块位于 guide 落库之后。guide 的 `persist_gated_sections` 内部已经提交过一次，所以作者块这里立即提交，只会把作者行的改动带进去。
+- 首屏里的作者块位于 guide 落库之后。guide 的 `persist_gated_sections` 内部已经提交过一次。作者块提交时，会带上本事务里已经 flush 的改动（例如 `o.attributes`），这是无害的；但不能有 dirty 对象。
+- 提交后 `o` 会过期（`expire_on_commit` 是默认值），之后再访问时会多一次重新加载，不影响正确性。
 - 调用 `locked_artist` 的代码，从拿到锁到提交之间，不能有其他 ORM 对象的未提交改动。测试里用断言检查这一点：拿锁时 `db.dirty` 必须为空。
 
 ### 3.4 worker 进程
@@ -741,20 +752,23 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
 
 **纪律 37**
 
-- 两个首屏同时遇到同一位新作者：不出现主键冲突，作者行不丢更新。
-- 首屏的作者块和 9 个翻译任务同时写同一位作者：最后各字段的所有语言都在。
-- 持锁期间不发起网络调用：用会阻塞的假网络测试，锁等待 < 1 秒；拿锁时 `db.dirty` 为空。
+- **测试环境说明**：SQLite 会忽略 `FOR UPDATE`，并发用例在上面会假通过。凡是并发类用例（下面标「PG」的），都打上 PG 专用标记；CI 缺 PG 时报**失败**，不是跳过。另加一条不依赖 PG 的断言：用 PG 方言编译 `locked_artist` 的查询，断言其中包含 `FOR UPDATE`。非并发用例留在 SQLite 上跑。
+- `bio_en` 快照前置条件：快照之后英文已被别人改掉时，这一批从快照翻译出来的其他语言全部不写。
+- （PG）两个首屏同时遇到同一位新作者：不出现主键冲突，作者行不丢更新。
+- （PG）首屏的作者块和 9 个翻译任务同时写同一位作者：最后各字段的所有语言都在。
+- （PG）持锁期间不发起网络调用：用会阻塞的假网络测试，锁等待 < 1 秒；拿锁时 `db.dirty` 为空。
 - 先把 `art` 加载进会话，再由另一个会话修改 bio，然后跑作者块：断言另一个会话的修改没有被回滚。
 - `bio`、`bio_audio`、`bio_audio_engine` 各自为 SQL NULL、JSON null、`{}` 时，补缺和修坏值都不报错。
 - `notable_works` 为 SQL NULL、JSON null、`[]` 时会被补上；非空时不会被覆盖。`notable_works_i18n` 的空列表视为缺失。
 - 修坏值：
   - 脚本进程里，额度为 0 时抛 `AudioLossBlocked`，数据库无任何改动。
-  - web 或 worker 的 record-only 模式下，写入成功，并且 `audio_invalidations` 里有对应记录。
-  - 两个进程并发修同一条坏值时，只有一方写入。
+  - web 或 worker 的 record-only 模式下，写入成功，并且清掉几门语言，`audio_invalidations` 就有几条记录。
+  - （PG）两个进程并发修同一条坏值时，只有一方写入。
   - 作者简介英文是缺失而不是坏值时，走补缺。
 - `lazy_audio`：
-  - 合成期间英文被修坏值改写了：不挂上用旧文本合成的音频。
-  - 两种语言并发合成：两个 key 都在。
+  - 合成期间这门语言的简介被改写了：返回 `(None, "busy")`，不挂上用旧文本合成的音频。
+  - 同一门语言已被别人写入：返回已有的 key。
+  - （PG）两门语言并发合成：两个 key 都在。
 - `names --refresh-langs` 仍能替换已有值，并且由闸管控。
 - resume：绕过 exists 早退；已有的深度段不传给 canonical；已有英文问答时，请求语言的问答来自翻译。
 - 9 个翻译任务并发补写简介时，最后 9 门语言都在。
@@ -868,4 +882,17 @@ brainstorm 时提过的「$30 一两个小时用完」，与上面评审的估�
 | 7 fill_artist_bio 的提交边界 | 改：W10 写明，实施时逐个核实三个调用方 |
 | 8 advisory lock 多余 | 改：删除，只用行锁 |
 | 测试清单 | 补充评审给出的 7 条 |
+
+### 13.6 v6 → v7（第六轮，§3.3）
+
+| 评审条目 | 处理 |
+|---|---|
+| 1–5 五个核实点 | 第 1 点核实成立：重读之后闸比较的是锁后的最新库值（PG 和 SQLite 都实测过）。第 2–5 点按下表修改 |
+| H1 修坏值失败后，其他语言来源不一致（阻断） | 改：所有从 `bio_en` 翻译出来的写入，都加「英文仍等于快照」这个前置条件，不满足就整批丢弃 |
+| H2 作者块要拆成三步 | 改：写明固定三步、一次加锁；`compute_artist_i18n_facts` 改为纯函数并给出签名；refresh 入口保留 |
+| H3 离线写入点漏列 | 改：补上 batch_names、fix_hant_script、fix_title_i18n；写明残余风险，以及「跑脚本前先停 worker」的运维约定 |
+| M1 SQLite 测试会假通过 | 改：并发用例打 PG 标记，缺 PG 时报失败；另加 `FOR UPDATE` 编译断言 |
+| M2 W11 丢弃时的返回值 | 改：三条判断写清楚，丢弃时返回 busy 或已有的 key |
+| M3 W6/W7 搬到 worker 后的副作用 | 改：写明「沿用现有行为，已知接受」，并补一条计数测试 |
+| L1、L2 | 改：修正提交边界的措辞；把三个调用方写进 W10 |
 
