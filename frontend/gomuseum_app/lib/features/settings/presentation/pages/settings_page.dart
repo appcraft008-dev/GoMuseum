@@ -3,6 +3,9 @@
 /// 门票式额度卡 + 01 通用 / 02 账户 / 03 支持与法律分区 + 版本脚注。
 library;
 
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +19,6 @@ import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/auto_save_photo_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
-// photo_manager 已在取景页的插件树里（最近照片条），这里不引入新原生插件。
 import 'package:photo_manager/photo_manager.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -33,7 +35,7 @@ const kTermsUrl = 'https://gomuseum.app/terms.html';
 /// 版本脚注。**不会自动跟着 pubspec 走** —— `package_info_plus` 同样是
 /// 原生插件(理由见 [kPrivacyPolicyUrl]),所以这里是手写的。
 /// 发版改 pubspec 时必须一起改;忘了会被 `settings_version_test` 拦下。
-const kVersionFootnote = 'GoMuseum 1.0.0 (67)';
+const kVersionFootnote = 'GoMuseum 1.0.0 (68)';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -511,14 +513,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   /// 打开「自动保存照片」前先要到相册写权限：没权限就写不进去，而开关开着、
   /// 照片一张没存的话用户无从知道为什么。要不到就**不写偏好、开关保持关**。
   /// 关闭时不请求权限（不需要）。
-  // ponytail: 权限判断不分平台。Android 10+ 走 MediaStore 其实无需任何权限，
-  // 此处一刀切会把「拒了相册读权限但保存本可成功」的机型也挡住 —— 但那批用户
-  // 取景页的最近照片条同样是空的，提示他去开权限并不冤；换成分平台判断要引
-  // device_info_plus 查 SDK 版本，不值当。
   Future<void> _setAutoSavePhoto(bool enabled) async {
     final notifier = ref.read(autoSavePhotoProvider.notifier);
     if (!enabled) {
       await notifier.setEnabled(false);
+      return;
+    }
+    final sdkInt = Platform.isAndroid
+        ? (await DeviceInfoPlugin().androidInfo).version.sdkInt
+        : 0;
+    if (!autoSaveNeedsPermission(
+        isAndroid: Platform.isAndroid, sdkInt: sdkInt)) {
+      await notifier.setEnabled(true);
       return;
     }
     final ps = await PhotoManager.requestPermissionExtend(

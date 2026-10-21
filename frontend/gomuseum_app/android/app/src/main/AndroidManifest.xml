@@ -7,8 +7,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <!-- Android 13+ 读相册图片（photo_manager「最近图库」缩略图条） -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <!-- 不声明 READ_MEDIA_IMAGES:Play 政策只许以浏览相册为核心功能的应用申请
+         (10-21 正式版送审被拦)。图库选图走 image_picker → 系统照片选择器,无需权限。 -->
 
     <!-- camera_android 为「录像带声音」而声明 RECORD_AUDIO;我们只拍照
          (CameraController 已设 enableAudio: false),不需要麦克风。
