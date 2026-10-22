@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+{% if noindex %}<meta name="robots" content="noindex">{% endif %}
+<link rel="canonical" href="{{ canonical }}">
+{% for code, href in hreflang %}<link rel="alternate" hreflang="{{ code }}" href="{{ href }}">
+{% endfor %}<meta property="og:type" content="website">
+<meta property="og:site_name" content="GoMuseum">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta property="og:url" content="{{ canonical }}">
+{% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
+<meta name="theme-color" content="#F3EDDF">
+<link rel="stylesheet" href="/w/static/site.css?v={{ asset_v }}">
+</head>
+<body data-page="{{ page_type }}" data-lang="{{ lang }}"{% if museum_slug %} data-museum="{{ museum_slug }}"{% endif %}{% if qid %} data-qid="{{ qid }}"{% endif %}>
+<a class="skip" href="#main">{{ t('nav_museums') }}</a>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="/{{ lang }}/">GOMUSEUM</a>
+    <nav class="nav-links">
+      <a href="/{{ lang }}/#museums">{{ t('nav_museums') }}</a>
+      <a href="/{{ lang }}/#must-see">{{ t('nav_must_see') }}</a>
+      <a href="/{{ lang }}/#how">{{ t('nav_how') }}</a>
+    </nav>
+    <details class="lang">
+      <summary>{{ lang_names[lang] }}</summary>
+      <ul>
+        {% for code in langs %}<li><a href="{{ lang_href(code) }}"{% if code == lang %} aria-current="true"{% endif %}>{{ lang_names[code] }}</a></li>
+        {% endfor %}
+      </ul>
+    </details>
+    <a class="btn btn-nav" href="#download" data-track="download_nav">{{ t('cta_download') }}</a>
+  </div>
+</header>
+{% if lang_hint %}<p class="langhint wrap"><a href="{{ lang_hint[0] }}">{{ t('switch_lang_hint') }} · {{ lang_hint[1] }} →</a></p>{% endif %}
+<main id="main">
+{% block main %}{% endblock %}
+</main>
+<section class="band band-dark" id="download">
+  <div class="wrap download">
+    <div>
+      <h2 class="h-serif">{{ t('hero_title') }}</h2>
+      <p>{{ t('free_note', n=free_n) }}</p>
+    </div>
+    {% from "_macros.html" import download_block %}{{ download_block(t, play, device, qr) }}
+  </div>
+</section>
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p>{{ t('independent') }}</p>
+    <p><a href="/privacy.html?lang={{ lang }}">{{ t('privacy') }}</a> · <a href="/terms.html?lang={{ lang }}">{{ t('terms') }}</a></p>
+    <p class="foot-langs">{% for code in langs %}<a href="{{ lang_href(code) }}">{{ lang_names[code] }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  </div>
+</footer>
+<script src="/w/static/site.js?v={{ asset_v }}" defer></script>
+</body>
+</html>

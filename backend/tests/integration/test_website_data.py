@@ -169,3 +169,9 @@ def test_page_languages_threshold(db, monkeypatch):
     assert wd.page_languages(db, [orsay.id], artist_qid="Q296") == ["en", "zh"]
     monkeypatch.setattr(wd, "THIN_ARTIST", 3)
     assert wd.page_languages(db, [orsay.id], artist_qid="Q296") == []
+
+
+def test_cards_for_qids_keeps_order_and_language(db):
+    orsay = wd.find_museum(db, "paris", "orsay")
+    cards = wd.cards_for_qids(db, [orsay.id], "en", ["Q103", "Q101", "Q100", "Q900"])
+    assert [c.qid for c in cards] == ["Q103", "Q100"]

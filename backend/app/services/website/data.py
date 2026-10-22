@@ -276,3 +276,14 @@ def page_languages(db, museum_ids: list, *, artist_qid: str | None = None) -> li
         if q.count() >= floor:
             out.append(lang)
     return out
+
+
+def cards_for_qids(db, museum_ids: list, language: str, qids: list[str]) -> list:
+    """搜索结果 → 卡片:只留该语言有内容的件,保持传入顺序。"""
+    if not qids:
+        return []
+    objs = {
+        o.qid: o
+        for o in _base(db, museum_ids, language).filter(MuseumObject.qid.in_(qids))
+    }
+    return to_cards(db, [objs[q] for q in qids if q in objs], language)

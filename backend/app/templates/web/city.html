@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import must_see_panels, museum_card, artist_chips %}
+{% block main %}
+<section class="wrap pagehead">
+  <h1 class="h-serif">{{ city_name }}</h1>
+  <p class="lead">{{ hero_sub }}</p>
+  {% if pass_note %}<p class="small">{{ pass_note }}</p>{% endif %}
+</section>
+<section class="band" id="museums" data-section="museums">
+  <div class="wrap"><div class="mgrid">{% for m in museums %}{{ museum_card(m, lang, t) }}{% endfor %}</div></div>
+</section>
+{% if panels %}
+<section class="band" id="must-see" data-section="must-see">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('must_see_title') }}</h2>
+    {{ must_see_panels(panels, lang, t) }}
+  </div>
+</section>
+{% endif %}
+{% if artists %}
+<section class="band" data-section="artists">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('by_artist') }}</h2>
+    {{ artist_chips(artists, '/' ~ lang ~ '/' ~ city ~ '/', t) }}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
