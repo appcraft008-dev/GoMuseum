@@ -1,9 +1,30 @@
 # 弹性可扩容架构 设计
 
 - 日期：2026-10-21
-- 状态：v9（10-22）。依据第八轮评审（对照最新 staging 代码与 prod 只读数据）修订，待用户审阅
+- 状态：v9（10-22）。依据第八轮评审（对照最新 staging 代码与 prod 只读数据）修订；同日用户定分阶段、按触发条件实施（见执行总览）。待用户审阅
 - 来源：10-20 staging 多用户压测（backlog #1041），以及 10-20/21 brainstorm 的逐段确认
 - 评审历史：见 §13。共 8 轮：第 1–6 轮逐段评审，第 7 轮全新上下文全量评审，第 8 轮重点查「会不会影响已有用户」
+
+## 执行总览（先读这一页）
+
+这份文档是「从现在到 200 人同时在用，再到更大规模」的完整蓝图，**不一次做完**。用户 10-22 定：先做阶段 0，其余每个阶段等触发条件满足再做；触发后照本文实施，不再重新设计。
+
+**现状（prod，10-22）**：近 30 天活跃 67 人（含测试账号），懒生成每天 1–59 件，数据库同时 12 个连接（上限 100），识别每天几十次，机器负载约 0.2。离任何一个瓶颈都还很远。
+
+| 阶段 | 做什么 | 什么时候做 | 估计耗时 |
+|---|---|---|---|
+| 0 | 监控最小版（采集触发指标）；共用 WiFi 不误伤（nginx 放宽、识别单独限流、游客登录放宽、懒生成额度按身份分档）；大模型调用 90 秒超时；懒生成并发数改成配置项；staging 加资源上限 | 现在 | 约 1 周 |
+| 0（可选） | 数据库连接上限 100 → 400，只重启数据库 | 用户批准后，趁用户少时做 | 半小时 |
+| 1 | 懒生成并发每进程 2 → 4，只改配置 | 7 天里有 3 天出现「首屏名额已满」或「补语言名额已满」 | 当天 |
+| 2 | 连接池；语音（Redis 槽位、流式提前释放连接、`/audio` 合成上限）；向量检索提速；限流计数改存 Redis | 任一：数据库连接峰值 > 40；7 天里有 3 天出现 TTS 同时合成 ≥ 4 路；向量检索 p95 > 0.5 秒；向量超过 10 万条 | 约 1 周 |
+| 3 | 生成管线：续跑、作者行加锁、429 处理（仍在 web 里跑） | 任一：阶段 1 之后，7 天里有 3 天高峰同时生成 ≥ 4 件；每周新增半成品 > 5 件 | 1–2 周，再观察 7 天 |
+| 4 | 任务表 + worker + 按美元计的预算 | 阶段 3 观察 7 天无阻断问题后接着做 | 约 2 周 |
+| 5 | 识别拆成独立容器，按 CPU 权重隔离 | 任一：高峰 CPU 15 分钟均值 > 50%；识别多的时段浏览 p95 > 1 秒 | 约 1 周 |
+| 按规模 | 向量检索 ②–⑤；作品超过 15 万件换搜索引擎；排队位置提示（阶段 4 之后随前端发版） | 见 §5.3、§5.4、§3.6 | — |
+
+- 触发指标从阶段 0 开始采集，量法见 §7；每个阶段的详细内容和上线步骤见 §11。
+- 阈值大多设在当时容量的一半左右，给实施留出时间。估计耗时含开发和测试，不含观察期。
+- 文中原来的阶段名：P1 = 阶段 2，P2a = 阶段 3，P2b = 阶段 4，P2c = 阶段 4 之后，P3 = 阶段 5；原 P4（监控）拆进阶段 0 和阶段 4。§13 的评审记录保留原名。
 
 ## 0. 目标与原则
 
@@ -382,7 +403,7 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 - inprocess 模式下：内容接口走原来的 `maybe_trigger`；worker 不领任务；queued 状态的任务都置为 `cancelled`（不计入冷却）。
 - 已知小代价：切换那一刻，已在 running 的队列任务可能和 web 内重新触发的同一件重复生成一次。
 - 两种模式都要测。观察两周后删除 inprocess 路径。
-- **开关只切换执行方式，不回滚管线改动。** 管线改动（续跑、作者行加锁、超时与 429、翻译逐段容错）在 P2a 单独上线、单独观察（用户 10-22 定拆分，§11）；它们出问题时回滚代码。
+- **开关只切换执行方式，不回滚管线改动。** 管线改动（续跑、作者行加锁、超时与 429、翻译逐段容错）在阶段 3 单独上线、单独观察（用户 10-22 定拆分，§11）；它们出问题时回滚代码。
 
 ### 3.5 被替换的旧机制
 
@@ -407,7 +428,7 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 
 预算停止期间：排队中、还没开跑的任务返回 `generating=false`，并带 `unavailable_reason="daily_cap"`。失败或冷却期间返回 `generating=false`，App 显示「待完善」。
 
-**新增字段 `queue_position`、`eta_seconds`**：放在 P2c，和前端的排队提示一起排期。
+**新增字段 `queue_position`、`eta_seconds`**：放在阶段 4 之后，和前端的排队提示一起排期。
 
 - `queue_position`：排在我前面的同档 queued 任务数。
 - `eta_seconds = ceil((位置+1) × 近 1 小时同类任务平均耗时 ÷ max(1, 同档 running 任务数))`。没有历史数据时，平均耗时按 20 秒算。
@@ -449,12 +470,13 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 | 游客账号（`is_guest`） | 账号层，加 IP 层 `CAP_PER_IP=300` |
 
 - 匿名用户不会触发生成。
+- 两档各用各的 IP 计数键（游客、正式账号分开），正式账号的用量不挤占游客那一份。分档放在阶段 0。
 - **扣额度的顺序**：enqueue 但不提交 → `inserted=True` 时扣 Redis 额度 → 超额就 ROLLBACK，否则 COMMIT。
   - 合并到已有任务的请求不扣额度。
   - 与 #1037 的 paid key 兼容：COMMIT 失败时会多扣一次，但同一件作品同一天不会再扣，可以自愈。
 - slowapi：`storage_uri` 指向 Redis，打开 `in_memory_fallback_enabled=True`，并设 socket 超时（第七轮实测，Redis 挂掉时不会报错）。
   - 改用 Redis 后，计数从「每个进程一份」变成「全站一份」，实际限额会减半。所以现有各条限额的数字**乘以当前 web 进程数（2）**，保持今天的实际限额：注册 5/分 → 10/分，登录 10/分 → 20/分，申请重设密码 5/时 → 10/时，确认重设密码 10/时 → 20/时，邮件验证 5/时 → 10/时，反馈与照片反馈 60/时 → 120/时，支付 120/分 → 240/分。
-- 游客登录限速 `GUEST_LOGIN_RATE=30/hour`。
+- 游客登录限速：目标是每 IP 每小时 30 次（`GUEST_LOGIN_RATE`）。现在是每进程每小时 5 次，共用 WiFi 的团体一来就不够用。阶段 0 先改成每进程 15 次（两个进程合计约 30），阶段 2 计数改存 Redis 后为全站 30 次。
 
 ### 4.3 外部接口速率
 
@@ -497,8 +519,8 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 | **合计** | | | | | **~287** |
 
 - `max_connections` 设为 400，0.8 × 400 = 320，放得下 287。staging 的 PostgreSQL 是独立容器，不占用这个额度。多机部署时再加 PgBouncer。
-- **P1 阶段不缩小连接池**，因为那时懒生成还跑在 web 里。
-- **改 `max_connections` 需要重启 PostgreSQL**，P1 要安排维护窗口（§11），并且排在 P1 代码上线**之前**：记账连接池上线后每进程最多 68 个连接，2 个进程是 136，超过现在的 100（第八轮）。
+- **阶段 2 不缩小连接池**，因为那时懒生成还跑在 web 里；阶段 4 把懒生成搬进 worker 后，再按上表调整。
+- **改 `max_connections` 需要重启 PostgreSQL**，要安排维护窗口：可以在阶段 0 趁用户少时做（可选，需用户批准），最晚排在阶段 2 代码上线**之前**：记账连接池上线后每进程最多 68 个连接，2 个进程是 136，超过现在的 100（第八轮）。
 - `shared_buffers`、`effective_cache_size` 不改：整个库只有 274 MB（10-22），调大没有收益，只会让维护窗口多一处改动（第八轮）。
 
 ### 5.2 recognizer 容器
@@ -507,7 +529,7 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
   - 使用识别专用的限流区（§4.4），保留 `proxy_read_timeout 120s`。
   - web 设为 backup，配合 `proxy_next_upstream error timeout`：只有连接失败才回落到 web；POST 请求已经发出就不会重发。
 - confirm、reject、已返回 410 的旧接口、照片反馈，这几个接口留在 web。
-- 配置：`RECOG_WORKERS=2`、`RECOG_ONNX_THREADS=4`（P3 按路径实测后定）、`RECOG_THREADPOOL=16`；web 上设 `RECOG_PRELOAD=false`。
+- 配置：`RECOG_WORKERS=2`、`RECOG_ONNX_THREADS=4`（阶段 5 按路径实测后定）、`RECOG_THREADPOOL=16`；web 上设 `RECOG_PRELOAD=false`。
 - **用 CPU 权重隔离识别和浏览**（用户 10-22 定）：recognizer `cpu_shares: 512`，web `cpu_shares: 1024`。两边争 CPU 时浏览优先；没人争时识别能用满空闲的核，单人识别速度不比今天慢。v8 的「每请求 2 线程」在今天的低负载下，预计会让画框、裁剪两步慢 2–3 倍（§0.2 基线）。
 
 ### 5.3 向量检索
@@ -518,8 +540,8 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 
 | 档 | 做法 | 触发 |
 |---|---|---|
-| ① | 去掉 Python 循环：`np.maximum.at` 加预存的 qid 下标；`np.isin` 做馆过滤；13 个查询向量合成一次矩阵乘法 | P1。第七轮实测：10 万向量、13 个查询约 6 ms（旧实现 329 ms）；30 万向量约 16 ms。按线性外推，100 万件作品（约 270 万条向量）约 150 ms，VPS 上可能再慢 2–3 倍 |
-| ② | 向量矩阵只常驻在 recognizer 里 | P3 |
+| ① | 去掉 Python 循环：`np.maximum.at` 加预存的 qid 下标；`np.isin` 做馆过滤；13 个查询向量合成一次矩阵乘法 | 阶段 2。第七轮实测：10 万向量、13 个查询约 6 ms（旧实现 329 ms）；30 万向量约 16 ms。按线性外推，100 万件作品（约 270 万条向量）约 150 ms，VPS 上可能再慢 2–3 倍 |
+| ② | 向量矩阵只常驻在 recognizer 里 | 阶段 5 |
 | ③ | 省内存：换成 FAISS 的半精度（或 8 位）暴力检索；索引存成文件，用内存映射加载，同机所有进程共用一份，秒级启动 | 每进程向量矩阵超过 1 GB（约 70 万条向量、25 万件作品）。到 100 万件时 float32 每进程约 4 GB，2 个进程就是 8 GB，从数据库重新加载要几分钟——这才是百万级的真正瓶颈 |
 | ④ | 缩小范围：识别接口加可选参数 `city`，先只搜该城市的馆，没有把握再退回全局。加法契约，老 App 照旧走全局 | 全局识别 p95 超过基线 × 1.5，或开到多个城市之后。要前端发版配合；参数从哪来（城市选择还是定位）届时再定 |
 | ⑤ | 近似检索（FAISS 的 HNSW 或 IVF），百万级单次查询在毫秒级；召回率略低于 100% | ①–④ 之后暴力检索仍超基线（约 200 万条向量以上）。上线前必须用 `scripts/recognition_photo_eval.py` 和它的标注集对比，Top-1 准确率不降才切 |
@@ -532,7 +554,7 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 
 **现状：**
 
-- 搜索和识别的文字链（AI 兜底读出展签后去匹配作品）共用一个匹配核心：`app/services/matching`，倒排召回加 rapidfuzz 精排。索引在进程内，每个 web 进程各建一份；P3 拆出 recognizer 后，它也要各建一份。
+- 搜索和识别的文字链（AI 兜底读出展签后去匹配作品）共用一个匹配核心：`app/services/matching`，倒排召回加 rapidfuzz 精排。索引在进程内，每个 web 进程各建一份；阶段 5 拆出 recognizer 后，它也要各建一份。
 - prod：约 2.7 万件作品、26 万个名字。搜索 p50 约 53 ms（#933 之后）。全量重建约 12 秒；到期先查目录指纹，没变只续期，最多 6 小时全量重建一次（#936）。
 - 生成 worker 只用匹配核心里的纯函数（规范化、人名判断），不建索引。
 
@@ -542,7 +564,7 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 
 | 事项 | 做法 |
 |---|---|
-| 触发前的代价 | 每加一个 web 或 recognizer 进程，就多一份索引内存、多一次重建。全量重建时和请求抢 GIL（#936 实测：重建窗口里搜索 0.5–2.9 秒），作品越多窗口越长。P3 拆 recognizer 时实测每进程索引内存，写进 §7 的报告 |
+| 触发前的代价 | 每加一个 web 或 recognizer 进程，就多一份索引内存、多一次重建。全量重建时和请求抢 GIL（#936 实测：重建窗口里搜索 0.5–2.9 秒），作品越多窗口越长。阶段 5 拆 recognizer 时实测每进程索引内存，写进 §7 的报告 |
 | 引擎放在哪 | compose 里加一个引擎容器，只绑 127.0.0.1。PG 仍是唯一真相源，引擎里的数据随时能从 PG 重建，不单独备份 |
 | 数据同步 | 沿用现在的目录指纹：指纹变了就推增量，最多 6 小时全量重建一次。不另外引入变更订阅 |
 | 不影响已有用户 | 加开关 `SEARCH_ENGINE=inprocess\|external`，默认 inprocess。切换前用 `tests/eval/matching/` 的搜索 6 类、识别 7 类评测对比，指标不降才切；引擎出问题就把开关改回 inprocess 再重启；观察两周后删除进程内路径 |
@@ -606,7 +628,24 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 | 磁盘 / 内存 / CPU | 宿主机 | > 80%；CPU 连续 15 分钟 > 70% | 加资源 |
 | 数据库连接 | `pg_stat_activity` | > 80% `max_connections` | 调整配置 |
 
-**外部探活**：推荐用免费的外部 HTTP 探活服务（如 UptimeRobot）探测 `/health`，覆盖 cron 或 docker 本身故障的情况。账号**由用户注册**（§11 P4）。
+阶段 0 先上其中 4 项：浏览 / 内容接口 p95 与 5xx、识别各路径 p95、磁盘 / 内存 / CPU、数据库连接。worker 存活、「有人在等」的最老任务、内容生成预算这 3 项随阶段 4 上。
+
+**外部探活**：推荐用免费的外部 HTTP 探活服务（如 UptimeRobot）探测 `/health`，覆盖 cron 或 docker 本身故障的情况。账号**由用户注册**（阶段 0）。
+
+**触发指标**（阶段 0 起采集，越线时发邮件提醒「该进入下一阶段了」，同一条 7 天只提醒一次）：
+
+| 指标 | 怎么量 | 对应 |
+|---|---|---|
+| 首屏名额已满、补语言名额已满 | event_log `lazy_slot_full`、`lazy_fanout_slot_full`（阶段 0 新增；现在首屏名额满时什么都不记） | T1 → 阶段 1；阶段 1 之后仍出现，计入 T3 |
+| 全站同时在生成的作品数 | 每次开始首屏生成时记 event_log `lazy_started`，带当时全站同时在生成的件数（数 `lazy_lock_at` 在 10 分钟内的作品） | T3 → 阶段 3 |
+| 每周新增半成品 | ready 但缺行的作品数（§3.4 的缺口定义），按周比较 | T3 |
+| 数据库连接峰值 | `pg_stat_activity`，每 5 分钟采样 | T2 → 阶段 2 |
+| TTS 同时合成数 | event_log `tts_busy`：某进程同时合成达到 4 路时记一条，每分钟最多一条 | T2 |
+| 向量检索 p95、向量数 | `recognition_events.timings.vq`；`object_embeddings` 行数 | T2；§5.3 |
+| 宿主机 CPU 15 分钟均值 | 宿主机，包含同机其他项目 | T5 → 阶段 5 |
+| 浏览 p95，以及同一 5 分钟内的识别次数 | nginx `urt=`；`recognition_events` | T5 |
+| IP 额度用尽次数（游客、正式账号分开） | event_log `lazy_cap_hit` | §4.2：游客的 IP 额度要不要放宽 |
+| 作品总数 | `museum_objects` | §5.4 |
 
 **`scripts/ops_report.py`（按需运行）包含：**
 
@@ -619,11 +658,11 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 - 记账失败计数（从 Redis 读）；
 - 向量数；
 - 作品总数，以及离 15 万件（换搜索引擎的触发点，§5.4）还差多少；
-- 各项指标距离上限还有多少余量。
+- 各项指标、各触发指标距离阈值还有多少余量。
 
 ## 8. staging 与 prod 隔离
 
-- staging 的容器加 `cpus` 和 `mem_limit`，合计 2 核 4G。
+- staging 的容器加 `cpus` 和 `mem_limit`，合计 2 核 4G。放在阶段 0：staging 和 prod 在同一台机器上，10-20 的压测把 8 核吃满（779%），不加上限的话，在 staging 压测会挤占 prod 用户。
 - prod 的 worker 设 `mem_limit`，防止它挤占 web 的资源。
 - 测真实容量时，按小时租一台同规格机器，跑 `lt.py` 的 200 人场景。
 
@@ -644,7 +683,7 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 - 200 人：需要 2.7–5.4 核，c_recog 实测后可能更高；这台 8 核机器还要分给 web、worker、PG 和同机其他项目（§2 第 5 条）。
 - 1000 人：需要 13–27 核，约 2–3 台机器；或者先做推理降本。
 
-**延迟要单独算**：最慢的路径要做 13 次推理。今天推理用满 8 核时，画框、裁剪两条路径的 p95 已经约 4 秒（§0.2 基线）。P3 要按路径（快路径、画框、裁剪、AI 兜底）分别实测单人和 200 人两种负载下的 p95，再定 `RECOG_ONNX_THREADS` 取多少。
+**延迟要单独算**：最慢的路径要做 13 次推理。今天推理用满 8 核时，画框、裁剪两条路径的 p95 已经约 4 秒（§0.2 基线）。阶段 5 要按路径（快路径、画框、裁剪、AI 兜底）分别实测单人和 200 人两种负载下的 p95，再定 `RECOG_ONNX_THREADS` 取多少。
 
 ### 9.2 生成
 
@@ -688,7 +727,7 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 - **Wikidata**：
   - 每件首屏约 10 次调用（未实测）。24 线程满载约 240 次/分钟；而 2 个令牌、p50 为 0.5 秒时，吞吐也约 240 次/分钟，**已经到了单进程的上限**。
   - 解法二选一：再开一个 worker 容器，令牌按总规则第 4 条平分；或者先把 HIGH 降到 16。
-  - P2b 上线后，看「最老等待时长」和首屏耗时的实测再定。
+  - 阶段 4 上线后，看「最老等待时长」和首屏耗时的实测再定。
 - **Google TTS**：
   - 200 人、每人每 3.5 分钟听一段：平均约 57 次/分钟，高峰（×3）约 171 次/分钟，**接近 200 的上限**。
   - 随着音频落库和 VoxCPM2 替换推进，未缓存比例会下降。
@@ -731,30 +770,31 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 | 配置 | 默认 | 位置 |
 |---|---|---|
 | `WEB_WORKERS` / `RECOG_WORKERS` | 2 / 2 | compose |
-| `RECOG_ONNX_THREADS` / `RECOG_THREADPOOL` | 4（P3 实测后定）/ 16 | `.env` |
+| `RECOG_ONNX_THREADS` / `RECOG_THREADPOOL` | 4（阶段 5 实测后定）/ 16 | `.env` |
 | `cpu_shares` | web 1024 / recognizer 512 | compose |
 | `RECOG_PRELOAD` | true（web 设为 false） | compose |
 | `INIT_DB_ON_START` | true（recognizer、worker 设为 false） | compose |
+| `LAZY_CONCURRENCY` / `LAZY_FANOUT_CONCURRENCY` | 2 / 2（阶段 1 改为 4；阶段 4 之后不再使用） | `.env` |
 | `LAZY_EXECUTOR` | **inprocess**（prod 上线 worker 后改为 queue） | `.env` |
 | `WORKER_HIGH_THREADS` / `WORKER_LOW_THREADS` | 24 / 60 | `.env` |
 | worker 的 `restart` / `stop_grace_period` | always / 60s | compose |
 | `JOB_COOLDOWN_TRANSIENT_MIN` / `JOB_COOLDOWN_INTERNAL_H` / `JOB_RESUME_COOLDOWN_H` | 15 / 6 / 6 | `.env` |
 | `LLM_TIMEOUT_S` | 90 | `.env` |
-| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | P1 保持 20/40；P2 起 web 40/12、recognizer 16/4，worker 自动计算 | `.env` |
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | 阶段 2 保持 20/40；阶段 4 起 web 40/12，worker 自动计算；阶段 5 起 recognizer 16/4 | `.env` |
 | `max_connections` | 400（`shared_buffers` 等不改） | postgres 容器启动命令 |
 | `LLM_PRICES` | 实施时核对 | `.env` |
 | `BUDGET_GEN_DAILY_USD` / `BUDGET_GEN_MONTHLY_USD` / `BUDGET_ALERT_RATIO` | 30 / 300 / 0.8 | `.env` |
 | `ALERT_TTS_DAILY_USD` / `ALERT_RECOG_DAILY_USD` | 按实测基线定 | `.env` |
 | `CAP_PER_USER` / `CAP_PER_IP` / `CAP_PER_IP_REGISTERED` | 160 / 300 / 3000 | `.env` |
 | `WEIGHT_GENERATION` / `WEIGHT_TRANSLATION` | 8 / 3 | `.env` |
-| `GUEST_LOGIN_RATE` | 30/hour | `.env` |
+| `GUEST_LOGIN_RATE` | 阶段 0 每进程 15/hour（两个进程合计约 30）；阶段 2 改存 Redis 后全站 30/hour | `.env` |
 | `WIKIDATA_CONCURRENCY` | 2（每进程） | `.env` |
 | `TTS_CONCURRENCY` | 32（每进程） | `.env` |
 | `AUDIO_SYNTH_SLOTS` | 2 | `.env` |
 | `AUDIO_SYNC_MAX` | 16（每进程） | `.env` |
-| nginx | 识别 2r/s burst 20；其他 50r/s burst 100 | nginx |
+| nginx | 识别 2r/s burst 20；其他 50r/s burst 100（阶段 0） | nginx |
 
-## 11. 分阶段实施
+## 11. 分阶段实施与触发条件
 
 **发布机制的约束（第七轮 A1）：**
 
@@ -762,14 +802,14 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 - 所以每个阶段都分三步：**代码合入 → 手工改 compose / nginx / .env → 切开关**。
 - compose 的改动必须在同一个维护窗口里**立即生效**（`up -d <服务>`）。否则下一次 CD 会把这些改动带上，在不受控的时间点重建容器（比如重启数据库）。
 
-**CD 要先停 worker 再迁移**（第八轮，P2b 起生效）：
+**CD 要先停 worker 再迁移**（第八轮，阶段 4 起生效）：
 
 - 生成管线的事务会跨越抓取和大模型调用（B14），prod `lock_timeout=0`。迁移时如果旧 worker 还在跑，`ALTER TABLE`、建索引要等它的事务全部结束，这段时间新 web 起不来，整站 502。改热表的迁移大约每月一次（09-07 讲解段表加列，10-19 作品表建唯一约束）。现在没事，是因为懒生成线程跟着旧 web 容器一起停掉了。
 - deploy.yml 的部署步骤改为：
 
   ```sh
   docker compose build
-  # 有 worker 服务时才停（P2b 之前没有这个服务）
+  # 有 worker 服务时才停（阶段 4 之前没有这个服务）
   if docker compose config --services | grep -qx worker; then docker compose stop -t 60 worker; fi
   docker compose up -d --remove-orphans --wait
   ```
@@ -777,16 +817,25 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
   先构建，停 worker 的这段时间就不包含构建耗时。worker 停下后，库里没有它的事务，迁移不用等锁。
 - alembic 每次迁移先 `SET lock_timeout = '10s'`。拿不到锁就失败退出，容器按 `restart` 策略重试，不会无限期挡住其他查询。
 - 代价：每次后端发版，懒生成暂停 1–3 分钟；在跑的首屏由续跑接手，不丢任务。现在发版时正在生成的作品要等 10 分钟锁过期，新方案仍然更好。
-- deploy.yml 的改动和 P2b 的代码放在同一个 PR 里合入，必须早于手工在 compose 里加 worker。
+- deploy.yml 的改动和阶段 4 的代码放在同一个 PR 里合入，必须早于手工在 compose 里加 worker。
 
-| 阶段 | 内容 | 上线步骤 |
-|---|---|---|
-| P1 | 连接池改为配置项（默认值不变）；流式语音提前 `db.close()`，两次检查放进线程池；`/audio` 同时合成上限；记账用独立连接池；向量检索 ①；防滥用按身份分档（含宽松 IP 层）；slowapi 改用 Redis（限额数字翻倍）；`TTS_CONCURRENCY` 和 TTS 429 退避；**所有音频路径统一用 Redis 槽位**，并加条件落库；Wikimedia 直连请求经过 `_GATE` | ① **维护窗口（先做）**：确认 prod 没有长任务 → 备份 → 手工改 compose 里 postgres 的 `max_connections=400` → `up -d postgres` → 核实连接数。趁正式版用户还少时做，影响最小。② 代码合入，CD 自动部署（这些改动都不涉及 compose）。③ 手工改 nginx（识别单独限流，其他 50r/s）→ `nginx -t` → reload |
-| P2a | 只改管线，仍在 web 里跑（用户 10-22 定拆分）：`locked_artist` 和作者块重构；`chat()` 显式超时和 429 专门异常；翻译逐段容错；`generate_object` 的续跑模式（inprocess 下 `_generate` 一律传 `resume=True`，对 stub 等同全新生成，让新代码路径先跑起来）；补记账、价目表、三笔账（此阶段只告警） | ① 代码合入，CD 自动部署。② 观察 7 天：作者行变更（纪律 37 写入面）、生成失败率、`audio_invalidations`、成本。出问题回滚代码 |
-| P2b | 任务表和 worker；按美元预算停止；内容接口的续跑触发与冷却；语言白名单；回滚开关；**deploy.yml 先停 worker**；**worker 存活告警**；记录被拒作品 | ① 代码合入（`LAZY_EXECUTOR` 默认 inprocess；开关只切执行方式，管线已在 P2a 跑过）。② 手工在 compose 里加 worker 服务（`depends_on: web: service_healthy`、`restart: always`、`stop_grace_period: 60s`、`mem_limit`）→ `up -d worker` → 看日志确认它在空转等待。③ `.env` 改为 `LAZY_EXECUTOR=queue` → 依次重启 web 和 worker。④ 观察 24 小时，出问题就把 `.env` 改回 inprocess 再重启。⑤ 两周后删除 inprocess 路径 |
-| P2c | `queue_position` / `eta_seconds` | 与前端一起排期 |
-| P3 | recognizer 容器（`cpu_shares` 低于 web）、nginx 分流、显式设置线程池、staging 资源上限、prod worker 的 `mem_limit`；按路径实测识别 p95，与 §0.2 基线对比 | ① 代码合入。② 手工在 compose 里加 recognizer → `up -d recognizer` → 本机请求验证。③ 改 nginx upstream（web 作为 backup）→ reload |
-| P4 | 其余 ops-check 检查项、ops_report、cron | ① 代码合入。② 在宿主机装 cron。③ **用户**注册外部探活服务 |
+**各阶段的内容、触发条件和上线步骤**（触发指标的量法见 §7）：
+
+| 阶段 | 内容 | 触发条件 | 上线步骤 |
+|---|---|---|---|
+| 0 | ① 监控最小版：宿主机 cron + `scripts/ops_check.py`，采集 §7 的触发指标，发 §7 里阶段 0 的 4 项告警；新增 event_log `lazy_slot_full`、`lazy_fanout_slot_full`、`lazy_started`、`lazy_cap_hit`、`tts_busy`<br>② nginx：识别单独限流区 2r/s burst 20，其他 50r/s burst 100（§4.4）<br>③ 游客登录限速放宽到每进程 15/时（§4.2）<br>④ 懒生成额度按身份分档，两档 IP 计数分开（§4.2）<br>⑤ `chat()` 显式超时 `LLM_TIMEOUT_S=90`（429 专门异常留在阶段 3）<br>⑥ 懒生成并发数改成配置项 `LAZY_CONCURRENCY` / `LAZY_FANOUT_CONCURRENCY`，默认仍为 2<br>⑦ staging 容器加 `cpus` / `mem_limit`（§8） | 现在（无条件） | ① 代码合入，CD 自动部署。② 手工改 nginx → `nginx -t` → reload。③ 手工改 staging 的 compose → `up -d`。④ 宿主机装 cron。⑤ **用户**注册外部探活服务（§7） |
+| 0（可选） | prod PostgreSQL `max_connections=400`（§5.1） | 用户批准后，趁用户少时做；不做的话，最晚在阶段 2 之前做 | 确认 prod 没有长任务 → 备份 → 手工改 compose 里 postgres 的启动参数 → `up -d postgres` → 核实连接数 |
+| 1 | `LAZY_CONCURRENCY`、`LAZY_FANOUT_CONCURRENCY` 从 2 改为 4（全站同时生成 4 → 8 件） | **T1**：7 天里有 3 天出现 `lazy_slot_full` 或 `lazy_fanout_slot_full` | 改 `.env` → 重启 web → 看一天日志和数据库连接数 |
+| 2（原 P1） | 连接池改为配置项（默认值不变）；流式语音提前 `db.close()`，两次检查放进线程池；`/audio` 同时合成上限；记账用独立连接池；向量检索 ①；slowapi 改用 Redis（限额数字翻倍，游客登录为全站 30/时）；`TTS_CONCURRENCY` 和 TTS 429 退避；**所有音频路径统一用 Redis 槽位**，并加条件落库；Wikimedia 直连请求经过 `_GATE` | **T2**，任一：数据库连接峰值 > 40；7 天里有 3 天出现 `tts_busy`；向量检索 p95 > 0.5 秒（7 天）；向量超过 10 万条 | ① 前置：阶段 0 的可选步骤没做，就先做。② 代码合入，CD 自动部署（不涉及 compose） |
+| 3（原 P2a） | 只改管线，仍在 web 里跑：`locked_artist` 和作者块重构；`chat()` 的 429 专门异常；翻译逐段容错；`generate_object` 的续跑模式（inprocess 下 `_generate` 一律传 `resume=True`，对 stub 等同全新生成，让新代码路径先跑起来）；补记账、价目表、三笔账（此阶段只告警） | **T3**，任一：阶段 1 之后，7 天里有 3 天 `lazy_started` 记到全站同时生成 ≥ 4 件（新容量的一半）；每周新增半成品 > 5 件 | ① 代码合入，CD 自动部署。② 观察 7 天：作者行变更（纪律 37 写入面）、生成失败率、`audio_invalidations`、成本。出问题回滚代码 |
+| 4（原 P2b） | 任务表和 worker；按美元预算停止；内容接口的续跑触发与冷却；语言白名单；回滚开关；**deploy.yml 先停 worker**；§7 其余 3 项告警和 ops_report 其余项；prod worker 的 `mem_limit`；记录被拒作品 | 阶段 3 观察 7 天没有阻断问题之后接着做：触发阶段 3 的信号说明队列迟早要上 | ① 代码合入（`LAZY_EXECUTOR` 默认 inprocess；开关只切执行方式，管线已在阶段 3 跑过）。② 手工在 compose 里加 worker 服务（`depends_on: web: service_healthy`、`restart: always`、`stop_grace_period: 60s`、`mem_limit`）→ `up -d worker` → 看日志确认它在空转等待。③ `.env` 改为 `LAZY_EXECUTOR=queue` → 依次重启 web 和 worker。④ 观察 24 小时，出问题就把 `.env` 改回 inprocess 再重启。⑤ 两周后删除 inprocess 路径 |
+| 4 之后（原 P2c） | `queue_position` / `eta_seconds` | 阶段 4 稳定后，与前端发版一起排期 | 与前端一起排期 |
+| 5（原 P3） | recognizer 容器（`cpu_shares` 低于 web）、nginx 分流、显式设置线程池；按路径实测识别 p95，与 §0.2 基线对比 | **T5**，任一：高峰时宿主机 CPU 15 分钟均值 > 50%（含同机其他项目）；同一 5 分钟内识别 ≥ 20 次且浏览 p95 > 1 秒 | ① 代码合入。② 手工在 compose 里加 recognizer → `up -d recognizer` → 本机请求验证。③ 改 nginx upstream（web 作为 backup）→ reload |
+| 按规模 | 向量检索 ②–⑤（§5.3）；作品超过 15 万件换搜索引擎（§5.4） | 见各节 | 见各节 |
+
+- 阈值大多设在当时容量的一半左右，给实施留出时间，不等用户受影响才动。触发指标越线时 ops_check 发邮件提醒，同一条 7 天只提醒一次；会话里看到 ops_report 越线，也要主动提醒用户。
+- 阶段之间的依赖：阶段 2 之前要先把数据库连接上限调到 400；阶段 4 要在阶段 3 的观察期之后；阶段 5 和其他阶段互不依赖。
+- 触发后照本文实施：先写实施计划，经用户批准再动手；不重新做设计。
 
 每个阶段上 prod 前，都要先确认 prod 上没有长任务在跑。
 
@@ -950,4 +999,5 @@ v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回
 | B4 worker 没写重启策略 | compose 默认不重启 | `restart: always`。见 §2 |
 | C1（用户追问）收录到几十万、上百万件时，向量识别会不会越来越慢 | prod 41,365 条向量；近 30 天 99.95% 是全局识别；百万级的瓶颈是每进程内存和加载时间，不是检索速度 | §5.3 改为五档路线，按触发条件上；近似检索从「30 万条」挪到最后一档 |
 | C2（用户追问）作品超过 15 万件后换外部搜索引擎（用户 10-07 定），v8 没写 | backlog「搜索换外部引擎」；匹配核心为进程内索引，搜索和识别文字链共用 | 补 §5.4：现状、触发条件、届时做法（开关、评测、同步）；§7 报告加作品总数 |
+| C3（用户 10-22）文档内容太多，是否分阶段、按条件触发实施 | prod 离各瓶颈都很远：近 30 天活跃 67 人，数据库 12 个连接，负载约 0.2 | 加「执行总览」；§11 改为阶段 0–5 加触发条件；P4 拆进阶段 0 和阶段 4；nginx、游客登录、额度分档、大模型超时、staging 资源上限提前到阶段 0；触发指标见 §7 |
 | 次要项 | — | slowapi 限额翻倍（§4.2）；维护窗口提前、不改 `shared_buffers`（§5.1、§11）；UTC 不用改（§4.1）；claim 拆成两条 SQL（§3.2）；英文未就绪的翻译不计次数回队列（§3.2）；`lang_priority` 兜底重译用优先级 10（§3.3）；存活告警改为 5 分钟（§7）；TTS 429 退避封顶 25 秒（§4.3）；同机其他项目计入容量（§2、§9.1） |
