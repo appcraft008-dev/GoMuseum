@@ -43,4 +43,16 @@ void main() {
     await pumpEventQueue();
     expect(reborn.read(autoSavePhotoProvider), isFalse);
   });
+
+  // Play 政策(10-21 送审被拦):Android 不再声明 READ_MEDIA_IMAGES。Android 10+
+  // 走 MediaStore 写相册不需要权限,向系统要会直接被拒 → 开关永远打不开。
+  test('Android 10+ 打开自动存相册不需要权限', () {
+    expect(autoSaveNeedsPermission(isAndroid: true, sdkInt: 29), isFalse);
+    expect(autoSaveNeedsPermission(isAndroid: true, sdkInt: 34), isFalse);
+  });
+
+  test('Android 9 及以下、iOS 仍要权限', () {
+    expect(autoSaveNeedsPermission(isAndroid: true, sdkInt: 28), isTrue);
+    expect(autoSaveNeedsPermission(isAndroid: false, sdkInt: 0), isTrue);
+  });
 }

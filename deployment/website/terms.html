@@ -1,52 +1,411 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>使用条款 · GoMuseum</title>
+<title>GoMuseum Terms of Service</title>
 <style>
   :root { --bg:#F3EDDF; --ink:#2C2316; --sub:#8A7A5F; --line:#DCD2B8; --accent:#A14E28; }
   * { box-sizing:border-box; margin:0; }
-  body { background:var(--bg); color:var(--ink); font-family:'Noto Sans SC','PingFang SC',sans-serif; }
-  .serif { font-family:'Noto Serif SC','Songti SC',serif; }
-  main { max-width:720px; margin:0 auto; padding:48px 28px 64px; }
+  [hidden] { display:none !important; }
+  body { background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,'Segoe UI','PingFang SC','PingFang TC','Hiragino Sans','Apple SD Gothic Neo','Noto Sans CJK SC','Noto Sans SC',sans-serif; }
+  .serif { font-family:Georgia,'Noto Serif SC','Songti SC','Hiragino Mincho ProN','Apple Myungjo',serif; }
+  main { max-width:720px; margin:0 auto; padding:32px 28px 64px; }
+  nav { display:flex; flex-wrap:wrap; gap:6px 8px; justify-content:center; margin-bottom:28px; }
+  nav button { font:inherit; font-size:13px; color:var(--sub); background:none; border:1px solid var(--line); border-radius:999px; padding:4px 12px; cursor:pointer; }
+  nav button[aria-current="true"] { color:var(--bg); background:var(--accent); border-color:var(--accent); }
+  nav button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   h1 { font-size:24px; font-weight:700; text-align:center; }
-  .meta { text-align:center; font-size:12px; color:var(--sub); margin:10px 0 36px; }
+  .meta { text-align:center; font-size:12px; color:var(--sub); margin:10px 0 36px; line-height:1.7; }
   h2 { font-size:16px; font-weight:700; color:var(--accent); margin:32px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
   p, li { font-size:14px; line-height:1.9; }
   ul { padding-left:22px; }
-  .en { color:var(--sub); font-size:13px; }
+  table { display:block; overflow-x:auto; width:100%; border-collapse:collapse; font-size:13px; margin:10px 0; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; line-height:1.6; vertical-align:top; min-width:150px; }
+  th { background:#EAE2CD; }
   a { color:var(--accent); }
 </style>
 </head>
 <body>
 <main>
-  <h1 class="serif">GoMuseum 使用条款</h1>
-  <p class="meta">Terms of Service · 生效日期 / Effective: 2026-09-04</p>
-  <h2>1. 服务说明</h2>
-  <p>GoMuseum 提供基于 AI 的展品识别与讲解。<strong>本应用并非任何博物馆的官方导览</strong>，识别结果与讲解内容由 AI 生成，仅供参考，可能存在错误。</p>
-  <h2>2. 馆内行为</h2>
-  <ul>
-    <li>请遵守博物馆的摄影规定；在禁止拍照的展区，请使用应用内的检索功能而非拍照。</li>
-    <li>请佩戴耳机收听语音讲解，避免外放打扰他人。</li>
-  </ul>
-  <h2>3. 免费额度与通票</h2>
-  <p><strong>免费部分</strong>：浏览、搜索、完整的文字讲解与预设问答始终免费；此外新用户有一定次数的拍照识别额度，以及 1 件作品的语音讲解免费试听（该件可无限重播）。</p>
-  <p><strong>通票</strong>：更多识别与全部语音讲解需购买通票。通票是<strong>一次性买断的消耗型商品，不是订阅，不会自动续费、也不会自动扣款</strong>。当前提供「巴黎 7 日通票」，覆盖卢浮宫、奥赛、橘园、小皇宫四馆。</p>
-  <ul>
-    <li><strong>7 天从「激活」起算，不是从购买起算。</strong>你可以提前买好，到馆当天首次使用高级功能并确认后才开始计时。</li>
-    <li><strong>未激活的通票在购买后 30 天失效。</strong>请在购买后 30 天内激活。</li>
-    <li>激活后连续计时 7×24 小时，期间不限次数使用，到期自动结束，无需取消。</li>
-    <li><strong>删除账号会使通票立即作废且无法找回</strong>，详见<a href="privacy.html">隐私政策</a>第 4 节。</li>
-  </ul>
-  <p><strong>退款</strong>：购买通过 Google Play 完成，退款按 Google Play 的政策与流程办理（在 Google Play 中申请）。退款成功后相应通票权益将被撤销。已使用的免费额度不予返还。</p>
-  <p class="en">Passes are one-time consumable purchases — not subscriptions, no auto-renewal. The 7-day period starts when you activate the pass, not when you buy it; an unactivated pass expires 30 days after purchase. Deleting your account voids any pass permanently. Refunds are handled by Google Play; a refunded pass is revoked.</p>
-  <h2>4. 知识产权</h2>
-  <p>展品图像与信息可能来源于公有领域资料（如 Wikidata/Wikimedia Commons）或由 AI 生成与编辑。如认为内容侵犯了你的权利，请联系 appcraft008@gmail.com，我们将及时处理。</p>
-  <h2>5. 责任限制</h2>
-  <p>在法律允许的最大范围内，我们不对因依赖 AI 生成内容、服务中断或第三方服务故障造成的损失承担责任。</p>
-  <h2>6. 账号</h2>
-  <p>你应妥善保管账号凭据。滥用服务（包括绕过额度限制、自动化批量请求）可能导致账号被限制或终止。</p>
+<nav aria-label="Language">
+<button type="button" data-l="en" aria-current="true">English</button>
+<button type="button" data-l="fr" aria-current="false">Français</button>
+<button type="button" data-l="de" aria-current="false">Deutsch</button>
+<button type="button" data-l="es" aria-current="false">Español</button>
+<button type="button" data-l="it" aria-current="false">Italiano</button>
+<button type="button" data-l="pl" aria-current="false">Polski</button>
+<button type="button" data-l="ja" aria-current="false">日本語</button>
+<button type="button" data-l="ko" aria-current="false">한국어</button>
+<button type="button" data-l="zh" aria-current="false">简体中文</button>
+<button type="button" data-l="zh-hant" aria-current="false">繁體中文</button>
+</nav>
+<article lang="en" data-l="en">
+<h1 class="serif">GoMuseum Terms of Service</h1>
+<p class="meta">Effective: 2026-09-04<br />If the language versions differ, the English version prevails.</p>
+
+<h2>1. The service</h2>
+<p>GoMuseum provides AI-based artwork recognition and narration. <strong>This app is not an official guide of any museum.</strong> Recognition results and narration are generated by AI, are for reference only and may contain errors.</p>
+
+<h2>2. Conduct in the museum</h2>
+<ul>
+  <li>Please follow each museum's photography rules; in areas where photography is prohibited, use the in-app search instead of taking a photo.</li>
+  <li>Please use headphones for audio narration and avoid playing it aloud, so as not to disturb others.</li>
+</ul>
+
+<h2>3. Free quota and passes</h2>
+<p><strong>What is free</strong>: browsing, search, the full text narration and the preset Q&amp;A are always free. In addition, a new user gets a certain number of photo recognitions and a free audio preview of 1 artwork (that one can be replayed without limit).</p>
+<p><strong>Passes</strong>: more recognitions and all audio narration require buying a pass. A pass is a <strong>one-time, consumable purchase — not a subscription; it does not renew automatically and nothing is charged automatically</strong>. The pass currently offered is the "Paris 7-Day Pass", covering four museums: the Louvre, the Musée d'Orsay, the Musée de l'Orangerie and the Petit Palais.</p>
+<ul>
+  <li><strong>The 7 days count from activation, not from purchase.</strong> You can buy in advance; the clock starts only when you first use a premium feature on the day you visit and confirm.</li>
+  <li><strong>A pass that has not been activated expires 30 days after purchase.</strong> Please activate it within 30 days of buying.</li>
+  <li>After activation the clock runs continuously for 7×24 hours, with unlimited use during that time; it ends automatically when the time is up, and there is nothing to cancel.</li>
+  <li><strong>Deleting your account voids the pass immediately and it cannot be recovered</strong>; see section 4 of the <a href="privacy.html">Privacy Policy</a>.</li>
+</ul>
+<p><strong>Refunds</strong>: purchases are made through Google Play, and refunds follow Google Play's policies and process (request them in Google Play). After a successful refund, the corresponding pass entitlement is revoked. Free quota that has already been used is not returned.</p>
+
+<h2>4. Intellectual property</h2>
+<p>Artwork images and information may come from public-domain material (such as Wikidata/Wikimedia Commons) or be generated and edited by AI. If you believe any content infringes your rights, please contact appcraft008@gmail.com and we will handle it promptly.</p>
+
+<h2>5. Limitation of liability</h2>
+<p>To the fullest extent permitted by law, we are not liable for losses caused by relying on AI-generated content, service interruptions or failures of third-party services.</p>
+
+<h2>6. Accounts</h2>
+<p>You are responsible for keeping your account credentials safe. Abusing the service (including getting around quota limits and sending automated bulk requests) may lead to your account being restricted or terminated.</p>
+</article>
+<article lang="fr" data-l="fr" hidden>
+<h1 class="serif">Conditions d'utilisation de GoMuseum</h1>
+<p class="meta">En vigueur depuis le : 04/09/2026<br />En cas de divergence entre les versions linguistiques, la version anglaise prévaut.</p>
+
+<h2>1. Le service</h2>
+<p>GoMuseum propose la reconnaissance d'œuvres et des commentaires fondés sur l'IA. <strong>Cette application n'est le guide officiel d'aucun musée.</strong> Les résultats de reconnaissance et les commentaires sont générés par l'IA, sont fournis à titre indicatif uniquement et peuvent contenir des erreurs.</p>
+
+<h2>2. Comportement dans le musée</h2>
+<ul>
+  <li>Veuillez respecter les règles de chaque musée en matière de photographie ; dans les zones où la photographie est interdite, utilisez la recherche de l'application plutôt que de prendre une photo.</li>
+  <li>Veuillez utiliser des écouteurs pour les commentaires audio et éviter de les diffuser à haute voix, afin de ne pas déranger les autres.</li>
+</ul>
+
+<h2>3. Quota gratuit et pass</h2>
+<p><strong>Ce qui est gratuit</strong> : la navigation, la recherche, les commentaires textuels complets et les questions-réponses prédéfinies sont toujours gratuits. En outre, un nouvel utilisateur bénéficie d'un certain nombre de reconnaissances par photo et d'un aperçu audio gratuit pour 1 œuvre (cette œuvre peut être réécoutée sans limite).</p>
+<p><strong>Pass</strong> : pour davantage de reconnaissances et pour tous les commentaires audio, il faut acheter un pass. Un pass est un <strong>achat unique consommable — ce n'est pas un abonnement ; il ne se renouvelle pas automatiquement et rien n'est prélevé automatiquement</strong>. Le pass actuellement proposé est le « Pass Paris 7 jours », qui couvre quatre musées : le Louvre, le musée d'Orsay, le musée de l'Orangerie et le Petit Palais.</p>
+<ul>
+  <li><strong>Les 7 jours courent à partir de l'activation, pas de l'achat.</strong> Vous pouvez acheter à l'avance ; le décompte ne commence que lorsque vous utilisez pour la première fois une fonctionnalité premium le jour de votre visite et que vous confirmez.</li>
+  <li><strong>Un pass non activé expire 30 jours après l'achat.</strong> Veuillez l'activer dans les 30 jours suivant l'achat.</li>
+  <li>Après l'activation, le décompte se poursuit sans interruption pendant 7×24 heures, avec une utilisation illimitée pendant cette période ; il prend fin automatiquement à l'échéance, et il n'y a rien à résilier.</li>
+  <li><strong>La suppression de votre compte annule immédiatement le pass, qui ne peut pas être récupéré</strong> ; voir la section 4 de la <a href="privacy.html">Politique de confidentialité</a>.</li>
+</ul>
+<p><strong>Remboursements</strong> : les achats sont effectués via Google Play, et les remboursements suivent les règles et la procédure de Google Play (à demander dans Google Play). Après un remboursement réussi, le droit correspondant au pass est révoqué. Le quota gratuit déjà utilisé n'est pas restitué.</p>
+
+<h2>4. Propriété intellectuelle</h2>
+<p>Les images et informations sur les œuvres peuvent provenir de documents du domaine public (comme Wikidata/Wikimedia Commons) ou être générées et rédigées par l'IA. Si vous estimez qu'un contenu porte atteinte à vos droits, veuillez contacter appcraft008@gmail.com et nous le traiterons rapidement.</p>
+
+<h2>5. Limitation de responsabilité</h2>
+<p>Dans toute la mesure permise par la loi, nous ne sommes pas responsables des pertes causées par le fait de se fier à un contenu généré par l'IA, par des interruptions de service ou par des défaillances de services tiers.</p>
+
+<h2>6. Comptes</h2>
+<p>Vous êtes responsable de la sécurité des identifiants de votre compte. Un abus du service (notamment contourner les limites de quota ou envoyer des requêtes automatisées en masse) peut entraîner la restriction ou la résiliation de votre compte.</p>
+</article>
+<article lang="de" data-l="de" hidden>
+<h1 class="serif">Nutzungsbedingungen von GoMuseum</h1>
+<p class="meta">Gültig ab: 04.09.2026<br />Weichen die Sprachfassungen voneinander ab, gilt die englische Fassung.</p>
+
+<h2>1. Der Dienst</h2>
+<p>GoMuseum bietet KI-gestützte Werkerkennung und Erläuterungen. <strong>Diese App ist kein offizieller Führer eines Museums.</strong> Erkennungsergebnisse und Erläuterungen werden von KI erzeugt, dienen nur als Orientierung und können Fehler enthalten.</p>
+
+<h2>2. Verhalten im Museum</h2>
+<ul>
+  <li>Bitte beachten Sie die Fotoregeln des jeweiligen Museums; in Bereichen, in denen das Fotografieren verboten ist, nutzen Sie bitte die Suche in der App statt eines Fotos.</li>
+  <li>Bitte hören Sie die Audioerläuterungen mit Kopfhörern und spielen Sie sie nicht laut ab, um andere nicht zu stören.</li>
+</ul>
+
+<h2>3. Kostenloses Kontingent und Pässe</h2>
+<p><strong>Was kostenlos ist</strong>: Stöbern, Suche, die vollständigen Texterläuterungen und die vorgegebenen Fragen und Antworten sind immer kostenlos. Außerdem erhält ein neuer Nutzer eine bestimmte Anzahl an Fotoerkennungen und eine kostenlose Audio-Vorschau für 1 Kunstwerk (dieses kann unbegrenzt erneut abgespielt werden).</p>
+<p><strong>Pässe</strong>: Für weitere Erkennungen und alle Audioerläuterungen ist der Kauf eines Passes erforderlich. Ein Pass ist ein <strong>einmaliger, verbrauchbarer Kauf — kein Abonnement; er verlängert sich nicht automatisch, und es wird nichts automatisch abgebucht</strong>. Aktuell wird der „Paris-7-Tage-Pass“ angeboten, der vier Museen abdeckt: den Louvre, das Musée d'Orsay, das Musée de l'Orangerie und das Petit Palais.</p>
+<ul>
+  <li><strong>Die 7 Tage zählen ab der Aktivierung, nicht ab dem Kauf.</strong> Sie können im Voraus kaufen; die Zeit läuft erst, wenn Sie am Tag Ihres Besuchs zum ersten Mal eine Premium-Funktion nutzen und bestätigen.</li>
+  <li><strong>Ein nicht aktivierter Pass verfällt 30 Tage nach dem Kauf.</strong> Bitte aktivieren Sie ihn innerhalb von 30 Tagen nach dem Kauf.</li>
+  <li>Nach der Aktivierung läuft die Zeit 7×24 Stunden ununterbrochen, mit unbegrenzter Nutzung in dieser Zeit; sie endet automatisch mit Ablauf, und es gibt nichts zu kündigen.</li>
+  <li><strong>Die Löschung Ihres Kontos lässt den Pass sofort verfallen, und er kann nicht wiederhergestellt werden</strong>; siehe Abschnitt 4 der <a href="privacy.html">Datenschutzerklärung</a>.</li>
+</ul>
+<p><strong>Rückerstattungen</strong>: Käufe erfolgen über Google Play, und Rückerstattungen richten sich nach den Richtlinien und dem Verfahren von Google Play (in Google Play zu beantragen). Nach einer erfolgreichen Rückerstattung wird die entsprechende Pass-Berechtigung widerrufen. Bereits genutztes kostenloses Kontingent wird nicht zurückgegeben.</p>
+
+<h2>4. Geistiges Eigentum</h2>
+<p>Bilder und Informationen zu Kunstwerken können aus gemeinfreiem Material (etwa Wikidata/Wikimedia Commons) stammen oder von KI erzeugt und bearbeitet sein. Wenn Sie der Ansicht sind, dass ein Inhalt Ihre Rechte verletzt, wenden Sie sich bitte an appcraft008@gmail.com; wir kümmern uns umgehend darum.</p>
+
+<h2>5. Haftungsbeschränkung</h2>
+<p>Soweit gesetzlich zulässig, haften wir nicht für Verluste, die dadurch entstehen, dass Sie sich auf KI-generierte Inhalte verlassen, sowie für Dienstunterbrechungen oder Ausfälle von Diensten Dritter.</p>
+
+<h2>6. Konten</h2>
+<p>Sie sind dafür verantwortlich, Ihre Zugangsdaten sicher aufzubewahren. Der Missbrauch des Dienstes (einschließlich der Umgehung von Kontingentgrenzen und des Sendens automatisierter Massenanfragen) kann dazu führen, dass Ihr Konto eingeschränkt oder gekündigt wird.</p>
+</article>
+<article lang="es" data-l="es" hidden>
+<h1 class="serif">Condiciones de uso de GoMuseum</h1>
+<p class="meta">En vigor desde: 04/09/2026<br />Si las versiones en distintos idiomas difieren, prevalece la versión en inglés.</p>
+
+<h2>1. El servicio</h2>
+<p>GoMuseum ofrece reconocimiento de obras y comentarios basados en IA. <strong>Esta aplicación no es la guía oficial de ningún museo.</strong> Los resultados del reconocimiento y los comentarios los genera la IA, son meramente orientativos y pueden contener errores.</p>
+
+<h2>2. Comportamiento en el museo</h2>
+<ul>
+  <li>Respete las normas de fotografía de cada museo; en las zonas donde está prohibido fotografiar, utilice la búsqueda de la aplicación en lugar de hacer una foto.</li>
+  <li>Utilice auriculares para escuchar los comentarios en audio y evite reproducirlos en voz alta, para no molestar a los demás.</li>
+</ul>
+
+<h2>3. Cuota gratuita y pases</h2>
+<p><strong>Qué es gratuito</strong>: explorar, buscar, los comentarios completos en texto y las preguntas y respuestas predefinidas son siempre gratuitos. Además, un usuario nuevo dispone de un cierto número de reconocimientos por foto y de una escucha previa gratuita en audio de 1 obra (esa obra se puede volver a reproducir sin límite).</p>
+<p><strong>Pases</strong>: para más reconocimientos y para todos los comentarios en audio hay que comprar un pase. Un pase es una <strong>compra única consumible: no es una suscripción, no se renueva automáticamente y no se cobra nada de forma automática</strong>. El pase que se ofrece actualmente es el «Pase París 7 días», que cubre cuatro museos: el Louvre, el Museo de Orsay, el Museo de la Orangerie y el Petit Palais.</p>
+<ul>
+  <li><strong>Los 7 días cuentan desde la activación, no desde la compra.</strong> Puede comprarlo con antelación; el contador solo empieza cuando, el día de su visita, usa por primera vez una función premium y confirma.</li>
+  <li><strong>Un pase que no se ha activado caduca 30 días después de la compra.</strong> Actívelo dentro de los 30 días siguientes a la compra.</li>
+  <li>Tras la activación, el contador corre de forma continua durante 7×24 horas, con uso ilimitado durante ese tiempo; termina automáticamente al acabar el plazo y no hay nada que cancelar.</li>
+  <li><strong>Eliminar su cuenta anula el pase de inmediato y no se puede recuperar</strong>; véase la sección 4 de la <a href="privacy.html">Política de privacidad</a>.</li>
+</ul>
+<p><strong>Reembolsos</strong>: las compras se realizan a través de Google Play, y los reembolsos se rigen por las políticas y el procedimiento de Google Play (se solicitan en Google Play). Tras un reembolso satisfactorio, se revoca el derecho correspondiente del pase. La cuota gratuita ya utilizada no se devuelve.</p>
+
+<h2>4. Propiedad intelectual</h2>
+<p>Las imágenes y la información de las obras pueden proceder de material de dominio público (como Wikidata/Wikimedia Commons) o haber sido generadas y editadas por IA. Si cree que algún contenido infringe sus derechos, póngase en contacto con appcraft008@gmail.com y lo atenderemos con prontitud.</p>
+
+<h2>5. Limitación de responsabilidad</h2>
+<p>En la máxima medida permitida por la ley, no somos responsables de las pérdidas causadas por confiar en contenido generado por IA, por interrupciones del servicio o por fallos de servicios de terceros.</p>
+
+<h2>6. Cuentas</h2>
+<p>Usted es responsable de mantener seguras las credenciales de su cuenta. El abuso del servicio (incluido eludir los límites de cuota y enviar solicitudes automatizadas masivas) puede dar lugar a que su cuenta sea restringida o cancelada.</p>
+</article>
+<article lang="it" data-l="it" hidden>
+<h1 class="serif">Termini di servizio di GoMuseum</h1>
+<p class="meta">In vigore dal: 04/09/2026<br />In caso di differenze tra le versioni linguistiche, prevale la versione inglese.</p>
+
+<h2>1. Il servizio</h2>
+<p>GoMuseum offre il riconoscimento delle opere e commenti basati sull'IA. <strong>Questa app non è la guida ufficiale di alcun museo.</strong> I risultati del riconoscimento e i commenti sono generati dall'IA, hanno valore puramente indicativo e possono contenere errori.</p>
+
+<h2>2. Comportamento nel museo</h2>
+<ul>
+  <li>Rispetta le regole fotografiche di ciascun museo; nelle aree in cui è vietato fotografare, usa la ricerca dell'app invece di scattare una foto.</li>
+  <li>Usa le cuffie per ascoltare i commenti audio ed evita di riprodurli ad alta voce, per non disturbare gli altri.</li>
+</ul>
+
+<h2>3. Quota gratuita e pass</h2>
+<p><strong>Cosa è gratuito</strong>: la consultazione, la ricerca, i commenti completi in testo e le domande e risposte predefinite sono sempre gratuiti. Inoltre, un nuovo utente ha a disposizione un certo numero di riconoscimenti tramite foto e un'anteprima audio gratuita di 1 opera (quell'opera può essere riascoltata senza limiti).</p>
+<p><strong>Pass</strong>: per più riconoscimenti e per tutti i commenti audio occorre acquistare un pass. Il pass è un <strong>acquisto singolo consumabile: non è un abbonamento, non si rinnova automaticamente e non viene addebitato nulla in automatico</strong>. Il pass attualmente offerto è il «Pass Parigi 7 giorni», che copre quattro musei: il Louvre, il Musée d'Orsay, il Musée de l'Orangerie e il Petit Palais.</p>
+<ul>
+  <li><strong>I 7 giorni decorrono dall'attivazione, non dall'acquisto.</strong> Puoi acquistarlo in anticipo; il conteggio inizia solo quando, il giorno della visita, usi per la prima volta una funzione premium e confermi.</li>
+  <li><strong>Un pass non attivato scade 30 giorni dopo l'acquisto.</strong> Attivalo entro 30 giorni dall'acquisto.</li>
+  <li>Dopo l'attivazione il conteggio prosegue senza interruzioni per 7×24 ore, con uso illimitato in questo periodo; termina automaticamente alla scadenza e non c'è nulla da annullare.</li>
+  <li><strong>L'eliminazione del tuo account annulla immediatamente il pass e non è possibile recuperarlo</strong>; vedi la sezione 4 dell'<a href="privacy.html">Informativa sulla privacy</a>.</li>
+</ul>
+<p><strong>Rimborsi</strong>: gli acquisti sono effettuati tramite Google Play e i rimborsi seguono le politiche e la procedura di Google Play (da richiedere in Google Play). Dopo un rimborso andato a buon fine, il diritto corrispondente del pass viene revocato. La quota gratuita già utilizzata non viene restituita.</p>
+
+<h2>4. Proprietà intellettuale</h2>
+<p>Le immagini e le informazioni sulle opere possono provenire da materiale di pubblico dominio (come Wikidata/Wikimedia Commons) o essere generate e redatte dall'IA. Se ritieni che un contenuto violi i tuoi diritti, contatta appcraft008@gmail.com e provvederemo tempestivamente.</p>
+
+<h2>5. Limitazione di responsabilità</h2>
+<p>Nella misura massima consentita dalla legge, non siamo responsabili delle perdite causate dall'affidamento a contenuti generati dall'IA, da interruzioni del servizio o da guasti di servizi di terzi.</p>
+
+<h2>6. Account</h2>
+<p>Sei responsabile della custodia delle credenziali del tuo account. L'abuso del servizio (inclusi l'aggiramento dei limiti di quota e l'invio di richieste automatizzate in blocco) può comportare la limitazione o la chiusura del tuo account.</p>
+</article>
+<article lang="pl" data-l="pl" hidden>
+<h1 class="serif">Regulamin GoMuseum</h1>
+<p class="meta">Obowiązuje od: 04.09.2026<br />W razie rozbieżności między wersjami językowymi obowiązuje wersja angielska.</p>
+
+<h2>1. Usługa</h2>
+<p>GoMuseum zapewnia rozpoznawanie dzieł i komentarze oparte na AI. <strong>Ta aplikacja nie jest oficjalnym przewodnikiem żadnego muzeum.</strong> Wyniki rozpoznawania i komentarze są generowane przez AI, mają charakter wyłącznie orientacyjny i mogą zawierać błędy.</p>
+
+<h2>2. Zachowanie w muzeum</h2>
+<ul>
+  <li>Przestrzegaj zasad fotografowania obowiązujących w danym muzeum; w strefach, w których fotografowanie jest zabronione, korzystaj z wyszukiwarki w aplikacji zamiast robić zdjęcie.</li>
+  <li>Komentarzy audio słuchaj w słuchawkach i nie odtwarzaj ich na głos, aby nie przeszkadzać innym.</li>
+</ul>
+
+<h2>3. Bezpłatny limit i karnety</h2>
+<p><strong>Co jest bezpłatne</strong>: przeglądanie, wyszukiwanie, pełne komentarze tekstowe i gotowe pytania i odpowiedzi są zawsze bezpłatne. Ponadto nowy użytkownik otrzymuje określoną liczbę rozpoznań ze zdjęcia oraz bezpłatny odsłuch audio 1 dzieła (to dzieło można odtwarzać bez ograniczeń).</p>
+<p><strong>Karnety</strong>: więcej rozpoznań i wszystkie komentarze audio wymagają zakupu karnetu. Karnet to <strong>jednorazowy zakup produktu zużywalnego — nie jest subskrypcją, nie odnawia się automatycznie i nic nie jest pobierane automatycznie</strong>. Obecnie dostępny jest „Karnet Paryż 7 dni”, obejmujący cztery muzea: Luwr, Musée d'Orsay, Musée de l'Orangerie i Petit Palais.</p>
+<ul>
+  <li><strong>7 dni liczy się od aktywacji, a nie od zakupu.</strong> Możesz kupić z wyprzedzeniem; odliczanie rozpoczyna się dopiero wtedy, gdy w dniu wizyty po raz pierwszy użyjesz funkcji premium i potwierdzisz.</li>
+  <li><strong>Nieaktywowany karnet wygasa 30 dni po zakupie.</strong> Aktywuj go w ciągu 30 dni od zakupu.</li>
+  <li>Po aktywacji czas biegnie nieprzerwanie przez 7×24 godziny, a w tym czasie korzystanie jest nieograniczone; kończy się automatycznie z upływem czasu i nie ma czego anulować.</li>
+  <li><strong>Usunięcie konta natychmiast unieważnia karnet i nie można go odzyskać</strong>; zob. sekcja 4 <a href="privacy.html">Polityki prywatności</a>.</li>
+</ul>
+<p><strong>Zwroty</strong>: zakupy są dokonywane przez Google Play, a zwroty podlegają zasadom i procedurze Google Play (o zwrot występuje się w Google Play). Po skutecznym zwrocie odpowiednie uprawnienie karnetu zostaje cofnięte. Wykorzystany już bezpłatny limit nie jest zwracany.</p>
+
+<h2>4. Własność intelektualna</h2>
+<p>Obrazy i informacje o dziełach mogą pochodzić z materiałów w domenie publicznej (takich jak Wikidata/Wikimedia Commons) lub być generowane i redagowane przez AI. Jeśli uważasz, że jakaś treść narusza Twoje prawa, skontaktuj się z appcraft008@gmail.com, a niezwłocznie się tym zajmiemy.</p>
+
+<h2>5. Ograniczenie odpowiedzialności</h2>
+<p>W maksymalnym zakresie dozwolonym przez prawo nie ponosimy odpowiedzialności za szkody wynikające z polegania na treściach generowanych przez AI, z przerw w działaniu usługi lub z awarii usług podmiotów trzecich.</p>
+
+<h2>6. Konta</h2>
+<p>Odpowiadasz za bezpieczne przechowywanie danych logowania do konta. Nadużywanie usługi (w tym obchodzenie limitów i wysyłanie zautomatyzowanych masowych żądań) może skutkować ograniczeniem lub zamknięciem Twojego konta.</p>
+</article>
+<article lang="ja" data-l="ja" hidden>
+<h1 class="serif">GoMuseum 利用規約</h1>
+<p class="meta">施行日：2026年9月4日<br />各言語版の間に相違がある場合は、英語版が優先します。</p>
+
+<h2>1. サービスについて</h2>
+<p>GoMuseum は、AI による作品認識と解説を提供します。<strong>本アプリは、いかなる美術館の公式ガイドでもありません。</strong>認識結果と解説は AI が生成したもので、参考情報にすぎず、誤りが含まれる場合があります。</p>
+
+<h2>2. 館内でのマナー</h2>
+<ul>
+  <li>各美術館の撮影ルールに従ってください。撮影が禁止されている展示室では、写真を撮らず、アプリ内の検索機能をご利用ください。</li>
+  <li>音声解説はイヤホンでお聞きください。周囲の迷惑にならないよう、スピーカーでの再生は避けてください。</li>
+</ul>
+
+<h2>3. 無料枠とパス</h2>
+<p><strong>無料の範囲</strong>：閲覧、検索、テキスト解説の全文、あらかじめ用意された質問への回答は、常に無料です。さらに、新規ユーザーには一定回数の写真認識と、1 作品の音声解説の無料試聴があります（その 1 作品は何度でも再生できます）。</p>
+<p><strong>パス</strong>：それ以上の認識とすべての音声解説には、パスの購入が必要です。パスは<strong>1 回限りの買い切りの消耗型商品で、サブスクリプションではなく、自動更新も自動課金もされません</strong>。現在提供しているのは「パリ 7 日間パス」で、ルーヴル美術館、オルセー美術館、オランジュリー美術館、プティ・パレの 4 館が対象です。</p>
+<ul>
+  <li><strong>7 日間は購入時ではなく「有効化」の時点から数えます。</strong>事前に購入しておき、来館当日に初めてプレミアム機能を使って確認した時点から計測が始まります。</li>
+  <li><strong>有効化していないパスは、購入から 30 日で失効します。</strong>購入後 30 日以内に有効化してください。</li>
+  <li>有効化後は 7×24 時間連続で計測され、その間は回数無制限で利用できます。期間が終われば自動的に終了し、解約の手続きは不要です。</li>
+  <li><strong>アカウントを削除すると、パスは直ちに無効になり、取り戻せません。</strong>詳しくは<a href="privacy.html">プライバシーポリシー</a>の第 4 項をご覧ください。</li>
+</ul>
+<p><strong>返金</strong>：購入は Google Play を通じて行われ、返金は Google Play のポリシーと手続きに従います（Google Play で申請してください）。返金が完了すると、該当するパスの権利は取り消されます。すでに使用した無料枠は返還されません。</p>
+
+<h2>4. 知的財産</h2>
+<p>作品の画像や情報は、パブリックドメインの資料（Wikidata／Wikimedia Commons など）に由来するか、AI によって生成・編集されたものである場合があります。内容がお客様の権利を侵害していると思われる場合は、appcraft008@gmail.com までご連絡ください。速やかに対応します。</p>
+
+<h2>5. 責任の制限</h2>
+<p>法律で認められる最大限の範囲で、当社は、AI が生成した内容を信頼したこと、サービスの中断、第三者サービスの障害によって生じた損害について責任を負いません。</p>
+
+<h2>6. アカウント</h2>
+<p>お客様は、アカウントの認証情報を適切に管理してください。サービスの不正利用（無料枠の制限の回避、自動化された大量リクエストを含む）は、アカウントの制限または停止につながることがあります。</p>
+</article>
+<article lang="ko" data-l="ko" hidden>
+<h1 class="serif">GoMuseum 이용약관</h1>
+<p class="meta">시행일: 2026년 9월 4일<br />언어 버전 간에 차이가 있는 경우 영어 버전이 우선합니다.</p>
+
+<h2>1. 서비스 안내</h2>
+<p>GoMuseum은 AI 기반 작품 인식과 해설을 제공합니다. <strong>이 앱은 어떤 박물관의 공식 가이드도 아닙니다.</strong> 인식 결과와 해설은 AI가 생성한 것으로 참고용일 뿐이며 오류가 있을 수 있습니다.</p>
+
+<h2>2. 관람 시 유의사항</h2>
+<ul>
+  <li>각 박물관의 촬영 규정을 지켜 주세요. 촬영이 금지된 전시 구역에서는 사진을 찍지 말고 앱의 검색 기능을 이용해 주세요.</li>
+  <li>음성 해설은 이어폰으로 들어 주시고, 다른 분들께 방해가 되지 않도록 소리를 크게 틀지 마세요.</li>
+</ul>
+
+<h2>3. 무료 이용 횟수와 패스</h2>
+<p><strong>무료로 제공되는 것</strong>: 둘러보기, 검색, 전체 텍스트 해설, 미리 준비된 질문과 답변은 항상 무료입니다. 또한 신규 사용자에게는 일정 횟수의 사진 인식과 1개 작품의 음성 해설 무료 미리 듣기가 제공됩니다(그 1개 작품은 무제한으로 다시 재생할 수 있습니다).</p>
+<p><strong>패스</strong>: 더 많은 인식과 모든 음성 해설을 이용하려면 패스를 구매해야 합니다. 패스는 <strong>1회성 소모성 상품이며 구독이 아니고, 자동으로 갱신되거나 자동으로 결제되지 않습니다</strong>. 현재 제공되는 상품은 “파리 7일 패스”이며, 루브르 박물관, 오르세 미술관, 오랑주리 미술관, 프티 팔레의 4개 박물관을 포함합니다.</p>
+<ul>
+  <li><strong>7일은 구매 시점이 아니라 “활성화” 시점부터 계산합니다.</strong> 미리 구매해 두고, 방문 당일 처음 프리미엄 기능을 사용해 확인한 시점부터 시간이 계산됩니다.</li>
+  <li><strong>활성화하지 않은 패스는 구매 후 30일이 지나면 만료됩니다.</strong> 구매 후 30일 이내에 활성화해 주세요.</li>
+  <li>활성화한 후에는 7×24시간 동안 연속으로 시간이 계산되며 그 기간 동안 횟수 제한 없이 이용할 수 있습니다. 기간이 끝나면 자동으로 종료되며 별도로 해지할 필요가 없습니다.</li>
+  <li><strong>계정을 삭제하면 패스는 즉시 무효가 되며 복구할 수 없습니다.</strong> 자세한 내용은 <a href="privacy.html">개인정보 처리방침</a> 제4항을 참조하세요.</li>
+</ul>
+<p><strong>환불</strong>: 구매는 Google Play를 통해 이루어지며, 환불은 Google Play의 정책과 절차에 따라 처리됩니다(Google Play에서 신청). 환불이 완료되면 해당 패스 권한은 회수됩니다. 이미 사용한 무료 횟수는 반환되지 않습니다.</p>
+
+<h2>4. 지식재산권</h2>
+<p>작품 이미지와 정보는 퍼블릭 도메인 자료(예: Wikidata/Wikimedia Commons)에서 가져왔거나 AI가 생성·편집한 것일 수 있습니다. 콘텐츠가 회원님의 권리를 침해한다고 생각되시면 appcraft008@gmail.com으로 연락해 주세요. 신속히 처리하겠습니다.</p>
+
+<h2>5. 책임의 제한</h2>
+<p>법률이 허용하는 최대 범위에서, 당사는 AI가 생성한 내용에 의존하여 발생한 손해, 서비스 중단, 제3자 서비스의 장애로 인한 손해에 대해 책임지지 않습니다.</p>
+
+<h2>6. 계정</h2>
+<p>회원님은 계정 인증 정보를 안전하게 보관할 책임이 있습니다. 서비스 악용(이용 횟수 제한 우회, 자동화된 대량 요청 포함)은 계정 제한 또는 해지로 이어질 수 있습니다.</p>
+</article>
+<article lang="zh-CN" data-l="zh" hidden>
+<h1 class="serif">GoMuseum 使用条款</h1>
+<p class="meta">生效日期：2026-09-04<br />各语言版本如有出入，以英文版为准。</p>
+
+<h2>1. 服务说明</h2>
+<p>GoMuseum 提供基于 AI 的展品识别与讲解。<strong>本应用并非任何博物馆的官方导览</strong>，识别结果与讲解内容由 AI 生成，仅供参考，可能存在错误。</p>
+
+<h2>2. 馆内行为</h2>
+<ul>
+  <li>请遵守博物馆的摄影规定；在禁止拍照的展区，请使用应用内的检索功能而非拍照。</li>
+  <li>请佩戴耳机收听语音讲解，避免外放打扰他人。</li>
+</ul>
+
+<h2>3. 免费额度与通票</h2>
+<p><strong>免费部分</strong>：浏览、搜索、完整的文字讲解与预设问答始终免费；此外新用户有一定次数的拍照识别额度，以及 1 件作品的语音讲解免费试听（该件可无限重播）。</p>
+<p><strong>通票</strong>：更多识别与全部语音讲解需购买通票。通票是<strong>一次性买断的消耗型商品，不是订阅，不会自动续费、也不会自动扣款</strong>。当前提供“巴黎 7 日通票”，覆盖卢浮宫、奥赛、橘园、小皇宫四馆。</p>
+<ul>
+  <li><strong>7 天从“激活”起算，不是从购买起算。</strong>你可以提前买好，到馆当天首次使用高级功能并确认后才开始计时。</li>
+  <li><strong>未激活的通票在购买后 30 天失效。</strong>请在购买后 30 天内激活。</li>
+  <li>激活后连续计时 7×24 小时，期间不限次数使用，到期自动结束，无需取消。</li>
+  <li><strong>删除账号会使通票立即作废且无法找回</strong>，详见<a href="privacy.html">隐私政策</a>第 4 节。</li>
+</ul>
+<p><strong>退款</strong>：购买通过 Google Play 完成，退款按 Google Play 的政策与流程办理（在 Google Play 中申请）。退款成功后相应通票权益将被撤销。已使用的免费额度不予返还。</p>
+
+<h2>4. 知识产权</h2>
+<p>展品图像与信息可能来源于公有领域资料（如 Wikidata/Wikimedia Commons）或由 AI 生成与编辑。如认为内容侵犯了你的权利，请联系 appcraft008@gmail.com，我们将及时处理。</p>
+
+<h2>5. 责任限制</h2>
+<p>在法律允许的最大范围内，我们不对因依赖 AI 生成内容、服务中断或第三方服务故障造成的损失承担责任。</p>
+
+<h2>6. 账号</h2>
+<p>你应妥善保管账号凭据。滥用服务（包括绕过额度限制、自动化批量请求）可能导致账号被限制或终止。</p>
+</article>
+<article lang="zh-TW" data-l="zh-hant" hidden>
+<h1 class="serif">GoMuseum 使用條款</h1>
+<p class="meta">生效日期：2026-09-04<br />各語言版本如有出入，以英文版為準。</p>
+
+<h2>1. 服務說明</h2>
+<p>GoMuseum 提供以 AI 為基礎的展品辨識與解說。<strong>本應用程式並非任何博物館的官方導覽</strong>，辨識結果與解說內容由 AI 產生，僅供參考，可能存在錯誤。</p>
+
+<h2>2. 館內行為</h2>
+<ul>
+  <li>請遵守博物館的攝影規定；在禁止拍照的展區，請使用應用程式內的搜尋功能而非拍照。</li>
+  <li>請配戴耳機收聽語音解說，避免外放打擾他人。</li>
+</ul>
+
+<h2>3. 免費額度與通票</h2>
+<p><strong>免費部分</strong>：瀏覽、搜尋、完整的文字解說與預設問答一律免費；此外新使用者有一定次數的拍照辨識額度，以及 1 件作品的語音解說免費試聽（該件可無限重播）。</p>
+<p><strong>通票</strong>：更多辨識與全部語音解說需購買通票。通票是<strong>一次性買斷的消耗型商品，不是訂閱，不會自動續訂，也不會自動扣款</strong>。目前提供「巴黎 7 日通票」，涵蓋羅浮宮、奧賽美術館、橘園美術館、小皇宮四館。</p>
+<ul>
+  <li><strong>7 天從「啟用」起算，不是從購買起算。</strong>你可以提前買好，到館當天首次使用進階功能並確認後才開始計時。</li>
+  <li><strong>未啟用的通票在購買後 30 天失效。</strong>請在購買後 30 天內啟用。</li>
+  <li>啟用後連續計時 7×24 小時，期間不限次數使用，到期自動結束，無需取消。</li>
+  <li><strong>刪除帳號會使通票立即作廢且無法找回</strong>，詳見<a href="privacy.html">隱私權政策</a>第 4 節。</li>
+</ul>
+<p><strong>退款</strong>：購買透過 Google Play 完成，退款依 Google Play 的政策與流程辦理（在 Google Play 中申請）。退款成功後，相應的通票權益將被撤銷。已使用的免費額度不予返還。</p>
+
+<h2>4. 智慧財產權</h2>
+<p>展品圖像與資訊可能來源於公有領域資料（如 Wikidata/Wikimedia Commons）或由 AI 產生與編輯。如認為內容侵害了你的權利，請聯絡 appcraft008@gmail.com，我們將及時處理。</p>
+
+<h2>5. 責任限制</h2>
+<p>在法律允許的最大範圍內，我們不對因倚賴 AI 產生的內容、服務中斷或第三方服務故障所造成的損失承擔責任。</p>
+
+<h2>6. 帳號</h2>
+<p>你應妥善保管帳號憑證。濫用服務（包括繞過額度限制、自動化大量請求）可能導致帳號被限制或終止。</p>
+</article>
 </main>
+<script>
+(function () {
+  var avail = ["en", "fr", "de", "es", "it", "pl", "ja", "ko", "zh", "zh-hant"];
+  function pick() {
+    var q = new URLSearchParams(location.search).get('lang');
+    var list = q ? [q] : (navigator.languages || [navigator.language || 'en']);
+    for (var i = 0; i < list.length; i++) {
+      var c = String(list[i]).toLowerCase().replace('_', '-');
+      c = /^zh-(hant|tw|hk|mo)/.test(c) ? 'zh-hant' : c.split('-')[0];
+      if (avail.indexOf(c) >= 0) return c;
+    }
+    return 'en';
+  }
+  function show(l, push) {
+    var arts = document.querySelectorAll('article');
+    for (var i = 0; i < arts.length; i++) {
+      var on = arts[i].dataset.l === l;
+      arts[i].hidden = !on;
+      if (on) {
+        document.documentElement.lang = arts[i].lang;
+        document.title = arts[i].querySelector('h1').textContent;
+        var links = arts[i].querySelectorAll('a[href^="privacy.html"]');
+        for (var j = 0; j < links.length; j++) links[j].href = 'privacy.html?lang=' + l;
+      }
+    }
+    var bs = document.querySelectorAll('nav button');
+    for (var k = 0; k < bs.length; k++) bs[k].setAttribute('aria-current', String(bs[k].dataset.l === l));
+    if (push && history.replaceState) history.replaceState(null, '', '?lang=' + l);
+  }
+  document.querySelector('nav').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) show(b.dataset.l, true);
+  });
+  show(pick(), false);
+})();
+</script>
 </body>
 </html>

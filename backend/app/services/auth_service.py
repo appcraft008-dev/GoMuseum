@@ -760,6 +760,7 @@ class AuthService:
           隐私政策已写明为防滥用保留设备标识。堵不住的是换设备号(恢复出厂),
           那要靠 Play Integrity。
         """
+        from app.models.app_event import AppEvent
         from app.models.auth_token import AuthToken
         from app.models.feedback import Feedback
         from app.models.purchase import Entitlement, Purchase
@@ -780,6 +781,12 @@ class AuthService:
         # 去改馆藏的在展判断。清掉 user_id 后这些行不再指向任何人。
         db.query(RecognitionEvent).filter(RecognitionEvent.user_id == uid).update(
             {"user_id": None}, synchronize_session=False
+        )
+
+        # 使用事件(打开作品/付费墙/购买/激活通票)断链不删:留着做产品统计,
+        # user_id 与 device_id 都清,只清一列行还指着人。隐私政策第 2 节写明了这张表。
+        db.query(AppEvent).filter(AppEvent.user_id == uid).update(
+            {"user_id": None, "device_id": None}, synchronize_session=False
         )
 
         # 反馈断链不删,但**自由文本要真删**。与识别事件的区别就在这里:
