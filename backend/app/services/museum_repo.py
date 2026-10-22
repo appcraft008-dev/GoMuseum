@@ -849,6 +849,23 @@ def _museum_names() -> dict[str, dict[str, str]]:
     }
 
 
+@lru_cache(maxsize=1)
+def _museum_websites() -> dict[str, str]:
+    from app.services.enrichment.catalog import MuseumCatalog
+    from app.services.enrichment.factory import CATALOG_PATH
+
+    return {
+        slug: cfg.website
+        for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
+        if cfg.website
+    }
+
+
+def museum_website(slug: str) -> str | None:
+    """馆官网(museums.yaml `website`,取自 Wikidata P856);没配 → None。"""
+    return _museum_websites().get(slug)
+
+
 def museum_names(museum: Museum) -> dict[str, str]:
     """该馆的 {语言: 馆名} 全表。
 

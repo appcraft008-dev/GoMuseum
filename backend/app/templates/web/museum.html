@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import grid, artist_chips, pager %}
+{% block main %}
+<p class="crumb wrap"><a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a> › {{ name }}</p>
+<section class="wrap pagehead">
+  <h1 class="h-serif">{{ name }}</h1>
+  {% if intro %}<div class="intro">{% for p in intro %}<p>{{ p }}</p>{% endfor %}</div>{% endif %}
+  <div class="practical">
+    <p>{{ t('official_hours') }}{% if website %} <a href="{{ website }}" rel="noopener" target="_blank">{{ t('official_site') }} ↗</a>{% endif %}</p>
+    <h2 class="h-small">{{ t('tips_title') }}</h2>
+    <ul class="tips"><li>{{ t('tip_headphones') }}</li><li>{{ t('tip_online') }}</li><li>{{ t('tip_must_see') }}</li></ul>
+    {% if pass_note %}<p class="small">{{ pass_note }}</p>{% endif %}
+  </div>
+</section>
+
+{% if must_see %}
+<section class="band" id="must-see" data-section="must-see">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('must_see_title') }}</h2>
+    {{ grid(must_see, lang, trials, t) }}
+  </div>
+</section>
+{% endif %}
+
+{% if artists %}
+<section class="band" data-section="artists">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('by_artist') }}</h2>
+    {{ artist_chips(artists, base, t) }}
+  </div>
+</section>
+{% endif %}
+
+<section class="band" id="works" data-section="works">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('all_works') }}</h2>
+    <form class="search" method="get" action="{{ base }}#works">
+      <input type="search" name="q" value="{{ q }}" placeholder="{{ t('search_placeholder') }}" aria-label="{{ t('search_placeholder') }}">
+      <button type="submit">{{ t('search_button') }}</button>
+    </form>
+    {% if cats|length > 1 %}
+    <ul class="chips chips-cat">
+      <li><a href="{{ base }}#works"{% if not category %} aria-current="true"{% endif %}>{{ t('all_works') }}</a></li>
+      {% for code, label, n in cats %}<li><a href="{{ base }}?category={{ code }}#works"{% if category == code %} aria-current="true"{% endif %}>{{ label }} <small>{{ n }}</small></a></li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if works %}{{ grid(works, lang, trials, t) }}{% else %}<p>{{ t('no_results') }}</p>{% endif %}
+    {{ pager(page, pages, page_href, t) }}
+  </div>
+</section>
+{% endblock %}

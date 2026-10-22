@@ -20,6 +20,8 @@ museums:
     # 目录插入后 published_at 为 NULL = 普通用户看不见;只有 can_preview 账号可见。
     # 放出前置:nl_pass_7d 在 Play 生效且 PASSES 里 on_sale=True(onboard_verify ⑧)。
     rank: 5
+    # 官网(Wikidata P856,2026-10-22 查)。网站馆页「开放时间与门票以官网为准」链到这里
+    website: https://www.rijksmuseum.nl/
     name_zh: 阿姆斯特丹国家博物馆
     name_en: Rijksmuseum
     # 十语取自 Wikidata Q190804 标签(2026-09-29 查),未改写
@@ -61,6 +63,33 @@ museums:
     sample_qids: []
   orsay:
     rank: 2
+    # 官网(Wikidata P856,2026-10-22 查)。网站馆页「开放时间与门票以官网为准」链到这里
+    website: https://www.musee-orsay.fr/
+    # 必看清单(网站/App 列表排序头部,顺序即排序;来源见 must_see.py 顶部说明)
+    must_see:
+      - Q737062  # 奥林匹亚
+      - Q152509  # 草地上的午餐
+      - Q683274  # 煎饼磨坊的舞会
+      - Q17495196  # 梵高自画像 1887
+      - Q3630735  # 梵高自画像 1889
+      - Q1213917  # 奥维尔教堂
+      - Q1464531  # 罗纳河上的星夜
+      - Q18543956  # 阿尔勒的卧室
+      - Q105444311  # 十四岁的小舞者
+      - Q1368055  # 拾穗
+      - Q2571560  # 晚祷
+      - Q687182  # 惠斯勒的母亲
+      - Q334138  # 世界的起源
+      - Q540488  # 奥尔南的葬礼
+      - Q1167178  # 画家的工作室
+      - Q3231771  # 阿让特伊的罂粟花田
+      - Q2270028  # 圣拉扎尔火车站
+      - Q17436678  # 鲁昂大教堂
+      - Q1766454  # 刨地板的工人
+      - Q1165042  # 玩牌的人
+      - Q930535  # 沙滩上的大溪地女人
+      - Q1239950  # 苦艾酒
+      - Q1212861  # 维纳斯的诞生(卡巴内尔)
     name_zh: 奥赛博物馆
     name_en: Musée d'Orsay
     names:
@@ -105,6 +134,18 @@ museums:
     sample_qids: []
   orangerie:
     rank: 3
+    # 官网(Wikidata P856,2026-10-22 查)。网站馆页「开放时间与门票以官网为准」链到这里
+    website: https://www.musee-orangerie.fr/
+    # 必看清单(网站/App 列表排序头部,顺序即排序;来源见 must_see.py 顶部说明)
+    must_see:
+      - Q28797622  # 睡莲·落日
+      - Q28797619  # 睡莲·绿色倒影
+      - Q28797618  # 睡莲·柳树下的晴朗清晨
+      - Q3828905  # 睡莲·云
+      - Q28797620  # 睡莲·清晨
+      - Q28797625  # 睡莲·树影
+      - Q28797624  # 睡莲·两棵柳树
+      - Q3937645  # 保罗·纪尧姆像(莫迪利亚尼)
     name_zh: 橘园美术馆
     name_en: Musée de l'Orangerie
     names:
@@ -144,6 +185,22 @@ museums:
     sample_qids: []
   louvre:
     rank: 1
+    # 官网(Wikidata P856,2026-10-22 查)。网站馆页「开放时间与门票以官网为准」链到这里
+    website: https://www.louvre.fr/
+    # 必看清单(网站/App 列表排序头部,顺序即排序;来源见 must_see.py 顶部说明)
+    must_see:
+      - Q12418  # 蒙娜丽莎
+      - Q151952  # 米洛的维纳斯
+      - Q216402  # 萨莫特拉斯的胜利女神
+      - Q1114881  # 波提切利壁画
+      - Q656434  # 美丽的费隆妮叶夫人
+      - Q563727  # 圣母子与圣安妮
+      - Q185255  # 迦拿的婚礼
+      - Q212616  # 梅杜萨之筏
+      - Q29530  # 自由引导人民
+      - Q83862  # 垂死的奴隶
+      - Q3203231  # 叛逆的奴隶
+      - Q517408  # 普赛克与爱神
     name_zh: 卢浮宫
     name_en: Louvre Museum
     names:
@@ -202,6 +259,17 @@ museums:
     sample_qids: []
   petit_palais:
     rank: 4
+    # 官网(Wikidata P856,2026-10-22 查)。网站馆页「开放时间与门票以官网为准」链到这里
+    website: https://www.petitpalais.paris.fr/
+    # 必看清单(网站/App 列表排序头部,顺序即排序;来源见 must_see.py 顶部说明)
+    must_see:
+      - Q326503  # 睡眠者(库尔贝)
+      - Q53846832  # 巴黎中央市场(莱尔米特)
+      - Q104445860  # 萨拉·伯恩哈特像(克莱兰)
+      - Q50818703  # 拉瓦库尔塞纳河上的日落(莫奈)
+      - Q106462064  # 菲恩达讷西青年铜像
+      - Q104479426  # 圣马丁(圣像)
+      - Q99472451  # 猴子音乐会座钟
     name_zh: 小皇宫美术馆
     name_en: Petit Palais
     names:

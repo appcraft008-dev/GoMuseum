@@ -53,6 +53,9 @@ class MuseumConfig:
     city_names: dict[str, str] = field(default_factory=dict)
     # 馆的经纬度 [lat, lng](Wikidata P625)。首页「附近」算距离用;缺省 None → 不参与距离排序。
     coordinates: tuple[float, float] | None = None
+    # 必看清单(顺序即排序)与官网地址:编辑决策,同 rank 只在 yaml
+    must_see: list[str] = field(default_factory=list)
+    website: str | None = None
 
 
 class MuseumCatalog:
@@ -94,6 +97,8 @@ class MuseumCatalog:
                 city_names={
                     k: str(v) for k, v in (m.get("city_names") or {}).items() if v
                 },
+                must_see=[str(q) for q in (m.get("must_see") or [])],
+                website=m.get("website"),
             )
         return cls(configs)
 

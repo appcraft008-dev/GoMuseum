@@ -606,3 +606,34 @@ def test_search_confirm_is_not_a_recognition_success(monkeypatch):
         assert s.query(AppEvent).count() == 0
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+def test_recognition_succeeded_records_qid(client, monkeypatch):
+    logged = []
+    monkeypatch.setattr(
+        "app.services.event_log.log_event",
+        lambda db, name, **kw: logged.append((name, kw.get("qid"))),
+    )
+    monkeypatch.setattr(
+        "app.services.recognition.service.recognize_billed",
+        lambda db, slug, data, **kw: {
+            "outcome": "match",
+            "match": {"qid": "Q7", "museum": "orsay"},
+        },
+    )
+    client.post("/api/v1/recognize?device_id=dev-1", files=_img())
+    assert logged == [("recognition_succeeded", "Q7"), ("museum_used", None)]
+
+
+def test_first_confirm_records_qid(monkeypatch):
+    from app.models.app_event import AppEvent
+
+    client, s = _confirm_client()
+    AppEvent.__table__.create(bind=s.get_bind())
+    try:
+        _event(s, "ph-qid")
+        client.post("/api/v1/recognize/confirm", json={"phash": "ph-qid", "qid": "Q1"})
+        ev = s.query(AppEvent).filter_by(name="recognition_succeeded").one()
+        assert ev.props["qid"] == "Q1"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
