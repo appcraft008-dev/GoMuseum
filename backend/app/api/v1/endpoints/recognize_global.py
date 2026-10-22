@@ -105,16 +105,18 @@ def run_recognition(
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     m = out.get("match") or {}
     if out.get("outcome") == "match" and m.get("qid"):
-        _log_success(db, m.get("museum"), user_id=user_id, device_id=device_id)
+        _log_success(
+            db, m.get("museum"), qid=m["qid"], user_id=user_id, device_id=device_id
+        )
     return out
 
 
-def _log_success(db, museum_slug, **who) -> None:
+def _log_success(db, museum_slug, qid=None, **who) -> None:
     """识别成功 = 直判命中,或候选首次被点选(P3-14)。museum_used 每次成功都记,
-    ops_report 按 (user, 馆) 去重算跨馆复用。"""
+    ops_report 按 (user, 馆) 去重算跨馆复用。qid 只记在 recognition_succeeded(加法)。"""
     from app.services.event_log import log_event
 
-    log_event(db, "recognition_succeeded", museum_slug=museum_slug, **who)
+    log_event(db, "recognition_succeeded", museum_slug=museum_slug, qid=qid, **who)
     log_event(db, "museum_used", museum_slug=museum_slug, **who)
 
 
@@ -188,7 +190,7 @@ def recognize_confirm(
         from app.services import entitlement_service as es
 
         museum = es.museum_of_qid(db, body.qid)
-        _log_success(db, museum.slug if museum else None, user_id=user_id)
+        _log_success(db, museum.slug if museum else None, qid=body.qid, user_id=user_id)
     # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。
     if first_time and user_id:
         from app.services import entitlement_service as es
