@@ -4,6 +4,21 @@
   root.classList.add("js");
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // ---- 自记统计:sendBeacon 到 /w/e,不设 cookie、不存本地 ----
+  var body = document.body.dataset;
+  window.gmTrack = function (name, extra) {
+    var data = { name: name, lang: body.lang, page_type: body.page, museum_slug: body.museum, qid: body.qid };
+    for (var k in (extra || {})) data[k] = extra[k];
+    var blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    if (navigator.sendBeacon) navigator.sendBeacon("/w/e", blob);
+  };
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href*="play.google.com"], [data-track]');
+    if (!a) return;
+    if (a.href && a.href.indexOf("play.google.com") >= 0) window.gmTrack("web_download_click", { channel: "play" });
+    else if (a.dataset.track) window.gmTrack("web_download_click", { channel: a.dataset.track });
+  });
+
   // ---- 馆标签 ----
   document.querySelectorAll(".tabs").forEach(function (bar) {
     var host = bar.parentNode;

@@ -34,7 +34,14 @@ from app.services.share import _accept_codes, card_url, guide_languages
 from app.services.storage import get_object_storage
 from app.services.website import data as wd
 from app.services.website.copy import t as _t
-from app.services.website.tracking import device_class, play_url
+from app.services.website.tracking import (
+    BEACON_MAX_BYTES,
+    BEACON_NAMES,
+    device_class,
+    log_page_view,
+    play_url,
+    qr_data_uri,
+)
 from app.services.website.trials import trial_parts, trial_qids
 
 router = APIRouter(tags=["website"])
@@ -77,11 +84,23 @@ def render(
     page_type: str,
     alternates: list[str],
     path_for,
+    db=None,
     noindex: bool = False,
     **ctx,
 ) -> HTMLResponse:
     """所有网页的统一出口:hreflang/canonical/noindex/下载区/语言提示都在这里定。"""
     ua = request.headers.get("user-agent", "")
+    device = device_class(ua)
+    play = play_url(page_type)
+    if db is not None:
+        log_page_view(
+            db,
+            request,
+            lang=lang,
+            page_type=page_type,
+            museum_slug=ctx.get("museum_slug"),
+            qid=ctx.get("qid"),
+        )
     hreflang = [
         (_HREFLANG.get(code, code), _abs(path_for(code))) for code in alternates
     ]
@@ -104,9 +123,9 @@ def render(
         canonical=_abs(path_for(lang)),
         noindex=noindex or lang not in alternates,
         page_type=page_type,
-        play=play_url(page_type),
-        device=device_class(ua),
-        qr=ctx.pop("qr", None),
+        play=play,
+        device=device,
+        qr=qr_data_uri(play) if play and device == "desktop" else None,
         free_n=settings.FREE_RECOGNITION_QUOTA,
         asset_v=ASSET_V,
         lang_hint=hint,
@@ -256,6 +275,41 @@ def sitemap_lang(lang: str, db: Session = Depends(get_db)):
     return _xml(body)
 
 
+@router.post("/w/e", status_code=204)
+async def beacon(request: Request, db: Session = Depends(get_db)):
+    """网页信标(sendBeacon)。白名单外、超长、坏 JSON 一律静默丢弃,恒 204、不设 cookie。"""
+    import json
+
+    raw = await request.body()
+    if len(raw) > BEACON_MAX_BYTES:
+        return Response(status_code=204)
+    try:
+        body = json.loads(raw or b"{}")
+    except ValueError:
+        return Response(status_code=204)
+    name = body.get("name") if isinstance(body, dict) else None
+    if name not in BEACON_NAMES:
+        return Response(status_code=204)
+    from app.services.event_log import log_event
+
+    def s(key):
+        v = body.get(key)
+        return str(v)[:64] if v is not None else None
+
+    log_event(
+        db,
+        name,
+        museum_slug=s("museum_slug"),
+        lang=s("lang"),
+        page_type=s("page_type"),
+        qid=s("qid"),
+        part=s("part"),
+        channel=s("channel"),
+        device=device_class(request.headers.get("user-agent", "")),
+    )
+    return Response(status_code=204)
+
+
 @router.get("/w/static/{name}")
 def static_file(name: str):
     path = _STATIC_FILES.get(name)
@@ -304,6 +358,7 @@ def home(lang: str, request: Request, db: Session = Depends(get_db)):
     return render(
         request,
         "home.html",
+        db=db,
         lang=lang,
         page_type="home",
         alternates=list(wd.LANGS),
@@ -335,6 +390,7 @@ def city_page(lang: str, city: str, request: Request, db: Session = Depends(get_
     return render(
         request,
         "city.html",
+        db=db,
         lang=lang,
         page_type="city",
         alternates=wd.page_languages(db, ids),
@@ -376,6 +432,7 @@ def _artist_page(request, db, lang, city, artist_qid, museums, museum=None, page
     return render(
         request,
         "artist.html",
+        db=db,
         lang=lang,
         page_type="artist",
         alternates=wd.page_languages(db, ids, artist_qid=artist_qid),
@@ -461,6 +518,7 @@ def museum_page(
     return render(
         request,
         "museum.html",
+        db=db,
         lang=lang,
         page_type="museum",
         alternates=wd.page_languages(db, [m.id]),
@@ -575,6 +633,7 @@ def work_page(
     return render(
         request,
         "work.html",
+        db=db,
         lang=lang,
         page_type="work",
         alternates=langs,
