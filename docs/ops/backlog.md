@@ -99,7 +99,7 @@
 | 退款后收回权益的链路 | 只有第一笔真实退款才能验证 |
 | nginx 限流阈值 | 观察项:有真实流量后看 error.log 的 excess 值 |
 | 分享功能的效果判断 | 至少 100 个真实活跃用户之后 |
-| iPhone 版 | 没开工 |
+| **iPhone 版**(10-22 定:与 Android 同一 App 原样上架 App Store;首发**不含中国大陆**——要 ICP 备案)—— **A 账号(你)**:用 UK 一人公司注册公司账号;先在 developer.apple.com/enroll/duns-lookup 查 D-U-N-S(英国公司多半已有);开通后立刻签 Paid Apps Agreement + 银行 + W-8BEN-E(不签 Sandbox 内购都测不了)、申请 Small Business Program(佣金 15%);⚠️ 欧盟 DSA 商家信息会公开公司注册地址,若是家庭住址先换代理地址。**B 后端(我,不等账号可先做)**:`iap_verification_service.verify_apple_receipt` 用的是已弃用的 `verifyReceipt` 且按订阅写(读 `latest_receipt_info`),消耗型通票大概率判无效(推断,未实测)→ 改 App Store Server API(.p8 签 JWT 查交易)+ 退款通知端点;纯加法不碰 Android;Sandbox 联调要等 .p8。**C 客户端(账号后)**:pbxproj `DEVELOPMENT_TEAM` 为空要配签名;核对 Firebase iOS app 与 `GoogleService-Info.plist` bundle id(`com.gomuseum.app`)、Google 登录 `REVERSED_CLIENT_ID` URL scheme;核对恢复购买按钮和应用内删除账号入口(审核硬要求);设仅 iPhone,但在 iPad 模拟器确认兼容模式不崩;Apple 登录前后端已接好。**D 上架材料**:App Store Connect 按后端下发的通票 ID 建同名消耗型商品;6.9/6.5 寸截图;隐私问卷;审核演示账号。**真机**:用户无 iPhone(iPhone 6 最高 iOS 12,App 最低 iOS 13 装不上);日常用 Mac mini 模拟器 + StoreKit 本地 `.storekit` 测;真机验收靠大陆朋友的 iPhone 17 当 TestFlight **内部**测试员(免 beta 审核)。朋友**不开 VPN**:Apple 登录 / Sandbox 购买 / TestFlight 崩溃报告可用,Google 登录、Crashlytics、`google_fonts` 运行时字体不可用(字体回落系统字体≠bug);**待朋友关 VPN 在 Safari 实测** `https://api.gomuseum.app/api/v1/museums` 与 `https://cdn.gomuseum.app/`(404 页=通)能否打开,cdn 不通则音频测不了 → 买二手 iPhone 11 / SE 2 | A 你注册账号 + 朋友实测两个链接;B 你说开始我就开 `feature/*` 先写设计文档 |
 | 意大利等跨城长线 | 再议 |
 
 ## 已决定不做(留档，别再提)
