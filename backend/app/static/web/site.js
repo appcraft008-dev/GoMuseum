@@ -144,7 +144,7 @@
   // ---- 桌面:右侧面板与左图等高;超宽图改成上下排 ----
   function fit() {
     if (!img || !panel) return;
-    var wideImg = img.naturalWidth && img.naturalWidth / img.naturalHeight > 1.6;
+    var wideImg = img.naturalWidth && img.naturalWidth / img.naturalHeight > 1.2; // 横幅:图在上、内容在下
     work.classList.toggle("wide", !!wideImg);
     var twoCol = window.matchMedia("(min-width: 1024px)").matches && !wideImg;
     panel.style.height = twoCol ? Math.max(img.offsetHeight, 480) + "px" : "";
