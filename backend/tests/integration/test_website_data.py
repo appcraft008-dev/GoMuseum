@@ -175,3 +175,28 @@ def test_cards_for_qids_keeps_order_and_language(db):
     orsay = wd.find_museum(db, "paris", "orsay")
     cards = wd.cards_for_qids(db, [orsay.id], "en", ["Q103", "Q101", "Q100", "Q900"])
     assert [c.qid for c in cards] == ["Q103", "Q100"]
+
+
+def test_nameless_artist_never_shows_its_id(db):
+    orsay = wd.find_museum(db, "paris", "orsay")
+    db.add(Artist(qid="5f46d24a3ac7899a992a2fd7f0c86e00"))
+    o = db.query(MuseumObject).filter_by(qid="Q103").one()
+    o.attributes = {"artist_qid": "5f46d24a3ac7899a992a2fd7f0c86e00"}
+    db.commit()
+    cards, _ = wd.list_works(db, [orsay.id], "en", category="sculpture")
+    assert cards[0].artist is None
+    assert all(
+        a.qid != o.attributes["artist_qid"]
+        for a in wd.top_artists(db, [orsay.id], "en")
+    )
+
+
+def test_nameless_artist_has_no_artist_page(db, monkeypatch):
+    monkeypatch.setattr(wd, "THIN_ARTIST", 1)
+    orsay = wd.find_museum(db, "paris", "orsay")
+    db.add(Artist(qid="HASH1"))
+    o = db.query(MuseumObject).filter_by(qid="Q103").one()
+    o.attributes = {"artist_qid": "HASH1"}
+    db.commit()
+    assert "HASH1" not in wd.artist_languages(db, [orsay.id])
+    assert "Q296" in wd.artist_languages(db, [orsay.id])

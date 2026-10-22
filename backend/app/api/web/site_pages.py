@@ -151,6 +151,11 @@ def _museum_vm(db, m: Museum, lang: str) -> dict:
     }
 
 
+def _museum_vms(db, museums: list[Museum], lang: str) -> list[dict]:
+    """该语言有内容的馆才上卡片(没内容的馆页是 404,不能链过去)。"""
+    return [vm for vm in (_museum_vm(db, m, lang) for m in museums) if vm["count"]]
+
+
 def _must_see_cards(db, m: Museum, lang: str) -> list:
     listed = MUST_SEE.get(m.slug) or []
     return wd.cards_for_qids(db, [m.id], lang, listed) if listed else []
@@ -344,17 +349,17 @@ def trial_audio(
 def home(lang: str, request: Request, db: Session = Depends(get_db)):
     if lang not in wd.LANGS:
         return _not_found()
-    cities = wd.public_cities(db)
-    if len(cities) == 1:
-        c = cities[0]
-        hero_sub = _t(lang, "hero_sub", city=_city_name(c, lang), n=len(c.museums))
-    else:
-        hero_sub = _t(
-            lang,
-            "hero_sub",
-            city=" · ".join(_city_name(c, lang) for c in cities),
-            n=sum(len(c.museums) for c in cities),
-        )
+    cities = []
+    for c in wd.public_cities(db):
+        vms = _museum_vms(db, c.museums, lang)
+        if vms:
+            cities.append((c, vms))
+    hero_sub = _t(
+        lang,
+        "hero_sub",
+        city=" · ".join(_city_name(c, lang) for c, _ in cities),
+        n=sum(len(vms) for _, vms in cities),
+    )
     return render(
         request,
         "home.html",
@@ -368,14 +373,10 @@ def home(lang: str, request: Request, db: Session = Depends(get_db)):
         hero_sub=hero_sub,
         screenshot=_screenshot(lang),
         cities=[
-            {
-                "slug": c.slug,
-                "name": _city_name(c, lang),
-                "museums": [_museum_vm(db, m, lang) for m in c.museums],
-            }
-            for c in cities
+            {"slug": c.slug, "name": _city_name(c, lang), "museums": vms}
+            for c, vms in cities
         ],
-        panels=_panels(db, cities[0].museums, lang) if len(cities) == 1 else [],
+        panels=_panels(db, cities[0][0].museums, lang) if len(cities) == 1 else [],
     )
 
 
@@ -386,7 +387,8 @@ def city_page(lang: str, city: str, request: Request, db: Session = Depends(get_
     if not c or not wd.guide_count(db, ids, lang):
         return _not_found()
     name = _city_name(c, lang)
-    hero_sub = _t(lang, "hero_sub", city=name, n=len(c.museums))
+    vms = _museum_vms(db, c.museums, lang)
+    hero_sub = _t(lang, "hero_sub", city=name, n=len(vms))
     return render(
         request,
         "city.html",
@@ -400,7 +402,7 @@ def city_page(lang: str, city: str, request: Request, db: Session = Depends(get_
         city=city,
         city_name=name,
         hero_sub=hero_sub,
-        museums=[_museum_vm(db, m, lang) for m in c.museums],
+        museums=vms,
         panels=_panels(db, c.museums, lang),
         artists=wd.top_artists(db, ids, lang),
         pass_note=_pass_note(c.museums, lang),
@@ -415,7 +417,9 @@ def _artist_page(request, db, lang, city, artist_qid, museums, museum=None, page
     if not total or not cards:
         return _not_found()
     a = db.query(Artist).filter_by(qid=artist_qid).one_or_none()
-    name = wd._artist_names(db, {artist_qid}, lang).get(artist_qid) or cards[0].artist
+    name = wd._artist_names(db, {artist_qid}, lang).get(artist_qid)
+    if not name:
+        return _not_found()  # 没名字的作者卡(佚名/哈希 qid)不出作者页
     c = wd.find_city(db, city)
     city_name = _city_name(c, lang)
     place = museum_name(museum, lang) if museum else city_name

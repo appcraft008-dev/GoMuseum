@@ -146,12 +146,14 @@ def _artist_names(db, qids, language) -> dict[str, str]:
         return {}
     out = {}
     for a in db.query(Artist).filter(Artist.qid.in_(list(qids))):
-        out[a.qid] = _resolve_name(
+        name = _resolve_name(
             a.name_i18n,
             language,
             {"zh": a.name_zh, "en": a.name_en},
-            a.name_en or a.name_zh or a.qid,
+            a.name_en or a.name_zh,
         )
+        if name:  # 没名字的作者卡(佚名/哈希 qid)不显示,绝不把 qid 当名字
+            out[a.qid] = name
     return out
 
 
@@ -322,7 +324,7 @@ def artist_languages(db, museum_ids: list) -> dict[str, list[str]]:
         if aq:
             c = counts.setdefault(aq, {})
             c[lang] = c.get(lang, 0) + 1
-    known = {a.qid for a in db.query(Artist.qid).filter(Artist.qid.in_(list(counts)))}
+    known = set(_artist_names(db, set(counts), "en"))  # 有名字的才有作者页
     return {
         aq: [lg for lg in LANGS if c.get(lg, 0) >= THIN_ARTIST]
         for aq, c in counts.items()

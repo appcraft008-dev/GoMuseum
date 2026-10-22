@@ -184,3 +184,18 @@ def test_artist_page_lists_only_language_works(client):
 
 def test_api_routes_not_shadowed(client):
     assert client.get("/api/health/").status_code == 200
+
+
+def test_nameless_artist_page_404(client, db):
+    db.add(Artist(qid="HASH1"))
+    o = db.query(MuseumObject).filter_by(qid="Q103").one()
+    o.attributes = {"artist_qid": "HASH1"}
+    db.commit()
+    assert client.get("/en/paris/orsay/artists/HASH1/").status_code == 404
+
+
+def test_museum_without_language_content_not_listed(client, db):
+    upsert_museum(db, {"slug": "emptyp", "name_en": "EmptyParis", "city_en": "Paris"})
+    _publish(db, "emptyp")
+    for path in ("/en/", "/en/paris/"):
+        assert "EmptyParis" not in client.get(path).text, path
