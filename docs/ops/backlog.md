@@ -20,7 +20,8 @@
 | 过审上线后:查测试订单能否和真实订单分开统计 | 许可测试账号的订单 Google 返回 `purchaseType: 0`、真实订单无此字段,后端两种都核验通过并开权益。⏳ 上线后我只读查订单表与收入相关统计,确认能按 `purchaseType` 剔除测试订单,不能就记技术债 | 10-21 |
 | ⚠️ Google Cloud 项目 gomuseum-499210 还在免费试用(10-20 截图:剩 £226.17 赠金、85 天 ≈ 2027-01-13 到期) | ⏳ 你:升级为付费账号。Cloud Text-to-Speech API 在这个项目里启用(懒生成 TTS 用 Chirp 3 HD),试用到期不升级 → 懒生成语音停掉。到期前务必升级;升级只改计费,不影响现有 key | 10-20 查速率上限时发现 |
 | 隐私政策与使用条款十语页(#1047 已合 staging;源在 `deployment/legal-src/`,`build.py` 生成)未部署到网站 | ⏳ **等 #1046(删号清 `app_events`)随发版 PR 上 prod 后**,你说一声我手工 scp 两页(同时带上 #1042 的中文隐私改动);部署后手机浏览器用 `?lang=fr` / `ja` 验证 | 10-21 |
-| 上线后网页引流(SEO)小一轮 | ①部署已写好的英/法落地页作首页(`deployment/website/index.html`、`fr/index.html`,现线上首页还是旧中文单页,`/fr/` 404),CTA 直链 Play;②加 `robots.txt` + `sitemap.xml`(列已生成内容的 `/a/{馆}/{qid}` 页,按语言拆);③作品页加语言互链 `hreflang`;④**你**注册 Google Search Console 验证域名,3 个月后据数据判断 SEO 值不值得继续投入;⑤即上一行 Play 链接。①–③纯网站/后端小改动免发版。**待你定**:首页多语言做到几种(我建议先英/法/中)。9-20 结论仍保留:高频词打不过维基/馆方/Google Arts,SEO 是副产品不是立项理由 | 10-22 |
+| 网站 v1 上线(spec `2026-10-22-website-v1-design.md`,取代原「网页引流小一轮」) | 代码在 `feature/website-v1`(十语首页/城市/馆/作者/作品页、每馆 5 件试听、sitemap/robots、自记统计),合并 staging 后可在 `staging-api.gomuseum.app/en/` 看。⏳ 上 prod 后:①我列宿主机 nginx 改动(`deployment/production/nginx-gomuseum.app.website.conf`)+ 备份/回滚命令,**你确认**后改;②同时 prod `.env` 加 `WEBSITE_LIVE=true` 并只重启后端(旧 `/a/` 分享链接才开始 301 到新作品页,**必须在 nginx 改完之后**);③线上旧中文首页 `index.html` 备份后留着不删(nginx 已不再路由到它)。网站做完就上线,不等 V69 过审:过审当天的 `SHARE_PLAY_LIVE=true` 会让下载按钮自动生效 | 10-22 |
+| 网站上线后:注册 Google Search Console | ⏳ **你**:验证 gomuseum.app 域名、提交 `https://gomuseum.app/sitemap.xml`。第一个月只观察,用真实数字定后两个月目标;三个月后按 spec §八复盘(网站带来的安装与质量、看页数/试听/分享、品牌词排名、收录页数) | 10-22 |
 
 ## 二、等你拍板
 

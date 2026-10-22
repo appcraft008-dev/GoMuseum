@@ -1758,6 +1758,21 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 **⚠️ 自由文本 = 个人数据**:`text` 是用户手写内容,上线前隐私政策必须有对应披露段。
 凡加「用户能自由输入」的字段,连带三件事一起做:**政策披露 / 删号断链 / 数据导出包含**。
 
+## 公开网站(网站 v1;2026-10-22,spec `2026-10-22-website-v1-design.md`)
+
+后端直接出 HTML:`/{lang}/`、`/{lang}/{city}/`、`/{lang}/{city}/{museum}/`、`…/artists/{qid}/`、`/{lang}/{city}/{museum}/{qid}/`,
+外加 `/sitemap.xml`、`/sitemap-{lang}.xml`、`/robots.txt`、`/w/static/*`、`/w/audio/*`、`POST /w/e`。代码:`app/api/web/site_pages.py` + `app/services/website/`。
+与 App 契约(`/api/v1/*`)无关,零改动。
+
+1. **网页层不带身份、不点火**:只读已发布内容,不调内容接口路由、不调懒生成/TTS。「有内容」= 该**请求语言**有已发布非空 guide 且有可展示图。
+2. **可见性同 App**:只认 `published_at IS NOT NULL` 的馆;隐身馆在页面、搜索、作者页、sitemap 里都不出现。新路由带 slug/qid 参数要登记 `test_visibility_routes.py`。
+3. **音频只给试听件**:每馆每语言自动 ≤5 件(`website/trials.py`:必看清单内、该语言导览有音频、各段音频最全优先;无清单按同分规则),经 `/w/audio` 302 到 1 小时 R2 预签名地址;其余作品页面里不出现任何音频地址。
+4. **必看清单与官网地址在 `museums.yaml`**(`must_see:`、`website:`),上新馆一并填;没填必看清单的馆不出「必看」区。
+5. **薄页**:馆/城市页某语言 <20 件、作者页 <3 件 → `noindex`,不进 sitemap / hreflang(页面照样能开)。无名作者卡不出作者页、不显示 qid。
+6. **统计自记**:`web_page_view`(lang/page_type/device/internal_ref/bot)+ 信标白名单 `web_download_click|web_trial_play|web_trial_complete|web_share_click`;不设 cookie、不用本地存储。每次访问看几页 = `web_page_view` 数 / `internal_ref=false` 数(近似值)。`recognition_succeeded` 自 2026-10-22 起带 `qid`。
+7. **上线开关**:`SHARE_PLAY_LIVE`(Play 链接)与 `WEBSITE_LIVE`(旧 `/a/` 链接 301 到新作品页)。`WEBSITE_LIVE` 必须在宿主机 nginx 把 `/{lang}/` 反代到后端之后才开(`deployment/production/nginx-gomuseum.app.website.conf`);`share.page_url()` 仍发 `/a/` 链接。
+8. **`site_pages` router 必须最后挂到 app 上**:`/{lang}/{city}/` 会吞掉之后注册的两段路径(如 `/api/health/`)。
+
 ## 路线图（执行顺序;每阶段 = 独立 spec→plan→实现,完成回写本文）
 
 **状态(2026-10-14 核对)**:prod 5 馆(奥赛/橘园/卢浮宫/小皇宫已放出,荷兰国立博物馆隐身演练),目录主干、显示名、图片 R2 自存、
