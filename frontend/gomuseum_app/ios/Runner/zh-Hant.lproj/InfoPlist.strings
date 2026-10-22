@@ -1,0 +1,4 @@
+"NSLocationWhenInUseUsageDescription" = "用於顯示你附近的博物館。位置只在手機上使用，不會上傳。";
+"NSCameraUsageDescription" = "用於拍攝藝術品照片，以便辨識作品。";
+"NSPhotoLibraryUsageDescription" = "用於從相簿選擇藝術品照片進行辨識。";
+"NSPhotoLibraryAddUsageDescription" = "用於將你拍攝的藝術品照片儲存到相簿。";

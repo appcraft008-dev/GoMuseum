@@ -1,0 +1,4 @@
+"NSLocationWhenInUseUsageDescription" = "Para mostrarte los museos cercanos. Tu ubicación se queda en tu teléfono y nunca se envía.";
+"NSCameraUsageDescription" = "Para fotografiar una obra y que GoMuseum la reconozca.";
+"NSPhotoLibraryUsageDescription" = "Para elegir de tu fototeca una foto de una obra y reconocerla.";
+"NSPhotoLibraryAddUsageDescription" = "Para guardar en tu fototeca las fotos de obras que hagas.";
