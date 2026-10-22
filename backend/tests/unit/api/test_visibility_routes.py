@@ -37,6 +37,10 @@ REGISTRY = {
         "GET",
         "/{lang}/{city}/{museum_slug}/artists/{artist_qid}/",
     ): GATED,  # 同上
+    (
+        "GET",
+        "/{lang}/{city}/{museum_slug}/{qid}/",
+    ): GATED,  # 作品页:同上 + 该语言有 guide
     ("POST", "/api/v1/feedback"): "只写不读:收下反馈不回显任何馆/藏品内容",
     (
         "POST",

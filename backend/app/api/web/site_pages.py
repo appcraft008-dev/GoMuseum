@@ -21,10 +21,15 @@ from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
 from app.services.entitlement_service import pass_for_museum, pass_title
-from app.services.museum_repo import _sized, museum_name, museum_website
+from app.services.museum_repo import (
+    _sized,
+    get_object_content,
+    museum_name,
+    museum_website,
+)
 from app.services.must_see import MUST_SEE
 from app.services.search.inprocess import search as run_search
-from app.services.share import _accept_codes
+from app.services.share import _accept_codes, card_url, guide_languages
 from app.services.storage import get_object_storage
 from app.services.website import data as wd
 from app.services.website.copy import t as _t
@@ -420,3 +425,100 @@ def museum_artist(
     if not m:
         return _not_found()
     return _artist_page(request, db, lang, city, artist_qid, [m], museum=m, page=page)
+
+
+def _sections(data: dict, audio: set, src, lang: str) -> list[dict]:
+    """导览 → 关于作者 → 深度段(类目顺序)→ 常见问题。audio=真有音频的段;src=None 表示非试听。"""
+
+    def item(key, title, body):
+        return {
+            "key": key,
+            "title": title,
+            "body": _paras(body),
+            "audio": key in audio,
+            "src": src(key) if src and key in audio else None,
+        }
+
+    out = []
+    guide = data.get("default_guide") or {}
+    if (guide.get("body") or "").strip():
+        out.append(item("guide", _t(lang, "guide"), guide["body"]))
+    artist = data.get("artist") or {}
+    if (artist.get("bio") or "").strip():
+        title = _t(lang, "about_artist")
+        if artist.get("name"):
+            title += f" · {artist['name']}"
+        out.append(item("artist_bio", title, artist["bio"]))
+    for tab in data.get("tabs") or []:
+        out.append(item(tab["section_code"], tab["label"], tab["body"]))
+    for q in data.get("suggested_questions") or []:
+        out.append(item(f"qa-{q['sort']}", q["question"], q.get("answer")))
+    return out
+
+
+@router.get("/{lang}/{city}/{museum_slug}/{qid}/", response_class=HTMLResponse)
+def work_page(
+    lang: str,
+    city: str,
+    museum_slug: str,
+    qid: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    m = wd.find_museum(db, city, museum_slug) if lang in wd.LANGS else None
+    obj = (
+        db.query(MuseumObject).filter_by(museum_id=m.id, qid=qid).one_or_none()
+        if m
+        else None
+    )
+    langs = guide_languages(db, obj) if obj else []
+    if lang not in langs:
+        return _not_found()
+    data = get_object_content(db, museum_slug, qid, lang)
+    if data is None:
+        return _not_found()
+    is_trial = qid in trial_qids(db, m, lang)
+    audio = set(trial_parts(db, obj, lang))
+    src = (
+        (lambda key: f"/w/audio/{museum_slug}/{qid}/{key}?lang={lang}")
+        if is_trial
+        else None
+    )
+    sections = _sections(data, audio, src, lang)
+    title = data.get("title") or qid
+    artist = (data.get("artist") or {}).get("name")
+    mname = museum_name(m, lang)
+    images = data.get("images") or []
+    others = [c for c in _must_see_cards(db, m, lang) if c.qid != qid][:6]
+    first = (sections[0]["body"][0] if sections and sections[0]["body"] else "")[:160]
+    return render(
+        request,
+        "work.html",
+        lang=lang,
+        page_type="work",
+        alternates=langs,
+        path_for=lambda code: f"/{code}/{city}/{museum_slug}/{qid}/",
+        title=f"{title}{' — ' + artist if artist else ''} · {mname} · GoMuseum",
+        description=first or title,
+        og_image=images[0]["url"] if images else card_url(museum_slug, qid, lang),
+        museum_slug=museum_slug,
+        qid=qid,
+        city=city,
+        city_name=_city_name(wd.find_city(db, city), lang),
+        museum_name=mname,
+        work_title=title,
+        byline=" · ".join(
+            x for x in (artist, (data.get("facts") or {}).get("date"), mname) if x
+        ),
+        image=images[0]["url"] if images else None,
+        credits=[i["credit"] for i in images if i.get("credit")],
+        sections=sections,
+        is_trial=is_trial,
+        has_audio=bool(audio),
+        trial_n=len(trial_qids(db, m, lang)),
+        share_url=_abs(f"/{lang}/{city}/{museum_slug}/{qid}/"),
+        card=card_url(museum_slug, qid, lang),
+        others=others,
+        trials=set(trial_qids(db, m, lang)),
+        now_tpl=_t(lang, "now_playing", part="__PART__"),
+    )

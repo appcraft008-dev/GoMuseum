@@ -118,6 +118,27 @@ def share_page(
     data = get_object_content(db, slug, qid, chosen)
     if data is None:
         return _not_found()
+    if settings.WEBSITE_LIVE:
+        from app.services.website.data import museum_city_slug
+
+        museum = db.query(Museum).filter_by(slug=slug).one()
+        ua = request.headers.get("user-agent", "")
+        log_event(
+            db,
+            "share_page_view",
+            museum_slug=slug,
+            qid=qid,
+            lang=chosen,
+            source=s or "direct",
+            bot=is_bot(ua),
+            ua=ua[:200],
+        )
+        db.commit()
+        suffix = f"?s={s}" if s else ""
+        return RedirectResponse(
+            f"/{chosen}/{museum_city_slug(museum)}/{slug}/{qid}/{suffix}",
+            status_code=301,
+        )
     copy = copy_for(chosen)
     guide = data.get("default_guide") or {}
     artist = data.get("artist") or {}
