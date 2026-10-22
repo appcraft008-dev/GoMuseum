@@ -93,8 +93,8 @@ async def verify_purchase(
              -H "Content-Type: application/json" \\
              -d '{
                    "platform": "ios",
-                   "receipt_data": "base64_encoded_receipt",
-                   "product_id": "com.gomuseum.recognition_pack_10",
+                   "receipt_data": "<StoreKit 2 交易 JWS>",
+                   "product_id": "paris_pass_7d",
                    "device_id": "device_12345"
                  }'
         ```
@@ -115,7 +115,10 @@ async def verify_purchase(
     try:
         # Verify receipt based on platform
         if request.platform == "ios":
-            verification = await iap_service.verify_apple_receipt(request.receipt_data)
+            # receipt_data = StoreKit 2 交易 JWS(spec 2026-10-22 iOS 内购校验)
+            verification = await iap_service.verify_apple_transaction(
+                request.receipt_data, request.product_id
+            )
         elif request.platform == "android":
             is_subscription = "annual" in request.product_id.lower()
             verification = await iap_service.verify_google_receipt(
@@ -166,6 +169,12 @@ async def verify_purchase(
                     product_id=request.product_id,
                     store_transaction_id=txn,
                     receipt_payload=request.receipt_data,
+                    # Apple Sandbox(审核员/TestFlight)照发但可区分;Android 无此字段
+                    granted_reason=(
+                        "sandbox"
+                        if verification.get("environment") == "sandbox"
+                        else "purchase"
+                    ),
                 )
             except _es.PurchaseOwnershipConflict:
                 # 这张收据已归属别的账号:回明确错误,不能假装成功
@@ -462,3 +471,41 @@ async def play_rtdn(
     revoked = _es.revoke_for_purchase(db, order_id, reason="refunded")
     log_event(db, "purchase_refunded", product_id=order_id, revoked=revoked)
     logger.info("RTDN voided purchase %s → revoked=%s", order_id, revoked)
+
+
+class AppleNotification(BaseModel):
+    """App Store Server Notifications V2 请求体。"""
+
+    signedPayload: str
+
+
+@router.post("/apple-notifications")
+@limiter.limit("120/minute")
+async def apple_notifications(
+    request: Request,
+    payload: AppleNotification,
+    db: Session = Depends(get_db),
+    iap_service=Depends(get_iap_verification_service),
+) -> dict:
+    """App Store 退款/撤销通知 → 撤权益(I10)。Apple 的 /payment/rtdn。
+
+    鉴权 = 通知本身的签名(x5c 验到 Apple Root CA G3);验不过 403。
+    验过之后**始终 200** —— 非 2xx Apple 会重试。
+    限流理由同 RTDN:公开未认证端点,每条都要做证书运算。
+    幂等:revoke_for_purchase 找不到订单返 False,重复推送无副作用。
+    """
+    from appstoreserverlibrary.signed_data_verifier import VerificationException
+
+    from app.services import entitlement_service as _es
+    from app.services.event_log import log_event
+
+    try:
+        reason, txn = iap_service.parse_apple_notification(payload.signedPayload)
+    except VerificationException as e:
+        logger.warning("Apple 通知验签失败: %s", e)
+        raise HTTPException(status_code=403, detail={"reason": "bad_apple_signature"})
+    if reason and txn:
+        revoked = _es.revoke_for_purchase(db, txn, reason=reason)
+        log_event(db, "purchase_refunded", product_id=txn, revoked=revoked)
+        logger.info("Apple %s %s → revoked=%s", reason, txn, revoked)
+    return {}
