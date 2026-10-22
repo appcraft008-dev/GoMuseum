@@ -107,6 +107,11 @@ class Settings(BaseSettings):
     APPLE_TEAM_ID: Optional[str] = None
     APPLE_KEY_ID: Optional[str] = None
     APPLE_PRIVATE_KEY_PATH: Optional[str] = None
+    # App Store 内购校验(iap_verification_service)。上面四个属 Apple 登录,与此无关。
+    APPLE_BUNDLE_ID: str = "com.gomuseum.app"
+    # App Store Connect 里 App 的数字 ID。缺失 → Production 交易一律拒(失败关闭),
+    # Sandbox 照常可验。
+    APPLE_APP_ID: Optional[int] = None
 
     # Object storage (images / audio)
     STORAGE_BACKEND: str = "local"  # "local" | "r2"

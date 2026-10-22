@@ -92,6 +92,45 @@ typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 trio = ["trio (>=0.31.0)"]
 
 [[package]]
+name = "app-store-server-library"
+version = "3.1.2"
+description = "The App Store Server Library"
+optional = false
+python-versions = "<4,>=3.7"
+groups = ["main"]
+files = [
+    {file = "app_store_server_library-3.1.2-py3-none-any.whl", hash = "sha256:8007b3dca89fd08a1123fae2ffdbe7bc72b99a7eabfb0a32e21b45a344159e62"},
+    {file = "app_store_server_library-3.1.2.tar.gz", hash = "sha256:0b9005c93298674c934dfa9bc164cd44bfc3f43a8d0dc3834eaf6f66c3572d45"},
+]
+
+[package.dependencies]
+asn1 = "3.2.0"
+attrs = ">=21.3.0"
+cattrs = ">=23.1.2"
+cryptography = ">=43.0.0"
+PyJWT = ">=2.6.0,<3"
+pyOpenSSL = ">=23.1.1"
+requests = ">=2.28.0,<3"
+
+[package.extras]
+async = ["httpx"]
+
+[[package]]
+name = "asn1"
+version = "3.2.0"
+description = "Python-ASN1 is a simple ASN.1 encoder and decoder for Python 2.7+ and 3.5+."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "asn1-3.2.0-py2.py3-none-any.whl", hash = "sha256:3c1788508d49f4f101c3c6b842b5a6d0fc9f68e2782e891d41af19bf321fedbb"},
+    {file = "asn1-3.2.0.tar.gz", hash = "sha256:0860ad40bbffd6475d2d54b82f50d9196e31b7cee985812ed9559b40e7d809c7"},
+]
+
+[package.dependencies]
+enum-compat = "*"
+
+[[package]]
 name = "async-timeout"
 version = "5.0.1"
 description = "Timeout context manager for asyncio programs"
@@ -167,6 +206,18 @@ files = [
 docs = ["Sphinx (>=8.1.3,<8.2.0)", "sphinx-rtd-theme (>=1.2.2)"]
 gssauth = ["gssapi ; platform_system != \"Windows\"", "sspilib ; platform_system == \"Windows\""]
 test = ["distro (>=1.9.0,<1.10.0)", "flake8 (>=6.1,<7.0)", "flake8-pyi (>=24.1.0,<24.2.0)", "gssapi ; platform_system == \"Linux\"", "k5test ; platform_system == \"Linux\"", "mypy (>=1.8.0,<1.9.0)", "sspilib ; platform_system == \"Windows\"", "uvloop (>=0.15.3) ; platform_system != \"Windows\" and python_version < \"3.14.0\""]
+
+[[package]]
+name = "attrs"
+version = "26.1.0"
+description = "Classes Without Boilerplate"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "attrs-26.1.0-py3-none-any.whl", hash = "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"},
+    {file = "attrs-26.1.0.tar.gz", hash = "sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32"},
+]
 
 [[package]]
 name = "bcrypt"
@@ -331,6 +382,33 @@ urllib3 = ">=1.25.4,<2.2.0 || >2.2.0,<3"
 
 [package.extras]
 crt = ["awscrt (==0.32.2)"]
+
+[[package]]
+name = "cattrs"
+version = "26.2.1"
+description = "Composable complex class support for attrs and dataclasses."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "cattrs-26.2.1-py3-none-any.whl", hash = "sha256:a12aaa3453dc8f633a815293179f08b7421ed18d2575c459c3c736f840beac24"},
+    {file = "cattrs-26.2.1.tar.gz", hash = "sha256:679132bfdc225c5ee40c024fc42519954767c387f950dc6751946c586bccdc6d"},
+]
+
+[package.dependencies]
+attrs = ">=25.4.0"
+typing-extensions = ">=4.14.0"
+
+[package.extras]
+bson = ["pymongo (>=4.4.0)"]
+cbor2 = ["cbor2 (>=5.4.6)"]
+msgpack = ["msgpack (>=1.0.5)"]
+msgspec = ["msgspec (>=0.21.1) ; implementation_name == \"cpython\""]
+orjson = ["orjson (>=3.11.3) ; implementation_name == \"cpython\""]
+pyyaml = ["pyyaml (>=6.0)"]
+tomlkit = ["tomlkit (>=0.11.8)"]
+tomllib = ["tomli (>=1.1.0) ; python_version < \"3.11\"", "tomli-w (>=1.1.0)"]
+ujson = ["ujson (>=5.10.0)"]
 
 [[package]]
 name = "certifi"
@@ -774,7 +852,7 @@ description = "Python bindings for CUDA"
 optional = false
 python-versions = ">=3.10"
 groups = ["bench"]
-markers = "platform_system == \"Linux\" and python_version <= \"3.14\""
+markers = "python_version < \"3.15\" and platform_system == \"Linux\""
 files = [
     {file = "cuda_bindings-13.3.1-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:120fcc53d57903df529c3486962c56528cba5b7d6c57c99537320ed9922c8b86"},
     {file = "cuda_bindings-13.3.1-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9851b0caa8bfd3bc6fa054eaf57bea7c8e9c3a62db2d2621224677f49f3c53d0"},
@@ -809,7 +887,7 @@ description = "Pathfinder for CUDA components"
 optional = false
 python-versions = ">=3.10"
 groups = ["bench"]
-markers = "platform_system == \"Linux\" and python_version <= \"3.14\""
+markers = "python_version < \"3.15\" and platform_system == \"Linux\""
 files = [
     {file = "cuda_pathfinder-1.5.6-py3-none-any.whl", hash = "sha256:7e4c07c117b78ba1fb35dac4c444d21f3677b1b1ff56175c53a8e3025c5b43c0"},
 ]
@@ -982,6 +1060,18 @@ files = [
 [package.dependencies]
 dnspython = ">=2.0.0"
 idna = ">=2.0.0"
+
+[[package]]
+name = "enum-compat"
+version = "0.0.3"
+description = "enum/enum34 compatibility package"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "enum-compat-0.0.3.tar.gz", hash = "sha256:3677daabed56a6f724451d585662253d8fb4e5569845aafa8bb0da36b1a8751e"},
+    {file = "enum_compat-0.0.3-py3-none-any.whl", hash = "sha256:88091b617c7fc3bbbceae50db5958023c48dc40b50520005aa3bf27f8f7ea157"},
+]
 
 [[package]]
 name = "factory-boy"
@@ -1261,7 +1351,7 @@ description = "Lightweight in-process concurrent programming"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "((sys_platform == \"linux\" or sys_platform == \"win32\") and (sys_platform == \"linux\" or platform_machine == \"x86_64\") and python_version < \"3.14\" and (platform_machine == \"aarch64\" or platform_machine == \"x86_64\") or (sys_platform != \"linux\" or platform_machine != \"aarch64\" and platform_machine != \"x86_64\") and python_version < \"3.14\" and (sys_platform != \"linux\" and sys_platform != \"win32\" or platform_machine != \"x86_64\") and (platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\")) and python_version < \"3.14\""
+markers = "python_version <= \"3.13\" and (sys_platform == \"linux\" or sys_platform == \"win32\" or platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\") and (sys_platform == \"linux\" or platform_machine == \"x86_64\" or platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\") and (platform_machine == \"aarch64\" or platform_machine == \"x86_64\" or platform_machine == \"ppc64le\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\")"
 files = [
     {file = "greenlet-3.2.4-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:8c68325b0d0acf8d91dde4e6f930967dd52a5302cd4062932a6b2e7c2969f47c"},
     {file = "greenlet-3.2.4-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:94385f101946790ae13da500603491f04a76b6e4c059dab271b3ce2e283b2590"},
@@ -2242,7 +2332,7 @@ files = [
 numpy = [
     {version = ">=2.1.0", markers = "python_version >= \"3.13\""},
     {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version == \"3.12\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 
 [package.extras]
@@ -2371,7 +2461,7 @@ description = "Python package for creating and manipulating graphs and networks"
 optional = false
 python-versions = "!=3.14.1,>=3.11"
 groups = ["bench"]
-markers = "python_version < \"3.14\""
+markers = "python_version <= \"3.13\""
 files = [
     {file = "networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"},
     {file = "networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509"},
@@ -3538,6 +3628,41 @@ markers = {main = "extra == \"dev\" or extra == \"test\""}
 
 [package.extras]
 windows-terminal = ["colorama (>=0.4.6)"]
+
+[[package]]
+name = "pyjwt"
+version = "2.15.1"
+description = "JSON Web Token implementation in Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pyjwt-2.15.1-py3-none-any.whl", hash = "sha256:42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193"},
+    {file = "pyjwt-2.15.1.tar.gz", hash = "sha256:4f259e80cdfb6b3fc18a7de51fd1ef9ec79652f25019bae68975ca2468a34df8"},
+]
+
+[package.extras]
+crypto = ["cryptography (>=3.4.0)"]
+
+[[package]]
+name = "pyopenssl"
+version = "26.2.0"
+description = "Python wrapper module around the OpenSSL library"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "pyopenssl-26.2.0-py3-none-any.whl", hash = "sha256:4f9d971bc5298b8bc1fab282803da04bf000c755d4ad9d99b52de2569ca19a70"},
+    {file = "pyopenssl-26.2.0.tar.gz", hash = "sha256:8c6fcecd1183a7fc897548dfe388b0cdb7f37e018200d8409cf33959dbe35387"},
+]
+
+[package.dependencies]
+cryptography = ">=46.0.0,<49"
+typing-extensions = {version = ">=4.9", markers = "python_version < \"3.13\" and python_version >= \"3.8\""}
+
+[package.extras]
+docs = ["sphinx (!=5.2.0,!=5.2.0.post0,!=7.2.5)", "sphinx_rtd_theme"]
+test = ["pretend", "pytest (>=3.0.1)", "pytest-rerunfailures"]
 
 [[package]]
 name = "pytest"
@@ -4718,7 +4843,7 @@ description = "A language and compiler for custom Deep Learning operations"
 optional = false
 python-versions = "<3.15,>=3.10"
 groups = ["bench"]
-markers = "platform_system == \"Linux\" and python_version <= \"3.14\""
+markers = "python_version < \"3.15\" and platform_system == \"Linux\""
 files = [
     {file = "triton-3.7.1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3daf64305d6cea88d3334c65ebc9bcd0c64c9564a977084366aa768d57cbcf64"},
     {file = "triton-3.7.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:ee89fbf782ec2ad50391dd1cf26cbea4f4467154c37f4773026da8fc31c0f58e"},
@@ -5224,4 +5349,4 @@ test = ["factory-boy", "faker", "fakeredis", "httpx", "pytest", "pytest-asyncio"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "cd7f01238c1a75bc950919369dadd41eab4568882b04abbc9fe39e0b270571f6"
+content-hash = "b2d7d1110671ba6170ae2409e001f63a1a202bb8689444c080edef2104499bbb"

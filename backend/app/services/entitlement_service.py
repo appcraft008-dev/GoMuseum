@@ -632,8 +632,11 @@ def grant_from_purchase(
     amount=None,
     currency=None,
     receipt_payload=None,
+    granted_reason: str = "purchase",
 ) -> tuple:
     """收据校验通过后:落订单 + 发权益。返回 (purchase, entitlement)。
+
+    `granted_reason="sandbox"`:Apple Sandbox 交易(审核员/TestFlight)照发,但可区分。
 
     **幂等靠 store_transaction_id 唯一** —— 恢复购买会重复上报同一 token,
     重复调用只返回已有记录,绝不发第二张票(重复发放=白送钱)。
@@ -684,7 +687,7 @@ def grant_from_purchase(
         scope=pass_scope(product_id),
         source_purchase_id=p.id,
         status=PURCHASED_NOT_ACTIVATED,
-        granted_reason="purchase",
+        granted_reason=granted_reason,
     )
     db.add(ent)
     db.commit()

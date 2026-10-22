@@ -5,12 +5,12 @@ Handles Apple App Store and Google Play Store receipt verification
 
 import json
 import logging
+from pathlib import Path
 from typing import Dict, Optional
 
 import httpx
 
 from app.core.config import settings
-from app.core.exceptions import ServiceException
 
 logger = logging.getLogger(__name__)
 
@@ -20,95 +20,110 @@ class IAPVerificationService:
 
     def __init__(self):
         """Initialize IAP verification service"""
-        self.apple_verify_url_production = "https://buy.itunes.apple.com/verifyReceipt"
-        self.apple_verify_url_sandbox = "https://sandbox.itunes.apple.com/verifyReceipt"
         self.google_package_name = getattr(
             settings, "GOOGLE_PACKAGE_NAME", "com.gomuseum.app"
         )
         logger.info("IAPVerificationService initialized")
 
-    async def verify_apple_receipt(
-        self, receipt_data: str, use_sandbox: bool = False
-    ) -> Dict[str, any]:
+    # ── App Store(StoreKit 2)──────────────────────────────────────────────
+    #
+    # 客户端(in_app_purchase_storekit,SK2 默认开)交来的 `receipt_data` 是 Apple
+    # 签名的**交易 JWS**,不是旧式 app receipt。此前这里调的是已弃用的 verifyReceipt、
+    # 按订阅读 latest_receipt_info —— 从无客户端调用过,喂 JWS 必然失败。
+    #
+    # 验签全交给 Apple 官方库(x5c 链验到 Apple Root CA G3 + ES256):手写证书链验证
+    # 写错 = 任何人能伪造通票。离线验,不需要 .p8。
+    # spec: docs/superpowers/specs/2026-10-22-ios-iap-verification-design.md
+
+    def _apple_verifiers(self) -> list:
+        """先 Production 后 Sandbox。审核员在 prod 后端上用 Sandbox 买(spec §4.3)。
+
+        Production 必须有 APPLE_APP_ID:没有就无法确认交易属于我们 → 不建,
+        Production 交易一律被 Sandbox verifier 以环境不符拒掉(失败关闭,I15)。
         """
-        Verify Apple App Store receipt
+        from appstoreserverlibrary.models.Environment import Environment
+        from appstoreserverlibrary.signed_data_verifier import SignedDataVerifier
 
-        Args:
-            receipt_data: Base64 encoded receipt from iOS
-            use_sandbox: Whether to use sandbox environment
+        roots = _apple_root_certificates()
+        bundle = settings.APPLE_BUNDLE_ID
+        out = []
+        if settings.APPLE_APP_ID:
+            out.append(
+                SignedDataVerifier(
+                    roots,
+                    False,
+                    Environment.PRODUCTION,
+                    bundle,
+                    int(settings.APPLE_APP_ID),
+                )
+            )
+        out.append(SignedDataVerifier(roots, False, Environment.SANDBOX, bundle))
+        return out
 
-        Returns:
-            Dictionary containing verification result:
-                - status: Verification status code
-                - valid: Boolean indicating if receipt is valid
-                - product_id: Product identifier
-                - transaction_id: Unique transaction ID
-                - purchase_date: Date of purchase
-                - expires_date: Expiration date (for subscriptions)
-
-        Raises:
-            ServiceException: If verification fails
-        """
-        logger.info("Verifying Apple receipt")
-
-        verify_url = (
-            self.apple_verify_url_sandbox
-            if use_sandbox
-            else self.apple_verify_url_production
+    def _apple_decode(self, method: str, signed: str):
+        """依次用各环境验;返回 (解码结果, 验过的 verifier)。环境不符才试下一个,
+        签名/证书/App 不符直接抛 —— 不拿别的环境去"再碰碰运气"。"""
+        from appstoreserverlibrary.signed_data_verifier import (
+            VerificationException,
+            VerificationStatus,
         )
 
-        payload = {
-            "receipt-data": receipt_data,
-            "password": getattr(settings, "APPLE_SHARED_SECRET", ""),
-            "exclude-old-transactions": True,
-        }
+        last = None
+        for v in self._apple_verifiers():
+            try:
+                return getattr(v, method)(signed), v
+            except VerificationException as e:
+                if e.status != VerificationStatus.INVALID_ENVIRONMENT:
+                    raise
+                last = e
+        raise last
+
+    async def verify_apple_transaction(self, jws: str, product_id: str) -> Dict:
+        """校验 SK2 交易 JWS。返回形状与 verify_google_receipt 一致,下游不分平台。
+
+        `transaction_id` 取自 Apple 签名内的 transactionId(I9)。
+        `environment` 供 payment.py 给 Sandbox 票打标(spec §4.3)。
+        """
+        from appstoreserverlibrary.signed_data_verifier import VerificationException
+
+        def fail(error: str) -> Dict:
+            logger.warning("Apple transaction rejected: %s", error)
+            return {"valid": False, "platform": "ios", "error": error}
 
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(verify_url, json=payload, timeout=30.0)
+            t, _ = self._apple_decode("verify_and_decode_signed_transaction", jws)
+        except VerificationException:
+            return fail("apple_jws_invalid")
+        if t.productId != product_id:
+            # 否则 A 商品的交易能冒充 B 商品
+            return fail("apple_product_mismatch")
+        if t.rawType != "Consumable":
+            return fail("apple_not_consumable")
+        if t.revocationDate is not None:
+            return fail("apple_revoked")
+        if not t.transactionId:
+            return fail("apple_transaction_id_missing")
+        return {
+            "valid": True,
+            "platform": "ios",
+            "product_id": t.productId,
+            "transaction_id": t.transactionId,
+            "environment": t.rawEnvironment.lower(),
+        }
 
-                result = response.json()
-                status = result.get("status")
+    def parse_apple_notification(self, signed_payload: str):
+        """App Store Server Notifications V2 → (reason, transaction_id) 或 (None, None)。
 
-                # Status 21007 means sandbox receipt in production - retry with sandbox
-                if status == 21007 and not use_sandbox:
-                    logger.info("Sandbox receipt detected, retrying with sandbox URL")
-                    return await self.verify_apple_receipt(
-                        receipt_data, use_sandbox=True
-                    )
-
-                # Status 0 means valid
-                if status == 0:
-                    latest_receipt_info = result.get("latest_receipt_info", [])
-                    if latest_receipt_info:
-                        receipt = latest_receipt_info[0]
-                        return {
-                            "valid": True,
-                            "status": status,
-                            "product_id": receipt.get("product_id"),
-                            "transaction_id": receipt.get("transaction_id"),
-                            "purchase_date": receipt.get("purchase_date_ms"),
-                            "expires_date": receipt.get("expires_date_ms"),
-                            "is_subscription": "expires_date_ms" in receipt,
-                            "platform": "ios",
-                        }
-
-                logger.warning(
-                    f"Apple receipt verification failed with status {status}"
-                )
-                return {
-                    "valid": False,
-                    "status": status,
-                    "error": self._get_apple_error_message(status),
-                    "platform": "ios",
-                }
-
-        except httpx.TimeoutException:
-            logger.error("Apple receipt verification timed out")
-            raise ServiceException("Apple receipt verification timed out")
-        except Exception as e:
-            logger.error(f"Apple receipt verification error: {str(e)}")
-            raise ServiceException(f"Apple receipt verification failed: {str(e)}")
+        只处理 REFUND / REVOKE;其余类型(CONSUMPTION_REQUEST 等)返回 (None, None)。
+        验签不过抛 VerificationException(端点据此回 403)。内层交易用验过外层的
+        同一个 verifier 验 —— 环境必须一致。
+        """
+        n, v = self._apple_decode("verify_and_decode_notification", signed_payload)
+        reason = {"REFUND": "refunded", "REVOKE": "revoked"}.get(n.rawNotificationType)
+        if not reason or not n.data or not n.data.signedTransactionInfo:
+            return None, None
+        t = v.verify_and_decode_signed_transaction(n.data.signedTransactionInfo)
+        return reason, t.transactionId
 
     _PLAY_API = "https://androidpublisher.googleapis.com/androidpublisher/v3"
 
@@ -229,22 +244,16 @@ class IAPVerificationService:
             "acknowledged": data.get("acknowledgementState"),
         }
 
-    def _get_apple_error_message(self, status: int) -> str:
-        """Get human-readable error message for Apple status code"""
-        status_messages = {
-            21000: "App Store could not read the JSON object",
-            21002: "Receipt data property is malformed or missing",
-            21003: "Receipt could not be authenticated",
-            21004: "Shared secret does not match",
-            21005: "Receipt server is not currently available",
-            21006: "Receipt is valid but subscription has expired",
-            21007: "Receipt is from sandbox but sent to production",
-            21008: "Receipt is from production but sent to sandbox",
-            21009: "Internal data access error",
-            21010: "User account cannot be found or has been deleted",
-        }
 
-        return status_messages.get(status, f"Unknown status code: {status}")
+_APPLE_ROOT_CERT = (
+    Path(__file__).resolve().parent.parent / "certs" / "AppleRootCA-G3.cer"
+)
+
+
+def _apple_root_certificates() -> list[bytes]:
+    """Apple Root CA - G3(公开证书,apple.com/certificateauthority;
+    SHA-256 63:34:3A:BF:…:91:79)。测试里替换成假根。"""
+    return [_APPLE_ROOT_CERT.read_bytes()]
 
 
 # Singleton instance
