@@ -185,6 +185,8 @@ def test_legacy_link_301_keeps_source(client, db, monkeypatch):
     r = client.get(f"/a/orsay/{MS1}?lang=en&s=wa")
     assert r.status_code == 301
     assert r.headers["location"] == f"/en/paris/orsay/{MS1}/?s=wa"
+    # 301 不能被永久缓存,否则 WEBSITE_LIVE 回滚后已缓存的访客仍被送去新页
+    assert r.headers["cache-control"] == "public, max-age=86400"
     ev = db.query(AppEvent).filter_by(name="share_page_view").one()
     assert ev.props["source"] == "wa"
     assert client.get("/a/orsay/Q404?lang=en").status_code == 404

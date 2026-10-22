@@ -116,3 +116,16 @@ def test_desktop_gets_qr(client):
     assert 'class="qr"' in html and "data:image/svg+xml" in html
     android = client.get("/en/", headers={"user-agent": ANDROID}).text
     assert 'class="qr"' not in android
+
+
+def test_bot_page_view_not_logged(client, db):
+    client.get("/en/", headers={"user-agent": GOOGLEBOT})
+    assert db.query(AppEvent).filter_by(name="web_page_view").count() == 0
+
+
+def test_beacon_rejects_non_string_and_cleans_lang(client, db):
+    assert client.post("/w/e", json={"name": [1]}).status_code == 204
+    assert client.post("/w/e", json={"name": {}}).status_code == 204
+    client.post("/w/e", json={"name": "web_share_click", "lang": "xx<script>"})
+    ev = db.query(AppEvent).filter_by(name="web_share_click").one()
+    assert ev.props["lang"] is None

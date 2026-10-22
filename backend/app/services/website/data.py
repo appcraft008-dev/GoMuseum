@@ -6,6 +6,7 @@
 - 只读,不调内容接口、不碰懒生成。
 """
 
+import time
 import unicodedata
 from dataclasses import dataclass, field
 
@@ -267,9 +268,24 @@ def guide_count(db, museum_ids: list, language: str) -> int:
     return _base(db, museum_ids, language).count()
 
 
+_LANG_TTL = 600
+# ponytail: 进程内 10 分钟缓存(同 trials);新内容最多晚 10 分钟进 hreflang/noindex 判定
+_lang_cache: dict = {}
+
+
 def page_languages(db, museum_ids: list, *, artist_qid: str | None = None) -> list:
-    """达到薄页门槛的语言(按 LANGS 顺序)。"""
+    """达到薄页门槛的语言(按 LANGS 顺序)。每个页面请求都要它,故缓存。"""
     floor = THIN_ARTIST if artist_qid else THIN_MUSEUM
+    key = (tuple(sorted(str(i) for i in museum_ids)), artist_qid, floor)
+    hit = _lang_cache.get(key)
+    if hit and time.monotonic() - hit[0] < _LANG_TTL:
+        return hit[1]
+    out = _page_languages(db, museum_ids, artist_qid, floor)
+    _lang_cache[key] = (time.monotonic(), out)
+    return out
+
+
+def _page_languages(db, museum_ids, artist_qid, floor) -> list:
     out = []
     for lang in LANGS:
         q = _base(db, museum_ids, lang)

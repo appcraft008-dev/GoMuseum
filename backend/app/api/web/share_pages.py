@@ -138,6 +138,8 @@ def share_page(
         return RedirectResponse(
             f"/{chosen}/{museum_city_slug(museum)}/{slug}/{qid}/{suffix}",
             status_code=301,
+            # 不给永久缓存:WEBSITE_LIVE 回滚后,一天内已缓存的访客也会回到原页面
+            headers={"Cache-Control": "public, max-age=86400"},
         )
     copy = copy_for(chosen)
     guide = data.get("default_guide") or {}

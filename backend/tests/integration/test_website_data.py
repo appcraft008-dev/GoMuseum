@@ -200,3 +200,14 @@ def test_nameless_artist_has_no_artist_page(db, monkeypatch):
     db.commit()
     assert "HASH1" not in wd.artist_languages(db, [orsay.id])
     assert "Q296" in wd.artist_languages(db, [orsay.id])
+
+
+def test_page_languages_cached(db, monkeypatch):
+    orsay = wd.find_museum(db, "paris", "orsay")
+    wd._lang_cache.clear()
+    first = wd.page_languages(db, [orsay.id])
+    calls = []
+    real = wd._base
+    monkeypatch.setattr(wd, "_base", lambda *a, **k: calls.append(1) or real(*a, **k))
+    assert wd.page_languages(db, [orsay.id]) == first
+    assert calls == []

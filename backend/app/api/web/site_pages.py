@@ -217,7 +217,8 @@ def _xml(body: str) -> Response:
 @router.get("/robots.txt")
 def robots():
     return Response(
-        "User-agent: *\nAllow: /\nDisallow: /w/\n" f"Sitemap: {_abs('/sitemap.xml')}\n",
+        "User-agent: *\nAllow: /\nDisallow: /w/audio/\nDisallow: /w/e\n"
+        f"Sitemap: {_abs('/sitemap.xml')}\n",
         media_type="text/plain",
     )
 
@@ -293,7 +294,7 @@ async def beacon(request: Request, db: Session = Depends(get_db)):
     except ValueError:
         return Response(status_code=204)
     name = body.get("name") if isinstance(body, dict) else None
-    if name not in BEACON_NAMES:
+    if not isinstance(name, str) or name not in BEACON_NAMES:
         return Response(status_code=204)
     from app.services.event_log import log_event
 
@@ -305,7 +306,7 @@ async def beacon(request: Request, db: Session = Depends(get_db)):
         db,
         name,
         museum_slug=s("museum_slug"),
-        lang=s("lang"),
+        lang=s("lang") if s("lang") in wd.LANGS else None,
         page_type=s("page_type"),
         qid=s("qid"),
         part=s("part"),
@@ -327,6 +328,8 @@ def static_file(name: str):
 def trial_audio(
     museum_slug: str, qid: str, part: str, lang: str = "", db: Session = Depends(get_db)
 ):
+    if lang not in wd.LANGS:  # 先挡:任意 lang 进缓存键会无限撑大进程缓存
+        return _not_found()
     m = (
         db.query(Museum)
         .filter(Museum.slug == museum_slug, Museum.published_at.isnot(None))

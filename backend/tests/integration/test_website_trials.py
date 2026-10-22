@@ -157,3 +157,11 @@ def test_audio_404_is_uniform(client):
         assert r.status_code == 404, p
         bodies.add(r.content)
     assert len(bodies) == 1
+
+
+def test_audio_unknown_lang_not_cached(client):
+    assert (
+        client.get(f"/w/audio/orsay/{MS2}/guide", params={"lang": "zzz"}).status_code
+        == 404
+    )
+    assert not any(k[1] == "zzz" for k in trials._cache)

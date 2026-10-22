@@ -54,6 +54,8 @@ def log_page_view(db, request, *, lang, page_type, museum_slug=None, qid=None):
     from app.services.event_log import log_event
 
     ua = request.headers.get("user-agent", "")
+    if is_bot(ua):  # 爬虫全站扫一遍就是上万行写入;统计只要真人
+        return
     log_event(
         db,
         "web_page_view",

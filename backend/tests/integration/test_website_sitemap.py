@@ -92,7 +92,8 @@ def test_robots(client):
     assert r.text.splitlines() == [
         "User-agent: *",
         "Allow: /",
-        "Disallow: /w/",
+        "Disallow: /w/audio/",
+        "Disallow: /w/e",
         "Sitemap: https://gomuseum.app/sitemap.xml",
     ]
 
