@@ -61,20 +61,15 @@ class IAPVerificationService:
         return out
 
     def _apple_decode(self, method: str, signed: str):
-        """依次用各环境验;返回 (解码结果, 验过的 verifier)。环境不符才试下一个,
-        签名/证书/App 不符直接抛 —— 不拿别的环境去"再碰碰运气"。"""
-        from appstoreserverlibrary.signed_data_verifier import (
-            VerificationException,
-            VerificationStatus,
-        )
+        """依次用各环境验;返回 (解码结果, 验过的 verifier),都不过抛最后一个异常。
+        每个 verifier 各自完整验签名/证书/App/环境,换环境重试不会放宽任何一项。"""
+        from appstoreserverlibrary.signed_data_verifier import VerificationException
 
         last = None
         for v in self._apple_verifiers():
             try:
                 return getattr(v, method)(signed), v
             except VerificationException as e:
-                if e.status != VerificationStatus.INVALID_ENVIRONMENT:
-                    raise
                 last = e
         raise last
 
