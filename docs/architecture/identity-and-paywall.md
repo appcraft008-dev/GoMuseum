@@ -245,7 +245,8 @@ GoMuseum 是**现场**使用的 AI 博物馆导览:用户站在作品前,拍照�
 
 - **I19 · 商店要求的交易确认必须真的调。** Play 的 `acknowledge` 漏了,
   **3 天后自动全额退款**,而我们这侧看起来一切正常(订单在、权益在、没有任何报错)。
-  Apple 的 `finishTransaction` 同理。这类"确认交付"是商店协议的**必答项**,
+  Apple 的 `finishTransaction` 同理(由客户端在后端验证成功后 `completePurchase` 调用;
+  没 finish 的交易 SK2 会在下次启动重投,后端靠幂等接住)。这类"确认交付"是商店协议的**必答项**,
   不是可选优化;归属适配器(见第 8 节),但**必须有调用方**(I16)。
 
 - **I20 · 任何"没收已付款项"的规则,必须在购买前披露,且披露与代码成对上线。**
@@ -403,6 +404,7 @@ GoMuseum 是**现场**使用的 AI 博物馆导览:用户站在作品前,拍照�
 | `POST /content/tts/generate` | **必需** | **权益** | 有 qid 按作品判;无 qid(任意文本)需通票生效 |
 | `POST /payment/verify` | **必需** | **非游客**(I11) | 身份取自令牌(I1) |
 | `POST /payment/rtdn` | 共享密钥 | — | 退款回调。始终返 204,否则 Pub/Sub 无限重投 |
+| `POST /payment/apple-notifications` | Apple 签名 | — | App Store 退款/撤销通知(V2)。验签不过 403;验过始终 200 |
 | `GET/POST /entitlements/*` | **必需** | — | 身份取自令牌(I1) |
 
 ---
@@ -509,6 +511,11 @@ store_transaction_id, ...)`,`Purchase` 表有 `platform` 列,`entitlement_servic
 1. `payment.py` 里的 `if platform == "ios" ... elif "android"`(每加一个商店多一个分支)
 2. `/payment/rtdn` 是 Play 专用端点(Apple 的通知格式完全不同)
 
+**2026-10-22 接入 App Store**(spec `2026-10-22-ios-iap-verification-design.md`):
+`verify_apple_transaction` 用官方库离线验 StoreKit 2 交易 JWS;Apple 通知走独立的
+`/payment/apple-notifications`。核心只加了 `grant_from_purchase(granted_reason=)` 一个
+默认参数 —— 两家仍用 `if platform` 分支,§8.4 的结论不变。
+
 ### 8.4 何时重构
 
 **第二个商店真的要接时,不是现在。** 我们连 Play 都还没上线;为可能永远不来的
@@ -522,7 +529,9 @@ store_transaction_id, ...)`,`Purchase` 表有 `platform` 列,`entitlement_servic
 - [ ] 交易 ID **稳定且唯一**,且来自商店(I9)
 - [ ] 通知来源**可验证**(签名或共享密钥),否则任何人都能伪造退款/发放
 - [ ] 凭证缺失/下游不可达时**拒绝**,不放行(I8、I15)
-- [ ] **沙盒/测试购买不得进入真实权益** —— 各商店都有沙盒,混进来就是白送
+- [ ] **沙盒/测试购买可以进权益,但必须可区分**(`granted_reason="sandbox"`)——
+      Apple 审核员在 prod 后端上用 Sandbox 买,拒收 = 以「内购不可用」拒审(用户 10-22 定);
+      正式商店安装包只产生正式交易,白拿票的只有自己邀请的测试员和审核员
 - [ ] 商店特有约束落在适配器内,且**确认交付真的被调用**(I19)
       —— Play 3 天内 `acknowledge`、Apple `finishTransaction`;漏调会静默全额退款
 - [ ] 该商店的钱路径能被 `verify_money_path.py` 覆盖

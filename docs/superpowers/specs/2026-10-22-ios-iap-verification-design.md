@@ -1,6 +1,6 @@
 # iOS 内购后端校验(App Store)设计
 
-日期:2026-10-22 · 状态:待用户审阅 · 出处:backlog「iPhone 版」B 线
+日期:2026-10-22 · 状态:用户 10-22 批准,已实现 · 出处:backlog「iPhone 版」B 线
 
 ## 1. 为什么做
 
@@ -201,7 +201,7 @@ App Store Connect 里对该笔发起 Sandbox 退款 → 确认权益被撤。
 - `CONSUMPTION_REQUEST` 回应:可降低恶意退款,要 .p8。触发:出现第一笔 iOS 退款。
 - `appAccountToken`(购买时绑账号 UUID):现有归属校验已够,不做。
 
-## 9. 待用户拍板
+## 9. 用户拍板(10-22 两条均同意)
 
 1. **Sandbox 交易在 prod 是否发权益**(§4.3)。建议:发,标 `granted_reason="sandbox"`;
    否则审核员买不了票、会被拒审。
