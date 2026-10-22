@@ -7,10 +7,11 @@
 
 import hashlib
 import math
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import Session
 
@@ -173,6 +174,86 @@ def _screenshot(lang: str) -> str | None:
 
 def _paras(text: str | None) -> list[str]:
     return [p.strip() for p in (text or "").split("\n\n") if p.strip()]
+
+
+_SITEMAP_TTL = 3600
+# ponytail: 进程内 1 小时缓存;单语言 sitemap 现约 1.2k 条,远低于协议 5 万条上限,未做分片——
+# 某语言超过 5 万条时改成 sitemap-{lang}-{n}.xml 分片(索引同步列出)
+_sitemap_cache: dict = {}
+
+
+def _xml(body: str) -> Response:
+    return Response(
+        '<?xml version="1.0" encoding="UTF-8"?>\n' + body,
+        media_type="application/xml",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@router.get("/robots.txt")
+def robots():
+    return Response(
+        "User-agent: *\nAllow: /\nDisallow: /w/\n" f"Sitemap: {_abs('/sitemap.xml')}\n",
+        media_type="text/plain",
+    )
+
+
+@router.get("/sitemap.xml")
+def sitemap_index():
+    items = "".join(
+        f"<sitemap><loc>{_abs(f'/sitemap-{lang}.xml')}</loc></sitemap>"
+        for lang in wd.LANGS
+    )
+    return _xml(
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{items}</sitemapindex>"
+    )
+
+
+def _sitemap_entries(db, lang: str) -> list[tuple[str, list[str]]]:
+    """(路径模板 '/{}/...', 该页存在的语言);只收 lang 在其中的页。"""
+    pages = [("/{}/", list(wd.LANGS))]
+    for c in wd.public_cities(db):
+        ids = [m.id for m in c.museums]
+        pages.append((f"/{{}}/{c.slug}/", wd.page_languages(db, ids)))
+        for aq, langs in wd.artist_languages(db, ids).items():
+            pages.append((f"/{{}}/{c.slug}/artists/{aq}/", langs))
+        for m in c.museums:
+            base = f"/{{}}/{c.slug}/{m.slug}/"
+            pages.append((base, wd.page_languages(db, [m.id])))
+            for aq, langs in wd.artist_languages(db, [m.id]).items():
+                pages.append((f"{base}artists/{aq}/", langs))
+            for qid, langs in wd.work_languages(db, [m.id]).items():
+                pages.append((f"{base}{qid}/", langs))
+    return [(p, langs) for p, langs in pages if lang in langs]
+
+
+@router.get("/sitemap-{lang}.xml")
+def sitemap_lang(lang: str, db: Session = Depends(get_db)):
+    if lang not in wd.LANGS:
+        return _not_found()
+    hit = _sitemap_cache.get(lang)
+    if hit and time.monotonic() - hit[0] < _SITEMAP_TTL:
+        return _xml(hit[1])
+    rows = []
+    for tpl, langs in _sitemap_entries(db, lang):
+        alts = "".join(
+            f'<xhtml:link rel="alternate" hreflang="{_HREFLANG.get(code, code)}" '
+            f'href="{_abs(tpl.format(code))}"/>'
+            for code in langs
+        )
+        if "en" in langs:
+            alts += (
+                '<xhtml:link rel="alternate" hreflang="x-default" '
+                f'href="{_abs(tpl.format("en"))}"/>'
+            )
+        rows.append(f"<url><loc>{_abs(tpl.format(lang))}</loc>{alts}</url>")
+    body = (
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+        'xmlns:xhtml="http://www.w3.org/1999/xhtml">' + "".join(rows) + "</urlset>"
+    )
+    _sitemap_cache[lang] = (time.monotonic(), body)
+    return _xml(body)
 
 
 @router.get("/w/static/{name}")

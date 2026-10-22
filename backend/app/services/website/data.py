@@ -287,3 +287,44 @@ def cards_for_qids(db, museum_ids: list, language: str, qids: list[str]) -> list
         for o in _base(db, museum_ids, language).filter(MuseumObject.qid.in_(qids))
     }
     return to_cards(db, [objs[q] for q in qids if q in objs], language)
+
+
+def _guide_rows(db, museum_ids):
+    """(qid, artist_qid, language) —— 每件每门有已发布 guide 且有图的语言一行。"""
+    return (
+        db.query(MuseumObject.qid, _artist_col(), ObjectContentSection.language)
+        .join(ObjectContentSection, ObjectContentSection.object_id == MuseumObject.id)
+        .filter(
+            MuseumObject.museum_id.in_(museum_ids),
+            ObjectContentSection.section_code == "guide",
+            ObjectContentSection.status == "published",
+            ObjectContentSection.body.isnot(None),
+            func.trim(ObjectContentSection.body) != "",
+            ObjectContentSection.language.in_(LANGS),
+            has_image_clause(),
+        )
+        .all()
+    )
+
+
+def work_languages(db, museum_ids: list) -> dict[str, list[str]]:
+    """qid → 有内容的语言(按 LANGS 顺序)。sitemap 一次查完,不逐件查。"""
+    out: dict[str, set] = {}
+    for qid, _a, lang in _guide_rows(db, museum_ids):
+        out.setdefault(qid, set()).add(lang)
+    return {q: [lg for lg in LANGS if lg in s] for q, s in out.items()}
+
+
+def artist_languages(db, museum_ids: list) -> dict[str, list[str]]:
+    """artist_qid → 达到作者页门槛的语言(按 LANGS 顺序)。"""
+    counts: dict[str, dict[str, int]] = {}
+    for _q, aq, lang in _guide_rows(db, museum_ids):
+        if aq:
+            c = counts.setdefault(aq, {})
+            c[lang] = c.get(lang, 0) + 1
+    known = {a.qid for a in db.query(Artist.qid).filter(Artist.qid.in_(list(counts)))}
+    return {
+        aq: [lg for lg in LANGS if c.get(lg, 0) >= THIN_ARTIST]
+        for aq, c in counts.items()
+        if aq in known
+    }
