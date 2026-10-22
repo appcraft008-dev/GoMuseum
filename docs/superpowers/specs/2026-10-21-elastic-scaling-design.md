@@ -1,9 +1,9 @@
 # 弹性可扩容架构 设计
 
 - 日期：2026-10-21
-- 状态：v8。依据第七轮评审（清空记忆的 Fable 全量深度评审）重写全文，待用户审阅
+- 状态：v9（10-22）。依据第八轮评审（对照最新 staging 代码与 prod 只读数据）修订，待用户审阅
 - 来源：10-20 staging 多用户压测（backlog #1041），以及 10-20/21 brainstorm 的逐段确认
-- 评审历史：见 §13。v1–v7 共 6 轮评审；第 7 轮换用全新上下文做全量评审
+- 评审历史：见 §13。共 8 轮：第 1–6 轮逐段评审，第 7 轮全新上下文全量评审，第 8 轮重点查「会不会影响已有用户」
 
 ## 0. 目标与原则
 
@@ -23,16 +23,27 @@
 |---|---|
 | 设计容量 | 全部馆合计 **200 人同时使用**；扩到 1000 人以上只靠加机器（PostgreSQL 单点的处理见 §9.5） |
 | 浏览、搜索、内容接口（不含长连接） | p95 ≤ 1 秒 |
-| 识别：向量判定路径 | p95 ≤ 3 秒 |
-| 识别：AI 兜底路径 | 单独统计，不设 3 秒目标（要调用外部视觉模型，超时为 30 秒），在 §7 的报告里跟踪 |
+| 识别：向量判定各路径 | 单人使用时不比今天的基线慢；200 人时各路径 p95 ≤ 基线 × 1.5（用户 10-22 定）。基线见下表 |
+| 识别：AI 兜底路径 | 单独统计（要调用外部视觉模型，超时为 30 秒），在 §7 的报告里跟踪 |
 | 首屏（空作品第一次打开，到本语言讲解出现） | 高峰时比单人多 ≤ 10 秒。单人首屏本身的时长归「单人首屏提速」专题 |
 | 其余 9 门语言补齐 | 平常 ≤ 5 分钟；高峰时允许积压，高峰过后 30 分钟内清空（用户 10-21 定 A）。预算停止期间不计 |
 | 生成中，另一种语言的用户打开同一件 | ≤ 60 秒（英文一就绪就开始翻译，§3.3；上线后实测） |
 | 首次播放（现场合成） | 50 人同时首播时，首包 p95 ≤ 3 秒 |
 | 第二个人听同一段正在合成的音频 | ≤ 3 秒开始播放（同一段最多 2 路合成，§6） |
-| 部署 / 重启 | 不丢任务，不留半成品 |
+| 部署 / 重启 | 不丢任务，不留半成品。后端发版时懒生成最多暂停约 3 分钟（§11）；浏览只受 web 重启本身影响，不会因为 worker 停得更久 |
 | 内容生成成本 | 每天 $30、每月 $300（配置项）。到 80% 告警，到 100% 停止生成新内容 |
 | 语音、识别兜底成本 | 各设一条告警线，只告警，不停服务（用户 10-21 定） |
+
+**识别延迟基线**（prod 10-08～10-22，推理用满 8 核，几乎没有并发）：
+
+| 路径 | 次数 | p50 | p95 |
+|---|---|---|---|
+| 向量直判 | 111 | 0.25 秒 | 2.0 秒 |
+| 画框 | 344 | 1.6 秒 | 4.0 秒 |
+| 裁剪 | 185 | 2.3 秒 | 4.1 秒 |
+| AI 兜底 | 344 | 6.0 秒 | 12.2 秒 |
+
+画框、裁剪两步各自 p50 约 1 秒，是推理最重的部分；约 77% 的识别会走到其中至少一步。v8 的「向量路径 p95 ≤ 3 秒」今天在几乎零负载下就达不到，所以改为对标基线。
 
 **容量与预算的关系（用户 10-21 定 A）**
 
@@ -69,6 +80,8 @@
 | B11 | **CD 只同步 `backend/` 目录**，compose 和 nginx 都是手工改；每次 CD 都会在 VPS 现有的 compose 目录执行 `up -d --build` | deploy.yml:15-16、77-95 | 新增容器、改数据库参数都需要手工配合，发布顺序一错就会停摆 |
 | B12 | 大模型调用没有显式超时（SDK 默认 600 秒，外加 2 次重试） | openai_models、content_enricher | 一次挂住的调用会占住一个线程几十分钟 |
 | B13 | 没有容量监控 | — | 不知道什么时候该加机器 |
+| B14 | 生成管线的同一个会话从第一次查库开到落库提交，中间穿插抓取和大模型调用，事务一直开着；prod `lock_timeout=0`；web 启动时先跑迁移 | pipeline.py `generate_object`；pg_settings；compose `command` | worker 常驻后，带改表迁移的发版要等它的事务全部结束，这段时间新 web 起不来，整站 502（第八轮） |
+| B15 | `/audio` 是同步接口，合成期间一直占着线程池；流式接口在事件循环里同步查库 | museums.py `object_audio`、`object_audio_stream` | 问答音频一多，浏览抢不到线程；连接池一耗尽，整个进程卡 30 秒 |
 
 已经可以扩容、不用改的部分：
 
@@ -96,8 +109,8 @@
 | 容器 | 负责 | 启动 | 扩容 |
 |---|---|---|---|
 | web | 浏览、搜索、内容、语音流、补图 | `alembic upgrade head && uvicorn …`，**只有它跑迁移** | 同机加 `WEB_WORKERS`；跨机在 upstream 加一台 |
-| recognizer | 识别接口 | `uvicorn …`，端口 `127.0.0.1:8102`，`depends_on: web: service_healthy` | 同机加 `RECOG_WORKERS`；跨机在 upstream 加一台 |
-| worker | 领任务、调 AI、写回 | `python -m app.workers.generation`，不映射端口，不写死容器名，`depends_on: web: service_healthy`，设 `mem_limit` | 加线程；或用 `--scale` / 跨机多开 |
+| recognizer | 识别接口 | `uvicorn …`，端口 `127.0.0.1:8102`，`depends_on: web: service_healthy`，`cpu_shares` 低于 web（§5.2） | 同机加 `RECOG_WORKERS`；跨机在 upstream 加一台 |
+| worker | 领任务、调 AI、写回 | `python -m app.workers.generation`，不映射端口，不写死容器名，`depends_on: web: service_healthy`，`restart: always`，`stop_grace_period: 60s`，设 `mem_limit` | 加线程；或用 `--scale` / 跨机多开 |
 
 - `init_db` 只在 web 里执行，由 `INIT_DB_ON_START` 控制。
 - 部署脚本和 cron 里写死的容器名，全部改成按 compose 服务名查找。
@@ -115,6 +128,7 @@
    - prod 和 staging 所有 web 进程的 `TTS_CONCURRENCY` 之和 < 100 路并发；
    - 每分钟请求数 < **200**（Chirp3-HD 的限额，backlog 10-20 探测）。
 4. 所有调用 Wikidata / Wikimedia 的进程，`WIKIDATA_CONCURRENCY` 之和 ≤ 4。
+5. 这台 VPS 还跑着 deepmeeting 的 prod/staging（web + worker）和公司官网。核数、内存按扣掉它们之后的余量算。
 
 ## 3. 生成任务队列
 
@@ -138,13 +152,14 @@
 | worker_id | varchar(64) null | |
 | created_at / started_at / finished_at | timestamptz | |
 | last_error | text null | 截断到 2000 字 |
+| error_kind | varchar(12) null | 失败类别：`transient`（超时、429、5xx、连接错误）/ `internal`（其余），决定冷却时长 |
 
 索引：
 
 - `uq_active_job (kind, qid, language) WHERE status IN ('queued','running')`：部分唯一索引，保证同一件作品同时只有一个首屏任务。
 - `ix_queued (priority DESC, created_at) WHERE status='queued'`：claim 用的部分索引。第七轮实测，优先级 10 的领取从 92 ms 降到 0.9 ms。
 - `ix_running_lease (lease_until) WHERE status='running'`：清理线程用。
-- `(kind, qid, language, finished_at)`：失败冷却用。
+- `(kind, qid, language, finished_at)`：冷却用。
 
 **有效优先级**：priority=10，且 `priority_at` 在 10 分钟以内，才算「有人在等」，由高优先级线程领取；其余任务由低优先级线程领取。降级直接在 claim 的条件里算出来，不用清理线程去改数据。
 
@@ -163,7 +178,11 @@
 3. **不和首屏重复**：`translate` 的目标语言等于本件活跃首屏的 `lang_priority` 时，返回那个首屏任务，不入队。首屏完成时会先把自己的行置为 done，再为其余语言入队，所以那一步不会触发这条规则。
 4. **没有依赖就不入队**：`translate` 任务对应的作品，既没有活跃的首屏，`content_status` 也不是 `ready`（即没有任何已发布的英文段，见 pipeline.py：`ready if pub_en > 0`），返回 `(None, False)`。
 5. **预算**：只有用户触发的入队（priority 10）在内容生成预算耗尽时返回 `daily_cap`。首屏完成后补的入队照常写入，什么时候执行由 claim 决定。
-6. **失败冷却**：6 小时内失败过（`JOB_FAIL_COOLDOWN_H`），返回 `(None, False)`。这是一处行为变化：冷却期间，App 上的「重试」不会触发生成。
+6. **冷却**（用户 10-22 定：按错误类型区分），看本件同类任务最近一次结束的记录：
+   - 失败且 `error_kind='transient'`：15 分钟内不再入队（`JOB_COOLDOWN_TRANSIENT_MIN`）。上游故障恢复后，用户最多等 15 分钟就能重新生成；
+   - 失败且 `error_kind='internal'`：6 小时（`JOB_COOLDOWN_INTERNAL_H`）；
+   - 由内容接口触发的续跑（优先级 0 的 first_screen）：**不论成败**，6 小时内结束过就不再入队（`JOB_RESUME_COOLDOWN_H`）；
+   - 冷却期间返回 `(None, False)`。行为变化：现在失败后点「重试」立即重来，改后要等冷却结束。
 7. **写入**：
 
 ```sql
@@ -179,15 +198,33 @@ RETURNING *, (xmax = 0) AS inserted;
 
 **`claim(db, worker_id, high: bool) -> Job | None`**
 
+高、低两档用**两条独立的 SQL**。第八轮：v8 用参数化的 `:high = (…)`，规划器没法把它当成索引范围条件，高档线程在「没有高优先级任务、低优先级积压很多」时每次都要扫完全部 queued 行。预算停止时 worker 直接不调用 claim（预算状态每 10 秒算一次，缓存在进程内）。
+
+高档：
+
+```sql
+UPDATE generation_jobs j SET status='running', attempts=j.attempts+1,
+       lease_until=now()+interval '2 min', worker_id=:w, started_at=now()
+WHERE j.id = (
+  SELECT c.id FROM generation_jobs c
+  WHERE c.status='queued' AND c.priority >= 10
+    AND c.priority_at >= now() - interval '10 min'
+    AND c.run_after <= now()
+  ORDER BY c.priority DESC, c.created_at
+  LIMIT 1 FOR UPDATE SKIP LOCKED)
+RETURNING j.*;
+```
+
+低档：
+
 ```sql
 UPDATE generation_jobs j SET status='running', attempts=j.attempts+1,
        lease_until=now()+interval '2 min', worker_id=:w, started_at=now()
 WHERE j.id = (
   SELECT c.id FROM generation_jobs c
   WHERE c.status='queued' AND c.run_after <= now()
-    AND ( :high = (c.priority >= 10 AND c.priority_at >= now() - interval '10 min') )
-    AND NOT :gen_budget_exhausted          -- 队列里只有生成类任务，预算停止时都不领
-    -- 优先级 0 的补齐翻译要等本件首屏整件完成；高优先级翻译只要求英文就绪，已由 enqueue 第 4 步保证
+    AND NOT (c.priority >= 10 AND c.priority_at >= now() - interval '10 min')
+    -- 优先级 0 的补齐翻译要等本件首屏整件完成
     AND NOT (c.kind='translate' AND c.priority < 10 AND EXISTS (
           SELECT 1 FROM generation_jobs f
           WHERE f.qid=c.qid AND f.kind='first_screen' AND f.status IN ('queued','running')))
@@ -196,8 +233,9 @@ WHERE j.id = (
 RETURNING j.*;
 ```
 
-- 只扫 `status='queued'`，走部分索引。
+- 两条都只扫 `status='queued'`，走部分索引；高档的 `priority >= 10` 是索引范围条件。
 - 依赖检查只查 `generation_jobs` 这张小表，不扫内容段表。第七轮实测，原来的写法每次都要对整张段表做一次约 74 ms 的哈希。
+- 高优先级翻译**不保证英文已就绪**：enqueue 第 4 步只保证本件有活跃首屏。所以翻译任务领到后，先查本件有没有已发布的英文主讲解；没有就置回 queued，`run_after = now() + 10s`，`attempts` 减 1（不计次数）。
 
 **清理线程**（每个 worker 进程一个，每 30 秒执行一次）：
 
@@ -211,10 +249,13 @@ RETURNING j.*;
 
 **`finish(db, job_id, worker_id, ok, error=None, retry=True)`**：只在 `worker_id=:w AND status='running'` 时生效。
 
-- 成功：
-  - 翻译任务在置为 done 之前**重新检查缺口**：如果有任何英文段（不论状态）在本语言还没有对应行（判断语义同 lazy.py 的 `_has_missing_section`），就置回 `queued`，`attempts` 清零。这样首屏期间陆续发布的深度段也会被翻译。
-  - 没有缺口：置为 `done`。
-- 失败：`retry=True` 且 `attempts < 3` 时，置回 `queued`，`run_after` 按指数退避；否则置为 `failed`。
+- 翻译任务：
+  - 开始时记下本件**已发布**英文段的段名集合 `seen`。
+  - 有任何一段翻译报错（逐段 try/except 跳过）：整个任务按**失败**处理，走下面的重试和冷却；已经翻好的段照常保留。
+  - 全部成功时，再算一次「现在已发布、不在 `seen` 里、本语言还没有行」的英文段。有就置回 `queued`（`attempts` 不清零）；没有就置为 `done`。这样首屏期间陆续发布的深度段也会被翻译。
+  - 每次回队列都必须有新发布的英文段，所以回队列次数受英文段数封顶，不会循环。第八轮：v8 写的「任何英文段（不论状态）」会把被闸挡下的英文段也算成缺口，而翻译只读已发布段，prod 上 1,269 条被挡英文段只有 30 条有法语行，翻译任务会永远回队列；「`attempts` 清零」会让一段每次都报错的翻译变成热循环，直到烧光当天预算。
+- 首屏任务成功：置为 `done`，同一事务里为其余语言入队（§3.3）。
+- 失败：记 `error_kind`。`retry=True` 且 `attempts < 3` 时，置回 `queued`，`run_after` 按指数退避；否则置为 `failed`，进入冷却（enqueue 第 6 步）。
 
 **`release`**：部署停机时调用，执行 `status='queued', attempts=attempts-1, worker_id=NULL`。
 
@@ -223,10 +264,10 @@ RETURNING j.*;
 | 工作 | 原来 | 现在 | 优先级 |
 |---|---|---|---|
 | 首屏生成 | BackgroundTasks → `maybe_trigger` | `enqueue(first_screen, qid, '', 10, lang_priority=请求语言)` | 10 |
-| **续跑**：作品已 ready，但英文深度段、问答或请求语言有缺口 | 不会被触发 | 内容接口按 §3.4 的缺口判定发现缺口时，执行 `enqueue(first_screen, …, 0)`；6 小时冷却防止反复触发 | 0 |
+| **续跑**：作品已 ready，但有缺行（不论状态，§3.4） | 不会被触发 | 内容接口发现缺行时，执行 `enqueue(first_screen, …, 0)`；续跑任务不论成败，结束后 6 小时内不再入队（enqueue 第 6 步） | 0 |
 | 首屏期间，另一种语言的用户打开 | 等首屏完成后插队 | `enqueue(translate, qid, 他的语言, 10)`，英文一就绪就能执行 | 10 |
 | 已有作品缺请求语言 | BackgroundTasks | `enqueue(translate, qid, lang, 10)` | 10 |
-| 首屏完成后补齐其余语言 | 首屏线程里接着跑 fanout | jobs 层单独开一个事务：**先把首屏行置为 done**，再对**仍有缺口的语言**执行 `enqueue(translate, qid, lang, 0)`。缺口判定同 `_fanout_langs`，也包括 `lang_priority` 那门（它可能在首屏里被闸挡下或失败） | 0 |
+| 首屏完成后补齐其余语言 | 首屏线程里接着跑 fanout | jobs 层单独开一个事务：**先把首屏行置为 done**，再对**仍有缺口的语言**执行 `enqueue(translate, qid, lang, 0)`。缺口判定同 `_fanout_langs`，也包括 `lang_priority` 那门（它可能在首屏里被闸挡下或失败）。**`lang_priority` 那门用优先级 10**：请求者多半还在页面上，排在优先级 0 后面会让他一直看到转圈 | 0（`lang_priority` 那门为 10） |
 | 补图 | web 后台线程 | **不变** | — |
 | 语音流、索引重建 | web 进程 | **不变** | — |
 
@@ -300,11 +341,11 @@ RETURNING j.*;
 
 **领到首屏任务时：**
 
-1. 先以数据库为准计算缺口，**不看 `content_status`**。以下任一项成立就算有缺口：
-   - 英文 guide 未发布；
+1. 先以数据库为准计算缺口，**不看 `content_status`**。缺口一律按「**缺行**」判断，被闸挡下（needs_review）的行也算有。用户 10-22 定：needs_review 是最终结果，懒生成不自动重试，与 lazy.py `_has_missing_section` 的现有规则一致。以下任一项成立就算有缺口：
+   - 英文 guide 没有行；
    - 本类别的基础段缺行；
-   - 英文问答缺失；
-   - `lang_priority` 那门语言没有已发布的段。
+   - 英文问答一行都没有；
+   - `lang_priority` 那门有英文已发布段还没有行。
 2. 没有缺口：直接 `finish(done)`。
 3. 有缺口：调用 `generate_object(…, resume=True)`。
 
@@ -315,33 +356,33 @@ RETURNING j.*;
 | 入口 | — | 跳过开头「已有已发布英文 → skipped」的早退 |
 | 装载状态 | — | `en_published` 从库里装载**全部**已发布的英文段 |
 | 取数 | `attributes` 里已有对应键 | `f_lab`、`f_amat` 只在缺 `title_i18n` 或作者材料键时才抓取（现在是无条件抓取） |
-| 英文 guide | `en/guide` 已发布 | 已有就从库里读出 `guide_text`，作为去重锚 |
-| 请求语言 guide | 已发布 | 已有就跳过 |
+| 英文 guide | `en/guide` 有行 | 已发布就从库里读出 `guide_text` 作为去重锚；needs_review 不重写 |
+| 请求语言 guide | 有行 | 已有就跳过 |
 | 作者块 | — | 按 §3.3 的三步执行 |
 | canonical 深度段 | 各段已有行（不论状态） | 只把缺的段名作为 `sections` 传给 `generate_canonical`（不用改接口）；已有的段不经过 `_upsert_section`。已知代价：缺的段看不到已有段的内容，去重效果会弱一些 |
 | 翻译 | 该语言该段已发布 | 调用 `translate_object_language(include_bio=False)`。**在函数内部的 `for code in ordered` 循环里逐段 try/except**（在外层包一层做不到逐段容错） |
-| 问答 | 该语言已有已发布问答 | 先补齐英文问答，再跑翻译（翻译时会顺带产出请求语言的问答）。只为没有问答的语言生成，因为 `persist_suggested_questions` 会整组删掉再插入 |
+| 问答 | 该语言有问答行（不论状态） | 英文问答一行都没有时才生成；再跑翻译（翻译时会顺带产出请求语言的问答）。只为没有问答行的语言生成，因为 `persist_suggested_questions` 会整组删掉再插入 |
 
-- `have` 只统计已发布的段，所以 needs_review 的段每次续跑都会再翻一次。每次续跑最多一次，有上限。
-- 存量的「只有主讲解」半成品，在内容接口发现缺口时会以优先级 0 自动入队（§3.3），也可以用运维脚本批量入队。
+- 翻译这一步沿用 `translate_object_language`：目标语言里被闸挡下的段会再翻一次（#1036「被挡的段重试一次」）。续跑结束后 6 小时内不会再触发，所以有上限。
+- 存量里真正缺行的半成品，在内容接口发现缺口时会以优先级 0 自动入队（§3.3），也可以用运维脚本批量入队。prod 10-22：1,096 件已有内容的作品中，英文段少于 5 行的有 108 件（其中一部分是类别本来就段少）；英文问答全被挡的 103 件、英文主讲解被挡的 3 件**不会**触发续跑。
 
-**异常处理**：捕获 BaseException，把任务置为 `failed(retry=False)` 并告警，线程继续运行。
+**异常处理**：捕获 BaseException，把任务置为 `failed(retry=False)` 并告警，线程继续运行。失败时按异常类型记 `error_kind`：超时、429 重试用尽、5xx、连接错误为 `transient`，其余为 `internal`。
 
-**收到 SIGTERM：**
+**收到 SIGTERM**（第八轮改，配合 CD，见 §11）：
 
 1. 停止领新任务。
-2. 首屏任务等它自然跑完（1–2 分钟）。
-3. 翻译任务最多等 4 分钟，到时间就 release。
-4. compose 设 `stop_grace_period: 5m`。
+2. 翻译任务在段与段之间检查到停止信号，就 release。
+3. 首屏任务**不等它跑完**。compose 设 `stop_grace_period: 60s`，到时进程被杀；租约最迟 2 分钟后过期，由新 worker 续跑接手，已落库的段不会重做。
 
-部署 worker 时先起新的再停旧的：`docker compose up -d --no-deps --scale worker=2 worker`，等旧容器排空后缩回 1 个。这样不会有 5 分钟没人领任务的空档。
+v8 的「首屏跑完再退（5 分钟宽限）」和「先扩到 2 个再缩回」都删掉：CD 每次只执行一条 `up`，做不到滚动；5 分钟宽限会让每次发版多等最多 5 分钟，期间没人领任务。
 
 **回滚开关 `LAZY_EXECUTOR=queue|inprocess`：**
 
 - **代码里的默认值是 `inprocess`**（第七轮 A1：代码合入就会自动部署，而 worker 需要手工上线）。prod 手工上线 worker 之后，再把 `.env` 改成 `queue`。`.env` 在 `backend/` 之外，CD 不会覆盖它。
-- inprocess 模式下：内容接口走原来的 `maybe_trigger`；worker 不领任务；queued 状态的任务都置为 `cancelled`（不计入失败冷却）。
+- inprocess 模式下：内容接口走原来的 `maybe_trigger`；worker 不领任务；queued 状态的任务都置为 `cancelled`（不计入冷却）。
 - 已知小代价：切换那一刻，已在 running 的队列任务可能和 web 内重新触发的同一件重复生成一次。
 - 两种模式都要测。观察两周后删除 inprocess 路径。
+- **开关只切换执行方式，不回滚管线改动。** 管线改动（续跑、作者行加锁、超时与 429、翻译逐段容错）在 P2a 单独上线、单独观察（用户 10-22 定拆分，§11）；它们出问题时回滚代码。
 
 ### 3.5 被替换的旧机制
 
@@ -362,10 +403,11 @@ RETURNING j.*;
 - 必须等这门语言整门翻完，才变成 false。
 - 首屏完成和补齐入队在同一个事务里，中间不会出现空窗。
 - 补齐只给有缺口的语言入队，所以内容已经完整的语言，不会因为一个排在后面的优先级 0 任务而一直显示 true（第七轮 B4）。
+- 续跑只由「缺行」触发（§3.4），所以 `generating=true` 时一定有新内容要出现。已有内容、只是部分段被闸挡下的作品不会入队，打开时不转圈。第八轮：v8 按「未发布」判断，prod 上 106 件这类作品每次打开都会转圈，并重新生成一次。
 
 预算停止期间：排队中、还没开跑的任务返回 `generating=false`，并带 `unavailable_reason="daily_cap"`。失败或冷却期间返回 `generating=false`，App 显示「待完善」。
 
-**新增字段 `queue_position`、`eta_seconds`**：放在 P2b，和前端的排队提示一起排期。
+**新增字段 `queue_position`、`eta_seconds`**：放在 P2c，和前端的排队提示一起排期。
 
 - `queue_position`：排在我前面的同档 queued 任务数。
 - `eta_seconds = ceil((位置+1) × 近 1 小时同类任务平均耗时 ÷ max(1, 同档 running 任务数))`。没有历史数据时，平均耗时按 20 秒算。
@@ -388,7 +430,7 @@ RETURNING j.*;
 | 识别兜底 | recognition、label | 只告警 | `ALERT_RECOG_DAILY_USD` |
 
 - 三笔账都在 `BUDGET_ALERT_RATIO=0.8` 时告警。
-- 统一按 UTC 计日，`llm_usage` 改用 UTC 日期。
+- 统一按 UTC 计日。容器时区本来就是 UTC，`llm_usage` 的 `date.today()` 就是 UTC 日期，不用改（第八轮核实）。
 - 不做缓存。
 - 已知文案偏差：月度预算耗尽时，App 仍提示「明天再来」（`guideDailyCap`）。前端下次发版时区分月度和日度。
 
@@ -411,6 +453,7 @@ RETURNING j.*;
   - 合并到已有任务的请求不扣额度。
   - 与 #1037 的 paid key 兼容：COMMIT 失败时会多扣一次，但同一件作品同一天不会再扣，可以自愈。
 - slowapi：`storage_uri` 指向 Redis，打开 `in_memory_fallback_enabled=True`，并设 socket 超时（第七轮实测，Redis 挂掉时不会报错）。
+  - 改用 Redis 后，计数从「每个进程一份」变成「全站一份」，实际限额会减半。所以现有各条限额的数字**乘以当前 web 进程数（2）**，保持今天的实际限额：注册 5/分 → 10/分，登录 10/分 → 20/分，申请重设密码 5/时 → 10/时，确认重设密码 10/时 → 20/时，邮件验证 5/时 → 10/时，反馈与照片反馈 60/时 → 120/时，支付 120/分 → 240/分。
 - 游客登录限速 `GUEST_LOGIN_RATE=30/hour`。
 
 ### 4.3 外部接口速率
@@ -422,7 +465,7 @@ RETURNING j.*;
   - queue 模式下只有 worker 调用。
 - **Google TTS**：
   - `TTS_CONCURRENCY` 每进程默认 32。
-  - 遇到 `ResourceExhausted`（429）时**先退避再重试**。现在 `_is_transient` 会立即重试一次，每次重试都要再消耗一次额度。
+  - 遇到 `ResourceExhausted`（429）时**先退避再重试**。现在 `_is_transient` 会立即重试一次，每次重试都要再消耗一次额度。退避加重试的总时长封顶 25 秒，保证 `/audio` 在 App 35 秒的接收超时之前返回。
   - 每次 429 记 `event_log`，纳入 §7。
 
 ### 4.4 nginx
@@ -438,6 +481,8 @@ RETURNING j.*;
 **先消除隐藏的连接占用：**
 
 - 流式语音接口在 `_require_audio_access` 和 `_hidden` 之后**立即 `db.close()`**。`_prepare_sync` 自己另开会话。
+- 流式接口是 async，这两次检查改为 `await run_in_threadpool(...)` 执行，不在事件循环里同步查库。否则连接池一旦耗尽，`pool_timeout=30s` 会把整个进程（包括健康检查）卡住 30 秒（B15）。
+- `/audio` 是同步接口，合成期间一直占着线程池的一个线程。设每进程同时合成上限 `AUDIO_SYNC_MAX=16`，超出直接返回 409（App 已会按 2→16 秒退避重试）。这样线程池 40 个里至少 24 个留给浏览。
 - 记账用独立连接池。
 - 启动时显式设置线程池大小，不依赖宿主机核数：
   - anyio limiter：web 40，recognizer `RECOG_THREADPOOL=16`；
@@ -453,7 +498,8 @@ RETURNING j.*;
 
 - `max_connections` 设为 400，0.8 × 400 = 320，放得下 287。staging 的 PostgreSQL 是独立容器，不占用这个额度。多机部署时再加 PgBouncer。
 - **P1 阶段不缩小连接池**，因为那时懒生成还跑在 web 里。
-- **改 `max_connections` 需要重启 PostgreSQL**，P1 要安排维护窗口（§11）。同一个窗口里顺便调 `shared_buffers=4GB`、`effective_cache_size=12GB`，这两项现在还是默认值。
+- **改 `max_connections` 需要重启 PostgreSQL**，P1 要安排维护窗口（§11），并且排在 P1 代码上线**之前**：记账连接池上线后每进程最多 68 个连接，2 个进程是 136，超过现在的 100（第八轮）。
+- `shared_buffers`、`effective_cache_size` 不改：整个库只有 274 MB（10-22），调大没有收益，只会让维护窗口多一处改动（第八轮）。
 
 ### 5.2 recognizer 容器
 
@@ -461,18 +507,26 @@ RETURNING j.*;
   - 使用识别专用的限流区（§4.4），保留 `proxy_read_timeout 120s`。
   - web 设为 backup，配合 `proxy_next_upstream error timeout`：只有连接失败才回落到 web；POST 请求已经发出就不会重发。
 - confirm、reject、已返回 410 的旧接口、照片反馈，这几个接口留在 web。
-- 配置：`RECOG_WORKERS=2`、`RECOG_ONNX_THREADS=2`、`RECOG_THREADPOOL=16`；web 上设 `RECOG_PRELOAD=false`。
+- 配置：`RECOG_WORKERS=2`、`RECOG_ONNX_THREADS=4`（P3 按路径实测后定）、`RECOG_THREADPOOL=16`；web 上设 `RECOG_PRELOAD=false`。
+- **用 CPU 权重隔离识别和浏览**（用户 10-22 定）：recognizer `cpu_shares: 512`，web `cpu_shares: 1024`。两边争 CPU 时浏览优先；没人争时识别能用满空闲的核，单人识别速度不比今天慢。v8 的「每请求 2 线程」在今天的低负载下，预计会让画框、裁剪两步慢 2–3 倍（§0.2 基线）。
 
 ### 5.3 向量检索
 
-| 档 | 做法 | 时机 |
+**现状（prod 10-22）**：41,365 条向量，对应 15,406 件作品（每件约 2.7 条），每条 384 维 float32（1.5 KB），合计约 62 MB。近 30 天 2,201 次识别里有 2,200 次是不限馆的全局识别，每次都扫全部向量。现在慢在 Python 循环（逐条建馆过滤掩码、逐条取每件作品的最高分），不在矩阵乘法本身。
+
+**收录到几十万、上百万件时的路线**（按触发条件逐级上，不提前做）：
+
+| 档 | 做法 | 触发 |
 |---|---|---|
-| ① | 用 `np.maximum.at` 加预存的 qid 下标；用 `np.isin` 做馆过滤；13 个查询向量合成一次矩阵乘法 | P1。第七轮实测：10 万向量、13 个查询约 6 ms（旧实现 329 ms）；30 万向量约 16 ms |
-| ② | 近似检索（HNSW 一类） | 向量数超过 30 万时；上线前必须跑评测集 |
-| ③ | 向量矩阵只常驻在 recognizer 里 | P3 |
+| ① | 去掉 Python 循环：`np.maximum.at` 加预存的 qid 下标；`np.isin` 做馆过滤；13 个查询向量合成一次矩阵乘法 | P1。第七轮实测：10 万向量、13 个查询约 6 ms（旧实现 329 ms）；30 万向量约 16 ms。按线性外推，100 万件作品（约 270 万条向量）约 150 ms，VPS 上可能再慢 2–3 倍 |
+| ② | 向量矩阵只常驻在 recognizer 里 | P3 |
+| ③ | 省内存：换成 FAISS 的半精度（或 8 位）暴力检索；索引存成文件，用内存映射加载，同机所有进程共用一份，秒级启动 | 每进程向量矩阵超过 1 GB（约 70 万条向量、25 万件作品）。到 100 万件时 float32 每进程约 4 GB，2 个进程就是 8 GB，从数据库重新加载要几分钟——这才是百万级的真正瓶颈 |
+| ④ | 缩小范围：识别接口加可选参数 `city`，先只搜该城市的馆，没有把握再退回全局。加法契约，老 App 照旧走全局 | 全局识别 p95 超过基线 × 1.5，或开到多个城市之后。要前端发版配合；参数从哪来（城市选择还是定位）届时再定 |
+| ⑤ | 近似检索（FAISS 的 HNSW 或 IVF），百万级单次查询在毫秒级；召回率略低于 100% | ①–④ 之后暴力检索仍超基线（约 200 万条向量以上）。上线前必须用 `scripts/recognition_photo_eval.py` 和它的标注集对比，Top-1 准确率不降才切 |
 
 - 第 ① 档不解决 CPU 占满的问题（B4），那要靠拆出 recognizer。
 - 验收标准：10 万向量时 ≤ 30 ms，结果与旧实现逐条对拍一致。
+- v8 把近似检索的门槛定在 30 万条向量。第八轮按实测数改为最后一档：30 万条暴力检索只要约 16 ms，那时换近似检索收益很小，还要承担召回率下降的风险。
 
 ## 6. 语音：合成槽位（所有音频路径统一）
 
@@ -487,7 +541,7 @@ RETURNING j.*;
 
 - 槽位 key：`audio:synth:{qid}:{lang}:{section}:{1|2}`，用 `SET <token> NX EX 180` 抢占；释放时用 Lua 比对 token 后再删除。
 - 抢到槽位后，**先再查一次缓存**：别人可能刚落库，有就直接返回。
-- 两个槽位都被占时，**流式和 `/audio` 都返回 409**，老 App 会按 2、4、8、16 秒退避重试。
+- 两个槽位都被占时，**流式和 `/audio` 都返回 409**，老 App 会按 2、4、8、16 秒退避重试，最多 60 秒（guide_audio_player.dart 已核实）。`/audio` 另有进程内同时合成上限（§5.1），超出也返回 409。
 - Redis 不可用时放行。这时仍受每进程 `TTS_CONCURRENCY` 限制，数据正确性由条件落库保证。
 
 **条件落库：**
@@ -524,11 +578,11 @@ RETURNING j.*;
 
 | 检查项 | 数据来源 | 阈值 | 处理办法 |
 |---|---|---|---|
-| **worker 存活** | 任务表 | 有 queued 的生成任务，**且当前不在预算停止期间**，且 2 分钟内没有任何任务被领取 | 最紧急：懒生成已经停了 |
+| **worker 存活** | 任务表 | 有 queued 的生成任务，**且当前不在预算停止期间**，且 5 分钟内没有任何任务被领取（发版时会停 worker 1–3 分钟，设 2 分钟会误报） | 最紧急：懒生成已经停了 |
 | 「有人在等」的最老任务 | 任务表：有效优先级 10 的 queued 任务中最老的那条已等待的时长（实时值，不是事后统计） | > 30 秒，且不在预算停止期间 | 加 `WORKER_HIGH_THREADS` |
 | 内容生成预算 | `llm_usage` × `LLM_PRICES` | 80% / 100% | 调高预算，或离线预生成 |
 | 浏览 / 内容接口 p95 与 5xx | nginx `urt=`，剔除长连接 | p95 > 1 秒，或 5xx > 1% | 加 web 进程；查日志 |
-| 识别（向量路径）p95 | `recognition_event`，按 engine 分路径 | > 3 秒 | 加 recognizer |
+| 识别（向量各路径）p95 | `recognition_event`，按 engine 分路径 | > 基线 × 1.5（§0.2） | 加 recognizer |
 | 磁盘 / 内存 / CPU | 宿主机 | > 80%；CPU 连续 15 分钟 > 70% | 加资源 |
 | 数据库连接 | `pg_stat_activity` | > 80% `max_connections` | 调整配置 |
 
@@ -563,13 +617,13 @@ RETURNING j.*;
 | U | 200 / 1000 | 设计容量 |
 | T_recog | 3–4 分钟 | **假设**（用户判断） |
 | k | 2–3 | **假设**；有真实流量后，用 `recognition_events` 的每分钟最大值 ÷ 平均值实测 |
-| c_recog | ≤ 0.97 核·秒 | 压测 B 的上限值，偏高，且没有分路径 |
+| c_recog | 0.97 核·秒（**待按路径实测**） | 压测 B 的值，没有分路径。prod 近 14 天约 77% 的识别会走画框或裁剪这两步重推理；压测样本如果多走了快路径，这个数会偏低而不是偏高（第八轮） |
 | u | 0.6 | 留出的余量 |
 
-- 200 人：需要 2.7–5.4 核。
+- 200 人：需要 2.7–5.4 核，c_recog 实测后可能更高；这台 8 核机器还要分给 web、worker、PG 和同机其他项目（§2 第 5 条）。
 - 1000 人：需要 13–27 核，约 2–3 台机器；或者先做推理降本。
 
-**延迟要单独算**：最慢的路径要做 13 次推理，`RECOG_ONNX_THREADS=2` 时单个请求可能接近 3 秒。P3 要按路径（快路径、画框加裁剪、AI 兜底）分别实测 p95，再定 `RECOG_ONNX_THREADS` 取多少。
+**延迟要单独算**：最慢的路径要做 13 次推理。今天推理用满 8 核时，画框、裁剪两条路径的 p95 已经约 4 秒（§0.2 基线）。P3 要按路径（快路径、画框、裁剪、AI 兜底）分别实测单人和 200 人两种负载下的 p95，再定 `RECOG_ONNX_THREADS` 取多少。
 
 ### 9.2 生成
 
@@ -613,7 +667,7 @@ RETURNING j.*;
 - **Wikidata**：
   - 每件首屏约 10 次调用（未实测）。24 线程满载约 240 次/分钟；而 2 个令牌、p50 为 0.5 秒时，吞吐也约 240 次/分钟，**已经到了单进程的上限**。
   - 解法二选一：再开一个 worker 容器，令牌按总规则第 4 条平分；或者先把 HIGH 降到 16。
-  - P2 上线后，看「最老等待时长」和首屏耗时的实测再定。
+  - P2b 上线后，看「最老等待时长」和首屏耗时的实测再定。
 - **Google TTS**：
   - 200 人、每人每 3.5 分钟听一段：平均约 57 次/分钟，高峰（×3）约 171 次/分钟，**接近 200 的上限**。
   - 随着音频落库和 VoxCPM2 替换推进，未缓存比例会下降。
@@ -656,15 +710,17 @@ RETURNING j.*;
 | 配置 | 默认 | 位置 |
 |---|---|---|
 | `WEB_WORKERS` / `RECOG_WORKERS` | 2 / 2 | compose |
-| `RECOG_ONNX_THREADS` / `RECOG_THREADPOOL` | 2 / 16 | `.env` |
+| `RECOG_ONNX_THREADS` / `RECOG_THREADPOOL` | 4（P3 实测后定）/ 16 | `.env` |
+| `cpu_shares` | web 1024 / recognizer 512 | compose |
 | `RECOG_PRELOAD` | true（web 设为 false） | compose |
 | `INIT_DB_ON_START` | true（recognizer、worker 设为 false） | compose |
 | `LAZY_EXECUTOR` | **inprocess**（prod 上线 worker 后改为 queue） | `.env` |
 | `WORKER_HIGH_THREADS` / `WORKER_LOW_THREADS` | 24 / 60 | `.env` |
-| `JOB_FAIL_COOLDOWN_H` | 6 | `.env` |
+| worker 的 `restart` / `stop_grace_period` | always / 60s | compose |
+| `JOB_COOLDOWN_TRANSIENT_MIN` / `JOB_COOLDOWN_INTERNAL_H` / `JOB_RESUME_COOLDOWN_H` | 15 / 6 / 6 | `.env` |
 | `LLM_TIMEOUT_S` | 90 | `.env` |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | P1 保持 20/40；P2 起 web 40/12、recognizer 16/4，worker 自动计算 | `.env` |
-| `max_connections` / `shared_buffers` / `effective_cache_size` | 400 / 4GB / 12GB | postgres 容器启动命令 |
+| `max_connections` | 400（`shared_buffers` 等不改） | postgres 容器启动命令 |
 | `LLM_PRICES` | 实施时核对 | `.env` |
 | `BUDGET_GEN_DAILY_USD` / `BUDGET_GEN_MONTHLY_USD` / `BUDGET_ALERT_RATIO` | 30 / 300 / 0.8 | `.env` |
 | `ALERT_TTS_DAILY_USD` / `ALERT_RECOG_DAILY_USD` | 按实测基线定 | `.env` |
@@ -674,6 +730,7 @@ RETURNING j.*;
 | `WIKIDATA_CONCURRENCY` | 2（每进程） | `.env` |
 | `TTS_CONCURRENCY` | 32（每进程） | `.env` |
 | `AUDIO_SYNTH_SLOTS` | 2 | `.env` |
+| `AUDIO_SYNC_MAX` | 16（每进程） | `.env` |
 | nginx | 识别 2r/s burst 20；其他 50r/s burst 100 | nginx |
 
 ## 11. 分阶段实施
@@ -684,12 +741,30 @@ RETURNING j.*;
 - 所以每个阶段都分三步：**代码合入 → 手工改 compose / nginx / .env → 切开关**。
 - compose 的改动必须在同一个维护窗口里**立即生效**（`up -d <服务>`）。否则下一次 CD 会把这些改动带上，在不受控的时间点重建容器（比如重启数据库）。
 
+**CD 要先停 worker 再迁移**（第八轮，P2b 起生效）：
+
+- 生成管线的事务会跨越抓取和大模型调用（B14），prod `lock_timeout=0`。迁移时如果旧 worker 还在跑，`ALTER TABLE`、建索引要等它的事务全部结束，这段时间新 web 起不来，整站 502。改热表的迁移大约每月一次（09-07 讲解段表加列，10-19 作品表建唯一约束）。现在没事，是因为懒生成线程跟着旧 web 容器一起停掉了。
+- deploy.yml 的部署步骤改为：
+
+  ```sh
+  docker compose build
+  # 有 worker 服务时才停（P2b 之前没有这个服务）
+  if docker compose config --services | grep -qx worker; then docker compose stop -t 60 worker; fi
+  docker compose up -d --remove-orphans --wait
+  ```
+
+  先构建，停 worker 的这段时间就不包含构建耗时。worker 停下后，库里没有它的事务，迁移不用等锁。
+- alembic 每次迁移先 `SET lock_timeout = '10s'`。拿不到锁就失败退出，容器按 `restart` 策略重试，不会无限期挡住其他查询。
+- 代价：每次后端发版，懒生成暂停 1–3 分钟；在跑的首屏由续跑接手，不丢任务。现在发版时正在生成的作品要等 10 分钟锁过期，新方案仍然更好。
+- deploy.yml 的改动和 P2b 的代码放在同一个 PR 里合入，必须早于手工在 compose 里加 worker。
+
 | 阶段 | 内容 | 上线步骤 |
 |---|---|---|
-| P1 | 连接池改为配置项（默认值不变）；流式语音提前 `db.close()`；记账用独立连接池；向量检索 ①；防滥用按身份分档（含宽松 IP 层）；slowapi 改用 Redis；`TTS_CONCURRENCY` 和 TTS 429 退避；**所有音频路径统一用 Redis 槽位**，并加条件落库；Wikimedia 直连请求经过 `_GATE` | ① 代码合入，CD 自动部署（这些改动都不涉及 compose）。② **维护窗口**：确认 prod 没有长任务 → 备份 → 手工改 compose 里 postgres 的 `max_connections=400` 和内存参数 → `up -d postgres` → 核实连接数。③ 手工改 nginx（识别单独限流，其他 50r/s）→ `nginx -t` → reload |
-| P2 | 补记账、价目表、三笔账；任务表和 worker；续跑；`locked_artist`；`chat()` 显式超时和 429；语言白名单；回滚开关；**worker 存活告警**；记录被拒作品 | ① 代码合入（`LAZY_EXECUTOR` 默认 inprocess，行为和现在一样）。② 手工在 compose 里加 worker 服务（`depends_on: web: service_healthy`、`mem_limit`）→ `up -d worker` → 看日志确认它在空转等待。③ `.env` 改为 `LAZY_EXECUTOR=queue` → 依次重启 web 和 worker。④ 观察 24 小时，出问题就把 `.env` 改回 inprocess 再重启。⑤ 两周后删除 inprocess 路径 |
-| P2b | `queue_position` / `eta_seconds` | 与前端一起排期 |
-| P3 | recognizer 容器、nginx 分流、显式设置线程池、staging 资源上限、prod worker 的 `mem_limit`；按路径实测识别 p95 | ① 代码合入。② 手工在 compose 里加 recognizer → `up -d recognizer` → 本机请求验证。③ 改 nginx upstream（web 作为 backup）→ reload |
+| P1 | 连接池改为配置项（默认值不变）；流式语音提前 `db.close()`，两次检查放进线程池；`/audio` 同时合成上限；记账用独立连接池；向量检索 ①；防滥用按身份分档（含宽松 IP 层）；slowapi 改用 Redis（限额数字翻倍）；`TTS_CONCURRENCY` 和 TTS 429 退避；**所有音频路径统一用 Redis 槽位**，并加条件落库；Wikimedia 直连请求经过 `_GATE` | ① **维护窗口（先做）**：确认 prod 没有长任务 → 备份 → 手工改 compose 里 postgres 的 `max_connections=400` → `up -d postgres` → 核实连接数。趁正式版用户还少时做，影响最小。② 代码合入，CD 自动部署（这些改动都不涉及 compose）。③ 手工改 nginx（识别单独限流，其他 50r/s）→ `nginx -t` → reload |
+| P2a | 只改管线，仍在 web 里跑（用户 10-22 定拆分）：`locked_artist` 和作者块重构；`chat()` 显式超时和 429 专门异常；翻译逐段容错；`generate_object` 的续跑模式（inprocess 下 `_generate` 一律传 `resume=True`，对 stub 等同全新生成，让新代码路径先跑起来）；补记账、价目表、三笔账（此阶段只告警） | ① 代码合入，CD 自动部署。② 观察 7 天：作者行变更（纪律 37 写入面）、生成失败率、`audio_invalidations`、成本。出问题回滚代码 |
+| P2b | 任务表和 worker；按美元预算停止；内容接口的续跑触发与冷却；语言白名单；回滚开关；**deploy.yml 先停 worker**；**worker 存活告警**；记录被拒作品 | ① 代码合入（`LAZY_EXECUTOR` 默认 inprocess；开关只切执行方式，管线已在 P2a 跑过）。② 手工在 compose 里加 worker 服务（`depends_on: web: service_healthy`、`restart: always`、`stop_grace_period: 60s`、`mem_limit`）→ `up -d worker` → 看日志确认它在空转等待。③ `.env` 改为 `LAZY_EXECUTOR=queue` → 依次重启 web 和 worker。④ 观察 24 小时，出问题就把 `.env` 改回 inprocess 再重启。⑤ 两周后删除 inprocess 路径 |
+| P2c | `queue_position` / `eta_seconds` | 与前端一起排期 |
+| P3 | recognizer 容器（`cpu_shares` 低于 web）、nginx 分流、显式设置线程池、staging 资源上限、prod worker 的 `mem_limit`；按路径实测识别 p95，与 §0.2 基线对比 | ① 代码合入。② 手工在 compose 里加 recognizer → `up -d recognizer` → 本机请求验证。③ 改 nginx upstream（web 作为 backup）→ reload |
 | P4 | 其余 ops-check 检查项、ops_report、cron | ① 代码合入。② 在宿主机装 cron。③ **用户**注册外部探活服务 |
 
 每个阶段上 prod 前，都要先确认 prod 上没有长任务在跑。
@@ -709,7 +784,7 @@ RETURNING j.*;
   - 重复请求会合并；抬高优先级时刷新 `priority_at`；
   - 插入时 `priority_at=now()`，测试从 enqueue 开始走真实路径；
   - 只读命中时不写库；running 中再次入队不写库；
-  - 冷却、语言白名单、环境守卫都生效；
+  - 冷却按 `error_kind` 区分（transient 15 分钟、internal 6 小时），续跑不论成败冷却 6 小时；语言白名单、环境守卫都生效；
   - 不同语言的首屏只生成一条任务；
   - 与首屏 `lang_priority` 相同的翻译不入队；
   - 没有依赖时不入队，`generating` 稳定为 false，不会在 true/false 之间抖动。
@@ -719,13 +794,17 @@ RETURNING j.*;
   - 优先级 0 的翻译会等首屏完成；
   - 预算停止时不领取；
   - `run_after` 退避生效；
-  - 用 EXPLAIN 断言走了部分索引；在 3 万件作品、10 万条 queued 任务的规模下，单次 claim < 5 ms。
+  - 用 EXPLAIN 断言两条 SQL 都走部分索引；在 3 万件作品、10 万条 queued 任务的规模下，单次 claim < 5 ms，**包括高档在「0 条高优先级、10 万条低优先级」时的最坏情况**；
+  - 高优先级翻译在英文还没就绪时被领到：置回 queued，不计次数。
 - 清理线程：租约过期后，按退避置回 queued，或置为 failed；孤儿翻译任务被置为 cancelled。
 - finish：
-  - 翻译完成时重新检查缺口，有缺口就置回 queued；首屏期间新发布的深度段最终会被翻译；
+  - 翻译完成时只因「开始后新发布的英文段」回队列；首屏期间新发布的深度段最终会被翻译；
+  - 英文有 needs_review 段时，翻译任务照常 done，不回队列；
+  - 某一段每次翻译都报错：任务按失败处理、进入冷却，不循环；已翻好的段保留；
   - `retry=False` 时直接置为 failed。
 - 首屏完成后，只为有缺口的语言入队；如果 `lang_priority` 那门在首屏里翻译失败，也会入队兜底。
-- SIGTERM：首屏任务跑完才退出；翻译任务被 release。
+- SIGTERM：翻译任务被 release；首屏任务被杀后，租约过期由续跑接手，已落库的段不重做。
+- 部署（staging 演练）：worker 有在跑的任务时，执行一次带改表迁移的 CD。断言迁移不等锁、worker 60 秒内退出、新 worker 续跑接手；期间浏览接口只受 web 重启影响。
 - 回滚开关：两种模式都要测；inprocess 模式下 worker 不领任务。
 - 显式超时：模拟大模型调用挂住，90 秒后报错并释放线程。
 - 429 重试用尽：抛出专门的异常，不落库薄内容。
@@ -738,7 +817,9 @@ RETURNING j.*;
   - 能绕过 exists 早退；
   - 已有的深度段不会传给 canonical；
   - 某一段翻译出错时跳过它，继续翻译后面的段；
-  - `content_status=ready` 但有缺口时，内容接口会以优先级 0 入队续跑。
+  - `content_status=ready` 但有缺行时，内容接口会以优先级 0 入队续跑；
+  - 英文问答全是 needs_review、英文主讲解是 needs_review 时，内容接口不入队，`generating` 保持 false；
+  - 续跑正常结束后 6 小时内再打开，不再入队。
 
 **纪律 37（作者行）**
 
@@ -772,6 +853,7 @@ RETURNING j.*;
 
 - 超额时 ROLLBACK，不留下任务。
 - 正式账号在同一 IP 下超过 3000 时被拒。
+- slowapi 改 Redis 后两个进程共用计数，各限额是原来数字的 2 倍。
 
 **语音**
 
@@ -781,6 +863,8 @@ RETURNING j.*;
 - 合成期间正文被改，返回 busy。
 - Redis 不可用时放行。
 - 问答和作者简介的音频也走槽位。
+- `/audio` 同一进程第 17 路同时合成返回 409。
+- 流式接口的权限检查不阻塞事件循环：数据库变慢时，同一进程的其他请求不受影响。
 
 **连接**：50 路流式同时进行时，数据库连接数不会随之增长。
 
@@ -790,7 +874,7 @@ RETURNING j.*;
 - 预算停止时返回 `daily_cap`。
 - 新字段可以缺省。
 
-**容量验收**：在同规格机器上跑 200 人场景，逐行对照 §0.2。
+**容量验收**：在同规格机器上跑 200 人场景，逐行对照 §0.2。识别要分别测单人（不比基线慢）和 200 人（p95 ≤ 基线 × 1.5）。
 
 ## 13. 评审历史
 
@@ -802,7 +886,8 @@ RETURNING j.*;
 | 4 | P2 v4 | 2 | 修坏值和「只补缺」冲突；代表作字段是列表 | v5 |
 | 5 | §3.3 v5 | 2 | 原生 SQL 绕过了音频损失闸 | v6 |
 | 6 | §3.3 v6 | 1 | 修坏值失败后，其他语言的译文来源不一致 | v7 |
-| 7 | **全文 v7，全新上下文** | 1 | 见下表 | v8（全文重写） |
+| 7 | **全文 v7，全新上下文** | 1 | 见 13.1 | v8（全文重写） |
+| 8 | **全文 v8，对照最新代码与 prod 只读数据**，重点查「会不会影响已有用户」 | 4 | 见 13.2 | v9（用户 10-22 定 4 项） |
 
 ### 13.1 第七轮（v7 → v8）
 
@@ -827,3 +912,20 @@ RETURNING j.*;
 | 简化建议 3：补图不进队列 | 采纳 |
 | 简化建议 4：音频统一用 Redis 槽位 | 采纳 |
 | 简化建议 5：监控收敛到 7 项 | 采纳 |
+
+### 13.2 第八轮（v8 → v9）
+
+核对方式：读 v8 全文，逐条对照最新 staging 代码（da8ca949）；在 prod 上只读查了数据库参数、存量内容和识别耗时。
+
+| 条目 | 证据 | 处理 |
+|---|---|---|
+| A1 发版时迁移被 worker 的长事务卡住，整站 502（阻断） | 管线事务跨越网络调用；prod `lock_timeout=0`；CD 先重建 web 跑迁移，这时旧 worker 还在跑 | CD 先构建、再停 worker、再 up；SIGTERM 不等首屏；迁移设 `lock_timeout`。见 §11、§3.4 |
+| A2 翻译完成后「重查缺口」会无限循环（阻断） | 翻译只读已发布英文段；prod 1,269 条被挡英文段只有 30 条有法语行；`attempts` 清零会热循环 | 只因「开始后新发布的英文段」回队列；有段报错按失败处理。见 §3.2 |
+| A3 续跑让已有内容的作品反复转圈、反复花钱（阻断） | v8 按「未发布」判缺口；prod 103 件英文问答全被挡、3 件主讲解被挡；冷却只管失败 | 用户定：needs_review 是最终结果；缺口一律按缺行；续跑不论成败冷却 6 小时。见 §3.2–§3.4、§3.6 |
+| A4 失败冷却 6 小时，上游故障恢复后仍打不开（阻断） | 现在失败后可以立即重试 | 用户定：transient 15 分钟，internal 6 小时。见 §3.1、§3.2 |
+| B1 识别每请求 2 线程会让今天的用户变慢；v8 的 3 秒目标今天就达不到 | prod 基线：画框 p95 4.0 秒、裁剪 4.1 秒；约 77% 走重路径 | 用户定：按 CPU 权重隔离，推理约 4 线程；目标对标基线。见 §0.2、§5.2、§9.1 |
+| B2 回滚开关不回滚管线改动 | inprocess 仍跑新管线 | 用户定：拆成 P2a（管线）和 P2b（队列）。见 §11 |
+| B3 `/audio` 占线程；流式接口在事件循环里同步查库 | museums.py | `/audio` 同时合成上限 16，超出返回 409；两次检查放进线程池。见 §5.1 |
+| B4 worker 没写重启策略 | compose 默认不重启 | `restart: always`。见 §2 |
+| C1（用户追问）收录到几十万、上百万件时，向量识别会不会越来越慢 | prod 41,365 条向量；近 30 天 99.95% 是全局识别；百万级的瓶颈是每进程内存和加载时间，不是检索速度 | §5.3 改为五档路线，按触发条件上；近似检索从「30 万条」挪到最后一档 |
+| 次要项 | — | slowapi 限额翻倍（§4.2）；维护窗口提前、不改 `shared_buffers`（§5.1、§11）；UTC 不用改（§4.1）；claim 拆成两条 SQL（§3.2）；英文未就绪的翻译不计次数回队列（§3.2）；`lang_priority` 兜底重译用优先级 10（§3.3）；存活告警改为 5 分钟（§7）；TTS 429 退避封顶 25 秒（§4.3）；同机其他项目计入容量（§2、§9.1） |
