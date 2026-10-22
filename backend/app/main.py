@@ -148,6 +148,10 @@ from app.api.web.share_pages import router as share_web_router  # noqa: E402
 
 app.include_router(share_web_router)
 
+from app.api.web.site_pages import router as site_router  # noqa: E402
+
+app.include_router(site_router)
+
 
 @app.get("/")
 def root():

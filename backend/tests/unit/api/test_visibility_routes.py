@@ -31,6 +31,7 @@ REGISTRY = {
     ("POST", "/api/v1/entitlements/activate"): GATED,  # ?museum=
     ("GET", "/a/{slug}/{qid}"): GATED,  # 公开网页:public_object 按外人判
     ("GET", "/a/{slug}/{qid}/card.jpg"): GATED,  # 分享图:同网页判定
+    ("GET", "/w/audio/{museum_slug}/{qid}/{part}"): GATED,  # 只认已放出馆的试听件
     ("POST", "/api/v1/feedback"): "只写不读:收下反馈不回显任何馆/藏品内容",
     (
         "POST",

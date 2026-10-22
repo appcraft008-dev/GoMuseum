@@ -30,3 +30,7 @@ class ObjectStorage(ABC):
     @abstractmethod
     def public_url(self, key: str) -> str:
         """返回可直接给客户端展示的 URL。"""
+
+    def presigned_url(self, key: str, expires: int = 3600) -> str:
+        """短时效读链接。默认(本地存储)退回公开地址;R2 覆盖为真签名。"""
+        return self.public_url(key)
