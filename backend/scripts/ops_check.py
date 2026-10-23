@@ -658,7 +658,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             if ns.dry_run or ns.no_mail:
                 print(f"{key}: {subject}")
-                if ns.no_mail:
+                if ns.no_mail and not ns.dry_run:  # --dry-run 优先:一行不写
                     log_event(db, "ops_alert", key=key, mailed=False)
                 acted.append(key)
                 continue

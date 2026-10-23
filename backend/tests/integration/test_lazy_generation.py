@@ -1050,3 +1050,36 @@ def test_translation_logs_no_started_or_finished(session, monkeypatch):
         _events(session, "lazy_started") == []
         and _events(session, "lazy_finished") == []
     )
+
+
+def test_empty_generation_is_ok_whatever_the_request_language(session, monkeypatch):
+    """材料太薄产出 empty 是设计内结果(宁缺毋滥),不能按请求语言没段记成失败(Fable 终审 I2)。"""
+    import app.services.enrichment.lazy as lazy
+
+    def empty(db, qid, language=None):
+        o = db.query(MuseumObject).filter_by(qid=qid).one()
+        o.content_status = "empty"
+        db.flush()
+        return {}
+
+    monkeypatch.setattr(lazy, "_generate", empty)
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", "zh", session_factory=lambda: session, close=False)
+    [fin] = _events(session, "lazy_finished")
+    assert (fin["ok"], fin["empty"], fin["err_kind"]) == (True, True, None)
+
+
+def test_finished_telemetry_failure_never_breaks_generation(session, monkeypatch):
+    """埋点绝不破坏业务:lazy_finished 统计抛异常时,补语言照样接着跑(Fable 终审 M2)。"""
+    import app.services.enrichment.lazy as lazy
+
+    def boom(*a, **k):
+        raise RuntimeError("db gone")
+
+    fanned = []
+    monkeypatch.setattr(lazy, "_generate", lambda db, qid, language=None: {})
+    monkeypatch.setattr(lazy, "_log_finished", boom)
+    monkeypatch.setattr(lazy, "_run_fanout", lambda *a, **k: fanned.append(a[0]))
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
+    assert fanned == ["Q1"]

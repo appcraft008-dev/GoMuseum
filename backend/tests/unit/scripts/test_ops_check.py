@@ -577,3 +577,9 @@ def test_render_capacity_lists_every_trigger_metric():
     assert "26678" in text and "122617" in text  # 作品离 15 万还差 150000 - 27383
     assert "2026-10-23T11:55" in text  # 最近一次采样:cron 停了一眼能看出来
     assert "browse-p95" in text and "3" in text  # 近 7 天每条规则发了或本该发几封
+
+
+def test_dry_run_with_no_mail_writes_nothing(db, wired):
+    """手工预演时容易两个一起给:--dry-run 优先,一行不写(Fable 终审 I1)。"""
+    assert oc.main(["--disk", "95", "--no-mail", "--dry-run"]) == 0
+    assert wired == [] and db.query(AppEvent).count() == 0

@@ -288,7 +288,12 @@ def _run_locked(
                 _tag_lazy_rows(db, o, t0)  # 失败前已落库的段也是花掉的钱,照样计
                 _clear_lock(db, o)
             if track:
-                _log_finished(db, o, run_id, lang, err, time.monotonic() - m0, exempt)
+                try:  # 埋点绝不破坏业务:抛出去会让后面的补语言不跑
+                    _log_finished(
+                        db, o, run_id, lang, err, time.monotonic() - m0, exempt
+                    )
+                except Exception:
+                    logger.warning("lazy_finished log failed: %s", qid, exc_info=True)
         finally:
             if close:
                 db.close()
@@ -402,7 +407,9 @@ def _log_finished(db, o, run_id, lang, err, dur_s, exempt) -> None:
                 pub[lg] = n
             elif st == "needs_review":
                 held[lg] = n
-    has_lang = lang in (None, "en") or bool(pub.get(lang) or held.get(lang))
+    # empty(材料太薄,宁缺毋滥)是设计内结果,不看请求语言有没有段(Fable 终审 I2)
+    empty = o is not None and o.content_status == "empty"
+    has_lang = empty or lang in (None, "en") or bool(pub.get(lang) or held.get(lang))
     _log(
         db,
         "lazy_finished",
@@ -414,6 +421,7 @@ def _log_finished(db, o, run_id, lang, err, dur_s, exempt) -> None:
         dur_s=round(dur_s, 1),
         pub=pub,
         held=held,
+        empty=empty,
         exempt=exempt,
     )
 
