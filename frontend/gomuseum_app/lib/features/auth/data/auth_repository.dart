@@ -59,7 +59,7 @@ class AuthRepository {
   /// 端点就成了账号枚举器。所以 UI 只能说「如果这个邮箱注册过,信已经发出去了」
   /// —— 说成「已发送到你的邮箱」是在替后端撒一个它没做的保证。
   ///
-  /// [language] 决定邮件正文语言(en/fr/zh,其余回落英文)。
+  /// [language] 决定邮件正文语言(十语,认不出的回落英文)。
   Future<void> requestPasswordReset(String email, {String? language}) async {
     await _dio.post(
       '/api/v1/auth/password-reset/request',

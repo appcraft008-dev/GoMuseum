@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # 认不出的语言一律回落英文 —— 宁可给一封看得懂的英文信,不给一封空的。
 # zh-hant 与 App 的 apiLanguage() 同一个写法(2026-09-30 补:繁体用户曾拿到简体信)。
 DEFAULT_LANG = "en"
-SUPPORTED_LANGS = ("en", "fr", "zh", "zh-hant")
+SUPPORTED_LANGS = ("en", "fr", "zh", "zh-hant", "de", "es", "it", "pl", "ja", "ko")
 # 浏览器 Accept-Language 常只带地区不带脚本码(zh-TW);脚本码优先于地区。
 _HANT_REGIONS = ("tw", "hk", "mo")
 
@@ -76,6 +76,48 @@ _RESET_MAIL = {
         "連結 {minutes} 分鐘內有效，只能使用一次。\n"
         "如果不是你本人操作，忽略這封郵件即可，密碼不會有任何變更。",
     ),
+    "de": (
+        "GoMuseum-Passwort zurücksetzen",
+        "Öffne diesen Link, um ein neues Passwort festzulegen:\n\n{link}\n\n"
+        "Der Link ist {minutes} Minuten gültig und kann nur einmal verwendet werden.\n"
+        "Wenn du das nicht angefordert hast, kannst du diese E-Mail ignorieren — "
+        "dein Passwort bleibt unverändert.",
+    ),
+    "es": (
+        "Restablece tu contraseña de GoMuseum",
+        "Abre este enlace para elegir una contraseña nueva:\n\n{link}\n\n"
+        "El enlace caduca en {minutes} minutos y solo puede usarse una vez.\n"
+        "Si no lo has solicitado, ignora este correo: "
+        "tu contraseña no cambiará.",
+    ),
+    "it": (
+        "Reimposta la password di GoMuseum",
+        "Apri questo link per scegliere una nuova password:\n\n{link}\n\n"
+        "Il link scade tra {minutes} minuti e può essere usato una sola volta.\n"
+        "Se non hai richiesto tu il ripristino, ignora questa e-mail: "
+        "la tua password resta invariata.",
+    ),
+    "pl": (
+        "Zresetuj hasło do GoMuseum",
+        "Otwórz ten link, aby ustawić nowe hasło:\n\n{link}\n\n"
+        "Link wygasa po {minutes} minutach i można go użyć tylko raz.\n"
+        "Jeśli ta prośba nie pochodzi od Ciebie, zignoruj tę wiadomość — "
+        "Twoje hasło pozostanie bez zmian.",
+    ),
+    "ja": (
+        "GoMuseum のパスワード再設定",
+        "以下のリンクを開いて、新しいパスワードを設定してください：\n\n{link}\n\n"
+        "リンクの有効期限は {minutes} 分で、1 回だけ使用できます。\n"
+        "お心当たりがない場合は、このメールを無視してください。"
+        "パスワードは変更されません。",
+    ),
+    "ko": (
+        "GoMuseum 비밀번호 재설정",
+        "아래 링크를 열어 새 비밀번호를 설정하세요:\n\n{link}\n\n"
+        "링크는 {minutes}분 동안 유효하며 한 번만 사용할 수 있습니다.\n"
+        "직접 요청하지 않았다면 이 메일은 무시하셔도 됩니다. "
+        "비밀번호는 변경되지 않습니다.",
+    ),
 }
 
 _VERIFY_MAIL = {
@@ -103,6 +145,43 @@ _VERIFY_MAIL = {
         "開啟這個連結確認這個電子郵件地址：\n\n{link}\n\n"
         "連結 {minutes} 分鐘內有效。\n"
         "確認之後，萬一將來需要找回密碼才走得通。",
+    ),
+    "de": (
+        "Bestätige deine E-Mail-Adresse für GoMuseum",
+        "Öffne diesen Link, um diese Adresse zu bestätigen:\n\n{link}\n\n"
+        "Der Link ist {minutes} Minuten gültig.\n"
+        "Mit der Bestätigung funktioniert die Passwort-Wiederherstellung, "
+        "falls du sie einmal brauchst.",
+    ),
+    "es": (
+        "Confirma tu correo de GoMuseum",
+        "Abre este enlace para confirmar esta dirección:\n\n{link}\n\n"
+        "El enlace caduca en {minutes} minutos.\n"
+        "Al confirmarla, podrás recuperar tu contraseña si algún día lo necesitas.",
+    ),
+    "it": (
+        "Conferma la tua e-mail GoMuseum",
+        "Apri questo link per confermare questo indirizzo:\n\n{link}\n\n"
+        "Il link scade tra {minutes} minuti.\n"
+        "Confermandolo potrai recuperare la password se un giorno ne avrai bisogno.",
+    ),
+    "pl": (
+        "Potwierdź swój adres e-mail w GoMuseum",
+        "Otwórz ten link, aby potwierdzić ten adres:\n\n{link}\n\n"
+        "Link wygasa po {minutes} minutach.\n"
+        "Dzięki potwierdzeniu odzyskasz hasło, jeśli kiedyś będzie to potrzebne.",
+    ),
+    "ja": (
+        "GoMuseum のメールアドレス確認",
+        "以下のリンクを開いて、このメールアドレスを確認してください：\n\n{link}\n\n"
+        "リンクの有効期限は {minutes} 分です。\n"
+        "確認しておくと、パスワードを忘れたときに再設定できます。",
+    ),
+    "ko": (
+        "GoMuseum 이메일 확인",
+        "아래 링크를 열어 이 이메일 주소를 확인하세요:\n\n{link}\n\n"
+        "링크는 {minutes}분 동안 유효합니다.\n"
+        "확인해 두면 나중에 비밀번호를 잊었을 때 재설정할 수 있습니다.",
     ),
 }
 
@@ -211,6 +290,167 @@ _PAGE_COPY = {
         "notice_verify_expired_title": "連結已失效",
         "notice_verify_expired_body": "這個確認連結已經過期或使用過了。\n"
         "可以在 App 的設定裡重新傳送。",
+    },
+    "de": {
+        "html_lang": "de",
+        "title": "Passwort zurücksetzen · GoMuseum",
+        "h1": "Neues Passwort festlegen",
+        "sub": "Wähle ein neues Passwort für dein GoMuseum-Konto.",
+        "label_new": "Neues Passwort",
+        "hint_min": "Mindestens 8 Zeichen",
+        "label_repeat": "Passwort wiederholen",
+        "button": "Bestätigen",
+        "msg_mismatch": "Die beiden Passwörter stimmen nicht überein.",
+        "msg_short": "Mindestens 8 Zeichen.",
+        "msg_ok": "Passwort geändert — melde dich damit in der App an.",
+        "msg_expired": "Dieser Link ist abgelaufen oder wurde bereits verwendet. "
+        "Bitte fordere in der App einen neuen an.",
+        "msg_error": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+        "msg_network": "Netzwerkfehler.",
+        "notice_expired_title": "Link nicht mehr gültig",
+        "notice_expired_body": "Dieser Link zum Zurücksetzen ist abgelaufen "
+        "oder wurde bereits verwendet.\n"
+        "Bitte fordere in der App einen neuen an.",
+        "notice_verified_title": "E-Mail-Adresse bestätigt",
+        "notice_verified_body": "Deine E-Mail-Adresse ist bestätigt.\n"
+        "Du kannst diese Seite schließen.",
+        "notice_verify_expired_title": "Link nicht mehr gültig",
+        "notice_verify_expired_body": "Dieser Link ist abgelaufen "
+        "oder wurde bereits verwendet.\n"
+        "Du kannst in den Einstellungen der App einen neuen senden.",
+    },
+    "es": {
+        "html_lang": "es",
+        "title": "Restablecer contraseña · GoMuseum",
+        "h1": "Crea una contraseña nueva",
+        "sub": "Elige una contraseña nueva para tu cuenta de GoMuseum.",
+        "label_new": "Contraseña nueva",
+        "hint_min": "Al menos 8 caracteres",
+        "label_repeat": "Repite la contraseña",
+        "button": "Confirmar",
+        "msg_mismatch": "Las dos contraseñas no coinciden.",
+        "msg_short": "Al menos 8 caracteres.",
+        "msg_ok": "Contraseña actualizada: inicia sesión con ella en la app.",
+        "msg_expired": "Este enlace ha caducado o ya se ha usado. "
+        "Solicita uno nuevo desde la app.",
+        "msg_error": "Algo ha salido mal. Inténtalo de nuevo.",
+        "msg_network": "Error de red.",
+        "notice_expired_title": "El enlace ya no es válido",
+        "notice_expired_body": "Este enlace de restablecimiento ha caducado "
+        "o ya se ha usado.\n"
+        "Solicita uno nuevo desde la app.",
+        "notice_verified_title": "Correo confirmado",
+        "notice_verified_body": "Tu dirección de correo está confirmada.\n"
+        "Ya puedes cerrar esta página.",
+        "notice_verify_expired_title": "El enlace ya no es válido",
+        "notice_verify_expired_body": "Este enlace ha caducado o ya se ha usado.\n"
+        "Puedes enviar uno nuevo desde los ajustes de la app.",
+    },
+    "it": {
+        "html_lang": "it",
+        "title": "Reimposta password · GoMuseum",
+        "h1": "Imposta una nuova password",
+        "sub": "Scegli una nuova password per il tuo account GoMuseum.",
+        "label_new": "Nuova password",
+        "hint_min": "Almeno 8 caratteri",
+        "label_repeat": "Ripeti la password",
+        "button": "Conferma",
+        "msg_mismatch": "Le due password non coincidono.",
+        "msg_short": "Almeno 8 caratteri.",
+        "msg_ok": "Password aggiornata: accedi con la nuova password nell'app.",
+        "msg_expired": "Questo link è scaduto o è già stato usato. "
+        "Richiedine uno nuovo dall'app.",
+        "msg_error": "Si è verificato un problema. Riprova.",
+        "msg_network": "Errore di rete.",
+        "notice_expired_title": "Link non più valido",
+        "notice_expired_body": "Questo link di ripristino è scaduto "
+        "o è già stato usato.\n"
+        "Richiedine uno nuovo dall'app.",
+        "notice_verified_title": "E-mail confermata",
+        "notice_verified_body": "Il tuo indirizzo e-mail è confermato.\n"
+        "Puoi chiudere questa pagina.",
+        "notice_verify_expired_title": "Link non più valido",
+        "notice_verify_expired_body": "Questo link è scaduto o è già stato usato.\n"
+        "Puoi inviarne uno nuovo dalle impostazioni dell'app.",
+    },
+    "pl": {
+        "html_lang": "pl",
+        "title": "Resetowanie hasła · GoMuseum",
+        "h1": "Ustaw nowe hasło",
+        "sub": "Wybierz nowe hasło do swojego konta GoMuseum.",
+        "label_new": "Nowe hasło",
+        "hint_min": "Co najmniej 8 znaków",
+        "label_repeat": "Powtórz hasło",
+        "button": "Potwierdź",
+        "msg_mismatch": "Hasła nie są takie same.",
+        "msg_short": "Co najmniej 8 znaków.",
+        "msg_ok": "Hasło zmienione — zaloguj się nim w aplikacji.",
+        "msg_expired": "Ten link wygasł lub został już użyty. "
+        "Poproś o nowy w aplikacji.",
+        "msg_error": "Coś poszło nie tak. Spróbuj ponownie.",
+        "msg_network": "Błąd sieci.",
+        "notice_expired_title": "Link jest już nieważny",
+        "notice_expired_body": "Ten link do resetowania hasła wygasł "
+        "lub został już użyty.\n"
+        "Poproś o nowy w aplikacji.",
+        "notice_verified_title": "Adres e-mail potwierdzony",
+        "notice_verified_body": "Twój adres e-mail został potwierdzony.\n"
+        "Możesz zamknąć tę stronę.",
+        "notice_verify_expired_title": "Link jest już nieważny",
+        "notice_verify_expired_body": "Ten link wygasł lub został już użyty.\n"
+        "Nowy możesz wysłać w ustawieniach aplikacji.",
+    },
+    "ja": {
+        "html_lang": "ja",
+        "title": "パスワード再設定 · GoMuseum",
+        "h1": "新しいパスワードを設定",
+        "sub": "GoMuseum アカウントの新しいパスワードを設定してください。",
+        "label_new": "新しいパスワード",
+        "hint_min": "8 文字以上",
+        "label_repeat": "もう一度入力",
+        "button": "確定",
+        "msg_mismatch": "2 つのパスワードが一致しません。",
+        "msg_short": "8 文字以上で入力してください。",
+        "msg_ok": "パスワードを更新しました。アプリで新しいパスワードを使ってログインしてください。",
+        "msg_expired": "このリンクは期限切れか、すでに使用されています。"
+        "アプリからもう一度リクエストしてください。",
+        "msg_error": "問題が発生しました。もう一度お試しください。",
+        "msg_network": "ネットワークエラー。",
+        "notice_expired_title": "リンクは無効です",
+        "notice_expired_body": "この再設定リンクは期限切れか、すでに使用されています。\n"
+        "アプリからもう一度リクエストしてください。",
+        "notice_verified_title": "メールアドレスを確認しました",
+        "notice_verified_body": "メールアドレスの確認が完了しました。\n"
+        "このページは閉じてかまいません。",
+        "notice_verify_expired_title": "リンクは無効です",
+        "notice_verify_expired_body": "この確認リンクは期限切れか、すでに使用されています。\n"
+        "アプリの設定から再送信できます。",
+    },
+    "ko": {
+        "html_lang": "ko",
+        "title": "비밀번호 재설정 · GoMuseum",
+        "h1": "새 비밀번호 설정",
+        "sub": "GoMuseum 계정에 사용할 새 비밀번호를 정하세요.",
+        "label_new": "새 비밀번호",
+        "hint_min": "8자 이상",
+        "label_repeat": "비밀번호 다시 입력",
+        "button": "확인",
+        "msg_mismatch": "두 비밀번호가 일치하지 않습니다.",
+        "msg_short": "8자 이상 입력하세요.",
+        "msg_ok": "비밀번호가 변경되었습니다. 앱에서 새 비밀번호로 로그인하세요.",
+        "msg_expired": "링크가 만료되었거나 이미 사용되었습니다. "
+        "앱에서 다시 요청하세요.",
+        "msg_error": "문제가 발생했습니다. 다시 시도하세요.",
+        "msg_network": "네트워크 오류입니다.",
+        "notice_expired_title": "더 이상 유효하지 않은 링크",
+        "notice_expired_body": "이 재설정 링크는 만료되었거나 이미 사용되었습니다.\n"
+        "앱에서 다시 요청하세요.",
+        "notice_verified_title": "이메일 확인 완료",
+        "notice_verified_body": "이메일 주소가 확인되었습니다.\n"
+        "이 페이지를 닫아도 됩니다.",
+        "notice_verify_expired_title": "더 이상 유효하지 않은 링크",
+        "notice_verify_expired_body": "이 확인 링크는 만료되었거나 이미 사용되었습니다.\n"
+        "앱 설정에서 다시 보낼 수 있습니다.",
     },
 }
 
