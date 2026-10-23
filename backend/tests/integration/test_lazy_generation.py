@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.app_event import AppEvent
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
@@ -28,6 +29,7 @@ def session():
             MuseumObject.__table__,
             ObjectImage.__table__,
             ObjectContentSection.__table__,
+            AppEvent.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -88,7 +90,7 @@ def test_maybe_trigger_schedules_runner_for_stub(session):
         environment="staging",
         language="fr",
     )
-    assert scheduled == [("Q1", "fr")]  # stub → 调度一次(透传请求语言=优先翻译)
+    assert scheduled == [("Q1", "fr", False)]  # stub → 调度一次(透传请求语言=优先翻译)
 
 
 def test_maybe_trigger_skips_ready_and_locked(session):
@@ -163,7 +165,7 @@ def test_maybe_trigger_lazy_translate_when_language_missing(session):
         environment="staging",
         language="de",
     )
-    assert scheduled == [("run_lazy_translation", ("Q1", "de"))]
+    assert scheduled == [("run_lazy_translation", ("Q1", "de", False))]
 
 
 def test_maybe_trigger_no_translate_when_language_present_or_en(session):
@@ -390,7 +392,7 @@ def test_lazy_translate_still_fires_when_no_sections(session):
         environment="staging",
         language="zh",
     )
-    assert scheduled == [("run_lazy_translation", ("Q1", "zh"))]
+    assert scheduled == [("run_lazy_translation", ("Q1", "zh", False))]
 
 
 def test_lazy_generation_only_request_language(session, monkeypatch):
@@ -718,7 +720,7 @@ def test_half_done_language_retriggers_translation(session):
     _publish(session, "Q1", "en")
     _publish(session, "Q1", "en", code="background")
     _publish(session, "Q1", "de")
-    assert _trigger(session, "de") == [("run_lazy_translation", ("Q1", "de"))]
+    assert _trigger(session, "de") == [("run_lazy_translation", ("Q1", "de", False))]
 
 
 def test_gated_only_gap_does_not_retrigger(session):
@@ -749,7 +751,7 @@ def test_no_translation_while_language_pending_in_fanout(session):
     _publish(session, "Q1", "en")
     lazy._set_fanout(session, _obj(session), ["de"])
     assert _trigger(session, "de") == []
-    assert _trigger(session, "it") == [("run_lazy_translation", ("Q1", "it"))]
+    assert _trigger(session, "it") == [("run_lazy_translation", ("Q1", "it", False))]
 
 
 def test_maybe_trigger_records_want_while_generating(session):
@@ -828,3 +830,256 @@ def test_slots_full_retries_do_not_burn_user_quota(session):
         lazy._SEM.release()
     assert r.get(f"lazy:u:u3:{_today()}") == str(WEIGHT_GENERATION)
     assert r.get(f"lazy:ip:museum-wifi:{_today()}") == str(WEIGHT_GENERATION)
+
+
+def test_cap_hit_logs_event_with_tier(session):
+    from app.services.enrichment.lazy import CAP_PER_IP_REGISTERED, _today
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+    r.set(f"lazy:ipr:1.2.3.4:{_today()}", CAP_PER_IP_REGISTERED)
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda *a: None,
+        environment="staging",
+        user_id="u1",
+        ip="1.2.3.4",
+        is_guest=False,
+        redis=r,
+    )
+    assert reason == "daily_cap"
+    assert [
+        e.props for e in session.query(AppEvent).filter_by(name="lazy_cap_hit")
+    ] == [
+        {
+            "qid": "Q1",
+            "layer": "ip",
+            "tier": "registered",
+            "kind": "lazy generation",
+            "exempt": False,
+        }
+    ]
+
+
+def _events(s, name):
+    return [e.props for e in s.query(AppEvent).filter_by(name=name)]
+
+
+def _fake_redis(monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+    monkeypatch.setattr(lazy, "_redis", lambda: r)
+    return r
+
+
+def _hold_sem():
+    import app.services.enrichment.lazy as lazy
+
+    for _ in range(lazy.settings.LAZY_CONCURRENCY):
+        lazy._SEM.acquire()
+
+
+def _release_sem():
+    import app.services.enrichment.lazy as lazy
+
+    for _ in range(lazy.settings.LAZY_CONCURRENCY):
+        lazy._SEM.release()
+
+
+def _sections(*rows):
+    """造一个假的 _generate:把 stub 置成 ready,并写入给定的 (语言, 段, 状态) 行。"""
+
+    def fake(db, qid, language=None):
+        o = db.query(MuseumObject).filter_by(qid=qid).one()
+        o.content_status = "ready"
+        for lang, code, status in rows:
+            db.add(
+                ObjectContentSection(
+                    object_id=o.id,
+                    language=lang,
+                    section_code=code,
+                    body="x",
+                    status=status,
+                )
+            )
+        db.flush()
+        return {}
+
+    return fake
+
+
+def test_slot_full_logged_once_per_item_per_10_min(session, monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    r = _fake_redis(monkeypatch)
+
+    def run():
+        try_acquire_lock(session, _obj(session))
+        lazy.run_lazy_generation(
+            "Q1", "zh", True, session_factory=lambda: session, close=False
+        )
+
+    _hold_sem()
+    try:
+        for _ in range(3):  # App 每 4 秒轮询一次
+            run()
+        assert _events(session, "lazy_slot_full") == [
+            {"qid": "Q1", "kind": "lazy generation", "exempt": True}
+        ]
+        r.delete("ops:once:lazy_slot_full:Q1")  # 10 分钟过去
+        run()
+        assert len(_events(session, "lazy_slot_full")) == 2
+    finally:
+        _release_sem()
+
+
+def test_slot_full_not_logged_without_redis(session):
+    """去重靠 Redis;Redis 挂了宁可不记,也不能每 4 秒往库里写一行。conftest 默认 _redis() 为 None。"""
+    import app.services.enrichment.lazy as lazy
+
+    _hold_sem()
+    try:
+        for _ in range(3):
+            try_acquire_lock(session, _obj(session))
+            lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
+    finally:
+        _release_sem()
+    assert _events(session, "lazy_slot_full") == []
+
+
+def test_generation_logs_started_and_finished(session, monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    r = _fake_redis(monkeypatch)
+    monkeypatch.setattr(
+        lazy,
+        "_generate",
+        _sections(
+            ("en", "guide", "published"),
+            ("fr", "guide", "published"),
+            ("en", "background", "needs_review"),
+        ),
+    )
+    monkeypatch.setattr(lazy, "_run_fanout", lambda *a, **k: None)
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", "fr", session_factory=lambda: session, close=False)
+    [st] = _events(session, "lazy_started")
+    [fin] = _events(session, "lazy_finished")
+    assert (st["qid"], st["running"], st["exempt"]) == ("Q1", 1, False)
+    assert fin["run_id"] == st["run_id"] and fin["lang"] == "fr"
+    assert (fin["ok"], fin["err_kind"]) == (True, None)
+    assert fin["pub"] == {"en": 1, "fr": 1} and fin["held"] == {"en": 1}
+    assert fin["dur_s"] >= 0
+    assert r.zcard("ops:lazy_running") == 0
+
+
+def test_generation_without_request_language_rows_is_not_ok(session, monkeypatch):
+    """翻译走 OpenAI、生成走 Anthropic:OpenAI 挂了 pipeline 会吞掉翻译异常(R14)。"""
+    import app.services.enrichment.lazy as lazy
+
+    monkeypatch.setattr(lazy, "_generate", _sections(("en", "guide", "published")))
+    monkeypatch.setattr(lazy, "_run_fanout", lambda *a, **k: None)
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", "de", session_factory=lambda: session, close=False)
+    [fin] = _events(session, "lazy_finished")
+    assert (fin["ok"], fin["err_kind"], fin["lang"]) == (False, None, "de")
+
+
+@pytest.mark.parametrize(
+    "exc,kind",
+    [(TimeoutError("upstream"), "transient"), (ValueError("bad json"), "internal")],
+)
+def test_generation_failure_logs_finished_not_ok(session, monkeypatch, exc, kind):
+    """spec §12 监控:生成失败时一定有一条 ok=false 的 lazy_finished。"""
+    import app.services.enrichment.lazy as lazy
+
+    def boom(db, qid, language=None):
+        raise exc
+
+    monkeypatch.setattr(lazy, "_generate", boom)
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
+    [fin] = _events(session, "lazy_finished")
+    assert (fin["ok"], fin["err_kind"]) == (False, kind)
+
+
+def test_started_logged_without_redis(session, monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    monkeypatch.setattr(lazy, "_generate", lambda db, qid, language=None: {})
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
+    [st] = _events(session, "lazy_started")
+    assert st["running"] is None
+
+
+def test_redis_errors_never_break_generation(session, monkeypatch):
+    """埋点绝不破坏业务:Redis 每个调用都报错,生成照常跑完、事件照记。"""
+    import app.services.enrichment.lazy as lazy
+
+    class Down:
+        def __getattr__(self, name):
+            def boom(*a, **k):
+                raise ConnectionError("redis down")
+
+            return boom
+
+    monkeypatch.setattr(lazy, "_redis", lambda: Down())
+    ran = []
+    monkeypatch.setattr(
+        lazy, "_generate", lambda db, qid, language=None: ran.append(qid) or {}
+    )
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
+    assert ran == ["Q1"]
+    [st] = _events(session, "lazy_started")
+    assert st["running"] is None and len(_events(session, "lazy_finished")) == 1
+
+
+def test_translation_logs_no_started_or_finished(session, monkeypatch):
+    import app.services.enrichment.lazy as lazy
+
+    monkeypatch.setattr(lazy, "_translate", lambda db, qid, lang: {})
+    o = _obj(session)
+    o.content_status = "ready"
+    session.commit()
+    try_acquire_lock(session, o, require_status=("ready",))
+    lazy.run_lazy_translation("Q1", "de", session_factory=lambda: session, close=False)
+    assert (
+        _events(session, "lazy_started") == []
+        and _events(session, "lazy_finished") == []
+    )
+
+
+def test_empty_generation_is_ok_whatever_the_request_language(session, monkeypatch):
+    """材料太薄产出 empty 是设计内结果(宁缺毋滥),不能按请求语言没段记成失败(Fable 终审 I2)。"""
+    import app.services.enrichment.lazy as lazy
+
+    def empty(db, qid, language=None):
+        o = db.query(MuseumObject).filter_by(qid=qid).one()
+        o.content_status = "empty"
+        db.flush()
+        return {}
+
+    monkeypatch.setattr(lazy, "_generate", empty)
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", "zh", session_factory=lambda: session, close=False)
+    [fin] = _events(session, "lazy_finished")
+    assert (fin["ok"], fin["empty"], fin["err_kind"]) == (True, True, None)
+
+
+def test_finished_telemetry_failure_never_breaks_generation(session, monkeypatch):
+    """埋点绝不破坏业务:lazy_finished 统计抛异常时,补语言照样接着跑(Fable 终审 M2)。"""
+    import app.services.enrichment.lazy as lazy
+
+    def boom(*a, **k):
+        raise RuntimeError("db gone")
+
+    fanned = []
+    monkeypatch.setattr(lazy, "_generate", lambda db, qid, language=None: {})
+    monkeypatch.setattr(lazy, "_log_finished", boom)
+    monkeypatch.setattr(lazy, "_run_fanout", lambda *a, **k: fanned.append(a[0]))
+    try_acquire_lock(session, _obj(session))
+    lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
+    assert fanned == ["Q1"]

@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
+import uuid
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 
+from app.core.config import settings
 from app.models.museum_object import MuseumObject
 from app.services import ops_alert
 
@@ -20,16 +23,16 @@ _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
 # 标记 attributes.lazy_fanout = {"at": 心跳时刻, "pending": [还没补完的语言]}。
 # 心跳 = 每补完一门刷新 at:慢任务不会过期;进程被部署杀掉后最多空等 5 分钟。
 _FANOUT_TTL = timedelta(minutes=5)
-# ponytail: 进程级同时最多 2 件补语言,满了跳过不排队(其余语言回到按请求懒翻译)
-_FANOUT_SEM = threading.Semaphore(2)
+# ponytail: 进程级同时最多 LAZY_FANOUT_CONCURRENCY 件补语言,满了跳过不排队(其余语言回到按请求懒翻译)
+_FANOUT_SEM = threading.Semaphore(settings.LAZY_FANOUT_CONCURRENCY)
 _FANOUT_WORKERS = 4  # 每件按语言并行;2 件 × 4 = 最多 8 路 mini 调用
 # 补语言写的段打自己的来源,不挤占懒生成日上限(计入的话 1000 段只够约 31 件/天);
 # 但要有自己的上限,不靠"只跟在生成后面"推理封顶:en 用户触发时每件要补的语言更多。
 # 3000 段 ÷ 每门约 3 段 ≈ 1000 门次 × $0.0035 ≈ 最坏 $3.5/天(spec §4.4)。
 FANOUT_SOURCE = "ai_lazy_fanout"
 _FANOUT_DAILY_SECTION_CAP = 3000
-# ponytail: 进程级并发上限2,保护 API 响应与 LLM 限速;多 worker/量大再上队列
-_SEM = threading.Semaphore(2)
+# ponytail: 进程级并发上限见 LAZY_CONCURRENCY,保护 API 响应与 LLM 限速;多 worker/量大再上队列
+_SEM = threading.Semaphore(settings.LAZY_CONCURRENCY)
 # 全局日上限(2026-09-20 安全审计):当天已生成段数达此值就不再点火。
 # 300 → 1000(10-10 用户定):10-07/10-08 只靠运营者逛馆就顶满(301/315),之后打开的新件全
 # 显示假「重试」到 UTC 零点。1000 段 ≈ 120 件 ≈ 最坏 $4-10/天。
@@ -44,10 +47,14 @@ LAZY_SOURCE = "ai_lazy"
 # 按"次数"计会让单 IP 100 次新生成 ≈ 800 段吃掉全站 80%(spec 第二节)。
 WEIGHT_GENERATION = 8
 WEIGHT_TRANSLATION = 3
-CAP_PER_USER = 160  # ≈20 件新生成;挡单账号,也挡同一 WiFi 下一个人吃光整个 IP
-CAP_PER_IP = (
-    300  # ≈37 件;单 IP 最多吃全站 30%。⚠️对 IPv6/代理轮换无效,分布式只靠全站上限
-)
+# 值见 settings(默认 160/300/600 段)
+CAP_PER_USER = (
+    settings.CAP_PER_USER
+)  # ≈20 件新生成;挡单账号,也挡同一 WiFi 下一个人吃光整个 IP
+# ≈37 件;单 IP 最多吃全站 30%(游客)。⚠️对 IPv6/代理轮换无效,分布式只靠全站上限
+CAP_PER_IP = settings.CAP_PER_IP
+# 正式账号的 IP 层另计一份(键 lazy:ipr:):团体共用 WiFi 时游客用满不拦正式账号,反之亦然
+CAP_PER_IP_REGISTERED = settings.CAP_PER_IP_REGISTERED
 _CAP_TTL_S = 2 * 86400
 
 
@@ -225,9 +232,18 @@ def _tag_lazy_rows(db, obj: MuseumObject, since, source=LAZY_SOURCE) -> None:
 
 
 def _run_locked(
-    qid: str, work, label: str, *, session_factory=None, close=True
+    qid: str,
+    work,
+    label: str,
+    *,
+    session_factory=None,
+    close=True,
+    exempt=False,
+    track=False,
+    lang=None,
 ) -> None:
-    """后台任务骨架:限并发跑 work(db),完成/失败均清锁(失败允许下次重试)。"""
+    """后台任务骨架:限并发跑 work(db),完成/失败均清锁(失败允许下次重试)。
+    track=True(只有懒生成):记 lazy_started / lazy_finished(spec §7 T1/T3、§12 监控)。"""
     if session_factory is None:
         from app.core.database import SessionLocal
 
@@ -239,33 +255,184 @@ def _run_locked(
             o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
             if o:
                 _clear_lock(db, o)
+            _log_once(db, "lazy_slot_full", qid, kind=label, exempt=exempt)
         finally:
             if close:
                 db.close()
         return
+    run_id = uuid.uuid4().hex if track else None
     try:
         db = session_factory()
         try:
+            if track:
+                _log(
+                    db,
+                    "lazy_started",
+                    qid=qid,
+                    run_id=run_id,
+                    running=_running_add(run_id),
+                    exempt=exempt,
+                )
             t0 = datetime.now(timezone.utc)
+            m0 = time.monotonic()
+            err = None
             try:
                 out = work(db)
                 logger.info("%s done: %s -> %s", label, qid, out)
-            except Exception:
+            except Exception as e:
+                err = e
                 db.rollback()
                 logger.exception("%s failed: %s", label, qid)
             o = db.query(MuseumObject).filter_by(qid=qid).one_or_none()
             if o:
                 _tag_lazy_rows(db, o, t0)  # 失败前已落库的段也是花掉的钱,照样计
                 _clear_lock(db, o)
+            if track:
+                try:  # 埋点绝不破坏业务:抛出去会让后面的补语言不跑
+                    _log_finished(
+                        db, o, run_id, lang, err, time.monotonic() - m0, exempt
+                    )
+                except Exception:
+                    logger.warning("lazy_finished log failed: %s", qid, exc_info=True)
         finally:
             if close:
                 db.close()
     finally:
+        if track:
+            _running_done(run_id)  # BaseException 时也要退出计数
         _SEM.release()
 
 
+def _log(db, name, **props):
+    from app.services.event_log import log_event
+
+    log_event(db, name, **props)
+
+
+def _log_once(db, name, qid, redis=None, **props):
+    """同一件 10 分钟内只记一次(App 每 4 秒轮询会反复撞名额)。
+    去重靠 Redis:Redis 为 None 或报错时不记,不能每 4 秒往库里写一行。"""
+    r = redis if redis is not None else _redis()
+    if r is None:
+        return
+    try:
+        if not r.set(f"ops:once:{name}:{qid}", 1, nx=True, ex=600):
+            return
+    except Exception:
+        return
+    _log(db, name, qid=qid, **props)
+
+
+_RUNNING_KEY = "ops:lazy_running"
+_RUNNING_TTL_S = 900  # 被部署杀掉的进程漏掉的 ZREM,15 分钟后不再计入(B7)
+
+
+def _running_add(run_id) -> int | None:
+    """全站同时在生成的件数(含自己);Redis 不可用或报错 → None。"""
+    try:
+        r = _redis()
+        if r is None:
+            return None
+        now = time.time()
+        r.zadd(_RUNNING_KEY, {run_id: now})
+        r.zremrangebyscore(_RUNNING_KEY, "-inf", now - _RUNNING_TTL_S)
+        return int(r.zcard(_RUNNING_KEY))
+    except Exception:
+        return None
+
+
+def _running_done(run_id) -> None:
+    try:
+        r = _redis()
+        if r is not None:
+            r.zrem(_RUNNING_KEY, run_id)
+    except Exception:
+        pass
+
+
+def _error_kind(exc: BaseException) -> str:
+    """失败类别(spec §3.1):超时、连接错误、429、5xx = transient,其余 internal。
+    沿 __cause__/__context__ 往上找(pipeline 常把上游异常包一层)。阶段 4 的 error_kind 复用。"""
+    import anthropic
+    import httpx
+    import openai
+    import requests
+
+    transient = (
+        TimeoutError,
+        ConnectionError,
+        openai.APITimeoutError,
+        openai.APIConnectionError,
+        anthropic.APITimeoutError,
+        anthropic.APIConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.ConnectionError,
+        httpx.TimeoutException,
+        httpx.NetworkError,
+    )
+    seen = set()
+    e = exc
+    while e is not None and id(e) not in seen:
+        seen.add(id(e))
+        code = getattr(e, "status_code", None)
+        if isinstance(e, transient) or (
+            isinstance(code, int) and (code == 429 or code >= 500)
+        ):
+            return "transient"
+        e = e.__cause__ or e.__context__
+    return "internal"
+
+
+def _log_finished(db, o, run_id, lang, err, dur_s, exempt) -> None:
+    """lazy_finished:pub/held = 这一件按语言的已发布 / needs_review 段数(懒生成只在 stub 上,
+    全部段就是这次写的)。ok 还要求请求语言至少有一行段(R14:翻译异常会被 pipeline 吞掉)。"""
+    from sqlalchemy import func
+
+    from app.models.content import ObjectContentSection
+
+    pub, held = {}, {}
+    if o is not None:
+        rows = (
+            db.query(
+                ObjectContentSection.language,
+                ObjectContentSection.status,
+                func.count(),
+            )
+            .filter(ObjectContentSection.object_id == o.id)
+            .group_by(ObjectContentSection.language, ObjectContentSection.status)
+            .all()
+        )
+        for lg, st, n in rows:
+            if st == "published":
+                pub[lg] = n
+            elif st == "needs_review":
+                held[lg] = n
+    # empty(材料太薄,宁缺毋滥)是设计内结果,不看请求语言有没有段(Fable 终审 I2)
+    empty = o is not None and o.content_status == "empty"
+    has_lang = empty or lang in (None, "en") or bool(pub.get(lang) or held.get(lang))
+    _log(
+        db,
+        "lazy_finished",
+        qid=o.qid if o is not None else None,
+        run_id=run_id,
+        lang=lang,
+        ok=err is None and has_lang,
+        err_kind=_error_kind(err) if err is not None else None,
+        dur_s=round(dur_s, 1),
+        pub=pub,
+        held=held,
+        empty=empty,
+        exempt=exempt,
+    )
+
+
 def run_lazy_generation(
-    qid: str, language: str | None = None, *, session_factory=None, close=True
+    qid: str,
+    language: str | None = None,
+    exempt=False,
+    *,
+    session_factory=None,
+    close=True,
 ) -> None:
     """stub 首访 → 生成英语轴心 + 请求语言;完成后补语言阶段补齐该馆其余语言
     (此时 _SEM 与 lazy_lock_at 都已释放,首屏和请求者自己的语言不受影响)。"""
@@ -275,8 +442,11 @@ def run_lazy_generation(
         "lazy generation",
         session_factory=session_factory,
         close=close,
+        exempt=exempt,
+        track=True,
+        lang=language,
     )
-    _run_fanout(qid, session_factory=session_factory, close=close)
+    _run_fanout(qid, exempt, session_factory=session_factory, close=close)
 
 
 def _museum_languages(db, obj: MuseumObject) -> list[str]:
@@ -332,6 +502,7 @@ def _fanout(
     close=True,
     executor=None,
     redis=None,
+    exempt=False,
 ) -> dict:
     """补语言阶段(spec 2026-10-17):懒生成完成后,把该馆其余语言的段/问答/作者 bio 补齐。
     不占 _SEM 和 lazy_lock_at;按语言的进行中标记见 fanout_pending。
@@ -352,6 +523,7 @@ def _fanout(
         return {}
     if not _FANOUT_SEM.acquire(blocking=False):
         logger.info("lazy fanout: 名额已满,跳过 qid=%s", qid)
+        _log_once(db, "lazy_fanout_slot_full", qid, redis=redis, exempt=exempt)
         return {}
     # acquire 后紧跟 try:之后任何一步抛异常都要还名额、清标记
     t0 = datetime.now(timezone.utc)
@@ -461,7 +633,7 @@ def _fanout(
     return out
 
 
-def _run_fanout(qid: str, *, session_factory=None, close=True) -> None:
+def _run_fanout(qid: str, exempt=False, *, session_factory=None, close=True) -> None:
     """补语言后台骨架:自带会话,失败只记日志(其余语言回到按请求懒翻译)。"""
     if session_factory is None:
         from app.core.database import SessionLocal
@@ -469,7 +641,7 @@ def _run_fanout(qid: str, *, session_factory=None, close=True) -> None:
         session_factory = SessionLocal
     db = session_factory()
     try:
-        out = _fanout(db, qid)
+        out = _fanout(db, qid, exempt=exempt)
         if out:
             logger.info("lazy fanout done: %s -> %s", qid, out)
     except Exception:
@@ -481,7 +653,7 @@ def _run_fanout(qid: str, *, session_factory=None, close=True) -> None:
 
 
 def run_lazy_translation(
-    qid: str, language: str, *, session_factory=None, close=True
+    qid: str, language: str, exempt=False, *, session_factory=None, close=True
 ) -> None:
     """ready 但请求语言缺 → 只翻这一门语言(数十秒,费用分钱级)。"""
     _run_locked(
@@ -490,6 +662,7 @@ def run_lazy_translation(
         "lazy translation",
         session_factory=session_factory,
         close=close,
+        exempt=exempt,
     )
 
 
@@ -626,7 +799,7 @@ def _alert_fail_open() -> None:
     )
 
 
-def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
+def _charge(user_id, ip, weight: int, redis=None, item=None, guest=True) -> str | None:
     """按账号、按 IP 扣当日额度。None=放行;"user"/"ip"=该层超限(已全部回滚)。
 
     item(如 "gen:Q1"/"tr:Q1:de"):同一人同一动作当天只扣一次。生成名额满时后台放弃并清锁,
@@ -636,10 +809,12 @@ def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
     先 INCRBY 再判断:INCRBY 原子,两个 worker 并发也不会越线(先查后加会)。
     超限就把本次加上的全部退回,被拒的请求不占额度。
     Redis 不可用 → 放行(fail open):全站上限在 DB,照样兜底;反过来 Redis 一抖全站懒生成就停了。
+    guest=False(正式账号):IP 层改用 lazy:ipr:、上限 CAP_PER_IP_REGISTERED;身份不明按游客。
     """
+    ip_layer = ("ip", ip, CAP_PER_IP) if guest else ("ipr", ip, CAP_PER_IP_REGISTERED)
     layers = [
         (name, f"lazy:{name}:{ident}:{_today()}", cap)
-        for name, ident, cap in (("u", user_id, CAP_PER_USER), ("ip", ip, CAP_PER_IP))
+        for name, ident, cap in (("u", user_id, CAP_PER_USER), ip_layer)
         if ident
     ]
     if not layers:
@@ -686,6 +861,21 @@ def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
     return layer
 
 
+def _log_cap_hit(db, qid, layer, is_guest, kind):
+    """额度用尽埋点(spec §7 T4)。exempt 账号不扣额度,所以这里恒为 False。"""
+    from app.services.event_log import log_event
+
+    log_event(
+        db,
+        "lazy_cap_hit",
+        qid=qid,
+        layer=layer,
+        tier="guest" if is_guest else "registered",
+        kind=kind,
+        exempt=False,
+    )
+
+
 def imageless_stub(db, obj) -> bool:
     """无图 stub 不点火(方案 B 2026-10-11):列表/搜索/识别都不给无图件,用户本就到不了;
     生成了也没图可看、外观描写还会是编的。口径同探索列表(has_image_clause)。"""
@@ -712,6 +902,7 @@ def maybe_trigger(
     ip=None,
     exempt=False,
     redis=None,
+    is_guest=True,
 ) -> str | None:
     """content 端点接线(拿到锁才调度,其余静默)。返回不生成的原因,端点透传给 App:
     "daily_cap"=当日预算用尽(App 提示明天再来);"no_image"=无图 stub 不生成;其余 None。
@@ -720,7 +911,7 @@ def maybe_trigger(
     - empty 不动(无可接地材料,防循环烧钱)。
     只在部署环境生效(development/测试不触发:防误连库、误烧 LLM 费)。
     - user_id/ip:按账号/IP 扣当日额度(拿到锁后才扣,超了清锁返回 "daily_cap");
-      exempt=运营预览账号,只受全站上限。"""
+      exempt=运营预览账号,只受全站上限;is_guest 选 IP 层档位(见 _charge)。"""
     if environment is None:
         from app.core.config import settings
 
@@ -744,7 +935,7 @@ def maybe_trigger(
     if language and language != "en" and generating_for(o, language):
         record_fanout_want(qid, language, redis)  # 补语言阶段先补有人在等的语言
     if o.content_status == "ready" and fanout_stale(o) and not lock_active(o):
-        schedule(_run_fanout, qid)  # 补语言进程中途死了(如部署重启):接着补
+        schedule(_run_fanout, qid, exempt)  # 补语言进程中途死了(如部署重启):接着补
     if not (wants_generation or wants_translation):
         return
     if wants_generation and imageless_stub(db, o):
@@ -761,17 +952,21 @@ def maybe_trigger(
         return "daily_cap"
     if wants_generation:
         if try_acquire_lock(db, o):
-            if not exempt and _charge(
-                user_id, ip, WEIGHT_GENERATION, redis, item=f"gen:{qid}"
-            ):
+            layer = not exempt and _charge(
+                user_id, ip, WEIGHT_GENERATION, redis, f"gen:{qid}", is_guest
+            )
+            if layer:
                 _clear_lock(db, o)
+                _log_cap_hit(db, qid, layer, is_guest, "lazy generation")
                 return "daily_cap"
-            schedule(run_lazy_generation, qid, language)
+            schedule(run_lazy_generation, qid, language, exempt)
         return
     if try_acquire_lock(db, o, require_status=("ready",)):
-        if not exempt and _charge(
-            user_id, ip, WEIGHT_TRANSLATION, redis, item=f"tr:{qid}:{language}"
-        ):
+        layer = not exempt and _charge(
+            user_id, ip, WEIGHT_TRANSLATION, redis, f"tr:{qid}:{language}", is_guest
+        )
+        if layer:
             _clear_lock(db, o)
+            _log_cap_hit(db, qid, layer, is_guest, "lazy translation")
             return "daily_cap"
-        schedule(run_lazy_translation, qid, language)
+        schedule(run_lazy_translation, qid, language, exempt)

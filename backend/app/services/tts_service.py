@@ -13,6 +13,7 @@ import hashlib
 import logging
 import re
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import AsyncIterator, Callable, Dict, Iterator, Optional
 
@@ -177,8 +178,44 @@ async def _iterate_in_thread(
     await fut
 
 
+# 本进程同时合成路数(spec §7 T2):达到 _BUSY_AT 记一条 tts_busy,每分钟最多一条
+_active = 0
+_BUSY_AT = 4
+_busy_logged = float("-inf")
+_busy_lock = threading.Lock()
+
+
+def _note_busy(n: int, now: float) -> bool:
+    """到线就在守护线程里写事件,自己不等:连接池耗尽时同步写库会让这次合成白等 30 秒(B9)。"""
+    global _busy_logged
+    with _busy_lock:
+        if n < _BUSY_AT or now - _busy_logged < 60:
+            return False
+        _busy_logged = now
+    threading.Thread(target=_log_busy, args=(n,), daemon=True).start()
+    return True
+
+
+def _log_busy(n: int, session_factory=None) -> None:
+    try:
+        if session_factory is None:
+            from app.core.database import SessionLocal
+
+            session_factory = SessionLocal
+        from app.services.event_log import log_event
+
+        db = session_factory()
+        try:
+            log_event(db, "tts_busy", active=n)
+        finally:
+            db.close()
+    except Exception:
+        logger.warning("tts_busy log failed", exc_info=True)
+
+
 def _drain(loop, queue, make_iter, done) -> None:
     """worker 线程:把同步迭代器的产出投回 loop。loop 已关(asyncio.run 收尾后)就安静停下。"""
+    global _active
 
     def put(item) -> bool:
         try:
@@ -187,13 +224,21 @@ def _drain(loop, queue, make_iter, done) -> None:
         except RuntimeError:  # loop 已关闭:没人收了
             return False
 
+    with _busy_lock:
+        _active += 1
+        n = _active
     try:
-        for item in make_iter():
-            if not put(item):
-                return
-        put(done)
-    except BaseException as e:  # 交给消费方抛
-        put(e)
+        _note_busy(n, time.monotonic())
+        try:
+            for item in make_iter():
+                if not put(item):
+                    return
+            put(done)
+        except BaseException as e:  # 交给消费方抛
+            put(e)
+    finally:
+        with _busy_lock:
+            _active -= 1
 
 
 class TTSService:

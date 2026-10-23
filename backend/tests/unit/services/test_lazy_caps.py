@@ -5,9 +5,11 @@ import threading
 import fakeredis
 import pytest
 
+from app.core.config import settings
 from app.services.enrichment import lazy
 from app.services.enrichment.lazy import (
     CAP_PER_IP,
+    CAP_PER_IP_REGISTERED,
     CAP_PER_USER,
     WEIGHT_GENERATION,
     _charge,
@@ -142,3 +144,31 @@ def test_rejected_item_is_not_marked_paid(r):
     r.set(f"lazy:u:u1:{lazy._today()}", CAP_PER_USER)
     assert _charge("u1", None, 8, redis=r, item="gen:Q9") == "user"
     assert _charge("u1", None, 8, redis=r, item="gen:Q9") == "user"
+
+
+def test_caps_default_from_settings():
+    assert (
+        (lazy.CAP_PER_USER, lazy.CAP_PER_IP, lazy.CAP_PER_IP_REGISTERED)
+        == (settings.CAP_PER_USER, settings.CAP_PER_IP, settings.CAP_PER_IP_REGISTERED)
+        == (160, 300, 600)
+    )
+
+
+def test_registered_accounts_share_wider_ip_layer(r):
+    n = 0
+    while _charge(f"u{n}", "9.9.9.9", 8, redis=r, guest=False) is None:
+        n += 1
+    assert n == CAP_PER_IP_REGISTERED // WEIGHT_GENERATION  # 75 件
+    assert r.keys("lazy:ip:*") == []  # 不占游客那一份
+
+
+def test_guest_ip_full_does_not_block_registered(r):
+    r.set(f"lazy:ip:9.9.9.9:{lazy._today()}", CAP_PER_IP)
+    assert _charge("g1", "9.9.9.9", 8, redis=r, guest=True) == "ip"
+    assert _charge("reg", "9.9.9.9", 8, redis=r, guest=False) is None
+
+
+def test_registered_ip_full_does_not_block_guest(r):
+    r.set(f"lazy:ipr:9.9.9.9:{lazy._today()}", CAP_PER_IP_REGISTERED)
+    assert _charge("reg", "9.9.9.9", 8, redis=r, guest=False) == "ip"
+    assert _charge("g1", "9.9.9.9", 8, redis=r, guest=True) is None

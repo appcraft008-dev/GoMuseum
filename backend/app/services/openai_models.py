@@ -7,6 +7,8 @@
 翻译/判官/重译/识别兜底 gpt-6-luna。
 """
 
+import httpx
+
 from app.core.config import settings
 
 VISION = "vision"
@@ -39,6 +41,8 @@ def create_kwargs(model: str, channel: str | None = None, **kw) -> dict:
 
 def chat(model: str, messages: list, channel: str | None = None, **kw):
     """一次对话调用(OpenAI chat 形状的 messages)。返回 (text, 真实模型, tokens_in, tokens_out)。"""
+    # 没给超时就用 LLM_TIMEOUT_S,连接保持 5 秒(SDK 默认 600 秒能占住生成线程半小时)
+    kw.setdefault("timeout", httpx.Timeout(settings.LLM_TIMEOUT_S, connect=5.0))
     real = resolve(model, channel)
     if real.startswith("claude"):
         return _claude(real, messages, **kw)

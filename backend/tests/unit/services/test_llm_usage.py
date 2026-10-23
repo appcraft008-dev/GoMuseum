@@ -109,3 +109,46 @@ def test_serving_process_tags_channel_with_app(session, monkeypatch):
         "translate",
         "translate@app",
     }
+
+
+# ── 价目表(spec §4.1;R8/R11)──
+from app.core.config import settings  # noqa: E402
+from app.services import llm_usage  # noqa: E402
+from app.services.llm_usage import cost_usd  # noqa: E402
+
+_TABLE = {"m1": (1.0, 4.0), "m2": (3.0, 15.0), "voice": (30.0, 0.0)}
+
+
+def test_cost_of_known_model(monkeypatch):
+    monkeypatch.setattr(llm_usage, "DEFAULT_LLM_PRICES", _TABLE)
+    usd, known = cost_usd("m1", 1_000_000, 500_000)
+    assert known is True and usd == pytest.approx(3.0)
+
+
+def test_unknown_model_priced_at_most_expensive_llm(monkeypatch):
+    """spec §4.1 按最贵价计;只在输出价 > 0 的大模型条目里取,TTS 的 $30/百万字不算(R11)。"""
+    monkeypatch.setattr(llm_usage, "DEFAULT_LLM_PRICES", _TABLE)
+    usd, known = cost_usd("brand-new", 1_000_000, 1_000_000)
+    assert known is False and usd == pytest.approx(18.0)
+
+
+def test_env_prices_merge_into_defaults(monkeypatch):
+    """.env 只写新增的模型,默认表里其它模型的价不能丢(R8)。"""
+    monkeypatch.setattr(llm_usage, "DEFAULT_LLM_PRICES", _TABLE)
+    monkeypatch.setattr(settings, "LLM_PRICES", {"gpt-7": (5.0, 20.0)})
+    assert cost_usd("gpt-7", 1_000_000, 0) == (pytest.approx(5.0), True)
+    assert cost_usd("m1", 1_000_000, 0) == (pytest.approx(1.0), True)
+
+
+def test_default_prices_cover_models_in_use():
+    for m in (
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-6-luna",
+        "gpt-6.1-sol",
+        "claude-haiku-5-5",
+        "claude-sonnet-5-5",
+        "tts-1",
+        "google-chirp3-hd",
+    ):
+        assert m in llm_usage.DEFAULT_LLM_PRICES, m

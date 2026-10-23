@@ -247,6 +247,7 @@ def test_endpoint_passes_user_ip_and_preview_flag(client, monkeypatch):
     assert seen["user_id"] == "user-9"
     assert seen["exempt"] is True
     assert seen["ip"]  # TestClient 的 client.host("testclient"),非空即可
+    assert seen["is_guest"] is False
 
 
 def test_per_user_cap_reaches_app_as_daily_cap(client, monkeypatch):
@@ -300,3 +301,23 @@ def test_imageless_stub_reports_no_image(client, monkeypatch, logged_in):
     assert r.json()["unavailable_reason"] == "no_image"
     assert r.json()["generating"] is False
     assert calls == []
+
+
+def test_endpoint_passes_guest_flag(client, monkeypatch):
+    """游客令牌必须走游客档:选反了,游客拿到正式账号 600 段的 IP 额度。"""
+    import app.services.enrichment.lazy as lazy
+    from app.services.auth_service import AuthService
+
+    _make_stub(monkeypatch)
+    seen = {}
+    monkeypatch.setattr(lazy, "maybe_trigger", lambda db, qid, **kw: seen.update(kw))
+    monkeypatch.setattr(
+        AuthService,
+        "get_current_user",
+        staticmethod(lambda db, t: type("U", (), {"id": "g-1", "is_guest": True})()),
+    )
+    client.get(
+        "/api/v1/museums/orsay/objects/Q1/content?language=zh",
+        headers={"Authorization": "Bearer x"},
+    )
+    assert seen["is_guest"] is True
