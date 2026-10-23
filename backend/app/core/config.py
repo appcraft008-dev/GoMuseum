@@ -71,6 +71,8 @@ class Settings(BaseSettings):
     # 游客登录每 IP 限速。slowapi 每进程计数:两个 web 进程合计约 60/时;
     # 阶段 2 计数改存 Redis 后才是全站 60(spec §4.2)
     GUEST_LOGIN_RATE: str = "30/hour"
+    # 大模型调用没给超时时的默认值:每次尝试的读写秒数,连接仍 5 秒;SDK 另有 2 次重试
+    LLM_TIMEOUT_S: float = 90
 
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""
