@@ -23,8 +23,7 @@
 | 网站 v1 上线(spec `2026-10-22-website-v1-design.md`,取代原「网页引流小一轮」) | 代码在 `feature/website-v1`(十语首页/城市/馆/作者/作品页、每馆 5 件试听、sitemap/robots、自记统计),合并 staging 后可在 `staging-api.gomuseum.app/en/` 看。⏳ 上 prod 后:①我列宿主机 nginx 改动(`deployment/production/nginx-gomuseum.app.website.conf`)+ 备份/回滚命令,**你确认**后改;②同时 prod `.env` 加 `WEBSITE_LIVE=true` 并只重启后端(旧 `/a/` 分享链接才开始 301 到新作品页,**必须在 nginx 改完之后**);③线上旧中文首页 `index.html` 备份后留着不删(nginx 已不再路由到它)。网站做完就上线,不等 V69 过审:过审当天的 `SHARE_PLAY_LIVE=true` 会让下载按钮自动生效 | 10-22 |
 | 网站上线后:注册 Google Search Console | ⏳ **你**:验证 gomuseum.app 域名、提交 `https://gomuseum.app/sitemap.xml`。第一个月只观察,用真实数字定后两个月目标;三个月后按 spec §八复盘(网站带来的安装与质量、看页数/试听/分享、品牌词排名、收录页数) | 10-22 |
 
-| 外部探活(UptimeRobot 关键词监控) | ⏳ 你注册,见阶段 0 计划 Task 18 | elastic-stage0 |
-| ops_check 只记不发满 7 天后:看 ops_report 的告警次数,定阈值、开邮件 | ⏳ 你批准,见阶段 0 计划 Task 15b | elastic-stage0 |
+| ops_check 只记不发满 7 天后(**2026-10-30**,cron 10-23 14:30Z 起跑):看 ops_report 的告警次数,定阈值、开邮件 | ⏳ 你批准,见阶段 0 计划 Task 15b | elastic-stage0 |
 
 ## 二、等你拍板
 
@@ -108,6 +107,7 @@
 | Joconde 断供期(2026-07-22~09-20)生成的件材料偏薄(纸上作品/馆藏号等 Joconde 特有信息缺失),`generate --force` 可补(10-14 从契约移来) | 决定回刷存量时;会作废音频,按纪律 37 先报数 |
 | 离线馆包 | 收到第一条「馆内没信号打不开」的反馈，或有了真实的分馆使用分布 |
 | 退款后收回权益的链路 | 只有第一笔真实退款才能验证 |
+| **(低优先级)外部探活**(UptimeRobot 免费账号,监控类型选 **Keyword**,不要普通 HTTP:它发 HEAD,我们回 405;URL `https://api.gomuseum.app/api/v1/museums`,关键词 `"slug"` 不存在时告警,5 分钟,发你邮箱)。**缺它意味着**:ops_check 跑在同一台 VPS 上、还要查库,整机宕机或数据库挂了它发不出告警,只能靠用户反馈发现 | 你注册;想要「整站挂了也能收到邮件」时,或上真实付费流量前 |
 | **弹性扩容阶段 1–5**(spec `2026-10-21-elastic-scaling-design.md` §11;运维 `docs/ops/capacity-runbook.md`) | ops_check 的阶段提醒邮件,或 ops_report 的容量段越线 |
 | 分享功能的效果判断 | 至少 100 个真实活跃用户之后 |
 | **iPhone 版**(10-22 定:与 Android 同一 App 原样上架 App Store;首发**不含中国大陆**——要 ICP 备案)—— **A 账号(你)**:用 UK 一人公司注册公司账号;先在 developer.apple.com/enroll/duns-lookup 查 D-U-N-S(英国公司多半已有);开通后立刻签 Paid Apps Agreement + 银行 + W-8BEN-E(不签 Sandbox 内购都测不了)、申请 Small Business Program(佣金 15%);⚠️ 欧盟 DSA 商家信息会公开公司注册地址,若是家庭住址先换代理地址。**B 后端(10-22 已实现,见 spec `2026-10-22-ios-iap-verification-design.md`)**:客户端 SK2 交的是交易 JWS(插件源码查证),改为 Apple 官方库离线验签(不需要 .p8)+ `POST /payment/apple-notifications` 退款撤权益;Sandbox 票照发、`granted_reason=sandbox`(用户 10-22 定);最低 iOS 15(并入 #1051)。**账号开通后要做**:prod/staging env 配 `APPLE_APP_ID`(数字 App ID,缺了 Production 交易全拒);App Store Connect 两个通知 URL 填 `https://api.gomuseum.app/api/v1/payment/apple-notifications`;商品 ID 必须与 `PASSES` 同名(`paris_pass_7d`/`nl_pass_7d`,Apple 商品 ID 删了不能复用);TestFlight Sandbox 买+退款端到端。**推迟**:Apple 退款主动对账(要 .p8 查 Get Transaction Info,触发=第一笔真实 iOS 收入);回应 `CONSUMPTION_REQUEST`(触发=第一笔 iOS 退款)。**C 客户端(10-22 审核要求摸底,只读未改)**:①`Info.plist` 里 `CFBundleURLTypes` 误嵌在 `NSAppTransportSecurity` 字典里 → Google 登录回调 scheme 没注册,iOS 点 Google 登录会失败/崩;②`GoogleService-Info.plist` 是旧的:`BUNDLE_ID=com.example.gomuseumApp`≠`com.gomuseum.app`,要在 Firebase `gomuseum-29a6a` 用正式 bundle id 注册 iOS app 换新 plist;其 `CLIENT_ID`(545824113199-…)来自另一个 GCP 项目,要核对该 iOS OAuth client 绑的 bundle id;③`NSAllowsArbitraryLoads=true` 全局放开明文 HTTP,审核会追问 → 去掉,只留 localhost 例外;④没有 `PrivacyInfo.xcprivacy`(提交必需);⑤权限说明只有一种语言且混着写(定位中文、其余英文)→ 补十语 `InfoPlist.strings`;麦克风/语音识别两条说明 App 没用到 → 删;⑥`TARGETED_DEVICE_FAMILY="1,2"` 声明支持 iPad → 改 1(否则要 iPad 截图和适配),再在 iPad 模拟器确认兼容模式不崩;⑦没有 `UIBackgroundModes: audio` → 锁屏/切后台讲解会停;`just_audio` 未显式配 audio session,静音键可能把讲解静音(真机核实);⑧没设 `ITSAppUsesNonExemptEncryption=false`,每次上传都要答出口合规;⑨pbxproj `DEVELOPMENT_TEAM` 为空(账号后配)。**已合格**:应用内删除账号、价格取商店本地化价格、Apple 登录、iOS 设备 ID 用 `identifierForVendor`;消耗型通票不属于 Apple 要求「可恢复」的商品,现有自动静默恢复够用,不必加按钮。**审核风险(你定)**:后端买票前强制登录(`login_required_to_purchase`),Apple 5.1.1 常以「非账号型内购不得要求先注册」拒审;我的建议=先按现状送审、审核备注说明「通票挂账号是为了换机找回」,被拒再议游客购买。**B 线备注**:`in_app_purchase_storekit` 0.4.11 交给后端的是 StoreKit1 收据还是 StoreKit2 JWS 要在模拟器确认;后端按 transactionId 调 App Store Server API 两种都能接。**D 上架材料**:App Store Connect 按后端下发的通票 ID 建同名消耗型商品;6.9/6.5 寸截图;隐私问卷;审核演示账号。**真机**:用户无 iPhone(iPhone 6 最高 iOS 12,App 最低 iOS 13 装不上);日常用 Mac mini 模拟器 + StoreKit 本地 `.storekit` 测;真机验收靠大陆朋友的 iPhone 17 当 TestFlight **内部**测试员(免 beta 审核)。朋友**不开 VPN**:Apple 登录 / Sandbox 购买 / TestFlight 崩溃报告可用,Google 登录、Crashlytics、`google_fonts` 运行时字体不可用(字体回落系统字体≠bug);**待朋友关 VPN 在 Safari 实测** `https://api.gomuseum.app/api/v1/museums` 与 `https://cdn.gomuseum.app/`(404 页=通)能否打开,cdn 不通则音频测不了 → 买二手 iPhone 11 / SE 2 | A 你注册账号 + 朋友实测两个链接;B 你说开始我就开 `feature/*` 先写设计文档 |
@@ -126,6 +126,8 @@
 - 存量 152 件证据包具名事实回刷(10-10 你同意不回刷):抽 10 件按新代码重生成,缺的事实只 2/10 被用上、可发布段 1 多 5 少,152 件里 136 件已录音频会作废。新生成的件已自动用上证据包(#883)。
 
 ## 最近关闭
+
+- 2026-10-23 **弹性扩容阶段 0 上 prod**(#1060 + 终审 7 条 Minor #1063,随 #1061 发版):监控 `ops_check` cron 每 5 分钟(头 7 天只记不发,10-30 定阈值开邮件)、游客登录 30 次/时、正式账号 IP 额度 600 段单独计数、大模型默认 90 秒超时、识别兜底记账与价目表、懒生成/TTS 埋点;staging 限 2 核 4G;prod nginx 总区 50r/s burst 100 + 识别区 2r/s burst 50(原「nginx 限流阈值」观察项关闭);prod postgres `max_connections` 100→400。运维 `docs/ops/capacity-runbook.md`。实测:同一 IP 同时 60 个请求 → 占 56 个库连接、浏览 p95 2.3 秒(阶段 2 连接触发线 40 合理)
 
 - 2026-10-21 **推正式前新模型两天测试**:用户测完通过(10-20 出了新旧调用量/挂起率对比),不再阻塞发版。同日 #1043 去掉 `READ_MEDIA_IMAGES`(取景页 Android 不再显示最近照片条,自动存相册 Android 10+ 免权限)、#1044 拍摄栏按钮上移 30,V69 送审
 - 2026-10-20 **懒生成名额满时排队用户的额度被白扣光**(本 PR):全站同时最多 4 件生成,第 5 个人点开无内容件时先扣 8 段、后台发现名额满放弃但不退,App 每 4s 轮询重复一遍——复现 21 次轮询(~80s)后提示「今日额度用尽」而作品一个字没生成,共用 WiFi 的 IP 额度同样被烧。改为同一人同一动作(生成某件 / 翻译某件某语言)当天只扣一次;超限被拒不算付过。纯后端,免发版
