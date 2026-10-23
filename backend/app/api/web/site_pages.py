@@ -543,6 +543,7 @@ def museum_page(
     if not count:
         return _not_found()
     q = q.strip()[:100]
+    cats = wd.categories(db, [m.id], lang)
     if q:
         _, hits = run_search(
             db,
@@ -555,7 +556,6 @@ def museum_page(
         works = wd.cards_for_qids(db, [m.id], lang, [h["qid"] for h in hits])
         total, page = len(works), 1
     else:
-        cats = wd.categories(db, [m.id], lang)
         if category and category not in {c for c, _, _ in cats}:
             return _not_found()  # 乱填的分类不出 200 空页(会被收录)
         works, total = wd.list_works(
@@ -625,7 +625,7 @@ def museum_page(
         must_see=_must_see_cards(db, m, lang),
         trials=set(trial_qids(db, m, lang)),
         artists=wd.top_artists(db, [m.id], lang),
-        cats=wd.categories(db, [m.id], lang),
+        cats=cats,
         category=category,
         q=q,
         works=works,
