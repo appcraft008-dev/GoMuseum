@@ -208,3 +208,21 @@ def test_theme_toggle_on_every_page(client):
         assert 'class="theme-btn"' in r.text, path
         head = r.text.split("</head>")[0]
         assert "gm-theme" in head and "dataset.theme" in head, path
+
+
+def test_museum_cover_with_credit(client, db):
+    # 复用 App 的馆封面(cover_image_key,large 档),带图片署名
+    m = db.query(Museum).filter_by(slug="orsay").one()
+    o = db.query(MuseumObject).filter_by(qid=MS1).one()
+    img = db.query(ObjectImage).filter_by(object_id=o.id).one()
+    img.credit = "Photo Someone"
+    m.cover_image_key = img.image_key
+    db.commit()
+    html = client.get("/en/paris/orsay/").text
+    assert 'class="m-cover' in html
+    assert f"{img.image_key}_large.jpg" in html
+    assert "Photo Someone" in html
+
+
+def test_museum_without_cover_has_no_hero(client):
+    assert 'class="m-cover' not in client.get("/en/paris/orsay/").text
