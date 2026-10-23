@@ -163,8 +163,17 @@ jobs:
           python-version: '3.13'
 
       # 分享图字体(与 prod 镜像同样两个 apt 包);缺了 test_font_present_in_ci 判红
+      # Azure 镜像偶发下载卡死(2026-10-23 两次卡满 10 分钟被取消):apt 断流 30s 自动重试,
+      # 外层每轮限 90s(正常 ~9s)、最多 2 轮,卡住就快速失败而不是吃光整个 job 时限
       - name: Install CJK fonts (share card)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk fonts-noto-core
+        timeout-minutes: 4
+        run: |
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=30"
+          for i in 1 2; do
+            sudo timeout 90 sh -c "apt-get $APT update && apt-get $APT install -y --no-install-recommends fonts-noto-cjk fonts-noto-core" && exit 0
+            echo "字体安装第 $i 轮失败/超时,重试"
+          done
+          exit 1
 
       # 按 poetry.lock 装,与 prod 镜像(backend/Dockerfile)同一套版本。
       # 此前 `pip install -e ".[dev,test]"` 按 pyproject 的宽松范围现解依赖:
