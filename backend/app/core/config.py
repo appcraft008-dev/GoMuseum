@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     CAP_PER_USER: int = 160
     CAP_PER_IP: int = 300
     CAP_PER_IP_REGISTERED: int = 600
+    # 三笔账告警(spec §4.1;R7)。内容生成预算:阶段 0 只告警,到 100% 停止是阶段 4
+    BUDGET_GEN_DAILY_USD: float = 30
+    BUDGET_GEN_MONTHLY_USD: float = 300
+    BUDGET_ALERT_RATIO: float = 0.8
+    # 语音、识别兜底只告警。0 = 关闭;识别默认关闭,上 prod 7 天后按真实账单定线(R7)
+    ALERT_TTS_DAILY_USD: float = 2
+    ALERT_RECOG_DAILY_USD: float = 0
 
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""
