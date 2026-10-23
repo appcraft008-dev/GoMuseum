@@ -14,6 +14,7 @@
 <meta property="og:description" content="{{ description }}">
 <meta property="og:url" content="{{ canonical }}">
 {% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
+{% if jsonld %}<script type="application/ld+json">{{ jsonld|tojson }}</script>{% endif %}
 <meta name="theme-color" content="#F3EDDF">
 <script>try{var gmT=localStorage.getItem("gm-theme");if(gmT)document.documentElement.dataset.theme=gmT}catch(e){}</script>
 <link rel="stylesheet" href="/w/static/site.css?v={{ asset_v }}">
