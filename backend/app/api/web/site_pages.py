@@ -7,6 +7,7 @@
 
 import hashlib
 import math
+import re
 import time
 from pathlib import Path
 
@@ -76,6 +77,27 @@ def _abs(path: str) -> str:
     return settings.PUBLIC_WEB_BASE_URL + path
 
 
+_CJK = {"zh", "zh-hant", "ja"}
+_SENT_END = re.compile(
+    r"[。！？]|(?:[!?]|(?<!\d)\.)(?=\s|$)"
+)  # 「12. Jh.」序数点不算句末
+
+
+def _summary(text: str, lang: str) -> str:
+    """meta description:搜索结果只显示 ~155 字符(中日 ~80 字),在句末截,找不到句末才按词截加省略号。"""
+    n = 80 if lang in _CJK else 155
+    text = " ".join(text.split())
+    if len(text) <= n:
+        return text
+    ends = [m.end() for m in _SENT_END.finditer(text) if m.end() <= n]
+    if ends and ends[-1] >= n // 3:
+        return text[: ends[-1]]
+    cut = text[: n - 1]
+    if lang not in _CJK and " " in cut:
+        cut = cut[: cut.rfind(" ")]
+    return cut.rstrip(" ,，、;；:：") + "…"
+
+
 def render(
     request: Request,
     template: str,
@@ -86,6 +108,8 @@ def render(
     path_for,
     db=None,
     noindex: bool = False,
+    description: str = "",
+    jsonld: dict | None = None,
     **ctx,
 ) -> HTMLResponse:
     """所有网页的统一出口:hreflang/canonical/noindex/下载区/语言提示都在这里定。"""
@@ -129,6 +153,8 @@ def render(
         free_n=settings.FREE_RECOGNITION_QUOTA,
         asset_v=ASSET_V,
         lang_hint=hint,
+        description=_summary(description, lang),
+        jsonld=jsonld,
         **ctx,
     )
     return HTMLResponse(html)
@@ -375,6 +401,17 @@ def home(lang: str, request: Request, db: Session = Depends(get_db)):
         path_for=lambda code: f"/{code}/",
         title=f"GoMuseum — {_t(lang, 'hero_title')}",
         description=hero_sub,
+        jsonld={
+            "@context": "https://schema.org",
+            "@type": "MobileApplication",
+            "name": "GoMuseum",
+            "description": hero_sub,
+            "url": _abs(f"/{lang}/"),
+            "operatingSystem": "Android",
+            "applicationCategory": "TravelApplication",
+            "inLanguage": lang,
+            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+        },
         hero_sub=hero_sub,
         screenshot=_screenshot(lang),
         cities=[
@@ -544,7 +581,24 @@ def museum_page(
         path_for=path_for,
         noindex=bool(q),
         title=f"{name} · GoMuseum",
-        description=(intro[0][:160] if intro else name),
+        description=(intro[0] if intro else name),
+        jsonld={
+            "@context": "https://schema.org",
+            "@type": "Museum",
+            "name": name,
+            "url": _abs(f"/{lang}/{city}/{museum_slug}/"),
+            "address": {
+                "@type": "PostalAddress",
+                "addressLocality": _city_name(c, lang),
+                **({"addressCountry": m.country} if m.country else {}),
+            },
+            **({"image": cover} if cover else {}),
+            **(
+                {"sameAs": [museum_website(museum_slug)]}
+                if museum_website(museum_slug)
+                else {}
+            ),
+        },
         museum_slug=museum_slug,
         city=city,
         city_name=_city_name(c, lang),
@@ -650,7 +704,7 @@ def work_page(
     mname = museum_name(m, lang)
     images = data.get("images") or []
     others = [c for c in _must_see_cards(db, m, lang) if c.qid != qid][:6]
-    first = (sections[0]["body"][0] if sections and sections[0]["body"] else "")[:160]
+    first = sections[0]["body"][0] if sections and sections[0]["body"] else ""
     return render(
         request,
         "work.html",
