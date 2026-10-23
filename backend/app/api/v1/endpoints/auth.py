@@ -11,6 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.user import User
@@ -186,7 +187,7 @@ class GuestLoginRequest(BaseModel):
 
 
 @router.post("/guest", response_model=TokenResponse)
-@limiter.limit("5/hour")
+@limiter.limit(settings.GUEST_LOGIN_RATE)
 def guest_login(
     request: Request,
     payload: Optional[GuestLoginRequest] = None,

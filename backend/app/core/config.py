@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     # 容量数字都是配置项,重启生效(spec §0.1)
     LAZY_CONCURRENCY: int = 2  # 每进程同时懒生成/懒翻译件数(阶段 1 改 4)
     LAZY_FANOUT_CONCURRENCY: int = 2  # 每进程同时补语言件数
+    # 游客登录每 IP 限速。slowapi 每进程计数:两个 web 进程合计约 60/时;
+    # 阶段 2 计数改存 Redis 后才是全站 60(spec §4.2)
+    GUEST_LOGIN_RATE: str = "30/hour"
 
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""
