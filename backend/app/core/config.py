@@ -64,6 +64,11 @@ class Settings(BaseSettings):
     LLM_CHANNEL_MODELS: dict[str, str] = {}
     OPENAI_TIMEOUT: int = 30
 
+    # ── 弹性扩容(spec 2026-10-21-elastic-scaling-design)──
+    # 容量数字都是配置项,重启生效(spec §0.1)
+    LAZY_CONCURRENCY: int = 2  # 每进程同时懒生成/懒翻译件数(阶段 1 改 4)
+    LAZY_FANOUT_CONCURRENCY: int = 2  # 每进程同时补语言件数
+
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""
 

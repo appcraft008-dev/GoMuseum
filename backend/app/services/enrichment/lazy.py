@@ -10,6 +10,7 @@ import threading
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 
+from app.core.config import settings
 from app.models.museum_object import MuseumObject
 from app.services import ops_alert
 
@@ -20,16 +21,16 @@ _LOCK_TTL = timedelta(minutes=10)  # 崩溃自愈:超时视为死锁可重拿
 # 标记 attributes.lazy_fanout = {"at": 心跳时刻, "pending": [还没补完的语言]}。
 # 心跳 = 每补完一门刷新 at:慢任务不会过期;进程被部署杀掉后最多空等 5 分钟。
 _FANOUT_TTL = timedelta(minutes=5)
-# ponytail: 进程级同时最多 2 件补语言,满了跳过不排队(其余语言回到按请求懒翻译)
-_FANOUT_SEM = threading.Semaphore(2)
+# ponytail: 进程级同时最多 LAZY_FANOUT_CONCURRENCY 件补语言,满了跳过不排队(其余语言回到按请求懒翻译)
+_FANOUT_SEM = threading.Semaphore(settings.LAZY_FANOUT_CONCURRENCY)
 _FANOUT_WORKERS = 4  # 每件按语言并行;2 件 × 4 = 最多 8 路 mini 调用
 # 补语言写的段打自己的来源,不挤占懒生成日上限(计入的话 1000 段只够约 31 件/天);
 # 但要有自己的上限,不靠"只跟在生成后面"推理封顶:en 用户触发时每件要补的语言更多。
 # 3000 段 ÷ 每门约 3 段 ≈ 1000 门次 × $0.0035 ≈ 最坏 $3.5/天(spec §4.4)。
 FANOUT_SOURCE = "ai_lazy_fanout"
 _FANOUT_DAILY_SECTION_CAP = 3000
-# ponytail: 进程级并发上限2,保护 API 响应与 LLM 限速;多 worker/量大再上队列
-_SEM = threading.Semaphore(2)
+# ponytail: 进程级并发上限见 LAZY_CONCURRENCY,保护 API 响应与 LLM 限速;多 worker/量大再上队列
+_SEM = threading.Semaphore(settings.LAZY_CONCURRENCY)
 # 全局日上限(2026-09-20 安全审计):当天已生成段数达此值就不再点火。
 # 300 → 1000(10-10 用户定):10-07/10-08 只靠运营者逛馆就顶满(301/315),之后打开的新件全
 # 显示假「重试」到 UTC 零点。1000 段 ≈ 120 件 ≈ 最坏 $4-10/天。
