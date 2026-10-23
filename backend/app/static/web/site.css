@@ -87,6 +87,8 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
 .m-cover figcaption { color: var(--faint); font-size: 12px; margin-top: 6px; }
 .dl-ios { opacity: .8; }
 .intro p { max-width: 68ch; margin: 0 0 12px; }
+/* 馆页正文与封面同宽 */
+.m-head .intro p, .m-head .practical { max-width: none; }
 .practical { margin-top: 18px; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; max-width: 760px; }
 .practical p { margin: 0; }
 .tips { margin: 0; padding-left: 20px; }

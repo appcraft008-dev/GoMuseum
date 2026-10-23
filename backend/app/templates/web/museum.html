@@ -3,7 +3,7 @@
 {% block main %}
 <p class="crumb wrap"><a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a> › {{ name }}</p>
 {% if cover %}<figure class="m-cover wrap"><img src="{{ cover }}" alt="{{ name }}">{% if cover_credit %}<figcaption>{{ t('image_credit') }}: {{ cover_credit }}</figcaption>{% endif %}</figure>{% endif %}
-<section class="wrap pagehead">
+<section class="wrap pagehead m-head">
   <h1 class="h-serif">{{ name }}</h1>
   {% if intro %}<div class="intro">{% for p in intro %}<p>{{ p }}</p>{% endfor %}</div>{% endif %}
   <div class="practical">
