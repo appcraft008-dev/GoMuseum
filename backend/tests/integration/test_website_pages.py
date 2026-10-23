@@ -331,3 +331,23 @@ def test_meta_description_ignores_german_ordinal_dot(client, db):
     db.commit()
     d = _desc(client.get("/de/paris/orsay/").text)
     assert not d.endswith("12.") and d.endswith("…")
+
+
+def test_unknown_category_404_and_links_encoded(client, db):
+    # 乱填的分类不能出 200 空页被收录;分类码进链接要 URL 编码
+    assert (
+        client.get("/en/paris/orsay/", params={"category": "nope"}).status_code == 404
+    )
+    _work(
+        db,
+        db.query(Museum).filter_by(slug="orsay").one(),
+        "Q104",
+        ("en",),
+        category="a&b c",
+    )
+    db.commit()
+    html = client.get("/en/paris/orsay/").text
+    assert "?category=a%26b%20c#works" in html
+    assert (
+        client.get("/en/paris/orsay/", params={"category": "a&b c"}).status_code == 200
+    )

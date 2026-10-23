@@ -166,3 +166,22 @@ def test_audio_unknown_lang_not_cached(client):
         == 404
     )
     assert not any(k[1] == "zzz" for k in trials._cache)
+
+
+def test_audio_rechecks_stale_trial_cache(client, db):
+    # 每 worker 各缓存 10 分钟:新音频入库后,页面(别的 worker)已给 ▶,这里不能 404
+    assert trials.trial_qids(db, _m(db, "orsay"), "fr") == []  # 缓存成空
+    o = db.query(MuseumObject).filter_by(qid=MS1).one()
+    db.add(
+        ObjectContentSection(
+            object_id=o.id,
+            language="fr",
+            section_code="guide",
+            body="x",
+            status="published",
+            audio_key="object-audio/fr-guide.mp3",
+        )
+    )
+    db.commit()
+    r = client.get(f"/w/audio/orsay/{MS1}/guide", params={"lang": "fr"})
+    assert r.status_code == 302

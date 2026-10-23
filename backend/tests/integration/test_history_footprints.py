@@ -485,3 +485,34 @@ def test_recent_paginates_after_filtering(client, db):
 
     page = client.get("/api/v1/history/recent?offset=2&limit=2", headers=a).json()
     assert [p["artwork_name"] for p in page] == ["作品2", "作品3"]
+
+
+def test_recent_loads_heavy_rows_only_for_the_page(client, session_factory, db):
+    """prod 测试号 1972 条足迹时每页 0.4–2 s(10-23 剖析):全部事件连大 JSON 列、
+    全部作品连 attributes 整行取回解析。判存在只要 qid,整行只取这一页。"""
+    from sqlalchemy import event
+
+    for i in range(30):
+        _obj(db, f"Q{i}", title_zh=f"作品{i}")
+    a = _register(client, "a@test.com")
+    me = _uid(db, "a@test.com")
+    for i in range(30):
+        _event(db, me, f"Q{i}", minutes=i)
+
+    engine = session_factory.kw["bind"]
+    seen = []
+
+    def _grab(_c, _cur, stmt, params, *_a):
+        seen.append((stmt, params))
+
+    event.listen(engine, "before_cursor_execute", _grab)
+    try:
+        page = client.get("/api/v1/history/recent?limit=2", headers=a).json()
+    finally:
+        event.remove(engine, "before_cursor_execute", _grab)
+
+    assert [p["qid"] for p in page] == ["Q0", "Q1"]
+    ev_sql = [s for s, _ in seen if "FROM recognition_events" in s]
+    assert ev_sql and not any("text_trace" in s or "vector_top" in s for s in ev_sql)
+    full = [p for s, p in seen if "museum_objects.attributes" in s]
+    assert full and all(len(p) <= 2 for p in full), "作品整行只该取这一页的 2 件"

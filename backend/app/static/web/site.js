@@ -167,12 +167,18 @@
       pspeed.textContent = rate + "x";
       tick();
     });
+    function stop() {
+      current = -1; seek.value = 0; seek.disabled = true; ptime.textContent = "";
+      follow = true; setBack(false); paint();
+    }
     audio.addEventListener("ended", function () {
       track("web_trial_complete", { part: secs[current].dataset.key });
       var k = playable.indexOf(current);
       if (k >= 0 && k + 1 < playable.length) play(playable[k + 1]);
-      else { current = -1; seek.value = 0; seek.disabled = true; ptime.textContent = ""; paint(); }
+      else stop();
     });
+    // 地址过期/不再是试听件(404)等:别让播放条停在「播放中」
+    audio.addEventListener("error", function () { if (current >= 0) stop(); });
   }
 
   // ---- 桌面:右侧面板与左图等高;超宽图改成上下排 ----
