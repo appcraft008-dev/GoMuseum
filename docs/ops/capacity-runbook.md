@@ -71,8 +71,8 @@
 | nginx 两个限流区(总区 50r/s burst 100;识别区 2r/s burst 50) | 宿主机上 api.gomuseum.app 的站点文件(改前用 `nginx -T 2>/dev/null \| grep -n 'configuration file\|gomuseum_api'` 定位),模板 `deployment/production/nginx-api.gomuseum.app.conf` | 改前 `cp` 一份 `.bak`;回滚 = 拷回、`nginx -t`、`systemctl reload nginx` |
 | staging 资源上限(合计 2 核 4G) | VPS `/opt/gomuseum/staging/docker-compose.yml`,仓库 `deployment/staging/docker-compose.yml` | 删掉 `cpus` / `mem_limit` 几行,`up -d <服务>`。⚠️ CPU 受限后 staging 的识别延迟和 prod 不可比:ORT 按宿主机 8 核开线程 |
 | prod `max_connections=400` | `deployment/production/docker-compose.yml` 里 postgres 的 `command` | 只能在维护窗口里 `up -d gomuseum_postgres`;回滚 = 删掉 `command`、同样在窗口里 `up -d` |
-| 外部探活 | UptimeRobot 关键词监控(用户注册) | 在 UptimeRobot 里暂停 |
-| `deployment/production/deploy.sh` | **不要用**:它把仓库 compose 同步到 VPS 并对全部服务 `up -d`,会在窗口外重建 postgres | 日常部署走 CD;compose 改了服务参数,只在维护窗口里单独 `up -d <服务>` |
+| 外部探活 | **未设**(10-23 定为低优先级待办,设置见 backlog 第五节)。在那之前,整机或数据库挂了 ops_check 发不出告警 | — |
+| `deployment/production/deploy.sh` | 可以用(10-23 起 VPS 上的 compose 与仓库一致)。⚠️ 它对全部服务 `up -d`:仓库 compose 若改了服务参数(如 postgres 的 `command`),会在窗口外重建该服务 | compose 改了服务参数时别用它,只在维护窗口里单独 `up -d <服务>`;日常部署走 CD |
 
 ## 6. 两条要重标的线(R7)
 
