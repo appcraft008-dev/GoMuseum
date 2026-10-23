@@ -34,7 +34,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.core.database import get_db
 from app.models.museum_object import MuseumObject
@@ -77,12 +77,31 @@ def _mine(db: Session, user_id: str, *, since=None) -> List[RecognitionEvent]:
     `_footprint_qid` 一处说了算。两处各写一遍"什么算足迹"是 bug 温床:
     先前版本就是这样,把 SQL 那份改错了行为却不变(另一份兜住了),
     等于错误被藏起来 —— 破坏性验证正是这么发现的。"""
-    q = db.query(RecognitionEvent).filter(
-        RecognitionEvent.user_id == user_id,
-        or_(
-            RecognitionEvent.confirmed_qid.isnot(None),
-            RecognitionEvent.top_qid.isnot(None),
-        ),
+    E = RecognitionEvent
+    # 只取足迹用得到的列:timings/text_trace/vector_top 是大 JSON,测试号上千条时
+    # 光解析它们就占一半耗时(10-23 prod 剖析)
+    q = (
+        db.query(E)
+        .options(
+            load_only(
+                E.id,
+                E.museum_slug,
+                E.outcome,
+                E.top_qid,
+                E.top_score,
+                E.confirmed_qid,
+                E.rejected_qids,
+                E.language,
+                E.created_at,
+            )
+        )
+        .filter(
+            RecognitionEvent.user_id == user_id,
+            or_(
+                RecognitionEvent.confirmed_qid.isnot(None),
+                RecognitionEvent.top_qid.isnot(None),
+            ),
+        )
     )
     if since is not None:
         q = q.filter(RecognitionEvent.created_at >= since)
@@ -151,12 +170,19 @@ def _hydrate(
     qids = {q for _, q in pairs if q}
     if not qids:
         return []
+    # 判「还在不在目录」只要 qid;作品整行(attributes 是大 JSON)只取这一页的
+    alive = {
+        q for (q,) in db.query(MuseumObject.qid).filter(MuseumObject.qid.in_(qids))
+    }
+    kept = [(ev, q) for ev, q in pairs if q in alive]
+    kept = kept[offset : None if limit is None else offset + limit]
     objs = {
         o.qid: o
-        for o in db.query(MuseumObject).filter(MuseumObject.qid.in_(qids)).all()
+        for o in db.query(MuseumObject).filter(
+            MuseumObject.qid.in_({q for _, q in kept})
+        )
     }
-    kept = [(ev, objs[q]) for ev, q in pairs if q and q in objs]
-    page = kept[offset : None if limit is None else offset + limit]
+    page = [(ev, objs[q]) for ev, q in kept if q in objs]
     storage = get_object_storage()
     # 一次渲染按语言分组:不传 language 时各条回退自己识别时的语言(老 App 行为)
     by_lang: dict = {}
