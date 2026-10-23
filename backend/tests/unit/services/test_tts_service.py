@@ -186,14 +186,9 @@ def test_current_engine_marker_is_google():
 
 
 def test_cost_report_has_google_price():
-    import importlib.util
-    import pathlib
+    from app.services import llm_usage
 
-    p = pathlib.Path(__file__).resolve().parents[3] / "scripts" / "llm_cost_report.py"
-    spec = importlib.util.spec_from_file_location("llm_cost_report", p)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    assert mod.PRICES["google-chirp3-hd"] == (30.0, 0.0)
+    assert llm_usage.DEFAULT_LLM_PRICES["google-chirp3-hd"] == (30.0, 0.0)
 
 
 def test_tts_generate_request_caps_text_length():

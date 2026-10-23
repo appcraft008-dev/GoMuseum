@@ -7,6 +7,40 @@ from datetime import date
 
 logger = logging.getLogger(__name__)
 
+# 模型 → (输入, 输出) $/百万 token;TTS 为 $/百万字、输出 0。2026-10-23 逐条核对官方价目页:
+# Claude: claude-api skill 模型表(Haiku 5.5 为提示 ≤10 万 token 的价,我们的调用都在此内)
+# OpenAI: https://developers.openai.com/api/docs/pricing(Standard / Batch / tts-1)
+# Google: https://cloud.google.com/text-to-speech/pricing(Chirp 3: HD)
+# .env 的 LLM_PRICES 只写要补或要改的模型,和这里合并(R8)。
+DEFAULT_LLM_PRICES: dict[str, tuple[float, float]] = {
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-sonnet-5-5": (2.0, 10.0),
+    "gpt-6-luna": (0.10, 0.50),
+    "gpt-6.1-sol": (2.0, 10.0),
+    "gpt-4o": (2.50, 10.0),
+    "gpt-4o-mini": (0.15, 0.60),
+    "gpt-4o@batch": (1.25, 5.0),  # Batch API 半价(成本工程②)
+    "tts-1": (15.0, 0.0),
+    "google-chirp3-hd": (30.0, 0.0),  # 每月前 100 万字免费,账上不扣
+}
+
+
+def cost_usd(model: str, tokens_in: int, tokens_out: int) -> tuple[float, bool]:
+    """(美元, 模型是否在价目里)。未知模型按最贵价计(spec §4.1):输入、输出各取
+    大模型条目(输出价 > 0)里的最高价;TTS 按字计价不参与,否则虚高 12 倍(R11)。"""
+    from app.core.config import settings
+
+    prices = {**DEFAULT_LLM_PRICES, **settings.LLM_PRICES}
+    known = model in prices
+    if known:
+        pin, pout = prices[model]
+    else:
+        llm = [v for v in prices.values() if v[1] > 0]
+        pin = max((v[0] for v in llm), default=0.0)
+        pout = max((v[1] for v in llm), default=0.0)
+    return (tokens_in or 0) / 1e6 * pin + (tokens_out or 0) / 1e6 * pout, known
+
+
 # 来源后缀(P3-14③):在线服务进程(懒生成/懒翻译/问答,用户触发)里记成 "translate@app",
 # 离线脚本照旧不带后缀。由 main._startup 置位。按进程分而不按调用链传标记:
 # 生成内部有线程池,contextvar 过不去。

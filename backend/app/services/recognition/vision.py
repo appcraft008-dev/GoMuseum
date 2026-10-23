@@ -71,9 +71,10 @@ def _default_complete(
     system: str, user_content, model: str = "gpt-4o-mini", channel: str | None = None
 ) -> str:
     """真实视觉调用(30s 超时),按 channel 分发到 OpenAI / Anthropic(见 openai_models.chat)。"""
+    from app.services.llm_usage import record_llm_usage
     from app.services.openai_models import chat
 
-    return chat(
+    text, real, tin, tout = chat(
         model,
         [
             {"role": "system", "content": system},
@@ -81,7 +82,9 @@ def _default_complete(
         ],
         channel=channel,
         timeout=30,
-    )[0]
+    )
+    record_llm_usage(channel or "recognition", real, tin, tout)
+    return text
 
 
 def _pick(raw, n: int):

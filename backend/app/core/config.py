@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     GUEST_LOGIN_RATE: str = "30/hour"
     # 大模型调用没给超时时的默认值:每次尝试的读写秒数,连接仍 5 秒;SDK 另有 2 次重试
     LLM_TIMEOUT_S: float = 90
+    # 模型 → (输入, 输出) $/百万 token(TTS 为 $/百万字)。只写要补或要改的模型,
+    # 和 llm_usage.DEFAULT_LLM_PRICES 合并(R8)
+    LLM_PRICES: dict[str, tuple[float, float]] = {}
 
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""
