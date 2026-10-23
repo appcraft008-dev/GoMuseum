@@ -107,6 +107,11 @@ class Settings(BaseSettings):
     APPLE_TEAM_ID: Optional[str] = None
     APPLE_KEY_ID: Optional[str] = None
     APPLE_PRIVATE_KEY_PATH: Optional[str] = None
+    # App Store 内购校验(iap_verification_service)。上面四个属 Apple 登录,与此无关。
+    APPLE_BUNDLE_ID: str = "com.gomuseum.app"
+    # App Store Connect 里 App 的数字 ID。缺失 → Production 交易一律拒(失败关闭),
+    # Sandbox 照常可验。
+    APPLE_APP_ID: Optional[int] = None
 
     # Object storage (images / audio)
     STORAGE_BACKEND: str = "local"  # "local" | "r2"
@@ -136,6 +141,9 @@ class Settings(BaseSettings):
     PUBLIC_WEB_BASE_URL: str = "https://gomuseum.app"
     # 推正式轨道那天改 true:网页粘底条才变成 Play 下载按钮(内测轨道的链接对外人是"找不到该应用")
     SHARE_PLAY_LIVE: bool = False
+    # 网站 v1(spec 2026-10-22-website-v1)上线开关:宿主机 nginx 把 /{lang}/ 反代到后端之后才改 true。
+    # true 时旧分享链接 /a/{slug}/{qid} 301 到新作品页;false 时 /a/ 照旧渲染(避免跳到 nginx 的 404)。
+    WEBSITE_LIVE: bool = False
     # 分享图字体(镜像装 fonts-noto-cjk;标题有中日韩文,没字体就是一排方框)
     SHARE_CARD_FONT: str = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
     SHARE_CARD_FONT_BOLD: str = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"

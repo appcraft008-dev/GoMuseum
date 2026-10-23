@@ -15,11 +15,13 @@
 
 | 事项 | 状态 | 出处 |
 |---|---|---|
-| 从内测轨道推到正式轨道(这一步才算发版) | ⏳ 你 | monetization-plan |
-| 推正式当天:prod env `SHARE_PLAY_LIVE=true` + 重启后端 | ⏳ 你,推正式当天做 | share-feature |
-| 正式版草稿选哪个包 | 用 **V67**(`1.0.0+67`,10-19 最新安装包;在 V66 之上加全屏比对左右箭头 + 最后一页「都不是」#1020、墙签检索预填整段全选 + 清空按钮 #1024);V66、V63、V56 作废 | 10-07 / 10-17 / 10-19 |
+| 正式版审核 | ⏳ Google 审核中。**V69**(`1.0.0+69`)10-21 已提交正式版、全面发布(首个正式版无分阶段);托管式发布关闭 → 过审自动上线。V67 送审被照片权限政策拦(`READ_MEDIA_IMAGES`)→ #1043 删权限出 V68;用户真机建议快门上移 → #1044 出 V69。V68/V67 及更早作废,下个包从 70 起 | 10-21 |
+| 过审上线当天:prod env `SHARE_PLAY_LIVE=true` + 重启后端 | ⏳ 你告诉我上线了,我先备份 `.env`、列命令请你确认,再只重启后端并查健康与分享页 Play 链接 | share-feature |
+| 过审上线后:查测试订单能否和真实订单分开统计 | 许可测试账号的订单 Google 返回 `purchaseType: 0`、真实订单无此字段,后端两种都核验通过并开权益。⏳ 上线后我只读查订单表与收入相关统计,确认能按 `purchaseType` 剔除测试订单,不能就记技术债 | 10-21 |
 | ⚠️ Google Cloud 项目 gomuseum-499210 还在免费试用(10-20 截图:剩 £226.17 赠金、85 天 ≈ 2027-01-13 到期) | ⏳ 你:升级为付费账号。Cloud Text-to-Speech API 在这个项目里启用(懒生成 TTS 用 Chirp 3 HD),试用到期不升级 → 懒生成语音停掉。到期前务必升级;升级只改计费,不影响现有 key | 10-20 查速率上限时发现 |
-| 推正式前:新模型整体测试两天 | 10-19 prod 已全切新模型(见第三节「模型迁移遗留」);⏳ 你测两天,推正式前我出 prod 调用量与挂起率新旧对比 | 10-19 |
+| 隐私政策与使用条款十语页(#1047 已合 staging;源在 `deployment/legal-src/`,`build.py` 生成)未部署到网站 | ⏳ **等 #1046(删号清 `app_events`)随发版 PR 上 prod 后**,你说一声我手工 scp 两页(同时带上 #1042 的中文隐私改动);部署后手机浏览器用 `?lang=fr` / `ja` 验证 | 10-21 |
+| 网站 v1 上线(spec `2026-10-22-website-v1-design.md`,取代原「网页引流小一轮」) | 代码在 `feature/website-v1`(十语首页/城市/馆/作者/作品页、每馆 5 件试听、sitemap/robots、自记统计),合并 staging 后可在 `staging-api.gomuseum.app/en/` 看。⏳ 上 prod 后:①我列宿主机 nginx 改动(`deployment/production/nginx-gomuseum.app.website.conf`)+ 备份/回滚命令,**你确认**后改;②同时 prod `.env` 加 `WEBSITE_LIVE=true` 并只重启后端(旧 `/a/` 分享链接才开始 301 到新作品页,**必须在 nginx 改完之后**);③线上旧中文首页 `index.html` 备份后留着不删(nginx 已不再路由到它)。网站做完就上线,不等 V69 过审:过审当天的 `SHARE_PLAY_LIVE=true` 会让下载按钮自动生效 | 10-22 |
+| 网站上线后:注册 Google Search Console | ⏳ **你**:验证 gomuseum.app 域名、提交 `https://gomuseum.app/sitemap.xml`。第一个月只观察,用真实数字定后两个月目标;三个月后按 spec §八复盘(网站带来的安装与质量、看页数/试听/分享、品牌词排名、收录页数) | 10-22 |
 
 ## 二、等你拍板
 
@@ -54,6 +56,11 @@
 | 模型迁移遗留④:SDK「Event loop is closed」重试 | 迁移前就有:OpenAI 异步客户端跨 `asyncio.run` 复用,首次调用报错后重试成功,多花一次往返。不急 | 10-18 |
 | **App 连续识别 20+ 分钟后自动重启**(V59 真机,巴黎 4 馆游客照测试) | 10-12 04:57:22(橘园,确认后进讲解页 6s)与 05:19:48(奥赛,讲解页停 50s)各冷启动一次;服务器请求全 200。Crashlytics 无原生崩溃 → **疑系统内存不足杀进程**(Crashlytics 抓不到),未坐实。**下一步**:手机 USB 连电脑跑 `adb shell dumpsys activity exit-info com.gomuseum.app` 看退出原因(LOW_MEMORY / CRASH_NATIVE 等,事后可查,记录会滚动别拖太久)。若是内存:嫌疑①每次命中都后台重拉全部足迹(~900 条 9 个请求,`history_providers.dart` loadHistory)(**10-12 #905 已改为只拉最新一页,V60 起已包含;用 V67 真机连拍 20+ 分钟再看还重不重启**)②反复进出讲解页的 hero 大图/音频播放器未释放 | 10-12 真机测试 |
 | Crashlytics 把所有界面层错误按「致命崩溃」上报 | `main.dart:25` `FlutterError.onError = recordFlutterFatalError` → 图片加载失败(维基 429)、字体下载断线都算 crash,控制台「未遇到崩溃的用户」只剩 48%,严重失真,真闪退被淹没。✅ 已改非致命上报(`recordFlutterError`,只有真正未捕获的异步错误才 fatal),代码已合 staging(#932),V62 起的包已包含(当前 V67)。**待看**:Crashlytics「未遇到崩溃的用户」比例是否回正 | 10-12 查重启时发现 |
+| 懒生成中离开讲解页再进来,App 不重新拉内容 | 10-21 真机《阿拉伯人的头》Q138632428(小皇宫):zh 等待中离开,10:16:44 zh guide 已发布,10:17:07 再进只收到 `/viewed` 没有 `/content`,10:18:25 才拉到。已排除:服务端提前把 `generating` 置 false(staging 探针整门翻完前一直 true)、插队失效、Redis 返回 bytes、Riverpod autoDispose 语义。**用户定先发版不查**;下次从 `objectContentProvider` 的 keepAlive 与 `guide_page.dart` 轮询停止时机查起 | 10-21 真机 |
+| 已删号用户在 `app_events` 里残留账号 ID 与设备号 | #1046 只对此后删号生效;此前删号的用户行里 `user_id` 指向已不存在的账号、`device_id` 还在。清理要写 prod:先列写入面清单(只动 `app_events` 的这两列、涉及行数)请你批准,备份范围 = 该表 | 10-21 |
+| 使用条款第 5 条免责对欧盟消费者可能不可执行 | Fable 核对译文时提出:可加一句「法律不许排除的责任不受限」。要加须英文先改再同步其余 9 语(`deployment/legal-src/terms.*.html`)。你定做不做 | 10-21 |
+| 1.0.1 前端小改动合集(下个出包时做,下一包版本代码从 70 起) | ①App 打开隐私政策/使用条款链接时带 `?lang=<App 当前语言>`(现在靠浏览器语言);②「懒生成中离开再进不重拉」排查结果若是前端问题一并修(见上条) | 10-21 |
+| 网站 v1 审查留下的小问题(Fable 终审 Minor,10-22) | ①`?category=乱填` 返回 200 空页且可被收录,拼链接未 URL 编码;②sitemap XML 手工拼接未转义(现 slug/qid 都是安全字符);③作品页 hreflang、`/a/` 跳转语言未限制在十语内(库里现只有十语),`?s=` 未编码;④`site.js` 音频加载失败没有错误处理(播放条会停在"播放中"),最后一段播完后「回到正在播放」按钮残留;⑤试听名单每个 worker 缓存 10 分钟,新音频入库后几分钟内各 worker 判定可能不一致。都不影响上线,有空或出现真实问题时修 | 10-22 网站 v1 终审 |
 | 文字链单候选要不要直开(影子统计中) | #873 起 `recognition_events.text_trace.single_direct` 记录「只 1 个候选、作者对上、标题 ≥0.9」若直开会开哪件,行为未变。10-10 摸底:prod 单候选 9 次,作者没对上 6 次里 4 次被否(同名撞车),作者对上 3 次无反馈。**攒到 20-30 条有确认/否定的 single_direct 样本**再看错例决定放不放 | 10-10 #873 |
 | 识别作者判同允许短名子集的误加分 | `same_person(allow_subset=True)`:AI 给「姓+常见名」而库里同姓有父子/亲属两位画家时可能误加 0.1(代际修饰都写了才会否决)。已有反向测试;等真机记录里出现再收紧 | 匹配层专题终审 minor |
 | 馆藏列表/搜索按真实热度排序(等真实用户数据) | `popularity` 是导入时写死的 Wikidata 跨语言条目数,**从不随用户行为更新**;prod 27221 件里 77% 为 0(Joconde 源一律 0)、有值也只 1~13。现列表排序 = 必看清单(`must_see.py`)→ popularity → id;搜索里 popularity 只作最末并列键。唯一用真实行为排序的是音频预生成队列(`audio_queue.py`:播放过 → 识别命中 → 必看 → popularity),不影响 App 列表。**用户 10-07 / 10-10 定:等有真实数据再做**——现在十几位真实用户、访问大多是测试,按访问排=按测试记录排。**触发条件**:单馆每周真实(非测试账号)识别+播放 ≥ 几百次。届时热度用自家行为数据(识别确认/播放/打开讲解,按时间衰减),**必看清单仍在最前**,只替换其后的 popularity 一层 | 用户 10-07 匹配层专题;10-10 会话 |
@@ -94,7 +101,7 @@
 | 退款后收回权益的链路 | 只有第一笔真实退款才能验证 |
 | nginx 限流阈值 | 观察项:有真实流量后看 error.log 的 excess 值 |
 | 分享功能的效果判断 | 至少 100 个真实活跃用户之后 |
-| iPhone 版 | 没开工 |
+| **iPhone 版**(10-22 定:与 Android 同一 App 原样上架 App Store;首发**不含中国大陆**——要 ICP 备案)—— **A 账号(你)**:用 UK 一人公司注册公司账号;先在 developer.apple.com/enroll/duns-lookup 查 D-U-N-S(英国公司多半已有);开通后立刻签 Paid Apps Agreement + 银行 + W-8BEN-E(不签 Sandbox 内购都测不了)、申请 Small Business Program(佣金 15%);⚠️ 欧盟 DSA 商家信息会公开公司注册地址,若是家庭住址先换代理地址。**B 后端(10-22 已实现,见 spec `2026-10-22-ios-iap-verification-design.md`)**:客户端 SK2 交的是交易 JWS(插件源码查证),改为 Apple 官方库离线验签(不需要 .p8)+ `POST /payment/apple-notifications` 退款撤权益;Sandbox 票照发、`granted_reason=sandbox`(用户 10-22 定);最低 iOS 15(并入 #1051)。**账号开通后要做**:prod/staging env 配 `APPLE_APP_ID`(数字 App ID,缺了 Production 交易全拒);App Store Connect 两个通知 URL 填 `https://api.gomuseum.app/api/v1/payment/apple-notifications`;商品 ID 必须与 `PASSES` 同名(`paris_pass_7d`/`nl_pass_7d`,Apple 商品 ID 删了不能复用);TestFlight Sandbox 买+退款端到端。**推迟**:Apple 退款主动对账(要 .p8 查 Get Transaction Info,触发=第一笔真实 iOS 收入);回应 `CONSUMPTION_REQUEST`(触发=第一笔 iOS 退款)。**C 客户端(10-22 审核要求摸底,只读未改)**:①`Info.plist` 里 `CFBundleURLTypes` 误嵌在 `NSAppTransportSecurity` 字典里 → Google 登录回调 scheme 没注册,iOS 点 Google 登录会失败/崩;②`GoogleService-Info.plist` 是旧的:`BUNDLE_ID=com.example.gomuseumApp`≠`com.gomuseum.app`,要在 Firebase `gomuseum-29a6a` 用正式 bundle id 注册 iOS app 换新 plist;其 `CLIENT_ID`(545824113199-…)来自另一个 GCP 项目,要核对该 iOS OAuth client 绑的 bundle id;③`NSAllowsArbitraryLoads=true` 全局放开明文 HTTP,审核会追问 → 去掉,只留 localhost 例外;④没有 `PrivacyInfo.xcprivacy`(提交必需);⑤权限说明只有一种语言且混着写(定位中文、其余英文)→ 补十语 `InfoPlist.strings`;麦克风/语音识别两条说明 App 没用到 → 删;⑥`TARGETED_DEVICE_FAMILY="1,2"` 声明支持 iPad → 改 1(否则要 iPad 截图和适配),再在 iPad 模拟器确认兼容模式不崩;⑦没有 `UIBackgroundModes: audio` → 锁屏/切后台讲解会停;`just_audio` 未显式配 audio session,静音键可能把讲解静音(真机核实);⑧没设 `ITSAppUsesNonExemptEncryption=false`,每次上传都要答出口合规;⑨pbxproj `DEVELOPMENT_TEAM` 为空(账号后配)。**已合格**:应用内删除账号、价格取商店本地化价格、Apple 登录、iOS 设备 ID 用 `identifierForVendor`;消耗型通票不属于 Apple 要求「可恢复」的商品,现有自动静默恢复够用,不必加按钮。**审核风险(你定)**:后端买票前强制登录(`login_required_to_purchase`),Apple 5.1.1 常以「非账号型内购不得要求先注册」拒审;我的建议=先按现状送审、审核备注说明「通票挂账号是为了换机找回」,被拒再议游客购买。**B 线备注**:`in_app_purchase_storekit` 0.4.11 交给后端的是 StoreKit1 收据还是 StoreKit2 JWS 要在模拟器确认;后端按 transactionId 调 App Store Server API 两种都能接。**D 上架材料**:App Store Connect 按后端下发的通票 ID 建同名消耗型商品;6.9/6.5 寸截图;隐私问卷;审核演示账号。**真机**:用户无 iPhone(iPhone 6 最高 iOS 12,App 最低 iOS 13 装不上);日常用 Mac mini 模拟器 + StoreKit 本地 `.storekit` 测;真机验收靠大陆朋友的 iPhone 17 当 TestFlight **内部**测试员(免 beta 审核)。朋友**不开 VPN**:Apple 登录 / Sandbox 购买 / TestFlight 崩溃报告可用,Google 登录、Crashlytics、`google_fonts` 运行时字体不可用(字体回落系统字体≠bug);**待朋友关 VPN 在 Safari 实测** `https://api.gomuseum.app/api/v1/museums` 与 `https://cdn.gomuseum.app/`(404 页=通)能否打开,cdn 不通则音频测不了 → 买二手 iPhone 11 / SE 2 | A 你注册账号 + 朋友实测两个链接;B 你说开始我就开 `feature/*` 先写设计文档 |
 | 意大利等跨城长线 | 再议 |
 
 ## 已决定不做(留档，别再提)
@@ -111,6 +118,7 @@
 
 ## 最近关闭
 
+- 2026-10-21 **推正式前新模型两天测试**:用户测完通过(10-20 出了新旧调用量/挂起率对比),不再阻塞发版。同日 #1043 去掉 `READ_MEDIA_IMAGES`(取景页 Android 不再显示最近照片条,自动存相册 Android 10+ 免权限)、#1044 拍摄栏按钮上移 30,V69 送审
 - 2026-10-20 **懒生成名额满时排队用户的额度被白扣光**(本 PR):全站同时最多 4 件生成,第 5 个人点开无内容件时先扣 8 段、后台发现名额满放弃但不退,App 每 4s 轮询重复一遍——复现 21 次轮询(~80s)后提示「今日额度用尽」而作品一个字没生成,共用 WiFi 的 IP 额度同样被烧。改为同一人同一动作(生成某件 / 翻译某件某语言)当天只扣一次;超限被拒不算付过。纯后端,免发版
 - 2026-10-20 **游客删号后再游客登录又拿到 5 次免费识别**(本 PR,用户 10-20 定补):删号不再整行删 `user_benefits`——带设备号的行清掉 `user_id` 与 `free_audio_qids`,保留设备号与剩余次数;`guest_login` 新建游客时先接上该设备 `user_id` 为空的行(多行取剩得最少的),顺带堵住「先匿名用过再游客登录多发一份」。隐私政策(`deployment/website/privacy.html`,生效 10-20)写明删号后保留设备标识与剩余次数。堵不住:恢复出厂/换设备号(靠 Play Integrity)。纯后端,免发版
 - 2026-10-20 **V67 真机验收通过**(全屏比对左右箭头 + 「都不是」页 #1020、墙签检索预填全选 + 清空按钮 #1024);**Play 商店条目十种语言 ASO 已全部补齐**(用户告知)

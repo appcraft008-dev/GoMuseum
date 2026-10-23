@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import grid %}
+{% block main %}
+<p class="crumb wrap"><a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a> › <a href="/{{ lang }}/{{ city }}/{{ museum_slug }}/">{{ museum_name }}</a></p>
+<article class="work wrap" data-now="{{ now_tpl }}">
+  <div class="work-pic">
+    {% if image %}<img id="work-img" src="{{ image }}" alt="{{ work_title }}">{% endif %}
+    {% if credits %}<small>{{ t('image_credit') }}: {{ credits|join(' · ') }}</small>{% endif %}
+  </div>
+  <div class="work-panel" id="work-panel">
+    <div class="work-fixed">
+      <h1 class="h-serif">{{ work_title }}</h1>
+      {% if byline %}<p class="byline">{{ byline }}</p>{% endif %}
+      {% if is_trial %}
+      <div class="player" id="player">
+        <button type="button" class="pbtn" id="pbtn" aria-label="{{ t('play_from_guide') }}">▶</button>
+        <div class="pmeta"><span id="plabel">{{ t('play_from_guide') }}</span><span class="pbar"><i id="pprog"></i></span></div>
+      </div>
+      <p class="small">🎧 {{ t('trial_note', n=trial_n) }}</p>
+      <audio id="audio" preload="none"></audio>
+      {% elif has_audio %}
+      <a class="lockbar" href="#download" data-track="download_work">🎧 {{ t('has_audio_in_app') }}</a>
+      {% endif %}
+      <div class="share" data-url="{{ share_url }}" data-title="{{ work_title }}">
+        <button type="button" class="chip-btn" data-share="native" hidden>{{ t('share') }}</button>
+        <a class="chip-btn" data-share="whatsapp" href="https://wa.me/?text={{ (work_title ~ ' ' ~ share_url)|urlencode }}" rel="noopener" target="_blank">WhatsApp</a>
+        <button type="button" class="chip-btn" data-share="copy" data-done="{{ t('copied') }}">{{ t('copy_link') }}</button>
+        <a class="chip-btn" data-share="card" href="{{ card }}" download>{{ t('save_card') }}</a>
+        <button type="button" class="chip-btn back" id="back" hidden>↺ {{ t('back_to_playing') }}</button>
+      </div>
+    </div>
+    <div class="work-sections" id="sections">
+      {% for s in sections %}
+      <section class="sec{% if loop.first %} open{% endif %}" data-key="{{ s.key }}"{% if s.src %} data-src="{{ s.src }}"{% endif %}>
+        <div class="sec-h">
+          {% if s.src %}<button type="button" class="sec-play" aria-label="▶ {{ s.title }}">▶</button>{% endif %}
+          <button type="button" class="sec-t" aria-expanded="{{ 'true' if loop.first else 'false' }}">{{ s.title }}</button>
+          {% if s.audio and not s.src %}<a class="sec-app" href="#download" data-track="download_section">🎧 {{ t('listen_in_app') }}</a>{% endif %}
+        </div>
+        <div class="sec-b">{% for p in s.body %}<p>{{ p }}</p>{% endfor %}</div>
+      </section>
+      {% endfor %}
+    </div>
+  </div>
+</article>
+<div class="mini" id="mini" hidden>
+  <button type="button" class="pbtn" id="mbtn">❚❚</button>
+  <span id="mlabel"></span>
+  <button type="button" class="chip-btn" id="mback" hidden>↺</button>
+</div>
+{% if others %}
+<section class="band" data-section="other-must-see">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('other_must_see', museum=museum_name) }}</h2>
+    {{ grid(others, lang, trials, t) }}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

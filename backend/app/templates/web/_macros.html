@@ -1,0 +1,59 @@
+{% macro download_block(t, play, device, qr) -%}
+<div class="dl">
+  {% if device in ('iphone', 'ipad') %}
+    <p class="dl-note">{{ t('android_only_ios') }}</p>
+  {% elif play %}
+    <a class="play" href="{{ play }}" data-track="download"><small>{{ t('play_badge_pre') }}</small><b>Google Play</b></a>
+    {% if device == 'desktop' and qr %}<figure class="qr"><img src="{{ qr }}" width="120" height="120" alt=""><figcaption>{{ t('scan_qr') }}</figcaption></figure>{% endif %}
+  {% else %}
+    <p class="dl-note">{{ t('play_soon') }}</p>
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro card(c, lang, trial_set, t) -%}
+<a class="card" href="/{{ lang }}/{{ c.city }}/{{ c.museum_slug }}/{{ c.qid }}/">
+  <span class="card-img">{% if c.thumb_url %}<img src="{{ c.thumb_url }}" alt="{{ c.title }}" loading="lazy">{% endif %}</span>
+  <span class="card-t">{{ c.title }}</span>
+  {% if c.artist %}<span class="card-a">{{ c.artist }}</span>{% endif %}
+  {% if c.qid in trial_set %}<span class="tag">🎧 {{ t('trial_tag') }}</span>{% endif %}
+</a>
+{%- endmacro %}
+
+{% macro grid(cards, lang, trial_set, t) -%}
+<div class="grid">{% for c in cards %}{{ card(c, lang, trial_set, t) }}{% endfor %}</div>
+{%- endmacro %}
+
+{% macro museum_card(m, lang, t) -%}
+<a class="mcard" href="/{{ lang }}/{{ m.city }}/{{ m.slug }}/">
+  <span class="mcard-img">{% if m.cover %}<img src="{{ m.cover }}" alt="{{ m.name }}" loading="lazy">{% endif %}</span>
+  <span class="mcard-b"><b>{{ m.name }}</b><small>{{ t('works_count', n=m.count) }}</small></span>
+</a>
+{%- endmacro %}
+
+{% macro must_see_panels(panels, lang, t) -%}
+{% if panels %}
+<div class="tabs" role="tablist">
+  {% for p in panels %}<button type="button" role="tab" data-tab="{{ p.slug }}"{% if loop.first %} aria-selected="true"{% endif %}>{{ p.name }}</button>{% endfor %}
+</div>
+{% for p in panels %}
+<div class="panel" data-panel="{{ p.slug }}">
+  <h3 class="panel-h">{{ p.name }}</h3>
+  {{ grid(p.cards, lang, p.trials, t) }}
+  <p class="more"><a href="/{{ lang }}/{{ p.city }}/{{ p.slug }}/#must-see">{{ t('see_all_must_see', n=p.total) }}</a><a href="/{{ lang }}/{{ p.city }}/{{ p.slug }}/#works">{{ t('browse_all', n=p.count) }}</a></p>
+</div>
+{% endfor %}
+{% endif %}
+{%- endmacro %}
+
+{% macro artist_chips(artists, base, t) -%}
+<ul class="chips">{% for a in artists %}<li><a href="{{ base }}artists/{{ a.qid }}/">{{ a.name }} <small>{{ a.count }}</small></a></li>{% endfor %}</ul>
+{%- endmacro %}
+
+{% macro pager(page, pages, href, t) -%}
+{% if pages > 1 %}<nav class="pager">
+  {% if page > 1 %}<a href="{{ href(page - 1) }}">{{ t('page_prev') }}</a>{% endif %}
+  <span>{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a href="{{ href(page + 1) }}">{{ t('page_next') }}</a>{% endif %}
+</nav>{% endif %}
+{%- endmacro %}

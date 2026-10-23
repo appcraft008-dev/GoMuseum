@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import must_see_panels, museum_card %}
+{% block main %}
+<section class="hero wrap">
+  <div class="hero-text">
+    <h1 class="h-serif">{{ t('hero_title') }}</h1>
+    <p class="lead">{{ hero_sub }}</p>
+    <a class="btn" href="#download" data-track="download_hero">{{ t('cta_download') }}</a>
+    <p class="small">{{ t('free_note', n=free_n) }}</p>
+  </div>
+  {% if screenshot %}<div class="phone"><img src="{{ screenshot }}" alt="GoMuseum" width="540" height="1200"></div>{% endif %}
+</section>
+
+{% if cities|length > 1 %}
+<section class="band" id="museums" data-section="cities">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('cities_title') }}</h2>
+    {% for c in cities %}
+    <h3 class="city-h"><a href="/{{ lang }}/{{ c.slug }}/">{{ c.name }}</a></h3>
+    <div class="mgrid">{% for m in c.museums %}{{ museum_card(m, lang, t) }}{% endfor %}</div>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+{% if panels %}
+<section class="band" id="must-see" data-section="must-see">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('must_see_title') }}</h2>
+    <p class="lead">{{ t('must_see_lead') }}</p>
+    {{ must_see_panels(panels, lang, t) }}
+  </div>
+</section>
+{% endif %}
+{% endif %}
+
+<section class="band" id="how" data-section="how">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('how_title') }}</h2>
+    <ol class="steps">
+      <li><b>{{ t('how_1_t') }}</b><p>{{ t('how_1_p') }}</p></li>
+      <li><b>{{ t('how_2_t') }}</b><p>{{ t('how_2_p') }}</p></li>
+      <li><b>{{ t('how_3_t') }}</b><p>{{ t('how_3_p') }}</p></li>
+    </ol>
+  </div>
+</section>
+
+{% if cities|length == 1 %}
+<section class="band" id="museums" data-section="museums">
+  <div class="wrap">
+    <h2 class="h-serif">{{ t('museums_title') }}</h2>
+    <div class="mgrid">{% for m in cities[0].museums %}{{ museum_card(m, lang, t) }}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -77,6 +77,7 @@ def account_tables():
     所以清单在这里只有一份，凡是会走到 `delete_user_account` 的 fixture 都用它。
     给删号新加表时改这里，不必去找有哪些 fixture 抄过。
     """
+    from app.models.app_event import AppEvent
     from app.models.auth_token import AuthToken
     from app.models.feedback import Feedback
     from app.models.purchase import Entitlement, Purchase
@@ -86,6 +87,7 @@ def account_tables():
     from app.models.user_benefits import UserBenefits
 
     return [
+        AppEvent.__table__,
         User.__table__,
         UserBenefits.__table__,
         AuthToken.__table__,

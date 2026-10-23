@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import grid, pager %}
+{% block main %}
+<p class="crumb wrap"><a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a>{% if museum_name %} › <a href="/{{ lang }}/{{ city }}/{{ museum_slug }}/">{{ museum_name }}</a>{% endif %} › {{ artist_name }}</p>
+<section class="wrap pagehead">
+  <h1 class="h-serif">{{ heading }}</h1>
+  {% if life %}<p class="lead">{{ life }}</p>{% endif %}
+  {% if bio %}<div class="intro">{% for p in bio %}<p>{{ p }}</p>{% endfor %}</div>{% endif %}
+</section>
+<section class="band" id="works" data-section="works">
+  <div class="wrap">
+    {{ grid(works, lang, trials, t) }}
+    {{ pager(page, pages, page_href, t) }}
+  </div>
+</section>
+{% endblock %}
