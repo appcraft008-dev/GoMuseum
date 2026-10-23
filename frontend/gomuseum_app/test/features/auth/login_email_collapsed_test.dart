@@ -75,7 +75,8 @@ void main() {
     await t.pump();
     await t.tapOnText(find.textRange.ofSubstring(l10n.authConsentPrivacy));
     await t.pump();
-    expect(opened, [kTermsUrl, kPrivacyPolicyUrl]);
+    // 带 App 当前语言(测试环境 en)
+    expect(opened, ['$kTermsUrl?lang=en', '$kPrivacyPolicyUrl?lang=en']);
     expect(copied, isEmpty);
   });
 
@@ -85,7 +86,7 @@ void main() {
       final l10n = await _pump(t);
       await t.tapOnText(find.textRange.ofSubstring(l10n.authConsentPrivacy));
       await t.pump();
-      expect(copied, [kPrivacyPolicyUrl], reason: 'opens=$opens');
+      expect(copied, ['$kPrivacyPolicyUrl?lang=en'], reason: 'opens=$opens');
     }
   });
 

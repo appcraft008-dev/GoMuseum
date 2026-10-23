@@ -9,6 +9,8 @@
 /// 这条测试把它和 pubspec 钉在一起,忘了改就红。
 library;
 
+import 'dart:ui' show Locale;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -45,5 +47,14 @@ void main() {
     // 原生通道只放行 https(MainActivity),写成 http 会静默落到复制兜底
     expect(kTermsUrl, startsWith('https://gomuseum.app/'));
     expect(kTermsUrl, contains('terms'));
+  });
+
+  test('政策链接带 App 当前语言(不靠浏览器语言)', () {
+    expect(legalUrl(kPrivacyPolicyUrl, const Locale('fr')),
+        'https://gomuseum.app/privacy.html?lang=fr');
+    expect(
+        legalUrl(kTermsUrl,
+            const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')),
+        'https://gomuseum.app/terms.html?lang=zh-hant');
   });
 }
