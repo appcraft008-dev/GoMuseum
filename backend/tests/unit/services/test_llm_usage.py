@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.models.llm_usage import LLMUsage
-from app.services.llm_usage import record_llm_usage
+from app.services.llm_usage import record_llm_usage, utc_today
 from scripts.llm_cost_report import report
 
 
@@ -25,7 +25,8 @@ def session():
 def test_record_accumulates_same_key(session):
     record_llm_usage("gate", "gpt-4o-mini", 100, 20, db=session)
     record_llm_usage("gate", "gpt-4o-mini", 50, 10, db=session)
-    row = session.get(LLMUsage, (date.today(), "gate", "gpt-4o-mini"))
+    # 按 UTC 记日:用本地 date.today() 查,本地零点到 UTC 零点之间必挂
+    row = session.get(LLMUsage, (utc_today(), "gate", "gpt-4o-mini"))
     assert row.calls == 2 and row.tokens_in == 150 and row.tokens_out == 30
 
 
