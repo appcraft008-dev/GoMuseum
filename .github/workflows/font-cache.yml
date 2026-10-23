@@ -18,11 +18,19 @@ jobs:
         with:
           path: ~/apt-fonts
           key: apt-fonts-noto-${{ runner.os }}-v1
+      # 不走 apt 的 Azure 镜像(2026-10-23 预热时 fonts-noto-cjk 在它上面卡满 15 分钟):
+      # 用 apt 算出下载地址,换官方源 curl 下,失败再换 kernel.org 镜像
       - name: Download font debs
         run: |
           ls ~/apt-fonts/*.deb >/dev/null 2>&1 && exit 0
-          APT="-o Acquire::Retries=5 -o Acquire::http::Timeout=60"
-          sudo apt-get $APT update
+          sudo apt-get update
           mkdir -p ~/apt-fonts && cd ~/apt-fonts
-          apt-get $APT download fonts-noto-cjk fonts-noto-core fonts-noto-mono
+          apt-get download --print-uris fonts-noto-cjk fonts-noto-core fonts-noto-mono | while read -r uri name _; do
+            path=$(echo "$uri" | tr -d "'" | sed -E 's#^.*/(pool/)#\1#')  # 不管 apt 给的是 http 还是 mirror+file 地址,都从 pool/ 起截
+            for host in http://archive.ubuntu.com/ubuntu http://mirrors.edge.kernel.org/ubuntu; do
+              curl -fsSL --retry 3 --speed-limit 500000 --speed-time 20 --max-time 300 -o "$name" "$host/$path" && break
+              echo "从 $host 下载 $name 失败,换源"; rm -f "$name"
+            done
+            test -s "$name"
+          done
           ls -la
