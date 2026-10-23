@@ -4,6 +4,11 @@ SQLAlchemy setup for PostgreSQL with optimized connection pooling
 """
 
 import logging
+import os
+import socket
+import threading
+import time
+from datetime import datetime, timezone
 from typing import Generator
 
 from sqlalchemy import create_engine, event
@@ -48,6 +53,7 @@ def receive_checkout(dbapi_conn, connection_record, connection_proxy):
     logger.debug(
         f"Connection checked out from pool. Pool status: {engine.pool.status()}"
     )
+    note_checkout(engine.pool.checkedout())
 
 
 @event.listens_for(engine, "checkin")
@@ -101,3 +107,57 @@ def init_db() -> None:
     Creates all tables defined in models
     """
     Base.metadata.create_all(bind=engine)
+
+
+# ── 连接池在用峰值(spec §7 T2):每进程每分钟的最高值写进 Redis,ops_check 按前缀读 ──
+POOL_PEAK_KEY = "ops:pool_peak:{minute}:{proc}"
+_pool_peak = 0
+_reporter_started = False
+
+
+def note_checkout(checked_out: int) -> None:
+    # ponytail: 不加锁,并发 checkout 时最多少记 1;峰值是趋势指标,不值得在热路径上加锁
+    global _pool_peak
+    if checked_out > _pool_peak:
+        _pool_peak = checked_out
+
+
+def flush_pool_peak(redis, current: int, now: datetime) -> int | None:
+    """写 max(本分钟峰值, current),再把峰值重置成 current(跨分钟仍被占着的连接算进下一分钟)。
+    redis 为 None 或报错 → None,不抛。"""
+    global _pool_peak
+    if redis is None:
+        return None
+    value = max(_pool_peak, current)
+    key = POOL_PEAK_KEY.format(
+        minute=now.strftime("%Y%m%d%H%M"), proc=f"{socket.gethostname()}-{os.getpid()}"
+    )
+    try:
+        redis.set(key, value, ex=900)
+    except Exception:
+        logger.warning("pool peak flush failed", exc_info=True)
+        return None
+    _pool_peak = current
+    return value
+
+
+def start_pool_peak_reporter() -> None:
+    """守护线程每 60 秒上报一次;每进程只起一个。"""
+    global _reporter_started
+    if _reporter_started:
+        return
+    _reporter_started = True
+
+    def loop():
+        from app.services.recognition.service import _get_redis
+
+        while True:
+            time.sleep(60)
+            try:
+                flush_pool_peak(
+                    _get_redis(), engine.pool.checkedout(), datetime.now(timezone.utc)
+                )
+            except Exception:
+                logger.warning("pool peak reporter failed", exc_info=True)
+
+    threading.Thread(target=loop, name="pool-peak", daemon=True).start()
