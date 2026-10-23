@@ -133,3 +133,6 @@ frontend/gomuseum_app/coverage/
 
 # 识别 benchmark 产物（离线原型，整目录不入库）
 backend/scripts/recognition_bench/data/
+
+# superpowers 头脑风暴草图(本地)
+.superpowers/

@@ -174,3 +174,9 @@ def project_info():
         "description": "An AI-powered museum guide platform.",
         "features": ["artwork_recognition", "ai_powered", "caching"],
     }
+
+
+# 公开网站 /{lang}/... 必须最后挂:它的通配路径会吞掉在它之后注册的 /api/health/ 等路由
+from app.api.web.site_pages import router as site_router  # noqa: E402
+
+app.include_router(site_router)
