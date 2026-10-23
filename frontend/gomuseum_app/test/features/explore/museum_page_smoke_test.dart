@@ -39,6 +39,8 @@ class _FakeCatalogDs implements CatalogRemoteDataSource {
             '是巴黎最受欢迎的博物馆之一，见证了艺术从学院派走向现代的转折。',
         'opening_hours': '周二–周日 9:30–18:00',
         'official_url': 'https://www.musee-orsay.fr',
+        'cover_image': 'https://r2/cover_large.jpg',
+        'cover_credit': 'Jane Doe · CC BY-SA 4.0',
       },
       'categories': [
         {'code': 'all', 'label': '全部', 'count': 2},
@@ -206,6 +208,8 @@ void main() {
     expect(find.textContaining('9:30–18:00'), findsOneWidget);
     expect(find.text('官方网站'), findsOneWidget);
     expect(find.textContaining('musee-orsay.fr'), findsOneWidget);
+    // 封面署名(Commons 建筑照公开展示须署名)
+    expect(find.text('Jane Doe · CC BY-SA 4.0'), findsOneWidget);
   });
 
   testWidgets(

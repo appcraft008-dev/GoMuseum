@@ -1117,6 +1117,8 @@ def get_museum_pack(
                 if m.cover_image_key
                 else None
             ),
+            # 封面署名「作者 · 授权」(加法,可 null;建筑照来自 Commons,公开展示须署名)
+            "cover_credit": m.cover_credit if m.cover_image_key else None,
         }
     )
     return pack

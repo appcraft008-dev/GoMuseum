@@ -64,4 +64,18 @@ void main() {
     expect(old.description, isNull);
     expect(old.coverImage, isNull);
   });
+
+  test('cover_credit 加法字段：解析；空串/缺 → null（不显署名）', () {
+    final m = MuseumDetail.fromJson(const {
+      'slug': 'orsay',
+      'cover_image': 'https://r2/cover_large.jpg',
+      'cover_credit': ' Jane Doe · CC BY-SA 4.0 ',
+    });
+    expect(m.coverCredit, 'Jane Doe · CC BY-SA 4.0');
+    expect(
+        MuseumDetail.fromJson(const {'slug': 'orsay', 'cover_credit': ''})
+            .coverCredit,
+        isNull);
+    expect(MuseumDetail.fromJson(const {'slug': 'orsay'}).coverCredit, isNull);
+  });
 }

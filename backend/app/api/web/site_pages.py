@@ -519,7 +519,7 @@ def museum_page(
     cover = cover_credit = None
     if m.cover_image_key:
         cover = _sized(get_object_storage(), m.cover_image_key, "large")
-        cover_credit = (
+        cover_credit = m.cover_credit or (
             db.query(ObjectImage.credit)
             .filter(ObjectImage.image_key == m.cover_image_key)
             .limit(1)

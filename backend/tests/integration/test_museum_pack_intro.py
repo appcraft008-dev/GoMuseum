@@ -59,3 +59,13 @@ def test_pack_cover_image_large_url(session):
     session.commit()
     pack = museum_repo.get_museum_pack(session, "orsay", "zh")
     assert pack["cover_image"] == "https://r2/images/Q1/0_large.jpg"
+
+
+def test_pack_cover_credit_additive(session):
+    # 加法字段:无封面/无署名为 null,老 App 不读不受影响
+    assert museum_repo.get_museum_pack(session, "orsay", "zh")["cover_credit"] is None
+    m = session.query(Museum).one()
+    m.cover_image_key, m.cover_credit = "images/Q1/cover-ab", "Jane Doe · CC BY-SA 4.0"
+    session.commit()
+    pack = museum_repo.get_museum_pack(session, "orsay", "zh")
+    assert pack["cover_credit"] == "Jane Doe · CC BY-SA 4.0"

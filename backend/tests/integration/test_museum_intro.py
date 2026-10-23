@@ -187,7 +187,7 @@ def test_cover_rejects_then_picks_next(session):
         )
 
     key = select_cover(
-        session, "orsay", complete=judge, fetch_building_photo=lambda qid: None
+        session, "orsay", complete=judge, fetch_candidates=lambda qid: []
     )
     assert key == "imgB"
     assert session.query(Museum).one().cover_image_key == "imgB"
@@ -203,9 +203,7 @@ def test_cover_judge_error_skips_conservatively(session):
         return '{"appropriate": true}'
 
     assert (
-        select_cover(
-            session, "orsay", complete=judge, fetch_building_photo=lambda qid: None
-        )
+        select_cover(session, "orsay", complete=judge, fetch_candidates=lambda qid: [])
         == "imgB"
     )
 
@@ -238,34 +236,65 @@ def _fake_bytes(url):
     return buf.getvalue()
 
 
-def test_cover_prefers_building_photo_skips_safety_gate(session):
-    # 建筑照优先,不经安全闸(complete 若被调用会 1/0 报错——证明确实跳过)
+INTERIOR = "https://commons.wikimedia.org/wiki/Special:FilePath/Hall.jpg"
+FACADE = "https://commons.wikimedia.org/wiki/Special:FilePath/Facade.jpg"
+
+
+def _cover(session, cands, *, exterior=lambda url: url == FACADE, **kw):
+    kw.setdefault("storage", _FakeStorage())
+    kw.setdefault("fetch_bytes", _fake_bytes)
+    kw.setdefault("complete", lambda s, u: 1 / 0)  # 建筑照不走藏品安全闸
+    return select_cover(
+        session,
+        "orsay",
+        fetch_candidates=lambda qid: cands,
+        is_exterior=exterior,
+        fetch_credit=lambda url: f"credit of {url.rsplit('/', 1)[-1]}",
+        **kw,
+    )
+
+
+def test_cover_skips_interior_takes_facade_with_credit(session):
+    # 规则:封面只要建筑外观全景/正门;内景(小皇宫 10-23 实例)跳过
     storage = _FakeStorage()
-    key = select_cover(
+    key = _cover(session, [INTERIOR, FACADE], storage=storage)
+    assert key.startswith("images/Q23402/cover-")
+    assert storage.put_calls == [f"{key}_thumb.jpg", f"{key}_large.jpg"]
+    m = session.query(Museum).one()
+    assert m.cover_image_key == key and m.cover_credit == "credit of Facade.jpg"
+
+
+def test_cover_key_differs_per_photo(session):
+    # 换了照片 key 就换:旧文件不被复用、App 缓存也跟着刷新
+    a = _cover(session, [FACADE])
+    b = _cover(
         session,
-        "orsay",
-        complete=lambda s, u: 1 / 0,
-        fetch_building_photo=lambda qid: "http://commons.wikimedia.org/x.jpg",
-        storage=storage,
-        fetch_bytes=_fake_bytes,
+        [FACADE.replace("Facade", "Other")],
+        exterior=lambda u: True,
+        force=True,
     )
-    assert key == "images/Q23402/0"
-    assert storage.put_calls == [
-        "images/Q23402/0_thumb.jpg",
-        "images/Q23402/0_large.jpg",
-    ]
-    assert session.query(Museum).filter_by(slug="orsay").one().cover_image_key == key
+    assert a != b
 
 
-def test_cover_falls_back_to_artwork_when_no_building_photo(session):
+def test_cover_exterior_check_error_skips_candidate(session):
+    def judge(url):
+        if url == INTERIOR:
+            raise RuntimeError("vision down")
+        return True
+
+    assert _cover(session, [INTERIOR, FACADE], exterior=judge).startswith(
+        "images/Q23402/cover-"
+    )
+    assert session.query(Museum).one().cover_credit == "credit of Facade.jpg"
+
+
+def test_cover_falls_back_to_artwork_when_no_exterior(session):
     _add_obj(session, "Q1", "Water Lilies", 50, key="imgB")
-    key = select_cover(
-        session,
-        "orsay",
-        complete=lambda s, u: '{"appropriate": true}',
-        fetch_building_photo=lambda qid: None,  # 无建筑照
-    )
-    assert key == "imgB"  # 走回原藏品逻辑
+    key = _cover(session, [INTERIOR], complete=lambda s, u: '{"appropriate": true}')
+    assert key == "imgB"
+    assert (
+        session.query(Museum).one().cover_credit is None
+    )  # 藏品图署名在 object_images
 
 
 def test_cover_falls_back_to_artwork_when_materialize_fails(session):
@@ -274,13 +303,11 @@ def test_cover_falls_back_to_artwork_when_materialize_fails(session):
     def _boom(url):
         raise RuntimeError("network down")
 
-    key = select_cover(
+    key = _cover(
         session,
-        "orsay",
-        complete=lambda s, u: '{"appropriate": true}',
-        fetch_building_photo=lambda qid: "http://x.jpg",
+        [FACADE],
         fetch_bytes=_boom,
-        storage=_FakeStorage(),
+        complete=lambda s, u: '{"appropriate": true}',
     )
     assert key == "imgB"  # 建筑照下载失败不开天窗,回落藏品
 
@@ -291,12 +318,12 @@ def test_cover_no_qid_skips_building_photo(session):
     session.commit()
     called = {"n": 0}
 
-    def _fbp(qid):
+    def _cands(qid):
         called["n"] += 1
-        return "http://x.jpg"
+        return [FACADE]
 
     key = select_cover(
-        session, "orsay", complete=lambda s, u: 1 / 0, fetch_building_photo=_fbp
+        session, "orsay", complete=lambda s, u: 1 / 0, fetch_candidates=_cands
     )
     assert called["n"] == 0 and key is None  # 无qid跳过建筑照;无藏品可退→None
 
