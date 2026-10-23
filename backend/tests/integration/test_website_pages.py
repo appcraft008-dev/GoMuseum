@@ -249,3 +249,85 @@ def test_home_phone_animates_scan_then_play(client):
         assert 'class="phone anim"' in html
         assert f"/w/static/app-{lang}-scan.jpg" in html
         assert f"/w/static/app-{lang}-play.jpg" in html
+
+
+def _ld(html):
+    import json
+    import re
+
+    return [
+        json.loads(x)
+        for x in re.findall(
+            r'<script type="application/ld\+json">(.*?)</script>', html, re.S
+        )
+    ]
+
+
+def _desc(html):
+    import html as h
+    import re
+
+    return h.unescape(re.search(r'<meta name="description" content="([^"]*)"', html)[1])
+
+
+def test_meta_description_cut_at_sentence(client, db):
+    # 搜索结果只显示前 ~155 字符(中日韩 ~80 字),硬切半句很难看 → 在句末截
+    m = db.query(Museum).filter_by(slug="orsay").one()
+    m.description_i18n = {
+        "en": "The first sentence is long enough to describe the museum well. "
+        + "Second goes on and on " * 10
+        + "end.",
+        "zh": "第一句话在这里写得足够长一些，用来完整地介绍这座博物馆的历史。"
+        + "第二句一直写下去" * 15
+        + "。",
+    }
+    db.commit()
+    assert _desc(client.get("/en/paris/orsay/").text) == (
+        "The first sentence is long enough to describe the museum well."
+    )
+    assert _desc(client.get("/zh/paris/orsay/").text) == (
+        "第一句话在这里写得足够长一些，用来完整地介绍这座博物馆的历史。"
+    )
+
+
+def test_meta_description_without_sentence_end_gets_ellipsis(client, db):
+    m = db.query(Museum).filter_by(slug="orsay").one()
+    m.description_i18n = {"en": "word " * 60}
+    db.commit()
+    d = _desc(client.get("/en/paris/orsay/").text)
+    assert len(d) <= 156 and d.endswith("word…")
+
+
+def test_museum_jsonld(client, db):
+    m = db.query(Museum).filter_by(slug="orsay").one()
+    m.cover_image_key = "images/Q23402/cover-ab"
+    db.commit()
+    (ld,) = _ld(client.get("/en/paris/orsay/").text)
+    assert ld["@type"] == "Museum"
+    assert ld["name"] == "Musée d'Orsay"
+    assert ld["url"] == "https://gomuseum.app/en/paris/orsay/"
+    assert ld["image"].endswith("cover-ab_large.jpg")
+    assert ld["address"]["addressLocality"] == "Paris"
+
+
+def test_home_jsonld(client):
+    # 不放 installUrl:iPhone 访客不能拿到 Play 链接(test_iphone_gets_no_play_link)
+    (ld,) = _ld(client.get("/en/").text)
+    assert ld["@type"] == "MobileApplication"
+    assert ld["operatingSystem"] == "Android"
+
+
+def test_meta_description_ignores_german_ordinal_dot(client, db):
+    # 「12. Jahrhundert」的点不是句末
+    m = db.query(Museum).filter_by(slug="orsay").one()
+    m.description_i18n = {
+        "de": "Das Museum liegt im historischen Palast, der auf das späte 12. "
+        + "Jahrhundert zurückgeht und lange " * 6
+        + "blieb."
+    }
+    db.commit()
+    _work(db, m, "Q104", ("de",))
+    _work(db, m, "Q105", ("de",))
+    db.commit()
+    d = _desc(client.get("/de/paris/orsay/").text)
+    assert not d.endswith("12.") and d.endswith("…")
