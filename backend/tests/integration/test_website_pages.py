@@ -199,3 +199,12 @@ def test_museum_without_language_content_not_listed(client, db):
     _publish(db, "emptyp")
     for path in ("/en/", "/en/paris/"):
         assert "EmptyParis" not in client.get(path).text, path
+
+
+def test_theme_toggle_on_every_page(client):
+    # 亮/暗开关:默认跟系统;选过的存本地,<head> 里先应用,免得刷新先闪一下另一个主题
+    for path in ("/en/", "/zh/paris/orsay/"):  # base.html 共用,作品页同理
+        r = client.get(path)
+        assert 'class="theme-btn"' in r.text, path
+        head = r.text.split("</head>")[0]
+        assert "gm-theme" in head and "dataset.theme" in head, path
