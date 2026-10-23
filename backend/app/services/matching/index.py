@@ -87,6 +87,7 @@ class Core:
             for w in words:
                 b[len(w)].append(w)
             self.by_len[f] = b
+        self._near_cache: dict[tuple, list[str]] = {}
         self.by_inv: dict[str, list[int]] = collections.defaultdict(list)
         for i, e in enumerate(entries):
             if e.get("inv"):
@@ -108,11 +109,7 @@ class Core:
             out[tok] = 1.0
         if len(tok) >= _FUZZY_MIN and not is_cjk(tok):
             k = 1 if len(tok) < 7 else 2
-            b = self.by_len[field]
-            # 合并后重排回字母序:同距离并列时 limit=8 取到的词与扫全词表一致
-            near = sorted(
-                w for n in range(len(tok) - k, len(tok) + k + 1) for w in b.get(n, ())
-            )
+            near = self._near(field, len(tok) - k, len(tok) + k)
             for v, d, _ in process.extract(
                 tok, near, scorer=OSA.distance, score_cutoff=k, limit=8
             ):
@@ -124,6 +121,17 @@ class Core:
                     out[vocab[j]] = max(out.get(vocab[j], 0.0), 0.9)
                 j += 1
         return out
+
+    def _near(self, field: str, lo: int, hi: int) -> list[str]:
+        """长度在 [lo, hi] 的库词,合并后重排回字母序(同距离并列时 limit=8 取到的词
+        与扫全词表一致)。按区间缓存:每次现排一遍曾占一次识别匹配 5s(prod 10-19)。"""
+        key = (field, lo, hi)
+        got = self._near_cache.get(key)
+        if got is None:
+            b = self.by_len[field]
+            got = sorted(w for n in range(lo, hi + 1) for w in b.get(n, ()))
+            self._near_cache[key] = got  # 并发下最多重复算一次,结果相同
+        return got
 
     def _token_hits(self, tok, fields, prefix, allowed) -> dict[int, float]:
         best: dict[int, float] = {}

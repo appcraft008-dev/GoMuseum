@@ -97,3 +97,19 @@ def test_surname_on_label_counts_as_artist_evidence():
         label_lines_inv_only=True,
     )
     assert acc and acc[0][0] == "Q_CR"
+
+
+def test_artist_check_once_per_distinct_artist(monkeypatch):
+    """prod 10-19:47 行墙签 × 上万候选 × 作者 → same_person 180 万次、匹配 13s。
+    同一作者名在多件作品上重复,判同结果只算一次。"""
+    from app.services.matching import core
+
+    idx = [_e(f"Q{i}", {f"madonna {i}"}, {"giovanni bellini"}) for i in range(30)]
+    calls = []
+    real = core.same_person
+    monkeypatch.setattr(
+        core, "same_person", lambda *a, **k: calls.append(a) or real(*a, **k)
+    )
+    acc, _ = recognize(idx, ["Madonna"], ["line one", "line two"], ["Giovanni Bellini"])
+    assert acc  # 行为不变:作者照样对上
+    assert len(calls) <= 3, f"{len(calls)} 次:按件重复判同了"
