@@ -8,7 +8,11 @@
     <a class="btn" href="#download" data-track="download_hero">{{ t('cta_download') }}</a>
     <p class="small">{{ t('free_note', n=free_n) }}</p>
   </div>
-  {% if screenshot %}<div class="phone"><img src="{{ screenshot }}" alt="GoMuseum" width="540" height="1200"></div>{% endif %}
+  {% if screenshot %}<div class="phone anim" aria-hidden="true">
+    <img src="{{ screenshot[0] }}" alt="" width="540" height="1200">
+    <img class="frame-play" src="{{ screenshot[1] }}" alt="" width="540" height="1200" loading="lazy">
+    <i class="scanline"></i>
+  </div>{% endif %}
 </section>
 
 {% if cities|length > 1 %}
