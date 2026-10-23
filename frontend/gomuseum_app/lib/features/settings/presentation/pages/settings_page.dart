@@ -32,6 +32,11 @@ import 'package:gomuseum_app/ui/gm/gm.dart';
 const kPrivacyPolicyUrl = 'https://gomuseum.app/privacy.html';
 const kTermsUrl = 'https://gomuseum.app/terms.html';
 
+/// 政策页带上 App 当前语言:页面按 `?lang=` → 浏览器语言 → 英文 选,不带就跟着
+/// 浏览器走,App 设成法语、手机是中文时会打开中文版。键与网站 `legal-src` 一致。
+String legalUrl(String url, Locale locale) =>
+    '$url?lang=${apiLanguage(locale)}';
+
 /// 版本脚注。**不会自动跟着 pubspec 走** —— `package_info_plus` 同样是
 /// 原生插件(理由见 [kPrivacyPolicyUrl]),所以这里是手写的。
 /// 发版改 pubspec 时必须一起改;忘了会被 `settings_version_test` 拦下。
@@ -124,13 +129,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               gm: gm,
               icon: GmIcons.shield,
               label: l10n.privacyPolicy,
-              onTap: () => openUrlOrCopy(context, kPrivacyPolicyUrl),
+              onTap: () => openUrlOrCopy(
+                  context,
+                  legalUrl(
+                      kPrivacyPolicyUrl, ref.read(resolvedLocaleProvider))),
             ),
             _row(
               gm: gm,
               icon: GmIcons.doc,
               label: l10n.authTermsOfService,
-              onTap: () => openUrlOrCopy(context, kTermsUrl),
+              onTap: () => openUrlOrCopy(context,
+                  legalUrl(kTermsUrl, ref.read(resolvedLocaleProvider))),
             ),
             const SizedBox(height: 28),
             Center(

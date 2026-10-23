@@ -41,8 +41,10 @@ class _FlakyDs implements CatalogRemoteDataSource {
   }
 
   @override
-  Future<MuseumDetail> getMuseumDetail(
-      {required String slug, String language = 'zh'}) async {
+  Future<MuseumDetail> getMuseumDetail({
+    required String slug,
+    String language = 'zh',
+  }) async {
     _tick();
     return const MuseumDetail(
       slug: 'petit_palais',
@@ -58,22 +60,24 @@ class _FlakyDs implements CatalogRemoteDataSource {
   }
 
   @override
-  Future<ObjectListPage> getObjects(
-      {required String slug,
-      String? category,
-      String sort = 'popularity',
-      int limit = 50,
-      int offset = 0,
-      String language = 'zh'}) async {
+  Future<ObjectListPage> getObjects({
+    required String slug,
+    String? category,
+    String sort = 'popularity',
+    int limit = 50,
+    int offset = 0,
+    String language = 'zh',
+  }) async {
     _tick();
     return const ObjectListPage(items: [], total: 0, limit: 50, offset: 0);
   }
 
   @override
-  Future<ObjectContent> getObjectContent(
-      {required String slug,
-      required String qid,
-      String language = 'zh'}) async {
+  Future<ObjectContent> getObjectContent({
+    required String slug,
+    required String qid,
+    String language = 'zh',
+  }) async {
     _tick();
     return ObjectContent(
       qid: qid,
@@ -90,28 +94,32 @@ class _FlakyDs implements CatalogRemoteDataSource {
   }
 
   @override
-  Future<GuideAudioResult> getGuideAudio(
-          {required String slug,
-          required String qid,
-          required String language,
-          String section = 'guide',
-          int? qaSort}) async =>
+  Future<GuideAudioResult> getGuideAudio({
+    required String slug,
+    required String qid,
+    required String language,
+    String section = 'guide',
+    int? qaSort,
+  }) async =>
       const GuideAudioFailed();
 
   @override
-  String audioStreamUrl(
-          {required String slug,
-          required String qid,
-          required String language,
-          String section = 'guide'}) =>
+  String audioStreamUrl({
+    required String slug,
+    required String qid,
+    required String language,
+    String section = 'guide',
+  }) =>
       'http://x/stream';
 }
 
 ProviderContainer _container(_FlakyDs ds) {
-  final c = ProviderContainer(overrides: [
-    catalogDataSourceProvider.overrideWithValue(ds),
-    resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
-  ]);
+  final c = ProviderContainer(
+    overrides: [
+      catalogDataSourceProvider.overrideWithValue(ds),
+      resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+    ],
+  );
   addTearDown(c.dispose);
   return c;
 }
@@ -206,7 +214,9 @@ void main() {
 
       var sub = c.listen(objectContentProvider(key), (_, __) {});
       expect(
-          (await c.read(objectContentProvider(key).future)).generating, isTrue);
+        (await c.read(objectContentProvider(key).future)).generating,
+        isTrue,
+      );
       expect(ds.calls, 1);
       await _leavePage(sub);
 
@@ -223,7 +233,9 @@ void main() {
 
       var sub = c.listen(objectContentProvider(key), (_, __) {});
       await expectLater(
-          c.read(objectContentProvider(key).future), throwsA(isA<Exception>()));
+        c.read(objectContentProvider(key).future),
+        throwsA(isA<Exception>()),
+      );
       await _leavePage(sub);
 
       sub = c.listen(objectContentProvider(key), (_, __) {});
@@ -246,4 +258,70 @@ void main() {
       sub.close();
     });
   });
+
+  group('objectContentProvider 换语言(#1045 真机 10-21)', () {
+    final key = (slug: 'petit_palais', qid: 'Q138632428');
+
+    test('④ en 已完成 → 切 zh 生成中 → 离开再进必须重新请求', () async {
+      final ds = _LangDs();
+      final locale = StateProvider<Locale>((_) => const Locale('en'));
+      final c = ProviderContainer(
+        overrides: [
+          catalogDataSourceProvider.overrideWithValue(ds),
+          resolvedLocaleProvider.overrideWith((ref) => ref.watch(locale)),
+        ],
+      );
+      addTearDown(c.dispose);
+
+      var sub = c.listen(objectContentProvider(key), (_, __) {});
+      expect(
+        (await c.read(objectContentProvider(key).future)).generating,
+        isFalse,
+      ); // en 完成 → keepAlive
+      c.read(locale.notifier).state = const Locale('zh');
+      expect(
+        (await c.read(objectContentProvider(key).future)).generating,
+        isTrue,
+      );
+      final before = ds.calls;
+      await _leavePage(sub);
+
+      sub = c.listen(objectContentProvider(key), (_, __) {});
+      await c.read(objectContentProvider(key).future);
+      expect(
+        ds.calls,
+        before + 1,
+        reason: 'en 那次的 keepAlive 没随重建释放的话,这里不发请求(真机 78s 无 /content)',
+      );
+      sub.close();
+    });
+  });
+}
+
+/// en 生成完;zh 一直生成中。
+class _LangDs extends _FlakyDs {
+  @override
+  Future<ObjectContent> getObjectContent({
+    required String slug,
+    required String qid,
+    String language = 'zh',
+  }) async {
+    final c = await super.getObjectContent(
+      slug: slug,
+      qid: qid,
+      language: language,
+    );
+    return ObjectContent(
+      qid: c.qid,
+      category: c.category,
+      language: language,
+      status: c.status,
+      generating: language != 'en',
+      title: c.title,
+      images: c.images,
+      facts: c.facts,
+      tabs: c.tabs,
+      suggestedQuestions: c.suggestedQuestions,
+    );
+  }
 }
