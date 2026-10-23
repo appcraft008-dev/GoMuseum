@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.app_event import AppEvent
 from app.models.content import ObjectContentSection
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
@@ -28,6 +29,7 @@ def session():
             MuseumObject.__table__,
             ObjectImage.__table__,
             ObjectContentSection.__table__,
+            AppEvent.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -828,3 +830,32 @@ def test_slots_full_retries_do_not_burn_user_quota(session):
         lazy._SEM.release()
     assert r.get(f"lazy:u:u3:{_today()}") == str(WEIGHT_GENERATION)
     assert r.get(f"lazy:ip:museum-wifi:{_today()}") == str(WEIGHT_GENERATION)
+
+
+def test_cap_hit_logs_event_with_tier(session):
+    from app.services.enrichment.lazy import CAP_PER_IP_REGISTERED, _today
+
+    r = fakeredis.FakeRedis(decode_responses=True)
+    r.set(f"lazy:ipr:1.2.3.4:{_today()}", CAP_PER_IP_REGISTERED)
+    reason = maybe_trigger(
+        session,
+        "Q1",
+        schedule=lambda *a: None,
+        environment="staging",
+        user_id="u1",
+        ip="1.2.3.4",
+        is_guest=False,
+        redis=r,
+    )
+    assert reason == "daily_cap"
+    assert [
+        e.props for e in session.query(AppEvent).filter_by(name="lazy_cap_hit")
+    ] == [
+        {
+            "qid": "Q1",
+            "layer": "ip",
+            "tier": "registered",
+            "kind": "lazy generation",
+            "exempt": False,
+        }
+    ]

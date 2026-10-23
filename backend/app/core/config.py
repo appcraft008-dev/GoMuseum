@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     # 模型 → (输入, 输出) $/百万 token(TTS 为 $/百万字)。只写要补或要改的模型,
     # 和 llm_usage.DEFAULT_LLM_PRICES 合并(R8)
     LLM_PRICES: dict[str, tuple[float, float]] = {}
+    # 懒生成每日额度(段;方案 A)。正式账号的 IP 层单独计数(spec §4.2 共用 WiFi 不误伤)
+    CAP_PER_USER: int = 160
+    CAP_PER_IP: int = 300
+    CAP_PER_IP_REGISTERED: int = 600
 
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""

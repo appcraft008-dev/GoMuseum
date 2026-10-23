@@ -45,10 +45,14 @@ LAZY_SOURCE = "ai_lazy"
 # 按"次数"计会让单 IP 100 次新生成 ≈ 800 段吃掉全站 80%(spec 第二节)。
 WEIGHT_GENERATION = 8
 WEIGHT_TRANSLATION = 3
-CAP_PER_USER = 160  # ≈20 件新生成;挡单账号,也挡同一 WiFi 下一个人吃光整个 IP
-CAP_PER_IP = (
-    300  # ≈37 件;单 IP 最多吃全站 30%。⚠️对 IPv6/代理轮换无效,分布式只靠全站上限
-)
+# 值见 settings(默认 160/300/600 段)
+CAP_PER_USER = (
+    settings.CAP_PER_USER
+)  # ≈20 件新生成;挡单账号,也挡同一 WiFi 下一个人吃光整个 IP
+# ≈37 件;单 IP 最多吃全站 30%(游客)。⚠️对 IPv6/代理轮换无效,分布式只靠全站上限
+CAP_PER_IP = settings.CAP_PER_IP
+# 正式账号的 IP 层另计一份(键 lazy:ipr:):团体共用 WiFi 时游客用满不拦正式账号,反之亦然
+CAP_PER_IP_REGISTERED = settings.CAP_PER_IP_REGISTERED
 _CAP_TTL_S = 2 * 86400
 
 
@@ -627,7 +631,7 @@ def _alert_fail_open() -> None:
     )
 
 
-def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
+def _charge(user_id, ip, weight: int, redis=None, item=None, guest=True) -> str | None:
     """按账号、按 IP 扣当日额度。None=放行;"user"/"ip"=该层超限(已全部回滚)。
 
     item(如 "gen:Q1"/"tr:Q1:de"):同一人同一动作当天只扣一次。生成名额满时后台放弃并清锁,
@@ -637,10 +641,12 @@ def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
     先 INCRBY 再判断:INCRBY 原子,两个 worker 并发也不会越线(先查后加会)。
     超限就把本次加上的全部退回,被拒的请求不占额度。
     Redis 不可用 → 放行(fail open):全站上限在 DB,照样兜底;反过来 Redis 一抖全站懒生成就停了。
+    guest=False(正式账号):IP 层改用 lazy:ipr:、上限 CAP_PER_IP_REGISTERED;身份不明按游客。
     """
+    ip_layer = ("ip", ip, CAP_PER_IP) if guest else ("ipr", ip, CAP_PER_IP_REGISTERED)
     layers = [
         (name, f"lazy:{name}:{ident}:{_today()}", cap)
-        for name, ident, cap in (("u", user_id, CAP_PER_USER), ("ip", ip, CAP_PER_IP))
+        for name, ident, cap in (("u", user_id, CAP_PER_USER), ip_layer)
         if ident
     ]
     if not layers:
@@ -687,6 +693,21 @@ def _charge(user_id, ip, weight: int, redis=None, item=None) -> str | None:
     return layer
 
 
+def _log_cap_hit(db, qid, layer, is_guest, kind):
+    """额度用尽埋点(spec §7 T4)。exempt 账号不扣额度,所以这里恒为 False。"""
+    from app.services.event_log import log_event
+
+    log_event(
+        db,
+        "lazy_cap_hit",
+        qid=qid,
+        layer=layer,
+        tier="guest" if is_guest else "registered",
+        kind=kind,
+        exempt=False,
+    )
+
+
 def imageless_stub(db, obj) -> bool:
     """无图 stub 不点火(方案 B 2026-10-11):列表/搜索/识别都不给无图件,用户本就到不了;
     生成了也没图可看、外观描写还会是编的。口径同探索列表(has_image_clause)。"""
@@ -713,6 +734,7 @@ def maybe_trigger(
     ip=None,
     exempt=False,
     redis=None,
+    is_guest=True,
 ) -> str | None:
     """content 端点接线(拿到锁才调度,其余静默)。返回不生成的原因,端点透传给 App:
     "daily_cap"=当日预算用尽(App 提示明天再来);"no_image"=无图 stub 不生成;其余 None。
@@ -721,7 +743,7 @@ def maybe_trigger(
     - empty 不动(无可接地材料,防循环烧钱)。
     只在部署环境生效(development/测试不触发:防误连库、误烧 LLM 费)。
     - user_id/ip:按账号/IP 扣当日额度(拿到锁后才扣,超了清锁返回 "daily_cap");
-      exempt=运营预览账号,只受全站上限。"""
+      exempt=运营预览账号,只受全站上限;is_guest 选 IP 层档位(见 _charge)。"""
     if environment is None:
         from app.core.config import settings
 
@@ -762,17 +784,21 @@ def maybe_trigger(
         return "daily_cap"
     if wants_generation:
         if try_acquire_lock(db, o):
-            if not exempt and _charge(
-                user_id, ip, WEIGHT_GENERATION, redis, item=f"gen:{qid}"
-            ):
+            layer = not exempt and _charge(
+                user_id, ip, WEIGHT_GENERATION, redis, f"gen:{qid}", is_guest
+            )
+            if layer:
                 _clear_lock(db, o)
+                _log_cap_hit(db, qid, layer, is_guest, "lazy generation")
                 return "daily_cap"
             schedule(run_lazy_generation, qid, language)
         return
     if try_acquire_lock(db, o, require_status=("ready",)):
-        if not exempt and _charge(
-            user_id, ip, WEIGHT_TRANSLATION, redis, item=f"tr:{qid}:{language}"
-        ):
+        layer = not exempt and _charge(
+            user_id, ip, WEIGHT_TRANSLATION, redis, f"tr:{qid}:{language}", is_guest
+        )
+        if layer:
             _clear_lock(db, o)
+            _log_cap_hit(db, qid, layer, is_guest, "lazy translation")
             return "daily_cap"
         schedule(run_lazy_translation, qid, language)
