@@ -220,6 +220,6 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
   .work.wide { grid-template-columns: 1fr; }
   .work.wide .work-pic img { max-height: 70vh; }
   .work.wide .work-sections { overflow: visible; }
-  .work.wide .work-panel { max-width: 760px; }
+  .work.wide .work-panel, .work.wide .sec-b p { max-width: none; }  /* 横幅图在上:正文与图同宽 */
   .work.wide .work-pic img { margin: 0 auto; width: auto; max-width: 100%; }
 }
