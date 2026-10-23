@@ -1,0 +1,36 @@
+# 给 ci.yml 的「Install CJK fonts」预热 .deb 缓存。
+# PR 只能读到自己或目标分支(staging/main)的缓存,而 CI 只在 PR 上跑 → 必须在分支上各存一份。
+# 本文件合入 staging / main 时各跑一次;缓存被逐出(7 天无人读)后 CI 会回落到在线下载,手动 Run workflow 可补。
+name: Warm font cache
+
+on:
+  push:
+    branches: [staging, main]
+    paths: [.github/workflows/font-cache.yml]
+  workflow_dispatch:
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/cache@v4
+        with:
+          path: ~/apt-fonts
+          key: apt-fonts-noto-${{ runner.os }}-v1
+      # 不走 apt 的 Azure 镜像(2026-10-23 预热时 fonts-noto-cjk 在它上面卡满 15 分钟):
+      # 用 apt 算出下载地址,换官方源 curl 下,失败再换 kernel.org 镜像
+      - name: Download font debs
+        run: |
+          ls ~/apt-fonts/*.deb >/dev/null 2>&1 && exit 0
+          sudo apt-get update
+          mkdir -p ~/apt-fonts && cd ~/apt-fonts
+          apt-get download --print-uris fonts-noto-cjk fonts-noto-core fonts-noto-mono | while read -r uri name _; do
+            path=$(echo "$uri" | tr -d "'" | sed -E 's#^.*/(pool/)#\1#')  # 不管 apt 给的是 http 还是 mirror+file 地址,都从 pool/ 起截
+            for host in http://archive.ubuntu.com/ubuntu http://mirrors.edge.kernel.org/ubuntu; do
+              curl -fsSL --retry 3 --speed-limit 500000 --speed-time 20 --max-time 300 -o "$name" "$host/$path" && break
+              echo "从 $host 下载 $name 失败,换源"; rm -f "$name"
+            done
+            test -s "$name"
+          done
+          ls -la

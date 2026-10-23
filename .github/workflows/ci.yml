@@ -163,8 +163,28 @@ jobs:
           python-version: '3.13'
 
       # 分享图字体(与 prod 镜像同样两个 apt 包);缺了 test_font_present_in_ci 判红
+      # Azure 镜像偶发下载卡死/极慢(2026-10-23 多次卡满 job 时限):.deb 缓存进 actions/cache,
+      # 命中就本地装、不碰镜像;未命中才下载(断流 30s 重试;每轮限 90s,正常 ~9s;最多 2 轮)
+      - name: Cache CJK font debs
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-fonts
+          key: apt-fonts-noto-${{ runner.os }}-v1
       - name: Install CJK fonts (share card)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk fonts-noto-core
+        timeout-minutes: 4
+        run: |
+          if ls ~/apt-fonts/*.deb >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends ~/apt-fonts/*.deb && exit 0
+          fi
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o APT::Keep-Downloaded-Packages=true"
+          for i in 1 2; do
+            if sudo timeout 90 sh -c "apt-get $APT update && apt-get $APT install -y --no-install-recommends fonts-noto-cjk fonts-noto-core"; then
+              mkdir -p ~/apt-fonts && cp /var/cache/apt/archives/fonts-noto-*.deb ~/apt-fonts/
+              exit 0
+            fi
+            echo "字体安装第 $i 轮失败/超时,重试"
+          done
+          exit 1
 
       # 按 poetry.lock 装,与 prod 镜像(backend/Dockerfile)同一套版本。
       # 此前 `pip install -e ".[dev,test]"` 按 pyproject 的宽松范围现解依赖:
