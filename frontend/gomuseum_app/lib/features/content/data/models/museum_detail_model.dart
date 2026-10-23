@@ -36,6 +36,7 @@ class MuseumDetail extends Equatable {
     this.archiveCount,
     this.description,
     this.coverImage,
+    this.coverCredit,
     this.nameI18n = const {},
     this.pass,
   });
@@ -65,6 +66,9 @@ class MuseumDetail extends Equatable {
 
   /// 封面直链（large 档，加法字段）；无合规封面 → null，封面 banner 隐藏。
   final String? coverImage;
+
+  /// 封面署名「作者 · 授权」（加法字段）；缺/空 → null，不显署名。
+  final String? coverCredit;
 
   /// 十语馆名（后端 `name_i18n`）。老后端不返回 → 空表。
   final Map<String, String> nameI18n;
@@ -106,6 +110,9 @@ class MuseumDetail extends Equatable {
       coverImage: (j['cover_image'] as String?)?.isNotEmpty == true
           ? j['cover_image'] as String
           : null,
+      coverCredit: (j['cover_credit'] as String?)?.trim().isNotEmpty == true
+          ? (j['cover_credit'] as String).trim()
+          : null,
       nameI18n: parseNameI18n(j['name_i18n']),
       pass: PassOffer.fromJson(j['pass']),
     );
@@ -126,6 +133,7 @@ class MuseumDetail extends Equatable {
         archiveCount,
         description,
         coverImage,
+        coverCredit,
         nameI18n,
         pass?.productId,
       ];

@@ -715,23 +715,73 @@ def fetch_museum_intro_material(qid: str, *, get_json=None) -> dict:
         return {"extract_en": None}
 
 
-_BUILDING_PHOTO_QUERY = "SELECT ?img WHERE {{ wd:{qid} wdt:P18 ?img . }} LIMIT 1"
+# 封面候选:馆自身 P18 在前,其后是「被这家馆使用」(P466 occupant)的建筑的 P18。
+# 不走 P276 位置:实测会带出「巴黎」「杜乐丽花园」这类非本馆建筑的图。
+_COVER_CANDIDATES_QUERY = """SELECT ?img ?kind WHERE {{
+  {{ wd:{qid} wdt:P18 ?img . BIND("a" AS ?kind) }}
+  UNION {{ ?b wdt:P466 wd:{qid} . ?b wdt:P18 ?img . BIND("b" AS ?kind) }}
+}}"""
 
 
-def fetch_museum_building_photo(qid: str, *, run_query=None) -> str | None:
-    """馆自身(非藏品)P18 建筑外观照(spec 2026-07-20 museum-cover-intro-quality)。
-    SPARQL wdt:P18 绑定即完整 Commons Special:FilePath URL,可直接下载。无→None。"""
+def fetch_museum_cover_candidates(qid: str, *, run_query=None) -> list[str]:
+    """馆封面候选图(Commons Special:FilePath URL),馆自身图在前、所在建筑图在后。
+    是不是外观照这里不判(机构条目的 P18 可能是展厅内景,小皇宫 2026-10-23 实例),
+    交给 select_cover 的外观判定。"""
     from app.services.enrichment.identity import is_wikidata_qid
 
     if not is_wikidata_qid(qid):
-        return None
+        return []
     run_query = run_query or _default_artist_query
-    rows = run_query(_BUILDING_PHOTO_QUERY.format(qid=qid))
-    for row in rows:
-        v = (row.get("img") or {}).get("value")
-        if v:
-            return v
-    return None
+    rows = run_query(_COVER_CANDIDATES_QUERY.format(qid=qid))
+    ranked = sorted(
+        rows, key=lambda r: (r.get("kind") or {}).get("value", "z")
+    )  # 稳定排序:同类保持返回顺序
+    out: list[str] = []
+    for r in ranked:
+        v = (r.get("img") or {}).get("value")
+        if v and v not in out:
+            out.append(v)
+    return out
+
+
+def _get_json(url, params):
+    import requests
+
+    r = requests.get(
+        url,
+        params=params,
+        headers={"User-Agent": "GoMuseumBot/0.1 (contact appcraft008@gmail.com)"},
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def commons_credit(file_url: str, *, get_json=None) -> str | None:
+    """Commons 图的署名「作者 · 授权」(CC-BY/BY-SA 公开展示要写作者)。取不到 → None。"""
+    import re
+    from urllib.parse import unquote
+
+    name = unquote(file_url.rsplit("/", 1)[-1].split("?", 1)[0])
+    try:
+        data = (get_json or _get_json)(
+            "https://commons.wikimedia.org/w/api.php",
+            {
+                "action": "query",
+                "format": "json",
+                "prop": "imageinfo",
+                "iiprop": "extmetadata",
+                "titles": f"File:{name}",
+            },
+        )
+        page = next(iter(data["query"]["pages"].values()))
+        meta = page["imageinfo"][0]["extmetadata"]
+    except Exception:
+        return None
+    artist = re.sub(r"<[^>]+>", "", (meta.get("Artist") or {}).get("value", "")).strip()
+    lic = (meta.get("LicenseShortName") or {}).get("value", "").strip()
+    parts = [p for p in (artist, lic) if p]
+    return " · ".join(parts) or None
 
 
 # 弃权关键词全部是法语(Auteur 字段是法语,不是英语),2026-10-07 实测奥赛

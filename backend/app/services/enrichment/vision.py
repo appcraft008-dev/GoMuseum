@@ -312,3 +312,48 @@ def describe_image(
     if not text:
         raise RuntimeError(f"视觉描述为空: {image_url}")
     return text
+
+
+_EXTERIOR_SYSTEM = (
+    'You check museum cover photos. Answer with JSON {"exterior": true|false}. '
+    "true only if the photo shows the OUTSIDE of a building: a full facade, a panoramic "
+    "view of the building, or its main entrance seen from outside. false for interiors "
+    "(halls, galleries, staircases, ceilings), close-up details, artworks, maps, "
+    "aerial city views where the building is not the subject, or anything else."
+)
+
+
+def is_building_exterior(
+    image_url: str, *, chat_fn=None, image_bytes: bytes | None = None
+) -> bool:
+    """馆封面规则(2026-10-23 用户定):封面只用建筑外观全景或正门全景,不用内景。
+    图先下载再以 base64 发(Commons 跳转链接让 OpenAI 自己去取会偶发超时)。
+    判不了就抛异常,由调用方保守跳过这张。"""
+    import base64
+    import json
+
+    if image_bytes is None:
+        from app.services.enrichment.materializer import _default_fetch_bytes
+
+        if "Special:FilePath" in image_url and "?" not in image_url:
+            image_url += "?width=800"  # 判外观不需要原图(Commons 原图常十几 MB)
+        image_bytes = _default_fetch_bytes(image_url)
+    data_url = "data:image/jpeg;base64," + base64.b64encode(image_bytes).decode()
+    messages = [
+        {"role": "system", "content": _EXTERIOR_SYSTEM},
+        {
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": data_url, "detail": "low"}}
+            ],
+        },
+    ]
+    text, real, tin, tout = (chat_fn or chat)(
+        MODEL, messages, channel="vision", temperature=0
+    )
+    if chat_fn is None:
+        from app.services.llm_usage import record_llm_usage
+
+        record_llm_usage("vision", real, tin, tout)
+    m = re.search(r"\{.*\}", text or "", re.S)
+    return bool(json.loads(m.group(0)).get("exterior")) if m else False

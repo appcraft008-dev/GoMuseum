@@ -70,6 +70,7 @@
   ],
   "description": "奥赛坐落在一座1900年的火车站里…(AI接地叙事,按language)",
   "cover_image": "<url|null>",
+  "cover_credit": "<作者 · 授权|null>",
   "artworks": [
     {"qid": "Q334138", "title_zh": "世界的起源", "title_en": "L'Origine du monde",
      "artist_zh": "居斯塔夫·库尔贝", "artist_en": "Gustave Courbet",
@@ -79,7 +80,7 @@
 }
 ```
 
-- `description`(✅2026-07-18 spec museum-intro,加法):馆叙事介绍,AI 接地生成 `description_i18n[language]`,缺→en→任一→**null**;2-3 短段落以 `\n\n` 分隔(2026-07-20 优化,不再是单一长段)。`cover_image`:封面 R2 直链(large 档,**可 null**)——**优先馆自身建筑外观照**(Museum.qid 的 Wikidata P18,不过安全闸:架构零裸体风险),无建筑照/下载失败则回落藏品图逐件得体性判定(古典/宗教裸体可,写实露骨否决)。前端 `as String?`,null 整块隐藏。老 App 不读不炸。
+- `description`(✅2026-07-18 spec museum-intro,加法):馆叙事介绍,AI 接地生成 `description_i18n[language]`,缺→en→任一→**null**;2-3 短段落以 `\n\n` 分隔(2026-07-20 优化,不再是单一长段)。`cover_image`:封面 R2 直链(large 档,**可 null**)——**封面规则(2026-10-23 用户定):只用建筑外观全景或正门全景,不用内景**。候选=馆自身 P18 + 「被本馆使用」(P466)的建筑 P18,逐张过视觉外观判定(内景/局部/展品不过,判定出错保守跳过;小皇宫机构条目 P18 是展厅内景即为此立规),不过安全闸(架构零裸体风险);都不合格/下载失败才回落藏品图逐件得体性判定(古典/宗教裸体可,写实露骨否决)。`cover_credit`(✅2026-10-23,加法,可 null):封面署名「作者 · 授权」,建筑照取自 Commons extmetadata(CC-BY/BY-SA 公开展示须署名),回落藏品图时为 null(署名在该图 `credit`)。前端 `as String?`,null 整块隐藏。老 App 不读不炸。
 
 - `pass`(加法,2026-09-29):这家馆**在售**的通票 `{product_id, days, label, covers}`,`label` 按 `language` 本地化
   (范围名,如「巴黎」「荷兰」——前端不知道也不许假设它是城市还是国家),`covers` = 该票覆盖的**已放出**馆名;
@@ -359,9 +360,9 @@
    默认不批量预生成,靠懒生成按需兜底(§收录策略⑤);运营定了 top-N 再跑。
    → 逐件:stub 抓材料(Wikipedia/Joconde)→ 生成 → 接地闸 → 翻译 → 落库 → `ready`/`empty`。
 6. **馆介绍+封面**:`python scripts/onboard.py <slug> intro --target <env>`(见§博物馆介绍)
-   → 接地生成馆叙事简介(按语言补缺)+ 选封面。**封面零额外配置**:优先取步骤①已填的
-   `wikidata_qid` 的 Wikidata P18(馆建筑外观照,自动下载物化);无 P18 才回落藏品图逐件
-   得体性判定。**这是"零代码上新馆"最新的一条自动收益**——不用为封面单独准备图源。
+   → 接地生成馆叙事简介(按语言补缺)+ 选封面。**封面零额外配置**:取步骤①已填的
+   `wikidata_qid` 的 P18 及其所在建筑(P466)的 P18,**只收建筑外观全景/正门**(视觉判定,内景跳过),
+   自动下载物化并存署名;都不合格才回落藏品图逐件得体性判定。只重选封面:`onboard.py <slug> cover --force`。**这是"零代码上新馆"最新的一条自动收益**——不用为封面单独准备图源。
    **6b. 覆盖率报告**:`python scripts/onboard.py coverage-report --museum <slug>` → 分层数字/展陈分布/KPI,
    回写 `museums.stats`(馆页数字数据源)。
 7. **验收闸(最后一步,全绿才算上完)**:`python scripts/onboard.py <slug> verify --target <env>`
@@ -1956,3 +1957,4 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 - 2026-06-30:阶段2a 落地——生成从证据包取料(用上 P88/P180 富属性)+ guide 互知去重(模块各守 lane、不复述头条、返空不发布)+ overview 退役(迁移删 category_sections 映射)。
 - 2026-06-29(晚):阶段1 证据包落地——`MuseumObject.evidence_pack`(facts/narrative/flagged);端点4 `facts` 策展+人性化(去学术噪音,provenance/exhibitions/bibliography 移出面板)。
 - 2026-06-29:升级为**主文档**(契约+内容体系+上馆手册+路线图)。纳入端点4 `default_guide`(默认标准讲解);新增 §内容体系(三层+模块库+证据包+去重lane+动态模块)、§路线图(阶段1-4)、§北极星 + 工作纪律。
+- 2026-10-23:**馆封面只用建筑外观**(用户定规则;小皇宫机构条目 P18 是展厅内景)。候选加所在建筑 P466 的 P18 + 视觉外观判定;加法字段 `cover_credit`(Commons 署名);封面 key 带照片 URL 哈希,换图即换 URL。

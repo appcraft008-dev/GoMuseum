@@ -224,5 +224,19 @@ def test_museum_cover_with_credit(client, db):
     assert "Photo Someone" in html
 
 
+def test_museum_cover_credit_from_museum_row(client, db):
+    # 建筑照封面的署名存在 museums.cover_credit
+    m = db.query(Museum).filter_by(slug="orsay").one()
+    m.cover_image_key, m.cover_credit = (
+        "images/Q23402/cover-ab",
+        "Jane Doe · CC BY-SA 4.0",
+    )
+    db.commit()
+    html = client.get("/en/paris/orsay/").text
+    assert (
+        "images/Q23402/cover-ab_large.jpg" in html and "Jane Doe · CC BY-SA 4.0" in html
+    )
+
+
 def test_museum_without_cover_has_no_hero(client):
     assert 'class="m-cover' not in client.get("/en/paris/orsay/").text
