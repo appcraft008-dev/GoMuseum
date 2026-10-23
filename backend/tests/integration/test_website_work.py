@@ -199,3 +199,24 @@ def test_legacy_link_301_keeps_source(client, db, monkeypatch):
     ev = db.query(AppEvent).filter_by(name="share_page_view").one()
     assert ev.props["source"] == "wa"
     assert client.get("/a/orsay/Q404?lang=en").status_code == 404
+
+
+def _extra_lang(db, qid, lang):
+    o = db.query(MuseumObject).filter_by(qid=qid).one()
+    _sec(db, o, "guide", lang)
+    db.commit()
+
+
+def test_work_hreflang_limited_to_site_languages(client, db):
+    _extra_lang(db, MS1, "pt")  # 库里有但网站不支持的语言
+    html = client.get(f"/en/paris/orsay/{MS1}/").text
+    assert 'hreflang="pt"' not in html
+
+
+def test_legacy_link_never_lands_on_unsupported_language(client, db, monkeypatch):
+    monkeypatch.setattr(settings, "WEBSITE_LIVE", True)
+    _extra_lang(db, MS1, "pt")
+    r = client.get(f"/a/orsay/{MS1}", headers={"accept-language": "pt"})
+    assert r.status_code == 301 and r.headers["location"].startswith("/en/")
+    r = client.get(f"/a/orsay/{MS1}", params={"lang": "en", "s": "a b&c"})
+    assert r.headers["location"].endswith("?s=a%20b%26c")
