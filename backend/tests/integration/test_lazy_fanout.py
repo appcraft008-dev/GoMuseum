@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.app_event import AppEvent
 from app.models.artist import Artist
 from app.models.content import (
     CategorySection,
@@ -41,6 +42,7 @@ def session():
             ObjectContentSection.__table__,
             ObjectSuggestedQuestion.__table__,
             Artist.__table__,
+            AppEvent.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()
@@ -276,7 +278,7 @@ def test_maybe_trigger_resumes_stale_fanout(session):
         environment="production",
         language="en",
     )
-    assert (lazy._run_fanout, ("Q1",)) in calls
+    assert (lazy._run_fanout, ("Q1", False)) in calls
 
 
 def test_maybe_trigger_leaves_fresh_fanout_alone(session):
@@ -598,3 +600,34 @@ def test_fanout_bio_not_retranslated_when_present(session):
 
     _run(session, ["en", "fr", "de", "it"], _Tr4())
     assert calls == ["it"]
+
+
+def test_fanout_slot_full_logs_event(session, monkeypatch):
+    r = fakeredis.FakeRedis(decode_responses=True)
+    monkeypatch.setattr(lazy, "_redis", lambda: r)
+    held = [
+        lazy._FANOUT_SEM.acquire(blocking=False)
+        for _ in range(lazy.settings.LAZY_FANOUT_CONCURRENCY)
+    ]
+    assert all(held)
+    try:
+        for _ in range(2):
+            assert (
+                lazy._fanout(
+                    session,
+                    "Q1",
+                    langs=["en", "fr", "de"],
+                    translator=_Tr(),
+                    session_factory=lambda: session,
+                    close=False,
+                    executor=_Serial(),
+                    exempt=True,
+                )
+                == {}
+            )
+    finally:
+        for _ in held:
+            lazy._FANOUT_SEM.release()
+    assert [
+        e.props for e in session.query(AppEvent).filter_by(name="lazy_fanout_slot_full")
+    ] == [{"qid": "Q1", "exempt": True}]
