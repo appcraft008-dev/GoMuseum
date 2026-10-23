@@ -1,6 +1,10 @@
 #!/bin/bash
 # GoMuseum 生产部署脚本：本机执行，rsync 到 VPS 后远程构建启动
 # 用法: ./deploy.sh [ssh_key_path]
+#
+# ⚠️ 本脚本会把仓库的 compose 同步到 VPS,并对全部服务 `up -d`(会重建 postgres)。
+# 日常部署走 CD(.github/workflows/deploy.yml)。compose 改了服务参数之后,只能按
+# docs/ops/capacity-runbook.md 在维护窗口里单独 `up -d <服务>`。
 set -euo pipefail
 VPS=root@38.242.207.219
 KEY=${1:-$HOME/.ssh/deepmeeting_deploy}

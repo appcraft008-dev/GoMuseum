@@ -20,7 +20,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.artist import Artist
 from app.models.museum import Museum
-from app.models.museum_object import MuseumObject
+from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.entitlement_service import pass_for_museum, pass_title
 from app.services.museum_repo import (
     _sized,
@@ -515,6 +515,16 @@ def museum_page(
     name = museum_name(m, lang)
     c = wd.find_city(db, city)
     intro = _paras((m.description_i18n or {}).get(lang))
+    # 馆封面:复用 App 的 cover_image_key(large 档),署名取同一张图
+    cover = cover_credit = None
+    if m.cover_image_key:
+        cover = _sized(get_object_storage(), m.cover_image_key, "large")
+        cover_credit = m.cover_credit or (
+            db.query(ObjectImage.credit)
+            .filter(ObjectImage.image_key == m.cover_image_key)
+            .limit(1)
+            .scalar()
+        )
 
     def path_for(code):
         p = f"/{code}/{city}/{museum_slug}/"
@@ -538,6 +548,8 @@ def museum_page(
         city_name=_city_name(c, lang),
         name=name,
         intro=intro,
+        cover=cover,
+        cover_credit=cover_credit,
         website=museum_website(museum_slug),
         pass_note=_pass_note([m], lang),
         must_see=_must_see_cards(db, m, lang),

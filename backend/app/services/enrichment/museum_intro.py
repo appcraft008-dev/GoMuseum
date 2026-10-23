@@ -12,7 +12,8 @@ from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.content_enricher import _parse_json
 from app.services.enrichment.material import (
     _variant_convert,
-    fetch_museum_building_photo,
+    commons_credit,
+    fetch_museum_cover_candidates,
     fetch_museum_intro_material,
 )
 from app.services.enrichment.prompts import (
@@ -117,14 +118,13 @@ def generate_museum_intro(
 def _materialize_museum_photo(url, qid, storage, fetch_bytes) -> str | None:
     """馆建筑照精简物化:下载→两档→R2。不嵌入(建筑照绝不能进识别向量库,
     会污染藏品识别),不建 ObjectImage 行(Museum 无此关联,直接落 cover_image_key)。
-    失败返回 None(调用方回落藏品逻辑)。"""
-    from app.services.enrichment.materializer import (
-        _two_tiers,
-        _Unreadable,
-        image_base_key,
-    )
+    key 带照片 URL 的短哈希:换照片就换 key,不复用旧文件、App 图片缓存也随之刷新。
+    失败返回 None(调用方试下一张/回落藏品逻辑)。"""
+    import hashlib
 
-    base = image_base_key(qid, 0)
+    from app.services.enrichment.materializer import _two_tiers, _Unreadable
+
+    base = f"images/{qid}/cover-{hashlib.sha1(url.encode()).hexdigest()[:8]}"
     try:
         if storage.exists(f"{base}_thumb.jpg") and storage.exists(f"{base}_large.jpg"):
             return base  # 共桶复用(同 materialize_row 惯例)
@@ -153,13 +153,16 @@ def select_cover(
     complete,
     force: bool = False,
     limit: int = 10,
-    fetch_building_photo=None,
+    fetch_candidates=None,
+    is_exterior=None,
+    fetch_credit=None,
     storage=None,
     fetch_bytes=None,
 ):
-    """封面优先取馆自身建筑外观照(P18,不过安全闸——架构零裸体风险,且无
-    title/artist/category 可喂闸);无建筑照/下载失败 → 回落藏品图逐件得体性判定
-    (原逻辑不变)。全不过→None(前端隐藏)。"""
+    """封面规则(2026-10-23 用户定):只用建筑外观全景或正门全景,不用内景。
+    候选 = 馆自身 P18 + 所在建筑 P18(见 fetch_museum_cover_candidates),逐张过外观
+    判定(判定出错=保守跳过这张),第一张合格的物化并存 Commons 署名。
+    都不合格/都失败 → 回落藏品图逐件得体性判定(原逻辑不变)。全不过→None(前端隐藏)。"""
     m = db.query(Museum).filter_by(slug=slug).one_or_none()
     if not m:
         return None
@@ -167,20 +170,33 @@ def select_cover(
         return m.cover_image_key
 
     if m.qid:
-        fetch_photo = fetch_building_photo or fetch_museum_building_photo
-        photo_url = fetch_photo(m.qid)
-        if photo_url:
-            from app.services.enrichment.materializer import _default_fetch_bytes
-            from app.services.storage import get_object_storage
+        from app.services.enrichment.vision import is_building_exterior
 
-            key = _materialize_museum_photo(
-                photo_url,
-                m.qid,
-                storage or get_object_storage(),
-                fetch_bytes or _default_fetch_bytes,
-            )
+        cands = (fetch_candidates or fetch_museum_cover_candidates)(m.qid)
+        check = is_exterior or is_building_exterior
+        for url in cands:
+            try:
+                ok = check(url)
+            except Exception:
+                logger.warning(
+                    "cover exterior check failed, skip: %s", url, exc_info=True
+                )
+                continue
+            if not ok:
+                logger.info("cover candidate not an exterior, skip: %s", url)
+                continue
+            if fetch_bytes is None:
+                from app.services.enrichment.materializer import _default_fetch_bytes
+
+                fetch_bytes = _default_fetch_bytes
+            if storage is None:
+                from app.services.storage import get_object_storage
+
+                storage = get_object_storage()
+            key = _materialize_museum_photo(url, m.qid, storage, fetch_bytes)
             if key:
                 m.cover_image_key = key
+                m.cover_credit = (fetch_credit or commons_credit)(url)
                 db.flush()
                 return key
 
@@ -207,6 +223,7 @@ def select_cover(
             continue
         if ok:
             m.cover_image_key = img.image_key
+            m.cover_credit = None  # 藏品图署名在 object_images.credit
             db.flush()
             return img.image_key
     return None

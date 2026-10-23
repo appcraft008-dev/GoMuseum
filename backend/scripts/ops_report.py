@@ -98,8 +98,11 @@ def build(db, days: int) -> dict:
         for e in ev.filter(AppEvent.name == "content_viewed")
     )
 
+    from scripts.ops_check import collect
+
     return {
         "days": days,
+        "capacity": collect(db, datetime.now(timezone.utc)),
         "users": {"total": users_total, "pass_active": paid, "pass_pending": pending},
         "funnel": {
             k: counts.get(k, 0)
@@ -182,6 +185,10 @@ def render(r: dict) -> None:
         )
     if f2.get("purchase_refunded"):
         print(f"├─ 退款 {f2['purchase_refunded']} 笔(已自动撤销权益)")
+    from scripts.ops_check import render_capacity
+
+    for line in render_capacity(r["capacity"]):
+        print(line)
     print(f"└─ 收入 €{r['revenue_eur']:.2f}")
 
 

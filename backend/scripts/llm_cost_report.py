@@ -5,24 +5,16 @@ import sys
 
 sys.path.insert(0, ".")
 
-# 粗估单价($/1M tokens;tts=$/1M 字符)。价目会变,改这里即可——报告以 tokens 为准,$ 仅参考。
-PRICES = {
-    "gpt-4o-mini": (0.15, 0.60),
-    "gpt-4o": (2.50, 10.00),
-    "gpt-4o@batch": (1.25, 5.00),  # Batch API 半价(成本工程②)
-    "tts-1": (15.0, 0.0),  # $15/1M chars
-    "google-chirp3-hd": (30.0, 0.0),  # $30/1M chars(每月前 100 万字免费,报表不扣)
-}
-
 
 def report(db, days: int) -> str:
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     from sqlalchemy import func
 
     from app.models.llm_usage import LLMUsage
+    from app.services.llm_usage import cost_usd, utc_today
 
-    since = date.today() - timedelta(days=days)
+    since = utc_today() - timedelta(days=days)
     rows = (
         db.query(
             LLMUsage.channel,
@@ -35,20 +27,22 @@ def report(db, days: int) -> str:
         .group_by(LLMUsage.channel, LLMUsage.model)
         .all()
     )
-    lines = [f"LLM 用量 最近{days}天(截至 {date.today()})"]
+    lines = [f"LLM 用量 最近{days}天(截至 {utc_today()} UTC)"]
     lines.append(
         f"{'channel':14} {'model':18} {'calls':>8} {'in':>12} {'out':>10} {'~$':>8}"
     )
     total = 0.0
     for ch, model, calls, tin, tout in sorted(rows, key=lambda r: r[0]):
         tin, tout = int(tin or 0), int(tout or 0)  # PG SUM 返回 Decimal,统一成 int
-        pin, pout = PRICES.get(model, (0.0, 0.0))
-        usd = tin / 1e6 * pin + tout / 1e6 * pout
+        usd, known = cost_usd(model, tin, tout)
         total += usd
         lines.append(
             f"{ch:14} {model:18} {calls or 0:>8} {tin:>12} {tout:>10} {usd:>8.2f}"
+            + ("" if known else " ?")
         )
-    lines.append(f"{'合计':>54} ~${total:.2f}(粗估,价目见 PRICES)")
+    lines.append(
+        f"{'合计':>54} ~${total:.2f}(粗估,价目见 llm_usage.DEFAULT_LLM_PRICES + .env LLM_PRICES;? = 不在价目里,按最贵价计)"
+    )
     return "\n".join(lines)
 
 

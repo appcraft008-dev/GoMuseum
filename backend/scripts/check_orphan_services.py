@@ -23,7 +23,7 @@ USE_DIRS = ("app", "scripts", "tests")
 # 有意的"无内部调用方":理由必须写清楚,否则不许进这张表
 ALLOW = {
     "add_referral_bonus": "推荐奖励功能待接入 UI;保留服务能力",
-    "fetch_museum_building_photo": "上新馆 CLI 按需调用(动态派发)",
+    "fetch_museum_cover_candidates": "上新馆 CLI 按需调用(动态派发)",
     "run_lazy_images": "运维脚本入口",
     "to_simplified": "繁简转换工具,按需使用",
 }

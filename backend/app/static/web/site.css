@@ -68,6 +68,10 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
 @media (min-width: 1024px) { .hero { grid-template-columns: 1.25fr .75fr; padding-top: 56px; padding-bottom: 52px; } }
 
 .pagehead { padding-top: 22px; padding-bottom: 28px; }
+.m-cover { margin-top: 8px; margin-bottom: 0; }
+.m-cover img { width: 100%; height: clamp(200px, 38vw, 440px); object-fit: cover; border-radius: 6px; background: var(--card); }
+.m-cover figcaption { color: var(--faint); font-size: 12px; margin-top: 6px; }
+.dl-ios { opacity: .8; }
 .intro p { max-width: 68ch; margin: 0 0 12px; }
 .practical { margin-top: 18px; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; max-width: 760px; }
 .practical p { margin: 0; }

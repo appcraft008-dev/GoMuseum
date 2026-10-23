@@ -82,6 +82,13 @@ def _startup() -> None:
         warm_embedder()
     except Exception:
         logger.exception("Embedder warm-up failed (will load on first query)")
+    try:
+        # 连接池在用峰值上报(spec §7 T2,扩容触发指标)
+        from app.core.database import start_pool_peak_reporter
+
+        start_pool_peak_reporter()
+    except Exception:
+        logger.exception("Pool peak reporter failed to start")
 
 
 @asynccontextmanager

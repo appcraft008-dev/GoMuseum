@@ -158,6 +158,8 @@ def object_content(
             # ProxyHeadersMiddleware(main.py)已把它解析成真实客户端 IP
             ip=request.client.host if request.client else None,
             exempt=bool(getattr(user, "can_preview", False)),
+            # 身份不明按游客,走更严的那一档(与 _charge 的默认一致)
+            is_guest=bool(getattr(user, "is_guest", True)),
         )
     data = get_object_content(db, slug, qid, language)
     if data is None:

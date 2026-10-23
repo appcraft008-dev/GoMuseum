@@ -129,3 +129,11 @@ def test_beacon_rejects_non_string_and_cleans_lang(client, db):
     client.post("/w/e", json={"name": "web_share_click", "lang": "xx<script>"})
     ev = db.query(AppEvent).filter_by(name="web_share_click").one()
     assert ev.props["lang"] is None
+
+
+def test_free_scans_not_tied_to_android_and_app_store_soon(client):
+    # 免费次数是 App 的,不分平台;非 iPhone 设备也告诉他 iPhone 版要来了
+    for ua in (DESKTOP, ANDROID):
+        html = client.get("/en/", headers={"user-agent": ua}).text
+        assert "Android · " not in html
+        assert "Coming soon to the App Store" in html

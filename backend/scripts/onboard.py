@@ -116,6 +116,9 @@ def build_parser() -> argparse.ArgumentParser:
     )  # 馆介绍+封面(spec 2026-07-18;门面类预生成,幂等按语言补缺)
     it.add_argument("--target", choices=["staging", "prod"], required=True)
     it.add_argument("--force", action="store_true")
+    cv = sub.add_parser("cover")  # 只重选封面(建筑外观规则),不动介绍
+    cv.add_argument("--target", choices=["staging", "prod"], required=True)
+    cv.add_argument("--force", action="store_true")
     vf = sub.add_parser("verify")  # 上新馆验收闸(六坑固化,全绿才算上完)
     vf.add_argument("--target", choices=["staging", "prod"], required=True)
     vf.add_argument("--langs", default=None)
@@ -534,6 +537,33 @@ def cmd_intro(slug: str, target: str, force: bool = False) -> None:
     print(f"✓ intro: {out} cover={cover}")
 
 
+def cmd_cover(slug: str, target: str, force: bool = False) -> None:
+    """只选封面(馆介绍不动)。--force 按现行规则重选并刷新署名。"""
+    expected = _ENV_BY_TARGET[target]
+    if settings.ENVIRONMENT != expected:
+        raise SystemExit(
+            f"❌ --target={target} 期望容器 ENVIRONMENT={expected}，"
+            f"但当前容器 ENVIRONMENT={settings.ENVIRONMENT}。请在 {expected} 环境容器内运行。"
+        )
+    from app.models.museum import Museum
+    from app.services.enrichment.content_enricher import default_complete
+    from app.services.enrichment.museum_intro import select_cover
+
+    db = SessionLocal()
+    try:
+        cover = select_cover(
+            db,
+            slug,
+            complete=lambda s, u: default_complete(s, u, channel="intro"),
+            force=force,
+        )
+        credit = db.query(Museum.cover_credit).filter_by(slug=slug).scalar()
+        db.commit()
+    finally:
+        db.close()
+    print(f"✓ cover={cover} credit={credit}")
+
+
 def cmd_verify(slug: str, langs: str | None, target: str, as_json: bool) -> None:
     expected = _ENV_BY_TARGET[target]
     if settings.ENVIRONMENT != expected:
@@ -653,6 +683,8 @@ def main(argv=None) -> None:
         cmd_display_evidence(ns.museum, ns.limit)
     elif ns.command == "intro":
         cmd_intro(ns.slug, ns.target, ns.force)
+    elif ns.command == "cover":
+        cmd_cover(ns.slug, ns.target, ns.force)
     elif ns.command == "verify":
         cmd_verify(ns.slug, ns.langs, ns.target, ns.json)
     elif ns.command == "coverage-report":

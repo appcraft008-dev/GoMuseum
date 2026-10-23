@@ -531,17 +531,37 @@ class _CoverTabBody extends StatelessWidget {
           if (cover != null)
             AspectRatio(
               aspectRatio: 4 / 3,
-              child: Image.network(
-                sizedImageUrl(cover, 1080),
-                fit: BoxFit.cover,
-                headers: kImageRequestHeaders,
-                loadingBuilder: (_, child, p) =>
-                    p == null ? child : ColoredBox(color: gm.chipBg),
-                errorBuilder: (_, __, ___) => ColoredBox(
-                  color: gm.chipBg,
-                  child: Center(
-                      child: GmIcon(GmIcons.photo, size: 36, color: gm.faint)),
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    sizedImageUrl(cover, 1080),
+                    fit: BoxFit.cover,
+                    headers: kImageRequestHeaders,
+                    loadingBuilder: (_, child, p) =>
+                        p == null ? child : ColoredBox(color: gm.chipBg),
+                    errorBuilder: (_, __, ___) => ColoredBox(
+                      color: gm.chipBg,
+                      child: Center(
+                          child:
+                              GmIcon(GmIcons.photo, size: 36, color: gm.faint)),
+                    ),
+                  ),
+                  // 署名右下角,同作品详情头图(Commons 建筑照公开展示须署名)
+                  if (detail.coverCredit != null)
+                    Positioned(
+                      bottom: 10,
+                      right: 12,
+                      left: 12,
+                      child: Text(
+                        detail.coverCredit!,
+                        textAlign: TextAlign.right,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GmText.sans(size: 9, color: GmFixed.heroCredit),
+                      ),
+                    ),
+                ],
               ),
             ),
           Padding(

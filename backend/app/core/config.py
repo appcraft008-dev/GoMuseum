@@ -64,6 +64,30 @@ class Settings(BaseSettings):
     LLM_CHANNEL_MODELS: dict[str, str] = {}
     OPENAI_TIMEOUT: int = 30
 
+    # ── 弹性扩容(spec 2026-10-21-elastic-scaling-design)──
+    # 容量数字都是配置项,重启生效(spec §0.1)
+    LAZY_CONCURRENCY: int = 2  # 每进程同时懒生成/懒翻译件数(阶段 1 改 4)
+    LAZY_FANOUT_CONCURRENCY: int = 2  # 每进程同时补语言件数
+    # 游客登录每 IP 限速。slowapi 每进程计数:两个 web 进程合计约 60/时;
+    # 阶段 2 计数改存 Redis 后才是全站 60(spec §4.2)
+    GUEST_LOGIN_RATE: str = "30/hour"
+    # 大模型调用没给超时时的默认值:每次尝试的读写秒数,连接仍 5 秒;SDK 另有 2 次重试
+    LLM_TIMEOUT_S: float = 90
+    # 模型 → (输入, 输出) $/百万 token(TTS 为 $/百万字)。只写要补或要改的模型,
+    # 和 llm_usage.DEFAULT_LLM_PRICES 合并(R8)
+    LLM_PRICES: dict[str, tuple[float, float]] = {}
+    # 懒生成每日额度(段;方案 A)。正式账号的 IP 层单独计数(spec §4.2 共用 WiFi 不误伤)
+    CAP_PER_USER: int = 160
+    CAP_PER_IP: int = 300
+    CAP_PER_IP_REGISTERED: int = 600
+    # 三笔账告警(spec §4.1;R7)。内容生成预算:阶段 0 只告警,到 100% 停止是阶段 4
+    BUDGET_GEN_DAILY_USD: float = 30
+    BUDGET_GEN_MONTHLY_USD: float = 300
+    BUDGET_ALERT_RATIO: float = 0.8
+    # 语音、识别兜底只告警。0 = 关闭;识别默认关闭,上 prod 7 天后按真实账单定线(R7)
+    ALERT_TTS_DAILY_USD: float = 2
+    ALERT_RECOG_DAILY_USD: float = 0
+
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""
 

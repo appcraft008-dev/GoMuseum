@@ -121,6 +121,7 @@ def test_pack_shape(session):
         "artworks",
         "description",  # 加法字段:馆介绍(spec 2026-07-18)
         "cover_image",  # 加法字段:封面
+        "cover_credit",  # 加法字段:封面署名(2026-10-23)
         "pass",  # 加法字段:这家馆卖哪张票(spec 2026-09-28 §3.3)
         "city_i18n",  # 加法字段:十语城市名
     }
