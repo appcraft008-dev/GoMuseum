@@ -107,6 +107,7 @@
 | Joconde 断供期(2026-07-22~09-20)生成的件材料偏薄(纸上作品/馆藏号等 Joconde 特有信息缺失),`generate --force` 可补(10-14 从契约移来) | 决定回刷存量时;会作废音频,按纪律 37 先报数 |
 | 离线馆包 | 收到第一条「馆内没信号打不开」的反馈，或有了真实的分馆使用分布 |
 | 退款后收回权益的链路 | 只有第一笔真实退款才能验证 |
+| **(低优先级)分支保护收紧:CI 不过不许合并** —— **是什么**:10-23 #1071 后端测试被取消(没跑完)仍合进了 staging 并自动部署;main 是否同样会放行没查过。可能是没把 `CI Status Check` 设为必过检查,也可能是管理员身份默认绕过保护(`gh pr merge` 用的就是你的号)。**现在靠什么兜着**:我的合并脚本只在「CI Status Check 通过」后才合(记忆 shell-and-gh-gotchas);staging 不是线上,上 prod 还要过 staging→main 的 CI。**缺它意味着**:脚本写错一次或网页手点合并,就没东西拦。**怎么做**:①我先 `gh api` 只读查 staging/main 现有保护设置,确认是哪种原因;②你在 Settings → Branches(或 Rules)给 staging、main 都把 `CI Status Check` 设为必过,并勾「Do not allow bypassing the above settings」 | 想要硬闸门时;或再出现一次 CI 没跑完就合入 |
 | **(低优先级)外部探活**(UptimeRobot 免费账号,监控类型选 **Keyword**,不要普通 HTTP:它发 HEAD,我们回 405;URL `https://api.gomuseum.app/api/v1/museums`,关键词 `"slug"` 不存在时告警,5 分钟,发你邮箱)。**缺它意味着**:ops_check 跑在同一台 VPS 上、还要查库,整机宕机或数据库挂了它发不出告警,只能靠用户反馈发现 | 你注册;想要「整站挂了也能收到邮件」时,或上真实付费流量前 |
 | **弹性扩容阶段 1–5**(spec `2026-10-21-elastic-scaling-design.md` §11;运维 `docs/ops/capacity-runbook.md`) | ops_check 的阶段提醒邮件,或 ops_report 的容量段越线 |
 | 分享功能的效果判断 | 至少 100 个真实活跃用户之后 |
