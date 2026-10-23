@@ -156,6 +156,15 @@ def test_non_trial_work_has_no_audio_but_marks_app(client):
     assert html.count("Listen in the app") == 3
 
 
+def test_trial_player_has_seek_and_speed(client):
+    # 和 App 一样:进度可拖、倍速可切;非试听件没有播放器
+    trial = client.get(f"/en/paris/orsay/{MS1}/").text
+    assert 'id="pseek" type="range"' in trial
+    assert 'id="pspeed"' in trial and ">1x<" in trial
+    plain = client.get("/en/paris/orsay/Q500/").text
+    assert 'id="pseek"' not in plain and 'id="pspeed"' not in plain
+
+
 def test_work_404_without_language_text(client):
     r = client.get(f"/fr/paris/orsay/{MS1}/")
     assert r.status_code == 404

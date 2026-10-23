@@ -19,6 +19,14 @@
     else if (a.dataset.track) window.gmTrack("web_download_click", { channel: a.dataset.track });
   });
 
+  // ---- 亮/暗开关:默认跟系统;点过就记在本地(纯偏好,不是统计) ----
+  var themeBtn = document.querySelector(".theme-btn");
+  if (themeBtn) themeBtn.addEventListener("click", function () {
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("gm-theme", root.dataset.theme); } catch (e) {}
+  });
+
   // ---- 馆标签 ----
   document.querySelectorAll(".tabs").forEach(function (bar) {
     var host = bar.parentNode;
@@ -81,7 +89,12 @@
     var mbtn = document.getElementById("mbtn");
     var label = document.getElementById("plabel");
     var mlabel = document.getElementById("mlabel");
-    var prog = document.getElementById("pprog");
+    var seek = document.getElementById("pseek");
+    var ptime = document.getElementById("ptime");
+    var pspeed = document.getElementById("pspeed");
+    var speeds = [1, 1.5, 2, 0.75]; // 与 App 一致
+    var rate = 1;
+    var dragging = false;
     var nowTpl = work.dataset.now || "__PART__";
     var playable = secs.map(function (s, i) { return s.dataset.src ? i : -1; }).filter(function (i) { return i >= 0; });
 
@@ -106,6 +119,8 @@
     function play(i) {
       current = i;
       audio.src = secs[i].dataset.src;
+      audio.defaultPlaybackRate = audio.playbackRate = rate; // 换段会重置速率
+      seek.disabled = false;
       audio.play().catch(function () {});
       track("web_trial_play", { part: secs[i].dataset.key });
       if (follow) open(i, true);
@@ -130,14 +145,33 @@
     if (mback) mback.addEventListener("click", backToPlaying);
     audio.addEventListener("play", paint);
     audio.addEventListener("pause", paint);
-    audio.addEventListener("timeupdate", function () {
-      if (audio.duration) prog.style.width = (audio.currentTime / audio.duration * 100) + "%";
+    function fmt(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + ("0" + sec % 60).slice(-2); }
+    function tick() {
+      if (!audio.duration) return;
+      if (!dragging) seek.value = Math.round(audio.currentTime / audio.duration * 1000);
+      ptime.textContent = "-" + fmt((audio.duration - audio.currentTime) / rate); // 剩余按倍速折算,同 App
+    }
+    audio.addEventListener("timeupdate", tick);
+    audio.addEventListener("loadedmetadata", tick);
+    seek.addEventListener("input", function () {
+      dragging = true;
+      if (audio.duration) {
+        audio.currentTime = seek.value / 1000 * audio.duration;
+        ptime.textContent = "-" + fmt((audio.duration - audio.currentTime) / rate);
+      }
+    });
+    seek.addEventListener("change", function () { dragging = false; });
+    pspeed.addEventListener("click", function () {
+      rate = speeds[(speeds.indexOf(rate) + 1) % speeds.length];
+      audio.defaultPlaybackRate = audio.playbackRate = rate;
+      pspeed.textContent = rate + "x";
+      tick();
     });
     audio.addEventListener("ended", function () {
       track("web_trial_complete", { part: secs[current].dataset.key });
       var k = playable.indexOf(current);
       if (k >= 0 && k + 1 < playable.length) play(playable[k + 1]);
-      else { current = -1; paint(); }
+      else { current = -1; seek.value = 0; seek.disabled = true; ptime.textContent = ""; paint(); }
     });
   }
 
