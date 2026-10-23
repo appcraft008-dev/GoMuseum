@@ -42,6 +42,8 @@ TRIGGER_H = 168
 RECOG_BASELINE = {"vector": 1.0, "vector_canvas": 4.0, "vector_crops": 4.2}
 RECOG_ENGINES = ("vector", "vector_canvas", "vector_crops", "text")
 GEN_CHANNELS = ("generate", "gate", "translate", "qa", "vision")
+# 向量检索耗时只看最新这么多条:近 7 天整表拉回 Python 会随识别量线性变重
+_VQ_LIMIT = 2000
 
 
 def _redis():
@@ -275,6 +277,8 @@ def collect(db, now) -> dict:
         t["vq"] / 1000
         for (t,) in db.query(RE.timings)
         .filter(RE.timings.isnot(None), RE.created_at >= naive - timedelta(days=7))
+        .order_by(RE.created_at.desc())
+        .limit(_VQ_LIMIT)
         .all()
         if isinstance(t, dict) and isinstance(t.get("vq"), (int, float))
     ]
@@ -304,6 +308,8 @@ def collect(db, now) -> dict:
         "conn_peak_7d": max(peaks) if peaks else None,
         "cpu_prev": cpu_prev,
         "vq_7d": {"n": len(vq), "p95": p95(vq)},
+        # ponytail: 两个全表 count,prod 10-23 实测 25ms / 83ms(27k 作品、41k 向量)。它们各自的
+        # 阶段线(作品 15 万、向量 10 万)到了就换方案,所以涨不到秒级;真变重再改成每小时算一次
         "vectors": int(
             db.query(func.count(ObjectEmbedding.id))
             .filter(ObjectEmbedding.model == settings.RECOG_MODEL)

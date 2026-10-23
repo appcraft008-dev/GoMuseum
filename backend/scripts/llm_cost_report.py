@@ -7,14 +7,14 @@ sys.path.insert(0, ".")
 
 
 def report(db, days: int) -> str:
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     from sqlalchemy import func
 
     from app.models.llm_usage import LLMUsage
-    from app.services.llm_usage import cost_usd
+    from app.services.llm_usage import cost_usd, utc_today
 
-    since = date.today() - timedelta(days=days)
+    since = utc_today() - timedelta(days=days)
     rows = (
         db.query(
             LLMUsage.channel,
@@ -27,7 +27,7 @@ def report(db, days: int) -> str:
         .group_by(LLMUsage.channel, LLMUsage.model)
         .all()
     )
-    lines = [f"LLM 用量 最近{days}天(截至 {date.today()})"]
+    lines = [f"LLM 用量 最近{days}天(截至 {utc_today()} UTC)"]
     lines.append(
         f"{'channel':14} {'model':18} {'calls':>8} {'in':>12} {'out':>10} {'~$':>8}"
     )

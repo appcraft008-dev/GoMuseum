@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,11 @@ def _insert_for(db):
     return postgresql.insert if name == "postgresql" else sqlite.insert
 
 
+def utc_today() -> date:
+    """记账计日一律按 UTC(spec §4.1),不随容器时区。"""
+    return datetime.now(timezone.utc).date()
+
+
 def usage_upsert(db, channel: str, model: str, tokens_in: int, tokens_out: int):
     """构造那条 upsert。抽出来是为了能直接断言它的 SQL 形状:
     增量得出现在语句里(`llm_usage.calls + 1`),而不是在 Python 里算完再写。
@@ -67,7 +72,7 @@ def usage_upsert(db, channel: str, model: str, tokens_in: int, tokens_out: int):
     from app.models.llm_usage import LLMUsage
 
     stmt = _insert_for(db)(LLMUsage).values(
-        day=date.today(),
+        day=utc_today(),
         channel=channel,
         model=model,
         calls=1,

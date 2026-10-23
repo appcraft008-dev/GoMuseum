@@ -152,3 +152,20 @@ def test_default_prices_cover_models_in_use():
         "google-chirp3-hd",
     ):
         assert m in llm_usage.DEFAULT_LLM_PRICES, m
+
+
+def test_usage_day_is_utc_not_container_local(session, monkeypatch):
+    """记账计日按 UTC(spec §4.1),和 ops_check 的账口径一致(Fable 终审 M8)。"""
+    from datetime import datetime as real_dt
+    from datetime import timezone
+
+    class FakeDT(real_dt):
+        @classmethod
+        def now(cls, tz=None):  # 本地已是 01-02 00:30,UTC 还是 01-01 22:30(都不是今天)
+            if tz is None:
+                return real_dt(2027, 1, 2, 0, 30)
+            return real_dt(2027, 1, 1, 22, 30, tzinfo=timezone.utc)
+
+    monkeypatch.setattr(llm_usage, "datetime", FakeDT, raising=False)
+    stmt = llm_usage.usage_upsert(session, "generate", "m", 1, 1)
+    assert stmt.compile().params["day"] == date(2027, 1, 1)

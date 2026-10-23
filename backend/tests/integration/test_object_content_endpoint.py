@@ -247,7 +247,7 @@ def test_endpoint_passes_user_ip_and_preview_flag(client, monkeypatch):
     assert seen["user_id"] == "user-9"
     assert seen["exempt"] is True
     assert seen["ip"]  # TestClient 的 client.host("testclient"),非空即可
-    assert seen["is_guest"] is False
+    assert seen["is_guest"] is True  # 身份不明按游客,走更严的档(Fable 终审 M7)
 
 
 def test_per_user_cap_reaches_app_as_daily_cap(client, monkeypatch):
