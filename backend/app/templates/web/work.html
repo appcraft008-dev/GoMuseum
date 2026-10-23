@@ -14,7 +14,10 @@
       {% if is_trial %}
       <div class="player" id="player">
         <button type="button" class="pbtn" id="pbtn" aria-label="{{ t('play_from_guide') }}">▶</button>
-        <div class="pmeta"><span id="plabel">{{ t('play_from_guide') }}</span><span class="pbar"><i id="pprog"></i></span></div>
+        <div class="pmeta"><span id="plabel">{{ t('play_from_guide') }}</span>
+          <span class="prow"><input id="pseek" type="range" min="0" max="1000" step="1" value="0" aria-label="{{ t('seek') }}" disabled><span class="ptime" id="ptime"></span></span>
+        </div>
+        <button type="button" class="pspeed" id="pspeed" aria-label="{{ t('speed') }}">1x</button>
       </div>
       <p class="small">🎧 {{ t('trial_note', n=trial_n) }}</p>
       <audio id="audio" preload="none"></audio>
