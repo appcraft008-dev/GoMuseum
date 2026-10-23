@@ -592,6 +592,12 @@ def test_page_language_follows_the_language_the_mail_was_sent_in(client, outbox)
         "zh-hant": ("重設密碼", ["重设密码", "Set a new password"]),
         "en": ("Set a new password", ["重设密码", "Définir un nouveau"]),
         "fr": ("Définir un nouveau mot de passe", ["重设密码", "Set a new password"]),
+        "de": ("Neues Passwort festlegen", ["Set a new password", "重设密码"]),
+        "es": ("Crea una contraseña nueva", ["Set a new password", "重设密码"]),
+        "it": ("Imposta una nuova password", ["Set a new password", "重设密码"]),
+        "pl": ("Ustaw nowe hasło", ["Set a new password", "重设密码"]),
+        "ja": ("新しいパスワードを設定", ["Set a new password", "重设密码"]),
+        "ko": ("새 비밀번호 설정", ["Set a new password", "重设密码"]),
     }
     html_lang = {"zh": "zh-CN", "zh-hant": "zh-Hant"}
     for i, (lang, (want, must_not)) in enumerate(expected.items()):
@@ -645,6 +651,13 @@ def test_every_language_has_the_same_page_and_mail_keys():
         assert set(account_recovery._PAGE_COPY[lang]) == keys, lang
 
 
+def test_recovery_covers_every_app_language():
+    """2026-10-24:App 已十语,找回密码/验证信却只有中英法 —— 日韩德西意波用户拿到英文信。"""
+    from app.services.website.data import LANGS
+
+    assert set(account_recovery.SUPPORTED_LANGS) == set(LANGS)
+
+
 def test_expired_link_notice_follows_the_language_too(client, outbox):
     """「链接已失效」是最常被看到的一页(重复点开就是它),不能漏。"""
     c, _ = client
@@ -656,7 +669,7 @@ def test_expired_link_notice_follows_the_language_too(client, outbox):
 def test_unknown_language_falls_back_to_english(client, outbox):
     """认不出的语言回落英文 —— 和邮件同一条规则,不能两处不一致。"""
     c, _ = client
-    html = c.get("/api/v1/auth/reset?token=bogus&lang=ja").text
+    html = c.get("/api/v1/auth/reset?token=bogus&lang=sw").text
     assert "Link no longer valid" in html
 
 
