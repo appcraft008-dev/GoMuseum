@@ -1,5 +1,10 @@
 # GoMuseum Staging（VPS 单机，与 prod 隔离）
 # 显式 name 避免与 myplantmate 的 "staging" 项目同名冲突
+#
+# 资源上限合计 2 核 4G:和 prod 同机,压测时不能挤占 prod 用户(spec §8)。压测前先看
+# 阶段 0 计划 Task 12 的内存实测。
+# ⚠️ build.context 是 VPS 上的目录布局(./backend),这个文件在仓库里不能直接 compose up;
+# 它是手工改 VPS /opt/gomuseum/staging/docker-compose.yml 时的评审依据。
 name: gomuseum-staging
 
 services:
@@ -7,6 +12,8 @@ services:
     image: postgres:16
     container_name: gomuseum_staging_postgres
     restart: unless-stopped
+    cpus: 0.4
+    mem_limit: 768m
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -23,6 +30,8 @@ services:
     image: redis:7
     container_name: gomuseum_staging_redis
     restart: unless-stopped
+    cpus: 0.1
+    mem_limit: 256m
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
@@ -38,6 +47,8 @@ services:
       dockerfile: Dockerfile
     container_name: gomuseum_staging_backend
     restart: unless-stopped
+    cpus: 1.5
+    mem_limit: 3g
     depends_on:
       gomuseum_postgres:
         condition: service_healthy

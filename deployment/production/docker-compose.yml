@@ -5,6 +5,9 @@ services:
     image: postgres:16
     container_name: gomuseum_prod_postgres
     restart: always
+    # spec §5.1:连接上限 100 → 400。只能在维护窗口里 `up -d gomuseum_postgres` 生效,
+    # 见阶段 0 计划 Task 17 与 docs/ops/capacity-runbook.md
+    command: ["postgres", "-c", "max_connections=400"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
