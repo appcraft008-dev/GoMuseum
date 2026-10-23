@@ -189,10 +189,12 @@ def _pass_note(museums: list[Museum], lang: str) -> str | None:
     return None
 
 
-def _screenshot(lang: str) -> str | None:
-    for name in (f"app-{lang}.jpg", "app-en.jpg"):
-        if name in _STATIC_FILES:
-            return f"/w/static/{name}?v={ASSET_V}"
+def _screenshot(lang: str) -> tuple[str, str] | None:
+    """首页手机两帧(扫描识别中 → 打开作品播放导览),缺该语言回落英文。"""
+    for code in (lang, "en"):
+        pair = (f"app-{code}-scan.jpg", f"app-{code}-play.jpg")
+        if all(n in _STATIC_FILES for n in pair):
+            return tuple(f"/w/static/{n}" for n in pair)
     return None
 
 

@@ -240,3 +240,12 @@ def test_museum_cover_credit_from_museum_row(client, db):
 
 def test_museum_without_cover_has_no_hero(client):
     assert 'class="m-cover' not in client.get("/en/paris/orsay/").text
+
+
+def test_home_phone_animates_scan_then_play(client):
+    # 首页手机:扫描识别中 → 打开作品播放导览,两帧按语言取
+    for lang in ("en", "zh-hant"):
+        html = client.get(f"/{lang}/").text
+        assert 'class="phone anim"' in html
+        assert f"/w/static/app-{lang}-scan.jpg" in html
+        assert f"/w/static/app-{lang}-play.jpg" in html
