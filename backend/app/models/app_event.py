@@ -44,6 +44,19 @@ EVENTS = (
     "share_page_view",
 )
 
+# 容量监控事件(spec 2026-10-21-elastic-scaling-design §7;阶段 0)。不是付费漏斗,
+# 别并进 EVENTS。props 约定见 docs/superpowers/plans/2026-10-23-elastic-stage0.md 事件表。
+OPS_EVENTS = (
+    "lazy_slot_full",  # 懒生成/懒翻译拿不到进程名额(同一件 10 分钟一条)→ 阶段 1 触发
+    "lazy_fanout_slot_full",  # 补语言拿不到进程名额 → 阶段 1 触发
+    "lazy_started",  # 懒生成开工;running = 全站同时在生成的件数 → 阶段 3 触发
+    "lazy_finished",  # 懒生成结束(ok/err_kind/各语言段数)→ 生成失败告警
+    "lazy_cap_hit",  # 每账号/每 IP 日额度用尽(layer/tier)→ 评估放宽 IP 额度
+    "tts_busy",  # 本进程同时合成 ≥4 路(每分钟一条)→ 阶段 2 触发
+    "ops_sample",  # ops_check 每 5 分钟的采样
+    "ops_alert",  # ops_check 发出(或只记不发)的告警,也是限频的依据
+)
+
 
 class AppEvent(Base):
     """一行一个事件。刻意保持窄表 + JSONB props,加事件不用改结构。"""

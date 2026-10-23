@@ -551,3 +551,29 @@ def test_mail_not_configured_returns_2(db, wired, monkeypatch):
     monkeypatch.setattr(oc.ops_alert, "send", boom)
     assert oc.main(["--disk", "95"]) == 2
     assert _alerts(db) == []  # 没发出去就不记,下次再试
+
+
+def test_render_capacity_lists_every_trigger_metric():
+    text = "\n".join(
+        oc.render_capacity(
+            _m(
+                last_sample_at="2026-10-23T11:55:00+00:00",
+                alerts_7d={"browse-p95": 3},
+            )
+        )
+    )
+    for word in (
+        "名额满",
+        "连接峰值",
+        "TTS",
+        "向量检索",
+        "作品",
+        "生成",
+        "AI 兜底",
+        "账",
+        "IP 额度",
+    ):
+        assert word in text, word
+    assert "26678" in text and "122617" in text  # 作品离 15 万还差 150000 - 27383
+    assert "2026-10-23T11:55" in text  # 最近一次采样:cron 停了一眼能看出来
+    assert "browse-p95" in text and "3" in text  # 近 7 天每条规则发了或本该发几封

@@ -13,8 +13,10 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.models.app_event import AppEvent
+from app.models.llm_usage import LLMUsage
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject
+from app.models.object_embedding import ObjectEmbedding
 from app.models.purchase import Entitlement, Purchase
 from app.models.recognition_demand import RecognitionDemand
 from app.models.recognition_event import RecognitionEvent
@@ -39,6 +41,8 @@ def session():
             UserBenefits.__table__,
             RecognitionEvent.__table__,
             RecognitionDemand.__table__,
+            LLMUsage.__table__,
+            ObjectEmbedding.__table__,
         ],
     )
     s = sessionmaker(bind=engine)()

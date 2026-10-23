@@ -320,6 +320,49 @@ def collect(db, now) -> dict:
     }
 
 
+def render_capacity(m: dict) -> list[str]:
+    """ops_report 的容量段:每个触发指标的现值、阈值、越线后进入哪个阶段(spec §7 报告)。"""
+    from app.core.config import settings
+
+    def fmt(v, nd=2):
+        return "—" if v is None else f"{v:.{nd}f}"
+
+    rp = m["recog_p95"]
+    led = m["ledger"]
+    vq = m["vq_7d"]
+    lines = [
+        "├─ 容量(近 7 天;阶段提醒照 spec §11 做,先写实施计划经用户批准)",
+        f"│  名额满天数 {m['slot_full_days']}(≥3 → 阶段 1)"
+        f" · 生成失败/中断 {m['gen_bad_7d']}(>5 → 阶段 3)"
+        f" · 同时生成≥4 的天数 {m['busy_gen_days']}"
+        f"(并发 {settings.LAZY_CONCURRENCY},≥4 后才判断 → 阶段 3)",
+        f"│  连接峰值 {m['conn_peak_7d'] if m['conn_peak_7d'] is not None else '—'}"
+        f"(>40 → 阶段 2) · TTS 同时合成≥4 的天数 {m['tts_busy_days']}(≥3 → 阶段 2)",
+        f"│  向量检索 p95 {fmt(vq['p95'])}s n={vq['n']}(>0.5s → 阶段 2)"
+        f" · 当前模型向量 {m['vectors']}(>100000 → 阶段 2,>700000 → §5.3 档③)",
+        f"│  作品 {m['objects']},离换外部搜索引擎的 150000 还差"
+        f" {max(0, 150_000 - m['objects'])}(§5.4)",
+        "│  识别 p95(最新 30 条,基线×1.5 告警) "
+        + " · ".join(
+            f"{e} {fmt(rp[e]['p95'])}s n={rp[e]['n']}" for e in RECOG_ENGINES if e in rp
+        ),
+        f"│  AI 兜底 今天 {m['ai_today']} 次 · 前 30 天日均 {m['ai_avg30']:.1f}"
+        f"(> max(20, 3×日均) 告警)",
+        f"│  懒生成 1 小时 {m['gen_1h']['fail']}/{m['gen_1h']['n']} 失败"
+        f" · 2 小时 {m['gen_2h']['fail']}/{m['gen_2h']['n']} 失败",
+        f"│  IP 额度用满 游客 {m['ip_cap_hits'].get('guest', 0)}"
+        f" · 正式账号 {m['ip_cap_hits'].get('registered', 0)}(>0 → 评估放宽,§4.2)",
+        f"│  账(@app) 生成 今天 ${led['gen_day']:.2f}/${settings.BUDGET_GEN_DAILY_USD:.0f}"
+        f" 本月 ${led['gen_month']:.2f}/${settings.BUDGET_GEN_MONTHLY_USD:.0f}"
+        f" · 语音今天 ${led['tts_day']:.2f} · 识别兜底今天 ${led['recog_day']:.2f}"
+        f" · 未知单价 {led['unknown_models'] or '无'}",
+        f"│  最近一次采样 {m['last_sample_at'] or '无(cron 没在跑?)'}",
+        "│  近 7 天告警(发了或本该发) "
+        + (" · ".join(f"{k} {n}" for k, n in sorted(m["alerts_7d"].items())) or "无"),
+    ]
+    return lines
+
+
 # ---------- 判断 ----------
 def _mail(subject, measured, threshold, action):
     return (
