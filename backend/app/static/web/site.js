@@ -19,6 +19,14 @@
     else if (a.dataset.track) window.gmTrack("web_download_click", { channel: a.dataset.track });
   });
 
+  // ---- 亮/暗开关:默认跟系统;点过就记在本地(纯偏好,不是统计) ----
+  var themeBtn = document.querySelector(".theme-btn");
+  if (themeBtn) themeBtn.addEventListener("click", function () {
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("gm-theme", root.dataset.theme); } catch (e) {}
+  });
+
   // ---- 馆标签 ----
   document.querySelectorAll(".tabs").forEach(function (bar) {
     var host = bar.parentNode;

@@ -81,10 +81,11 @@ def _pick(db, museum: Museum, language: str) -> list[str]:
     }
     order = {q: i for i, q in enumerate(listed)}
 
+    # 清单顺序优先(名作必须在试听里);没清单的馆才按音频完整度挑
     def score(o):
         n = sec.get(o.id, 0) + qa.get(o.id, 0)
         n += 1 if (o.attributes or {}).get("artist_qid") in bio else 0
-        return (-n, order.get(o.qid, 0), -(o.popularity or 0), str(o.id))
+        return (order.get(o.qid, 0), -n, -(o.popularity or 0), str(o.id))
 
     return [o.qid for o in sorted(objs, key=score)[:TRIAL_LIMIT]]
 

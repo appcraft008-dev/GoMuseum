@@ -15,6 +15,7 @@
 <meta property="og:url" content="{{ canonical }}">
 {% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
 <meta name="theme-color" content="#F3EDDF">
+<script>try{var gmT=localStorage.getItem("gm-theme");if(gmT)document.documentElement.dataset.theme=gmT}catch(e){}</script>
 <link rel="stylesheet" href="/w/static/site.css?v={{ asset_v }}">
 </head>
 <body data-page="{{ page_type }}" data-lang="{{ lang }}"{% if museum_slug %} data-museum="{{ museum_slug }}"{% endif %}{% if qid %} data-qid="{{ qid }}"{% endif %}>
@@ -34,6 +35,7 @@
         {% endfor %}
       </ul>
     </details>
+    <button class="theme-btn" type="button" aria-label="{{ t('theme_toggle') }}" title="{{ t('theme_toggle') }}"></button>
     <a class="btn btn-nav" href="#download" data-track="download_nav">{{ t('cta_download') }}</a>
   </div>
 </header>

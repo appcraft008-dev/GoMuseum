@@ -114,8 +114,9 @@ def _m(db, slug):
     return db.query(Museum).filter_by(slug=slug).one()
 
 
-def test_trials_only_from_must_see_with_guide_audio_fullest_first(db):
-    assert trials.trial_qids(db, _m(db, "orsay"), "zh") == [MS2, MS1]
+def test_trials_only_from_must_see_with_guide_audio_in_list_order(db):
+    # 清单顺序优先:MS2 音频更全也排在 MS1 后(prod 上蒙娜丽莎就是这样被挤掉的)
+    assert trials.trial_qids(db, _m(db, "orsay"), "zh") == [MS1, MS2]
 
 
 def test_trials_without_must_see_fullest_first_capped(db):
