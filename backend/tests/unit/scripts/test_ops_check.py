@@ -583,3 +583,31 @@ def test_dry_run_with_no_mail_writes_nothing(db, wired):
     """手工预演时容易两个一起给:--dry-run 优先,一行不写(Fable 终审 I1)。"""
     assert oc.main(["--disk", "95", "--no-mail", "--dry-run"]) == 0
     assert wired == [] and db.query(AppEvent).count() == 0
+
+
+def test_vq_uses_latest_samples_only(db, monkeypatch):
+    """近 7 天的 timings 不整表拉回 Python,只取最新 N 条(Fable 终审 M4)。"""
+    monkeypatch.setattr(oc, "_VQ_LIMIT", 3)
+    naive = NOW.replace(tzinfo=None)
+    for i in range(2):
+        db.add(
+            RecognitionEvent(
+                phash=f"o{i}",
+                outcome="match",
+                engine="vector",
+                timings={"vq": 9000},
+                created_at=naive - timedelta(days=2),
+            )
+        )
+    for i in range(3):
+        db.add(
+            RecognitionEvent(
+                phash=f"n{i}",
+                outcome="match",
+                engine="vector",
+                timings={"vq": 100},
+                created_at=naive - timedelta(hours=1),
+            )
+        )
+    db.commit()
+    assert oc.collect(db, NOW)["vq_7d"] == {"n": 3, "p95": pytest.approx(0.1)}

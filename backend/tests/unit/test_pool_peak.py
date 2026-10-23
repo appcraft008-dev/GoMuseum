@@ -34,3 +34,19 @@ def test_flush_without_redis_or_on_error_never_raises():
 
     assert database.flush_pool_peak(None, current=0, now=NOW) is None
     assert database.flush_pool_peak(Boom(), current=0, now=NOW) is None
+
+
+def test_second_flush_in_same_minute_keeps_the_higher_value():
+    """sleep(60) 会漂移:同一分钟上报两次时,后一次不能把前一次的峰值盖小(Fable 终审 M5)。"""
+    r = fakeredis.FakeRedis(decode_responses=True)
+    database.note_checkout(5)
+    assert database.flush_pool_peak(r, current=2, now=NOW) == 5
+    assert database.flush_pool_peak(r, current=1, now=NOW + timedelta(seconds=3)) == 5
+    [key] = r.keys("ops:pool_peak:202610231234:*")
+    assert r.get(key) == "5"
+
+
+def test_reporter_wakes_just_after_each_minute_boundary():
+    """对齐到整分钟后 1 秒,不再按 60 秒累积漂移、跳过或重复某一分钟。"""
+    assert database._next_flush_delay(1_000_040.0) == pytest.approx(41.0)
+    assert database._next_flush_delay(1_000_079.5) == pytest.approx(1.5)

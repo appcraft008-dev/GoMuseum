@@ -23,7 +23,8 @@ read -r _ u n s i w q sq st _ < /proc/stat
 busy=$((u + n + s + q + sq + st))
 total=$((busy + i + w))
 cpu=""
-if read -r pb pt < "$STATE" 2>/dev/null && [ "$total" -gt "$pt" ]; then
+# 先判断文件可读:`read < 不存在的文件 2>/dev/null` 的报错在 2>/dev/null 生效前就打出来了
+if [ -r "$STATE" ] && read -r pb pt < "$STATE" && [ "$total" -gt "$pt" ]; then
     cpu=$((100 * (busy - pb) / (total - pt)))
 fi
 # 预演不动状态文件:否则下一次 cron 算的是一个更短的区间

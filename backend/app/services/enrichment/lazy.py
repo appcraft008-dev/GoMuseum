@@ -298,9 +298,11 @@ def _run_locked(
             if close:
                 db.close()
     finally:
-        if track:
-            _running_done(run_id)  # BaseException 时也要退出计数
-        _SEM.release()
+        try:
+            if track:
+                _running_done(run_id)  # BaseException 时也要退出计数
+        finally:
+            _SEM.release()  # _running_done 里冒出 BaseException 也要还名额
 
 
 def _log(db, name, **props):

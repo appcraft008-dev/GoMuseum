@@ -133,6 +133,9 @@ def flush_pool_peak(redis, current: int, now: datetime) -> int | None:
         minute=now.strftime("%Y%m%d%H%M"), proc=f"{socket.gethostname()}-{os.getpid()}"
     )
     try:
+        # 同一分钟可能上报两次(线程被调度晚了):取两次里的大值,不让后一次把峰值盖小
+        prev = redis.get(key)
+        value = max(value, int(prev or 0))
         redis.set(key, value, ex=900)
     except Exception:
         logger.warning("pool peak flush failed", exc_info=True)
@@ -141,8 +144,13 @@ def flush_pool_peak(redis, current: int, now: datetime) -> int | None:
     return value
 
 
+def _next_flush_delay(ts: float) -> float:
+    """睡到下一个整分钟后 1 秒:sleep(60) 会累积漂移,跳过或重复某一分钟。"""
+    return 60 - ts % 60 + 1
+
+
 def start_pool_peak_reporter() -> None:
-    """守护线程每 60 秒上报一次;每进程只起一个。"""
+    """守护线程每分钟上报一次;每进程只起一个。"""
     global _reporter_started
     if _reporter_started:
         return
@@ -152,7 +160,7 @@ def start_pool_peak_reporter() -> None:
         from app.services.recognition.service import _get_redis
 
         while True:
-            time.sleep(60)
+            time.sleep(_next_flush_delay(time.time()))
             try:
                 flush_pool_peak(
                     _get_redis(), engine.pool.checkedout(), datetime.now(timezone.utc)

@@ -1083,3 +1083,25 @@ def test_finished_telemetry_failure_never_breaks_generation(session, monkeypatch
     try_acquire_lock(session, _obj(session))
     lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
     assert fanned == ["Q1"]
+
+
+def test_sem_released_even_if_running_done_raises_base_exception(session, monkeypatch):
+    """进程关闭时 _running_done 里冒出 BaseException,名额也要还(Fable 终审 M1)。"""
+    import app.services.enrichment.lazy as lazy
+
+    class Stop(BaseException):
+        pass
+
+    def stop(run_id):
+        raise Stop()
+
+    monkeypatch.setattr(lazy, "_running_done", stop)
+    monkeypatch.setattr(lazy, "_generate", lambda db, qid, language=None: {})
+    monkeypatch.setattr(lazy, "_run_fanout", lambda *a, **k: None)
+    try_acquire_lock(session, _obj(session))
+    with pytest.raises(Stop):
+        lazy.run_lazy_generation("Q1", session_factory=lambda: session, close=False)
+    n = sum(lazy._SEM.acquire(blocking=False) for _ in range(10))
+    for _ in range(n):
+        lazy._SEM.release()
+    assert n == lazy.settings.LAZY_CONCURRENCY
