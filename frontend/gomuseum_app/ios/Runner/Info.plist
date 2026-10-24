@@ -45,24 +45,55 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>This app needs access to the microphone for voice questions about artworks</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>This app needs speech recognition to answer your questions about artworks</string>
+	<!-- 权限说明的英文兜底;各语言版本在 <lang>.lproj/InfoPlist.strings。
+	     麦克风/语音识别没有用到(相机 enableAudio:false),不申请。 -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>用于显示你身边的博物馆。位置只在手机上使用，不会上传。</string>
+	<string>Used to show museums near you. Your location stays on your phone and is never uploaded.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs camera access to recognize artworks</string>
+	<string>Used to take a photo of an artwork so GoMuseum can recognize it.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs photo library access to select artwork images</string>
+	<string>Used to pick an artwork photo from your library for recognition.</string>
 	<!-- 「自动保存照片」只要 add-only 权限。这个 key 与上面那个是两回事:
 	     缺它而发起 addOnly 请求，iOS 会直接终止进程。 -->
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This app saves the artwork photos you take to your photo library</string>
+	<string>Used to save the artwork photos you take to your library.</string>
+	<!-- 讲解锁屏/切后台继续播放 -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<!-- 只用 HTTPS(系统加密,属豁免),免每次上传答出口合规 -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- 与 lib/l10n 的 10 种语言一致;缺了 iOS 只按 en 匹配系统语言 -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>fr</string>
+		<string>de</string>
+		<string>es</string>
+		<string>it</string>
+		<string>ja</string>
+		<string>ko</string>
+		<string>pl</string>
+	</array>
+	<!-- Google 登录回调。曾误嵌在 NSAppTransportSecurity 里 → scheme 没注册、登录失败 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.110810284497-t1ep36fa6n5qdqbjh4n12vtug6992nng</string>
+			</array>
+		</dict>
+	</array>
+	<!-- 线上全是 HTTPS(prod object_images 0 条 http,10-22 查);只给本地开发放行 -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
 			<key>127.0.0.1</key>
@@ -76,17 +107,6 @@
 				<true/>
 			</dict>
 		</dict>
-		<key>CFBundleURLTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleTypeRole</key>
-				<string>Editor</string>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>com.googleusercontent.apps.545824113199-p5khmtegc2t8r282os7pgdoovliqal41</string>
-				</array>
-			</dict>
-		</array>
 	</dict>
 </dict>
 </plist>

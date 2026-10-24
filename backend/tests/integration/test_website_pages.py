@@ -169,6 +169,15 @@ def test_play_link_only_when_live(client, monkeypatch):
     assert "utm_medium%3Dweb%26utm_content%3Dhome" in html.text
 
 
+def test_wechat_gets_no_play_link(client, monkeypatch):
+    """微信内置浏览器打不开 Play:不给链接,改提示去浏览器打开。"""
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    ua = "Mozilla/5.0 (Linux; Android 14) MicroMessenger/8.0.47"
+    html = client.get("/zh/", headers={"user-agent": ua}).text
+    assert "play.google.com" not in html
+    assert "浏览器" in html
+
+
 def test_no_audio_leaks_into_listing_pages(client):
     for path in ("/en/", "/zh/paris/", "/zh/paris/orsay/", "/en/paris/artists/Q296/"):
         html = client.get(path).text
@@ -351,3 +360,21 @@ def test_unknown_category_404_and_links_encoded(client, db):
     assert (
         client.get("/en/paris/orsay/", params={"category": "a&b c"}).status_code == 200
     )
+
+
+def test_hero_has_official_play_badge_and_desktop_qr(client, monkeypatch):
+    """首屏直接给官方 Play 徽章(按语言),电脑端带二维码,手机端不带。"""
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    desktop = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    for lang in ("zh", "de", "zh-hant"):
+        html = client.get(f"/{lang}/", headers={"user-agent": desktop}).text
+        hero = html.split('<section class="hero wrap">')[1].split("</section>")[0]
+        assert f"/w/static/play-badge-{lang}.png" in hero
+        assert 'class="qr"' in hero
+        assert client.get(f"/w/static/play-badge-{lang}.png").status_code == 200
+    android = "Mozilla/5.0 (Linux; Android 14)"
+    hero = client.get("/en/", headers={"user-agent": android}).text.split(
+        '<section class="hero wrap">'
+    )[1]
+    assert "play-badge-en.png" in hero.split("</section>")[0]
+    assert 'class="qr"' not in hero.split("</section>")[0]

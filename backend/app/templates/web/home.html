@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% from "_macros.html" import must_see_panels, museum_card %}
+{% from "_macros.html" import must_see_panels, museum_card, download_block %}
 {% block main %}
 <section class="hero wrap">
   <div class="hero-text">
     <h1 class="h-serif">{{ t('hero_title') }}</h1>
     <p class="lead">{{ hero_sub }}</p>
-    <a class="btn" href="#download" data-track="download_hero">{{ t('cta_download') }}</a>
+    {{ download_block(t, play, device, qr, wechat, lang) }}
     <p class="small">{{ t('free_note', n=free_n) }}</p>
   </div>
   {% if screenshot %}<div class="phone anim" aria-hidden="true">

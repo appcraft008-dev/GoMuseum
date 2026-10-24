@@ -1,0 +1,4 @@
+"NSLocationWhenInUseUsageDescription" = "Used to show museums near you. Your location stays on your phone and is never uploaded.";
+"NSCameraUsageDescription" = "Used to take a photo of an artwork so GoMuseum can recognize it.";
+"NSPhotoLibraryUsageDescription" = "Used to pick an artwork photo from your library for recognition.";
+"NSPhotoLibraryAddUsageDescription" = "Used to save the artwork photos you take to your library.";

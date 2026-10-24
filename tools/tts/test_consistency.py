@@ -10,6 +10,7 @@ mlx-whisper 对我们自己生成的音频的实际转写。
 
 import json
 import pathlib
+import re
 
 import pytest
 
@@ -157,8 +158,10 @@ def test_run_batch_真的把_tts_input_接在生成那一行上():
     src = (pathlib.Path(__file__).parent / "run_batch.py").read_text(encoding="utf-8")
     assert "from consistency import" in src and "tts_input" in src, \
         "run_batch.py 没有引入 tts_input"
-    assert "m.generate(text=tts_input(text, lang)" in src, \
-        "生成那一行没有走 tts_input —— zh-hant 又会拿繁体字形去念(实测 3 个词全错)"
+    # 生成收口在 generate() 里,调用点有两处(GPU 预取的首次 + 重试),每一处都要走 tts_input
+    calls = re.findall(r"(?<![\w.])(?<!def )generate\((.*?)\)", src)  # 不含 def 本身和 m.generate
+    assert len(calls) >= 2 and all(c.startswith("tts_input(text, lang") for c in calls), \
+        f"生成调用点没有都走 tts_input —— zh-hant 又会拿繁体字形去念(实测 3 个词全错): {calls}"
 
 
 def test_质检基准仍是原始繁体正文():

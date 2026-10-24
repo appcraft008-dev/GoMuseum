@@ -25,6 +25,8 @@ python preflight.py jobs.json
 
 # ②b 生成机产文件 —— 用 start_run.sh（它会确认真的跑起来了、并记下起跑 commit）
 ./start_run.sh jobs.json out_dir 8
+#    或把生成放到 Modal L40S(fp32,约 Mac 5 倍速、每 1000 条约 $22;质检仍在本机):
+TTS_GPU=modal MAX_USD=10 ./start_run.sh jobs.json out_dir
 
 # ②c 跑批中看进度（只认 _state.json，别看日志滚动或通知流）
 python progress.py out_dir 589

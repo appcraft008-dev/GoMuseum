@@ -1,0 +1,4 @@
+"NSLocationWhenInUseUsageDescription" = "近くの美術館を表示するために使います。位置情報は端末内だけで使い、送信しません。";
+"NSCameraUsageDescription" = "作品を撮影して GoMuseum が認識するために使います。";
+"NSPhotoLibraryUsageDescription" = "ライブラリから作品の写真を選んで認識するために使います。";
+"NSPhotoLibraryAddUsageDescription" = "撮影した作品の写真をライブラリに保存するために使います。";

@@ -9,6 +9,8 @@
 set -euo pipefail
 
 JOBS=$1; OUT=$2; CHUNK=${3:-10}
+# GPU 模式不分块:泄漏是 MPS 生成的事,而每起一个进程 Modal 就要冷启动一次(按秒计费)
+[ "${TTS_GPU:-}" = modal ] && CHUNK=1000000
 PY=${PY:-$HOME/tts-lab/venv/bin/python}
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 export TTS_LAB=${TTS_LAB:-$HOME/tts-lab}
@@ -25,6 +27,6 @@ json.dump(d, open(out,'w'), ensure_ascii=False)
 print(f'--- 块 {i}-{i+len(d)} / {len(json.load(open(jobs)))} ---')
 " "$JOBS" "$i" "$CHUNK" "$CHUNKFILE"
   # 用仓库里这一份 run_batch.py(与 $HERE 同目录),别再指回本机的旧副本
-  "$PY" "$HERE/run_batch.py" "$CHUNKFILE" "$OUT" 2>&1 | grep -E --line-buffered "^\[|完成|无文本|Error"
+  "$PY" "$HERE/run_batch.py" "$CHUNKFILE" "$OUT" 2>&1 | grep -E --line-buffered "^\[|完成|无文本|费用闸|Error"
 done
 echo "ALLDONE"
