@@ -710,3 +710,14 @@ def test_page_copy_never_gets_inlined_into_the_script(client, outbox):
     assert _html.unescape(attr) == (
         "Mot de passe mis à jour — connectez-vous dans l'application."
     )
+
+
+def test_register_requires_the_same_8_chars_as_reset(client):
+    """2026-10-24:注册曾不限长度,重置却要 8 位 —— 同一账号两套规则。"""
+    c, _ = client
+    r = c.post(
+        "/api/v1/auth/register",
+        json={"email": "short@test.com", "password": "1234567"},
+    )
+    assert r.status_code == 422, r.text
+    _register(c, email="ok@test.com", password="12345678")
