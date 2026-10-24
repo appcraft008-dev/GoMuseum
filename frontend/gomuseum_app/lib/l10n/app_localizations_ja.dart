@@ -481,7 +481,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authPasswordRequired => 'パスワードを入力してください';
 
   @override
-  String get authPasswordMin6 => 'パスワードは6文字以上必要です';
+  String get authPasswordMin8 => 'パスワードは8文字以上必要です';
 
   @override
   String get authConfirmPasswordHint => 'パスワードを確認';

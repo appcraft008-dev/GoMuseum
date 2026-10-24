@@ -971,11 +971,11 @@ abstract class AppLocalizations {
   /// **'Please enter your password'**
   String get authPasswordRequired;
 
-  /// No description provided for @authPasswordMin6.
+  /// No description provided for @authPasswordMin8.
   ///
   /// In en, this message translates to:
-  /// **'Password must be at least 6 characters'**
-  String get authPasswordMin6;
+  /// **'Password must be at least 8 characters'**
+  String get authPasswordMin8;
 
   /// No description provided for @authConfirmPasswordHint.
   ///

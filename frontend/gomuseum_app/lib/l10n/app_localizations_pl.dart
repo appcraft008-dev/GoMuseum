@@ -487,7 +487,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get authPasswordRequired => 'Wprowadź swoje hasło';
 
   @override
-  String get authPasswordMin6 => 'Hasło musi mieć co najmniej 6 znaków';
+  String get authPasswordMin8 => 'Hasło musi mieć co najmniej 8 znaków';
 
   @override
   String get authConfirmPasswordHint => 'Potwierdź hasło';

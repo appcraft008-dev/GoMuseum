@@ -89,7 +89,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     obscure: true,
                     validator: (v) {
                       if (v?.isEmpty == true) return l10n.authPasswordRequired;
-                      if (v!.length < 6) return l10n.authPasswordMin6;
+                      if (v!.length < 8) return l10n.authPasswordMin8;
                       return null;
                     },
                   ),
