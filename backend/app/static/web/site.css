@@ -156,8 +156,13 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
 .dl-ios { flex-basis: 100%; max-width: none; font-size: 13px; }  /* 不受 .dl-note 44ch 限宽,否则手机端不换行 */
 .qr { margin: 0; text-align: center; font-size: 12px; }
 .qr img { background: #fff; padding: 6px; border-radius: 4px; }
-.hero .dl { margin-top: 4px; }
-.hero .qr img { width: 96px; height: 96px; border: 1px solid var(--line); }
+/* 首屏:徽章是主角;二维码作为电脑端的次要入口,竖线隔开、说明放在码右侧,与徽章同一中线 */
+.hero .dl { margin-top: 6px; gap: 16px 24px; }
+.hero .play img { height: 56px; }
+.hero .qr { display: flex; align-items: center; gap: 12px; padding-left: 24px; border-left: 1px solid var(--line); text-align: left; font-size: 13px; line-height: 1.5; color: var(--sub); }
+.hero .qr img { width: 72px; height: 72px; padding: 4px; border: 1px solid var(--line); }
+.hero .qr figcaption { max-width: 9em; text-wrap: balance; word-break: keep-all; }  /* 中文别把「手机」拆开 */
+.free { margin: 14px 0 0; font-size: 14px; font-weight: 600; color: var(--accent-deep); }
 
 .foot { padding: 26px 0 40px; font-size: 13px; color: var(--sub); }
 .foot-in p { margin: 0 0 8px; }

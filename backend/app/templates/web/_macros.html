@@ -1,4 +1,4 @@
-{% macro download_block(t, play, device, qr, wechat, lang) -%}
+{% macro download_block(t, play, device, qr, wechat, lang, ios=true) -%}
 <div class="dl">
   {% if device in ('iphone', 'ipad') %}
     <p class="dl-note">{{ t('android_only_ios') }}</p>
@@ -10,7 +10,7 @@
   {% else %}
     <p class="dl-note">{{ t('play_soon') }}</p>
   {% endif %}
-  {% if device not in ('iphone', 'ipad') %}<p class="dl-note dl-ios">{{ t('ios_soon') }}</p>{% endif %}
+  {% if ios and device not in ('iphone', 'ipad') %}<p class="dl-note dl-ios">{{ t('ios_soon') }}</p>{% endif %}
 </div>
 {%- endmacro %}
 
