@@ -149,13 +149,15 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
 .download { display: grid; gap: 22px; align-items: center; }
 @media (min-width: 820px) { .download { grid-template-columns: 1fr auto; } }
 .download h2 { color: var(--on-dark); }
-.dl { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.play { display: inline-flex; flex-direction: column; background: #000; color: #fff; text-decoration: none; padding: 9px 20px; border-radius: 8px; border: 1px solid #555; line-height: 1.2; min-height: 44px; }
-.play small { font-size: 11px; color: #ccc; }
-.play b { font-size: 18px; }
+.dl { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
+.play { display: block; line-height: 0; border-radius: 8px; }  /* Google Play 官方徽章原图,不得改动 */
+.play img { display: block; height: 50px; width: auto; }
 .dl-note { margin: 0; max-width: 44ch; }
+.dl-ios { flex-basis: 100%; font-size: 13px; }
 .qr { margin: 0; text-align: center; font-size: 12px; }
 .qr img { background: #fff; padding: 6px; border-radius: 4px; }
+.hero .dl { margin-top: 4px; }
+.hero .qr img { width: 96px; height: 96px; border: 1px solid var(--line); }
 
 .foot { padding: 26px 0 40px; font-size: 13px; color: var(--sub); }
 .foot-in p { margin: 0 0 8px; }
