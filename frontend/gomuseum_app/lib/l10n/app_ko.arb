@@ -143,7 +143,7 @@
   "authEmailInvalid": "유⁠효⁠한 이⁠메⁠일⁠을 입⁠력⁠하⁠세⁠요",
   "authPasswordHint": "비⁠밀⁠번⁠호",
   "authPasswordRequired": "비⁠밀⁠번⁠호⁠를 입⁠력⁠하⁠세⁠요",
-  "authPasswordMin6": "비⁠밀⁠번⁠호⁠는 6⁠자 이⁠상⁠이⁠어⁠야 합⁠니⁠다",
+  "authPasswordMin8": "비⁠밀⁠번⁠호⁠는 8⁠자 이⁠상⁠이⁠어⁠야 합⁠니⁠다",
   "authConfirmPasswordHint": "비⁠밀⁠번⁠호 확⁠인",
   "authPasswordMismatch": "비⁠밀⁠번⁠호⁠가 일⁠치⁠하⁠지 않⁠습⁠니⁠다",
   "authUsernameOptionalHint": "사⁠용⁠자 이⁠름 (선⁠택)",

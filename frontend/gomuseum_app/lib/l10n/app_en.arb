@@ -301,7 +301,7 @@
   "authEmailInvalid": "Please enter a valid email",
   "authPasswordHint": "Password",
   "authPasswordRequired": "Please enter your password",
-  "authPasswordMin6": "Password must be at least 6 characters",
+  "authPasswordMin8": "Password must be at least 8 characters",
   "authConfirmPasswordHint": "Confirm password",
   "authPasswordMismatch": "Passwords do not match",
   "authUsernameOptionalHint": "Username (optional)",

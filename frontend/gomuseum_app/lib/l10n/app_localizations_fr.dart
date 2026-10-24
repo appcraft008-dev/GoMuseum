@@ -489,8 +489,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authPasswordRequired => 'Veuillez saisir votre mot de passe';
 
   @override
-  String get authPasswordMin6 =>
-      'Le mot de passe doit comporter au moins 6 caractères';
+  String get authPasswordMin8 =>
+      'Le mot de passe doit comporter au moins 8 caractères';
 
   @override
   String get authConfirmPasswordHint => 'Confirmer le mot de passe';

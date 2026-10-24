@@ -143,7 +143,7 @@
   "authEmailInvalid": "Inserisci un'e-mail valida",
   "authPasswordHint": "Password",
   "authPasswordRequired": "Inserisci la tua password",
-  "authPasswordMin6": "La password deve contenere almeno 6 caratteri",
+  "authPasswordMin8": "La password deve contenere almeno 8 caratteri",
   "authConfirmPasswordHint": "Conferma password",
   "authPasswordMismatch": "Le password non corrispondono",
   "authUsernameOptionalHint": "Nome utente (facoltativo)",

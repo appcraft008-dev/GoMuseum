@@ -143,7 +143,7 @@
   "authEmailInvalid": "有効なメールアドレスを入力してください",
   "authPasswordHint": "パスワード",
   "authPasswordRequired": "パスワードを入力してください",
-  "authPasswordMin6": "パスワードは6文字以上必要です",
+  "authPasswordMin8": "パスワードは8文字以上必要です",
   "authConfirmPasswordHint": "パスワードを確認",
   "authPasswordMismatch": "パスワードが一致しません",
   "authUsernameOptionalHint": "ユーザー名（任意）",
