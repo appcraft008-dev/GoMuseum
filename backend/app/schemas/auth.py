@@ -1,6 +1,6 @@
 """Authentication schemas"""
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.user import UserResponse
 
@@ -16,7 +16,8 @@ class RegisterRequest(BaseModel):
     """Registration request schema"""
 
     email: EmailStr
-    password: str
+    # 与重置密码(auth.py new_password)同一条规则;登录不校验长度,老账号照常可登
+    password: str = Field(min_length=8, max_length=128)
     username: str | None = None
 
 
