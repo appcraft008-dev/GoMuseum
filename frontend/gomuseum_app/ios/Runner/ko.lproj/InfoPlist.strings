@@ -1,0 +1,4 @@
+"NSLocationWhenInUseUsageDescription" = "주변 박물관을 보여 주는 데 사용해요. 위치는 휴대폰 안에서만 쓰이고 전송되지 않아요.";
+"NSCameraUsageDescription" = "작품을 촬영해 GoMuseum이 인식하는 데 사용해요.";
+"NSPhotoLibraryUsageDescription" = "보관함에서 작품 사진을 골라 인식하는 데 사용해요.";
+"NSPhotoLibraryAddUsageDescription" = "촬영한 작품 사진을 보관함에 저장하는 데 사용해요.";
