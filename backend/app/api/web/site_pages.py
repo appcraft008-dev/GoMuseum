@@ -117,7 +117,8 @@ def render(
     """所有网页的统一出口:hreflang/canonical/noindex/下载区/语言提示都在这里定。"""
     ua = request.headers.get("user-agent", "")
     device = device_class(ua)
-    play = play_url(page_type)
+    wechat = "MicroMessenger" in ua  # 微信内置浏览器打不开 Play
+    play = None if wechat else play_url(page_type)
     if db is not None:
         log_page_view(
             db,
@@ -150,6 +151,7 @@ def render(
         noindex=noindex or lang not in alternates,
         page_type=page_type,
         play=play,
+        wechat=wechat,
         device=device,
         qr=qr_data_uri(play) if play and device == "desktop" else None,
         free_n=settings.FREE_RECOGNITION_QUOTA,

@@ -50,7 +50,7 @@
       <h2 class="h-serif">{{ t('hero_title') }}</h2>
       <p>{{ t('free_note', n=free_n) }}</p>
     </div>
-    {% from "_macros.html" import download_block %}{{ download_block(t, play, device, qr) }}
+    {% from "_macros.html" import download_block %}{{ download_block(t, play, device, qr, wechat) }}
   </div>
 </section>
 <footer class="foot">
