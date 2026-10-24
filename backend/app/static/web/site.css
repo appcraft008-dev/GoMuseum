@@ -149,15 +149,21 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
 .download { display: grid; gap: 22px; align-items: center; }
 @media (min-width: 820px) { .download { grid-template-columns: 1fr auto; } }
 .download h2 { color: var(--on-dark); }
-.dl { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
+/* 下载区(首屏+底部同一套):徽章为主;二维码竖线隔开、说明在码右侧,与徽章同一中线 */
+.dl { display: flex; align-items: center; gap: 16px 24px; flex-wrap: wrap; }
 .play { display: block; line-height: 0; border-radius: 8px; }  /* Google Play 官方徽章原图,不得改动 */
-.play img { display: block; height: 50px; width: auto; }
+.play img { display: block; height: 56px; width: auto; }
 .dl-note { margin: 0; max-width: 44ch; }
 .dl-ios { flex-basis: 100%; max-width: none; font-size: 13px; }  /* 不受 .dl-note 44ch 限宽,否则手机端不换行 */
-.qr { margin: 0; text-align: center; font-size: 12px; }
-.qr img { background: #fff; padding: 6px; border-radius: 4px; }
-.hero .dl { margin-top: 4px; }
-.hero .qr img { width: 96px; height: 96px; border: 1px solid var(--line); }
+.qr { display: flex; align-items: center; gap: 12px; margin: 0; padding-left: 24px; border-left: 1px solid var(--line); font-size: 13px; line-height: 1.5; color: var(--sub); }
+.qr img { width: 72px; height: 72px; padding: 4px; background: #fff; border: 1px solid var(--line); border-radius: 4px; }
+.qr figcaption { max-width: 9em; text-wrap: balance; word-break: keep-all; }  /* 中文别把「手机」拆开 */
+.hero .dl { margin-top: 6px; }
+.band-dark .qr { border-left-color: rgba(243, 237, 223, .22); color: var(--on-dark-sub); }
+.band-dark .qr img { border-color: transparent; }
+.download .dl { max-width: 460px; }  /* auto 列按 max-content 算,iOS 一行长句会把左侧标题挤成三行 */
+.free { margin: 14px 0 0; font-size: 14px; font-weight: 600; color: var(--accent-deep); }
+.ios-soon { margin: 4px 0 0; font-size: 13px; color: var(--sub); }  /* 首屏:免费次数优先,iOS 预告其次 */
 
 .foot { padding: 26px 0 40px; font-size: 13px; color: var(--sub); }
 .foot-in p { margin: 0 0 8px; }

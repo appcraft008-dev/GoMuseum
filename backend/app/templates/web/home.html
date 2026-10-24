@@ -5,8 +5,9 @@
   <div class="hero-text">
     <h1 class="h-serif">{{ t('hero_title') }}</h1>
     <p class="lead">{{ hero_sub }}</p>
-    {{ download_block(t, play, device, qr, wechat, lang) }}
-    <p class="small">{{ t('free_note', n=free_n) }}</p>
+    {{ download_block(t, play, device, qr, wechat, lang, ios=false) }}
+    <p class="free">{{ t('free_note', n=free_n) }}</p>
+    {% if device not in ('iphone', 'ipad') %}<p class="ios-soon">{{ t('ios_soon') }}</p>{% endif %}
   </div>
   {% if screenshot %}<div class="phone anim" aria-hidden="true">
     <img src="{{ screenshot[0] }}" alt="" width="540" height="1200">
