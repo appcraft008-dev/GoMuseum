@@ -68,7 +68,7 @@ _FULL_MUSEUM = re.compile(r"^/api/v1/museums/[^/]+$")
 
 def nginx_stats(lines: Iterable[str], now: datetime, minutes: int) -> dict:
     """浏览/内容接口(GET /api/v1/*)在窗口内的请求数、urt p95、5xx 数、出过 5xx 的分钟数。
-    剔除音频长连接、老 App 的 5MB 全量馆包、已知慢接口 history/recent(R4)。
+    剔除音频长连接、老 App 的 5MB 全量馆包(history/recent 10-23 已提速,不再剔除)。
     时间按每行自带的时区算(10-25 起 +0200 → +0100)。"""
     start = now - timedelta(minutes=minutes)
     n, n5xx, times, bad_min = 0, 0, [], set()
@@ -88,7 +88,6 @@ def nginx_stats(lines: Iterable[str], now: datetime, minutes: int) -> dict:
             or not path.startswith("/api/v1/")
             or "/audio" in path
             or _FULL_MUSEUM.match(path)
-            or path == "/api/v1/history/recent"
         ):
             continue
         n += 1

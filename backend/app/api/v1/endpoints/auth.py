@@ -51,7 +51,7 @@ def register(
     Register a new user with email and password
 
     - **email**: User's email address (must be unique)
-    - **password**: User's password (min 8 characters recommended)
+    - **password**: User's password (8–128 characters)
     - **username**: Optional display name
 
     Returns access token, refresh token, and user profile

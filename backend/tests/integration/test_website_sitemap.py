@@ -137,3 +137,10 @@ def test_alternates_only_existing_languages(client):
 
 def test_unknown_language_sitemap_404(client):
     assert client.get("/sitemap-xx.xml").status_code == 404
+
+
+def test_sitemap_is_valid_xml_when_urls_need_escaping(client, monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_WEB_BASE_URL", "https://go&museum.app")
+    for path in ("/sitemap.xml", "/sitemap-en.xml"):
+        root = ET.fromstring(client.get(path).content)  # 未转义的 & 会解析失败
+        assert "https://go&museum.app/" in "".join(root.itertext())

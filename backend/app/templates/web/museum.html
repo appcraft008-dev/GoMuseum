@@ -42,7 +42,7 @@
     {% if cats|length > 1 %}
     <ul class="chips chips-cat">
       <li><a href="{{ base }}#works"{% if not category %} aria-current="true"{% endif %}>{{ t('all_works') }}</a></li>
-      {% for code, label, n in cats %}<li><a href="{{ base }}?category={{ code }}#works"{% if category == code %} aria-current="true"{% endif %}>{{ label }} <small>{{ n }}</small></a></li>{% endfor %}
+      {% for code, label, n in cats %}<li><a href="{{ base }}?category={{ code|urlencode }}#works"{% if category == code %} aria-current="true"{% endif %}>{{ label }} <small>{{ n }}</small></a></li>{% endfor %}
     </ul>
     {% endif %}
     {% if works %}{{ grid(works, lang, trials, t) }}{% else %}<p>{{ t('no_results') }}</p>{% endif %}

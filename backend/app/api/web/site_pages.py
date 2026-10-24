@@ -10,6 +10,8 @@ import math
 import re
 import time
 from pathlib import Path
+from urllib.parse import quote
+from xml.sax.saxutils import quoteattr
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
@@ -234,6 +236,10 @@ _SITEMAP_TTL = 3600
 _sitemap_cache: dict = {}
 
 
+def _x(text: str) -> str:
+    return quoteattr(text)[1:-1]  # 元素文本:同属性转义,去掉两端引号
+
+
 def _xml(body: str) -> Response:
     return Response(
         '<?xml version="1.0" encoding="UTF-8"?>\n' + body,
@@ -254,7 +260,7 @@ def robots():
 @router.get("/sitemap.xml")
 def sitemap_index():
     items = "".join(
-        f"<sitemap><loc>{_abs(f'/sitemap-{lang}.xml')}</loc></sitemap>"
+        f"<sitemap><loc>{_x(_abs(f'/sitemap-{lang}.xml'))}</loc></sitemap>"
         for lang in wd.LANGS
     )
     return _xml(
@@ -292,15 +298,15 @@ def sitemap_lang(lang: str, db: Session = Depends(get_db)):
     for tpl, langs in _sitemap_entries(db, lang):
         alts = "".join(
             f'<xhtml:link rel="alternate" hreflang="{_HREFLANG.get(code, code)}" '
-            f'href="{_abs(tpl.format(code))}"/>'
+            f"href={quoteattr(_abs(tpl.format(code)))}/>"
             for code in langs
         )
         if "en" in langs:
             alts += (
                 '<xhtml:link rel="alternate" hreflang="x-default" '
-                f'href="{_abs(tpl.format("en"))}"/>'
+                f"href={quoteattr(_abs(tpl.format('en')))}/>"
             )
-        rows.append(f"<url><loc>{_abs(tpl.format(lang))}</loc>{alts}</url>")
+        rows.append(f"<url><loc>{_x(_abs(tpl.format(lang)))}</loc>{alts}</url>")
     body = (
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
         'xmlns:xhtml="http://www.w3.org/1999/xhtml">' + "".join(rows) + "</urlset>"
@@ -363,7 +369,12 @@ def trial_audio(
         .filter(Museum.slug == museum_slug, Museum.published_at.isnot(None))
         .one_or_none()
     )
-    if m is None or qid not in trial_qids(db, m, lang):
+    # 页面可能由缓存更新的 worker 渲染(已给 ▶),本 worker 缓存未命中就重算一次再判。
+    # ponytail: 非试听件每次 404 都多一次重算;被刷时靠 nginx 限流兜
+    if m is None or (
+        qid not in trial_qids(db, m, lang)
+        and qid not in trial_qids(db, m, lang, fresh=True)
+    ):
         return _not_found()
     obj = db.query(MuseumObject).filter_by(museum_id=m.id, qid=qid).one()
     key = trial_parts(db, obj, lang).get(part)
@@ -532,6 +543,7 @@ def museum_page(
     if not count:
         return _not_found()
     q = q.strip()[:100]
+    cats = wd.categories(db, [m.id], lang)
     if q:
         _, hits = run_search(
             db,
@@ -544,13 +556,15 @@ def museum_page(
         works = wd.cards_for_qids(db, [m.id], lang, [h["qid"] for h in hits])
         total, page = len(works), 1
     else:
+        if category and category not in {c for c, _, _ in cats}:
+            return _not_found()  # 乱填的分类不出 200 空页(会被收录)
         works, total = wd.list_works(
             db, [m.id], lang, category=category or None, page=page, page_size=PAGE_SIZE
         )
         if page > 1 and not works:
             return _not_found()
     base = f"/{lang}/{city}/{museum_slug}/"
-    cat_q = f"category={category}&" if category else ""
+    cat_q = f"category={quote(category)}&" if category else ""
     name = museum_name(m, lang)
     c = wd.find_city(db, city)
     intro = _paras((m.description_i18n or {}).get(lang))
@@ -611,7 +625,7 @@ def museum_page(
         must_see=_must_see_cards(db, m, lang),
         trials=set(trial_qids(db, m, lang)),
         artists=wd.top_artists(db, [m.id], lang),
-        cats=wd.categories(db, [m.id], lang),
+        cats=cats,
         category=category,
         q=q,
         works=works,
@@ -685,7 +699,7 @@ def work_page(
         if m
         else None
     )
-    langs = guide_languages(db, obj) if obj else []
+    langs = [x for x in guide_languages(db, obj) if x in wd.LANGS] if obj else []
     if lang not in langs:
         return _not_found()
     data = get_object_content(db, museum_slug, qid, lang)

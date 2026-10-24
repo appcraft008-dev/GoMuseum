@@ -143,7 +143,7 @@
   "authEmailInvalid": "请输入有效的邮箱地址",
   "authPasswordHint": "密码",
   "authPasswordRequired": "请输入密码",
-  "authPasswordMin6": "密码至少 6 位",
+  "authPasswordMin8": "密码至少 8 位",
   "authConfirmPasswordHint": "确认密码",
   "authPasswordMismatch": "两次密码不一致",
   "authUsernameOptionalHint": "用户名（可选）",

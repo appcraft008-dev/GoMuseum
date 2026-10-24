@@ -11,7 +11,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gomuseum_app/core/utils/open_url.dart';
 import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/settings/presentation/pages/settings_page.dart'
-    show kPrivacyPolicyUrl, kTermsUrl;
+    show kPrivacyPolicyUrl, kTermsUrl, legalUrl;
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -55,9 +55,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isLoading = false;
   bool _emailOpen = false;
   late final _termsTap = TapGestureRecognizer()
-    ..onTap = () => openUrlOrCopy(context, kTermsUrl);
+    ..onTap = () => openUrlOrCopy(
+        context, legalUrl(kTermsUrl, ref.read(resolvedLocaleProvider)));
   late final _privacyTap = TapGestureRecognizer()
-    ..onTap = () => openUrlOrCopy(context, kPrivacyPolicyUrl);
+    ..onTap = () => openUrlOrCopy(
+        context, legalUrl(kPrivacyPolicyUrl, ref.read(resolvedLocaleProvider)));
 
   // Google Sign-In instance
   // serverClientId is required for backend token verification

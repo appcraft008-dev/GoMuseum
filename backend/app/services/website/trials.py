@@ -28,10 +28,11 @@ def _published(lang):
     )
 
 
-def trial_qids(db, museum: Museum, language: str) -> list[str]:
+def trial_qids(db, museum: Museum, language: str, *, fresh: bool = False) -> list[str]:
+    """fresh=True 跳过缓存重算并回填(/w/audio 未命中时用,见 site_pages.trial_audio)。"""
     key = (museum.id, language)
     hit = _cache.get(key)
-    if hit and time.monotonic() - hit[0] < _TTL:
+    if hit and not fresh and time.monotonic() - hit[0] < _TTL:
         return hit[1]
     got = _pick(db, museum, language)
     _cache[key] = (time.monotonic(), got)

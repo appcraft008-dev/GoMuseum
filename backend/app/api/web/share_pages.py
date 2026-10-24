@@ -8,6 +8,7 @@
 import html as _html
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -31,6 +32,7 @@ from app.services.share import (
 )
 from app.services.share_card import render_card
 from app.services.storage import get_object_storage
+from app.services.website.data import LANGS
 
 router = APIRouter(tags=["share-web"])
 
@@ -105,12 +107,13 @@ def share_page(
     db: Session = Depends(get_db),
 ):
     obj = public_object(db, slug, qid)
-    langs = guide_languages(db, obj) if obj else []
+    # 只在网站十语里挑:跳过去的新作品页不支持别的语言
+    langs = [x for x in guide_languages(db, obj) if x in LANGS] if obj else []
     if not langs:
         return _not_found()
     chosen = pick_language(lang, request.headers.get("accept-language", ""), langs)
     if lang and lang != chosen:
-        suffix = f"&s={s}" if s else ""
+        suffix = f"&s={quote(s)}" if s else ""
         return RedirectResponse(
             f"/a/{slug}/{qid}?lang={chosen}{suffix}", status_code=302
         )
@@ -134,7 +137,7 @@ def share_page(
             ua=ua[:200],
         )
         db.commit()
-        suffix = f"?s={s}" if s else ""
+        suffix = f"?s={quote(s)}" if s else ""
         return RedirectResponse(
             f"/{chosen}/{museum_city_slug(museum)}/{slug}/{qid}/{suffix}",
             status_code=301,

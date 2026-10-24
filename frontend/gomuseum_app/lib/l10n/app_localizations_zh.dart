@@ -480,7 +480,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authPasswordRequired => '请输入密码';
 
   @override
-  String get authPasswordMin6 => '密码至少 6 位';
+  String get authPasswordMin8 => '密码至少 8 位';
 
   @override
   String get authConfirmPasswordHint => '确认密码';
@@ -1657,7 +1657,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get authPasswordRequired => '請輸入密碼';
 
   @override
-  String get authPasswordMin6 => '密碼至少 6 位';
+  String get authPasswordMin8 => '密碼至少 8 位';
 
   @override
   String get authConfirmPasswordHint => '確認密碼';

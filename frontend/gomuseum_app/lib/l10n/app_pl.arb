@@ -143,7 +143,7 @@
   "authEmailInvalid": "Wprowadź prawidłowy e-mail",
   "authPasswordHint": "Hasło",
   "authPasswordRequired": "Wprowadź swoje hasło",
-  "authPasswordMin6": "Hasło musi mieć co najmniej 6 znaków",
+  "authPasswordMin8": "Hasło musi mieć co najmniej 8 znaków",
   "authConfirmPasswordHint": "Potwierdź hasło",
   "authPasswordMismatch": "Hasła nie są zgodne",
   "authUsernameOptionalHint": "Nazwa użytkownika (opcjonalnie)",

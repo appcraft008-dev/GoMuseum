@@ -43,7 +43,6 @@ def test_nginx_counts_only_browse_gets_in_window():
         ),
         _line(t, "/api/v1/museums/orsay/objects/Q1/audio?section=guide", urt="12.000"),
         _line(t, "/api/v1/museums/orsay", urt="3.000"),  # 5MB 全量馆包
-        _line(t, "/api/v1/history/recent?limit=20", urt="2.000"),  # 已知慢接口,另记台账
         _line(t, "/api/v1/recognize", method="POST", urt="5.000"),
         _line("23/Oct/2026:13:40:00 +0200", "/api/v1/museums", urt="8.000"),  # 窗口外
         '"\\x05\\x01\\x00" 400',  # 扫描器

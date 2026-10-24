@@ -10,7 +10,7 @@ from rapidfuzz import fuzz
 
 from app.services.matching.index import core_for
 from app.services.matching.normalize import normalize, tokens
-from app.services.matching.people import is_named, same_person, surname_seen
+from app.services.matching.people import _people, is_named, same_person, surname_seen
 
 ACCEPT_WITH_ARTIST = 0.75
 ACCEPT_TITLE_ONLY = 0.9
@@ -70,12 +70,27 @@ def recognize(
             if (allowed is None or i in allowed) and e.get("inv") in inv:
                 cand[i] = 1.0
 
+    # 作者判同按作者名记住结果:同一作者挂在上千件候选上,逐件重算曾让 47 行墙签的
+    # 一次匹配跑到 13s(prod 10-19,same_person 180 万次)
+    # 预筛(结果不变):判同要么整串相等,要么某个人的词集合相等/是子集——都至少共用一个词
+    seen: dict[str, bool] = {}
+    hint_cf = {h.strip().casefold() for h in hints}
+    hint_words = {w for h in hints for p in _people(h) for w in p}
+
+    def artist_ok(a: str) -> bool:
+        if a not in seen:
+            maybe = a.strip().casefold() in hint_cf or any(
+                p & hint_words for p in _people(a)
+            )
+            seen[a] = (
+                maybe and any(same_person(h, a, allow_subset=True) for h in hints)
+            ) or bool(ocr_norm and len(a) >= 6 and a in ocr_norm)
+        return seen[a]
+
     rows = []
     for i, s in cand.items():
         e = core.entries[i]
-        ok = any(
-            same_person(h, a, allow_subset=True) for h in hints for a in e["artists"]
-        ) or bool(ocr_norm and any(len(a) >= 6 and a in ocr_norm for a in e["artists"]))
+        ok = any(artist_ok(a) for a in e["artists"])
         rows.append((s + ARTIST_BONUS * ok, s, ok, e["qid"], i))
     rows.sort(key=lambda r: -r[0])
 

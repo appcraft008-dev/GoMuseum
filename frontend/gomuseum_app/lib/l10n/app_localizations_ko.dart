@@ -483,7 +483,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authPasswordRequired => '비⁠밀⁠번⁠호⁠를 입⁠력⁠하⁠세⁠요';
 
   @override
-  String get authPasswordMin6 => '비⁠밀⁠번⁠호⁠는 6⁠자 이⁠상⁠이⁠어⁠야 합⁠니⁠다';
+  String get authPasswordMin8 => '비⁠밀⁠번⁠호⁠는 8⁠자 이⁠상⁠이⁠어⁠야 합⁠니⁠다';
 
   @override
   String get authConfirmPasswordHint => '비⁠밀⁠번⁠호 확⁠인';
