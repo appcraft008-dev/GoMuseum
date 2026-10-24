@@ -1,7 +1,9 @@
-{% macro download_block(t, play, device, qr) -%}
+{% macro download_block(t, play, device, qr, wechat) -%}
 <div class="dl">
   {% if device in ('iphone', 'ipad') %}
     <p class="dl-note">{{ t('android_only_ios') }}</p>
+  {% elif wechat %}
+    <p class="dl-note">{{ t('open_in_browser') }}</p>
   {% elif play %}
     <a class="play" href="{{ play }}" data-track="download"><small>{{ t('play_badge_pre') }}</small><b>Google Play</b></a>
     {% if device == 'desktop' and qr %}<figure class="qr"><img src="{{ qr }}" width="120" height="120" alt=""><figcaption>{{ t('scan_qr') }}</figcaption></figure>{% endif %}
