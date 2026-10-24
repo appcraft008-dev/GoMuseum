@@ -3,13 +3,16 @@
 
 用法: run_batch.py <jobs.json> <输出目录>
 """
+import atexit
 import hashlib
+import io
 import json
 import os
 import subprocess
 import sys
 import time
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 warnings.filterwarnings("ignore")
@@ -89,6 +92,12 @@ WLANG = {"zh": "zh", "zh-hant": "zh", "en": "en", "fr": "fr", "de": "de",
          "es": "es", "it": "it", "pl": "pl", "ja": "ja", "ko": "ko"}
 # ====================
 
+# TTS_GPU=modal:生成放 Modal L40S(见 modal_gen.py),其余全在本机,口径不变。
+# GPU 模式下一条的首次生成提前在后台提交,与本条质检重叠,GPU 不空转。
+GPU = os.environ.get("TTS_GPU") == "modal"
+MAX_USD = float(os.environ.get("MAX_USD", "5"))  # 本次运行的费用闸(按墙钟保守估)
+ENGINE = "modal-l40s-fp32" if GPU else "mac-mps-fp32"
+
 _model = None
 
 
@@ -97,6 +106,30 @@ def model():
     if _model is None:
         _model = VoxCPM.from_pretrained("openbmb/VoxCPM2", load_denoiser=False)
     return _model
+
+
+def generate(text, lang):
+    """→ (float32 波形, 采样率)。"""
+    seed = LAB / f"seeds_final/{SEED_OF[lang]}.wav"
+    if GPU:
+        import modal_gen
+        wav, _ = modal_gen.TTS().gen.remote(text, seed.read_bytes(), CFG, TIMESTEPS)
+        w, sr = sf.read(io.BytesIO(wav), dtype="float32")
+        return w, sr
+    m = model()
+    wav = m.generate(text=text, reference_wav_path=str(seed),
+                     cfg_value=CFG, inference_timesteps=TIMESTEPS)
+    return np.asarray(wav, dtype=np.float32), m.tts_model.sample_rate
+
+
+def prepare(j):
+    """取文本 + (GPU 时)首次生成。在后台线程里跑,给下一条预取。"""
+    text, lang = fetch_text(j), j["language"]
+    # zh-hant 喂**简体**给模型(见 tts_input:模型认不全繁体专用字形)。
+    # 质检、语速、长度比一律仍按原始正文 `text` 算 —— 用户读到的是它,
+    # 口径不能跟着输入走(normalize() 本来两侧都转简体,读数零影响)。
+    first = generate(tts_input(text, lang), lang) if text and GPU else None
+    return text, first
 
 
 def qc(path, text, wl):
@@ -126,26 +159,30 @@ def main():
         todo.append((j, name))
     print(f"总任务 {len(jobs)},待做 {len(todo)}(已完成 {len(jobs)-len(todo)})", flush=True)
 
-    m = model()
-    sr = m.tts_model.sample_rate
+    if GPU:
+        import modal_gen
+        run_ctx = modal_gen.app.run()
+        run_ctx.__enter__()  # 容器空闲 60s 自动缩到 0
+        atexit.register(run_ctx.__exit__, None, None, None)
+        t_start = time.time()
+    pool = ThreadPoolExecutor(1)
+    nxt = pool.submit(prepare, todo[0][0]) if todo else None
     for i, (j, name) in enumerate(todo, 1):
+        if GPU and (time.time() - t_start) * modal_gen.USD_PER_S > MAX_USD:
+            print(f"💰 费用闸:估算已超 ${MAX_USD},停在第 {i} 条(调大 MAX_USD 续跑)", flush=True)
+            break
         lang = j["language"]
-        text = fetch_text(j)
+        text, first = nxt.result()
+        nxt = pool.submit(prepare, todo[i][0]) if i < len(todo) else None
         if not text:
             print(f"[{i}/{len(todo)}] {name} 无文本,跳过", flush=True)
             state[name] = {"ok": False, "reason": "no_text"}
             statef.write_text(json.dumps(state, ensure_ascii=False, indent=1))
             continue
-        seed = LAB / f"seeds_final/{SEED_OF[lang]}.wav"
         tries = []
         for attempt in range(1, MAX_TRY + 1):
             t0 = time.time()
-            # zh-hant 喂**简体**给模型(见 tts_input:模型认不全繁体专用字形)。
-            # 质检、语速、长度比一律仍按原始正文 `text` 算 —— 用户读到的是它,
-            # 口径不能跟着输入走(normalize() 本来两侧都转简体,读数零影响)。
-            wav = m.generate(text=tts_input(text, lang), reference_wav_path=str(seed),
-                             cfg_value=CFG, inference_timesteps=TIMESTEPS)
-            w = np.asarray(wav, dtype=np.float32)
+            w, sr = first if attempt == 1 and first else generate(tts_input(text, lang), lang)
             raw = outdir / f"_tmp_{name}.wav"
             sf.write(raw, w, sr)
             mp3 = outdir / name
@@ -175,7 +212,7 @@ def main():
                   f"{'✅' if ok else '重试'} {gen:.0f}s", flush=True)
             tries.append({"try": attempt, "ok": ok, "sharp": round(sharp, 1),
                           "consist": round(ratio, 2), "lenratio": round(lr, 2),
-                          "atempo": round(at, 3),
+                          "atempo": round(at, 3), "engine": ENGINE,
                           "lufs_in": None if lufs is None else round(lufs, 1),
                           "gain": round(g, 2)})
             if ok:
