@@ -87,6 +87,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     controller: _passwordController,
                     hint: l10n.authPasswordHint,
                     obscure: true,
+                    // 边输边提示,不等点「注册」才发现位数不够
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: (v) {
                       if (v?.isEmpty == true) return l10n.authPasswordRequired;
                       if (v!.length < 8) return l10n.authPasswordMin8;
@@ -145,9 +147,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     TextInputType? keyboardType,
     bool obscure = false,
     String? Function(String?)? validator,
+    AutovalidateMode? autovalidateMode,
   }) {
     return TextFormField(
       controller: controller,
+      autovalidateMode: autovalidateMode,
       keyboardType: keyboardType,
       obscureText: obscure,
       validator: validator,

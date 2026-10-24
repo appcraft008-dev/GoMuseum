@@ -31,7 +31,7 @@ class _FakeRepo extends AuthRepository {
   }
 }
 
-Future<_FakeRepo> _submit(WidgetTester tester, String password) async {
+Future<_FakeRepo> _pump(WidgetTester tester) async {
   final repo = _FakeRepo();
   tester.view.physicalSize = const Size(400, 1200);
   tester.view.devicePixelRatio = 1.0;
@@ -53,6 +53,11 @@ Future<_FakeRepo> _submit(WidgetTester tester, String password) async {
     ),
   );
   await tester.pumpAndSettle();
+  return repo;
+}
+
+Future<_FakeRepo> _submit(WidgetTester tester, String password) async {
+  final repo = await _pump(tester);
   final fields = find.byType(TextFormField);
   await tester.enterText(fields.at(0), 'a@test.com');
   await tester.enterText(fields.at(2), password);
@@ -74,5 +79,17 @@ void main() {
     expect(find.text('密码至少 8 位'), findsNothing);
     expect(repo.registered, ['12345678']);
     await tester.pumpAndSettle(const Duration(seconds: 5)); // 等失败提示条消失
+  });
+
+  testWidgets('输入时就提示不足 8 位，不用等点注册', (tester) async {
+    await _pump(tester);
+    final password = find.byType(TextFormField).at(2);
+    await tester.enterText(password, '1234567');
+    await tester.pump();
+    expect(find.text('密码至少 8 位'), findsOneWidget);
+
+    await tester.enterText(password, '12345678');
+    await tester.pump();
+    expect(find.text('密码至少 8 位'), findsNothing);
   });
 }
