@@ -124,11 +124,11 @@ def generate(text, lang):
 
 def prepare(j):
     """取文本 + (GPU 时)首次生成。在后台线程里跑,给下一条预取。"""
-    text = fetch_text(j)
+    text, lang = fetch_text(j), j["language"]
     # zh-hant 喂**简体**给模型(见 tts_input:模型认不全繁体专用字形)。
     # 质检、语速、长度比一律仍按原始正文 `text` 算 —— 用户读到的是它,
     # 口径不能跟着输入走(normalize() 本来两侧都转简体,读数零影响)。
-    first = generate(tts_input(text, j["language"]), j["language"]) if text and GPU else None
+    first = generate(tts_input(text, lang), lang) if text and GPU else None
     return text, first
 
 
