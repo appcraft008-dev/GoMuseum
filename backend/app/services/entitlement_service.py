@@ -633,6 +633,7 @@ def grant_from_purchase(
     currency=None,
     receipt_payload=None,
     granted_reason: str = "purchase",
+    is_test=None,
 ) -> tuple:
     """收据校验通过后:落订单 + 发权益。返回 (purchase, entitlement)。
 
@@ -678,6 +679,7 @@ def grant_from_purchase(
         status="purchased",
         purchased_at=_now(),
         receipt_payload=receipt_payload,
+        is_test=is_test,
     )
     db.add(p)
     db.flush()  # 拿 p.id 关联权益

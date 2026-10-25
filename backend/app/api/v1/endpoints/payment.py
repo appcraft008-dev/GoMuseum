@@ -175,6 +175,8 @@ async def verify_purchase(
                         if verification.get("environment") == "sandbox"
                         else "purchase"
                     ),
+                    is_test=bool(verification.get("is_test"))
+                    or verification.get("environment") == "sandbox",
                 )
             except _es.PurchaseOwnershipConflict:
                 # 这张收据已归属别的账号:回明确错误,不能假装成功

@@ -114,6 +114,7 @@ def test_revenue_counts_only_purchased(session):
             amount=7.99,
             status="purchased",
             purchased_at=datetime.now(timezone.utc),
+            is_test=False,
         )
     )
     session.add(
@@ -128,3 +129,25 @@ def test_revenue_counts_only_purchased(session):
     )
     session.commit()
     assert build(session, 7)["revenue_eur"] == 7.99  # 退款不计收入
+
+
+def test_test_orders_excluded_from_revenue(session):
+    """许可测试单没扣钱,不能算收入;NULL(补标前的老单)算未知,单独列。"""
+    now = datetime.now(timezone.utc)
+    for i, flag in enumerate([True, False, None]):
+        session.add(
+            Purchase(
+                user_id=f"u{i}",
+                platform="android",
+                product_id="p",
+                store_transaction_id=f"t{i}",
+                amount=7.99,
+                status="purchased",
+                purchased_at=now,
+                is_test=flag,
+            )
+        )
+    session.commit()
+    r = build(session, 7)
+    assert r["orders"] == {"real": 1, "test": 1, "unknown": 1}
+    assert r["revenue_eur"] == 7.99  # 测试单不计;未知单也不计,免得虚高

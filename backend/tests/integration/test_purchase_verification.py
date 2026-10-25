@@ -486,3 +486,78 @@ def test_ownership_conflict_surfaces_as_409_not_500(client, monkeypatch):
 
     assert r.status_code == 409, r.text
     assert r.json()["detail"]["reason"] == "purchase_belongs_to_another_account"
+
+
+@pytest.mark.parametrize(
+    "play_body,expected",
+    [
+        ({"purchaseType": 0}, True),  # 许可测试:没扣钱
+        ({}, False),  # 真实付款:Play 不带 purchaseType
+        ({"purchaseType": 1}, False),  # 促销码:不是测试账号
+    ],
+)
+@pytest.mark.asyncio
+async def test_google_receipt_reports_license_test(monkeypatch, play_body, expected):
+    """测试单与真实单在库里一模一样,收入统计会把测试单算进去。
+    唯一能分开的信号是 Play 返回的 purchaseType(0=许可测试),此前被丢弃。"""
+    import httpx
+
+    from app.services import iap_verification_service as mod
+
+    body = {"purchaseState": 0, "orderId": "GPA.1", **play_body}
+    transport = httpx.MockTransport(lambda req: httpx.Response(200, json=body))
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        mod.httpx,
+        "AsyncClient",
+        lambda **k: real_client(transport=transport, **k),
+    )
+    svc = IAPVerificationService()
+    monkeypatch.setattr(svc, "_play_access_token", lambda: "tok")
+
+    out = await svc.verify_google_receipt(purchase_token="t", product_id="p")
+    assert out["valid"] is True
+    assert out["is_test"] is expected
+
+
+@pytest.mark.parametrize("is_test", [True, False])
+def test_verify_records_is_test_on_purchase(client, monkeypatch, is_test):
+    from app.api.v1.endpoints import payment as pay
+    from app.api.v1.endpoints.payment import get_iap_verification_service
+
+    c, db = client
+    u = User(email=f"t{is_test}@test.com", is_guest=False)
+    db.add(u)
+    db.commit()
+    monkeypatch.setattr(
+        pay.AuthService, "get_current_user", staticmethod(lambda *a, **k: u)
+    )
+
+    class _FakeIAP:
+        async def verify_google_receipt(self, *a, **k):
+            return {
+                "valid": True,
+                "product_id": es.PARIS_PASS_7D,
+                "transaction_id": "GPA.9",
+                "is_test": is_test,
+            }
+
+        async def acknowledge_google_purchase(self, *a, **k):
+            return True
+
+    app.dependency_overrides[get_iap_verification_service] = lambda: _FakeIAP()
+    try:
+        r = c.post(
+            "/api/v1/payment/verify",
+            json={
+                "platform": "android",
+                "product_id": es.PARIS_PASS_7D,
+                "receipt_data": "whatever",
+            },
+            headers={"Authorization": "Bearer x"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_iap_verification_service, None)
+
+    assert r.status_code == 200, r.text
+    assert db.query(Purchase).one().is_test is is_test
