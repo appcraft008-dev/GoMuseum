@@ -4,7 +4,7 @@
 下游没有任何东西会报错,只有人在排查失败原因时被带偏。
 """
 
-from batch_record import make_record
+from batch_record import make_record, pick
 
 FAIL1 = {"try": 1, "ok": False, "sharp": 136.1, "consist": 0.06, "lenratio": 1.46, "atempo": 0.784}
 FAIL2 = {"try": 2, "ok": False, "sharp": 144.2, "consist": 0.72, "lenratio": 0.94, "atempo": 0.804}
@@ -38,6 +38,37 @@ def test_四个分数同源不混搭():
 def test_每次尝试的原始分数都留着():
     rec = make_record([FAIL1, FAIL2, FAIL3], "SEED_en", None)
     assert [t["consist"] for t in rec["tries"]] == [0.06, 0.72, 0.87]
+
+
+OK_FAST = {"try": 1, "ok": True, "sharp": 120.0, "consist": 0.97, "lenratio": 1.0, "atempo": 0.78, "paced": False}
+OK_PACED = {"try": 2, "ok": True, "sharp": 150.0, "consist": 0.95, "lenratio": 1.0, "atempo": 0.90, "paced": True}
+OK_FAST3 = {**OK_FAST, "try": 3}
+
+
+def test_择优_合格且节奏达标的优先():
+    assert pick([OK_FAST, OK_PACED]) == 1
+    # 达标那次夹在中间:"取最后一个合格的"会错选第3次
+    assert pick([OK_FAST, OK_PACED, OK_FAST3]) == 1
+
+
+def test_择优_都不达标时留最早合格的那次_不被后面的失败冲掉():
+    # 第1次合格但偏、第2/3次没过闸:必须留第1次,不能留最后那次失败的
+    assert pick([OK_FAST, FAIL2, FAIL3]) == 0
+
+
+def test_择优_全失败留最后一次():
+    assert pick([FAIL1, FAIL2, FAIL3]) == 2
+
+
+def test_择优_没有_paced_字段的老记录视为达标():
+    assert pick([PASS3]) == 0
+
+
+def test_顶层分数跟着被留下的那次走():
+    rec = make_record([OK_FAST, OK_PACED, OK_FAST3], "SEED_zh", "m", kept=1, pipeline="abc")
+    for k in ("sharp", "consist", "lenratio", "atempo"):
+        assert rec[k] == OK_PACED[k], f"{k} 不是被留下那次的值"
+    assert rec["pipeline"] == "abc"
 
 
 def test_单次成功也记进_tries():

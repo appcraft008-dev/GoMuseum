@@ -135,7 +135,9 @@ def test_cli_is_dry_run_by_default(tmp_path):
     assert "dry-run" in out.stdout, out.stdout + out.stderr
 
 
-def _run_main(db_session, tmp_path, *extra, engine="voxcpm2", verdict=True):
+def _run_main(
+    db_session, tmp_path, *extra, engine="voxcpm2", verdict=True, legacy=False
+):
     """跑 CLI 的 main(),把 DB/存储换成测试替身。返回 (stats 输出, 写入的 key 列表)."""
     import audio_ingest_cli as cli
 
@@ -172,12 +174,19 @@ def _run_main(db_session, tmp_path, *extra, engine="voxcpm2", verdict=True):
                     "Q1__zh__guide.mp3": {
                         "ok": verdict,
                         "md5": hashlib.md5(data).hexdigest(),
+                        "pipeline": "ea1c0bc3",
                         "sharp": 120.0,
                         "consist": 0.99,
                     }
                 }
             )
         )
+        if legacy:  # 生成机旧副本的记录形态:没有 md5/pipeline
+            st = json.loads((tmp_path / "_state.json").read_text())
+            for rec in st.values():
+                rec.pop("md5")
+                rec.pop("pipeline")
+            (tmp_path / "_state.json").write_text(json.dumps(st))
     monkey.setattr(
         sys,
         "argv",
@@ -246,6 +255,20 @@ def test_gate_failed_clip_is_not_written(db_with_existing, tmp_path, capsys):
     assert written == [], "未过闸的产物不该被写入"
     out = capsys.readouterr().out
     assert "unverified" in out, "拒绝原因要单独计数,不能混进质量闸的 rejected"
+
+
+def test_old_copy_batch_is_not_written(db_with_existing, tmp_path, capsys):
+    """旧副本产的批次(记录无 md5/pipeline)不许落库 —— 全链路验证闸接上了。"""
+    written = _run_main(db_with_existing, tmp_path, "--force", legacy=True)
+    assert written == []
+    assert "unverified_pipeline" in capsys.readouterr().out
+
+
+def test_old_copy_batch_needs_explicit_escape_hatch(db_with_existing, tmp_path):
+    written = _run_main(
+        db_with_existing, tmp_path, "--force", "--allow-legacy-state", legacy=True
+    )
+    assert len(written) == 1
 
 
 def test_apply_without_state_file_is_refused(db_with_existing, tmp_path):

@@ -14,9 +14,12 @@ DATA = b"pretend-this-is-an-mp3" * 100
 MD5 = hashlib.md5(DATA).hexdigest()
 
 
+GOOD = {"ok": True, "md5": MD5, "pipeline": "ea1c0bc3"}
+
+
 def test_good_clip_passes():
-    """正样本:判定合格且 md5 相符 → 放行。"""
-    assert verdict_problem({"a.mp3": {"ok": True, "md5": MD5}}, "a.mp3", DATA) is None
+    """正样本:判定合格、md5 相符、带管线版本 → 放行。"""
+    assert verdict_problem({"a.mp3": GOOD}, "a.mp3", DATA) is None
 
 
 def test_gate_failed_clip_is_refused():
@@ -32,13 +35,33 @@ def test_unknown_clip_is_refused():
 
 def test_content_mismatch_is_refused():
     """反样本③:内容与判定时的 md5 不符 —— 传输损坏或文件被换过。"""
-    v = {"a.mp3": {"ok": True, "md5": hashlib.md5(b"other").hexdigest()}}
+    v = {"a.mp3": {**GOOD, "md5": hashlib.md5(b"other").hexdigest()}}
     assert "md5_mismatch" in (verdict_problem(v, "a.mp3", DATA) or "")
 
 
-def test_legacy_record_without_md5_still_passes():
-    """老批次的 _state.json 没有 md5 字段,不能因此把它们全判成不合格。"""
-    assert verdict_problem({"a.mp3": {"ok": True}}, "a.mp3", DATA) is None
+def test_old_copy_record_is_refused():
+    """反样本④:生成机旧副本产的记录长这样(ok 但无 md5/pipeline)——
+    2026-10-19 起 535 条就是这个形态灌进去的,线上响度极差 12.1dB。"""
+    v = {"a.mp3": {"ok": True, "sharp": 120.0, "atempo": 0.9}}
+    assert "unverified_pipeline" in (verdict_problem(v, "a.mp3", DATA) or "")
+
+
+def test_md5_without_pipeline_is_refused():
+    """反样本⑤:有 md5 没管线版本 —— 不是 start_run.sh 起的(直接调了 run_chunked)。"""
+    v = {"a.mp3": {"ok": True, "md5": MD5}}
+    assert "unverified_pipeline" in (verdict_problem(v, "a.mp3", DATA) or "")
+
+
+def test_legacy_escape_hatch_must_be_explicit():
+    """重灌老批次:显式 allow_legacy 才放行,且 md5 不符仍然拦。"""
+    assert (
+        verdict_problem({"a.mp3": {"ok": True}}, "a.mp3", DATA, allow_legacy=True)
+        is None
+    )
+    bad = {"a.mp3": {"ok": True, "md5": hashlib.md5(b"other").hexdigest()}}
+    assert "md5_mismatch" in (
+        verdict_problem(bad, "a.mp3", DATA, allow_legacy=True) or ""
+    )
 
 
 def test_apply_without_state_file_is_refused(tmp_path):

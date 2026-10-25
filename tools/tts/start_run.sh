@@ -18,13 +18,20 @@ LOG=${LOG:-$HOME/tts-lab/run_$(basename "${JOBS%.json}").log}
 
 [ -f "$JOBS" ] || { echo "❌ 任务文件不存在: $JOBS" >&2; exit 1; }
 
+# 唯一管线:每条产物记下起跑 commit(灌入端缺它就拒)。工作区有未提交改动时
+# 拒跑 —— 否则记下的 commit 不是实际跑的代码(10-19 那批就记着 dd911dfa,
+# 实际代码是未提交改动)。要试新改法:先提交,再跑。
+DIRTY=$(git -C "$HERE" status --porcelain -- . 2>/dev/null || echo "非仓库")
+[ -z "$DIRTY" ] || { echo "❌ tools/tts 有未提交改动或不在仓库里,拒绝起跑:" >&2; echo "$DIRTY" >&2; exit 1; }
+PIPELINE=$(git -C "$HERE" rev-parse --short HEAD)
+
 # ⚠️ 追加(>>)不是覆盖(>)。长批中途重起是常态(换工作树/OOM/手误),
 # 用 > 每次都把历史日志清空:2026-09-10 那批重起两次,前 144 条的时长与 atempo
 # 永久丢失,事后做「锐度 vs 时长」分组只剩 445/589 条可用。
 # **凡是只存在于日志里的字段(成品时长、atempo、每次尝试的耗时)都会随重起蒸发** ——
 # `_state.json` 是累积的,日志不是。
-echo "=== 起跑 $(date '+%F %T')  commit $(git -C "$HERE" rev-parse --short HEAD 2>/dev/null || echo '非仓库')  jobs=$JOBS ===" >> "$LOG"
-PY=${PY:-$HOME/tts-lab/venv/bin/python} TTS_LAB=${TTS_LAB:-$HOME/tts-lab} \
+echo "=== 起跑 $(date '+%F %T')  commit $PIPELINE  jobs=$JOBS ===" >> "$LOG"
+TTS_PIPELINE=$PIPELINE PY=${PY:-$HOME/tts-lab/venv/bin/python} TTS_LAB=${TTS_LAB:-$HOME/tts-lab} \
   nohup "$HERE/run_chunked.sh" "$JOBS" "$OUT" "$CHUNK" >> "$LOG" 2>&1 &
 
 # 模型加载要十几秒,给足时间再判活
