@@ -47,6 +47,8 @@ OK_FAST3 = {**OK_FAST, "try": 3}
 
 def test_择优_合格且节奏达标的优先():
     assert pick([OK_FAST, OK_PACED]) == 1
+    # 达标那次夹在中间:"取最后一个合格的"会错选第3次
+    assert pick([OK_FAST, OK_PACED, OK_FAST3]) == 1
 
 
 def test_择优_都不达标时留最早合格的那次_不被后面的失败冲掉():
