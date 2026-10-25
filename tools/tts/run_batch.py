@@ -22,7 +22,7 @@ import numpy as np
 import soundfile as sf
 from voxcpm import VoxCPM
 
-from batch_record import make_record
+from batch_record import make_record, pick
 from consistency import consistency, length_ratio, tts_input
 from fetch_text import fetch_text  # 取文本只此一份实现(含 502 重试)
 from loudness import TARGET_LUFS, gain_db, measure
@@ -62,6 +62,11 @@ for _kv in filter(None, os.environ.get("SEED_OVERRIDE", "").split(",")):
 RATE = {"zh": 4.64, "en": 15.84, "fr": 15.61, "de": 15.67, "es": 15.87,
         "it": 15.78, "pl": 14.86, "ja": 5.47, "ko": 7.31, "zh-hant": 4.71}
 ATEMPO_MIN, ATEMPO_MAX = 0.75, 1.15   # 0.75 用户听不出;0.56 明确否决"明显拉长"
+# 节奏偏好(软指标,不进 ok,只决定多次尝试里留哪条,见 batch_record.pick):
+# atempo 只能整体缩放,缩放幅度大 = 这次生成原始节奏离目标远,内部停顿大概率
+# 也不匀。10-25 意语 358 条 atempo 主体落在 0.80-1.00(mean 0.891,sd 0.046);
+# 加偏好后 56 条 sd 0.038,约 12.5% 的条目多生成一次。边界取整是判断,未精确拟合。
+ATEMPO_PREFER = (0.80, 1.00)
 SHARP_MAX = 240.0       # 谐波锐度(丝丝)
 # 为什么是 240 而不是原来的 200(2026-09-14 九条盲听定的,含真实被拦样本):
 # 用户只按"丝丝声"盲评,判断与锐度值**不单调** —— 176 被评"最轻"、143 被评
@@ -97,6 +102,7 @@ WLANG = {"zh": "zh", "zh-hant": "zh", "en": "en", "fr": "fr", "de": "de",
 GPU = os.environ.get("TTS_GPU") == "modal"
 MAX_USD = float(os.environ.get("MAX_USD", "5"))  # 本次运行的费用闸(按墙钟保守估)
 ENGINE = "modal-l40s-fp32" if GPU else "mac-mps-fp32"
+PIPELINE = os.environ.get("TTS_PIPELINE")  # start_run.sh 注入起跑 commit;缺了灌入端会拒
 
 _model = None
 
@@ -185,7 +191,9 @@ def main():
             w, sr = first if attempt == 1 and first else generate(tts_input(text, lang), lang)
             raw = outdir / f"_tmp_{name}.wav"
             sf.write(raw, w, sr)
-            mp3 = outdir / name
+            # 每次尝试单独落一个文件:合格但节奏偏时会接着试,若后面那次反而
+            # 没过闸,直接写 outdir/name 就会把已经合格的那条冲掉。
+            mp3 = outdir / f"_try{attempt}_{name}"
             # 语速对齐:按该语言 tts-1 字/秒算目标时长,atempo 压回去。
             # atempo 只伸缩时间不改音高(实测 F0 190→188),且锐度/HNR 反而变好。
             at = min(max((len(w) / sr) / (len(text) / RATE[lang]),
@@ -204,20 +212,28 @@ def main():
             ok = (sharp < SHARP_BY_LANG.get(lang, SHARP_MAX)
                   and ratio >= CONSIST_BY_LANG.get(lang, CONSIST_MIN)
                   and LEN_RANGE[0] <= lr <= LEN_RANGE[1])
+            paced = ATEMPO_PREFER[0] <= at <= ATEMPO_PREFER[1]
             gen = time.time() - t0
             print(f"[{i}/{len(todo)}] {name} 第{attempt}次 锐度={sharp:.0f}% 一致={ratio:.2f} "
                   f"长度比={lr:.2f} "
-                  f"{len(w)/sr:.0f}s→{len(w)/sr/at:.0f}s(atempo {at:.2f}) "
+                  f"{len(w)/sr:.0f}s→{len(w)/sr/at:.0f}s(atempo {at:.2f}{'' if paced else ',偏'}) "
                   f"响度{lufs if lufs is None else round(lufs, 1)}→{TARGET_LUFS}({g:+.1f}dB) "
                   f"{'✅' if ok else '重试'} {gen:.0f}s", flush=True)
             tries.append({"try": attempt, "ok": ok, "sharp": round(sharp, 1),
                           "consist": round(ratio, 2), "lenratio": round(lr, 2),
-                          "atempo": round(at, 3), "engine": ENGINE,
+                          "atempo": round(at, 3), "paced": paced, "engine": ENGINE,
                           "lufs_in": None if lufs is None else round(lufs, 1),
                           "gain": round(g, 2)})
-            if ok:
+            if ok and paced:
                 break
-        if not tries[-1]["ok"]:
+        kept = pick(tries)
+        for t in tries:
+            f = outdir / f"_try{t['try']}_{name}"
+            if t is tries[kept]:
+                f.replace(outdir / name)
+            else:
+                f.unlink(missing_ok=True)
+        if not tries[kept]["ok"]:
             # 三次都没过闸 → 把产物移出灌入目录(不是删掉)。
             # 必须移走:灌入端的 check_audio 只判时长比例与替换偏差,**不看锐度/
             # 一致性**,留在原地会一路绿灯进 prod(实测已漏进去一条 Q3937645/ja/qa_0)。
@@ -237,7 +253,8 @@ def main():
         final = outdir / name
         state[name] = make_record(
             tries, SEED_OF[lang],
-            hashlib.md5(final.read_bytes()).hexdigest() if final.exists() else None)
+            hashlib.md5(final.read_bytes()).hexdigest() if final.exists() else None,
+            kept=kept, pipeline=PIPELINE)
         statef.write_text(json.dumps(state, ensure_ascii=False, indent=1))
 
     done = sum(1 for v in state.values() if v.get("ok"))
