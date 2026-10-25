@@ -130,13 +130,33 @@ def build(db, days: int) -> dict:
             "reuse_pct": round(reuse, 1),
             "dist": dict(dist),
         },
+        "orders": _orders(db, since),
+        # 只计确认是真实付款的单:测试单没扣钱,未知(NULL)单也不计,免得虚高
         "revenue_eur": float(
             db.query(func.coalesce(func.sum(Purchase.amount), 0))
-            .filter(Purchase.status == "purchased", Purchase.created_at >= since)
+            .filter(
+                Purchase.status == "purchased",
+                Purchase.created_at >= since,
+                Purchase.is_test.is_(False),
+            )
             .scalar()
             or 0
         ),
     }
+
+
+def _orders(db, since) -> dict:
+    rows = (
+        db.query(Purchase.is_test, func.count())
+        .filter(Purchase.status == "purchased", Purchase.created_at >= since)
+        .group_by(Purchase.is_test)
+        .all()
+    )
+    key = {True: "test", False: "real", None: "unknown"}
+    out = {"real": 0, "test": 0, "unknown": 0}
+    for flag, n in rows:
+        out[key[flag]] = n
+    return out
 
 
 def render(r: dict) -> None:
@@ -189,7 +209,12 @@ def render(r: dict) -> None:
 
     for line in render_capacity(r["capacity"]):
         print(line)
-    print(f"└─ 收入 €{r['revenue_eur']:.2f}")
+    o = r["orders"]
+    unknown = f" / 未知 {o['unknown']}" if o["unknown"] else ""
+    print(f"├─ 订单  真实 {o['real']} / 测试 {o['test']}{unknown}(测试单不计收入)")
+    # ⚠️ purchases.amount 购买链路从未写入:有真实单时这里的 €0 不是真的 0
+    note = "(金额未记录,以 Play Console 为准)" if o["real"] else ""
+    print(f"└─ 收入 €{r['revenue_eur']:.2f}{note}")
 
 
 def main() -> None:

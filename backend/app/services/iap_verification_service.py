@@ -237,6 +237,8 @@ class IAPVerificationService:
             "is_subscription": subscription,
             "platform": "android",
             "acknowledged": data.get("acknowledgementState"),
+            # purchaseType 0 = 许可测试(没扣钱);真实付款不带此字段;1 = 促销码
+            "is_test": data.get("purchaseType") == 0,
         }
 
 

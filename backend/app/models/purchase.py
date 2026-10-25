@@ -10,7 +10,7 @@ scope 先只有 "paris",将来 madrid/london/europe 自然扩展,不改表结构
 
 import uuid
 
-from sqlalchemy import Column, DateTime, Numeric, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.core.database import Base
@@ -35,6 +35,8 @@ class Purchase(Base):
     purchased_at = Column(DateTime(timezone=True), nullable=True)
     refunded_at = Column(DateTime(timezone=True), nullable=True)
     receipt_payload = Column(Text, nullable=True)  # 原始收据,存档待查
+    # 许可测试/Sandbox 单:没扣钱,不计收入。NULL = 未知(本列上线前的老单)
+    is_test = Column(Boolean, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
