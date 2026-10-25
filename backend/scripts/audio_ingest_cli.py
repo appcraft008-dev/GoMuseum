@@ -102,6 +102,11 @@ def main() -> int:
         action="store_true",
         help="没有 _state.json 也允许 --apply(逃生口,仅用于外部引擎产出的音频)",
     )
+    ap.add_argument(
+        "--allow-legacy-state",
+        action="store_true",
+        help="放行缺 md5/pipeline 的判定记录(逃生口,仅用于重灌 2026-10-25 前的老批次)",
+    )
     ns = ap.parse_args()
 
     import pathlib
@@ -130,7 +135,9 @@ def main() -> int:
             # md5 逐条核对 127/127 全过:核的是"上传的和本地一致",
             # 验不出"本地这条本身没过闸"。
             if verdicts is not None:
-                bad = verdict_problem(verdicts, f.name, data)
+                bad = verdict_problem(
+                    verdicts, f.name, data, allow_legacy=ns.allow_legacy_state
+                )
                 if bad:
                     stats["unverified"] += 1
                     rejected.append((f"{qid}/{lang}/{sec}", bad))

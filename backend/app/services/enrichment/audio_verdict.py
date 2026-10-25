@@ -33,14 +33,20 @@ def load_verdicts(root, *, apply: bool, allow_unverified: bool):
     )
 
 
-def verdict_problem(verdicts: dict, name: str, data: bytes) -> str | None:
+def verdict_problem(
+    verdicts: dict, name: str, data: bytes, *, allow_legacy: bool = False
+) -> str | None:
     """这条产物有没有问题?没有则返回 None。
 
     - 判定记录缺失 → 可能是拷错目录 / 别批残留
     - 判定为不合格 → 生成侧三次都没过闸
+    - 缺 md5/pipeline → 不是仓库 tools/tts/start_run.sh 产的
     - md5 不符     → 传输损坏,或文件被换过
-    md5 是 2026-09-04 之后才记进 `_state.json` 的,老批次没有该字段 ——
-    跳过这一项,而不是把老批次全判成不合格。
+
+    缺 md5/pipeline 默认拒绝:2026-10-19 起有批次绕过仓库脚本、用了生成机上
+    8 月的旧副本(没有响度归一),535 条照样灌进 prod,线上响度极差 12.1dB。
+    旧副本不写这两个字段,所以这道闸能把它挡在门外。真要重灌老批次,显式
+    `allow_legacy`。
     """
     rec = verdicts.get(name)
     if rec is None:
@@ -51,6 +57,11 @@ def verdict_problem(verdicts: dict, name: str, data: bytes) -> str | None:
             f"sharp={rec.get('sharp')} consist={rec.get('consist')})"
         )
     want = rec.get("md5")
+    if not allow_legacy and not (want and rec.get("pipeline")):
+        return (
+            "unverified_pipeline(判定记录缺 md5/pipeline,不是 tools/tts/start_run.sh "
+            "产的;老批次重灌显式加 --allow-legacy-state)"
+        )
     if want and hashlib.md5(data).hexdigest() != want:
         return "md5_mismatch(与判定时的内容不符,传输损坏或文件被换过)"
     return None
