@@ -17,6 +17,7 @@ class PassOffer {
     this.title,
     this.covers = const [],
     this.stamp,
+    this.recommended = false,
   });
 
   /// Play 商品 ID。购买/查价都用它。
@@ -37,6 +38,10 @@ class PassOffer {
   /// 前端不用发版就能用上;没有时退回 [label] 大写(见 [stampText])。
   final String? stamp;
 
+  /// 后端认定的「你最近在这个城市」(`/me.offers`,按足迹)。权益页把它放第一、
+  /// 其余城市折叠 —— 城市多了以后防买错。老后端没有 → false,全部平铺。
+  final bool recommended;
+
   String get stampText => (stamp ?? label).toUpperCase();
 
   /// null = 后端没给(老后端 / 这家馆暂未开售)。调用方显示「暂未开售」,
@@ -53,6 +58,7 @@ class PassOffer {
       covers:
           (json['covers'] as List?)?.whereType<String>().toList() ?? const [],
       stamp: json['stamp'] as String?,
+      recommended: json['recommended'] as bool? ?? false,
     );
   }
 
@@ -71,6 +77,7 @@ class OwnedPass {
     required this.state,
     this.expiresAt,
     this.activateBy,
+    this.exchangeTo = const [],
   });
 
   final String productId;
@@ -82,6 +89,10 @@ class OwnedPass {
   final String state;
   final DateTime? expiresAt;
   final DateTime? activateBy;
+
+  /// 未激活时能换成哪几张票(商品 ID,买错城市的兜底)。能不能换只看后端给的这份
+  /// 名单 —— 同价位、在售由后端判,前端不推断。老后端没有 → 空,不给换。
+  final List<String> exchangeTo;
 
   bool get isActive => state == 'active';
   bool get isPurchasedNotActivated => state == 'purchased_not_activated';
@@ -103,6 +114,9 @@ class OwnedPass {
       state: json['state'] as String? ?? 'active',
       expiresAt: t('expires_at'),
       activateBy: t('activate_by'),
+      exchangeTo:
+          (json['exchange_to'] as List?)?.whereType<String>().toList() ??
+              const [],
     );
   }
 

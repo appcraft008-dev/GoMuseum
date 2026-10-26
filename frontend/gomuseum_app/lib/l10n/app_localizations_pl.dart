@@ -976,6 +976,35 @@ class AppLocalizationsPl extends AppLocalizations {
   String get benefitsSecBuyAnother => 'Kolejny bilet';
 
   @override
+  String benefitsOtherCities(int count) {
+    return 'Inne miasta ($count)';
+  }
+
+  @override
+  String get passExchangeLink => 'Złe miasto? Wymień bilet';
+
+  @override
+  String get passExchangeSheetTitle => 'Wymień na inne miasto';
+
+  @override
+  String get passExchangeSheetBody =>
+      'Bilet, który jeszcze nie wystartował, można bezpłatnie wymienić na inne miasto w tej samej cenie. Termin aktywacji się nie zmienia.';
+
+  @override
+  String passExchangeTo(String title) {
+    return 'Wymień na: $title';
+  }
+
+  @override
+  String passExchangeDone(String title) {
+    return 'Wymieniono na: $title';
+  }
+
+  @override
+  String get passExchangeFailed =>
+      'Nie udało się wymienić, bilet bez zmian. Spróbuj później';
+
+  @override
   String get benefitsRecognition => 'Rozpoznawanie ze zdjęcia';
 
   @override

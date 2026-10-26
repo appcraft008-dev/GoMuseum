@@ -245,6 +245,23 @@ Future<Entitlements?> activatePass(WidgetRef ref, {String? museum}) async {
   }
 }
 
+/// 买错城市:把一张**未激活**的票换成 [to](只能是 `OwnedPass.exchangeTo` 里的)。
+/// 返回是否换成。被拒(409)/断网都是 false,后端保证被拒时一个字节都不改。
+Future<bool> exchangePass(WidgetRef ref,
+    {required String from, required String to}) async {
+  final dio = ref.read(dioProvider);
+  try {
+    await dio.post('/api/v1/entitlements/exchange', queryParameters: {
+      'from_product': from,
+      'to_product': to,
+      'language': apiLanguage(ref.read(resolvedLocaleProvider)),
+    });
+    return true;
+  } on DioException {
+    return false;
+  }
+}
+
 /// 花 1 次免费额度,解锁这件作品的语音(主讲解段)。返回是否解锁成功。
 ///
 /// **必须由用户显式确认后才调** —— 静默扣额度,用户在一件无所谓的作品上花掉、

@@ -934,6 +934,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get benefitsSecBuyAnother => 'もう一枚';
 
   @override
+  String benefitsOtherCities(int count) {
+    return 'ほかの都市（$count）';
+  }
+
+  @override
+  String get passExchangeLink => '都市を間違えた？交換する';
+
+  @override
+  String get passExchangeSheetTitle => '別の都市のパスに交換';
+
+  @override
+  String get passExchangeSheetBody =>
+      'まだ開始していないパスは、同じ価格の別の都市のパスに無料で交換できます。有効化の期限は変わりません。';
+
+  @override
+  String passExchangeTo(String title) {
+    return '$titleに交換';
+  }
+
+  @override
+  String passExchangeDone(String title) {
+    return '$titleに交換しました';
+  }
+
+  @override
+  String get passExchangeFailed => '交換できませんでした。パスは変わっていません。後でもう一度お試しください';
+
+  @override
   String get benefitsRecognition => '写真認識';
 
   @override

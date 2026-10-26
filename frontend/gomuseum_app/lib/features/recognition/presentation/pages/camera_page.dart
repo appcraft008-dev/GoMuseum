@@ -401,7 +401,10 @@ class _CameraPageState extends ConsumerState<CameraPage>
         return;
       }
       ref.invalidate(entitlementsProvider); // 客户端闸与后端不一致,重拉一次
-      if (mounted) _showQuotaExhaustedSheet(passId: st.passId);
+      if (mounted) {
+        _showQuotaExhaustedSheet(
+            passId: st.passId, inMuseum: st.museum != null);
+      }
       return;
     }
     // 额度**由后端扣**，前端只把扣完的结果拉回来给 UI 显示。
@@ -643,8 +646,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
     return ensurePassActivated(context, ref, ent, museum: museum);
   }
 
-  /// [passId]:402 告诉了是哪家馆的票就只卖那张;不知道 → 权益页列出全部可买的票。
-  void _showQuotaExhaustedSheet({String? passId}) {
+  /// [passId]:402 告诉了是哪家馆的票就只卖那张。[inMuseum]:命中了某家馆却没给票
+  /// = 那家馆没在售的票 → 只说暂未开售。都没有(全局识别前置闸)→ 权益页全列(已按足迹排序)。
+  void _showQuotaExhaustedSheet({String? passId, bool inMuseum = false}) {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
@@ -671,7 +675,7 @@ class _CameraPageState extends ConsumerState<CameraPage>
               icon: GmIcons.ticket,
               onTap: () {
                 Navigator.of(sheetContext).pop();
-                context.push(benefitsRoute(passId));
+                context.push(benefitsRoute(passId, inMuseum: inMuseum));
               },
             ),
           ],

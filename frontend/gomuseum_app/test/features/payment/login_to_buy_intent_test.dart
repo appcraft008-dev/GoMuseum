@@ -25,6 +25,8 @@ import 'package:gomuseum_app/features/payment/presentation/providers/benefits_pr
 import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 
+const _paris = PassOffer(productId: 'paris_pass_7d', days: 7, label: '巴黎');
+
 /// 游客的权益：能识别、**不能购买**（买票前必须登录）。
 /// `canPurchase: false` 正是让按钮变成「登录后购买」的那一位。
 const _guest = Entitlements(
@@ -34,7 +36,7 @@ const _guest = Entitlements(
   canAudioAny: false,
   freeRecognitionsLeft: 3,
   freeRecognitionsTotal: 5,
-  offers: [PassOffer(productId: 'paris_pass_7d', days: 7, label: '巴黎')],
+  offers: [_paris],
 );
 
 class _StubBenefits extends BenefitsState {
@@ -140,7 +142,7 @@ void main() {
     await t.pumpAndSettle();
 
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
-    showPaywallSheet(ctx, onBuy: (_) {});
+    showPaywallSheet(ctx, offer: _paris, onBuy: (_) {});
     await t.pumpAndSettle();
 
     final cta = find.text(l10n.paywallLoginToBuy);
