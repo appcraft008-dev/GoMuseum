@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -11,6 +12,7 @@ import 'theme/app_theme.dart';
 import 'theme/gm_tokens.dart';
 import 'core/router/app_router.dart';
 import 'core/services/app_update_service.dart';
+import 'core/services/media_session.dart';
 import 'core/theme/theme_mode_provider.dart';
 import 'features/settings/presentation/providers/language_provider.dart';
 import 'l10n/app_localizations.dart';
@@ -35,6 +37,9 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('Firebase init skipped: $e');
   }
+
+  // 系统播放卡片:不阻塞启动;没起来之前开播只是暂时没卡片
+  unawaited(MediaSession.init());
 
   runApp(const ProviderScope(child: GoMuseumApp()));
   // 首帧后再查:Google 的更新小窗要盖在已渲染的界面上

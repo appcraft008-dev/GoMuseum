@@ -11,9 +11,12 @@ library;
 
 import 'dart:async';
 
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/core/network/image_request.dart';
+import 'package:gomuseum_app/core/services/media_session.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
@@ -28,15 +31,18 @@ import 'package:gomuseum_app/ui/gm/gm_icon.dart';
 import 'package:just_audio/just_audio.dart';
 
 /// 单实例播放：同屏任一 player 开播前先停上一个正在播的（问答可同时展开多条）。
+/// 系统播放卡片(锁屏/通知栏)跟着这里走:谁接班就接到谁,释放就撤卡片。
 class _ActiveAudio {
   static _GuideAudioPlayerState? _current;
   static void takeOver(_GuideAudioPlayerState next) {
     if (_current != null && !identical(_current, next)) _current!._pauseQuiet();
     _current = next;
+    MediaSession.attach(next._player, next._mediaItem());
   }
 
   static void release(_GuideAudioPlayerState self) {
     if (identical(_current, self)) _current = null;
+    MediaSession.detach(self._player);
   }
 }
 
@@ -100,6 +106,41 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
 
   void _pauseQuiet() {
     if (_player.playing) _player.pause();
+  }
+
+  /// 系统播放卡片的内容:作品名 / 「段落 · 馆名」/ 作品图。
+  /// 只读已在内存里的数据,不为卡片额外发请求 —— 馆详情没加载过(从识别直接进来)
+  /// 就只写段落,缺了不影响播放。
+  MediaItem _mediaItem() {
+    final c = ref
+        .read(objectContentProvider((slug: widget.slug, qid: widget.qid)))
+        .valueOrNull;
+    final museum = ref
+        .read(museumDetailProvider(
+            (slug: widget.slug, language: widget.language)))
+        .valueOrNull
+        ?.name;
+    final segment = switch (widget.section) {
+      'guide' || 'artist_bio' => c?.artist?.name,
+      'qa' => c?.suggestedQuestions
+          .where((q) => q.sort == widget.qaSort)
+          .firstOrNull
+          ?.question,
+      _ => c?.tabs
+          .where((t) => t.sectionCode == widget.section)
+          .firstOrNull
+          ?.label,
+    };
+    final image = c?.images.firstOrNull?.url;
+    return MediaItem(
+      id: audioSourceId(widget),
+      title: c?.title ?? 'GoMuseum',
+      artist: [segment, museum]
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .join(' · '),
+      artUri: image == null ? null : Uri.tryParse(sizedImageUrl(image, 600)),
+    );
   }
 
   @override
