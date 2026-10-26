@@ -932,6 +932,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get benefitsSecBuyAnother => '再来一张';
 
   @override
+  String benefitsOtherCities(int count) {
+    return '其他城市（$count）';
+  }
+
+  @override
+  String get passExchangeLink => '买错城市了？换一张';
+
+  @override
+  String get passExchangeSheetTitle => '换成另一个城市的票';
+
+  @override
+  String get passExchangeSheetBody => '还没开始计时的票，可以免费换成同价的其他城市票。激活截止日不变。';
+
+  @override
+  String passExchangeTo(String title) {
+    return '换成$title';
+  }
+
+  @override
+  String passExchangeDone(String title) {
+    return '已换成$title';
+  }
+
+  @override
+  String get passExchangeFailed => '没换成，票没有变化。请稍后重试';
+
+  @override
   String get benefitsRecognition => '拍照识别';
 
   @override
@@ -2107,6 +2134,33 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get benefitsSecBuyAnother => '再來一張';
+
+  @override
+  String benefitsOtherCities(int count) {
+    return '其他城市（$count）';
+  }
+
+  @override
+  String get passExchangeLink => '買錯城市了？換一張';
+
+  @override
+  String get passExchangeSheetTitle => '換成另一個城市的票';
+
+  @override
+  String get passExchangeSheetBody => '還沒開始計時的票，可以免費換成同價的其他城市票。啟用截止日不變。';
+
+  @override
+  String passExchangeTo(String title) {
+    return '換成$title';
+  }
+
+  @override
+  String passExchangeDone(String title) {
+    return '已換成$title';
+  }
+
+  @override
+  String get passExchangeFailed => '沒換成，票沒有變化。請稍後重試';
 
   @override
   String get benefitsRecognition => '拍照辨識';

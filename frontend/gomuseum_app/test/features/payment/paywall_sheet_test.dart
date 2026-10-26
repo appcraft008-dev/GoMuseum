@@ -96,7 +96,8 @@ void main() {
   });
 
   testWidgets('拿不到价格就不显示 —— 宁可不显示,也不显示一个当地是错的金额', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris), price: null));
+    await t.pumpWidget(
+        _wrap(const PaywallSheetContent(offer: _paris), price: null));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallPriceNote), findsNothing);
@@ -189,7 +190,8 @@ void main() {
   });
 
   testWidgets('游客看到的是「登录后购买」 —— 通票挂账号,游客买了换手机就拿不回', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris), ent: _guest));
+    await t.pumpWidget(
+        _wrap(const PaywallSheetContent(offer: _paris), ent: _guest));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallLoginToBuy), findsOneWidget);
@@ -201,8 +203,8 @@ void main() {
   testWidgets('权益读不到时绝不说「登录后购买」 —— 用户可能已登录,只是断网了', (t) async {
     // ⚠️ Entitlements.unknown 的 canPurchase 也是 false。少了 known 标记,
     // 这里就会对着一个已登录的用户要求登录 —— 他照做也没用。
-    await t.pumpWidget(
-        _wrap(const PaywallSheetContent(offer: _paris), ent: Entitlements.unknown));
+    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris),
+        ent: Entitlements.unknown));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallLoginToBuy), findsNothing);
@@ -213,7 +215,8 @@ void main() {
   });
 
   testWidgets('已登录用户直接看到购买按钮', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris), ent: _member));
+    await t.pumpWidget(
+        _wrap(const PaywallSheetContent(offer: _paris), ent: _member));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallBuy), findsOneWidget);

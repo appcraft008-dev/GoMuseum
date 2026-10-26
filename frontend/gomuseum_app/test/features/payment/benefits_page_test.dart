@@ -3,9 +3,13 @@
 /// 这一页出过一次真金白银的事故:已付费用户进来看到的还是商店,以为没买成功
 /// 而重复购买(2026-09-02 真机)。所以"已购之后不再出现购买按钮"是这里
 /// 最该钉死的一条。
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/data/pass_history.dart';
 import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
@@ -89,10 +93,12 @@ Widget _wrap(
   List<PassRecord> history = const [],
   Locale locale = const Locale('zh'),
   String? passId,
+  Dio? dio,
 }) =>
     ProviderScope(
       overrides: [
         entitlementsProvider.overrideWith((ref) async => ent),
+        if (dio != null) dioProvider.overrideWithValue(dio),
         passHistoryProvider.overrideWith((ref) async => history),
         // 真的 IAP 插件在测试环境不可用
         passPriceProvider.overrideWith((ref, _) async => '€7.99'),
@@ -105,6 +111,30 @@ Widget _wrap(
         home: BenefitsPage(passId: passId),
       ),
     );
+
+/// 记下发出去的请求,回一份最小的权益 JSON(测换票不能等真实网络)。
+class _Recorder implements HttpClientAdapter {
+  _Recorder(this.status);
+  final int status;
+  final List<RequestOptions> sent = [];
+
+  @override
+  Future<ResponseBody> fetch(
+      RequestOptions options, Stream<Uint8List>? _, Future<void>? __) async {
+    sent.add(options);
+    return ResponseBody.fromString(
+        status == 200
+            ? '{"state":"purchased_not_activated","can":{"purchase":true}}'
+            : '{"detail":{"reason":"no_unactivated_pass"}}',
+        status,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType]
+        });
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
 
 Future<AppLocalizations> _l10n() =>
     AppLocalizations.delegate.load(const Locale('zh'));
@@ -428,6 +458,126 @@ void main() {
     await _pump(t, _wrap(held([parisActive, nlActive])));
     final l10n = await _l10n();
     expect(find.text(l10n.benefitsOtherMuseumsRecognition), findsNothing);
+  });
+
+  // ---- 城市多了以后防买错 ------------------------------------------------
+
+  testWidgets('⭐ 有推荐城市:只摆那一张,其余城市折叠 —— 城市多了不让人在一长串里挑错', (t) async {
+    const nlHere = PassOffer(
+        productId: 'nl_pass_7d', days: 7, label: '荷兰', recommended: true);
+    const ent = Entitlements(
+      state: 'not_purchased',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      offers: [nlHere, _paris],
+    );
+    await _pump(t, _wrap(ent));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
+    expect(find.text(l10n.paywallTitle('巴黎', '7')), findsNothing);
+    expect(find.text(l10n.paywallBuy), findsOneWidget);
+    await t.tap(find.text(l10n.benefitsOtherCities(1)));
+    await t.pumpAndSettle();
+    expect(find.text(l10n.paywallTitle('巴黎', '7')), findsOneWidget);
+    expect(find.text(l10n.paywallBuy), findsNWidgets(2));
+  });
+
+  testWidgets('没推荐(没足迹/老后端):全部平铺,不折叠也不猜', (t) async {
+    const ent = Entitlements(
+      state: 'not_purchased',
+      canPurchase: true,
+      canRecognize: true,
+      canAudioAny: false,
+      offers: [_paris, _nl],
+    );
+    await _pump(t, _wrap(ent));
+    final l10n = await _l10n();
+    expect(find.text(l10n.paywallBuy), findsNWidgets(2));
+    expect(find.text(l10n.benefitsOtherCities(1)), findsNothing);
+  });
+
+  testWidgets('⭐ 馆内没票(?pass= 空):暂未开售,绝不列出别的城市', (t) async {
+    await _pump(t, _wrap(_free, passId: ''));
+    final l10n = await _l10n();
+    expect(find.text(l10n.passNotOnSale), findsOneWidget);
+    expect(find.text(l10n.paywallBuy), findsNothing);
+  });
+
+  Entitlements pendingParis({List<String> exchangeTo = const ['nl_pass_7d']}) =>
+      Entitlements(
+        state: 'purchased_not_activated',
+        canPurchase: true,
+        canRecognize: true,
+        canAudioAny: false,
+        offers: const [_paris, _nl],
+        passes: [
+          OwnedPass(
+              productId: 'paris_pass_7d',
+              label: '巴黎',
+              days: 7,
+              state: 'purchased_not_activated',
+              exchangeTo: exchangeTo),
+        ],
+      );
+
+  testWidgets('⭐ 买错城市:未激活的票能换成后端给的那几张,换完提示', (t) async {
+    final rec = _Recorder(200);
+    await _pump(t, _wrap(pendingParis(), dio: Dio()..httpClientAdapter = rec));
+    final l10n = await _l10n();
+    await t.tap(find.text(l10n.passExchangeLink));
+    await t.pumpAndSettle();
+    expect(find.text(l10n.passExchangeSheetBody), findsOneWidget);
+    final nlTitle = l10n.paywallTitle('荷兰', '7');
+    await t.tap(find.text(l10n.passExchangeTo(nlTitle)));
+    await t.pumpAndSettle();
+    expect(rec.sent.single.path, '/api/v1/entitlements/exchange');
+    expect(rec.sent.single.method, 'POST');
+    expect(rec.sent.single.queryParameters['from_product'], 'paris_pass_7d');
+    expect(rec.sent.single.queryParameters['to_product'], 'nl_pass_7d');
+    expect(find.text(l10n.passExchangeDone(nlTitle)), findsOneWidget);
+  });
+
+  testWidgets('换票被拒:明说票没变,不能让人以为丢了', (t) async {
+    final rec = _Recorder(409);
+    await _pump(t, _wrap(pendingParis(), dio: Dio()..httpClientAdapter = rec));
+    final l10n = await _l10n();
+    await t.tap(find.text(l10n.passExchangeLink));
+    await t.pumpAndSettle();
+    await t.tap(find.text(l10n.passExchangeTo(l10n.paywallTitle('荷兰', '7'))));
+    await t.pumpAndSettle();
+    expect(find.text(l10n.passExchangeFailed), findsOneWidget);
+  });
+
+  testWidgets('后端没给可换的票(老后端/已无同价城市):不出现换票入口', (t) async {
+    await _pump(t, _wrap(pendingParis(exchangeTo: const [])));
+    expect(find.text((await _l10n()).passExchangeLink), findsNothing);
+  });
+
+  testWidgets('生效中的票不能换(时间已经在走)', (t) async {
+    await _pump(t, _wrap(_active));
+    expect(find.text((await _l10n()).passExchangeLink), findsNothing);
+  });
+
+  group('⭐ 馆内点过「获取通票」→ 权益页直接拉起付款(shouldAutoBuy)', () {
+    test('能买、这张在售、手里没有 → 直接拉起', () {
+      expect(shouldAutoBuy(_free, 'paris_pass_7d'), isTrue);
+    });
+    test('不拉起:没指定票 / 馆内没票 / 不在售 / 已握在手里 / 游客 / 权益读不到', () {
+      expect(shouldAutoBuy(_free, null), isFalse);
+      expect(shouldAutoBuy(_free, ''), isFalse);
+      expect(shouldAutoBuy(_free, 'nl_pass_7d'), isFalse);
+      expect(shouldAutoBuy(_unactivated, 'paris_pass_7d'), isFalse,
+          reason: '已买未激活再拉起付款 = 让他付两次钱');
+      const guest = Entitlements(
+          state: 'not_purchased',
+          canPurchase: false,
+          canRecognize: true,
+          canAudioAny: false,
+          offers: [_paris]);
+      expect(shouldAutoBuy(guest, 'paris_pass_7d'), isFalse);
+      expect(shouldAutoBuy(Entitlements.unknown, 'paris_pass_7d'), isFalse);
+    });
   });
 
   testWidgets('十种语言都不缺键(缺了会抛,不是显示英文)', (t) async {

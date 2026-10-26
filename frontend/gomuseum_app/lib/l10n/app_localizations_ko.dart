@@ -950,6 +950,35 @@ class AppLocalizationsKo extends AppLocalizations {
   String get benefitsSecBuyAnother => '한 장 더';
 
   @override
+  String benefitsOtherCities(int count) {
+    return '다⁠른 도⁠시 ($count)';
+  }
+
+  @override
+  String get passExchangeLink => '도⁠시⁠를 잘⁠못 골⁠랐⁠나⁠요? 교⁠환⁠하⁠기';
+
+  @override
+  String get passExchangeSheetTitle => '다⁠른 도⁠시 패⁠스⁠로 교⁠환';
+
+  @override
+  String get passExchangeSheetBody =>
+      '아⁠직 시⁠작⁠하⁠지 않⁠은 패⁠스⁠는 같⁠은 가⁠격⁠의 다⁠른 도⁠시 패⁠스⁠로 무⁠료 교⁠환⁠할 수 있⁠습⁠니⁠다. 활⁠성⁠화 기⁠한⁠은 그⁠대⁠로⁠입⁠니⁠다.';
+
+  @override
+  String passExchangeTo(String title) {
+    return '$title(으)로 교⁠환';
+  }
+
+  @override
+  String passExchangeDone(String title) {
+    return '$title(으)로 교⁠환⁠했⁠습⁠니⁠다';
+  }
+
+  @override
+  String get passExchangeFailed =>
+      '교⁠환⁠하⁠지 못⁠했⁠습⁠니⁠다. 패⁠스⁠는 그⁠대⁠로⁠입⁠니⁠다. 잠⁠시 후 다⁠시 시⁠도⁠해 주⁠세⁠요';
+
+  @override
   String get benefitsRecognition => '사⁠진 인⁠식';
 
   @override

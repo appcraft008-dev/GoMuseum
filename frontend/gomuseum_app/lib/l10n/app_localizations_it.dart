@@ -974,6 +974,35 @@ class AppLocalizationsIt extends AppLocalizations {
   String get benefitsSecBuyAnother => 'Un altro pass';
 
   @override
+  String benefitsOtherCities(int count) {
+    return 'Altre città ($count)';
+  }
+
+  @override
+  String get passExchangeLink => 'Città sbagliata? Cambialo';
+
+  @override
+  String get passExchangeSheetTitle => 'Cambia con un\'altra città';
+
+  @override
+  String get passExchangeSheetBody =>
+      'Un pass non ancora avviato si può cambiare gratis con un\'altra città dello stesso prezzo. La scadenza per l\'attivazione resta invariata.';
+
+  @override
+  String passExchangeTo(String title) {
+    return 'Cambia con $title';
+  }
+
+  @override
+  String passExchangeDone(String title) {
+    return 'Cambiato con $title';
+  }
+
+  @override
+  String get passExchangeFailed =>
+      'Cambio non riuscito, il tuo pass è invariato. Riprova più tardi';
+
+  @override
   String get benefitsRecognition => 'Riconoscimento foto';
 
   @override

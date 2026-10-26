@@ -1805,6 +1805,48 @@ abstract class AppLocalizations {
   /// **'Another pass'**
   String get benefitsSecBuyAnother;
 
+  /// No description provided for @benefitsOtherCities.
+  ///
+  /// In en, this message translates to:
+  /// **'Other cities ({count})'**
+  String benefitsOtherCities(int count);
+
+  /// No description provided for @passExchangeLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong city? Swap it'**
+  String get passExchangeLink;
+
+  /// No description provided for @passExchangeSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap for another city'**
+  String get passExchangeSheetTitle;
+
+  /// No description provided for @passExchangeSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A pass that hasn\'t started can be swapped free for another city at the same price. The activation deadline stays the same.'**
+  String get passExchangeSheetBody;
+
+  /// No description provided for @passExchangeTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap for {title}'**
+  String passExchangeTo(String title);
+
+  /// No description provided for @passExchangeDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Swapped for {title}'**
+  String passExchangeDone(String title);
+
+  /// No description provided for @passExchangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap failed — your pass is unchanged. Please try again later'**
+  String get passExchangeFailed;
+
   /// No description provided for @benefitsRecognition.
   ///
   /// In en, this message translates to:
