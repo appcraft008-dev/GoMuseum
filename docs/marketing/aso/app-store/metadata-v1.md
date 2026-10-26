@@ -16,7 +16,7 @@
 | 副标题 | `Paris museum audio guide` | 24/30 |
 | 关键词 | `orsay,orangerie,petit palais,art,painting,sculpture,artwork,tour,audioguide,mona lisa,gallery,camera` | 100/100 |
 
-描述(2155/4000):
+描述(2156/4000):
 
 ```
 Most works at the Louvre carry no number on the wall, and the label is in French. GoMuseum tells you what you're looking at — just point your camera.
@@ -44,6 +44,7 @@ One pass unlocks unlimited scans and audio across the Louvre, Orsay, Orangerie a
 
 PRIVACY FIRST
 Photos are used only to recognize the artwork in front of you, and the original is discarded as soon as recognition finishes — unless you choose to send it to us.
+
 GoMuseum is an independent guide. It is not affiliated with, endorsed by, or connected to the Louvre, the Musée d'Orsay, the Musée de l'Orangerie or the Petit Palais.
 
 Note: GoMuseum needs an internet connection to recognize artworks and stream audio guides.
@@ -183,7 +184,7 @@ Nota: GoMuseum necesita conexión a internet para reconocer las obras y transmit
 | 副标题 | `Fotografa l'opera e ascolta` | 27/30 |
 | 关键词 | `orsay,orangerie,petit palais,parigi,museo,audioguida,visita,quadro,dipinto,scultura,gioconda,arte` | 97/100 |
 
-描述(2306/4000):
+描述(2304/4000):
 
 ```
 Al Louvre la maggior parte delle opere non ha un numero sulla parete e la didascalia è in francese. GoMuseum ti dice cosa stai guardando: basta puntare la fotocamera.
@@ -215,7 +216,6 @@ Le foto servono solo a riconoscere l'opera che hai davanti e l'originale viene e
 GoMuseum è una guida indipendente. Non è affiliata, approvata né collegata al Museo del Louvre, al Museo d'Orsay, al Museo dell'Orangerie o al Petit Palais.
 
 Nota: GoMuseum richiede una connessione internet per riconoscere le opere e trasmettere le audioguide.
-`
 ```
 
 ## Polish
@@ -226,10 +226,10 @@ Nota: GoMuseum richiede una connessione internet per riconoscere le opere e tras
 | 副标题 | `Zrób zdjęcie dzieła i słuchaj` | 29/30 |
 | 关键词 | `orsay,oranżeria,petit palais,paryż,muzeum,przewodnik,louvre,obraz,rzeźba,mona lisa,sztuka,zwiedzanie` | 100/100 |
 
-描述(1853/4000):
+描述(1842/4000):
 
 ```
-GoMuseum toGoMuseum to niezależny, wielojęzyczny przewodnik dla Luwru, Musée d'Orsay, Musée de l'Orangerie i Petit Palais w Paryżu. Zrób zdjęcie dzieła, które akurat masz przed sobą — nie musisz znać jego nazwy ani numeru w katalogu — i natychmiast przeczytaj lub odsłuchaj jego historię.
+GoMuseum to niezależny, wielojęzyczny przewodnik dla Luwru, Musée d'Orsay, Musée de l'Orangerie i Petit Palais w Paryżu. Zrób zdjęcie dzieła, które akurat masz przed sobą — nie musisz znać jego nazwy ani numeru w katalogu — i natychmiast przeczytaj lub odsłuchaj jego historię.
 
 ZESKANUJ I POSŁUCHAJ
 Stań przed obrazem lub rzeźbą i zrób zdjęcie telefonem. GoMuseum rozpoznaje dzieło i pokazuje pełny komentarz tekstowy — zawsze bezpłatnie — a do tego nagranie audio w Twoim języku.
@@ -263,10 +263,10 @@ GoMuseum to niezależna aplikacja. Nie jest oficjalnie powiązana z Luwrem, Mus�
 | 副标题 | `作品を撮ってすぐ解説を聴く` | 13/30 |
 | 关键词 | `オルセー,オランジュリー,プティ・パレ,パリ,美術館,ルーブル,博物館,絵画,彫刻,モナリザ,オーディオガイド,観光,アート` | 62/100 |
 
-描述(805/4000):
+描述(789/4000):
 
 ```
-GoMuseumは、ルーヴル美術GoMuseumは、ルーヴル美術館、オルセー美術館、オランジュリー美術館、プティ・パレ(パリ)のための独立系・多言語ガイドアプリです。目の前にある作品をスマートフォンで撮影するだけで、作品名や番号を知らなくても、その物語を文章や音声ですぐに楽しめます。
+GoMuseumは、ルーヴル美術館、オルセー美術館、オランジュリー美術館、プティ・パレ(パリ)のための独立系・多言語ガイドアプリです。目の前にある作品をスマートフォンで撮影するだけで、作品名や番号を知らなくても、その物語を文章や音声ですぐに楽しめます。
 
 スキャンして聴く
 絵画や彫刻の前に立ち、スマートフォンで撮影してください。GoMuseumが作品を認識し、文章の解説(常に無料)と、お好きな言語の音声ガイドをお届けします。
