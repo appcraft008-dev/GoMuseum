@@ -1,5 +1,5 @@
 <h1 class="serif">GoMuseum 隐私政策</h1>
-<p class="meta">生效日期：2026-10-23 · 适用应用：GoMuseum（com.gomuseum.app）<br />各语言版本如有出入，以英文版为准。</p>
+<p class="meta">生效日期：2026-10-26 · 适用应用：GoMuseum（com.gomuseum.app）<br />各语言版本如有出入，以英文版为准。</p>
 
 <h2>1. 我们是谁</h2>
 <p>GoMuseum（“我们”）是一款博物馆导览应用，提供拍照识别展品、AI 讲解、语音播放与问答功能。本应用由在英格兰及威尔士注册的 APPCRAFT008 LTD 运营（公司注册号 16529564，注册地址：71-75 Shelton Street, Covent Garden, London, WC2H 9JQ, United Kingdom），该公司为数据控制者。联系方式：appcraft008@gmail.com。</p>
@@ -7,7 +7,7 @@
 <h2>2. 我们收集哪些数据、为什么</h2>
 <table>
   <tr><th>数据</th><th>用途</th><th>保留</th></tr>
-  <tr><td>账号信息：邮箱、用户名（或 Google 账号基本资料）</td><td>创建与登录账号、找回访问权限</td><td>至账号删除</td></tr>
+  <tr><td>账号信息：邮箱、用户名（或 Google / Apple 账号基本资料）</td><td>创建与登录账号、找回访问权限</td><td>至账号删除</td></tr>
   <tr><td>展品照片（拍照识别时）</td><td>仅用于实时识别展品，<strong>默认临时处理、不存储原图</strong>，处理完成即丢弃</td><td>不保留</td></tr>
   <tr><td><strong>你主动发送给我们的照片</strong>（识别没认准时，应用会问“把这张照片发给我们？”，<strong>默认不勾选</strong>；只有你勾选发送才会保存），以及你可选填的补充说明、你当时搜索的文字或说明牌上的文字、你最终找到的作品</td><td>只用于三件事：补录我们还没收录的作品、为缺图的作品寻找有授权的图片并核对是不是同一件、找出识别失败的原因。<strong>不对外展示，不加入识别用的参考图库</strong>。不勾选不影响任何功能</td><td><strong>最长 90 天</strong>，处理完即提前删除；删除账号时一并删除（见第 4 节）。照片删除后只保留不含图像的记录（识别分数、你找到的作品）</td></tr>
   <tr><td>识别事件：图片指纹、识别到的作品与置信度、所在馆、语言</td><td>两个用途：①改进识别准确率、统计哪些展品被拍到却认不出，据此优先补充资料；②生成你的<strong>“足迹”</strong>——登录状态下拍照识别时会记下你的账号，让你能在应用内回看拍过哪些作品。你可以在足迹页<strong>逐条删除</strong>，也可以随时导出</td><td>与账号的关联至账号删除或你自行删除；去除账号关联后的统计记录长期保留</td></tr>
@@ -24,8 +24,8 @@
 <ul>
   <li><strong>AI 服务提供商。</strong>识别与讲解由 AI 服务提供商按我们的指示处理。<strong>OpenAI</strong> 接收你为识别展品而拍的照片（仅在我们自己的匹配无法判定时）和作品名称，并负责文字翻译。<strong>Anthropic</strong> 读取说明牌照片，并依据公开参考资料（不含个人数据）撰写、核对讲解与问答。依据两家的 API 数据政策，这些数据都不会用于训练其模型。</li>
   <li><strong>语音。</strong>讲解音频由我们自己的服务器或 <strong>Google Cloud Text-to-Speech</strong> 合成。Google 只收到讲解文字，这些是关于作品的公开信息，不含个人数据。</li>
-  <li>Google 登录由 Google 提供。<strong>崩溃报告与使用统计由 Google Firebase 提供</strong>（Firebase Crashlytics 与 Firebase Analytics）：我们只使用其默认的自动统计事件（应用打开、页面浏览、会话），<strong>在 Firebase 中没有自定义埋点，也移除了广告标识符权限</strong>，不用于广告或跨应用追踪。</li>
-  <li><strong>应用内购买由 Google Play 结算处理。</strong>我们<strong>不接触也不存储你的支付方式</strong>（银行卡号等）——付款全程在 Google Play 内完成。我们仅从 Google 收到一份购买凭据用于核验并发放通票，并保存订单号、商品、金额与时间。</li>
+  <li>Google 登录由 Google 提供，通过 Apple 登录由 Apple 提供。<strong>崩溃报告与使用统计由 Google Firebase 提供</strong>（Firebase Crashlytics 与 Firebase Analytics）：我们只使用其默认的自动统计事件（应用打开、页面浏览、会话），<strong>在 Firebase 中没有自定义埋点，也移除了广告标识符权限，在 iPhone 上也从不请求跟踪权限</strong>，不用于广告或跨应用追踪。</li>
+  <li><strong>应用内购买在 Android 上由 Google Play 结算处理，在 iPhone 上由 Apple App Store 处理。</strong>我们<strong>不接触也不存储你的支付方式</strong>（银行卡号等）——付款全程在 Google Play 或 App Store 内完成。我们仅从 Google 或 Apple 收到一份购买凭据用于核验并发放通票，并保存订单号、商品、金额与时间。</li>
   <li><strong>你主动发送的照片</strong>存放在 Cloudflare R2 的<strong>私有</strong>存储中，<strong>数据限定保存在欧盟境内</strong>（R2 欧盟管辖区）；不绑定任何公开网址，只有我们凭专用密钥才能访问。</li>
   <li>我们不向任何第三方出售你的个人数据，也不用于广告。</li>
 </ul>
@@ -40,7 +40,7 @@
       <li><strong>足迹与使用事件和你的关联被切断</strong>：识别事件与使用事件中的账号标识（以及使用事件中的设备标识符）会被清除，这些记录不再指向任何人；去除关联后的统计数据（图片指纹、识别到的作品、页面与购买的计数）作为识别准确率与产品统计保留。</li>
       <li><strong>你写的反馈文字被删除，缺陷坐标断链保留</strong>：你在反馈里填的文字会被<strong>真正删除</strong>；反馈指向的坐标（哪个馆、哪件作品、哪个语种、哪类问题）会清除账号与设备标识后保留——那一条记的是“这件作品的这个语种有问题”，留着才能把内容修好，删了等于把还没修的错误一并抹掉。</li>
       <li><strong>你主动发送的照片被删除</strong>：照片本身、你写的补充说明、你搜索的文字一并删除；只保留不含图像、不指向任何人的记录（识别分数、你找到的作品）。</li>
-      <li><strong>已购通票立即作废且无法找回</strong>——重新注册也不行，只能重新购买。通票是消耗型商品，一经发放即在 Google Play 侧完成核销，“恢复购买”不会将其取回。<strong>请在删除前确认你的通票已经用完或不再需要。</strong></li>
+      <li><strong>已购通票立即作废且无法找回</strong>——重新注册也不行，只能重新购买。通票是消耗型商品，一经发放即在商店侧（Google Play 或 App Store）完成核销，“恢复购买”不会将其取回。<strong>请在删除前确认你的通票已经用完或不再需要。</strong></li>
       <li><strong>交易记录保留</strong>：因会计与税务留存义务，购买记录（订单号、商品、金额、时间）不予删除，但会<strong>切断与你身份的关联</strong>并清除其中的个人数据（购买凭据原文）。这是法律义务允许的例外，不用于任何其他目的。</li>
     </ul>
   </li>
