@@ -44,4 +44,17 @@ NSFW 版块（如 r/museum，因裸体艺术被设成 18+）的帖子不进搜�
 
 ## GEO（让 AI 回答里提到我们）
 
-暂无验证过的条目。待做：问 ChatGPT、Gemini、Perplexity "best Louvre audio guide app" 这类问题，做一次基线诊断，看它们推荐谁、引用了哪些 Reddit 帖子。
+**G1. 基线（2026-10-26）：问"用什么 App 替代卢浮宫讲解器，最好能扫画"，ChatGPT、Perplexity、Google 都没提 GoMuseum。**
+- ChatGPT：推荐 Smartify、TourLens、ArtGuide、Chiaro；引用来源以 Play 商店页和各家官网为主，没有 Reddit。直接问它 GoMuseum，它能说出功能，但称"在应用商店索引里找不到"，所以把 Smartify 排在前面。
+- Perplexity：推荐 Smartify、CulturAll、TourLens、卢浮宫官方 App；引用的是博客和官网。
+- Google 搜 "best app for louvre audio guide"：前排是各家商店页，加 3 个 r/ParisTravelGuide 帖子。其中 1w3b9zd（2026-08-31）还能评论，2027-02 底归档前要去回；另外两个是 2023 年的，已经归档。
+- 推论（待验证）：AI 引用商店页，商店页本身就是 GEO 主战场，要靠安装量、评价和时间被收录。下次复测时对比。
+
+**G2. 仓库是公开的，AI 会读里面的文档。**
+ChatGPT 答出了"奥赛约 6,789 件"，官网上没有这个数，出处是公开仓库里的 `aso/google-play-round1/app-marketing-context.md`。写进仓库的营销文档要当成会被公开看到来写（2026-10-26）。
+
+## 竞品观察
+
+- **ArtGuide**（art-guide.app）：网页版拍画听讲解，免装 App，50 次免费扫描，之后 €4.90 起。用户亲测：以德语为主，收费项太多，体验差。2026-10-26
+- **CulturAll**：卢浮宫拍作品或拍标签生成语音讲解，免费每天 5 件，通票 €1.99 起。Perplexity 推荐。2026-10-26
+- **TourLens: Louvre Guide**：拍了就能听，宣称完全免费。ChatGPT 和 Perplexity 都推荐。2026-10-26
