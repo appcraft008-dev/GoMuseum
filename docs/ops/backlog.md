@@ -118,7 +118,7 @@
 
 ## 最近关闭
 
-- 2026-10-26 **使用条款第 5 条补「法律不许排除的责任与消费者法定权利不受影响」**(十语同步,`deployment/legal-src/terms.*.html` + build.py;网站页需手工 scp 上线)
+- 2026-10-26 **使用条款第 5 条补「法律不许排除的责任与消费者法定权利不受影响」**(十语同步,`deployment/legal-src/terms.*.html` + build.py;#1123;10-26 已 scp 上线,线上十语核对通过,旧页备份 `/opt/gomuseum/website/terms.html.bak-20261026`)
 - 2026-10-26 **测试订单与真实订单分开统计**(#1100 上 prod):订单表加 `is_test`(按 `purchaseType=0`),老单 19 笔已补标;关闭第一节同名项
 - 2026-10-25 **Google Search Console 注册完成**:网域资源 gomuseum.app 经 Cloudflare 一键 DNS 验证(TXT `google-site-verification` 勿删);站点地图 `https://gomuseum.app/sitemap.xml` 状态「成功」、发现 12,360 页,Googlebot 当天读完 10 个子地图全 200;首页已收录。后续观察移入第五节「营销数据定期复盘」。同日 Play 商店日语/波兰语描述的免费口径改正(原写「每件作品免费听 1 次」且日语没提 5 次免费识别,与后端 `FREE_RECOGNITION_QUOTA=5`+识别件主讲解免费不符)已过审上线、抓线上页复核通过
 - 2026-10-26 **V71 正式版上线**(`1.0.2+71`,#1113):先内部测试真机验过再推正式版,过审自动发布(用户已改回该模式)。含 #1110 锁屏/通知栏播放卡片 + 耳机键(audio_service,媒体播放前台服务已申报)。抓线上页:十语均显示 1.0.2、更新日期 Oct 26, 2026(Play 网页不含「新功能」文字,版本说明无法从网页核对)。下个包从 72 起
