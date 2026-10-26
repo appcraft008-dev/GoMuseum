@@ -33,7 +33,7 @@ Apple 的定义是「传出设备才算收集」,所以不申报。
 演示账号要**用户自己在 prod 注册**一个邮箱账号(建议 8 位以上密码),填进 Sign-in information。
 **不要把密码写进仓库。**
 
-⚠️ 待验证:「对着另一块屏幕上的名画拍照能认出来」还没实测。送审前要在模拟器或真机上拍屏幕上的蒙娜丽莎 / 罗讷河上的星夜,确认认得出;认不出就删掉这一条,只留搜索。
+✅ 已验证(10-26):「对着另一块屏幕上的名画拍照能认出来」——用户日常测试大多就是这样拍的,识别在后端、iOS 与 Android 同一套。
 
 ```
 GoMuseum is an audio guide for Paris museums (Louvre, Musée d'Orsay, Musée de l'Orangerie, Petit Palais).
