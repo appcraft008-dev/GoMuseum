@@ -44,6 +44,8 @@ dependencies:
 
   # 音频播放
   just_audio: ^0.9.36
+  # 锁屏/控制中心/通知栏播放卡片 + 耳机按键(见 core/services/media_session.dart)
+  audio_service: ^0.18.19
 
   # 语音识别
   permission_handler: ^11.1.0

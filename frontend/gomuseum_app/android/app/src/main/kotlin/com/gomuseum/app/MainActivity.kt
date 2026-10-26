@@ -12,11 +12,12 @@ import com.google.android.play.core.install.InstallStateUpdatedListener
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.InstallStatus
 import com.google.android.play.core.install.model.UpdateAvailability
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+// AudioServiceActivity 是 FlutterActivity 的子类:系统播放卡片要它来挂引擎(见 media_session.dart)
+class MainActivity : AudioServiceActivity() {
     private var updateManager: AppUpdateManager? = null
     private var updateListener: InstallStateUpdatedListener? = null
     private var lastUpdateInfo: AppUpdateInfo? = null
