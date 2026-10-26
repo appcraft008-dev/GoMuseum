@@ -29,6 +29,7 @@ EVENTS = (
     "purchase_failed",
     "purchase_refunded",
     "pass_activated",
+    "pass_exchanged",  # 未激活票换城市:多了说明用户常买错,该回头看购买入口
     # 内容入口(判断"搜索绕过付费"是否成立的关键)
     "content_viewed",
     # 跨馆复用(MVP 最重要的新指标)

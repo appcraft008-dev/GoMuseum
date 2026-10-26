@@ -252,8 +252,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/benefits',
         name: 'benefits',
         // `?pass=<product_id>`:从馆内来时只卖这家馆的票(spec 2026-09-28 §3.3)
-        builder: (context, state) =>
-            BenefitsPage(passId: state.uri.queryParameters['pass']),
+        builder: (context, state) => BenefitsPage(
+            passId: state.uri.queryParameters['pass'],
+            autoBuy: state.uri.queryParameters['buy'] == '1'),
       ),
     ],
 

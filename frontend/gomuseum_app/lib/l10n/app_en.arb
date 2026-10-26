@@ -561,6 +561,34 @@
   "benefitsSecPurchases": "Purchases",
   "benefitsSecCurrentQuota": "Your allowance now",
   "benefitsSecBuyAnother": "Another pass",
+  "benefitsOtherCities": "Other cities ({count})",
+  "@benefitsOtherCities": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passExchangeLink": "Wrong city? Swap it",
+  "passExchangeSheetTitle": "Swap for another city",
+  "passExchangeSheetBody": "A pass that hasn't started can be swapped free for another city at the same price. The activation deadline stays the same.",
+  "passExchangeTo": "Swap for {title}",
+  "@passExchangeTo": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "passExchangeDone": "Swapped for {title}",
+  "@passExchangeDone": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "passExchangeFailed": "Swap failed — your pass is unchanged. Please try again later",
   "benefitsRecognition": "Photo recognition",
   "benefitsFreeAudioNote": "For every artwork you scan, the main audio commentary is free. Any other artwork can be unlocked with one free credit.",
   "benefitsFeatBrowse": "Browsing, search, full written commentary",

@@ -79,9 +79,19 @@ class _DeepAudioLockBar extends StatelessWidget {
                             .future))
                     .pass
                     ?.productId;
-              } catch (_) {}
+              } catch (_) {
+                // 查不到这家馆卖哪张:提示重试,不跳一个列出所有城市的权益页(会买错)
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content:
+                          Text(AppLocalizations.of(context)!.loadFailedRetry)));
+                }
+                return;
+              }
             }
-            if (context.mounted) context.push(benefitsRoute(pid));
+            if (context.mounted) {
+              context.push(benefitsRoute(pid, inMuseum: s != null));
+            }
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),

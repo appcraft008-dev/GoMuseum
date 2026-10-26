@@ -116,6 +116,41 @@ def activate_pass(
     )
 
 
+@router.post("/exchange")
+def exchange_pass(
+    from_product: str,
+    to_product: str,
+    language: str = "zh",
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> dict:
+    """未激活的票换成另一城市的票(买错了的兜底)。规则见 `es.exchange`。
+
+    **加法端点**:老 App 不知道它存在。被拒 → 409 `{reason}`,一个字节都不改。
+    """
+    user_id, is_guest = _me(db, credentials)
+    preview = can_preview(db, credentials)
+    try:
+        es.exchange(db, user_id, from_product, to_product, preview=preview)
+    except es.ExchangeRefused as e:
+        raise HTTPException(status_code=409, detail={"reason": e.reason})
+    log_event(
+        db,
+        "pass_exchanged",
+        user_id=user_id,
+        from_product=from_product,
+        to_product=to_product,
+    )
+    return es.summary(
+        db,
+        user_id,
+        _benefits(db, user_id),
+        is_guest=is_guest,
+        language=language,
+        preview=preview,
+    )
+
+
 @router.post("/audio/unlock")
 def unlock_audio(
     qid: str,

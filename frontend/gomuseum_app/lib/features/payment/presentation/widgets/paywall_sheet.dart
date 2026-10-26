@@ -120,14 +120,15 @@ void showPaywallHint(BuildContext context,
 /// (Play 有购买 + 后端无权益),已改为权益页自动静默恢复。
 /// 手动入口只在权益页底部留一个兜底。
 ///
-/// [offer]:这家馆该买的票(馆包/402 的 `pass`)。null = 不知道在哪家馆 →
-/// 列出 `/me.offers` 的每一张。[onBuy] 收到要买的商品 ID(列出多张时为 null,
-/// 由权益页让用户挑)。
+/// [offer]:这家馆该买的票(馆包/402 的 `pass`)。null = **这家馆没有在售的票**
+/// → 「暂未开售」。⚠️ 此前 null 回落到 `/me.offers` 全列:在一家没开卖的馆里撞墙,
+/// 卖给他的是另一个城市的票。弹层只在馆内弹,不存在"不知道在哪家馆"这一档;
+/// 查馆失败由调用方提示重试,不弹这里。[onBuy] 收到这家馆那张票的商品 ID。
 Future<void> showPaywallSheet(
   BuildContext context, {
   String reason = 'unknown',
   PassOffer? offer,
-  required void Function(String? productId) onBuy,
+  required void Function(String productId) onBuy,
 }) {
   final gm = context.gm;
   return showModalBottomSheet<void>(
@@ -139,9 +140,18 @@ Future<void> showPaywallSheet(
   );
 }
 
-/// 购买入口统一跳权益页(购买全流程只在那里实现)。带 `?pass=` 就只卖那一张。
-String benefitsRoute(String? productId) =>
-    productId == null ? '/benefits' : '/benefits?pass=$productId';
+/// 购买入口统一跳权益页(购买全流程只在那里实现)。三种情况:
+///   [productId] 给了        → 只卖那一张
+///   [inMuseum] 且这家馆没票 → `?pass=` 空 = 只说「暂未开售」,**绝不列别城的票**
+///   都不知道(首页/全局识别) → 全列,后端已按足迹排序
+///
+/// [buy]:用户在馆内付费墙已经点过「获取通票」—— 权益页一就绪直接拉起付款,
+/// 不让他在同一张票上再点一次(购买流程仍只在权益页一处)。
+String benefitsRoute(String? productId,
+    {bool inMuseum = false, bool buy = false}) {
+  if (productId == null) return inMuseum ? '/benefits?pass=' : '/benefits';
+  return buy ? '/benefits?pass=$productId&buy=1' : '/benefits?pass=$productId';
+}
 
 /// 弹层外壳:暖纸底、直角(4px)、顶部发丝线。小屏内容超出可滚,CTA 不会被挤出屏幕。
 class _PaywallSheetShell extends StatelessWidget {
@@ -203,7 +213,7 @@ class PaywallSheetContent extends ConsumerWidget {
   const PaywallSheetContent({super.key, this.offer, this.onBuy});
 
   final PassOffer? offer;
-  final void Function(String? productId)? onBuy;
+  final void Function(String productId)? onBuy;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -215,9 +225,8 @@ class PaywallSheetContent extends ConsumerWidget {
     // ⚠️ 权益**读不到**(离线)和**未登录**是两回事。混在一起就会对着一个
     // 已登录、只是断网的用户说「登录后购买」,他照做也没用。
     final unknown = ent != null && !ent.known;
-    // 卖哪张票由后端决定:知道在哪家馆就卖那一张,不知道就每张都列出来
-    // (不猜"第一张" —— 票多了会卖错)。拿不到任何在售票就说「暂未开售」。
-    final offers = offer != null ? [offer!] : (ent?.offers ?? const []);
+    // 只卖这家馆的那张(后端定);这家馆没票就「暂未开售」,不拿别城的票顶上
+    final offers = [if (offer != null) offer!];
 
     if (unknown) return _unknownSheet(context, gm, l10n, ref);
 
@@ -262,7 +271,7 @@ class PaywallSheetContent extends ConsumerWidget {
             onTap: () {
               Navigator.of(context).pop();
               if (canBuy) {
-                onBuy?.call(offers.length == 1 ? offers.first.productId : null);
+                onBuy?.call(offers.first.productId);
               } else {
                 context.push(kLoginToUpgrade);
               }

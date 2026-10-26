@@ -48,12 +48,37 @@ import 'package:gomuseum_app/ui/gm/gm_ticket_button.dart';
 /// 而且把地址直接摆在界面上比藏在 mailto 后面更透明。
 const kSupportEmail = 'appcraft008@gmail.com';
 
+/// 这一页该卖哪几张票。[passId] 给了就只卖那一张(`''` = 馆内没票,一张都不卖);
+/// null = 不知道在哪家馆 → `/me.offers` 全列(不猜"第一张")。已经握在手里的票
+/// 不再卖 —— 生效中/待激活时再买一张同样的票只会让用户付两次钱。
+List<PassOffer> sellableOffers(Entitlements ent, String? passId) {
+  final held = ent.passes.map((p) => p.productId).toSet();
+  return ent.offers
+      .where((o) => passId == null || o.productId == passId)
+      .where((o) => !held.contains(o.productId))
+      .toList();
+}
+
+/// 馆内付费墙点过「获取通票」后,进页是否直接拉起付款。只在**确定能买这一张**
+/// 时拉:游客/权益读不到/已握在手里/不在售都不拉 —— 拉起一个注定失败或会重复
+/// 扣款的付款框,比让用户多点一下糟得多。
+bool shouldAutoBuy(Entitlements ent, String? passId) =>
+    ent.known &&
+    ent.canPurchase &&
+    passId != null &&
+    passId.isNotEmpty &&
+    sellableOffers(ent, passId).isNotEmpty;
+
 class BenefitsPage extends ConsumerStatefulWidget {
-  const BenefitsPage({super.key, this.passId});
+  const BenefitsPage({super.key, this.passId, this.autoBuy = false});
 
   /// `?pass=<product_id>`:从馆内进来时只卖**这家馆**的那张票。
+  /// `?pass=`(空)= 馆内、这家馆没票 → 暂未开售,绝不列别城的票。
   /// null = 不知道在哪家馆(首页/设置)→ 列出 `/me.offers` 的每一张。
   final String? passId;
+
+  /// `?buy=1`:用户已在馆内付费墙点过购买 → IAP 就绪后直接拉起付款(见 [shouldAutoBuy])。
+  final bool autoBuy;
 
   @override
   ConsumerState<BenefitsPage> createState() => _BenefitsPageState();
@@ -71,6 +96,9 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   /// 收据冲突:**不是可重试的失败**,所以它是一个状态而不是一条 SnackBar。
   /// 弹完就消失的提示会让用户反复点购买 —— 而这条路永远走不通。
   bool _conflict = false;
+
+  /// 推荐城市之外的票是否展开(城市多了以后防买错:默认收起)。
+  bool _showOtherCities = false;
 
   @override
   void initState() {
@@ -94,8 +122,15 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       // 商店不可用(无 Play 服务的设备、测试环境)时 isAvailable() 直接抛。
       // 这一页的其余部分**不该跟着死** —— 用户还要在这里看自己的通票状态。
     }
-    if (!mounted) return;
-    if (success) await _autoRestoreIfNoPass();
+    if (!mounted || !success) return;
+    if (widget.autoBuy) {
+      final ent = await ref.read(entitlementsProvider.future);
+      if (!mounted) return;
+      // ponytail: 直接拉起时跳过静默恢复 —— 恢复要等 3 秒,用户刚点过购买,
+      // 付款框晚 3 秒出来像没反应。"付了没到账"那个窗口还在,手动入口在页底。
+      if (shouldAutoBuy(ent, widget.passId)) return _buy(widget.passId!);
+    }
+    await _autoRestoreIfNoPass();
   }
 
   /// **无票才自动跑一次恢复,且全程静默** —— 只有真捞到东西才出声。
@@ -199,6 +234,49 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
   /// 说的是「没有找到未完成的付款」——跟着标签的口径走,而不是"没有可恢复的购买"。
   String _restoreLabel(AppLocalizations l10n) =>
       _isRestoring ? l10n.restoreInProgress : l10n.paywallRestore;
+
+  /// 买错城市:列出后端说能换的票,点哪张换哪张。
+  Future<void> _exchange(Entitlements ent, OwnedPass p) async {
+    final l10n = AppLocalizations.of(context)!;
+    final targets =
+        ent.offers.where((o) => p.exchangeTo.contains(o.productId)).toList();
+    String title(PassOffer o) =>
+        passTitle(l10n, o.label, o.days, title: o.title);
+    final to = await showModalBottomSheet<PassOffer>(
+      context: context,
+      backgroundColor: context.gm.surface,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.passExchangeSheetTitle,
+                  style: GmText.serif(size: 16.5, weight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(l10n.passExchangeSheetBody,
+                  style: GmText.sans(
+                      size: 12.5, color: context.gm.sub, height: 1.6)),
+              for (final o in targets) ...[
+                const SizedBox(height: 14),
+                GmTicketButton(
+                  label: l10n.passExchangeTo(title(o)),
+                  onTap: () => Navigator.of(sheet).pop(o),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+    if (to == null || !mounted) return;
+    final ok = await exchangePass(ref, from: p.productId, to: to.productId);
+    invalidateEntitlements(ref);
+    if (mounted) {
+      _toast(ok ? l10n.passExchangeDone(title(to)) : l10n.passExchangeFailed);
+    }
+  }
 
   Future<void> _activate() async {
     final ent = ref.read(entitlementsProvider).value;
@@ -359,6 +437,11 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
       for (final p in held) ...[
         const SizedBox(height: 16),
         _heldTicket(gm, l10n, p),
+        // 买错城市的兜底:能换成哪几张由后端给(未激活、同价、在售)
+        if (p.isPurchasedNotActivated &&
+            ent.offers.any((o) => p.exchangeTo.contains(o.productId)))
+          BenSecondaryAction(
+              label: l10n.passExchangeLink, onTap: () => _exchange(ent, p)),
       ],
       // 一张都没生效时才讲「还没开始计时」并给开始按钮。已有生效的票时不给:
       // 不带馆的 /activate 会先认到那张生效的票,按了什么都不会发生。
@@ -652,37 +735,49 @@ class _BenefitsPageState extends ConsumerState<BenefitsPage> {
 
   // ── 共用零件 ──
 
-  /// 这一页该卖哪几张票。`?pass=` 给了就只卖那一张;否则 `/me.offers` 全列
-  /// (不猜"第一张")。已经握在手里的票不再卖 —— 生效中/待激活时再买一张同样的票
-  /// 只会让用户付两次钱。
-  List<PassOffer> _sellable(Entitlements ent) {
-    final held = ent.passes.map((p) => p.productId).toSet();
-    return ent.offers
-        .where((o) => widget.passId == null || o.productId == widget.passId)
-        .where((o) => !held.contains(o.productId))
-        .toList();
-  }
+  List<PassOffer> _sellable(Entitlements ent) =>
+      sellableOffers(ent, widget.passId);
 
   /// 售票区:每张在售票一张票面 + 一个购买按钮。一张都没有 → 「暂未开售」。
+  ///
+  /// 后端标了推荐城市(用户最近在那儿)→ 只摆那一张,其余收进「其他城市」:
+  /// 城市多了以后,一长串平铺的票就是买错城市的现场。没推荐 = 全部平铺(不猜)。
   List<Widget> _saleSection(AppLocalizations l10n, Entitlements ent) {
     final offers = _sellable(ent);
     if (offers.isEmpty) {
       return [BenNotice(head: l10n.passNotOnSale, body: '')];
     }
+    final top = offers.where((o) => o.recommended).toList();
+    final others = offers.where((o) => !o.recommended).toList();
+    final fold = top.isNotEmpty && others.isNotEmpty;
     return [
-      for (final o in offers) ...[
-        const SizedBox(height: 10),
-        GmTicket(
-          stamp: o.stampText,
-          days: o.days,
-          stub: _clockStub(l10n, o.days),
-          child: saleTicketFace(context, ref, o),
+      ..._tickets(l10n, ent, fold ? top : offers),
+      if (fold) ...[
+        const SizedBox(height: 8),
+        BenSecondaryAction(
+          label: l10n.benefitsOtherCities(others.length),
+          onTap: () => setState(() => _showOtherCities = !_showOtherCities),
         ),
-        const SizedBox(height: 18),
-        _buyCta(l10n, ent, o),
+        if (_showOtherCities) ..._tickets(l10n, ent, others),
       ],
     ];
   }
+
+  List<Widget> _tickets(
+          AppLocalizations l10n, Entitlements ent, List<PassOffer> offers) =>
+      [
+        for (final o in offers) ...[
+          const SizedBox(height: 10),
+          GmTicket(
+            stamp: o.stampText,
+            days: o.days,
+            stub: _clockStub(l10n, o.days),
+            child: saleTicketFace(context, ref, o),
+          ),
+          const SizedBox(height: 18),
+          _buyCta(l10n, ent, o),
+        ],
+      ];
 
   /// 生效中/待激活时,还有别的票可买(例如持巴黎票、从荷兰的馆点进来)。
   List<Widget> _moreToBuy(AppLocalizations l10n, Entitlements ent) {

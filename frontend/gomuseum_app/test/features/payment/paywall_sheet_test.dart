@@ -70,13 +70,13 @@ Widget _wrap(
 
 void main() {
   testWidgets('说清"买了不立即计时" —— 旅游产品常提前几天买,不说会被投诉', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent()));
+    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris)));
     await t.pumpAndSettle();
     expect(find.textContaining('不马上开始计时'), findsOneWidget);
   });
 
   testWidgets('说清"文字讲解始终免费" —— 付费墙在现场体验,不在内容', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent()));
+    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris)));
     await t.pumpAndSettle();
     expect(find.textContaining('始终免费'), findsOneWidget);
   });
@@ -84,19 +84,20 @@ void main() {
   testWidgets('说清"未激活会失效" —— 后端真会没收,不告知就是偷偷吃票', (t) async {
     // ⚠️ 这条与后端 ACTIVATION_WINDOW 成对存在。删了这句 = 没披露就没收
     // 已付的款(Play 合规问题),删了那段代码 = 票面印了个假承诺。
-    await t.pumpWidget(_wrap(const PaywallSheetContent()));
+    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris)));
     await t.pumpAndSettle();
     expect(find.textContaining('30 天失效'), findsOneWidget);
   });
 
   testWidgets('显示价格 —— 此前弹层里根本没有价格,用户不知道多少钱就在点购买', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent()));
+    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris)));
     await t.pumpAndSettle();
     expect(find.text('€7.99'), findsOneWidget);
   });
 
   testWidgets('拿不到价格就不显示 —— 宁可不显示,也不显示一个当地是错的金额', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent(), price: null));
+    await t.pumpWidget(
+        _wrap(const PaywallSheetContent(offer: _paris), price: null));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallPriceNote), findsNothing);
@@ -114,7 +115,7 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
 
     String? boughtId;
-    showPaywallSheet(ctx, onBuy: (id) {
+    showPaywallSheet(ctx, offer: _paris, onBuy: (id) {
       bought = true;
       boughtId = id;
     });
@@ -130,7 +131,7 @@ void main() {
     await t.tap(find.text(l10n.paywallBuy));
     await t.pumpAndSettle();
     expect(bought, isTrue);
-    expect(boughtId, 'paris_pass_7d', reason: '只有一张可买时直接带上它的商品 ID');
+    expect(boughtId, 'paris_pass_7d', reason: '直接带上这家馆那张票的商品 ID');
   });
 
   // ---- 多城市/多国(spec 2026-09-28 §3.3)----------------------------------
@@ -160,36 +161,37 @@ void main() {
     expect(find.textContaining('巴黎'), findsNothing);
   });
 
-  testWidgets('不知道在哪家馆、有两张可买:两张都列出,购买交给权益页挑(不猜第一张)', (t) async {
-    const two = Entitlements(
-      state: 'not_purchased',
-      canPurchase: true,
-      canRecognize: true,
-      canAudioAny: false,
-      offers: [_paris, _nl],
-    );
-    String? boughtId = 'unset';
+  testWidgets('⭐ 馆内没有这家馆的票:/me.offers 里有巴黎也不卖 —— 在荷兰的馆里卖巴黎票就是卖错', (t) async {
+    // 弹层只在馆内弹(播放器)。此前 offer 为 null 时回落到 /me.offers 全列,
+    // 于是在一家没开卖的馆里撞墙,看到的是另一个城市的票。
+    await t.pumpWidget(_wrap(const PaywallSheetContent(), ent: _member));
+    await t.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+    expect(find.text(l10n.passNotOnSale), findsOneWidget);
+    expect(find.textContaining('巴黎'), findsNothing);
+    expect(find.text(l10n.paywallBuy), findsNothing);
+  });
+
+  testWidgets('⭐ 馆内付费墙点购买:直接带上这家馆的票去付款(少一步,不再让用户挑)', (t) async {
+    String? boughtId;
     late BuildContext ctx;
     await t.pumpWidget(_wrap(Builder(builder: (c) {
       ctx = c;
       return const SizedBox();
-    }), ent: two));
+    })));
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
-    showPaywallSheet(ctx, onBuy: (id) => boughtId = id);
+    showPaywallSheet(ctx, offer: _nl, onBuy: (id) => boughtId = id);
     await t.pumpAndSettle();
-    expect(find.text(l10n.paywallTitle('巴黎', '7')), findsOneWidget);
-    expect(find.text(l10n.paywallTitle('荷兰', '7')), findsOneWidget);
-    // 两张票会把按钮挤出弹层可视区,先滚过去
     await t.ensureVisible(find.text(l10n.paywallBuy));
     await t.pumpAndSettle();
     await t.tap(find.text(l10n.paywallBuy));
     await t.pumpAndSettle();
-    expect(boughtId, isNull, reason: '多张时不替用户选');
-    expect(benefitsRoute(boughtId), '/benefits');
+    expect(boughtId, 'nl_pass_7d');
   });
 
   testWidgets('游客看到的是「登录后购买」 —— 通票挂账号,游客买了换手机就拿不回', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent(), ent: _guest));
+    await t.pumpWidget(
+        _wrap(const PaywallSheetContent(offer: _paris), ent: _guest));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallLoginToBuy), findsOneWidget);
@@ -201,8 +203,8 @@ void main() {
   testWidgets('权益读不到时绝不说「登录后购买」 —— 用户可能已登录,只是断网了', (t) async {
     // ⚠️ Entitlements.unknown 的 canPurchase 也是 false。少了 known 标记,
     // 这里就会对着一个已登录的用户要求登录 —— 他照做也没用。
-    await t.pumpWidget(
-        _wrap(const PaywallSheetContent(), ent: Entitlements.unknown));
+    await t.pumpWidget(_wrap(const PaywallSheetContent(offer: _paris),
+        ent: Entitlements.unknown));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallLoginToBuy), findsNothing);
@@ -213,7 +215,8 @@ void main() {
   });
 
   testWidgets('已登录用户直接看到购买按钮', (t) async {
-    await t.pumpWidget(_wrap(const PaywallSheetContent(), ent: _member));
+    await t.pumpWidget(
+        _wrap(const PaywallSheetContent(offer: _paris), ent: _member));
     await t.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
     expect(find.text(l10n.paywallBuy), findsOneWidget);
