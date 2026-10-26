@@ -199,11 +199,17 @@ def pass_offer(db, museum, language: str = "zh", *, preview: bool = False):
     return _offer(pid, _museums(db, preview), language)
 
 
-def pass_offers(db, language: str = "zh", *, preview: bool = False) -> list[dict]:
+def pass_offers(
+    db, language: str = "zh", *, preview: bool = False, user_id: str | None = None
+) -> list[dict]:
     """全部可买的票(`/me.offers`)—— 给**不知道用户在哪家馆**的购买入口用
     (首页/设置进权益页、识别前置闸撞墙)。每张各一个购买按钮,不猜"第一张"。
 
-    只列覆盖至少一家**已放出**馆的在售票:否则演练期的票会从这里漏给公众。"""
+    只列覆盖至少一家**已放出**馆的在售票:否则演练期的票会从这里漏给公众。
+
+    给了 [user_id]:覆盖他**最近去过的馆**的那张排第一并标 `recommended`
+    (城市多了以后防买错城市)。老 App 按下发顺序列票,所以排序不用发版就生效;
+    没足迹 = 目录顺序、不推荐任何一张(不猜)。"""
     museums = _museums(db, preview)
     out = []
     for pid, p in PASSES.items():
@@ -212,7 +218,32 @@ def pass_offers(db, language: str = "zh", *, preview: bool = False) -> list[dict
         offer = _offer(pid, museums, language)
         if offer["covers"]:
             out.append(offer)
+    # 只有一张票时排序没意义,不为它在热路径(/me)上多查一次表
+    last = _last_museum(db, user_id, museums) if user_id and len(out) > 1 else None
+    top = pass_for_museum(last) if last is not None else None
+    for o in out:
+        o["recommended"] = o["product_id"] == top
+    out.sort(key=lambda o: not o["recommended"])  # 稳定排序:其余保持目录顺序
     return out
+
+
+def _last_museum(db, user_id: str, museums: list):
+    """用户最近一次看讲解/在馆里识别的那家馆(只在可见馆里找)。
+    ponytail: 只看最近一条;要按"这次旅行去过哪些城市"加权再说。"""
+    from app.models.app_event import AppEvent
+
+    slug = (
+        db.query(AppEvent.museum_slug)
+        .filter(
+            AppEvent.user_id == user_id,
+            AppEvent.name.in_(("content_viewed", "museum_used")),
+            AppEvent.museum_slug.in_([m.slug for m in museums]),
+        )
+        .order_by(AppEvent.created_at.desc())
+        .limit(1)
+        .scalar()
+    )
+    return next((m for m in museums if m.slug == slug), None)
 
 
 def _museums(db, preview: bool) -> list:
@@ -412,7 +443,7 @@ def summary(
         "free_audio_days": FREE_AUDIO_WINDOW.days,
         "passes": _passes(db, user_id, language, preview=preview),
         # 可买的票(加法):不知道用户在哪家馆的购买入口据此列出每一张
-        "offers": pass_offers(db, language, preview=preview),
+        "offers": pass_offers(db, language, preview=preview, user_id=user_id),
         # ⚠️ **恒为 None**。老字段的语义是"你认领的那一件",而"认领"这件事
         # 已经不存在了(2026-09-19 免费语音改为跟着识别走)。
         # 不删键、恒给 null 是**故意的**:老 App 读到 null 会把本地闸放开、

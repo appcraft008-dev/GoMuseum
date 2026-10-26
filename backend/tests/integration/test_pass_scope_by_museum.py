@@ -585,3 +585,51 @@ def test_exchange_endpoint(client, db):
     )
     assert again.status_code == 409
     assert again.json()["detail"]["reason"] == "no_unactivated_pass"
+
+
+# ---- /me.offers 按用户最近去过的馆排序(多城市防误购) -----------------------
+
+
+def _seen(db, uid, slug, name="content_viewed", minutes_ago=0):
+    db.add(
+        AppEvent(
+            name=name,
+            user_id=uid,
+            museum_slug=slug,
+            created_at=datetime.now(timezone.utc) - timedelta(minutes=minutes_ago),
+        )
+    )
+    db.commit()
+
+
+def _order(offers):
+    return [(o["product_id"], o["recommended"]) for o in offers]
+
+
+def test_offers_put_the_city_you_were_just_in_first(db, monkeypatch):
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    _seen(db, "u", "orsay", minutes_ago=60)
+    _seen(db, "u", "rijks", name="museum_used", minutes_ago=5)
+    _seen(db, "other", "orsay")  # 别人的足迹不算
+    assert _order(es.pass_offers(db, "zh", user_id="u")) == [
+        ("nl_pass_7d", True),
+        ("paris_pass_7d", False),
+    ]
+    _seen(db, "u", "orsay")  # 又回到巴黎
+    assert _order(es.pass_offers(db, "zh", user_id="u"))[0] == ("paris_pass_7d", True)
+
+
+def test_offers_without_history_keep_catalog_order_and_recommend_nothing(
+    db, monkeypatch
+):
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    _seen(db, "u", "nope")  # 不存在的馆 / 没有在售票覆盖的馆 → 当没去过
+    want = [("paris_pass_7d", False), ("nl_pass_7d", False)]
+    assert _order(es.pass_offers(db, "zh", user_id="u")) == want
+    assert _order(es.pass_offers(db, "zh")) == want
+
+
+def test_me_offers_are_ranked_for_the_caller(client, db):
+    _seen(db, "u", "rijks")
+    me = client.get("/api/v1/entitlements/me", headers=AUTH).json()
+    assert _order(me["offers"]) == [("nl_pass_7d", True), ("paris_pass_7d", False)]
