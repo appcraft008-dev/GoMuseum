@@ -119,7 +119,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         .read(museumDetailProvider(
             (slug: widget.slug, language: widget.language)))
         .valueOrNull
-        ?.name;
+        ?.localizedName(widget.language); // `name` 是中文名,不能直接用
     final segment = switch (widget.section) {
       'guide' || 'artist_bio' => c?.artist?.name,
       'qa' => c?.suggestedQuestions

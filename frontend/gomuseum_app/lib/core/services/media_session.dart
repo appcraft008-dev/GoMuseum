@@ -88,6 +88,8 @@ class GuideMediaHandler extends BaseAudioHandler with SeekHandler {
       androidCompactActionIndices: const [0],
       // 流式无总时长时不能 seek(同 App 内进度条的规则)
       systemActions: {
+        // 耳机线控/AirPods 单击发的是 playPause,不声明 iOS 上会禁用该命令
+        MediaAction.playPause,
         if (p.duration != null) MediaAction.seek,
       },
       processingState: const {

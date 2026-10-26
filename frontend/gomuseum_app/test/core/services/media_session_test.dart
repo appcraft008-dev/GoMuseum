@@ -48,6 +48,7 @@ void main() {
     final s = h.playbackState.value;
     expect(s.controls, [MediaControl.play]);
     expect(s.systemActions, isNot(contains(MediaAction.seek)));
+    expect(s.systemActions, contains(MediaAction.playPause)); // 耳机键
   });
 
   test('没有在放的段时,锁屏按键是空操作(不抛错)', () async {
