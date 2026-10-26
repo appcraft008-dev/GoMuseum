@@ -468,3 +468,120 @@ def test_summary_reports_expired_unlocks_and_window(db, monkeypatch):
     out = es.summary(db, "u", b)
     assert out["free_audio_expired"] == ["Q1"]
     assert out["free_audio_qids"] == []
+
+
+# ---- 未激活票换城市(买错了的兜底) ------------------------------------------
+
+
+def _bought(db, uid, pid, *, days_ago=0):
+    """模拟真实购买:有 source_purchase_id,退款能顺着它撤权益。"""
+    from app.models.purchase import Purchase
+
+    Purchase.__table__.create(bind=db.get_bind(), checkfirst=True)
+    p, ent = es.grant_from_purchase(
+        db,
+        user_id=uid,
+        platform="google",
+        product_id=pid,
+        store_transaction_id=f"tok-{uid}-{pid}-{days_ago}",
+    )
+    ent.created_at = datetime.now(timezone.utc) - timedelta(days=days_ago)
+    db.commit()
+    return p, ent
+
+
+def test_exchange_moves_the_unactivated_ticket_to_another_city(db, monkeypatch):
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    p, ent = _bought(db, "u", "paris_pass_7d", days_ago=3)
+    born = ent.created_at
+    es.exchange(db, "u", "paris_pass_7d", "nl_pass_7d")
+    db.refresh(ent)
+    assert ent.entitlement_type == "nl_pass_7d" and ent.scope == "country:NL"
+    assert ent.status == es.PURCHASED_NOT_ACTIVATED
+    assert es.resolve_state(db, "u", _m(db, "rijks"))[0] == es.PURCHASED_NOT_ACTIVATED
+    assert es.resolve_state(db, "u", _m(db, "orsay"))[0] == es.NOT_PURCHASED
+    # 订单不动(收入按当初买的商品算);激活保质期不因换票重新起算
+    assert p.product_id == "paris_pass_7d"
+    assert es._aware(ent.created_at) == es._aware(born)
+
+
+def test_refund_after_exchange_still_revokes(db, monkeypatch):
+    """换了城市再去 Play 退款:票必须跟着撤,不能退了钱还能用。"""
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    p, ent = _bought(db, "u", "paris_pass_7d")
+    es.exchange(db, "u", "paris_pass_7d", "nl_pass_7d")
+    assert es.revoke_for_purchase(db, p.store_transaction_id)
+    assert es.resolve_state(db, "u", _m(db, "rijks"))[0] == es.NOT_PURCHASED
+
+
+@pytest.mark.parametrize(
+    "setup,frm,to,reason",
+    [
+        ("active", "paris_pass_7d", "nl_pass_7d", "no_unactivated_pass"),
+        ("lapsed", "paris_pass_7d", "nl_pass_7d", "no_unactivated_pass"),
+        ("none", "paris_pass_7d", "nl_pass_7d", "no_unactivated_pass"),
+        ("ok", "paris_pass_7d", "paris_pass_7d", "not_exchangeable"),
+        ("ok", "paris_pass_7d", "typo_pass_7d", "not_exchangeable"),
+        ("ok", "paris_pass_7d", "nl_off_sale", "not_exchangeable"),
+        ("ok", "paris_pass_7d", "nl_other_tier", "not_exchangeable"),
+    ],
+)
+def test_exchange_refuses(db, monkeypatch, setup, frm, to, reason):
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    if to == "nl_off_sale":
+        monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", False)
+        to = "nl_pass_7d"
+    if to == "nl_other_tier":
+        monkeypatch.setitem(es.PASSES["nl_pass_7d"], "price_tier", "premium")
+        to = "nl_pass_7d"
+    if setup in ("ok", "active"):
+        _, ent = _bought(db, "u", frm)
+        if setup == "active":
+            es.activate(db, "u")
+    elif setup == "lapsed":
+        _bought(db, "u", frm, days_ago=31)
+    with pytest.raises(es.ExchangeRefused) as e:
+        es.exchange(db, "u", frm, to)
+    assert e.value.reason == reason
+    # 被拒时一个字节都不改
+    for r in db.query(Entitlement).all():
+        assert r.entitlement_type == frm
+
+
+def test_exchange_never_uses_a_hidden_museums_ticket(db, monkeypatch):
+    """演练期的票不能借换票漏给公众;预览者可以(真机演练换票链路)。"""
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    _m(db, "rijks").published_at = None
+    db.commit()
+    _bought(db, "u", "paris_pass_7d")
+    with pytest.raises(es.ExchangeRefused):
+        es.exchange(db, "u", "paris_pass_7d", "nl_pass_7d")
+    es.exchange(db, "u", "paris_pass_7d", "nl_pass_7d", preview=True)
+
+
+def test_passes_tell_which_tickets_an_unactivated_one_can_become(db, monkeypatch):
+    monkeypatch.setitem(es.PASSES["nl_pass_7d"], "on_sale", True)
+    _bought(db, "u", "paris_pass_7d")
+    _ticket(db, "u", "nl_pass_7d")  # 生效中的票不能换
+    by_id = {p["product_id"]: p for p in es.summary(db, "u")["passes"]}
+    assert by_id["paris_pass_7d"]["exchange_to"] == ["nl_pass_7d"]
+    assert by_id["nl_pass_7d"]["exchange_to"] == []
+
+
+def test_exchange_endpoint(client, db):
+    _bought(db, "u", "paris_pass_7d")
+    r = client.post(
+        "/api/v1/entitlements/exchange?from_product=paris_pass_7d"
+        "&to_product=nl_pass_7d&language=en",
+        headers=AUTH,
+    )
+    assert r.status_code == 200
+    assert [p["product_id"] for p in r.json()["passes"]] == ["nl_pass_7d"]
+    assert db.query(AppEvent).filter_by(name="pass_exchanged").count() == 1
+    again = client.post(
+        "/api/v1/entitlements/exchange?from_product=paris_pass_7d"
+        "&to_product=nl_pass_7d",
+        headers=AUTH,
+    )
+    assert again.status_code == 409
+    assert again.json()["detail"]["reason"] == "no_unactivated_pass"

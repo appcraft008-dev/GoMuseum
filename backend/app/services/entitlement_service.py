@@ -39,10 +39,14 @@ from app.models.purchase import Entitlement
 #
 # `label`:范围名(十语),付费墙「{label} {days} 日通票」与票面刻印用它。
 # `on_sale`:False = 目录里有、但不下发给前端(演练期/尚未在商店生效)。
+# `price_tier`:**商店后台定价相同**的票填同一档,未激活时可互换(见 exchange)。
+#   价格在商店不在这里,所以这一档是**人工承诺**:改了某张票的商店价,这里也得改。
+#   缺省 = 不可换(宁可不让换,不可让便宜票换成贵票)。
 PASSES: dict[str, dict] = {
     "paris_pass_7d": {
         "days": 7,
         "scope": "city:paris",
+        "price_tier": "standard",
         "label": {
             "zh": "巴黎",
             "zh-hant": "巴黎",
@@ -59,6 +63,7 @@ PASSES: dict[str, dict] = {
     "nl_pass_7d": {
         "days": 7,
         "scope": "country:NL",
+        "price_tier": "standard",
         "label": {
             "zh": "荷兰",
             "zh-hant": "荷蘭",
@@ -405,7 +410,7 @@ def summary(
         # 的 N 由后端给,改窗口不用发版)
         "free_audio_expired": free_audio_expired(benefits),
         "free_audio_days": FREE_AUDIO_WINDOW.days,
-        "passes": _passes(db, user_id, language),
+        "passes": _passes(db, user_id, language, preview=preview),
         # 可买的票(加法):不知道用户在哪家馆的购买入口据此列出每一张
         "offers": pass_offers(db, language, preview=preview),
         # ⚠️ **恒为 None**。老字段的语义是"你认领的那一件",而"认领"这件事
@@ -471,7 +476,64 @@ def _iso(dt):
     return dt.isoformat() if dt else None
 
 
-def _passes(db, user_id: str, language: str) -> list[dict]:
+class ExchangeRefused(Exception):
+    """换票被拒。`reason` 原样回给前端(409 detail.reason)。"""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def exchange_targets(db, product_id: str, *, preview: bool = False) -> list[str]:
+    """一张**未激活**的票能换成哪些票:当前可买(在售且覆盖已放出的馆)、
+    同天数、同价位档。只读后端配置 —— 能不能换由后端说了算,前端不推断。"""
+    me = PASSES.get(product_id, {})
+    tier = me.get("price_tier")
+    if tier is None:
+        return []
+    return [
+        o["product_id"]
+        for o in pass_offers(db, preview=preview)
+        if o["product_id"] != product_id
+        and PASSES[o["product_id"]].get("price_tier") == tier
+        and o["days"] == me.get("days")
+    ]
+
+
+def exchange(
+    db, user_id: str, from_product: str, to_product: str, *, preview: bool = False
+):
+    """买错城市的兜底:把一张**未激活**的票原地改成另一城市的票。
+
+    原地改同一行(不新建):`source_purchase_id` 不变,退款回调照样能撤它;
+    `created_at` 不变,30 天激活期不因换票重新起算(否则可以无限续命)。
+    订单(`purchases.product_id`)不动 —— 收入按当初付钱买的商品算。
+    已激活的票不能换:时间已经在走,换了等于白送一段别的城市。
+    """
+    from app.models.purchase import Entitlement
+
+    if to_product not in exchange_targets(db, from_product, preview=preview):
+        raise ExchangeRefused("not_exchangeable")
+    rows = (
+        db.query(Entitlement)
+        .filter_by(
+            user_id=user_id,
+            entitlement_type=from_product,
+            status=PURCHASED_NOT_ACTIVATED,
+        )
+        .order_by(Entitlement.created_at.desc())
+        .all()
+    )
+    ent = next((r for r in rows if not _unactivated_expired(r)), None)
+    if ent is None:
+        raise ExchangeRefused("no_unactivated_pass")
+    ent.entitlement_type = to_product
+    ent.scope = pass_scope(to_product)
+    db.commit()
+    return ent
+
+
+def _passes(db, user_id: str, language: str, *, preview: bool = False) -> list[dict]:
     """还能用的票(生效中/待激活),各自带范围名。权益页据此写明
     「荷兰 7 日通票 · 有效至…」「巴黎 7 日通票 · 待激活」—— 用户看得出哪张票管哪里。"""
     rows = (
@@ -500,6 +562,12 @@ def _passes(db, user_id: str, language: str) -> list[dict]:
                     _iso(activation_deadline(r))
                     if state == PURCHASED_NOT_ACTIVATED
                     else None
+                ),
+                # 加法字段:未激活时可换成哪几张(买错城市的兜底);其余恒为空
+                "exchange_to": (
+                    exchange_targets(db, r.entitlement_type, preview=preview)
+                    if state == PURCHASED_NOT_ACTIVATED
+                    else []
                 ),
             }
         )

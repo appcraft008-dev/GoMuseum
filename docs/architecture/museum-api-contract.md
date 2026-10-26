@@ -1649,6 +1649,7 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 | `POST /content/tts/generate` | 同上 / 通票 | section 模式按 qid;ad-hoc(任意文本)需通票生效 |
 | `POST /entitlements/audio/unlock?qid=` | 额度 | 花 1 次额度解锁该件主讲解段;**先扣费再解锁**;幂等;额度为 0 → 402 |
 | `GET /entitlements/me?museum=`、`POST /entitlements/activate?museum=` | 按馆 | 带馆 → 只看/只激活**覆盖该馆**的票;不带 = 旧行为 |
+| `POST /entitlements/exchange?from_product=&to_product=` | 换票 | **未激活**票原地改成另一城市的票(买错兜底);只换 `/me.passes[].exchange_to` 列出的(在售、同天数、同 `price_tier`);订单与激活期不变,退款照撤;被拒 → 409 `{reason}` 且不改任何数据 |
 
 ⚠️ 上表所有"按票放行"的判断都**按资源所属的馆**判(qid 反查,不信 URL 的 slug),见闸门纪律 7。
 
