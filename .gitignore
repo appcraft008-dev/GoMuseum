@@ -136,3 +136,6 @@ backend/scripts/recognition_bench/data/
 
 # superpowers 头脑风暴草图(本地)
 .superpowers/
+
+# ASO 合成脚本的缩略对照图(本地检查用)
+tools/aso/_review*/
