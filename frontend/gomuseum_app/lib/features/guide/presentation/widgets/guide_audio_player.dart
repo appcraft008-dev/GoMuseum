@@ -182,7 +182,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     // 最后以为没买成功而**重复购买**。2026-09-02 真机实测撞到,买了两次。
     if (ent.isPurchasedNotActivated) {
       // 按馆激活:只撕覆盖这家馆的那张(持两国未激活票时不能烧错)
-      final offer = await _museumOffer();
+      final offer = (await _museumOffer())?.pass;
       if (!mounted) return true;
       if (await ensurePassActivated(context, ref, ent,
           museum: widget.slug, offer: offer)) {
@@ -273,32 +273,41 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   /// 不传就等于按钮只关弹窗、什么都不做——付费墙形同虚设(实测撞到过)。
   /// 购买全流程(IAP 初始化/查商品/验证/发权益)只在权益页有完整实现,
   /// 这里统一跳过去,不在播放器里另搭一套。
-  /// 这家馆卖的票(馆包 `pass`,后端下发)。拿不到 = null,付费墙说「暂未开售」,
-  /// **绝不回落到巴黎票** —— 此前付费墙在任何馆都卖「巴黎 7 日通票」。
-  Future<PassOffer?> _museumOffer() async {
+  /// 这家馆的馆包(取它下发的 `pass`)。**查不到 = null**,与「查到了、这家馆没票」
+  /// (`pass == null`)是两回事:后者说「暂未开售」,前者让用户重试 ——
+  /// 混成一个 null 的话,断网时付费墙会说「暂未开售」,而它其实在卖。
+  Future<({PassOffer? pass})?> _museumOffer() async {
     try {
       final m = await ref.read(
           museumDetailProvider((slug: widget.slug, language: widget.language))
               .future);
-      return m.pass;
+      return (pass: m.pass);
     } catch (_) {
       return null;
     }
   }
 
   Future<void> _showPaywall() async {
-    final offer = await _museumOffer();
+    final museum = await _museumOffer();
     if (!mounted) return;
+    if (museum == null) {
+      // 不知道这家馆卖哪张票时**不弹付费墙**:弹了只能猜一张,而猜就会卖错城市
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)!.loadFailedRetry)));
+      return;
+    }
     await showPaywallSheet(
       context,
       reason: 'audio',
-      offer: offer,
+      offer: museum.pass,
       onBuy: (productId) {
         // 提示条挂在**根 ScaffoldMessenger** 上,不属于当前页 —— 不清掉的话
         // 它会跟着飘到权益页,在那儿悬着一个多余的「获取通票」,而那一页
         // 本来就有自己的购买入口(2026-09-04 真机实测撞到)。
         ScaffoldMessenger.of(context).clearSnackBars();
-        context.push(benefitsRoute(productId));
+        // buy:在这里已经点过「获取通票」了,权益页直接拉起付款
+        context.push(benefitsRoute(productId, buy: true));
       },
     );
   }
