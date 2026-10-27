@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import load_only
 
 from app.api.v1.endpoints.history import _footprint_qid
 from app.models.must_see_medal import MustSeeMedal
@@ -31,10 +32,23 @@ def checkins(db, user_id: str, slug: str) -> list[tuple[str, datetime]]:
     E = RecognitionEvent
     rows = (
         db.query(E)
+        # 只取判据用得到的列:timings/text_trace/vector_top 是大 JSON(同 history._mine,
+        # 10-23 prod 剖析解析它们占一半耗时)
+        .options(
+            load_only(
+                E.outcome,
+                E.top_qid,
+                E.confirmed_qid,
+                E.rejected_qids,
+                E.created_at,
+            )
+        )
         .filter(
             E.user_id == user_id,
             E.capture == "camera",
             or_(E.confirm_source.is_(None), E.confirm_source != "search"),
+            # SQL 只做粗筛超集(qid 沾边就捞回),精确判据仍归 _footprint_qid 一处
+            or_(E.confirmed_qid.in_(listed), E.top_qid.in_(listed)),
         )
         .order_by(E.created_at)
         .all()

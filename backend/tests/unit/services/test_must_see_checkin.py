@@ -195,3 +195,25 @@ def test_times_are_utc_aware(db):
     p = _p(db, T0)
     assert p["checked"]["Q1"].endswith("+00:00")
     assert p["round_started_at"].endswith("+00:00")
+
+
+def test_checkins_query_skips_big_json_and_other_qids(db):
+    """性能(审查 I1):只取判据要的列(不解析 timings/text_trace/vector_top 大 JSON),
+    SQL 先按清单 qid 粗筛;精确判据仍归 _footprint_qid。"""
+    from sqlalchemy import event
+
+    _ev(db, "Q1", T0, timings={"big": "x" * 10})
+    _ev(db, "Q99", T0)  # 清单外
+    stmts = []
+
+    def grab(conn, cursor, statement, params, context, executemany):
+        stmts.append(statement)
+
+    event.listen(db.get_bind(), "before_cursor_execute", grab)
+    try:
+        assert set(_p(db, T0)["checked"]) == {"Q1"}
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", grab)
+    q = next(s for s in stmts if "FROM recognition_events" in s)
+    assert "timings" not in q and "text_trace" not in q and "vector_top" not in q
+    assert " IN (" in q.upper() or "IN (__[POSTCOMPILE" in q.upper()
