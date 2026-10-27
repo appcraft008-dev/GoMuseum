@@ -791,6 +791,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String passportBasement(int n) {
+    return 'Piano -$n';
+  }
+
+  @override
   String passportRoom(String room) {
     return 'Sala $room';
   }

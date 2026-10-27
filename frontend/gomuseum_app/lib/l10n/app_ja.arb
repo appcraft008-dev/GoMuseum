@@ -235,6 +235,7 @@
   "passportMedals": "マイメダル",
   "passportNoLocation": "展示室情報なし",
   "passportLevel": "{level}階",
+  "passportBasement": "地下{n}階",
   "passportRoom": "展示室 {room}",
   "mustSeeToastStamped": "スタンプ!必見 {done} / {total}",
   "mustSeeToastDone": "必見制覇 {total} / {total}",

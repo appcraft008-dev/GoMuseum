@@ -54,8 +54,10 @@ Future<void> maybeShowStampToast(
     final title = d.completed
         ? l10n.mustSeeToastDone(total)
         : l10n.mustSeeToastStamped(d.checkedCount, total);
-    final loc =
-        item.location == null ? null : locationText(l10n, item.location!);
+    final loc = item.location == null
+        ? null
+        : locationText(
+            l10n, Localizations.localeOf(context).languageCode, item.location!);
     final overlay = Overlay.of(context);
     final entry = OverlayEntry(
       builder: (ctx) => Positioned(

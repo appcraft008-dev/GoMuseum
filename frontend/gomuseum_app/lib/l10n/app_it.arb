@@ -235,6 +235,7 @@
   "passportMedals": "Le mie medaglie",
   "passportNoLocation": "Sala non indicata",
   "passportLevel": "Piano {level}",
+  "passportBasement": "Piano -{n}",
   "passportRoom": "Sala {room}",
   "mustSeeToastStamped": "Timbrato! Da non perdere {done} / {total}",
   "mustSeeToastDone": "Tutte le opere viste {total} / {total}",

@@ -1523,6 +1523,12 @@ abstract class AppLocalizations {
   /// **'Level {level}'**
   String passportLevel(int level);
 
+  /// No description provided for @passportBasement.
+  ///
+  /// In en, this message translates to:
+  /// **'Level -{n}'**
+  String passportBasement(int n);
+
   /// No description provided for @passportRoom.
   ///
   /// In en, this message translates to:

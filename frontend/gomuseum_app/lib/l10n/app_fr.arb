@@ -235,6 +235,7 @@
   "passportMedals": "Mes médailles",
   "passportNoLocation": "Salle non indiquée",
   "passportLevel": "Niveau {level}",
+  "passportBasement": "Niveau -{n}",
   "passportRoom": "Salle {room}",
   "mustSeeToastStamped": "Tamponné ! Incontournables {done} / {total}",
   "mustSeeToastDone": "Tous les incontournables vus {total} / {total}",

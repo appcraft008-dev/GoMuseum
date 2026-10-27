@@ -235,6 +235,7 @@
   "passportMedals": "Moje medale",
   "passportNoLocation": "Sala nieznana",
   "passportLevel": "Poziom {level}",
+  "passportBasement": "Poziom -{n}",
   "passportRoom": "Sala {room}",
   "mustSeeToastStamped": "Pieczątka! Najważniejsze {done} / {total}",
   "mustSeeToastDone": "Wszystko zobaczone {total} / {total}",

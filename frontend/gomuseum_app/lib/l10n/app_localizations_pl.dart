@@ -792,6 +792,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String passportBasement(int n) {
+    return 'Poziom -$n';
+  }
+
+  @override
   String passportRoom(String room) {
     return 'Sala $room';
   }

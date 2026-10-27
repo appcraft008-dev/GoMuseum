@@ -777,6 +777,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String passportBasement(int n) {
+    return '지⁠하 $n⁠층';
+  }
+
+  @override
   String passportRoom(String room) {
     return '$room 전⁠시⁠실';
   }

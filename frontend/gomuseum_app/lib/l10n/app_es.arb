@@ -235,6 +235,7 @@
   "passportMedals": "Mis medallas",
   "passportNoLocation": "Sala no indicada",
   "passportLevel": "Planta {level}",
+  "passportBasement": "Planta -{n}",
   "passportRoom": "Sala {room}",
   "mustSeeToastStamped": "¡Sellado! Imprescindibles {done} / {total}",
   "mustSeeToastDone": "Todos los imprescindibles vistos {total} / {total}",

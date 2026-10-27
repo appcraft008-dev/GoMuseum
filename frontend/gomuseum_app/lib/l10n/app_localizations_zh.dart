@@ -760,7 +760,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String passportLevel(int level) {
-    return '$level 层';
+    return '$level 楼';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return '地下 $n 层';
   }
 
   @override
@@ -2025,7 +2030,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String passportLevel(int level) {
-    return '$level 層';
+    return '$level 樓';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return '地下 $n 層';
   }
 
   @override

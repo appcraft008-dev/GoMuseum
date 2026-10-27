@@ -28,10 +28,21 @@ String medalMonth(DateTime d) =>
 String _ymd(DateTime d) =>
     '${medalMonth(d)}-${d.day.toString().padLeft(2, '0')}';
 
+/// 楼层叫法。后端 level 是欧式楼层(0 = 地面层,1 = 地面往上一层,同官网 Niveau);
+/// 中日韩习惯「1 楼 = 地面层」,照搬数字会把人带错楼 → 这三种语言换算,其余照官方叫法。
+String levelText(AppLocalizations l10n, String lang, int level) {
+  if (!const {'zh', 'ja', 'ko'}.contains(lang))
+    return l10n.passportLevel(level);
+  return level >= 0
+      ? l10n.passportLevel(level + 1)
+      : l10n.passportBasement(-level);
+}
+
 /// 位置拼法:缺哪段跳过,用 " · " 连;侧翼名是官方专名,不翻译。
-String locationText(AppLocalizations l10n, MustSeeLocation loc) => [
+String locationText(AppLocalizations l10n, String lang, MustSeeLocation loc) =>
+    [
       if (loc.wing != null) loc.wing!,
-      if (loc.level != null) l10n.passportLevel(loc.level!),
+      if (loc.level != null) levelText(l10n, lang, loc.level!),
       if (loc.room != null) l10n.passportRoom(loc.room!),
     ].join(' · ');
 
@@ -70,7 +81,8 @@ class _Passport extends StatelessWidget {
 
   /// (组名, 件) 按 yaml 顺序;有位置的按 (wing, level) 归组,无位置的归最后一组。
   /// 整馆都没位置 → 一组、无组名。
-  List<(String?, List<(int, MustSeeItem)>)> _groups(AppLocalizations l10n) {
+  List<(String?, List<(int, MustSeeItem)>)> _groups(
+      AppLocalizations l10n, String lang) {
     final indexed = [
       for (var i = 0; i < data.items.length; i++) (i + 1, data.items[i])
     ];
@@ -83,8 +95,8 @@ class _Passport extends StatelessWidget {
         none.add(e);
         continue;
       }
-      final name =
-          locationText(l10n, MustSeeLocation(wing: loc.wing, level: loc.level));
+      final name = locationText(
+          l10n, lang, MustSeeLocation(wing: loc.wing, level: loc.level));
       groups.putIfAbsent(name, () => []).add(e);
     }
     return [
@@ -141,7 +153,8 @@ class _Passport extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: GmText.sans(size: 11.5, color: gm.sub)),
                   const SizedBox(height: 12),
-                  for (final (name, items) in _groups(l10n)) ...[
+                  for (final (name, items) in _groups(
+                      l10n, Localizations.localeOf(context).languageCode)) ...[
                     if (name != null) _GroupLabel(name),
                     _SlotGrid(slug: slug, items: items, checked: data.checked),
                   ],

@@ -797,6 +797,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String passportBasement(int n) {
+    return 'Niveau -$n';
+  }
+
+  @override
   String passportRoom(String room) {
     return 'Salle $room';
   }

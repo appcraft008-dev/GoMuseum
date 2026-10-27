@@ -80,8 +80,8 @@ void main() {
 
   testWidgets('按 (wing, level) 分组,无位置的归最后「暂无展厅信息」', (t) async {
     await _pump(t, _data());
-    final denon = t.getTopLeft(find.text('Denon · 1 层')).dy;
-    final sully = t.getTopLeft(find.text('Sully · 0 层')).dy;
+    final denon = t.getTopLeft(find.text('Denon · 2 楼')).dy;
+    final sully = t.getTopLeft(find.text('Sully · 1 楼')).dy;
     final none = t.getTopLeft(find.text('暂无展厅信息')).dy;
     expect(denon < sully && sully < none, isTrue);
     expect(find.text('711 厅'), findsOneWidget);

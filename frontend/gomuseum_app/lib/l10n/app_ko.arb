@@ -235,6 +235,7 @@
   "passportMedals": "내 메⁠달",
   "passportNoLocation": "전⁠시⁠실 정⁠보 없⁠음",
   "passportLevel": "{level}⁠층",
+  "passportBasement": "지⁠하 {n}⁠층",
   "passportRoom": "{room} 전⁠시⁠실",
   "mustSeeToastStamped": "도⁠장 쾅! 필⁠수 작⁠품 {done} / {total}",
   "mustSeeToastDone": "필⁠수 작⁠품 완⁠주 {total} / {total}",

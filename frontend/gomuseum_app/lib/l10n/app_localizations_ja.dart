@@ -766,6 +766,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String passportBasement(int n) {
+    return '地下$n階';
+  }
+
+  @override
   String passportRoom(String room) {
     return '展示室 $room';
   }

@@ -451,6 +451,14 @@
       }
     }
   },
+  "passportBasement": "Level -{n}",
+  "@passportBasement": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "passportRoom": "Room {room}",
   "@passportRoom": {
     "placeholders": {
