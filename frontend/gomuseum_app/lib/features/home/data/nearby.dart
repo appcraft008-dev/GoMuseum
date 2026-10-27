@@ -157,11 +157,10 @@ Future<void> requestLocation(WidgetRef ref) async {
   try {
     if (!await Geolocator.isLocationServiceEnabled()) {
       await Geolocator.openLocationSettings();
-    } else if (await Geolocator.checkPermission() ==
+    } else if (await Geolocator.requestPermission() ==
         LocationPermission.deniedForever) {
+      // 只能看请求结果:安卓端 checkPermission 从不报 deniedForever(10-27 真机在系统设置里关权限后点了只闪一下)
       await Geolocator.openAppSettings();
-    } else {
-      await Geolocator.requestPermission();
     }
   } catch (_) {}
   ref.invalidate(deviceLocationProvider);

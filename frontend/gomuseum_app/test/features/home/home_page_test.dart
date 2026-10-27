@@ -8,6 +8,7 @@ import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/home/presentation/pages/home_page.dart';
@@ -57,6 +58,29 @@ const _fakeEntitlements = Entitlements(
 class _NoHistory extends History {
   @override
   HistoryState build() => const HistoryState(isLoading: false, hasMore: false);
+}
+
+/// 模拟安卓:查权限只会报 denied(插件安卓端从不报 deniedForever),
+/// 真去请求时系统不弹框直接回 deniedForever(用户在系统设置里手动关了定位权限)。
+class _DeniedInSettingsPlatform extends GeolocatorPlatform {
+  int appSettingsOpened = 0;
+
+  @override
+  Future<bool> isLocationServiceEnabled() async => true;
+
+  @override
+  Future<LocationPermission> checkPermission() async =>
+      LocationPermission.denied;
+
+  @override
+  Future<LocationPermission> requestPermission() async =>
+      LocationPermission.deniedForever;
+
+  @override
+  Future<bool> openAppSettings() async {
+    appSettingsOpened++;
+    return true;
+  }
 }
 
 void main() {
@@ -122,6 +146,39 @@ void main() {
     expect(find.text('博物馆'), findsOneWidget);
     expect(find.text('开启定位，显示你身边的馆'), findsNothing);
     expect(find.text('附近还没有收录的博物馆'), findsOneWidget);
+  });
+
+  testWidgets('系统设置里关了定位权限:点「开启定位」带去 App 设置,不再只闪一下', (tester) async {
+    final platform = _DeniedInSettingsPlatform();
+    final original = GeolocatorPlatform.instance;
+    GeolocatorPlatform.instance = platform;
+    addTearDown(() => GeolocatorPlatform.instance = original);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          deviceLocationProvider.overrideWith((ref) async => null),
+          historyProvider.overrideWith(_NoHistory.new),
+        ],
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(body: HomePage())),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('开启定位，显示你身边的馆'));
+    await tester.tap(find.text('开启定位，显示你身边的馆'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(platform.appSettingsOpened, 1);
   });
 
   testWidgets('通票生效中：额度提示改说"通票生效中"而非"免费识别还剩"', (tester) async {
