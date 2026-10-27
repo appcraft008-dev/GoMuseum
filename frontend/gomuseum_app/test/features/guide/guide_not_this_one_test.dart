@@ -167,7 +167,7 @@ void main() {
                 MustSeeItem(qid: 'Q1', title: 'A', artist: ''),
                 MustSeeItem(qid: 'Q2', title: 'B', artist: ''),
               ],
-              checked: {'Q1': DateTime(2026, 10, 27)},
+              checked: {'Q1': DateTime.now()},
               roundStartedAt: DateTime(2026, 10, 27),
               completed: false,
               medals: const [],

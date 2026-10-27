@@ -13,7 +13,10 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 
 const _loc = MustSeeLocation(wing: 'Denon', level: 1, room: '700');
 
-MustSeeData _d({Set<String> checked = const {'Q6'}, bool completed = false}) =>
+MustSeeData _d(
+        {Set<String> checked = const {'Q6'},
+        bool completed = false,
+        DateTime? at}) =>
     MustSeeData(
       items: [
         for (var i = 1; i <= 12; i++)
@@ -23,7 +26,7 @@ MustSeeData _d({Set<String> checked = const {'Q6'}, bool completed = false}) =>
               artist: '',
               location: i == 6 ? _loc : null),
       ],
-      checked: {for (final q in checked) q: DateTime(2026, 10, 27)},
+      checked: {for (final q in checked) q: at ?? DateTime.now()},
       roundStartedAt: DateTime(2026, 10, 27),
       completed: completed,
       medals: const [],
@@ -138,5 +141,45 @@ void main() {
     expect(find.textContaining('盖章'), findsNothing);
     await _pump(t, qid: 'Q7');
     expect(find.textContaining('盖章'), findsNothing);
+  });
+
+  testWidgets('重拍已盖过的件(打卡在 10 分钟前)→ 不再弹', (t) async {
+    await _pump(t,
+        data: _d(at: DateTime.now().subtract(const Duration(days: 1))));
+    expect(find.textContaining('盖章'), findsNothing);
+  });
+
+  testWidgets('离开讲解页 → 提示立刻收起,不留在上一页', (t) async {
+    requests = 0;
+    final container = ProviderContainer(overrides: [
+      museumsListProvider.overrideWith((_) async => [
+            MuseumSummary.fromJson({'slug': 'louvre', 'must_see_count': 12}),
+          ]),
+      mustSeeProvider.overrideWith((ref, slug) async => _d()),
+    ]);
+    addTearDown(container.dispose);
+    await container.read(museumsListProvider.future);
+    final nav = GlobalKey<NavigatorState>();
+    await t.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        navigatorKey: nav,
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(body: Text('PREV PAGE')),
+      ),
+    ));
+    nav.currentState!
+        .push(MaterialPageRoute(builder: (_) => const _Host(qid: 'Q6')));
+    await t.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('盖章!必看 1 / 12'), findsOneWidget);
+    nav.currentState!.pop();
+    for (var i = 0; i < 6; i++) {
+      await t.pump(const Duration(milliseconds: 200)); // 退场动画 + 一次检查
+    }
+    expect(find.text('PREV PAGE'), findsOneWidget);
+    expect(find.text('盖章!必看 1 / 12'), findsNothing);
+    await t.pump(const Duration(seconds: 5));
   });
 }
