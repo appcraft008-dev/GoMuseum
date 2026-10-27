@@ -33,6 +33,7 @@
 
 | 事项 | 说明 | 出处 |
 |---|---|---|
+| 说明牌直接命中可能重复扣费(待核实) | 作品照返回候选/认不出后 `_artworkPhash` 保留,拍说明牌**直接命中**已在 `recognize_billed` 扣过一次,`_goGuide` 仍用作品照 phash 发 confirm → `confirm_event` 判首次 → 再扣一次(`camera_page.dart:377,492-498,527-530`)。审查读代码发现,未实测复现;先写测试复现再修 | 必看打卡计划审查 10-27 |
 | 两条告警线重定 | `ALERT_RECOG_DAILY_USD` 用 7 天真实记账重定,时间是阶段 0 上 prod 后第 7 天;`ALERT_TTS_DAILY_USD` 在阶段 2 前重标(R7) | elastic-stage0 |
 
 ### 10-12 测试复盘清单(按执行顺序,做完逐条删)
