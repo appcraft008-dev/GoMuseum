@@ -410,6 +410,88 @@
   "camRetake": "Retake",
   "museumCoverTab": "Cover",
   "museumCollectionTab": "Collection",
+  "museumTabMustSee": "Must-sees",
+  "passportTitle": "{museum} · Must-sees",
+  "@passportTitle": {
+    "placeholders": {
+      "museum": {
+        "type": "String"
+      }
+    }
+  },
+  "passportStamped": "{done} / {total} stamped",
+  "@passportStamped": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "passportRoundSince": "Since {date}",
+  "@passportRoundSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "passportRoundDone": "All seen this visit ✓",
+  "passportSealTitle": "ALL SEEN",
+  "passportShare": "Share this page",
+  "passportMedals": "My medals",
+  "passportNoLocation": "Room not listed",
+  "passportLevel": "Level {level}",
+  "@passportLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "passportRoom": "Room {room}",
+  "@passportRoom": {
+    "placeholders": {
+      "room": {
+        "type": "String"
+      }
+    }
+  },
+  "mustSeeToastStamped": "Stamped! Must-sees {done} / {total}",
+  "@mustSeeToastStamped": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mustSeeToastDone": "All must-sees seen {total} / {total}",
+  "@mustSeeToastDone": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "passportShareText": "I saw all {total} must-sees at {museum} ({date}), stamped with GoMuseum.",
+  "@passportShareText": {
+    "placeholders": {
+      "museum": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "museumOpeningHours": "Opening Hours",
   "museumOfficialSite": "Official Website",
   "museumIntroComingSoon": "Museum introduction coming soon",

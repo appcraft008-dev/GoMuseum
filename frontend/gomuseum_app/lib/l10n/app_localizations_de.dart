@@ -755,6 +755,64 @@ class AppLocalizationsDe extends AppLocalizations {
   String get museumCollectionTab => 'Sammlung';
 
   @override
+  String get museumTabMustSee => 'Highlights';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · Highlights';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return '$done / $total gestempelt';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return 'Seit $date';
+  }
+
+  @override
+  String get passportRoundDone => 'Diesmal alles gesehen ✓';
+
+  @override
+  String get passportSealTitle => 'ALLES GESEHEN';
+
+  @override
+  String get passportShare => 'Seite teilen';
+
+  @override
+  String get passportMedals => 'Meine Medaillen';
+
+  @override
+  String get passportNoLocation => 'Saal nicht angegeben';
+
+  @override
+  String passportLevel(int level) {
+    return 'Ebene $level';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return 'Saal $room';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return 'Gestempelt! Highlights $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return 'Alle Highlights gesehen $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return 'Alle $total Highlights gesehen: $museum ($date), gestempelt mit GoMuseum.';
+  }
+
+  @override
   String get museumOpeningHours => 'Öffnungszeiten';
 
   @override

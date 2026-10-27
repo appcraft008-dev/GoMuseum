@@ -753,6 +753,64 @@ class AppLocalizationsIt extends AppLocalizations {
   String get museumCollectionTab => 'Collezione';
 
   @override
+  String get museumTabMustSee => 'Da non perdere';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · Da non perdere';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return '$done / $total timbrati';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return 'Dal $date';
+  }
+
+  @override
+  String get passportRoundDone => 'Tutto visto questa volta ✓';
+
+  @override
+  String get passportSealTitle => 'TUTTO VISTO';
+
+  @override
+  String get passportShare => 'Condividi questa pagina';
+
+  @override
+  String get passportMedals => 'Le mie medaglie';
+
+  @override
+  String get passportNoLocation => 'Sala non indicata';
+
+  @override
+  String passportLevel(int level) {
+    return 'Piano $level';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return 'Sala $room';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return 'Timbrato! Da non perdere $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return 'Tutte le opere viste $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return 'Tutte le $total opere da non perdere viste: $museum ($date), timbrate con GoMuseum.';
+  }
+
+  @override
   String get museumOpeningHours => 'Orari di apertura';
 
   @override
