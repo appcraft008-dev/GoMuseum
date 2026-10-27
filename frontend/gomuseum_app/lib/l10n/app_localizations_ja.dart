@@ -133,6 +133,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeEnableLocation => '位置情報をオンにすると近くの館を表示します';
 
   @override
+  String get homeNoMuseumNearby => '近くにはまだ収録済みの館がありません';
+
+  @override
   String get homeContinue => '続きから見る';
 
   @override

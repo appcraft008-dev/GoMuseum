@@ -98,6 +98,32 @@ void main() {
     expect(find.text('开启定位，显示你身边的馆'), findsOneWidget);
   });
 
+  testWidgets('定位到了但附近没有收录的馆(马德里):不再显示「开启定位」,改说附近没有', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          benefitsStateProvider.overrideWith(_FakeBenefitsState.new),
+          entitlementsProvider.overrideWith((ref) async => _fakeEntitlements),
+          museumsListProvider.overrideWith((_) async => _fakeMuseums),
+          deviceLocationProvider
+              .overrideWith((ref) async => (lat: 40.4168, lng: -3.7038)),
+          historyProvider.overrideWith(_NoHistory.new),
+        ],
+        child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Scaffold(body: HomePage())),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('博物馆'), findsOneWidget);
+    expect(find.text('开启定位，显示你身边的馆'), findsNothing);
+    expect(find.text('附近还没有收录的博物馆'), findsOneWidget);
+  });
+
   testWidgets('通票生效中：额度提示改说"通票生效中"而非"免费识别还剩"', (tester) async {
     // 回归：freeRecognitionsLeft 在 active 态恒为 null（见 Entitlements 注释），
     // 旧文案会显示成"免费识别还剩 — 次"——对已付费用户是错误信息。

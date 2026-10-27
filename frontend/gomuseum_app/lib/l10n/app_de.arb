@@ -38,6 +38,7 @@
   "homeNearby": "Museen in der Nähe",
   "homeMuseums": "Museen",
   "homeEnableLocation": "Standort aktivieren, um Museen in deiner Nähe zu sehen",
+  "homeNoMuseumNearby": "In deiner Nähe gibt es noch keine Museen in unserem Guide",
   "homeContinue": "Weiter, wo du warst",
   "statusOpen": "Geöffnet",
   "exploreTitle": "Entdecken",

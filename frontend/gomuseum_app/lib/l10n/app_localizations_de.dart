@@ -134,6 +134,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Standort aktivieren, um Museen in deiner Nähe zu sehen';
 
   @override
+  String get homeNoMuseumNearby =>
+      'In deiner Nähe gibt es noch keine Museen in unserem Guide';
+
+  @override
   String get homeContinue => 'Weiter, wo du warst';
 
   @override

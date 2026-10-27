@@ -38,6 +38,7 @@
   "homeNearby": "附近博物馆",
   "homeMuseums": "博物馆",
   "homeEnableLocation": "开启定位，显示你身边的馆",
+  "homeNoMuseumNearby": "附近还没有收录的博物馆",
   "homeContinue": "继续游览",
   "statusOpen": "开放中",
   "exploreTitle": "探 索",

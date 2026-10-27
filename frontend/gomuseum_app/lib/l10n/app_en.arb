@@ -76,6 +76,7 @@
   "homeNearby": "Nearby Museums",
   "homeMuseums": "Museums",
   "homeEnableLocation": "Turn on location to see museums near you",
+  "homeNoMuseumNearby": "No museums in our guide near you yet",
   "homeContinue": "Pick up where you left off",
   "statusOpen": "Open",
   "exploreTitle": "Explore",

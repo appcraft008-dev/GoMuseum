@@ -34,7 +34,7 @@ enum NearbyMode {
 }
 
 class Nearby {
-  const Nearby(this.mode, this.museums, {this.cityKey});
+  const Nearby(this.mode, this.museums, {this.cityKey, this.located = false});
 
   final NearbyMode mode;
 
@@ -43,6 +43,9 @@ class Nearby {
 
   /// 当前城市的去重键(中文城市名,与探索页同一口径);none 时为 null。
   final String? cityKey;
+
+  /// 手机定位拿到了(哪怕身边没有我们的馆)。为 true 时首页不该再叫用户「开启定位」。
+  final bool located;
 }
 
 /// 最后一次**现场拍照**命中:哪家馆、什么时候。
@@ -94,10 +97,10 @@ Nearby resolveNearby(
     if (hit != null) {
       return Nearby(
           NearbyMode.live, all.where((m) => m.city == hit.city).toList(),
-          cityKey: hit.city);
+          cityKey: hit.city, located: here != null);
     }
   }
-  return Nearby(NearbyMode.none, all);
+  return Nearby(NearbyMode.none, all, located: here != null);
 }
 
 // ── 现场命中的本地存储(只存手机上,不上传)──
@@ -149,9 +152,17 @@ final deviceLocationProvider =
 });
 
 /// 用户点了「开启定位」才请求权限 —— 不在启动时弹。
+/// 系统不会再弹授权框的两种情况(定位总开关关着/永久拒绝)直接带去系统设置,否则点了只闪一下。
 Future<void> requestLocation(WidgetRef ref) async {
   try {
-    await Geolocator.requestPermission();
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      await Geolocator.openLocationSettings();
+    } else if (await Geolocator.checkPermission() ==
+        LocationPermission.deniedForever) {
+      await Geolocator.openAppSettings();
+    } else {
+      await Geolocator.requestPermission();
+    }
   } catch (_) {}
   ref.invalidate(deviceLocationProvider);
 }

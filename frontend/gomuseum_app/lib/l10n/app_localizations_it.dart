@@ -135,6 +135,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Attiva la posizione per vedere i musei vicino a te';
 
   @override
+  String get homeNoMuseumNearby =>
+      'Non ci sono ancora musei della nostra guida vicino a te';
+
+  @override
   String get homeContinue => 'Riprendi la visita';
 
   @override
