@@ -443,6 +443,7 @@
   "passportShare": "Share this page",
   "passportMedals": "My medals",
   "passportNoLocation": "Room not listed",
+  "passportSignInHint": "Sign in, then snap artworks in the museum to collect stamps",
   "passportLevel": "Level {level}",
   "@passportLevel": {
     "placeholders": {

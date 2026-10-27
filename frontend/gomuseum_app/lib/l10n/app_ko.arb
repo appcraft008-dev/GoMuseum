@@ -234,6 +234,7 @@
   "passportShare": "이 페⁠이⁠지 공⁠유",
   "passportMedals": "내 메⁠달",
   "passportNoLocation": "전⁠시⁠실 정⁠보 없⁠음",
+  "passportSignInHint": "로⁠그⁠인⁠하⁠고 현⁠장⁠에⁠서 작⁠품⁠을 찍⁠으⁠면 도⁠장⁠이 찍⁠혀⁠요",
   "passportLevel": "{level}⁠층",
   "passportBasement": "지⁠하 {n}⁠층",
   "passportRoom": "{room} 전⁠시⁠실",

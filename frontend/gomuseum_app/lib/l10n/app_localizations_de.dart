@@ -788,6 +788,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get passportNoLocation => 'Saal nicht angegeben';
 
   @override
+  String get passportSignInHint =>
+      'Melde dich an und fotografiere die Werke vor Ort, um Stempel zu sammeln';
+
+  @override
   String passportLevel(int level) {
     return 'Ebene $level';
   }

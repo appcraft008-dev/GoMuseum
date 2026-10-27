@@ -234,6 +234,7 @@
   "passportShare": "このページを共有",
   "passportMedals": "マイメダル",
   "passportNoLocation": "展示室情報なし",
+  "passportSignInHint": "ログインして館内で作品を撮るとスタンプが押せます",
   "passportLevel": "{level}階",
   "passportBasement": "地下{n}階",
   "passportRoom": "展示室 {room}",

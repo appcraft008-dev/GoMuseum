@@ -234,6 +234,7 @@
   "passportShare": "Condividi questa pagina",
   "passportMedals": "Le mie medaglie",
   "passportNoLocation": "Sala non indicata",
+  "passportSignInHint": "Accedi e fotografa le opere al museo per timbrarle",
   "passportLevel": "Piano {level}",
   "passportBasement": "Piano -{n}",
   "passportRoom": "Sala {room}",

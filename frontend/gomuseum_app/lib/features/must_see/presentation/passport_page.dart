@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
@@ -66,18 +67,31 @@ class MustSeePassport extends ConsumerWidget {
               onPressed: () => ref.invalidate(mustSeeProvider(slug)),
             ),
           ),
-          data: (d) => _Passport(slug: slug, museumName: museumName, data: d),
+          data: (d) => _Passport(
+            slug: slug,
+            museumName: museumName,
+            data: d,
+            // 匿名识别也扣额度但不算打卡(spec §五.2):明说要登录,免得以为拍了没盖上是 bug
+            signedOut: switch (ref.watch(currentUserProvider)) {
+              AsyncData(value: null) => true,
+              _ => false,
+            },
+          ),
         );
   }
 }
 
 class _Passport extends StatelessWidget {
   const _Passport(
-      {required this.slug, required this.museumName, required this.data});
+      {required this.slug,
+      required this.museumName,
+      required this.data,
+      this.signedOut = false});
 
   final String slug;
   final String museumName;
   final MustSeeData data;
+  final bool signedOut;
 
   /// (组名, 件) 按 yaml 顺序;有位置的按 (wing, level) 归组,无位置的归最后一组。
   /// 整馆都没位置 → 一组、无组名。
@@ -152,6 +166,13 @@ class _Passport extends StatelessWidget {
                   Text(sub,
                       textAlign: TextAlign.center,
                       style: GmText.sans(size: 11.5, color: gm.sub)),
+                  if (signedOut)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(l10n.passportSignInHint,
+                          textAlign: TextAlign.center,
+                          style: GmText.sans(size: 12, color: gm.accent)),
+                    ),
                   const SizedBox(height: 12),
                   for (final (name, items) in _groups(
                       l10n, Localizations.localeOf(context).languageCode)) ...[

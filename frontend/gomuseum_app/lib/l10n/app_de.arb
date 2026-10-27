@@ -234,6 +234,7 @@
   "passportShare": "Seite teilen",
   "passportMedals": "Meine Medaillen",
   "passportNoLocation": "Saal nicht angegeben",
+  "passportSignInHint": "Melde dich an und fotografiere die Werke vor Ort, um Stempel zu sammeln",
   "passportLevel": "Ebene {level}",
   "passportBasement": "Ebene -{n}",
   "passportRoom": "Saal {room}",

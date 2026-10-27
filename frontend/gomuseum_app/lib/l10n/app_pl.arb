@@ -234,6 +234,7 @@
   "passportShare": "Udostępnij stronę",
   "passportMedals": "Moje medale",
   "passportNoLocation": "Sala nieznana",
+  "passportSignInHint": "Zaloguj się i fotografuj dzieła w muzeum, by zbierać pieczątki",
   "passportLevel": "Poziom {level}",
   "passportBasement": "Poziom -{n}",
   "passportRoom": "Sala {room}",

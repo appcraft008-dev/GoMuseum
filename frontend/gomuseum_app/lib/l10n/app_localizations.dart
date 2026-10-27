@@ -1517,6 +1517,12 @@ abstract class AppLocalizations {
   /// **'Room not listed'**
   String get passportNoLocation;
 
+  /// No description provided for @passportSignInHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in, then snap artworks in the museum to collect stamps'**
+  String get passportSignInHint;
+
   /// No description provided for @passportLevel.
   ///
   /// In en, this message translates to:

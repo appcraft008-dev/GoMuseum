@@ -759,6 +759,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get passportNoLocation => '暂无展厅信息';
 
   @override
+  String get passportSignInHint => '登录后,在馆里拍照就能盖章';
+
+  @override
   String passportLevel(int level) {
     return '$level 楼';
   }
@@ -2027,6 +2030,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get passportNoLocation => '暫無展廳資訊';
+
+  @override
+  String get passportSignInHint => '登入後,在館裡拍照就能蓋章';
 
   @override
   String passportLevel(int level) {

@@ -761,6 +761,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get passportNoLocation => '展示室情報なし';
 
   @override
+  String get passportSignInHint => 'ログインして館内で作品を撮るとスタンプが押せます';
+
+  @override
   String passportLevel(int level) {
     return '$level階';
   }

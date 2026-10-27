@@ -779,6 +779,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passportNoLocation => 'Room not listed';
 
   @override
+  String get passportSignInHint =>
+      'Sign in, then snap artworks in the museum to collect stamps';
+
+  @override
   String passportLevel(int level) {
     return 'Level $level';
   }

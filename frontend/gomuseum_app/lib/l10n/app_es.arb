@@ -234,6 +234,7 @@
   "passportShare": "Compartir esta página",
   "passportMedals": "Mis medallas",
   "passportNoLocation": "Sala no indicada",
+  "passportSignInHint": "Inicia sesión y fotografía las obras en el museo para sellarlas",
   "passportLevel": "Planta {level}",
   "passportBasement": "Planta -{n}",
   "passportRoom": "Sala {room}",

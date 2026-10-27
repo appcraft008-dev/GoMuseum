@@ -234,6 +234,7 @@
   "passportShare": "分享這一頁",
   "passportMedals": "我的勳章",
   "passportNoLocation": "暫無展廳資訊",
+  "passportSignInHint": "登入後,在館裡拍照就能蓋章",
   "passportLevel": "{level} 樓",
   "passportBasement": "地下 {n} 層",
   "passportRoom": "{room} 廳",

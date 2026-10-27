@@ -772,6 +772,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get passportNoLocation => '전⁠시⁠실 정⁠보 없⁠음';
 
   @override
+  String get passportSignInHint => '로⁠그⁠인⁠하⁠고 현⁠장⁠에⁠서 작⁠품⁠을 찍⁠으⁠면 도⁠장⁠이 찍⁠혀⁠요';
+
+  @override
   String passportLevel(int level) {
     return '$level⁠층';
   }

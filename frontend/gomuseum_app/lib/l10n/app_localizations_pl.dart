@@ -787,6 +787,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get passportNoLocation => 'Sala nieznana';
 
   @override
+  String get passportSignInHint =>
+      'Zaloguj się i fotografuj dzieła w muzeum, by zbierać pieczątki';
+
+  @override
   String passportLevel(int level) {
     return 'Poziom $level';
   }

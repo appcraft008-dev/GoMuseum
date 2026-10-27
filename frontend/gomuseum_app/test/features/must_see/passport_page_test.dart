@@ -1,8 +1,12 @@
 // 必看护照页(spec 2026-10-27 必看打卡 §五.6;样稿 docs/superpowers/specs/2026-10-27-must-see-mockups/)
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/features/auth/data/auth_repository.dart';
+import 'package:gomuseum_app/features/auth/domain/user.dart';
+import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
 import 'package:gomuseum_app/features/must_see/data/must_see_models.dart';
 import 'package:gomuseum_app/features/must_see/data/must_see_providers.dart';
 import 'package:gomuseum_app/features/must_see/presentation/passport_page.dart';
@@ -31,9 +35,28 @@ MustSeeData _data({
   );
 }
 
+class _LoggedOut extends AuthNotifier {
+  _LoggedOut(super.repository) {
+    state = const AsyncValue.data(null);
+  }
+}
+
+class _LoggedIn extends AuthNotifier {
+  _LoggedIn(super.repository) {
+    state = AsyncValue.data(User(
+      id: 'u1',
+      email: 'a@b.c',
+      username: 'a',
+      isActive: true,
+      isVerified: true,
+      createdAt: DateTime.utc(2026, 9, 1),
+    ));
+  }
+}
+
 late List<String> _pushed;
 
-Widget _wrap(MustSeeData d) {
+Widget _wrap(MustSeeData d, {bool? loggedIn = true}) {
   _pushed = [];
   final router = GoRouter(routes: [
     GoRoute(
@@ -48,7 +71,13 @@ Widget _wrap(MustSeeData d) {
         }),
   ]);
   return ProviderScope(
-    overrides: [mustSeeProvider.overrideWith((ref, slug) async => d)],
+    overrides: [
+      mustSeeProvider.overrideWith((ref, slug) async => d),
+      if (loggedIn != null)
+        currentUserProvider.overrideWith((ref) => loggedIn
+            ? _LoggedIn(AuthRepository(Dio()))
+            : _LoggedOut(AuthRepository(Dio()))),
+    ],
     child: MaterialApp.router(
       locale: const Locale('zh'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -58,11 +87,12 @@ Widget _wrap(MustSeeData d) {
   );
 }
 
-Future<void> _pump(WidgetTester t, MustSeeData d) async {
+Future<void> _pump(WidgetTester t, MustSeeData d,
+    {bool? loggedIn = true}) async {
   t.view.physicalSize = const Size(720, 3200);
   t.view.devicePixelRatio = 2;
   addTearDown(t.view.reset);
-  await t.pumpWidget(_wrap(d));
+  await t.pumpWidget(_wrap(d, loggedIn: loggedIn));
   await t.pump();
   await t.pump(const Duration(milliseconds: 50));
 }
@@ -121,5 +151,15 @@ void main() {
     await t.tap(find.text('TQ2'));
     await t.pumpAndSettle();
     expect(_pushed, ['guide']);
+  });
+
+  testWidgets('未登录 → 提示登录后拍照才能盖章(审查 I3)', (t) async {
+    await _pump(t, _data(checked: const {}), loggedIn: false);
+    expect(find.text('登录后,在馆里拍照就能盖章'), findsOneWidget);
+  });
+
+  testWidgets('已登录 → 不出登录提示', (t) async {
+    await _pump(t, _data());
+    expect(find.text('登录后,在馆里拍照就能盖章'), findsNothing);
   });
 }
