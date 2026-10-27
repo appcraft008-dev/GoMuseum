@@ -137,11 +137,12 @@ def museum_must_see(
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
     listed = must_see.MUST_SEE.get(slug) or []
     locs = must_see.MUST_SEE_LOCATION.get(slug) or {}
-    # 馆藏列表把必看排在最前(must_see_order),取前 N 件即可复用同一套标题/作者/缩略图口径
-    page = repo_list_objects(db, slug, language=language, limit=len(listed))
-    if page is None:  # 目录里没有这家馆
+    from app.services.museum_repo import must_see_objects
+
+    # 同馆藏列表的标题/作者/缩略图口径,但不过滤无图件、不整馆 count()
+    by_qid = must_see_objects(db, slug, listed, language)
+    if by_qid is None:  # 目录里没有这家馆
         raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
-    by_qid = {it["qid"]: it for it in page.get("items", [])}
     items = []
     for q in listed:
         it = by_qid.get(q) or {}
