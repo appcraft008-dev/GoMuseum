@@ -753,7 +753,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String passportRoundSince(String date) {
-    return '$date부⁠터';
+    return '$date⁠부⁠터';
   }
 
   @override
@@ -773,7 +773,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String passportLevel(int level) {
-    return '$level층';
+    return '$level⁠층';
   }
 
   @override
@@ -793,7 +793,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String passportShareText(String museum, int total, String date) {
-    return '$museum의 필⁠수 작⁠품 $total점⁠을 모⁠두 봤⁠어⁠요($date). GoMuseum으⁠로 완⁠주.';
+    return '$museum⁠의 필⁠수 작⁠품 $total⁠점⁠을 모⁠두 봤⁠어⁠요($date). GoMuseum⁠으⁠로 완⁠주.';
   }
 
   @override
