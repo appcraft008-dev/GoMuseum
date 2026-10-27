@@ -23,7 +23,7 @@ import soundfile as sf
 from voxcpm import VoxCPM
 
 from batch_record import make_record, pick
-from consistency import consistency, length_ratio, tts_input
+from consistency import consistency, length_ratio, spoken_len, tts_input
 from fetch_text import fetch_text  # 取文本只此一份实现(含 502 重试)
 from loudness import TARGET_LUFS, gain_db, measure
 
@@ -59,7 +59,9 @@ for _kv in filter(None, os.environ.get("SEED_OVERRIDE", "").split(",")):
 # ⚠️ 缺了这一步的后果实测过:28 条试点音频全部偏快,平均 +15%(fr +23%、es +18%),
 # 远超配方 ①-④ 里"时长差 ≤7%"的验收线。VoxCPM2 原速就是比 tts-1 快,
 # 定稿基准批是靠 atempo 压回去的(实测对齐误差 <0.05s),生产脚本必须继承。
-RATE = {"zh": 4.64, "en": 15.84, "fr": 15.61, "de": 15.67, "es": 15.87,
+# en/fr 按 spoken_len 计(数字加权),基准同比放大 1.041/1.038(修线上批均值),
+# 让全体平均语速不变,只把数字密的段相对放慢。
+RATE = {"zh": 4.64, "en": 16.49, "fr": 16.20, "de": 15.67, "es": 15.87,
         "it": 15.78, "pl": 14.86, "ja": 5.47, "ko": 7.31, "zh-hant": 4.71}
 ATEMPO_MIN, ATEMPO_MAX = 0.75, 1.15   # 0.75 用户听不出;0.56 明确否决"明显拉长"
 # 节奏偏好(软指标,不进 ok,只决定多次尝试里留哪条,见 batch_record.pick):
@@ -196,7 +198,7 @@ def main():
             mp3 = outdir / f"_try{attempt}_{name}"
             # 语速对齐:按该语言 tts-1 字/秒算目标时长,atempo 压回去。
             # atempo 只伸缩时间不改音高(实测 F0 190→188),且锐度/HNR 反而变好。
-            at = min(max((len(w) / sr) / (len(text) / RATE[lang]),
+            at = min(max((len(w) / sr) / (spoken_len(text, lang) / RATE[lang]),
                          ATEMPO_MIN), ATEMPO_MAX)
             # 响度对齐:量一遍变速后的响度/峰值,算纯增益(见 loudness.py)。
             # 与语速对齐同理 —— **必须在生成侧做完**:灌入端的 check_audio 只看
