@@ -327,6 +327,7 @@ def recognize_artwork(
     language: str = "zh",
     mode: str = "artwork",
     device_id: str | None = None,
+    capture: Literal["camera", "gallery"] | None = None,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -345,6 +346,7 @@ def recognize_artwork(
         mode=mode,
         device_id=device_id,
         credentials=credentials,
+        capture=capture,
     )
 
 
