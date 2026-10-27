@@ -65,14 +65,18 @@ def clear_capture(db, *, event_id=None, phash=None) -> None:
     """撤销这次的「现场拍照」标记 = 不算必看打卡(spec 2026-10-27 §五.2:没扣成费不算)。
 
     给 event_id 清那一行;给 phash 清 24h 内该 phash 最新一行 —— 与 confirm_event
-    回填的是同一行。吞异常同 record_event:埋点不打断主流程。"""
+    回填的是同一行。**走独立的小会话**:调用方是在失败分支上调它,不能顺手把调用方
+    会话里还没提交的改动一起提交掉。吞异常同 record_event:埋点不打断主流程。"""
+    from app.core.database import guarded_sessionmaker
+
+    s = guarded_sessionmaker(bind=db.get_bind())()
     try:
         if event_id is not None:
-            row = db.get(RecognitionEvent, event_id)
+            row = s.get(RecognitionEvent, event_id)
         else:
             cutoff = datetime.utcnow() - timedelta(hours=24)
             row = (
-                db.query(RecognitionEvent)
+                s.query(RecognitionEvent)
                 .filter(
                     RecognitionEvent.phash == phash,
                     RecognitionEvent.created_at >= cutoff,
@@ -82,13 +86,18 @@ def clear_capture(db, *, event_id=None, phash=None) -> None:
             )
         if row is not None and row.capture is not None:
             row.capture = None
-            db.commit()
+            s.commit()
     except Exception:
         logger.exception("clear_capture failed")
-        try:
-            db.rollback()
-        except Exception:
-            pass
+        s.rollback()
+    finally:
+        s.close()
+    # 调用方会话里若缓存着这一行,作废它的 capture,下次读取库里的值。
+    # 只翻已缓存的对象,不在调用方会话里发查询(查询会触发 autoflush)
+    for obj in list(db.identity_map.values()):
+        if isinstance(obj, RecognitionEvent) and obj.capture is not None:
+            if obj.id == event_id or (event_id is None and obj.phash == phash):
+                db.expire(obj, ["capture"])
 
 
 def confirm_event(db, phash: str, qid: str, source: str = "candidates") -> bool:

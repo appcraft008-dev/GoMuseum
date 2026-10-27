@@ -19,6 +19,11 @@ import 'package:gomuseum_app/ui/gm/gm.dart';
 
 const _shownFor = Duration(seconds: 4);
 
+/// 这一次识别才盖上的章:打卡时间离现在不超过这么久。重拍一件本轮早已盖过的作品
+/// 不再弹(数字没变,只是打扰)。留 10 分钟余量:手机与服务器时钟有偏差,候选确认
+/// 也按原识别那次的时间记。
+const _freshStamp = Duration(minutes: 10);
+
 Future<void> maybeShowStampToast(
   BuildContext context,
   WidgetRef ref, {
@@ -47,7 +52,12 @@ Future<void> maybeShowStampToast(
   final sub = ref.listenManual(mustSeeProvider(slug), (_, __) {});
   try {
     final d = await ref.read(mustSeeProvider(slug).future);
-    if (!context.mounted || !d.checked.containsKey(qid)) return;
+    final at = d.checked[qid];
+    if (!context.mounted ||
+        at == null ||
+        DateTime.now().difference(at) > _freshStamp) {
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final total = d.items.length;
     final item = d.items.firstWhere((i) => i.qid == qid);
@@ -71,7 +81,13 @@ Future<void> maybeShowStampToast(
       ),
     );
     overlay.insert(entry);
-    await Future<void>.delayed(_shownFor);
+    // 提示挂在 Navigator 的 Overlay 上:用户提前离开讲解页就立刻收起,不留到上一页
+    const tick = Duration(milliseconds: 200);
+    for (var i = 0;
+        i < _shownFor.inMilliseconds ~/ tick.inMilliseconds && context.mounted;
+        i++) {
+      await Future<void>.delayed(tick);
+    }
     entry.remove();
   } catch (_) {
     // 拉不到进度就不提示:提示是锦上添花,不能打扰讲解

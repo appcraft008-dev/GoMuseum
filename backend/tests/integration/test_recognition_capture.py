@@ -103,3 +103,27 @@ def test_inflight_waiter_row_has_no_capture(db, monkeypatch):
     assert calls["n"] == 1
     rows = _rows(db)
     assert [r.capture for r in rows] == ["camera", None]
+
+
+def test_clear_capture_does_not_commit_callers_pending_work(db):
+    """审查 Minor-5:撤销打卡走独立小事务,不能把调用方会话里没提交的改动一起提交。"""
+    from app.models.user_benefits import UserBenefits
+    from app.services.recognition.events import clear_capture, record_event
+
+    eid = record_event(
+        db,
+        museum_slug=None,
+        phash="ph-x",
+        outcome="match",
+        top_qid="Q1",
+        top_score=0.9,
+        language="zh",
+        engine="vector",
+        user_id="u",
+        capture="camera",
+    )
+    db.add(UserBenefits(user_id="pending-u", recognition_quota=1, free_audio_qids={}))
+    clear_capture(db, event_id=eid)
+    db.rollback()  # 调用方最终放弃自己的改动
+    assert db.query(UserBenefits).filter_by(user_id="pending-u").count() == 0
+    assert db.get(RecognitionEvent, eid).capture is None

@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
@@ -123,7 +124,8 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
 
   /// 护照页标题里的馆名:馆列表里按界面语言取(与探索页一致)。
   String _museumName(String lang) {
-    for (final m in ref.read(museumsListProvider).valueOrNull ?? const []) {
+    for (final m in ref.read(museumsListProvider).valueOrNull ??
+        const <MuseumSummary>[]) {
       if (m.slug == widget.slug) return m.localizedName(lang);
     }
     return widget.slug;

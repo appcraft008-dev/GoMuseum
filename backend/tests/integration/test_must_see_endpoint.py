@@ -58,9 +58,16 @@ def db(monkeypatch):
                         "attributes": {},
                     },
                 )
+        if slug == "orsay":
+            # 目录里有、但没有图的件(审查 Minor-4:标题不该回退成裸 QID)
+            upsert_object(
+                s,
+                m.id,
+                {"qid": "QNOIMG", "title_en": "No Image Work", "attributes": {}},
+            )
     s.commit()
-    # 清单顺序 Q2, Q1, QMISSING(目录里没有)
-    monkeypatch.setitem(must_see.MUST_SEE, "orsay", ["Q2", "Q1", "QMISSING"])
+    # 清单顺序 Q2, Q1, QMISSING(目录里没有), QNOIMG(没图)
+    monkeypatch.setitem(must_see.MUST_SEE, "orsay", ["Q2", "Q1", "QMISSING", "QNOIMG"])
     monkeypatch.setitem(must_see.MUST_SEE, "hidden", ["Q1"])
     monkeypatch.setitem(
         must_see.MUST_SEE_LOCATION,
@@ -87,7 +94,7 @@ def test_items_in_list_order_with_location_and_fallback(client):
     r = client.get("/api/v1/museums/orsay/must-see?language=en")
     assert r.status_code == 200
     items = r.json()["items"]
-    assert [i["qid"] for i in items] == ["Q2", "Q1", "QMISSING"]
+    assert [i["qid"] for i in items] == ["Q2", "Q1", "QMISSING", "QNOIMG"]
     assert items[0]["title"] == "TQ2" and items[0]["artist"] == "A"
     assert items[0]["location"] == {"wing": None, "level": 5, "room": "29"}
     assert items[1]["location"] is None
@@ -135,5 +142,28 @@ def test_unknown_and_hidden_museum_404(client):
 
 def test_museum_list_has_must_see_count(client):
     rows = {r["slug"]: r for r in client.get("/api/v1/museums").json()}
-    assert rows["orsay"]["must_see_count"] == 3
+    assert rows["orsay"]["must_see_count"] == 4
     assert rows["plain"]["must_see_count"] == 0
+
+
+def test_imageless_listed_work_keeps_its_title(client):
+    items = client.get("/api/v1/museums/orsay/must-see?language=en").json()["items"]
+    noimg = next(i for i in items if i["qid"] == "QNOIMG")
+    assert noimg["title"] == "No Image Work" and noimg["thumbnail"] is None
+
+
+def test_must_see_does_not_count_whole_museum(client, db):
+    """必看只要清单那几件:不该像馆藏列表那样每次整馆 count()。"""
+    from sqlalchemy import event
+
+    stmts = []
+
+    def grab(conn, cursor, statement, params, context, executemany):
+        stmts.append(statement.lower())
+
+    event.listen(db.get_bind(), "before_cursor_execute", grab)
+    try:
+        assert client.get("/api/v1/museums/orsay/must-see").status_code == 200
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", grab)
+    assert not any("count(" in st for st in stmts)

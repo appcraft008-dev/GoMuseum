@@ -1333,6 +1333,13 @@ def list_objects(
         *must_see_order(slug), MuseumObject.popularity.desc(), MuseumObject.id
     )
     objs = q.limit(limit).offset(offset).all()
+    items = _object_items(db, objs, language)
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+def _object_items(db: Session, objs: list, language: str) -> list[dict]:
+    """藏品列表项(qid/title/artist/year/thumbnail/content_status)。
+    馆藏列表与必看端点共用这一份口径。"""
 
     obj_ids = [o.id for o in objs]
     images_by_obj: dict = {}
@@ -1419,4 +1426,24 @@ def list_objects(
         }
         for o in objs
     ]
-    return {"items": items, "total": total, "limit": limit, "offset": offset}
+    return items
+
+
+def must_see_objects(
+    db: Session, slug: str, qids: list[str], language: str
+) -> dict | None:
+    """必看清单里的件,qid → 列表项(同 `_object_items` 口径)。未知馆 → None。
+
+    与馆藏列表不同:**不过滤有没有图**(没图的件也要显示真标题),也**不整馆 count()**
+    —— 只取清单那几件。"""
+    m = db.query(Museum).filter_by(slug=slug).one_or_none()
+    if not m:
+        return None
+    if not qids:
+        return {}
+    objs = (
+        db.query(MuseumObject)
+        .filter(MuseumObject.museum_id == m.id, MuseumObject.qid.in_(qids))
+        .all()
+    )
+    return {it["qid"]: it for it in _object_items(db, objs, language)}
