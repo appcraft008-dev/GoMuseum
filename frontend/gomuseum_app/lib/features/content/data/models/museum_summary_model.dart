@@ -32,6 +32,7 @@ class MuseumSummary extends Equatable {
     this.coverImage,
     this.nameI18n = const {},
     this.cityI18n = const {},
+    this.mustSeeCount = 0,
   });
 
   final String slug;
@@ -71,6 +72,9 @@ class MuseumSummary extends Equatable {
   String localizedName(String lang) =>
       nameI18n[lang] ?? (lang == 'zh' ? name : nameEn);
 
+  /// 必看件数(后端 `must_see_count`,加法字段 2026-10-27)。>0 才显示「必看」tab。
+  final int mustSeeCount;
+
   /// 十语城市名(后端 `city_i18n`,加法字段)。老后端不返回 → 空表。
   final Map<String, String> cityI18n;
 
@@ -100,6 +104,7 @@ class MuseumSummary extends Equatable {
           : null,
       nameI18n: parseNameI18n(j['name_i18n']),
       cityI18n: parseNameI18n(j['city_i18n']),
+      mustSeeCount: (j['must_see_count'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -116,5 +121,6 @@ class MuseumSummary extends Equatable {
         coverImage,
         nameI18n,
         cityI18n,
+        mustSeeCount,
       ];
 }

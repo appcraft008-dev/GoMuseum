@@ -65,6 +65,24 @@ void main() {
     expect(captured.containsKey('device_id'), isFalse);
   });
 
+  test('recognize sends capture only when given (必看打卡)', () async {
+    when(() => dio.post(any(),
+        data: any(named: 'data'),
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'))).thenAnswer((_) async => okResponse());
+
+    await ds.recognize(
+        slug: null, image: image(), language: 'en', capture: 'camera');
+    await ds.recognize(slug: null, image: image(), language: 'en');
+
+    final captured = verify(() => dio.post(any(),
+        data: any(named: 'data'),
+        queryParameters: captureAny(named: 'queryParameters'),
+        options: any(named: 'options'))).captured;
+    expect((captured[0] as Map)['capture'], 'camera');
+    expect((captured[1] as Map).containsKey('capture'), isFalse);
+  });
+
   // 402 与 500 必须成对测:只测 402 的话,一个"什么都当付费墙"的实现照样全绿。
   test('recognize maps 402 to QuotaExceededException (not a failure)',
       () async {

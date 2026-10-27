@@ -367,9 +367,12 @@ class _CameraPageState extends ConsumerState<CameraPage>
     setState(() => _captured = shot);
     final lang = apiLanguage(ref.read(resolvedLocaleProvider));
     final mode = _labelMode ? 'label' : 'artwork';
-    await ref
-        .read(recognitionNotifierProvider.notifier)
-        .recognize(slug: null, image: shot, language: lang, mode: mode);
+    await ref.read(recognitionNotifierProvider.notifier).recognize(
+        slug: null,
+        image: shot,
+        language: lang,
+        mode: mode,
+        capture: live ? 'camera' : 'gallery');
     if (!mounted) return;
     final st = ref.read(recognitionNotifierProvider);
     if (mode == 'artwork') {

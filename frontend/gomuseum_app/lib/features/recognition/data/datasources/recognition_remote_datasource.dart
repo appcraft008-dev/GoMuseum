@@ -21,6 +21,7 @@ abstract class RecognitionRemoteDataSource {
     required String language,
     String mode,
     String? deviceId,
+    String? capture,
   });
 
   /// 确认卡点选「这一件」→ 上报「照片(phash)→qid」标注（喂后端 CLIP 校准）。
@@ -101,6 +102,7 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
     required String language,
     String mode = 'artwork',
     String? deviceId,
+    String? capture,
   }) async {
     try {
       final bytes = await image.readAsBytes();
@@ -123,6 +125,8 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
           'language': language,
           'mode': mode,
           if (deviceId != null) 'device_id': deviceId,
+          // 必看打卡:快门现场拍 = camera,相册 = gallery(后端只认 camera 算打卡)
+          if (capture != null) 'capture': capture,
         },
         options: Options(
           headers: {'Accept': 'application/json'},
