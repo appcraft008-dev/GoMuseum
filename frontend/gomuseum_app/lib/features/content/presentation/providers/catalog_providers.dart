@@ -5,6 +5,8 @@ import 'package:gomuseum_app/features/content/data/datasources/catalog_remote_da
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
+import 'package:gomuseum_app/features/content/data/models/object_list_model.dart'
+    show ContentStatus;
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 
 ///
@@ -47,7 +49,10 @@ final objectContentProvider = FutureProvider.autoDispose
   final content = await ref
       .watch(catalogDataSourceProvider)
       .getObjectContent(slug: a.slug, qid: a.qid, language: lang);
-  if (!content.generating) ref.keepAlive();
+  // 「不在生成」≠「生成完」:这门语言 empty/stub 也可能是后端的过渡态(#1045),同样不驻留
+  if (!content.generating && content.status == ContentStatus.ready) {
+    ref.keepAlive();
+  }
   return content;
 });
 
