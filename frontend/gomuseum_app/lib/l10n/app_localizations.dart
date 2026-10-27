@@ -341,6 +341,12 @@ abstract class AppLocalizations {
   /// **'Turn on location to see museums near you'**
   String get homeEnableLocation;
 
+  /// No description provided for @homeNoMuseumNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'No museums in our guide near you yet'**
+  String get homeNoMuseumNearby;
+
   /// No description provided for @homeContinue.
   ///
   /// In en, this message translates to:

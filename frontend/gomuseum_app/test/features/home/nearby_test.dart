@@ -43,6 +43,12 @@ void main() {
     final n = resolveNearby(_all, here: _inTokyo, now: _now);
     expect(n.mode, NearbyMode.none);
     expect(n.museums, hasLength(3));
+    // 定位是有的:首页不能再叫用户「开启定位」(10-27 马德里真机点了只闪一下)
+    expect(n.located, isTrue);
+  });
+
+  test('没定位 → located=false(首页才给「开启定位」入口)', () {
+    expect(resolveNearby(_all, now: _now).located, isFalse);
   });
 
   test('没定位:12 小时内现场命中 → 那家馆所在城市的全部馆', () {

@@ -38,6 +38,7 @@
   "homeNearby": "近くの美術館",
   "homeMuseums": "美術館・博物館",
   "homeEnableLocation": "位置情報をオンにすると近くの館を表示します",
+  "homeNoMuseumNearby": "近くにはまだ収録済みの館がありません",
   "homeContinue": "続きから見る",
   "statusOpen": "開館中",
   "exploreTitle": "探す",

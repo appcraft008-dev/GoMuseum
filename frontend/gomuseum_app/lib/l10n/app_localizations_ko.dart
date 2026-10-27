@@ -133,6 +133,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeEnableLocation => '위⁠치⁠를 켜⁠면 가⁠까⁠운 미⁠술⁠관⁠을 보⁠여 드⁠려⁠요';
 
   @override
+  String get homeNoMuseumNearby => '근⁠처⁠에 아⁠직 수⁠록⁠된 미⁠술⁠관⁠이 없⁠어⁠요';
+
+  @override
   String get homeContinue => '이⁠어⁠서 보⁠기';
 
   @override

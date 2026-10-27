@@ -133,6 +133,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeEnableLocation => '开启定位，显示你身边的馆';
 
   @override
+  String get homeNoMuseumNearby => '附近还没有收录的博物馆';
+
+  @override
   String get homeContinue => '继续游览';
 
   @override
@@ -1335,6 +1338,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homeEnableLocation => '開啟定位，顯示你身邊的館';
+
+  @override
+  String get homeNoMuseumNearby => '附近還沒有收錄的博物館';
 
   @override
   String get homeContinue => '繼續遊覽';
