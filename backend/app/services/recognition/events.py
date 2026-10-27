@@ -35,20 +35,20 @@ def record_event(
     仍然沿用"埋点失败不打断识别"的纪律 —— 足迹丢一条,好过识别 500。"""
     try:
         ev = RecognitionEvent(
-                museum_slug=museum_slug,
-                phash=phash,
-                outcome=outcome,
-                top_qid=top_qid,
-                top_score=top_score,
-                language=language,
-                engine=engine,
-                user_id=user_id,
-                duration_ms=duration_ms,
-                timings=timings,
-                text_trace=text_trace,
-                vector_top=vector_top,
-                capture=capture,
-            )
+            museum_slug=museum_slug,
+            phash=phash,
+            outcome=outcome,
+            top_qid=top_qid,
+            top_score=top_score,
+            language=language,
+            engine=engine,
+            user_id=user_id,
+            duration_ms=duration_ms,
+            timings=timings,
+            text_trace=text_trace,
+            vector_top=vector_top,
+            capture=capture,
+        )
         db.add(ev)
         db.commit()
         return ev.id

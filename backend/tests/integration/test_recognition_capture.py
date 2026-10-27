@@ -8,9 +8,9 @@ import pytest
 
 from app.models.recognition_event import RecognitionEvent
 from tests.integration.test_pass_scope_by_museum import (  # noqa: F401  db 是 fixture
-    _Redis,
     _ben,
     _jpeg,
+    _Redis,
     _ticket,
     db,
 )

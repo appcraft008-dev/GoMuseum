@@ -652,7 +652,9 @@ def test_capture_param_passed_through(client, monkeypatch):
     monkeypatch.setattr("app.services.recognition.service.recognize_billed", fake)
     r = client.post("/api/v1/recognize?device_id=d&capture=camera", files=_img())
     assert r.status_code == 200 and seen["capture"] == "camera"
-    r = client.post("/api/v1/museums/orsay/recognize?device_id=d&capture=gallery", files=_img())
+    r = client.post(
+        "/api/v1/museums/orsay/recognize?device_id=d&capture=gallery", files=_img()
+    )
     assert r.status_code == 200 and seen["capture"] == "gallery"
     client.post("/api/v1/recognize?device_id=d", files=_img())
     assert seen["capture"] is None
