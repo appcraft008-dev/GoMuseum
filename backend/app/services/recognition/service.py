@@ -413,6 +413,7 @@ def _compute(
     redis,
     ckey,
     clock,
+    capture=None,
 ) -> dict:
     """缓存未命中后的真识别:向量三档 → GPT+文字兜底 → 记事件 → 写缓存。"""
     from app.services.image_service import ImageService
@@ -631,7 +632,7 @@ def _compute(
 
     out["phash"] = phash  # 三档都带;缓存写入前放进 out,缓存命中的响应体也有
     tq, ts = _top_of(out)
-    record_event(
+    event_id = record_event(
         db,
         museum_slug=slug,
         phash=phash,
@@ -645,6 +646,7 @@ def _compute(
         timings=clock.stages,
         text_trace=text_trace,
         vector_top=vector_top,
+        capture=capture,
     )
 
     if redis is not None:
@@ -653,6 +655,8 @@ def _compute(
             redis.setex(ckey, ttl, json.dumps(out, ensure_ascii=False))
         except Exception:
             pass
+    # 写完缓存再放:事件 id 只属于这一次请求,不能进缓存(计费层 pop 掉,不进响应)
+    out["_event_id"] = event_id
     return out
 
 
@@ -685,6 +689,7 @@ def recognize(
     embed_canvas_fn=None,
     user_id=None,
     visible=None,
+    capture=None,
 ) -> dict | None:
     """拍照识别:DINOv2 向量前置(三档)→ miss 则 GPT+OCR 兜底。
     slug=None → 全局(不查馆、不过滤);slug 给了但馆不存在 → None(老语义)。
@@ -727,7 +732,7 @@ def recognize(
                 )
                 cached_out["phash"] = phash  # 升级前旧缓存条目无 phash,命中时补齐
                 tq, ts = _top_of(cached_out)
-                record_event(
+                cached_out["_event_id"] = record_event(
                     db,
                     museum_slug=slug,
                     phash=phash,
@@ -739,6 +744,7 @@ def recognize(
                     user_id=user_id,
                     duration_ms=clock.total_ms(),
                     timings=clock.stages,
+                    capture=capture,
                 )
                 return cached_out
         except Exception:
@@ -766,6 +772,7 @@ def recognize(
             redis=redis,
             ckey=ckey,
             clock=clock,
+            capture=capture,
         )
     finally:
         # 独立 finally:首请求成功、异常、写缓存失败,锁都必须放掉(等待者靠它判结束)
@@ -840,6 +847,7 @@ def recognize_billed(
     embed_fn=None,
     vector_query_fn=None,
     visible=None,
+    capture=None,
 ) -> dict | None:
     """带配额的识别(计费规则,用户 2026-07-04 批准 / 2026-09-20 修订):
     match 扣 1;unrecognized 不扣(不为失败付费);这件已解锁未过期时重拍不扣;
@@ -889,9 +897,11 @@ def recognize_billed(
         vector_query_fn=vector_query_fn,
         user_id=user_id,  # 埋点顺带记足迹;device_id 不传(匿名就是匿名)
         visible=visible,
+        capture=capture,
     )
     if out is None:
         return out
+    event_id = out.pop("_event_id", None)
     cached = out.pop("_billed", None)  # 缓存命中标记(见 recognize)
     # S5 服务端开关(加法字段):App 只在它为 true 时才弹「发照片」确认框。
     # 隐私政策上线前 PHOTO_FEEDBACK_ENABLED=False → 恒 false,前端代码可以先发版。
@@ -900,33 +910,43 @@ def recognize_billed(
     out["photo_feedback"] = pf.photo_feedback_available()
     if out.get("outcome") != "match":
         return out
-    if cached == "inflight":
-        # S2:等来的是同一张照片在途首请求的结果,首请求自己会按规则扣次/解锁。
-        # 这里再判就会撞上「首请求的解锁还没提交」→ 一张照片扣两次。
-        # ponytail: 不区分首请求是不是同一个人(不同人同一时刻传同一份字节≈不存在);
-        # 真要区分时把 user_id/device_id 写进锁值再比对。
-        return out
-    qid = (out.get("match") or {}).get("qid")
-    museum = es.museum_of_qid(db, qid)
-    # D7:**按命中的馆**判票。覆盖它 → 不限次,不扣额度,也不写免费解锁(D8:
-    # 票本来就覆盖这件,过期自然锁)。不覆盖 → 与免费用户同价。
-    # 否则买一张最便宜的票,到别的城市见一件拍一件就能白拿全部主讲解。
-    if _pass_active(db, user_id, museum):
-        return out
-    if user_id and qid in es.free_audio_qids(
-        benefits.get_or_create_benefits(user_id=user_id)
-    ):
-        return out  # 这件已解锁且未过期:重拍不再扣(替代原先按缓存命中免扣)
-    if not user_id and cached:
-        return out  # 匿名设备:同一张照片缓存命中不重复扣(老语义)
+    from app.services.recognition.events import clear_capture
+
+    # 必看打卡只认扣费通过(或按规则免扣)的命中:下面任何一条路没走到 return
+    # (402、扣费链路抛错)都撤销这行的 capture(spec 2026-10-27 §五.2)
     try:
-        charged = benefits.consume_recognition(user_id, device_id)
-    except Exception:
-        # 与改动前同语义:结果已算出,扣费故障不把用户打回 402
-        logger.exception("consume_recognition failed")
-        charged = True
-    if not charged:
-        # 持别处的票、免费额度又用完:不给结果,弹**这家馆**的票
-        raise QuotaExceededError(museum)
-    _unlock_audio(db, user_id, out)
-    return out
+        if cached == "inflight":
+            # 必看打卡:扣费归首请求那一行,等待方这行不算打卡
+            clear_capture(db, event_id=event_id)
+            # S2:等来的是同一张照片在途首请求的结果,首请求自己会按规则扣次/解锁。
+            # 这里再判就会撞上「首请求的解锁还没提交」→ 一张照片扣两次。
+            # ponytail: 不区分首请求是不是同一个人(不同人同一时刻传同一份字节≈不存在);
+            # 真要区分时把 user_id/device_id 写进锁值再比对。
+            return out
+        qid = (out.get("match") or {}).get("qid")
+        museum = es.museum_of_qid(db, qid)
+        # D7:**按命中的馆**判票。覆盖它 → 不限次,不扣额度,也不写免费解锁(D8:
+        # 票本来就覆盖这件,过期自然锁)。不覆盖 → 与免费用户同价。
+        # 否则买一张最便宜的票,到别的城市见一件拍一件就能白拿全部主讲解。
+        if _pass_active(db, user_id, museum):
+            return out
+        if user_id and qid in es.free_audio_qids(
+            benefits.get_or_create_benefits(user_id=user_id)
+        ):
+            return out  # 这件已解锁且未过期:重拍不再扣(替代原先按缓存命中免扣)
+        if not user_id and cached:
+            return out  # 匿名设备:同一张照片缓存命中不重复扣(老语义)
+        try:
+            charged = benefits.consume_recognition(user_id, device_id)
+        except Exception:
+            # 与改动前同语义:结果已算出,扣费故障不把用户打回 402
+            logger.exception("consume_recognition failed")
+            charged = True
+        if not charged:
+            # 持别处的票、免费额度又用完:不给结果,弹**这家馆**的票
+            raise QuotaExceededError(museum)
+        _unlock_audio(db, user_id, out)
+        return out
+    except BaseException:
+        clear_capture(db, event_id=event_id)
+        raise

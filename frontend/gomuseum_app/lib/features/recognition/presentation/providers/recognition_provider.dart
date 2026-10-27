@@ -121,6 +121,7 @@ class RecognitionNotifier extends _$RecognitionNotifier {
     required XFile image,
     required String language,
     String mode = 'artwork',
+    String? capture,
   }) async {
     state = const RecognitionLoading();
     try {
@@ -139,7 +140,8 @@ class RecognitionNotifier extends _$RecognitionNotifier {
           image: image,
           language: language,
           mode: mode,
-          deviceId: deviceId);
+          deviceId: deviceId,
+          capture: capture);
       // S2 失败即重发:锁屏/切后台时系统会不会断连,代码里判断不了、各厂商也不同,
       // 两种情况都兜住。同一张照片 → 服务端同键在途合并或缓存命中,不重算不重复扣。
       // 最多重发 [_maxResends] 次(V54 真机:切回来那一刻 Wi‑Fi ↔ 运营商网络切换,

@@ -1,0 +1,102 @@
+
+<style>
+.ph{width:340px;background:#F3EDDF;color:#2C2316;border-radius:28px;border:8px solid #2b2b2b;overflow:hidden;font-family:'Noto Sans SC',system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.25);flex:none}
+.ph *{box-sizing:border-box}
+.scr{height:690px;overflow-y:auto}
+.top{padding:14px 16px 0}
+.mname{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:700}
+.tabs{display:flex;gap:22px;margin-top:10px;border-bottom:1px solid #DCD2B8;font-size:14px}
+.tabs span{padding:8px 0;color:#8A7A5F}
+.tabs .on{color:#2C2316;border-bottom:2px solid #A14E28;font-weight:600}
+.prog{padding:14px 16px 6px}
+.prog .n{font-family:'Noto Serif SC',serif;font-size:26px;font-weight:700;color:#A14E28}
+.prog .t{font-size:12px;color:#8A7A5F}
+.bar{height:5px;background:#DCD2B8;border-radius:3px;margin-top:8px}
+.bar i{display:block;height:100%;width:41.6%;background:#A14E28;border-radius:3px}
+.gh{font-size:12px;color:#8A7A5F;letter-spacing:.08em;padding:14px 16px 6px;display:flex;align-items:center;gap:8px}
+.gh:after{content:'';flex:1;height:1px;background:#DCD2B8}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px}
+.cell .im{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;background:#EAE2CD;border:1px solid #DCD2B8}
+.cell img{width:100%;height:100%;object-fit:cover;display:block}
+.cell.no img{filter:grayscale(1);opacity:.35}
+.cell .tt{font-size:11px;margin-top:4px;line-height:1.3}
+.cell .rm{font-size:10px;color:#8A7A5F}
+.stamp{position:absolute;right:-6px;bottom:-6px;width:46px;height:46px;border-radius:50%;border:2px solid #A14E28;color:#A14E28;background:rgba(251,247,236,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9px;line-height:1.1;transform:rotate(-14deg);font-weight:700}
+.stamp b{font-size:11px}
+.medals{margin:18px 16px 24px;padding:12px;border:1px dashed #DCD2B8;border-radius:8px;font-size:12px;color:#8A7A5F}
+.medal{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:#2C2316}
+.medal i{width:26px;height:26px;border-radius:50%;background:#A14E28;color:#FBF7EC;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px}
+/* B */
+.route{padding:0 16px 0 16px}
+.stop{display:flex;gap:12px;position:relative;padding:8px 0}
+.stop:before{content:'';position:absolute;left:13px;top:0;bottom:0;width:2px;background:#DCD2B8}
+.dot{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid #B0A283;background:#F3EDDF;z-index:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#B0A283;margin-top:12px}
+.stop.ok .dot{background:#A14E28;border-color:#A14E28;color:#FBF7EC}
+.stop .th{flex:none;width:56px;height:56px;border-radius:6px;overflow:hidden;border:1px solid #DCD2B8}
+.stop .th img{width:100%;height:100%;object-fit:cover}
+.stop:not(.ok) .th img{filter:grayscale(1);opacity:.45}
+.stop .tx{flex:1;padding-top:4px}
+.stop .tx b{font-size:13px;font-weight:600;display:block}
+.stop .tx span{font-size:11px;color:#8A7A5F}
+.stop .room{flex:none;align-self:center;font-size:11px;color:#A14E28;border:1px solid #A14E28;border-radius:10px;padding:1px 7px}
+/* C */
+.pass{margin:12px 14px;background:#FBF7EC;border:1px solid #DCD2B8;border-radius:10px;padding:14px 10px 18px;background-image:repeating-linear-gradient(0deg,transparent,transparent 23px,rgba(220,210,184,.35) 24px)}
+.pass h4{margin:0;text-align:center;font-family:'Noto Serif SC',serif;font-size:15px;letter-spacing:.2em}
+.pass .sub{text-align:center;font-size:11px;color:#8A7A5F;margin:2px 0 12px}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 6px}
+.ps{display:flex;flex-direction:column;align-items:center}
+.ps .c{width:78px;height:78px;border-radius:50%;overflow:hidden;position:relative;border:2px dashed #B0A283;display:flex;align-items:center;justify-content:center;color:#B0A283;font-family:'Noto Serif SC',serif;font-size:20px}
+.ps.ok .c{border:3px double #A14E28;transform:rotate(-8deg)}
+.ps .c img{width:100%;height:100%;object-fit:cover}
+.ps .c .d{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:9px;background:#A14E28;color:#FBF7EC;padding:0 5px;border-radius:6px}
+.ps .n{font-size:10.5px;text-align:center;margin-top:5px;line-height:1.25;max-width:96px}
+.ps .r{font-size:9.5px;color:#8A7A5F}
+.ps:not(.ok) .n{color:#8A7A5F}
+.row{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.lab{text-align:center;margin-bottom:10px}
+.lab h3{margin:0}
+.lab p{margin:4px 0 0;font-size:13px;opacity:.8;max-width:340px}
+</style>
+
+<style>
+.pass .fl{grid-column:1/-1;font-size:10px;color:#8A7A5F;letter-spacing:.1em;display:flex;align-items:center;gap:6px;margin-top:2px}
+.pass .fl:before,.pass .fl:after{content:'';flex:1;height:1px;border-top:1px dashed #DCD2B8}
+.pwrap{position:relative}
+.seal{position:absolute;left:50%;top:250px;transform:translate(-50%,-50%) rotate(-12deg);width:200px;height:200px;border-radius:50%;border:5px double #A14E28;color:#A14E28;background:rgba(251,247,236,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Noto Serif SC',serif;text-align:center;box-shadow:0 0 0 4px rgba(161,78,40,.12)}
+.seal .a{font-size:13px;letter-spacing:.3em}
+.seal .b{font-size:30px;font-weight:700;margin:4px 0}
+.seal .c{font-size:12px}
+.share{display:block;margin:6px auto 18px;background:#A14E28;color:#FBF7EC;border:none;border-radius:20px;padding:9px 26px;font-size:14px}
+.past{margin:4px 14px 22px}
+.past .h{font-size:12px;color:#8A7A5F;margin-bottom:8px}
+.pp{display:flex;gap:10px}
+.pc{width:64px;height:84px;border-radius:4px 8px 8px 4px;background:#7E3A1C;color:#F3EDDF;font-family:'Noto Serif SC',serif;font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:2px 2px 0 #5c2a14}
+.pc i{width:22px;height:22px;border-radius:50%;border:1.5px solid #F3EDDF;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:11px}
+.guide{position:relative}
+.guide .hero{height:300px;background:#222 center/cover}
+.toast{position:absolute;left:14px;right:14px;top:14px;background:#FBF7EC;border:1px solid #DCD2B8;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.toast .mini{width:40px;height:40px;border-radius:50%;border:2px double #A14E28;overflow:hidden;transform:rotate(-8deg);flex:none}
+.toast .mini img{width:100%;height:100%;object-fit:cover}
+.toast b{font-size:13px;display:block}
+.toast span{font-size:11px;color:#8A7A5F}
+.gbody{padding:16px}
+.gbody h1{font-family:'Noto Serif SC',serif;font-size:22px;margin:0}
+.gbody .meta{font-size:12px;color:#8A7A5F;margin:4px 0 12px}
+.gbody .ln{height:9px;background:#EAE2CD;border-radius:4px;margin:8px 0}
+</style>
+
+<style>
+.scr.bottom{display:flex;flex-direction:column;justify-content:flex-end}
+.done-bar{margin:12px 14px 0;font-size:12px;color:#A14E28;font-weight:600}
+.rm{display:flex;gap:14px;flex-wrap:wrap}
+.rmed{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:#8A7A5F}
+.rmed .o{width:64px;height:64px;border-radius:50%;border:3px double #A14E28;color:#A14E28;background:#FBF7EC;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Noto Serif SC',serif;transform:rotate(-10deg);line-height:1.15}
+.rmed .o b{font-size:15px}
+.rmed .o span{font-size:8.5px;letter-spacing:.15em}
+</style>
+
+<h2>往次勋章 · 两种画法</h2>
+<p class="subtitle">同一个已打满的卢浮宫护照页,大章一直盖着;只差页底「往次完成」的画法。手机里往下滚到页底看对比(假设已完成过 3 轮)。点选倾向的一个,回终端说。</p>
+<div class="options" style="display:block"><div class="row">
+<div><div class="option" data-choice="A" onclick="toggleSelect(this)" style="display:block;margin-bottom:10px"><div class="lab"><h3>A · 合上的小护照</h3><p>每轮一本深色小册子,像真护照收在抽屉里。</p></div></div><div class="ph"><div class="scr" style="scroll-behavior:auto" ref="b"><div class="top"><div class="mname">卢浮宫</div><div class="tabs"><span>封面</span><span class="on">必看</span><span>藏品</span></div></div><div class="done-bar">本轮已完成 ✓</div><div class="pwrap"><div class="pass"><h4>卢 浮 宫 · 必 看</h4><div class="sub">已盖 12 / 12 枚章</div><div class="pg"><div class="fl">德农馆 · 1 层</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Mona%20Lisa%2C%20by%20Leonardo%20da%20Vinci%2C%20from%20C2RMF%20retouched.jpg?width=320"><span class="d">10·27</span></div><div class="n">蒙娜丽莎</div><div class="r">711 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Les%20Noces%20de%20Cana%20-%20Paolo%20Veronese%20-%20Mus%C3%A9e%20du%20Louvre%20Peintures%20INV%20142%20%3B%20MR%20384.jpg?width=320"><span class="d">10·27</span></div><div class="n">迦拿的婚礼</div><div class="r">711 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Leonardo%20da%20Vinci%20-%20Virgin%20and%20Child%20with%20St%20Anne%20C2RMF%20retouched.jpg?width=320"><span class="d">10·29</span></div><div class="n">圣母子与圣安妮</div><div class="r">710 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/V%C3%A9nus%20et%20les%20trois%20Gr%C3%A2ces%20offrant%20des%20pr%C3%A9sents%20%C3%A0%20une%20jeune%20fille%20-%20Sandro%20Botticelli%20-%20Mus%C3%A9e%20du%20Louvre%20Peintures%20RF%20321.jpg?width=320"><span class="d">10·29</span></div><div class="n">波提切利壁画</div><div class="r">706 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Victoire%20de%20Samothrace%20-%20Musee%20du%20Louvre%20-%2020190812.jpg?width=320"><span class="d">10·27</span></div><div class="n">萨莫色雷斯的胜利女神</div><div class="r">703 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/JEAN%20LOUIS%20TH%C3%89ODORE%20G%C3%89RICAULT%20-%20La%20Balsa%20de%20la%20Medusa%20%28Museo%20del%20Louvre%2C%201818-19%29.jpg?width=320"><span class="d">10·27</span></div><div class="n">梅杜萨之筏</div><div class="r">700 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/La%20Libert%C3%A9%20guidant%20le%20peuple%20-%20Eug%C3%A8ne%20Delacroix%20-%20Mus%C3%A9e%20du%20Louvre%20Peintures%20RF%20129%20-%20apr%C3%A8s%20restauration%202024.jpg?width=320"><span class="d">10·29</span></div><div class="n">自由引导人民</div><div class="r">700 厅</div></div><div class="fl">德农馆 · 0 层</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Dying%20slave%20Louvre%20MR%201590.jpg?width=320"><span class="d">10·29</span></div><div class="n">垂死的奴隶</div><div class="r">403 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/%27Rebellious%20Slave%27%20Michelangelo%20JBU81.jpg?width=320"><span class="d">10·29</span></div><div class="n">叛逆的奴隶</div><div class="r">403 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/0%20Psych%C3%A9%20ranim%C3%A9e%20par%20le%20baiser%20de%20l%27Amour%20-%20Canova%20-%20Louvre%201.JPG?width=320"><span class="d">10·29</span></div><div class="n">普赛克与爱神</div><div class="r">403 厅</div></div><div class="fl">叙利馆 · 0 层</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/V%C3%A9nus%20de%20Milo%20-%20Mus%C3%A9e%20du%20Louvre%20AGER%20LL%20299%20%3B%20N%20527%20%3B%20Ma%20399.jpg?width=320"><span class="d">10·27</span></div><div class="n">米洛的维纳斯</div><div class="r">345 厅</div></div><div class="fl">暂无展厅信息</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/La%20Belle%20Ferroni%C3%A8re%20-%20Google%20Arts.jpg?width=320"><span class="d">10·29</span></div><div class="n">美丽的费隆妮叶夫人</div><div class="r"></div></div></div></div><div class="seal"><div class="a">必看完成</div><div class="b">12 / 12</div><div class="c">卢浮宫 · 2026-10-29</div></div></div><button class="share">分享这一页</button><div class="past"><div class="h">我的勋章 · 3</div><div class="pp"><div class="pc"><i>✓</i>卢浮宫<br>2026-10</div><div class="pc"><i>✓</i>卢浮宫<br>2025-06</div><div class="pc"><i>✓</i>卢浮宫<br>2024-08</div></div></div></div></div></div><div><div class="option" data-choice="B" onclick="toggleSelect(this)" style="display:block;margin-bottom:10px"><div class="lab"><h3>B · 圆形奖章</h3><p>每轮一枚缩小的完成大章,和页面上那枚章同一个样子。</p></div></div><div class="ph"><div class="scr" style="scroll-behavior:auto" ref="b"><div class="top"><div class="mname">卢浮宫</div><div class="tabs"><span>封面</span><span class="on">必看</span><span>藏品</span></div></div><div class="done-bar">本轮已完成 ✓</div><div class="pwrap"><div class="pass"><h4>卢 浮 宫 · 必 看</h4><div class="sub">已盖 12 / 12 枚章</div><div class="pg"><div class="fl">德农馆 · 1 层</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Mona%20Lisa%2C%20by%20Leonardo%20da%20Vinci%2C%20from%20C2RMF%20retouched.jpg?width=320"><span class="d">10·27</span></div><div class="n">蒙娜丽莎</div><div class="r">711 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Les%20Noces%20de%20Cana%20-%20Paolo%20Veronese%20-%20Mus%C3%A9e%20du%20Louvre%20Peintures%20INV%20142%20%3B%20MR%20384.jpg?width=320"><span class="d">10·27</span></div><div class="n">迦拿的婚礼</div><div class="r">711 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Leonardo%20da%20Vinci%20-%20Virgin%20and%20Child%20with%20St%20Anne%20C2RMF%20retouched.jpg?width=320"><span class="d">10·29</span></div><div class="n">圣母子与圣安妮</div><div class="r">710 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/V%C3%A9nus%20et%20les%20trois%20Gr%C3%A2ces%20offrant%20des%20pr%C3%A9sents%20%C3%A0%20une%20jeune%20fille%20-%20Sandro%20Botticelli%20-%20Mus%C3%A9e%20du%20Louvre%20Peintures%20RF%20321.jpg?width=320"><span class="d">10·29</span></div><div class="n">波提切利壁画</div><div class="r">706 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Victoire%20de%20Samothrace%20-%20Musee%20du%20Louvre%20-%2020190812.jpg?width=320"><span class="d">10·27</span></div><div class="n">萨莫色雷斯的胜利女神</div><div class="r">703 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/JEAN%20LOUIS%20TH%C3%89ODORE%20G%C3%89RICAULT%20-%20La%20Balsa%20de%20la%20Medusa%20%28Museo%20del%20Louvre%2C%201818-19%29.jpg?width=320"><span class="d">10·27</span></div><div class="n">梅杜萨之筏</div><div class="r">700 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/La%20Libert%C3%A9%20guidant%20le%20peuple%20-%20Eug%C3%A8ne%20Delacroix%20-%20Mus%C3%A9e%20du%20Louvre%20Peintures%20RF%20129%20-%20apr%C3%A8s%20restauration%202024.jpg?width=320"><span class="d">10·29</span></div><div class="n">自由引导人民</div><div class="r">700 厅</div></div><div class="fl">德农馆 · 0 层</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Dying%20slave%20Louvre%20MR%201590.jpg?width=320"><span class="d">10·29</span></div><div class="n">垂死的奴隶</div><div class="r">403 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/%27Rebellious%20Slave%27%20Michelangelo%20JBU81.jpg?width=320"><span class="d">10·29</span></div><div class="n">叛逆的奴隶</div><div class="r">403 厅</div></div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/0%20Psych%C3%A9%20ranim%C3%A9e%20par%20le%20baiser%20de%20l%27Amour%20-%20Canova%20-%20Louvre%201.JPG?width=320"><span class="d">10·29</span></div><div class="n">普赛克与爱神</div><div class="r">403 厅</div></div><div class="fl">叙利馆 · 0 层</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/V%C3%A9nus%20de%20Milo%20-%20Mus%C3%A9e%20du%20Louvre%20AGER%20LL%20299%20%3B%20N%20527%20%3B%20Ma%20399.jpg?width=320"><span class="d">10·27</span></div><div class="n">米洛的维纳斯</div><div class="r">345 厅</div></div><div class="fl">暂无展厅信息</div><div class="ps ok"><div class="c"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/La%20Belle%20Ferroni%C3%A8re%20-%20Google%20Arts.jpg?width=320"><span class="d">10·29</span></div><div class="n">美丽的费隆妮叶夫人</div><div class="r"></div></div></div></div><div class="seal"><div class="a">必看完成</div><div class="b">12 / 12</div><div class="c">卢浮宫 · 2026-10-29</div></div></div><button class="share">分享这一页</button><div class="past"><div class="h">我的勋章 · 3</div><div class="rm"><div class="rmed"><div class="o"><span>必看完成</span><b>12/12</b><span>2026-10</span></div>卢浮宫</div><div class="rmed"><div class="o"><span>必看完成</span><b>12/12</b><span>2025-06</span></div>卢浮宫</div><div class="rmed"><div class="o"><span>必看完成</span><b>12/12</b><span>2024-08</span></div>卢浮宫</div></div></div></div></div></div></div></div>
+<script>document.querySelectorAll('.scr').forEach(s=>s.scrollTop=s.scrollHeight);</script>

@@ -17,6 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/core/services/tts_service.dart';
+import 'package:gomuseum_app/features/must_see/presentation/stamp_toast.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/share_object.dart';
@@ -64,6 +65,8 @@ class GuideArgs {
     this.autoPlayAudio = false,
     this.rejectPhash,
     this.entry,
+    this.liveShot = false,
+    this.pendingConfirm,
   }) : assert(
           (slug != null && qid != null) || result != null,
           'GuideArgs 需提供 (slug+qid) 或 result 其中一种',
@@ -97,6 +100,12 @@ class GuideArgs {
   /// 压根没用过语音,付费墙就白建了。自动播让每个免费用户都真的体验过一次。
   /// 只在识别路径为 true —— 从列表/搜索点进来的不自动出声(用户没预期)。
   final bool autoPlayAudio;
+
+  /// 快门现场拍照识别进来的(相册/搜索/列表进来为 false)。只有它才出必看盖章提示。
+  final bool liveShot;
+
+  /// 候选确认请求(fire-and-forget)。盖章提示要等它提交了再查进度,否则后端还没这条打卡。
+  final Future<void>? pendingConfirm;
 
   /// 是否走 A5 内容路径
   bool get useA5 => slug != null && qid != null;
@@ -165,6 +174,14 @@ class _GuidePageState extends ConsumerState<GuidePage>
     if (a.useA5 && a.entry != null) {
       unawaited(reportContentViewed(ref.read(dioProvider),
           slug: a.slug!, qid: a.qid!, entry: a.entry!));
+    }
+    if (a.useA5 && a.liveShot) {
+      // 必看打卡:命中清单里的作品 → 顶部几秒的盖章提示(spec 2026-10-27 §五.6)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(maybeShowStampToast(context, ref,
+            slug: a.slug!, qid: a.qid!, pendingConfirm: a.pendingConfirm));
+      });
     }
   }
 

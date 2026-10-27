@@ -746,6 +746,73 @@ class AppLocalizationsEn extends AppLocalizations {
   String get museumCollectionTab => 'Collection';
 
   @override
+  String get museumTabMustSee => 'Must-sees';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · Must-sees';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return '$done / $total stamped';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return 'Since $date';
+  }
+
+  @override
+  String get passportRoundDone => 'All seen this visit ✓';
+
+  @override
+  String get passportSealTitle => 'ALL SEEN';
+
+  @override
+  String get passportShare => 'Share this page';
+
+  @override
+  String get passportMedals => 'My medals';
+
+  @override
+  String get passportNoLocation => 'Room not listed';
+
+  @override
+  String get passportSignInHint =>
+      'Sign in, then snap artworks in the museum to collect stamps';
+
+  @override
+  String passportLevel(int level) {
+    return 'Level $level';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return 'Level -$n';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return 'Room $room';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return 'Stamped! Must-sees $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return 'All must-sees seen $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return 'I saw all $total must-sees at $museum ($date), stamped with GoMuseum.';
+  }
+
+  @override
   String get museumOpeningHours => 'Opening Hours';
 
   @override

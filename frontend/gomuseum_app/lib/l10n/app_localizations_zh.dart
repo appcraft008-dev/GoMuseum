@@ -726,6 +726,72 @@ class AppLocalizationsZh extends AppLocalizations {
   String get museumCollectionTab => '藏品';
 
   @override
+  String get museumTabMustSee => '必看';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · 必看';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return '已盖 $done / $total 枚章';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return '本轮始于 $date';
+  }
+
+  @override
+  String get passportRoundDone => '本轮已完成 ✓';
+
+  @override
+  String get passportSealTitle => '必看完成';
+
+  @override
+  String get passportShare => '分享这一页';
+
+  @override
+  String get passportMedals => '我的勋章';
+
+  @override
+  String get passportNoLocation => '暂无展厅信息';
+
+  @override
+  String get passportSignInHint => '登录后,在馆里拍照就能盖章';
+
+  @override
+  String passportLevel(int level) {
+    return '$level 楼';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return '地下 $n 层';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return '$room 厅';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return '盖章!必看 $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return '必看完成 $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return '我在$museum看完了全部 $total 件必看作品($date),用 GoMuseum 盖的章。';
+  }
+
+  @override
   String get museumOpeningHours => '开放时间';
 
   @override
@@ -1931,6 +1997,72 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get museumCollectionTab => '藏品';
+
+  @override
+  String get museumTabMustSee => '必看';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · 必看';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return '已蓋 $done / $total 枚章';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return '本輪始於 $date';
+  }
+
+  @override
+  String get passportRoundDone => '本輪已完成 ✓';
+
+  @override
+  String get passportSealTitle => '必看完成';
+
+  @override
+  String get passportShare => '分享這一頁';
+
+  @override
+  String get passportMedals => '我的勳章';
+
+  @override
+  String get passportNoLocation => '暫無展廳資訊';
+
+  @override
+  String get passportSignInHint => '登入後,在館裡拍照就能蓋章';
+
+  @override
+  String passportLevel(int level) {
+    return '$level 樓';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return '地下 $n 層';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return '$room 廳';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return '蓋章!必看 $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return '必看完成 $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return '我在$museum看完了全部 $total 件必看作品($date),用 GoMuseum 蓋的章。';
+  }
 
   @override
   String get museumOpeningHours => '開放時間';

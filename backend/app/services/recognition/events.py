@@ -27,31 +27,64 @@ def record_event(
     timings=None,
     text_trace=None,
     vector_top=None,
-) -> None:
-    """记一次识别事件。独立小事务,失败回滚不影响主流程。
+    capture=None,
+):
+    """记一次识别事件,返回新行 id(失败 None)。独立小事务,失败回滚不影响主流程。
 
     user_id 只在令牌解析成功时有值,它同时是足迹页的数据源(见 /history/*)。
     仍然沿用"埋点失败不打断识别"的纪律 —— 足迹丢一条,好过识别 500。"""
     try:
-        db.add(
-            RecognitionEvent(
-                museum_slug=museum_slug,
-                phash=phash,
-                outcome=outcome,
-                top_qid=top_qid,
-                top_score=top_score,
-                language=language,
-                engine=engine,
-                user_id=user_id,
-                duration_ms=duration_ms,
-                timings=timings,
-                text_trace=text_trace,
-                vector_top=vector_top,
-            )
+        ev = RecognitionEvent(
+            museum_slug=museum_slug,
+            phash=phash,
+            outcome=outcome,
+            top_qid=top_qid,
+            top_score=top_score,
+            language=language,
+            engine=engine,
+            user_id=user_id,
+            duration_ms=duration_ms,
+            timings=timings,
+            text_trace=text_trace,
+            vector_top=vector_top,
+            capture=capture,
         )
+        db.add(ev)
         db.commit()
+        return ev.id
     except Exception:
         logger.exception("record_event failed")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None
+
+
+def clear_capture(db, *, event_id=None, phash=None) -> None:
+    """撤销这次的「现场拍照」标记 = 不算必看打卡(spec 2026-10-27 §五.2:没扣成费不算)。
+
+    给 event_id 清那一行;给 phash 清 24h 内该 phash 最新一行 —— 与 confirm_event
+    回填的是同一行。吞异常同 record_event:埋点不打断主流程。"""
+    try:
+        if event_id is not None:
+            row = db.get(RecognitionEvent, event_id)
+        else:
+            cutoff = datetime.utcnow() - timedelta(hours=24)
+            row = (
+                db.query(RecognitionEvent)
+                .filter(
+                    RecognitionEvent.phash == phash,
+                    RecognitionEvent.created_at >= cutoff,
+                )
+                .order_by(RecognitionEvent.created_at.desc())
+                .first()
+            )
+        if row is not None and row.capture is not None:
+            row.capture = None
+            db.commit()
+    except Exception:
+        logger.exception("clear_capture failed")
         try:
             db.rollback()
         except Exception:

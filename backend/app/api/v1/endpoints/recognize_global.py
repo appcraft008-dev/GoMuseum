@@ -18,6 +18,9 @@ from app.core.database import get_db
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+# 必看打卡(spec 2026-10-27 §五.1):快门现场拍 = camera,相册/最近照片 = gallery;
+# 缺省 = 未知(老 App),永不算打卡
+Capture = Literal["camera", "gallery"]
 _bearer = HTTPBearer(auto_error=False)
 
 
@@ -42,6 +45,7 @@ def run_recognition(
     mode: str,
     device_id: str | None,
     credentials: HTTPAuthorizationCredentials | None,
+    capture: str | None = None,
 ) -> dict:
     """共享识别逻辑:身份(Bearer 令牌或 device_id)→ 计费识别 → 402/404 映射。
     slug=None 为全局跨馆;slug 给了但目录无此馆 → out is None → 404。
@@ -75,6 +79,7 @@ def run_recognition(
             language=language,
             mode=mode,
             visible=visible_museum_ids(db, preview),
+            capture=capture,
         )
     except QuotaExceededError as e:
         # 付费漏斗的关键一环:没有它就答不出"多少人撞到额度墙"
@@ -127,6 +132,7 @@ def recognize_global(
     language: str = "zh",
     mode: str = "artwork",
     device_id: str | None = None,
+    capture: Capture | None = None,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -140,6 +146,7 @@ def recognize_global(
         mode=mode,
         device_id=device_id,
         credentials=credentials,
+        capture=capture,
     )
 
 
@@ -176,7 +183,7 @@ def recognize_confirm(
     再解锁:事件行只存 top_qid,这里无从知道那次识别到底给了哪几个候选,放行的话
     qid 可以任填 —— 确认过一次就能用一次额度解锁全馆。改选那件要听,走详情页
     的手动解锁确认(`/entitlements/audio/unlock`,那里明写"将用掉 1 次")。"""
-    from app.services.recognition.events import confirm_event
+    from app.services.recognition.events import clear_capture, confirm_event
     from app.services.visibility import can_preview, qid_visible
 
     # 隐身馆的藏品:什么都不做(恒 204,与未知 qid 不可区分)
@@ -185,28 +192,39 @@ def recognize_confirm(
     first_time = confirm_event(db, body.phash, body.qid, body.source)
     if body.source == "search":
         return Response(status_code=204)
-    user_id = _user_id(db, credentials)
-    if first_time:
-        from app.services import entitlement_service as es
-
-        museum = es.museum_of_qid(db, body.qid)
-        _log_success(db, museum.slug if museum else None, qid=body.qid, user_id=user_id)
-    # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。
-    if first_time and user_id:
-        from app.services import entitlement_service as es
-        from app.services.benefits_service import BenefitsService
-
-        # D7/D8:覆盖**这件所在馆**的票生效中 → 不扣、也不写免费解锁(票本来就覆盖)。
-        # 只看任意一张票的话,持最便宜的票就能在别的城市逐件白拿主讲解。
-        museum = es.museum_of_qid(db, body.qid)
-        if es.resolve_state(db, user_id, museum)[0] == es.ACTIVE:
-            return Response(status_code=204)
-        # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
-        # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
-        if not BenefitsService(db).consume_recognition(user_id=user_id):
-            return Response(status_code=204)
-        es.unlock_free_audio(db, user_id, [body.qid])
+    if not first_time:
+        # 改选:同一张照片已扣过一次,不再扣,打卡跟着挪到新选的这件(spec §五.3 边角)
+        return Response(status_code=204)
+    # 必看打卡只认扣费通过的确认:没走到「票覆盖 / 扣成」就撤销这行的 capture(§五.2)
+    try:
+        if not _bill_confirm(db, body.qid, _user_id(db, credentials)):
+            clear_capture(db, phash=body.phash)
+    except BaseException:
+        clear_capture(db, phash=body.phash)
+        raise
     return Response(status_code=204)
+
+
+def _bill_confirm(db: Session, qid: str, user_id: str | None) -> bool:
+    """候选首次确认的计费。返回这次是否已付(票覆盖或扣成)。"""
+    from app.services import entitlement_service as es
+    from app.services.benefits_service import BenefitsService
+
+    museum = es.museum_of_qid(db, qid)
+    _log_success(db, museum.slug if museum else None, qid=qid, user_id=user_id)
+    # 匿名(无令牌)跳过:解锁的音频要令牌才用得上,扣了也无处兑现。
+    if not user_id:
+        return False
+    # D7/D8:覆盖**这件所在馆**的票生效中 → 不扣、也不写免费解锁(票本来就覆盖)。
+    # 只看任意一张票的话,持最便宜的票就能在别的城市逐件白拿主讲解。
+    if es.resolve_state(db, user_id, museum)[0] == es.ACTIVE:
+        return True
+    # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
+    # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
+    if not BenefitsService(db).consume_recognition(user_id=user_id):
+        return False
+    es.unlock_free_audio(db, user_id, [qid])
+    return True
 
 
 @router.post("/recognize/reject", status_code=204)

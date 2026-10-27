@@ -15,6 +15,9 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:gomuseum_app/features/must_see/data/must_see_models.dart';
+import 'package:gomuseum_app/features/must_see/data/must_see_providers.dart';
+import 'package:gomuseum_app/features/must_see/presentation/passport_page.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -212,7 +215,51 @@ List<Override> _common(Locale l, Entitlements ent) => [
       objectContentProvider.overrideWith((ref, _) async => _content(l)),
     ];
 
+/// 必看护照页最满的一态:打满(大章常驻)+ 两枚勋章 + 带展厅号的分组 + 一组无位置。
+MustSeeData _passport() => MustSeeData(
+      items: [
+        for (final (q, t, loc) in [
+          (
+            'Q1',
+            'Portrait of Lisa Gherardini, wife of Francesco del Giocondo',
+            const MustSeeLocation(wing: 'Denon', level: 1, room: '711')
+          ),
+          (
+            'Q2',
+            'Winged Victory of Samothrace',
+            const MustSeeLocation(wing: 'Denon', level: 1, room: '703')
+          ),
+          (
+            'Q3',
+            'Venus de Milo',
+            const MustSeeLocation(wing: 'Sully', level: 0, room: '345')
+          ),
+          ('Q4', 'The Virgin and Child with Saint Anne', null),
+        ])
+          MustSeeItem(qid: q, title: t, artist: 'Leonardo', location: loc),
+      ],
+      checked: {
+        for (final q in ['Q1', 'Q2', 'Q3', 'Q4']) q: DateTime(2026, 10, 29, 23)
+      },
+      roundStartedAt: DateTime(2026, 10, 27, 10),
+      completed: true,
+      medals: [
+        MustSeeMedal(completedAt: DateTime(2026, 10, 29), count: 12),
+        MustSeeMedal(completedAt: DateTime(2025, 6, 1), count: 12),
+      ],
+    );
+
 final Map<String, _Page> _pages = {
+  'passport': (
+    overrides: (l) => [
+          ..._common(l, _free(l)),
+          mustSeeProvider.overrideWith((ref, _) async => _passport()),
+        ],
+    page: const Scaffold(
+        body: MustSeePassport(
+            slug: 'louvre',
+            museumName: 'Musée des Beaux-Arts de la Ville de Paris'))
+  ),
   'login': (overrides: (l) => _common(l, _free(l)), page: const LoginPage()),
   'home': (
     overrides: (l) => _common(l, _free(l)),

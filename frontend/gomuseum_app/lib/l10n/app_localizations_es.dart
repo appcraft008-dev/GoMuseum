@@ -756,6 +756,73 @@ class AppLocalizationsEs extends AppLocalizations {
   String get museumCollectionTab => 'Colección';
 
   @override
+  String get museumTabMustSee => 'Imprescindibles';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · Imprescindibles';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return '$done / $total sellados';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return 'Desde el $date';
+  }
+
+  @override
+  String get passportRoundDone => 'Todo visto esta vez ✓';
+
+  @override
+  String get passportSealTitle => 'TODO VISTO';
+
+  @override
+  String get passportShare => 'Compartir esta página';
+
+  @override
+  String get passportMedals => 'Mis medallas';
+
+  @override
+  String get passportNoLocation => 'Sala no indicada';
+
+  @override
+  String get passportSignInHint =>
+      'Inicia sesión y fotografía las obras en el museo para sellarlas';
+
+  @override
+  String passportLevel(int level) {
+    return 'Planta $level';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return 'Planta -$n';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return 'Sala $room';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return '¡Sellado! Imprescindibles $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return 'Todos los imprescindibles vistos $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return 'Los $total imprescindibles vistos: $museum ($date), sellados con GoMuseum.';
+  }
+
+  @override
   String get museumOpeningHours => 'Horario';
 
   @override

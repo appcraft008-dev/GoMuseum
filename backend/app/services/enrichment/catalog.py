@@ -55,7 +55,29 @@ class MuseumConfig:
     coordinates: tuple[float, float] | None = None
     # 必看清单(顺序即排序)与官网地址:编辑决策,同 rank 只在 yaml
     must_see: list[str] = field(default_factory=list)
+    # 必看件的馆内位置(qid → {wing, level, room}),只收写了位置的项。
+    # yaml 里必看项可写成纯 qid,或 {qid, wing?, level?, room?}(spec 2026-10-27 必看打卡 §五.5)
+    must_see_locations: dict[str, dict] = field(default_factory=dict)
     website: str | None = None
+
+
+def _must_see_qid(item) -> str:
+    return str(item["qid"]) if isinstance(item, dict) else str(item)
+
+
+def _must_see_locations(items) -> dict[str, dict]:
+    out = {}
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        loc = {
+            "wing": str(it["wing"]) if it.get("wing") is not None else None,
+            "level": int(it["level"]) if it.get("level") is not None else None,
+            "room": str(it["room"]) if it.get("room") is not None else None,
+        }
+        if any(v is not None for v in loc.values()):
+            out[str(it["qid"])] = loc
+    return out
 
 
 class MuseumCatalog:
@@ -97,7 +119,8 @@ class MuseumCatalog:
                 city_names={
                     k: str(v) for k, v in (m.get("city_names") or {}).items() if v
                 },
-                must_see=[str(q) for q in (m.get("must_see") or [])],
+                must_see=[_must_see_qid(q) for q in (m.get("must_see") or [])],
+                must_see_locations=_must_see_locations(m.get("must_see") or []),
                 website=m.get("website"),
             )
         return cls(configs)

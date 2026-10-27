@@ -728,6 +728,72 @@ class AppLocalizationsJa extends AppLocalizations {
   String get museumCollectionTab => 'コレクション';
 
   @override
+  String get museumTabMustSee => '必見';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · 必見';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return 'スタンプ $done / $total';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return '$date から';
+  }
+
+  @override
+  String get passportRoundDone => '今回はすべて見ました ✓';
+
+  @override
+  String get passportSealTitle => '必見制覇';
+
+  @override
+  String get passportShare => 'このページを共有';
+
+  @override
+  String get passportMedals => 'マイメダル';
+
+  @override
+  String get passportNoLocation => '展示室情報なし';
+
+  @override
+  String get passportSignInHint => 'ログインして館内で作品を撮るとスタンプが押せます';
+
+  @override
+  String passportLevel(int level) {
+    return '$level階';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return '地下$n階';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return '展示室 $room';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return 'スタンプ!必見 $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return '必見制覇 $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return '$museumの必見作品 $total 点をすべて見ました($date)。GoMuseum でスタンプ。';
+  }
+
+  @override
   String get museumOpeningHours => '開館時間';
 
   @override

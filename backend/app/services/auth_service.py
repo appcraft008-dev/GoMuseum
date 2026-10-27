@@ -634,6 +634,14 @@ class AuthService:
             .order_by(Feedback.created_at.desc())
             .all()
         )
+        from app.models.must_see_medal import MustSeeMedal
+
+        medals = (
+            db.query(MustSeeMedal)
+            .filter(MustSeeMedal.user_id == uid)
+            .order_by(MustSeeMedal.completed_at.desc())
+            .all()
+        )
         from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
 
         photos = (
@@ -696,6 +704,15 @@ class AuthService:
                     "created_at": f.created_at.isoformat() if f.created_at else None,
                 }
                 for f in feedback
+            ],
+            # 必看勋章(spec 2026-10-27):打满一轮的纪念,账号关联的个人数据
+            "must_see_medals": [
+                {
+                    "museum_slug": m.museum_slug,
+                    "completed_at": m.completed_at.isoformat(),
+                    "count": m.count,
+                }
+                for m in medals
             ],
             "recognition_photos": [
                 {
@@ -785,6 +802,14 @@ class AuthService:
 
         # 使用事件(打开作品/付费墙/购买/激活通票)断链不删:留着做产品统计,
         # user_id 与 device_id 都清,只清一列行还指着人。隐私政策第 2 节写明了这张表。
+        # 必看勋章**真删**:勋章是给这个人的纪念,离开账号就没有任何用处
+        # (不像识别事件还兼着 KPI 与展陈证据)
+        from app.models.must_see_medal import MustSeeMedal
+
+        db.query(MustSeeMedal).filter(MustSeeMedal.user_id == uid).delete(
+            synchronize_session=False
+        )
+
         db.query(AppEvent).filter(AppEvent.user_id == uid).update(
             {"user_id": None, "device_id": None}, synchronize_session=False
         )

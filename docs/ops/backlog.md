@@ -33,6 +33,8 @@
 
 | 事项 | 说明 | 出处 |
 |---|---|---|
+| 402 被拒的识别也进足迹 | 命中后因额度不足 402(持别处的票+免费额度用完)时,事件行已落库且 outcome=match,`history._footprint_qid` 不看是否扣费 → 用户没拿到结果,足迹里却多一条。必看打卡已用 capture 撤销挡住打卡,足迹本身未改;修法候选:足迹也按「capture 被撤销/402」排除,或 402 时把 outcome 标成单独值 | 必看打卡 Task 2 核查 10-27 |
+| 说明牌直接命中可能重复扣费(待核实) | 作品照返回候选/认不出后 `_artworkPhash` 保留,拍说明牌**直接命中**已在 `recognize_billed` 扣过一次,`_goGuide` 仍用作品照 phash 发 confirm → `confirm_event` 判首次 → 再扣一次(`camera_page.dart:377,492-498,527-530`)。审查读代码发现,未实测复现;先写测试复现再修 | 必看打卡计划审查 10-27 |
 | 两条告警线重定 | `ALERT_RECOG_DAILY_USD` 用 7 天真实记账重定,时间是阶段 0 上 prod 后第 7 天;`ALERT_TTS_DAILY_USD` 在阶段 2 前重标(R7) | elastic-stage0 |
 
 ### 10-12 测试复盘清单(按执行顺序,做完逐条删)
