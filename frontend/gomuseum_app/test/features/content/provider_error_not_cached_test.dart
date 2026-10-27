@@ -27,12 +27,15 @@ import 'package:gomuseum_app/features/settings/presentation/providers/language_p
 
 /// 头 [failFirst] 次调用抛异常,之后成功。模拟"一次瞬时网络抖动"。
 class _FlakyDs implements CatalogRemoteDataSource {
-  _FlakyDs({this.failFirst = 0, this.generatingCalls = 0});
+  _FlakyDs({this.failFirst = 0, this.generatingCalls = 0, this.emptyCalls = 0});
 
   final int failFirst;
 
   /// 讲解:头 [generatingCalls] 次返回「生成中」(后端还在写),之后返回生成完。
   final int generatingCalls;
+
+  /// 讲解:头 [emptyCalls] 次返回「不在生成、这门语言也没内容」(status=empty)。
+  final int emptyCalls;
   int calls = 0;
 
   void _tick() {
@@ -83,7 +86,7 @@ class _FlakyDs implements CatalogRemoteDataSource {
       qid: qid,
       category: 'painting',
       language: language,
-      status: ContentStatus.ready,
+      status: calls <= emptyCalls ? ContentStatus.empty : ContentStatus.ready,
       generating: calls <= generatingCalls,
       title: '安东尼娅',
       images: const [],
@@ -241,6 +244,26 @@ void main() {
       sub = c.listen(objectContentProvider(key), (_, __) {});
       await c.read(objectContentProvider(key).future);
       expect(ds.calls, 2);
+      sub.close();
+    });
+
+    /// #1045 真机 10-21:zh 等待中离开,再进连请求都不发。后端有个窗口(英文生成完
+    /// 清锁 → 补语言登记 pending 之前)会回 generating=false + 这门语言 empty;
+    /// 旧代码见 generating=false 就 keepAlive,把「暂无讲解」缓存到杀进程。
+    test('④ 不在生成但这门语言没内容 → 重进页面必须重新请求', () async {
+      final ds = _FlakyDs(emptyCalls: 1);
+      final c = _container(ds);
+
+      var sub = c.listen(objectContentProvider(key), (_, __) {});
+      final first = await c.read(objectContentProvider(key).future);
+      expect(first.generating, isFalse);
+      expect(first.status, ContentStatus.empty);
+      await _leavePage(sub);
+
+      sub = c.listen(objectContentProvider(key), (_, __) {});
+      final content = await c.read(objectContentProvider(key).future);
+      expect(ds.calls, 2, reason: '空结果驻留的话这里还是 1 —— 一直「暂无讲解」');
+      expect(content.status, ContentStatus.ready);
       sub.close();
     });
 
