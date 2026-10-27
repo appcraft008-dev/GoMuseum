@@ -527,10 +527,11 @@ class _CameraPageState extends ConsumerState<CameraPage>
     }
     // 确认卡点选 → 回传标注 + 后端扣 1 次额度（无 phash / 命中态静默跳过）。
     // 不 await：跳转不等它，刷新权益在 notifier 内部做（这个页马上就没了）。
-    unawaited(ref.read(recognitionNotifierProvider.notifier).confirmRecognition(
-        qid,
-        fromSearch: fromSearch,
-        phashOverride: _artworkPhash));
+    final confirming = ref
+        .read(recognitionNotifierProvider.notifier)
+        .confirmRecognition(qid,
+            fromSearch: fromSearch, phashOverride: _artworkPhash);
+    unawaited(confirming);
     // 用户本次拍摄/选图的本地照片作 hero 图直通讲解页（guide 用 FileImage 渲染）。
     final args = GuideArgs(
       slug: slug,
@@ -543,6 +544,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
       // 直判带 match 的 phash;候选点选也给(10-14 真机:点错了要能回头),搜索不给
       rejectPhash: rejectPhash ?? (fromSearch ? null : _artworkPhash),
       entry: fromSearch ? GuideEntry.search : GuideEntry.recognition,
+      // 必看打卡:只有快门现场拍的才盖章;讲解页等确认提交完再查进度
+      liveShot: _lastShotLive && !fromSearch,
+      pendingConfirm: confirming,
     );
     // 命中与选候选都 pushReplacement:返回一次就退出识别。候选原先 push 好让返回改选(S3),
     // 有了全屏比对后改选 ~2%,却每次要多退一层(10-10 用户定去掉)。
