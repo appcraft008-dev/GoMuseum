@@ -25,6 +25,7 @@
 | `GET /museums/{slug}/objects/{qid}/audio/stream?language=&section=` | 流式 TTS(✅2026-07-16 #256):首播边生成边播 | `endpoints/museums.py` |
 | `POST /feedback` | 用户反馈(藏品级/App 级;匿名可写;204 无响应体) | `endpoints/feedback.py` |
 | `POST /museums/{slug}/objects/{qid}/viewed` | 进讲解页打点(`content_viewed`;204,fire-and-forget) | `endpoints/museums.py` |
+| `GET /museums/{slug}/must-see?language=` | 必看护照页(清单+展厅号+当前轮进度+勋章;令牌可选) | `endpoints/museums.py` + `must_see_checkin.py` |
 
 **`/viewed`(加法,2026-10-13 #941)**:App 进讲解页报一次。请求体 `{"from": recognition|search|collection|history|home|link}`(讲解页入口,取值外 → 422),Bearer 可选(带了就记到人)。**不挂在 `/content` 上**:生成中前端每 4s 轮询 `/content`,挂在那里会重复计数。恒 204,失败不影响页面。
 
@@ -50,6 +51,7 @@
 - `coordinates`(加法,2026-09-29):`[lat, lng] | null`,取自 Wikidata P625 配在 yaml。首页「附近」**在手机本地**
   按它算距离 —— **用户位置不上传**,后端只下发馆坐标(纪律 42)。
 - 只列**已放出**的馆;`can_preview` 调用者另含隐身馆(可见性闸)。响应因调用者身份而异 → 前端缓存必须以身份为键(纪律 38)。
+- `must_see_count`(加法,2026-10-27 必看打卡):该馆 `museums.yaml` 必看清单件数,无清单 0。App 进馆页**同步**读它决定显不显示「必看」tab(放馆列表而不放馆详情,标签栏首帧就对)。
 - `cover_image`(✅2026-07-20 spec museum-cover-intro-quality,加法):探索页列表缩略图(thumb 档),
   同 `m.cover_image_key` 一行零成本可读;未生成封面则 `null`(前端隐藏)。
 
@@ -148,6 +150,23 @@
 
 ---
 
+## 5. `GET /museums/{slug}/must-see?language=zh`(必看护照页;加法,2026-10-27)
+
+spec `docs/superpowers/specs/2026-10-27-must-see-checkin-design.md`。令牌可选;隐身馆/未知馆 404。
+
+```json
+{"items": [{"qid": "Q12418", "title": "…", "artist": "…", "thumbnail": "<url|null>",
+            "location": {"wing": "Denon", "level": 1, "room": "711"} | null}],
+ "checked": {"Q12418": "2026-10-27T10:00:00+00:00"}, "round_started_at": "<iso|null>",
+ "completed": false, "medals": [{"completed_at": "<iso>", "count": 12}]}
+```
+
+- `items` 按 yaml 顺序;目录查不到/无图的件也列出(`title` 回退 qid、`artist` 回退 `""`、`thumbnail` null),分母恒为清单件数。
+- **打卡判据**:该用户、`recognition_events.capture='camera'`(快门现场拍)、`confirm_source != 'search'`、足迹判据(`history._footprint_qid`)认定的那件在该馆清单里。**不看 `museum_slug`**(全局端点事件该列为空)。命中后没扣成费(402/扣费链路抛错/确认时未付)的行 capture 被撤销成 NULL。
+- **轮**:相邻两次打卡间隔 > 30 天切新轮;距上次打卡 > 30 天 → 当前无进行中的轮(`checked` 空)。
+- **勋章**:读这个端点时,哪一轮覆盖了当前清单全部作品、且该轮区间内没有勋章 → 落一行 `must_see_medals`(遍历所有轮,补齐那次没拉到也会补发)。已发勋章不随清单改动、删足迹变化;导出给出,删号真删。
+- 匿名:只给清单,进度为空。
+
 ## `content_status` 生命周期
 
 `stub`(只元数据,目录铺出) → `ready`(≥1 段已发布)/ `empty`(无可接地材料)。前端:`stub`/`empty` 显"待完善",`ready` 正常。未知值按 `ready` 容错。
@@ -213,6 +232,9 @@
 **⑥ staging 轻量化(2026-07-17 定,spec 2026-07-17-staging-lightweight)。** staging=机制验证平台,**永不为数据规模付 LLM 费**:机制验证用小样本(护栏强制——onboard names/generate/translate 在 staging 默认 limit=50,rescan 系需显式 `--allow-full`);规模数据一律从 prod 搬运(`sync_staging_from_prod.py`,slim=金样本 ~300-500 件/full=发版前拉真;内容是 prod 已付费资产,共 R2 桶 key 复制即解析,零 LLM);**用户表(users/benefits/devices)与 recognition_events 永不跨环境**。上新馆同理:staging 只跑 `catalog --limit` 验证配方,全量只在 prod。
 
 ## 上新馆 = 纯配置(零核心改动)
+
+> **⓪b 必看清单(2026-10-27 必看打卡定)**:`museums.yaml` 的 `must_see:` 只放**常年在展的镇馆之宝**(官网高亮/官方参观线路里几乎不外借的),且**逐件确认可识别**(库里有图、有识别向量)。我们不监测在不在展(人手与数据都不够),所以选清单时就避开常外借的件,偶尔外借打不满接受。
+> 官网能取到**展厅号**的就取(`tools/must_see_rooms/fetch_rooms.py <slug>`,只读官网,输出 yaml 片段),写成 `{qid, wing, level, room}`;取不到的(如奥赛官网拒绝程序访问)写纯 qid,不标位置。顺序按馆内大致动线排。改清单/展厅号 = 改 yaml 的 PR,不直写 prod 库。
 
 > **⓪ 预检清单(2026-07-19 橘园实战补;写配置前先做,两条各一分钟)**:
 > 1. **QID 核验+规模预估**——馆名易记错 QID(橘园教训:Q1094962 查出 0 条,真身 Q726781)。先
@@ -1643,7 +1665,7 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 
 | 端点 | 闸 | 备注 |
 |---|---|---|
-| `POST /recognize`、`/museums/{slug}/recognize` | 额度 | match/candidates 扣 1;未识别与缓存命中不扣 |
+| `POST /recognize`、`/museums/{slug}/recognize` | 额度 | match/candidates 扣 1;未识别与缓存命中不扣。可选 `capture=camera\|gallery`(加法,2026-10-27 必看打卡;缺省=未知,永不算打卡) |
 | `GET /museums/{slug}/objects/{qid}/audio` | `audio_access` | 402 `pass_required` |
 | `GET .../audio/stream` | 同上 | ⚠️ 播放器直取、**不经 Dio 拦截器**,前端须自带令牌 |
 | `POST /content/tts/generate` | 同上 / 通票 | section 模式按 qid;ad-hoc(任意文本)需通票生效 |

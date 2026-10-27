@@ -119,6 +119,45 @@ def list_museums(
     return repo_list(db, preview=can_preview(db, credentials))
 
 
+@router.get("/{slug}/must-see")
+def museum_must_see(
+    slug: str,
+    language: str = "zh",
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> dict:
+    """必看护照页(spec 2026-10-27 必看打卡 §五.4):清单 + 当前轮进度 + 勋章。
+
+    令牌可选:匿名只给清单。清单里目录查不到/没图的件也列出(标题回退 qid),
+    分母始终是清单件数。读的时候算出某轮打满会顺手落勋章(见 must_see_checkin)。"""
+    from app.services import must_see
+    from app.services.must_see_checkin import progress
+
+    if _hidden(db, credentials, slug):
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
+    listed = must_see.MUST_SEE.get(slug) or []
+    locs = must_see.MUST_SEE_LOCATION.get(slug) or {}
+    # 馆藏列表把必看排在最前(must_see_order),取前 N 件即可复用同一套标题/作者/缩略图口径
+    page = repo_list_objects(db, slug, language=language, limit=len(listed))
+    if page is None:  # 目录里没有这家馆
+        raise HTTPException(status_code=404, detail=f"museum not found: {slug}")
+    by_qid = {it["qid"]: it for it in page.get("items", [])}
+    items = []
+    for q in listed:
+        it = by_qid.get(q) or {}
+        items.append(
+            {
+                "qid": q,
+                "title": it.get("title") or q,
+                "artist": it.get("artist") or "",
+                "thumbnail": it.get("thumbnail"),
+                "location": locs.get(q),
+            }
+        )
+    user = _caller(db, credentials)
+    return {"items": items, **progress(db, str(user.id) if user else None, slug)}
+
+
 @router.get("/{slug}/objects/{qid}/content")
 def object_content(
     slug: str,

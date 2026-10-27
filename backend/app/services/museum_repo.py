@@ -15,6 +15,7 @@ from app.models.content import (
 )
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
+from app.services import must_see as _must_see
 from app.services.enrichment.catalog import RANK_LAST
 from app.services.enrichment.category_config import section_label
 from app.services.entitlement_service import pass_offer
@@ -957,6 +958,8 @@ def list_museums(db: Session, *, preview: bool = False) -> list[dict]:
         row["cover_image"] = (
             _sized(storage, m.cover_image_key, "thumb") if m.cover_image_key else None
         )
+        # 必看件数(加法,spec 2026-10-27):App 进馆页同步读它决定有没有「必看」tab
+        row["must_see_count"] = len(_must_see.MUST_SEE.get(m.slug) or [])
         out.append(row)
     # DB 里可能有 yaml 没配的馆(手工建的/刚删了配置),给它末位,再按 slug 稳定排。
     ranks = _museum_ranks()
