@@ -1,4 +1,4 @@
-// 最近搜索:只存本机、按范围(全局/各馆)分开、最多 5 条、新的在前、去重。
+// 最近搜索:只存本机、按范围(全局/各馆)分开、最多 8 条、新的在前、去重。
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,17 +16,26 @@ Future<List<String>> _settled(ProviderContainer c, String scope) async {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('新的在前、重复挪到最前(不分大小写)、最多 5 条', () async {
+  test('新的在前、重复挪到最前(不分大小写)、最多 8 条', () async {
     final c = ProviderContainer();
     addTearDown(c.dispose);
     final n = c.read(recentSearchesProvider('global').notifier);
-    for (final q in ['a', 'b', 'c', 'd', 'e', 'f']) {
+    for (final q in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']) {
       await n.add(q);
     }
     await n.add(' C ');
-    expect(c.read(recentSearchesProvider('global')), ['C', 'f', 'e', 'd', 'b']);
+    expect(c.read(recentSearchesProvider('global')), [
+      'C',
+      'i',
+      'h',
+      'g',
+      'f',
+      'e',
+      'd',
+      'b',
+    ]);
     await n.add('   ');
-    expect(c.read(recentSearchesProvider('global')).length, 5);
+    expect(c.read(recentSearchesProvider('global')).length, 8);
   });
 
   test('全局与各馆分开记,且写进本机存储', () async {
@@ -57,16 +66,21 @@ void main() {
       'recent_searches_global': ['星夜', '睡莲'],
     });
     String? picked;
-    await t.pumpWidget(ProviderScope(
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
-        home: Scaffold(
-          body: RecentSearchesView(scope: 'global', onPick: (q) => picked = q),
+    await t.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: RecentSearchesView(
+              scope: 'global',
+              onPick: (q) => picked = q,
+            ),
+          ),
         ),
       ),
-    ));
+    );
     await t.pumpAndSettle();
     expect(find.text('最近搜索'), findsOneWidget);
 
