@@ -6,7 +6,7 @@ from app.services.must_see import MUST_SEE
 
 def test_must_see_matches_yaml():
     assert MUST_SEE["louvre"][0] == "Q12418"
-    assert len(MUST_SEE["orsay"]) == 23
+    assert len(MUST_SEE["orsay"]) == 15  # 10-28 用户定:23 → 15
     assert MUST_SEE["petit_palais"][-1] == "Q104479426"
     assert "rijksmuseum" not in MUST_SEE
 

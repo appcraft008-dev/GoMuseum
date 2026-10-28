@@ -7,8 +7,11 @@
 library;
 
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
@@ -21,6 +24,19 @@ import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
 import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:share_plus/share_plus.dart';
+
+/// iOS 版还没上架(Apple 开发者账号 11 月初才恢复),先只给 Play;iPhone 用户走网站链接。
+const kPlayStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.gomuseum.app';
+
+/// 分享出口(测试替换成假的,看发出去的是什么)。
+Future<void> defaultPassportShareSend(ShareParams p) async {
+  await SharePlus.instance.share(p);
+}
+
+@visibleForTesting
+Future<void> Function(ShareParams p) passportShareSend =
+    defaultPassportShareSend;
 
 /// 章位上的日期签(10·27)与勋章上的年月(2026-10):纯数字,十语通用。
 String stampDate(DateTime d) => '${d.month}·${d.day}';
@@ -81,7 +97,7 @@ class MustSeePassport extends ConsumerWidget {
   }
 }
 
-class _Passport extends StatelessWidget {
+class _Passport extends StatefulWidget {
   const _Passport(
       {required this.slug,
       required this.museumName,
@@ -93,29 +109,74 @@ class _Passport extends StatelessWidget {
   final MustSeeData data;
   final bool signedOut;
 
-  /// (组名, 件) 按 yaml 顺序;有位置的按 (wing, level) 归组,无位置的归最后一组。
-  /// 整馆都没位置 → 一组、无组名。
+  @override
+  State<_Passport> createState() => _PassportState();
+}
+
+class _PassportState extends State<_Passport> {
+  String get slug => widget.slug;
+  String get museumName => widget.museumName;
+  MustSeeData get data => widget.data;
+  bool get signedOut => widget.signedOut;
+
+  /// 分享截图的范围 = 护照卡本身(完成大章叠在卡外,自然不进图)。
+  final _cardKey = GlobalKey();
+
+  /// 截护照卡 → PNG;截不到(卡片滚出屏幕没绘制等)就返回 null,只发文字。
+  Future<Uint8List?> _capture() async {
+    try {
+      final ro = _cardKey.currentContext?.findRenderObject();
+      if (ro is! RenderRepaintBoundary) return null;
+      final img = await ro.toImage(
+          pixelRatio: MediaQuery.of(context).devicePixelRatio.clamp(1.0, 3.0));
+      final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+      img.dispose();
+      return bytes?.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _share(String text) async {
+    final png = await _capture();
+    await passportShareSend(ShareParams(
+      text: '$text\nGoogle Play: $kPlayStoreUrl\nhttps://gomuseum.app/',
+      files: png == null
+          ? null
+          : [XFile.fromData(png, mimeType: 'image/png', name: 'gomuseum.png')],
+    ));
+  }
+
+  /// (组名, [(编号, 件)]):有位置的按 (wing, level) 归组(组序 = 该组首件在 yaml 里的先后),
+  /// 无位置的归最后一组;整馆都没位置 → 一组、无组名。
+  /// 编号按**分组后**屏幕上的先后排(10-28:按 yaml 顺序编号,分组后小皇宫显示成 2,3,4,5,1,6)。
   List<(String?, List<(int, MustSeeItem)>)> _groups(
       AppLocalizations l10n, String lang) {
-    final indexed = [
-      for (var i = 0; i < data.items.length; i++) (i + 1, data.items[i])
-    ];
-    if (indexed.every((e) => e.$2.location == null)) return [(null, indexed)];
-    final groups = <String, List<(int, MustSeeItem)>>{};
-    final none = <(int, MustSeeItem)>[];
-    for (final e in indexed) {
-      final loc = e.$2.location;
-      if (loc == null || (loc.wing == null && loc.level == null)) {
-        none.add(e);
-        continue;
+    final List<(String?, List<MustSeeItem>)> grouped;
+    if (data.items.every((it) => it.location == null)) {
+      grouped = [(null, data.items)];
+    } else {
+      final groups = <String, List<MustSeeItem>>{};
+      final none = <MustSeeItem>[];
+      for (final it in data.items) {
+        final loc = it.location;
+        if (loc == null || (loc.wing == null && loc.level == null)) {
+          none.add(it);
+          continue;
+        }
+        final name = locationText(
+            l10n, lang, MustSeeLocation(wing: loc.wing, level: loc.level));
+        groups.putIfAbsent(name, () => []).add(it);
       }
-      final name = locationText(
-          l10n, lang, MustSeeLocation(wing: loc.wing, level: loc.level));
-      groups.putIfAbsent(name, () => []).add(e);
+      grouped = [
+        for (final g in groups.entries) (g.key, g.value),
+        if (none.isNotEmpty) (l10n.passportNoLocation, none),
+      ];
     }
+    var n = 0;
     return [
-      for (final g in groups.entries) (g.key, g.value),
-      if (none.isNotEmpty) (l10n.passportNoLocation, none),
+      for (final (name, items) in grouped)
+        (name, [for (final it in items) (++n, it)]),
     ];
   }
 
@@ -147,39 +208,52 @@ class _Passport extends StatelessWidget {
           ),
         Stack(
           children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
-              decoration: BoxDecoration(
-                color: gm.surface,
-                border: Border.all(color: gm.line),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                children: [
-                  Text(l10n.passportTitle(museumName),
-                      textAlign: TextAlign.center,
-                      style: GmText.serif(
-                          size: 16,
-                          weight: FontWeight.w700,
-                          letterSpacing: 1.5)),
-                  const SizedBox(height: 4),
-                  Text(sub,
-                      textAlign: TextAlign.center,
-                      style: GmText.sans(size: 11.5, color: gm.sub)),
-                  if (signedOut)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(l10n.passportSignInHint,
-                          textAlign: TextAlign.center,
-                          style: GmText.sans(size: 12, color: gm.accent)),
-                    ),
-                  const SizedBox(height: 12),
-                  for (final (name, items) in _groups(
-                      l10n, Localizations.localeOf(context).languageCode)) ...[
-                    if (name != null) _GroupLabel(name),
-                    _SlotGrid(slug: slug, items: items, checked: data.checked),
+            RepaintBoundary(
+              key: _cardKey,
+              child: Container(
+                key: const Key('passport-card'),
+                padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
+                decoration: BoxDecoration(
+                  color: gm.surface,
+                  border: Border.all(color: gm.line),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  children: [
+                    Text(l10n.passportTitle(museumName),
+                        textAlign: TextAlign.center,
+                        style: GmText.serif(
+                            size: 16,
+                            weight: FontWeight.w700,
+                            letterSpacing: 1.5)),
+                    const SizedBox(height: 4),
+                    Text(sub,
+                        textAlign: TextAlign.center,
+                        style: GmText.sans(size: 11.5, color: gm.sub)),
+                    if (signedOut)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(l10n.passportSignInHint,
+                            textAlign: TextAlign.center,
+                            style: GmText.sans(size: 12, color: gm.accent)),
+                      ),
+                    const SizedBox(height: 12),
+                    for (final (name, items) in _groups(l10n,
+                        Localizations.localeOf(context).languageCode)) ...[
+                      if (name != null) _GroupLabel(name),
+                      _SlotGrid(
+                          slug: slug, items: items, checked: data.checked),
+                    ],
+                    // 分享图上让收到的人知道是哪个 App
+                    if (data.completed)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Text('GoMuseum · gomuseum.app',
+                            style: GmText.sans(
+                                size: 10.5, letterSpacing: 1, color: gm.faint)),
+                      ),
                   ],
-                ],
+                ),
               ),
             ),
             if (data.completed)
@@ -208,11 +282,8 @@ class _Passport extends StatelessWidget {
               child: FilledButton(
                 style: FilledButton.styleFrom(
                     backgroundColor: gm.ctaBg, foregroundColor: gm.ctaInk),
-                onPressed: () => SharePlus.instance.share(ShareParams(
-                  text:
-                      '${l10n.passportShareText(museumName, total, _ymd(_doneAt))}\n'
-                      'https://gomuseum.app/',
-                )),
+                onPressed: () => _share(
+                    l10n.passportShareText(museumName, total, _ymd(_doneAt))),
                 child: Text(l10n.passportShare),
               ),
             ),
@@ -290,6 +361,14 @@ class _SlotGrid extends StatelessWidget {
   }
 }
 
+/// 去色(ITU-R BT.709 亮度系数)。
+const _greyscale = ColorFilter.matrix(<double>[
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0, 0, 0, 1, 0,
+]);
+
 class _Slot extends StatelessWidget {
   const _Slot(
       {required this.slug,
@@ -360,13 +439,55 @@ class _Slot extends StatelessWidget {
                       ),
                     ]),
                   )
-                : CustomPaint(
-                    painter: _DashedCircle(gm.faint),
-                    child: Center(
-                      child: Text('$n',
-                          style: GmText.serif(size: 20, color: gm.faint)),
-                    ),
-                  ),
+                : item.thumbnail == null
+                    ? CustomPaint(
+                        painter: _DashedCircle(gm.faint),
+                        child: Center(
+                          child: Text('$n',
+                              style: GmText.serif(size: 20, color: gm.faint)),
+                        ),
+                      )
+                    // 没盖:淡灰作品图当提示(10-28 用户:空圈难看,也不知道该找哪件)
+                    : Stack(alignment: Alignment.bottomCenter, children: [
+                        Padding(
+                          key: Key('slot-ghost-${item.qid}'),
+                          padding: const EdgeInsets.all(5),
+                          child: ClipOval(
+                            child: Opacity(
+                              opacity: 0.35,
+                              child: ColorFiltered(
+                                colorFilter: _greyscale,
+                                child: SizedBox.expand(
+                                  child: Image.network(
+                                    sizedImageUrl(item.thumbnail!, 200),
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 200,
+                                    headers: kImageRequestHeaders,
+                                    errorBuilder: (_, __, ___) =>
+                                        const SizedBox.shrink(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned.fill(
+                            child:
+                                CustomPaint(painter: _DashedCircle(gm.faint))),
+                        Positioned(
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                                color: gm.surface,
+                                border: Border.all(color: gm.line),
+                                borderRadius: BorderRadius.circular(6)),
+                            child: Text('$n',
+                                style: GmText.sans(size: 9, color: gm.sub)),
+                          ),
+                        ),
+                      ]),
           ),
           const SizedBox(height: 5),
           Padding(
