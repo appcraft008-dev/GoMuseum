@@ -13,6 +13,20 @@
 这类缺陷已经发生三次（autojunk、漏归一化、日语浊点），
 每次都是靠人工比对才发现的。放进版本控制 + 配自动测试，是为了让第四次被挡住。
 
+## 多批排队与暂停(2026-10-28)
+
+多批串行用 `queue.sh`,批次仍由 `start_run.sh` 起:
+
+```bash
+tools/tts/queue.sh start    # 按 ~/tts-lab/queue.txt 逐批跑,已完成的批次跳过
+tools/tts/queue.sh pause    # 让出资源:先停队列再停批次,正在生成的那 1 条作废
+tools/tts/queue.sh status   # 每批 完成/未完成 + 条数
+```
+
+`queue.txt` 每行「<jobs.json> <输出目录>」。完成与否只认日志里本次起跑后的 ALLDONE
+—— 被 pause 杀掉的批次没有它,队列会停在原地,而不是当成跑完去起下一批
+(10-26 手搓串联就这样让意语提前开跑过)。续跑 = 再 `start`,批内已合格的条目自动跳过。
+
 ## 唯一管线(2026-10-25 定)
 
 **生成只有这一份代码、这一个入口:`tools/tts/start_run.sh`。** 要改进就改这里、走 PR,
