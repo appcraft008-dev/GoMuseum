@@ -1340,4 +1340,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get recLabelNoMatch =>
       'Wystawa czasowa lub jeszcze nie w przewodniku? Spróbuj innej nazwy lub numeru.';
+
+  @override
+  String get recentSearches => 'Ostatnie wyszukiwania';
+
+  @override
+  String get recentSearchesClear => 'Wyczyść';
 }

@@ -1282,4 +1282,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recLabelNoMatch => '企画展か未収録の作品かもしれません。別の名前や番号で探してみてください。';
+
+  @override
+  String get recentSearches => '最近の検索';
+
+  @override
+  String get recentSearchesClear => 'クリア';
 }

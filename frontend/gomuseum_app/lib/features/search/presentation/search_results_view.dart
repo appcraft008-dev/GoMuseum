@@ -10,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/utils/year_format.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/search/data/search_api.dart';
@@ -45,6 +47,14 @@ class SearchResultsView extends ConsumerWidget {
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
     final async = ref.watch(searchProvider(query));
+    // 全局搜索同名作品多(十几幅《圣安东尼的诱惑》)→ 每件标所属馆;馆内搜索不标。
+    final museumNames = query.slug != null
+        ? const <String, String>{}
+        : {
+            for (final m in ref.watch(museumsListProvider).valueOrNull ??
+                const <MuseumSummary>[])
+              m.slug: m.localizedName(query.lang),
+          };
 
     return async.when(
       loading: () => Padding(
@@ -73,6 +83,7 @@ class SearchResultsView extends ConsumerWidget {
                   onPick: onPickObject,
                   // 用户在按编号找时把完整编号露出来对照说明牌;按名字搜时不加噪音
                   showInventory: query.q.contains(RegExp(r'\d')),
+                  museumName: museumNames[o.museum],
                 ),
             ],
           ],
@@ -146,6 +157,7 @@ class _ObjectHitRow extends StatelessWidget {
     this.onNavigate,
     this.onPick,
     this.showInventory = false,
+    this.museumName,
   });
 
   final SearchObject obj;
@@ -153,6 +165,9 @@ class _ObjectHitRow extends StatelessWidget {
   final VoidCallback? onNavigate;
   final void Function(SearchObject)? onPick;
   final bool showInventory;
+
+  /// 所属馆名(仅全局搜索给);null → 不显示这一行。
+  final String? museumName;
 
   @override
   Widget build(BuildContext context) {
@@ -209,6 +224,21 @@ class _ObjectHitRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: GmText.sans(size: 11.5, color: gm.sub),
                   ),
+                  if (museumName != null) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        GmIcon(GmIcons.pin, size: 11, color: gm.faint),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(museumName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GmText.sans(size: 10.5, color: gm.faint)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

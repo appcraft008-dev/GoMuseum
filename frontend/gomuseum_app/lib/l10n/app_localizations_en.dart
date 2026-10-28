@@ -1329,4 +1329,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recLabelNoMatch =>
       'Temporary show or not in our guide yet? Try another name or number.';
+
+  @override
+  String get recentSearches => 'Recent searches';
+
+  @override
+  String get recentSearchesClear => 'Clear';
 }

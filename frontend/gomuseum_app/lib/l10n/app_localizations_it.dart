@@ -1336,4 +1336,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get recLabelNoMatch =>
       'Mostra temporanea o non ancora in guida? Prova un altro nome o numero.';
+
+  @override
+  String get recentSearches => 'Ricerche recenti';
+
+  @override
+  String get recentSearchesClear => 'Cancella';
 }

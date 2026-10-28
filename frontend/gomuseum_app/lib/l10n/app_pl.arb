@@ -393,5 +393,7 @@
   "guideNotThisOne": "To nie to dzieło?",
   "guideNotThisOneNoted": "Zapisano. Spróbuj z innego kąta albo użyj wyszukiwania.",
   "recMaybeNotCollected": "Wystawa czasowa lub jeszcze nie w przewodniku? Zdjęcie opisu zwykle pomaga.",
-  "recLabelNoMatch": "Wystawa czasowa lub jeszcze nie w przewodniku? Spróbuj innej nazwy lub numeru."
+  "recLabelNoMatch": "Wystawa czasowa lub jeszcze nie w przewodniku? Spróbuj innej nazwy lub numeru.",
+  "recentSearches": "Ostatnie wyszukiwania",
+  "recentSearchesClear": "Wyczyść"
 }

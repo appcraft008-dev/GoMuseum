@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gomuseum_app/ui/gm/gm.dart';
 import 'package:gomuseum_app/features/content/data/datasources/catalog_remote_datasource.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
@@ -136,6 +137,29 @@ Widget _wrap({bool withIntro = true}) => ProviderScope(
 // ---------------------------------------------------------------------------
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('馆内搜索:打开且没输入 → 只显示本馆的最近搜索', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'recent_searches_orsay': ['睡莲'],
+      'recent_searches_global': ['蒙娜丽莎'],
+    });
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('最近搜索'), findsNothing);
+
+    await tester.tap(find.byWidgetPredicate(
+        (w) => w is GmIcon && w.icon == GmIcons.search)); // 顶栏搜索开关
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('最近搜索'), findsOneWidget);
+    expect(find.text('睡莲'), findsOneWidget);
+    expect(find.text('蒙娜丽莎'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), '睡');
+    await tester.pump();
+    expect(find.text('最近搜索'), findsNothing); // 一打字就收起
+  });
 
   testWidgets('藏品目录：默认大图网格，点切换 → 列表并记在本机', (tester) async {
     await tester.pumpWidget(_wrap());

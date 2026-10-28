@@ -2386,6 +2386,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Temporary show or not in our guide yet? Try another name or number.'**
   String get recLabelNoMatch;
+
+  /// No description provided for @recentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get recentSearches;
+
+  /// No description provided for @recentSearchesClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get recentSearchesClear;
 }
 
 class _AppLocalizationsDelegate

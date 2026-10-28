@@ -393,5 +393,7 @@
   "guideNotThisOne": "Ce n'est pas celle-ci ?",
   "guideNotThisOneNoted": "C'est noté. Essayez un autre angle, ou utilisez la recherche.",
   "recMaybeNotCollected": "Expo temporaire ou pas encore au guide\u00a0? Le cartel en photo aide souvent.",
-  "recLabelNoMatch": "Expo temporaire ou pas encore au guide\u00a0? Essayez un autre nom ou numéro."
+  "recLabelNoMatch": "Expo temporaire ou pas encore au guide\u00a0? Essayez un autre nom ou numéro.",
+  "recentSearches": "Recherches récentes",
+  "recentSearchesClear": "Effacer"
 }
