@@ -40,7 +40,8 @@ run)  # 内部:由 start 用 nohup 拉起,一个队列文件一个进程
   done 3< "$Q"
   echo "$(date '+%F %T') 队列全部完成" ;;
 start)
-  alive && { echo "❌ 已有批次在跑,先 pause" >&2; exit 1; }
+  # 只拦同一条队列重复起:Mac 队列在跑时也能单独起 Modal 队列(反之亦然)
+  for Q in "${QS[@]}"; do pgrep -f "queue.sh run $Q" >/dev/null && { echo "❌ $(basename "$Q") 已在跑,先 pause" >&2; exit 1; }; done
   for Q in "${QS[@]}"; do
     [ -f "$Q" ] || { echo "❌ 队列文件不存在: $Q" >&2; exit 1; }
     nohup "$HERE/queue.sh" run "$Q" >> "${Q%.txt}.log" 2>&1 &

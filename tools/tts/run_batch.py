@@ -121,7 +121,17 @@ def generate(text, lang):
     seed = LAB / f"seeds_final/{SEED_OF[lang]}.wav"
     if GPU:
         import modal_gen
-        wav, _ = modal_gen.TTS().gen.remote(text, seed.read_bytes(), CFG, TIMESTEPS)
+        # 10-28 实测:新进程首次连 input-plane 偶发 TimeoutError(同配置再起就通),
+        # 不重试的话整批在第一条就挂掉。连接错误重试,生成本身的错误照常抛。
+        for i in range(3):
+            try:
+                wav, _ = modal_gen.TTS().gen.remote(text, seed.read_bytes(), CFG, TIMESTEPS)
+                break
+            except TimeoutError:
+                if i == 2:
+                    raise
+                print(f"  Modal 连接超时,{30 * (i + 1)}s 后重试", flush=True)
+                time.sleep(30 * (i + 1))
         w, sr = sf.read(io.BytesIO(wav), dtype="float32")
         return w, sr
     m = model()
