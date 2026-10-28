@@ -103,7 +103,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                     _pageDots(gm),
                     if (nearby?.mode == NearbyMode.none)
-                      _enableLocation(gm, l10n),
+                      nearby!.located
+                          ? _noMuseumNearby(gm, l10n)
+                          : _enableLocation(gm, l10n),
                     ..._continueSection(gm, l10n),
                   ],
                 ),
@@ -114,6 +116,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
   }
+
+  /// 定位到了、但附近没有收录的馆(如人在马德里):只说明,不再给「开启定位」入口。
+  Widget _noMuseumNearby(GmPalette gm, AppLocalizations l10n) => Padding(
+        padding: const EdgeInsets.fromLTRB(26, 2, 26, 6),
+        child: Text(l10n.homeNoMuseumNearby,
+            textAlign: TextAlign.center,
+            style: GmText.sans(size: 12, color: gm.sub)),
+      );
 
   /// 没有任何位置信号时的一行入口:点了才请求定位权限 —— 不在启动时弹。
   Widget _enableLocation(GmPalette gm, AppLocalizations l10n) =>

@@ -78,6 +78,7 @@ def test_list_shape(session):
         "name_i18n",  # 加法字段:十语馆名(本端点无 language 参数,给整张表)
         "city_i18n",  # 加法字段:十语城市名(spec 2026-09-28 §3.3)
         "coordinates",  # 加法字段:馆坐标(首页「附近」,spec 2026-09-29)
+        "must_see_count",  # 加法字段:必看件数(必看打卡,spec 2026-10-27)
     }
     assert rows[0]["artwork_count"] == 1
     assert rows[0]["cover_image"] is None  # 未设 cover_image_key → null(前端隐藏)

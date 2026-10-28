@@ -1,9 +1,10 @@
-/// 馆详情页 — 暖纸手册 §8 CollectionListScreen（顶层二级 tab：封面 / 藏品）
+/// 馆详情页 — 暖纸手册 §8 CollectionListScreen（顶层二级 tab：封面 / [必看] / 藏品）
 ///
 /// 顶栏：← + 馆名 + 藏品数 + 搜索图标（全局，不随 tab 变化）
 /// Tab①「封面」：hero 图 + 馆介绍(description) + 实用信息(开放时间/官网)。
 ///   两字段皆缺(老馆/未生成) → 显「介绍生成中」占位，不留空白页。
-/// Tab②「藏品」（默认，用户进馆直接看目录）：分类 Tab 横滑(A2 categories) + 目录列表(A3 无限滚动)，与此前行为一致。
+/// 有必看清单的馆多一个「必看」tab(护照页,spec 2026-10-27 必看打卡)并默认停在它。
+/// Tab②「藏品」（无必看清单时默认，用户进馆直接看目录）：分类 Tab 横滑(A2 categories) + 目录列表(A3 无限滚动)，与此前行为一致。
 /// 顶层 tab 结构预留扩展位——以后加「地图」「特展」等新 tab 只需在 _MuseumTopTabBar
 /// 的 tabs 列表 + TabBarView children 各加一项。
 /// 目录列表行：序号 + 缩略图 + 标题/作者·年代 + content_status 角标；stub → 「待完善」角标
@@ -17,12 +18,15 @@ import 'package:go_router/go_router.dart';
 import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/core/utils/year_format.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_detail_model.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/object_list_notifier.dart';
 import 'package:gomuseum_app/features/explore/presentation/providers/collection_view_provider.dart';
 import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
+import 'package:gomuseum_app/features/must_see/data/must_see_providers.dart';
+import 'package:gomuseum_app/features/must_see/presentation/passport_page.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -43,9 +47,25 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
   String _selectedCategory = 'all';
   final ScrollController _scrollController = ScrollController();
 
-  /// 顶层二级 tab：0=封面 1=藏品(默认，用户进馆直接看目录)。
+  /// 这家馆有必看清单 → 多一个「必看」tab。**同步**读已缓存的馆列表(首页已拉过),
+  /// 标签栏第一帧就对;还没拿到(深链冷启动)按没有处理(spec §五.4)。
+  late final bool _hasMustSee =
+      (ref.read(museumsListProvider).valueOrNull ?? const [])
+          .any((m) => m.slug == widget.slug && m.mustSeeCount > 0);
+
+  /// 顶层 tab：封面 / [必看] / 藏品。下标 1 是默认页:有必看 = 必看,否则 = 藏品。
   late final TabController _topTabController =
-      TabController(length: 2, vsync: this, initialIndex: 1);
+      TabController(length: _hasMustSee ? 3 : 2, vsync: this, initialIndex: 1)
+        ..addListener(_onTopTab);
+
+  /// 每次切到「必看」都拉一次最新进度(spec §五.6)。
+  void _onTopTab() {
+    if (_hasMustSee &&
+        !_topTabController.indexIsChanging &&
+        _topTabController.index == 1) {
+      ref.invalidate(mustSeeProvider(widget.slug));
+    }
+  }
 
   /// 馆内搜索：图标展开搜索框，即时（debounce 300ms）只搜当前馆。
   bool _searching = false;
@@ -102,6 +122,15 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
     }
   }
 
+  /// 护照页标题里的馆名:馆列表里按界面语言取(与探索页一致)。
+  String _museumName(String lang) {
+    for (final m in ref.read(museumsListProvider).valueOrNull ??
+        const <MuseumSummary>[]) {
+      if (m.slug == widget.slug) return m.localizedName(lang);
+    }
+    return widget.slug;
+  }
+
   @override
   Widget build(BuildContext context) {
     final gm = context.gm;
@@ -141,13 +170,19 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
                       ),
               )
             else ...[
-              _MuseumTopTabBar(controller: _topTabController),
+              _MuseumTopTabBar(
+                  controller: _topTabController, hasMustSee: _hasMustSee),
               Expanded(
                 child: TabBarView(
                   controller: _topTabController,
                   children: [
                     // Tab① 封面：介绍 + 实用信息（新增扩展点在此列表追加）。
                     _CoverTab(detailAsync: detailAsync),
+                    if (_hasMustSee)
+                      MustSeePassport(
+                        slug: widget.slug,
+                        museumName: _museumName(lang),
+                      ),
                     // Tab② 藏品：分类 tab + 无限滚动目录（与此前行为一致）。
                     Column(
                       children: [
@@ -188,9 +223,10 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
 // TabBarView.children 对应加一个 view，TabController(length: N) 同步改）。
 // ---------------------------------------------------------------------------
 class _MuseumTopTabBar extends StatelessWidget {
-  const _MuseumTopTabBar({required this.controller});
+  const _MuseumTopTabBar({required this.controller, required this.hasMustSee});
 
   final TabController controller;
+  final bool hasMustSee;
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +249,7 @@ class _MuseumTopTabBar extends StatelessWidget {
         indicatorWeight: 2.5,
         tabs: [
           Tab(text: l10n.museumCoverTab),
+          if (hasMustSee) Tab(text: l10n.museumTabMustSee),
           Tab(text: l10n.museumCollectionTab),
         ],
       ),

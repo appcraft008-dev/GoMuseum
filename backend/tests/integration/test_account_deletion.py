@@ -467,3 +467,34 @@ def test_删号断开使用事件里的账号与设备号但留下事件本身(c
     assert all(e.device_id is None for e in mine), "还指着一台设备就不算断开"
     other = db.query(AppEvent).filter(AppEvent.user_id == "someone-else").one()
     assert other.device_id == "dev-x", "别人的事件不能碰"
+
+
+def test_delete_account_removes_medals(client_db):
+    from datetime import datetime
+
+    from app.models.must_see_medal import MustSeeMedal
+    from app.services.auth_service import AuthService
+
+    c, db = client_db
+    tok = c.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "medal@gomuseum.app",
+            "username": "medal",
+            "password": "Passw0rd!1",
+        },
+    ).json()["access_token"]
+    uid = str(AuthService.get_current_user(db, tok).id)
+    for who in (uid, "other"):
+        db.add(
+            MustSeeMedal(
+                user_id=who,
+                museum_slug="louvre",
+                completed_at=datetime(2026, 10, 27),
+                count=12,
+            )
+        )
+    db.commit()
+    r = c.delete("/api/v1/auth/me", headers={"Authorization": f"Bearer {tok}"})
+    assert r.status_code == 204, r.text
+    assert [m.user_id for m in db.query(MustSeeMedal).all()] == ["other"]

@@ -19,19 +19,26 @@ from sqlalchemy import and_, case, exists, or_
 from app.models.museum_object import MuseumObject, ObjectImage
 
 
-def _load() -> dict[str, list[str]]:
+def _configs():
     from app.services.enrichment.catalog import MuseumCatalog
     from app.services.enrichment.factory import CATALOG_PATH
 
-    return {
-        slug: list(cfg.must_see)
+    return [
+        (slug, cfg)
         for slug, cfg in MuseumCatalog.from_file(CATALOG_PATH).items()
         if cfg.must_see
-    }
+    ]
 
+
+_CONFIGS = _configs()
 
 # 真相源是 museums.yaml 的 `must_see:`(2026-10-22 从代码搬过去:上新馆=加 yaml,不改代码)
-MUST_SEE: dict[str, list[str]] = _load()
+MUST_SEE: dict[str, list[str]] = {slug: list(cfg.must_see) for slug, cfg in _CONFIGS}
+
+# 必看件的馆内位置 slug → qid → {wing, level, room}(官网取得到才有,spec 2026-10-27 §五.5)
+MUST_SEE_LOCATION: dict[str, dict[str, dict]] = {
+    slug: dict(cfg.must_see_locations) for slug, cfg in _CONFIGS
+}
 
 ALL_MUST_SEE: frozenset[str] = frozenset(q for qs in MUST_SEE.values() for q in qs)
 

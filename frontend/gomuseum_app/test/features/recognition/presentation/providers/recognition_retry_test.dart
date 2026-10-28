@@ -27,6 +27,7 @@ class _ScriptedDs implements RecognitionRemoteDataSource {
     required String language,
     String mode = 'artwork',
     String? deviceId,
+    String? capture,
   }) async {
     final step = script[calls++];
     log.add('send');

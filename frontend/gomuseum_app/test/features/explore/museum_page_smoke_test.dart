@@ -14,7 +14,10 @@ import 'package:gomuseum_app/features/content/data/models/museum_detail_model.da
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/explore/presentation/pages/museum_page.dart';
+import 'package:gomuseum_app/features/must_see/data/must_see_models.dart';
+import 'package:gomuseum_app/features/must_see/data/must_see_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
@@ -117,6 +120,8 @@ Widget _wrap({bool withIntro = true}) => ProviderScope(
       overrides: [
         catalogDataSourceProvider
             .overrideWithValue(_FakeCatalogDs(withIntro: withIntro)),
+        // 馆页同步读馆列表决定有没有「必看」tab;不 override 会发真请求
+        museumsListProvider.overrideWith((_) async => const <MuseumSummary>[]),
       ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -225,5 +230,96 @@ void main() {
 
     expect(find.text('馆方介绍生成中，敬请期待'), findsOneWidget);
     expect(find.text('开放时间'), findsNothing);
+  });
+
+  // --- 必看 tab(spec 2026-10-27 必看打卡 §五.6) ---
+
+  Future<int> pumpWithMustSee(WidgetTester tester, {required int count}) async {
+    var requests = 0;
+    final container = ProviderContainer(overrides: [
+      catalogDataSourceProvider.overrideWithValue(_FakeCatalogDs()),
+      museumsListProvider.overrideWith((_) async => [
+            MuseumSummary.fromJson(
+                {'slug': 'orsay', 'name': '奥赛博物馆', 'must_see_count': count}),
+          ]),
+      mustSeeProvider.overrideWith((ref, slug) async {
+        requests++;
+        return const MustSeeData(
+          items: [MustSeeItem(qid: 'Q1', title: '奥林匹亚', artist: '马奈')],
+          checked: {},
+          roundStartedAt: null,
+          completed: false,
+          medals: [],
+        );
+      }),
+    ]);
+    addTearDown(container.dispose);
+    // 真机上馆列表在首页就已拉到缓存里;这里先把它解析完,模拟「进馆页时已在缓存」
+    await container.read(museumsListProvider.future);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('zh'),
+        home: MuseumPage(slug: 'orsay'),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    return requests;
+  }
+
+  testWidgets('有必看清单 → 封面/必看/藏品,默认停在「必看」', (tester) async {
+    await pumpWithMustSee(tester, count: 12);
+    expect(find.text('封面'), findsOneWidget);
+    expect(find.text('必看'), findsOneWidget);
+    expect(find.text('藏品'), findsOneWidget);
+    expect(find.text('奥赛博物馆 · 必看'), findsOneWidget); // 护照页标题
+    expect(find.text('在阿尔勒的卧室'), findsNothing); // 藏品页没在前台
+  });
+
+  testWidgets('必看件数为 0 → 不出「必看」tab,默认「藏品」', (tester) async {
+    await pumpWithMustSee(tester, count: 0);
+    expect(find.text('必看'), findsNothing);
+    expect(find.text('在阿尔勒的卧室'), findsOneWidget);
+  });
+
+  testWidgets('切走再切回「必看」会重新拉进度', (tester) async {
+    var n = 0;
+    final container = ProviderContainer(overrides: [
+      catalogDataSourceProvider.overrideWithValue(_FakeCatalogDs()),
+      museumsListProvider.overrideWith((_) async => [
+            MuseumSummary.fromJson(
+                {'slug': 'orsay', 'name': '奥赛博物馆', 'must_see_count': 1}),
+          ]),
+      mustSeeProvider.overrideWith((ref, slug) async {
+        n++;
+        return const MustSeeData(
+            items: [],
+            checked: {},
+            roundStartedAt: null,
+            completed: false,
+            medals: []);
+      }),
+    ]);
+    addTearDown(container.dispose);
+    await container.read(museumsListProvider.future);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('zh'),
+        home: MuseumPage(slug: 'orsay'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final first = n;
+    await tester.tap(find.text('藏品'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('必看'));
+    await tester.pumpAndSettle();
+    expect(n, greaterThan(first));
   });
 }

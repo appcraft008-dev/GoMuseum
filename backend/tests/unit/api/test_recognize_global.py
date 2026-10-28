@@ -637,3 +637,123 @@ def test_first_confirm_records_qid(monkeypatch):
         assert ev.props["qid"] == "Q1"
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+# --- 必看打卡:capture 参数与「确认没扣成费就撤销」(spec 2026-10-27) ---
+
+
+def test_capture_param_passed_through(client, monkeypatch):
+    seen = {}
+
+    def fake(db, slug, data, **kw):
+        seen.update(kw)
+        return {"outcome": "unrecognized"}
+
+    monkeypatch.setattr("app.services.recognition.service.recognize_billed", fake)
+    r = client.post("/api/v1/recognize?device_id=d&capture=camera", files=_img())
+    assert r.status_code == 200 and seen["capture"] == "camera"
+    r = client.post(
+        "/api/v1/museums/orsay/recognize?device_id=d&capture=gallery", files=_img()
+    )
+    assert r.status_code == 200 and seen["capture"] == "gallery"
+    client.post("/api/v1/recognize?device_id=d", files=_img())
+    assert seen["capture"] is None
+    r = client.post("/api/v1/recognize?device_id=d&capture=foo", files=_img())
+    assert r.status_code == 422
+
+
+def _cap_event(s, phash):
+    from app.models.recognition_event import RecognitionEvent
+
+    s.add(
+        RecognitionEvent(
+            phash=phash,
+            outcome="candidates",
+            top_qid="Q1",
+            engine="text",
+            user_id="u-1",
+            capture="camera",
+        )
+    )
+    s.commit()
+
+
+def _cap(s, phash):
+    from app.models.recognition_event import RecognitionEvent
+
+    s.expire_all()
+    return s.query(RecognitionEvent).filter_by(phash=phash).one().capture
+
+
+def test_confirm_charged_keeps_capture(monkeypatch):
+    client, s = _confirm_client()
+    headers = _as_user(monkeypatch)
+    try:
+        _cap_event(s, "c-ok")
+        client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "c-ok", "qid": "Q1"},
+            headers=headers,
+        )
+        assert _cap(s, "c-ok") == "camera"
+        # 改选:同一张照片已扣过,不撤销
+        client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "c-ok", "qid": "Q2"},
+            headers=headers,
+        )
+        assert _cap(s, "c-ok") == "camera"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_without_token_clears_capture():
+    client, s = _confirm_client()
+    try:
+        _cap_event(s, "c-anon")
+        client.post("/api/v1/recognize/confirm", json={"phash": "c-anon", "qid": "Q1"})
+        assert _cap(s, "c-anon") is None
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_no_quota_clears_capture(monkeypatch):
+    from app.services.benefits_service import BenefitsService
+
+    client, s = _confirm_client()
+    headers = _as_user(monkeypatch)
+    monkeypatch.setattr(BenefitsService, "consume_recognition", lambda self, **k: False)
+    try:
+        _cap_event(s, "c-0")
+        r = client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "c-0", "qid": "Q1"},
+            headers=headers,
+        )
+        assert r.status_code == 204
+        assert _cap(s, "c-0") is None
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+def test_confirm_billing_exception_clears_capture(monkeypatch):
+    from app.services.benefits_service import BenefitsService
+
+    client, s = _confirm_client()
+    headers = _as_user(monkeypatch)
+
+    def boom(self, **k):
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(BenefitsService, "consume_recognition", boom)
+    try:
+        _cap_event(s, "c-x")
+        with pytest.raises(RuntimeError):
+            client.post(
+                "/api/v1/recognize/confirm",
+                json={"phash": "c-x", "qid": "Q1"},
+                headers=headers,
+            )
+        assert _cap(s, "c-x") is None
+    finally:
+        app.dependency_overrides.pop(get_db, None)

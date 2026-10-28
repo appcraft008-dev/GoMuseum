@@ -106,3 +106,29 @@ def test_只导出自己的交易(db, user):
     out = AuthService.export_user_data(db, user)
 
     assert [p["store_transaction_id"] for p in out["purchases"]] == ["GPA.mine"]
+
+
+def test_export_includes_must_see_medals(db, user):
+    from app.models.must_see_medal import MustSeeMedal
+
+    db.add(
+        MustSeeMedal(
+            user_id=str(user.id),
+            museum_slug="louvre",
+            completed_at=datetime(2026, 10, 27, 9, 0),
+            count=12,
+        )
+    )
+    db.add(
+        MustSeeMedal(
+            user_id="someone-else",
+            museum_slug="louvre",
+            completed_at=datetime(2026, 10, 27, 9, 0),
+            count=12,
+        )
+    )
+    db.commit()
+    out = AuthService.export_user_data(db, user)
+    assert out["must_see_medals"] == [
+        {"museum_slug": "louvre", "completed_at": "2026-10-27T09:00:00", "count": 12}
+    ]

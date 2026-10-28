@@ -341,6 +341,12 @@ abstract class AppLocalizations {
   /// **'Turn on location to see museums near you'**
   String get homeEnableLocation;
 
+  /// No description provided for @homeNoMuseumNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'No museums in our guide near you yet'**
+  String get homeNoMuseumNearby;
+
   /// No description provided for @homeContinue.
   ///
   /// In en, this message translates to:
@@ -1456,6 +1462,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Collection'**
   String get museumCollectionTab;
+
+  /// No description provided for @museumTabMustSee.
+  ///
+  /// In en, this message translates to:
+  /// **'Must-sees'**
+  String get museumTabMustSee;
+
+  /// No description provided for @passportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{museum} · Must-sees'**
+  String passportTitle(String museum);
+
+  /// No description provided for @passportStamped.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total} stamped'**
+  String passportStamped(int done, int total);
+
+  /// No description provided for @passportRoundSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Since {date}'**
+  String passportRoundSince(String date);
+
+  /// No description provided for @passportRoundDone.
+  ///
+  /// In en, this message translates to:
+  /// **'All seen this visit ✓'**
+  String get passportRoundDone;
+
+  /// No description provided for @passportSealTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ALL SEEN'**
+  String get passportSealTitle;
+
+  /// No description provided for @passportShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share this page'**
+  String get passportShare;
+
+  /// No description provided for @passportMedals.
+  ///
+  /// In en, this message translates to:
+  /// **'My medals'**
+  String get passportMedals;
+
+  /// No description provided for @passportNoLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Room not listed'**
+  String get passportNoLocation;
+
+  /// No description provided for @passportSignInHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in, then snap artworks in the museum to collect stamps'**
+  String get passportSignInHint;
+
+  /// No description provided for @passportLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level {level}'**
+  String passportLevel(int level);
+
+  /// No description provided for @passportBasement.
+  ///
+  /// In en, this message translates to:
+  /// **'Level -{n}'**
+  String passportBasement(int n);
+
+  /// No description provided for @passportRoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Room {room}'**
+  String passportRoom(String room);
+
+  /// No description provided for @mustSeeToastStamped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stamped! Must-sees {done} / {total}'**
+  String mustSeeToastStamped(int done, int total);
+
+  /// No description provided for @mustSeeToastDone.
+  ///
+  /// In en, this message translates to:
+  /// **'All must-sees seen {total} / {total}'**
+  String mustSeeToastDone(int total);
+
+  /// No description provided for @passportShareText.
+  ///
+  /// In en, this message translates to:
+  /// **'I saw all {total} must-sees at {museum} ({date}), stamped with GoMuseum.'**
+  String passportShareText(String museum, int total, String date);
 
   /// No description provided for @museumOpeningHours.
   ///

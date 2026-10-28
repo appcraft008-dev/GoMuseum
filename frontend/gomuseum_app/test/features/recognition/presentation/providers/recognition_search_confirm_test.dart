@@ -21,6 +21,7 @@ class _Ds implements RecognitionRemoteDataSource {
     required String language,
     String mode = 'artwork',
     String? deviceId,
+    String? capture,
   }) async =>
       RecognizeResponse.fromJson(resp);
 

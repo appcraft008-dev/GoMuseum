@@ -51,6 +51,9 @@ class RecognitionEvent(Base):
     # P2-13(2026-10-13):向量定档用的前 3 名 [[qid, score], ...](藏掉不可见馆之后)。
     # 评估「第 1 名领先第 2 名多少才直判」的原始材料;GPT/label 路径为 NULL。
     vector_top = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
+    # 必看打卡(2026-10-27):这张照片是快门现场拍的("camera")还是相册选的("gallery")。
+    # 老 App 不传 → NULL,永不算打卡。命中后没扣成费的行会被清回 NULL(见 recognize_billed)。
+    capture = Column(String(8), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     __table_args__ = (

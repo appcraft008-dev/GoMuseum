@@ -109,6 +109,20 @@ def tts_input(text: str, lang: str) -> str:
     return _CC.convert(text) if lang == "zh-hant" else text
 
 
+# 数字念出来比写出来长:"1863" 4 个字符,念作 "eighteen sixty-three" 约 20 个。
+# 按字符数定语速目标,数字/年份密的段(背景、事实)会被 atempo 硬压快 ——
+# 10-27 用户盲听点名的 en/04、05 就是这样(atempo 1.13/1.14,数字密度是均值 2-4 倍)。
+# 每位数字折算的字符数按修线上批真实产物拟合:en/fr 都在 4.5 时 atempo 方差最小
+# (分别降 12%/15%);zh/it 拟合出 1.0,即没有这个效应,故不列。
+DIGIT_SPOKEN = {"en": 4.5, "fr": 4.5}
+
+
+def spoken_len(text: str, lang: str) -> float:
+    """定语速目标用的「念出来的长度」(字符当量)。只给数字加权,其余同 len。"""
+    w = DIGIT_SPOKEN.get(lang, 1.0)
+    return len(text) + (w - 1) * sum(c.isdigit() for c in text)
+
+
 def length_ratio(source: str, transcript: str) -> float:
     """转写字数 / 原文字数。**专抓复读崩坏与截断**,比一致性阈值更直接。
 

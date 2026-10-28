@@ -22,6 +22,7 @@ class _ThrowingDs implements RecognitionRemoteDataSource {
     required String language,
     String mode = 'artwork',
     String? deviceId,
+    String? capture,
   }) async =>
       throw error;
 

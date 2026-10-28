@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
+import 'package:gomuseum_app/features/must_see/data/must_see_models.dart';
+import 'package:gomuseum_app/features/must_see/data/must_see_providers.dart';
 import 'package:gomuseum_app/features/content/data/models/object_content_model.dart';
 import 'package:gomuseum_app/features/content/data/models/object_list_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
@@ -40,6 +44,7 @@ class _Ds implements RecognitionRemoteDataSource {
     required String language,
     String mode = 'artwork',
     String? deviceId,
+    String? capture,
   }) =>
       throw UnimplementedError();
 
@@ -91,13 +96,20 @@ ObjectContent _sample() => const ObjectContent(
       suggestedQuestions: [],
     );
 
-Future<_Ds> _pump(WidgetTester t, {String? rejectPhash}) async {
+Future<_Ds> _pump(WidgetTester t,
+    {String? rejectPhash,
+    bool liveShot = false,
+    List<Override> extra = const []}) async {
   final ds = _Ds();
   final router = GoRouter(initialLocation: '/guide', routes: [
     GoRoute(
       path: '/guide',
       builder: (_, __) => GuidePage(
-          args: GuideArgs(slug: 'orsay', qid: 'Q1', rejectPhash: rejectPhash)),
+          args: GuideArgs(
+              slug: 'orsay',
+              qid: 'Q1',
+              rejectPhash: rejectPhash,
+              liveShot: liveShot)),
     ),
     GoRoute(
         path: '/camera',
@@ -113,6 +125,7 @@ Future<_Ds> _pump(WidgetTester t, {String? rejectPhash}) async {
       recognitionRemoteDataSourceProvider.overrideWithValue(ds),
       historyRemoteDataSourceProvider.overrideWithValue(_History()),
       resolvedLocaleProvider.overrideWithValue(const Locale('zh')),
+      ...extra,
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -142,5 +155,33 @@ void main() {
     expect(ds.rejects.single.$2, ['Q1']);
     expect(find.text('CAMERA'), findsOneWidget);
     expect(find.text(l10n.guideNotThisOneNoted), findsOneWidget);
+  });
+
+  // --- 必看打卡盖章提示的接线(spec 2026-10-27 §五.6) ---
+  List<Override> mustSee() => [
+        museumsListProvider.overrideWith((_) async => [
+              MuseumSummary.fromJson({'slug': 'orsay', 'must_see_count': 2}),
+            ]),
+        mustSeeProvider.overrideWith((ref, _) async => MustSeeData(
+              items: const [
+                MustSeeItem(qid: 'Q1', title: 'A', artist: ''),
+                MustSeeItem(qid: 'Q2', title: 'B', artist: ''),
+              ],
+              checked: {'Q1': DateTime.now()},
+              roundStartedAt: DateTime(2026, 10, 27),
+              completed: false,
+              medals: const [],
+            )),
+      ];
+
+  testWidgets('快门现场拍进来 → 顶部盖章提示', (t) async {
+    await _pump(t, liveShot: true, extra: mustSee());
+    expect(find.text('盖章!必看 1 / 2'), findsOneWidget);
+    await t.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('不是现场拍(列表/相册)进来 → 没有盖章提示', (t) async {
+    await _pump(t, extra: mustSee());
+    expect(find.textContaining('盖章'), findsNothing);
   });
 }

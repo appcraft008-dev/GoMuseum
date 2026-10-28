@@ -80,6 +80,7 @@ def account_tables():
     from app.models.app_event import AppEvent
     from app.models.auth_token import AuthToken
     from app.models.feedback import Feedback
+    from app.models.must_see_medal import MustSeeMedal
     from app.models.purchase import Entitlement, Purchase
     from app.models.recognition_event import RecognitionEvent
     from app.models.recognition_photo_feedback import RecognitionPhotoFeedback
@@ -96,4 +97,5 @@ def account_tables():
         RecognitionEvent.__table__,
         RecognitionPhotoFeedback.__table__,
         Feedback.__table__,
+        MustSeeMedal.__table__,
     ]

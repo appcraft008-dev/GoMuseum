@@ -133,6 +133,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeEnableLocation => '위⁠치⁠를 켜⁠면 가⁠까⁠운 미⁠술⁠관⁠을 보⁠여 드⁠려⁠요';
 
   @override
+  String get homeNoMuseumNearby => '근⁠처⁠에 아⁠직 수⁠록⁠된 미⁠술⁠관⁠이 없⁠어⁠요';
+
+  @override
   String get homeContinue => '이⁠어⁠서 보⁠기';
 
   @override
@@ -734,6 +737,72 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get museumCollectionTab => '컬⁠렉⁠션';
+
+  @override
+  String get museumTabMustSee => '필⁠수 작⁠품';
+
+  @override
+  String passportTitle(String museum) {
+    return '$museum · 필⁠수 작⁠품';
+  }
+
+  @override
+  String passportStamped(int done, int total) {
+    return '도⁠장 $done / $total';
+  }
+
+  @override
+  String passportRoundSince(String date) {
+    return '$date⁠부⁠터';
+  }
+
+  @override
+  String get passportRoundDone => '이⁠번⁠엔 모⁠두 봤⁠어⁠요 ✓';
+
+  @override
+  String get passportSealTitle => '완⁠주';
+
+  @override
+  String get passportShare => '이 페⁠이⁠지 공⁠유';
+
+  @override
+  String get passportMedals => '내 메⁠달';
+
+  @override
+  String get passportNoLocation => '전⁠시⁠실 정⁠보 없⁠음';
+
+  @override
+  String get passportSignInHint => '로⁠그⁠인⁠하⁠고 현⁠장⁠에⁠서 작⁠품⁠을 찍⁠으⁠면 도⁠장⁠이 찍⁠혀⁠요';
+
+  @override
+  String passportLevel(int level) {
+    return '$level⁠층';
+  }
+
+  @override
+  String passportBasement(int n) {
+    return '지⁠하 $n⁠층';
+  }
+
+  @override
+  String passportRoom(String room) {
+    return '$room 전⁠시⁠실';
+  }
+
+  @override
+  String mustSeeToastStamped(int done, int total) {
+    return '도⁠장 쾅! 필⁠수 작⁠품 $done / $total';
+  }
+
+  @override
+  String mustSeeToastDone(int total) {
+    return '필⁠수 작⁠품 완⁠주 $total / $total';
+  }
+
+  @override
+  String passportShareText(String museum, int total, String date) {
+    return '$museum⁠의 필⁠수 작⁠품 $total⁠점⁠을 모⁠두 봤⁠어⁠요($date). GoMuseum⁠으⁠로 완⁠주.';
+  }
 
   @override
   String get museumOpeningHours => '운⁠영 시⁠간';

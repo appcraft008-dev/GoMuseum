@@ -3,7 +3,7 @@
 > **这是唯一权威主文档。** 所有博物馆按本文的契约与路线图上线;奥赛 = 样板馆。
 > **工作纪律**:每次决策 / 发现的问题 / 零散需求 → **回写本文**。带日期的 `docs/superpowers/specs/*` = 设计记录,**喂给本文**;本文永远是当前真相。新馆只读本文即可快速上线。
 > 端点前缀 `/api/v1`。**加法/前向兼容**——只增字段、不破老解析;破坏性变更走版本化端点。
-> 最近更新:2026-10-20(本地化完整性补记:静态表要测试强制配齐 + 十语逐字段验收查法;单值字段订正 + Wikidata 照抄原名;纪律 37 补记共享实体不许拿引用方兜底、权威覆盖也是覆盖)。此前:2026-10-14(P1-9B 深度段只写材料明说的;上新馆配方合并成一套;补 `/viewed` 端点;纪律 20 扩写、新增 53)。
+> 最近更新:2026-10-28(必看打卡:上新馆 ⓪b 选清单与展厅号规则、`level` 楼层口径、识别扣费路径撤销打卡的纪律;§5 必看端点)。此前:2026-10-20(本地化完整性补记:静态表要测试强制配齐 + 十语逐字段验收查法;单值字段订正 + Wikidata 照抄原名;纪律 37 补记共享实体不许拿引用方兜底、权威覆盖也是覆盖)。此前:2026-10-14(P1-9B 深度段只写材料明说的;上新馆配方合并成一套;补 `/viewed` 端点;纪律 20 扩写、新增 53)。
 
 ## 北极星
 
@@ -25,6 +25,7 @@
 | `GET /museums/{slug}/objects/{qid}/audio/stream?language=&section=` | 流式 TTS(✅2026-07-16 #256):首播边生成边播 | `endpoints/museums.py` |
 | `POST /feedback` | 用户反馈(藏品级/App 级;匿名可写;204 无响应体) | `endpoints/feedback.py` |
 | `POST /museums/{slug}/objects/{qid}/viewed` | 进讲解页打点(`content_viewed`;204,fire-and-forget) | `endpoints/museums.py` |
+| `GET /museums/{slug}/must-see?language=` | 必看护照页(清单+展厅号+当前轮进度+勋章;令牌可选) | `endpoints/museums.py` + `must_see_checkin.py` |
 
 **`/viewed`(加法,2026-10-13 #941)**:App 进讲解页报一次。请求体 `{"from": recognition|search|collection|history|home|link}`(讲解页入口,取值外 → 422),Bearer 可选(带了就记到人)。**不挂在 `/content` 上**:生成中前端每 4s 轮询 `/content`,挂在那里会重复计数。恒 204,失败不影响页面。
 
@@ -50,6 +51,7 @@
 - `coordinates`(加法,2026-09-29):`[lat, lng] | null`,取自 Wikidata P625 配在 yaml。首页「附近」**在手机本地**
   按它算距离 —— **用户位置不上传**,后端只下发馆坐标(纪律 42)。
 - 只列**已放出**的馆;`can_preview` 调用者另含隐身馆(可见性闸)。响应因调用者身份而异 → 前端缓存必须以身份为键(纪律 38)。
+- `must_see_count`(加法,2026-10-27 必看打卡):该馆 `museums.yaml` 必看清单件数,无清单 0。App 进馆页**同步**读它决定显不显示「必看」tab(放馆列表而不放馆详情,标签栏首帧就对)。
 - `cover_image`(✅2026-07-20 spec museum-cover-intro-quality,加法):探索页列表缩略图(thumb 档),
   同 `m.cover_image_key` 一行零成本可读;未生成封面则 `null`(前端隐藏)。
 
@@ -148,6 +150,23 @@
 
 ---
 
+## 5. `GET /museums/{slug}/must-see?language=zh`(必看护照页;加法,2026-10-27)
+
+spec `docs/superpowers/specs/2026-10-27-must-see-checkin-design.md`。令牌可选;隐身馆/未知馆 404。
+
+```json
+{"items": [{"qid": "Q12418", "title": "…", "artist": "…", "thumbnail": "<url|null>",
+            "location": {"wing": "Denon", "level": 1, "room": "711"} | null}],
+ "checked": {"Q12418": "2026-10-27T10:00:00+00:00"}, "round_started_at": "<iso|null>",
+ "completed": false, "medals": [{"completed_at": "<iso>", "count": 12}]}
+```
+
+- `items` 按 yaml 顺序;目录查不到/无图的件也列出(`title` 回退 qid、`artist` 回退 `""`、`thumbnail` null),分母恒为清单件数。
+- **打卡判据**:该用户、`recognition_events.capture='camera'`(快门现场拍)、`confirm_source != 'search'`、足迹判据(`history._footprint_qid`)认定的那件在该馆清单里。**不看 `museum_slug`**(全局端点事件该列为空)。命中后没扣成费(402/扣费链路抛错/确认时未付)的行 capture 被撤销成 NULL。
+- **轮**:相邻两次打卡间隔 > 30 天切新轮;距上次打卡 > 30 天 → 当前无进行中的轮(`checked` 空)。
+- **勋章**:读这个端点时,哪一轮覆盖了当前清单全部作品、且该轮区间内没有勋章 → 落一行 `must_see_medals`(遍历所有轮,补齐那次没拉到也会补发)。已发勋章不随清单改动、删足迹变化;导出给出,删号真删。
+- 匿名:只给清单,进度为空。
+
 ## `content_status` 生命周期
 
 `stub`(只元数据,目录铺出) → `ready`(≥1 段已发布)/ `empty`(无可接地材料)。前端:`stub`/`empty` 显"待完善",`ready` 正常。未知值按 `ready` 容错。
@@ -213,6 +232,15 @@
 **⑥ staging 轻量化(2026-07-17 定,spec 2026-07-17-staging-lightweight)。** staging=机制验证平台,**永不为数据规模付 LLM 费**:机制验证用小样本(护栏强制——onboard names/generate/translate 在 staging 默认 limit=50,rescan 系需显式 `--allow-full`);规模数据一律从 prod 搬运(`sync_staging_from_prod.py`,slim=金样本 ~300-500 件/full=发版前拉真;内容是 prod 已付费资产,共 R2 桶 key 复制即解析,零 LLM);**用户表(users/benefits/devices)与 recognition_events 永不跨环境**。上新馆同理:staging 只跑 `catalog --limit` 验证配方,全量只在 prod。
 
 ## 上新馆 = 纯配置(零核心改动)
+
+> **⓪b 必看清单(2026-10-27 必看打卡定;App「必看」护照页的数据源)**:写在 `museums.yaml` 的 `must_see:`。顺序同时决定**馆藏列表头部、网站必看区和护照页**的先后,所以最有名的放前面;护照页会再按位置(侧翼+楼层)自动分组,不用为动线排序。改清单/展厅号 = 改 yaml 的 PR,**不直写 prod 库**。
+> 1. **选什么**:只放**常年在展的镇馆之宝**(官网高亮/官方参观线路里几乎不外借的)。我们**不监测在不在展**(只有一个人,用户反馈分不清「没找到」和「不在展」,官网数据不是每馆都有),所以选清单时就避开常外借的件(依据:卢浮宫官方 JSON 的 `exhibition` 外借史、Wikidata P608 展览史——后者很不全,0 不代表没外借过)。偶尔外借打不满,接受。
+> 2. **可识别,逐件查**:线上 `GET /museums/{slug}/objects?limit=N` 里该件**有 thumbnail**(有图 = 已物化、已嵌入向量);没图的件谁都打不满,不许进清单(小皇宫猴子座钟实例)。必看件**一律跑第 4b 步**补他人实拍——它们是用户一定会去拍的。
+> 3. **展厅号**:官网能取到的就标,取不到的写纯 qid、不标(奥赛官网 403 拒绝程序访问)。写法 `{qid, wing, level, room}`,三段都可缺:
+>    - `wing` = 官方侧翼名**原文**(专名,不翻译,如 `Denon`);`room` = 厅号**字符串**(可能是 `"04"`);
+>    - **`level` = 欧式楼层整数:0 = 地面层,1 = 地面往上一层,-1 = 地下一层——不管该馆官网怎么叫,上馆时统一换算成这个口径。** 美国馆的 "1st Floor"、英国馆的 "Ground Floor" 都是 `0`;法国馆的 "Niveau 1"、"Rez-de-chaussée" 分别是 `1`、`0`;小皇宫 "Rez-de-jardin" 是 `-1`。App 显示时中日韩按「1 楼 = 地面层」换算(0 → 1 楼,1 → 2 楼,-2 → 地下 2 层),其余语言照「Level n」——这个换算**全靠 level 口径统一**,照官网数字直填会把东亚游客带错楼。
+>    - 取数用 `tools/must_see_rooms/fetch_rooms.py <slug>`(只读官网、逐件 ≥1 秒、失败不重试,输出可贴回 yaml 的片段)。⚠️ **它不是通用的**:目前只会解析卢浮宫(官方藏品 JSON,Wikidata P9394)、橘园作品页、巴黎博物馆集团藏品库(小皇宫)三种,官网链接从 Wikidata P9394/P973 找。新馆官网有逐件位置 → 在脚本里加一个 `parse_<馆>()`,把一份官网响应片段存进 `tools/must_see_rooms/fixtures/` 配解析测试,楼层按上面口径换算;没有就不标。Wikidata 上没有官网链接的件(橘园《睡莲》)脚本取不到。
+> 4. **改清单的影响(运营须知)**:已发的勋章永不变;**加一件** → 正在进行的那一轮变回「未完成」,补拍后也不再发第二枚(该轮已有勋章);**删一件** → 过去某一轮可能按新清单「变成已打满」,下次读接口时补发一枚日期在过去的勋章。清单为空 = App 不出「必看」tab。
 
 > **⓪ 预检清单(2026-07-19 橘园实战补;写配置前先做,两条各一分钟)**:
 > 1. **QID 核验+规模预估**——馆名易记错 QID(橘园教训:Q1094962 查出 0 条,真身 Q726781)。先
@@ -353,7 +381,7 @@
    → 全馆缺图行下载→两档→R2→署名→**入库即嵌入**(幂等;见§图片字段。存量老库用 `backfill_embeddings.py` 补漏,新馆此步已自动嵌入,无需额外跑)。
    - **4a 雕塑/立体作品多视角**:`onboard.py views --museum <slug>` 插 Commons 他人照片行 → **再跑一次 `images`** 物化。
      view 与正面照的相似度闸在物化嵌入时自动执行(删/隔离/入索引,见§识别);`vet_view_images.py` 只用于存量或换引擎后重标,新馆不用跑。
-   - **4b(可选)必看/易认错的画作补他人实拍**:`onboard.py recog-views --qids Q1,Q2,…` 后**只对这批件**物化
+   - **4b 必看件必做(其余易认错画作可选)补他人实拍**:`onboard.py recog-views --qids Q1,Q2,…` 后**只对这批件**物化
      (无现成命令:按件调 `materializer.materialize_object_images`,写法参考 `scripts/add_works_by_qid.py`),不跑整馆 `images`(它会顺带整馆切块,纪律 37 补记)。只进识别索引。
    - **4c(可选,法国馆)展陈证据**:`onboard.py display-evidence --museum <slug>`(Joconde P347 → 展陈位置)。
 5. **生成内容(可选)**:`python scripts/onboard.py <slug> generate --target <env> [--qid Q..|--limit N] [--langs zh,en,fr]`
@@ -1643,11 +1671,13 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 
 | 端点 | 闸 | 备注 |
 |---|---|---|
-| `POST /recognize`、`/museums/{slug}/recognize` | 额度 | match/candidates 扣 1;未识别与缓存命中不扣 |
+| `POST /recognize`、`/museums/{slug}/recognize` | 额度 | match/candidates 扣 1;未识别与缓存命中不扣。可选 `capture=camera\|gallery`(加法,2026-10-27 必看打卡;缺省=未知,永不算打卡) |
 | `GET /museums/{slug}/objects/{qid}/audio` | `audio_access` | 402 `pass_required` |
 | `GET .../audio/stream` | 同上 | ⚠️ 播放器直取、**不经 Dio 拦截器**,前端须自带令牌 |
 | `POST /content/tts/generate` | 同上 / 通票 | section 模式按 qid;ad-hoc(任意文本)需通票生效 |
 | `POST /entitlements/audio/unlock?qid=` | 额度 | 花 1 次额度解锁该件主讲解段;**先扣费再解锁**;幂等;额度为 0 → 402 |
+
+- **识别扣费路径的纪律(2026-10-27 必看打卡)**:必看打卡只认 `recognition_events.capture='camera'` 且**扣费通过**(或按规则免扣:票覆盖该馆、这件已解锁未过期时重拍、匿名设备同一张图缓存命中)的识别。事件行在扣费**之前**就落库了,所以**新增或改动任何识别扣费路径,没扣成费的分支(402、扣费链路抛异常、在途等待方、候选确认未付)必须调 `clear_capture` 撤销这行的 capture**,否则就是白送一枚章。`recognize_billed` 命中后的整段已包在 `except BaseException: clear_capture(...)` 里,`/recognize/confirm` 用 `_bill_confirm` 的返回值判;在这两处前段加写操作要注意:失败分支的 `clear_capture` 会 commit 整个 session。
 | `GET /entitlements/me?museum=`、`POST /entitlements/activate?museum=` | 按馆 | 带馆 → 只看/只激活**覆盖该馆**的票;不带 = 旧行为 |
 | `GET /entitlements/me` → `offers[]` | 排序 | 可买票 >1 张时,覆盖用户**最近看讲解/在馆识别过的馆**的那张排第一并标 `recommended: true`(加法字段);没足迹 = 目录顺序、全 false。老 App 按下发顺序列票,排序免发版生效 |
 | `POST /entitlements/exchange?from_product=&to_product=` | 换票 | **未激活**票原地改成另一城市的票(买错兜底);只换 `/me.passes[].exchange_to` 列出的(在售、同天数、同 `price_tier`);订单与激活期不变,退款照撤;被拒 → 409 `{reason}` 且不改任何数据 |
@@ -1784,7 +1814,7 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 - **阶段 1 — 材料地基**:✅ 证据包落库并进材料(只用 Wikidata 富属性,见§内容体系);✅ Joconde(法国官方);⏸ Europeana(待 key);⏳ 非法国馆的官方连接器(上到时逐馆写)。
 - **阶段 2 — 内容生成**:✅ 分工去重 lane + 动态模块(空段不展示);✅ 深度段只写材料明说的(#954);⏸ 接地闸第 2 步(10-14 定暂不做,台账第五节有触发条件);⏳ 争议 hedge(证据包 `flagged` 尚无消费方)。
 - **阶段 3 — 体验补全**:✅ TTS 音频、懒生成、识别、搜索;⏳ 接地版 AI 自由问答(旧 `/chat/ask` 未接地,2026-07-27 已停用;预设问答照常)。
-- **阶段 4 — 规模化**:✅ 图片 R2 自存、上新馆纯配置 + `verify` 闸、隐身上线;⏳ 官方馆藏库连接器(在展清单/展厅号)。
+- **阶段 4 — 规模化**:✅ 图片 R2 自存、上新馆纯配置 + `verify` 闸、隐身上线;🟡 官方馆藏库连接器:必看件展厅号已有只读取数脚本(卢浮宫/橘园/小皇宫三种官网,2026-10-27,见 ⓪b);在展清单 ⏳(定为不监测,见 ⓪b 第 1 条)。
 
 **奥赛 = 样板馆**:作为先行者会多吞一两次重生成;流水线成型后,新馆从第一天即"配全·生成一次·封板"。
 
@@ -1792,6 +1822,7 @@ sitelink → 全文 extract`,但**馆本体未必有 enwiki 条目**——小皇
 
 ## 变更记录
 
+- 2026-10-28:**必看打卡回写**(#1135,spec `2026-10-27-must-see-checkin-design.md`)。API(全加法):`GET /museums/{slug}/must-see`(§5)、`/museums` 加 `must_see_count`、识别端点加可选 `capture=camera|gallery`、`recognition_events.capture` 可空列、新表 `must_see_medals`(迁移 c1m1/c1m2)。上新馆配方 ⓪b 扩写:选清单标准、逐件可识别、**`level` 统一为欧式楼层(0 = 地面层)**、取数脚本只支持三种官网及新馆怎么扩、改清单对勋章的影响;第 4b 步对必看件改为必做。付费墙一节新增识别扣费路径纪律(没扣成费必须 `clear_capture`)。路线图阶段 4 官方连接器改为部分完成。
 - 2026-10-20:**多语言与共享实体回写**(#1030/#1032)。本地化完整性原则补记:材质表只配三语,13708 件作品七语显示英文 —— 静态翻译表必须有测试强制配齐全部语言、拼接式按语言配;新增「十语逐字段统计回退」验收查法(已实跑)。单值字段同理订正:10-10 只修了取数层,解析层 10-20 才修;改代码不会修存量;Wikidata 作品标签照抄原名(nl)不算权威。纪律 37 补记:共享实体字段不许拿引用方记录兜底(45 位作者 name_en 是合作者)、能/不能自愈字段分开看、权威标签默认覆盖也违反 ①(现只补缺 + 显式 `--refresh-langs`)。
 
 - 2026-10-14:**P1-9B 第 1 步回写 + 契约两轮评审(本人 + 独立模型)清理**(#954/#955)。内容:深度模块表改成「只写材料明说的、没有就留空」并补摄影/装饰艺术段;纪律 20 扩成通则(prompt 里的格式标签、分隔符、举例措辞都是示范,禁用词清单除外);新增纪律 53(同调用多段,改一段评测全部段);补记 18(闸放行空泛评价)、28(analysis 99% 是闸盲区)、48(固定种子≠同一批样本)、51(9→16 未在 prod 成立;推广到五段)、12(回收年龄按 DB `updated_at`,#953)。API:补登 `/viewed` 加法端点(#941);端点 4 示例去掉已退役的 overview;识别缓存键更正为 `recog4`。结构:上新馆配方合并成一套(§识别 里那条旧链删除,`views`/`recog-views`/`display-evidence` 并入第 4 步,`coverage-report` 为 6b、`verify` 为最后一步);馆介绍独立成节;Joconde 预检条目修复断句;证据包现状与路线图按代码更正。移出:纪律 36 全文 → `docs/ops/android-release.md`(编号不变);音频 ⑥ 硬件细节指向 TTS 配方;Joconde 断供期存量补救 → 台账。

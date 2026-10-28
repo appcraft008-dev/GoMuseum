@@ -19,6 +19,7 @@ GATED = "gated"
 REGISTRY = {
     ("GET", "/api/v1/museums/{slug}"): GATED,
     ("GET", "/api/v1/museums/{slug}/objects"): GATED,
+    ("GET", "/api/v1/museums/{slug}/must-see"): GATED,  # 必看护照页:_hidden 闸
     ("GET", "/api/v1/museums/{slug}/objects/{qid}/content"): GATED,
     ("GET", "/api/v1/museums/{slug}/objects/{qid}/audio"): GATED,
     ("GET", "/api/v1/museums/{slug}/objects/{qid}/audio/stream"): GATED,

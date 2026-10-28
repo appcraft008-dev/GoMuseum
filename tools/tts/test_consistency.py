@@ -14,7 +14,7 @@ import re
 
 import pytest
 
-from consistency import consistency, length_ratio, normalize, tts_input
+from consistency import consistency, length_ratio, normalize, spoken_len, tts_input
 
 FIX = pathlib.Path(__file__).parent / "fixtures"
 
@@ -174,3 +174,21 @@ def test_质检基准仍是原始繁体正文():
     assert consistency(_HANT_OPENING, 转写) == consistency(
         tts_input(_HANT_OPENING, "zh-hant"), 转写
     )
+
+
+def test_语速目标给数字加权_只在拟合出效应的语言():
+    # 真实回归:en/05(Q17493621 背景段)366 字符含 16 位数字,按字符数定目标被
+    # atempo 压快 14%;按念出来的长度算,目标拉长 15%,压缩基本消失。
+    text = "Painted in 1863 and shown at the Salon des Refusés of 1863."
+    assert spoken_len(text, "en") == len(text) + 3.5 * 8
+    assert spoken_len(text, "fr") == len(text) + 3.5 * 8
+    # zh/it 拟合不出数字效应:不能悄悄改它们的语速目标
+    assert spoken_len(text, "zh") == len(text)
+    assert spoken_len(text, "it") == len(text)
+    assert spoken_len("无数字", "en") == 3
+
+
+def test_run_batch_的语速目标用的是_spoken_len():
+    src = (pathlib.Path(__file__).parent / "run_batch.py").read_text()
+    assert "spoken_len(text, lang) / RATE[lang]" in src
+    assert "(len(text) / RATE[lang])" not in src
