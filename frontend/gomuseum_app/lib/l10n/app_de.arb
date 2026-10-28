@@ -393,5 +393,7 @@
   "guideNotThisOne": "Nicht dieses Werk?",
   "guideNotThisOneNoted": "Notiert. Versuche einen anderen Winkel oder nutze die Suche.",
   "recMaybeNotCollected": "Sonderschau oder noch nicht im Guide? Ein Foto vom Schild hilft meist.",
-  "recLabelNoMatch": "Sonderschau oder noch nicht im Guide? Probier anderen Namen oder Nummer."
+  "recLabelNoMatch": "Sonderschau oder noch nicht im Guide? Probier anderen Namen oder Nummer.",
+  "recentSearches": "Letzte Suchen",
+  "recentSearchesClear": "Löschen"
 }

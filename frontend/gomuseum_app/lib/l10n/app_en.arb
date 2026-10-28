@@ -860,5 +860,7 @@
   },
   "@recLabelNoMatch": {
     "description": "Hint under 'couldn't find this work': label text was read but matched nothing; suggest another search, not shooting the label again"
-  }
+  },
+  "recentSearches": "Recent searches",
+  "recentSearchesClear": "Clear"
 }

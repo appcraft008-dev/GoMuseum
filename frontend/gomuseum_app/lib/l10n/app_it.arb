@@ -393,5 +393,7 @@
   "guideNotThisOne": "Non è questa?",
   "guideNotThisOneNoted": "Annotato. Prova un'altra angolazione o usa la ricerca.",
   "recMaybeNotCollected": "Mostra temporanea o non ancora in guida? Fotografa la didascalia: spesso aiuta.",
-  "recLabelNoMatch": "Mostra temporanea o non ancora in guida? Prova un altro nome o numero."
+  "recLabelNoMatch": "Mostra temporanea o non ancora in guida? Prova un altro nome o numero.",
+  "recentSearches": "Ricerche recenti",
+  "recentSearchesClear": "Cancella"
 }

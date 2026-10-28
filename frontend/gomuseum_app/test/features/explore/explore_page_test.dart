@@ -12,6 +12,7 @@ import 'package:gomuseum_app/features/content/presentation/providers/catalog_pro
 import 'package:gomuseum_app/features/explore/presentation/pages/explore_page.dart';
 import 'package:gomuseum_app/features/home/data/nearby.dart';
 import 'package:gomuseum_app/features/search/data/search_api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _fakeMuseums = [
   MuseumSummary(
@@ -121,6 +122,38 @@ void main() {
     expect(_chipHighlighted(t, '阿姆斯特丹'), isTrue,
         reason: '滚到第二座城市段,chip 要跟着切过去');
     expect(_chipHighlighted(t, '巴黎'), isFalse);
+  });
+
+  group('最近搜索', () {
+    setUp(() => SharedPreferences.setMockInitialValues({
+          'recent_searches_global': ['卢浮'],
+        }));
+
+    testWidgets('聚焦且没输入 → 最近搜索替换城市 chips;点标签直接搜', (tester) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      expect(find.text('最近搜索'), findsNothing); // 没聚焦:页面和原来一样
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      expect(find.text('最近搜索'), findsOneWidget);
+
+      await tester.tap(find.text('卢浮'));
+      await tester.pumpAndSettle();
+      expect(find.text('最近搜索'), findsNothing);
+      expect(find.text('卢浮宫'), findsWidgets); // 搜索结果
+    });
+
+    testWidgets('按键盘搜索键记一条', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '睡莲');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getStringList('recent_searches_global'), ['睡莲']);
+    });
   });
 }
 

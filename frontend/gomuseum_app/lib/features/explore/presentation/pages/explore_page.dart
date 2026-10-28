@@ -17,6 +17,8 @@ import 'package:gomuseum_app/core/network/image_request.dart';
 import 'package:gomuseum_app/features/content/data/models/museum_summary_model.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/home/data/nearby.dart';
+import 'package:gomuseum_app/features/search/data/recent_searches.dart';
+import 'package:gomuseum_app/features/search/presentation/recent_searches_view.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -47,6 +49,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   void initState() {
     super.initState();
     _scroll.addListener(_syncActive);
+    // 聚焦/失焦切换「最近搜索」与城市 chips
+    _searchFocus.addListener(() => setState(() {}));
   }
 
   /// 滚动时高亮「标题已经滚到顶部附近」的最后一个城市段。
@@ -85,9 +89,14 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   String _debounced = '';
   Timer? _debounceTimer;
 
+  final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -104,6 +113,17 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       if (mounted) setState(() => _debounced = q);
     });
   }
+
+  /// 点最近搜索标签:回填并立刻搜(不等 debounce)。
+  void _pickRecent(String q) {
+    _debounceTimer?.cancel();
+    _searchCtrl.value = TextEditingValue(
+        text: q, selection: TextSelection.collapsed(offset: q.length));
+    setState(() => _debounced = q);
+  }
+
+  void _rememberQuery() =>
+      ref.read(recentSearchesProvider('global').notifier).add(_debounced);
 
   /// 城市去重键用中文城市名（语言无关、稳定），显示时再本地化。
   ///
@@ -210,7 +230,16 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                       _searchBox(gm, l10n),
                       if (_debounced.isEmpty) ...[
                         const SizedBox(height: 12),
-                        _cityChips(gm, cities, all, lang, active),
+                        // 聚焦且没输入 → 最近搜索(没记录时仍是城市 chips)
+                        if (_searchFocus.hasFocus &&
+                            ref
+                                .watch(recentSearchesProvider('global'))
+                                .isNotEmpty &&
+                            _searchCtrl.text.trim().isEmpty)
+                          RecentSearchesView(
+                              scope: 'global', onPick: _pickRecent)
+                        else
+                          _cityChips(gm, cities, all, lang, active),
                       ],
                     ],
                   ),
@@ -223,6 +252,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                           child: SearchResultsView(
                             query: (slug: null, q: _debounced, lang: lang),
                             showMuseums: true,
+                            onNavigate: _rememberQuery,
                           ),
                         )
                       : all.isEmpty
@@ -292,6 +322,11 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              controller: _searchCtrl,
+              focusNode: _searchFocus,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (v) =>
+                  ref.read(recentSearchesProvider('global').notifier).add(v),
               style: GmText.sans(size: 13.5),
               decoration: InputDecoration(
                 hintText: l10n.searchCityMuseumArtwork,

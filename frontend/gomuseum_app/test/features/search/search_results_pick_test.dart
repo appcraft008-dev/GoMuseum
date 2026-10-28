@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/search/data/search_api.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -18,7 +19,10 @@ const _hit = SearchResults(objects: [
 Widget _wrap(String q, {void Function(SearchObject)? onPick}) {
   final key = (slug: null, q: q, lang: 'en');
   return ProviderScope(
-    overrides: [searchProvider(key).overrideWith((ref) => _hit)],
+    overrides: [
+      searchProvider(key).overrideWith((ref) => _hit),
+      museumsListProvider.overrideWith((_) async => const []),
+    ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
