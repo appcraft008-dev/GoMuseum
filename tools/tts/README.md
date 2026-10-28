@@ -23,7 +23,10 @@ tools/tts/queue.sh pause    # 让出资源:先停队列再停批次,正在生成
 tools/tts/queue.sh status   # 每批 完成/未完成 + 条数
 ```
 
-`queue.txt` 每行「<jobs.json> <输出目录>」。完成与否只认日志里本次起跑后的 ALLDONE
+`~/tts-lab/queue*.txt` 每个文件一条串行队列,start/pause/status 默认一次管全部;
+文件名含 `modal` 的(如 `queue_modal.txt`)生成放 Modal,与 Mac 队列并行。Modal 队列
+必须在沙箱外起(沙箱内连不上 input-plane);月度花费上限设在 Modal 后台 usage limit。
+每行「<jobs.json> <输出目录>」。完成与否只认日志里本次起跑后的 ALLDONE
 —— 被 pause 杀掉的批次没有它,队列会停在原地,而不是当成跑完去起下一批
 (10-26 手搓串联就这样让意语提前开跑过)。续跑 = 再 `start`,批内已合格的条目自动跳过。
 
