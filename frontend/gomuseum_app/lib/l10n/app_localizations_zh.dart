@@ -1275,6 +1275,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recLabelNoMatch => '可能是临展或还没收录，换个名称或编号搜搜看。';
+
+  @override
+  String get recentSearches => '最近搜索';
+
+  @override
+  String get recentSearchesClear => '清除';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -2548,4 +2554,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get recLabelNoMatch => '可能是臨展或還沒收錄，換個名稱或編號搜搜看。';
+
+  @override
+  String get recentSearches => '最近搜尋';
+
+  @override
+  String get recentSearchesClear => '清除';
 }

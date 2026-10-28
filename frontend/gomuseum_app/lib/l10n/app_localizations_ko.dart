@@ -1308,4 +1308,10 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get recLabelNoMatch =>
       '특⁠별⁠전⁠이⁠거⁠나 미⁠수⁠록 작⁠품⁠일 수 있⁠어⁠요. 다⁠른 이⁠름⁠이⁠나 번⁠호⁠로 찾⁠아⁠보⁠세⁠요.';
+
+  @override
+  String get recentSearches => '최⁠근 검⁠색';
+
+  @override
+  String get recentSearchesClear => '지⁠우⁠기';
 }

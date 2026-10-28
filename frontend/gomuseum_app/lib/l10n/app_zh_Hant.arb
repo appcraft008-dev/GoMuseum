@@ -393,5 +393,7 @@
   "guideNotThisOne": "不是這件？",
   "guideNotThisOneNoted": "已記下。換個角度再拍一張，或用搜尋找到它。",
   "recMaybeNotCollected": "可能是臨展或還沒收錄的作品，拍旁邊的說明牌更容易認出。",
-  "recLabelNoMatch": "可能是臨展或還沒收錄，換個名稱或編號搜搜看。"
+  "recLabelNoMatch": "可能是臨展或還沒收錄，換個名稱或編號搜搜看。",
+  "recentSearches": "最近搜尋",
+  "recentSearchesClear": "清除"
 }

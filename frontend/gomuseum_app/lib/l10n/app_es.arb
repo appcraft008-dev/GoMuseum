@@ -393,5 +393,7 @@
   "guideNotThisOne": "¿No es esta?",
   "guideNotThisOneNoted": "Anotado. Prueba con otro ángulo o usa la búsqueda.",
   "recMaybeNotCollected": "¿Expo temporal o aún no en la guía? Una foto de la cartela suele ayudar.",
-  "recLabelNoMatch": "¿Expo temporal o aún no en la guía? Prueba otro nombre o número."
+  "recLabelNoMatch": "¿Expo temporal o aún no en la guía? Prueba otro nombre o número.",
+  "recentSearches": "Búsquedas recientes",
+  "recentSearchesClear": "Borrar"
 }

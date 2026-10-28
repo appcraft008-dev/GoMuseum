@@ -1341,4 +1341,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get recLabelNoMatch =>
       'Sonderschau oder noch nicht im Guide? Probier anderen Namen oder Nummer.';
+
+  @override
+  String get recentSearches => 'Letzte Suchen';
+
+  @override
+  String get recentSearchesClear => 'Löschen';
 }

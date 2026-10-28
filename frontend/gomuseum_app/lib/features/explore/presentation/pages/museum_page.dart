@@ -27,6 +27,8 @@ import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/presentation/pages/guide_page.dart';
 import 'package:gomuseum_app/features/must_see/data/must_see_providers.dart';
 import 'package:gomuseum_app/features/must_see/presentation/passport_page.dart';
+import 'package:gomuseum_app/features/search/data/recent_searches.dart';
+import 'package:gomuseum_app/features/search/presentation/recent_searches_view.dart';
 import 'package:gomuseum_app/features/search/presentation/search_results_view.dart';
 import 'package:gomuseum_app/features/settings/presentation/providers/language_provider.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
@@ -71,6 +73,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
   bool _searching = false;
   String _searchDebounced = '';
   Timer? _searchTimer;
+  final _searchCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -81,6 +84,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
   @override
   void dispose() {
     _searchTimer?.cancel();
+    _searchCtrl.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _topTabController.dispose();
@@ -89,11 +93,23 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
 
   void _toggleSearch() {
     _searchTimer?.cancel();
+    _searchCtrl.clear();
     setState(() {
       _searching = !_searching;
       _searchDebounced = '';
     });
   }
+
+  /// 点最近搜索标签:回填并立刻搜(不等 debounce)。
+  void _pickRecent(String q) {
+    _searchTimer?.cancel();
+    _searchCtrl.value = TextEditingValue(
+        text: q, selection: TextSelection.collapsed(offset: q.length));
+    setState(() => _searchDebounced = q);
+  }
+
+  void _rememberQuery(String q) =>
+      ref.read(recentSearchesProvider(widget.slug).notifier).add(q);
 
   void _onSearchChanged(String v) {
     _searchTimer?.cancel();
@@ -102,6 +118,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
       setState(() => _searchDebounced = '');
       return;
     }
+    if (_searchDebounced.isEmpty) setState(() {}); // 一开始打字就收起最近搜索
     _searchTimer = Timer(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _searchDebounced = q);
     });
@@ -151,11 +168,19 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
               searching: _searching,
               onSearchToggle: _toggleSearch,
               onQueryChanged: _onSearchChanged,
+              controller: _searchCtrl,
+              onSubmitted: _rememberQuery,
             ),
             if (_searching)
               Expanded(
                 child: _searchDebounced.isEmpty
-                    ? const SizedBox.shrink()
+                    ? (_searchCtrl.text.trim().isEmpty
+                        ? SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                            child: RecentSearchesView(
+                                scope: widget.slug, onPick: _pickRecent),
+                          )
+                        : const SizedBox.shrink())
                     : SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
                         child: SearchResultsView(
@@ -166,6 +191,7 @@ class _MuseumPageState extends ConsumerState<MuseumPage>
                           ),
                           showMuseums: false,
                           fallbackSlug: widget.slug,
+                          onNavigate: () => _rememberQuery(_searchDebounced),
                         ),
                       ),
               )
@@ -268,6 +294,8 @@ class _TopBar extends StatelessWidget {
     required this.searching,
     required this.onSearchToggle,
     required this.onQueryChanged,
+    required this.controller,
+    required this.onSubmitted,
   });
 
   final String slug;
@@ -276,6 +304,8 @@ class _TopBar extends StatelessWidget {
   final bool searching;
   final VoidCallback onSearchToggle;
   final ValueChanged<String> onQueryChanged;
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +359,10 @@ class _TopBar extends StatelessWidget {
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: TextField(
+                      controller: controller,
                       autofocus: true,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: onSubmitted,
                       style: GmText.sans(size: 14),
                       decoration: InputDecoration(
                         hintText: l10n.searchCityMuseumArtwork,

@@ -1344,4 +1344,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get recLabelNoMatch =>
       'Expo temporaire ou pas encore au guide ? Essayez un autre nom ou numéro.';
+
+  @override
+  String get recentSearches => 'Recherches récentes';
+
+  @override
+  String get recentSearchesClear => 'Effacer';
 }
