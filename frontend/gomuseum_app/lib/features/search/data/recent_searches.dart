@@ -7,7 +7,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const kRecentSearchMax = 5;
+const kRecentSearchMax = 8; // 10-28 用户定(先定 5,看过后改回 8)
 
 final recentSearchesProvider =
     StateNotifierProvider.family<RecentSearches, List<String>, String>(
