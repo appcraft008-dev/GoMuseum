@@ -25,6 +25,10 @@
 大版块在搜索下拉里显示简介而不是访客数，容易误以为小版块更大。证据（2026-10-25）：r/Louvre 最新 25 帖跨约 6 个半月，r/ParisTravelGuide 最新 25 帖跨约 2 天。
 NSFW 版块（如 r/museum，因裸体艺术被设成 18+）的帖子不进搜索和推荐，没登录的人看要先过年龄验证，基本没有长尾流量，只能当加分项。
 
+**R6. r/ParisTravelGuide 不只禁 AI 措辞，连"用 AI 查资料再转述"也不行：事实和观点都必须是你自己的。**
+证据：2026-10-29 首个 Tips & Advice 帖（1xiyo2w，圣诞元旦博物馆闭馆速查）被版块 AI 检测器拦下；版主翻账号历史说"有片段像 AI"。实情是：事实由 Claude 查、中文要点由 Claude 列，英文由 ChatGPT 润色（之前的评论也是）。用户如实坦白后，版主 10-30 答复：拿用户的问题问 AI 再发回去没有意义，"even if you start writing future posts in your own words, it's not enough. The ideas and facts have to be your own as well."
+做法：在 PTG 只凭自己的真实经历和知识发言，AI 不参与找贴、查资料、核对；对版主一律如实说。查好的事实改放到自己的网站上（见 backlog「网站问答页」）。
+
 ## Play / ASO
 
 **A1. 小语种关键词用真实 Play 数据研究，不从英语、法语类推。**
