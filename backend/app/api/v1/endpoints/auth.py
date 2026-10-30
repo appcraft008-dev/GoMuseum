@@ -25,6 +25,7 @@ from app.schemas.auth import (
 from app.schemas.user import UserResponse
 from app.services import account_recovery, mailer
 from app.services.auth_service import AuthService
+from app.services.event_log import mark_probe_login
 
 logger = logging.getLogger(__name__)
 # endpoints → v1 → api → app
@@ -95,7 +96,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
 
     Returns access token, refresh token, and user profile
     """
-    return AuthService.login(db, payload)
+    return mark_probe_login(db, request, AuthService.login(db, payload))
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -144,6 +145,7 @@ def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
 @router.post("/google", response_model=TokenResponse)
 def google_login(
     request: OAuthRequest,
+    http: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
     db: Session = Depends(get_db),
 ):
@@ -160,7 +162,9 @@ def google_login(
     - Set GOOGLE_CLIENT_ID in backend settings
     - Configure Google OAuth 2.0 credentials in Google Cloud Console
     """
-    return AuthService.oauth_google(db, request, credentials)
+    return mark_probe_login(
+        db, http, AuthService.oauth_google(db, request, credentials)
+    )
 
 
 @router.post("/apple", response_model=TokenResponse)
@@ -205,7 +209,10 @@ def guest_login(
 
     Guest users can later convert to regular users by registering.
     """
-    return AuthService.guest_login(db, payload.device_id if payload else None)
+    device_id = payload.device_id if payload else None
+    return mark_probe_login(
+        db, request, AuthService.guest_login(db, device_id), device_id
+    )
 
 
 @router.get("/me/export")

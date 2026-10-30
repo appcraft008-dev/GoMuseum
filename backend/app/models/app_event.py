@@ -56,6 +56,7 @@ OPS_EVENTS = (
     "tts_busy",  # 本进程同时合成 ≥4 路(每分钟一条)→ 阶段 2 触发
     "ops_sample",  # ops_check 每 5 分钟的采样
     "ops_alert",  # ops_check 发出(或只记不发)的告警,也是限频的依据
+    "probe_login",  # 从 Google 网段登录(Play 审核/预发布测试机)→ 报告剔出真实用户
 )
 
 
