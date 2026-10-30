@@ -21,7 +21,7 @@ sys.path.insert(0, "/app")
 from sqlalchemy import func  # noqa: E402
 
 from app.core.database import SessionLocal  # noqa: E402
-from app.models.app_event import AppEvent  # noqa: E402
+from app.models.app_event import OPS_EVENTS, AppEvent  # noqa: E402
 from app.models.museum import Museum  # noqa: E402
 from app.models.museum_object import MuseumObject  # noqa: E402
 from app.models.purchase import Entitlement, Purchase  # noqa: E402
@@ -131,6 +131,7 @@ def build(db, days: int) -> dict:
             "dist": dict(dist),
         },
         "orders": _orders(db, since),
+        "real_users": _real_users(db, since),
         # 只计确认是真实付款的单:测试单没扣钱,未知(NULL)单也不计,免得虚高
         "revenue_eur": float(
             db.query(func.coalesce(func.sum(Purchase.amount), 0))
@@ -142,6 +143,46 @@ def build(db, days: int) -> dict:
             .scalar()
             or 0
         ),
+    }
+
+
+def _real_users(db, since) -> dict:
+    """活跃身份(账号,或只有设备的游客)去掉 Google 机器人和许可测试账号。
+
+    10-30 实测 34 个活跃身份里约 25 个是 Play 审核/预发布测试机,不剔除没法看。
+    """
+    probe = set()
+    probe_dev = set()
+    for u, d in db.query(AppEvent.user_id, AppEvent.device_id).filter(
+        AppEvent.name == "probe_login"
+    ):
+        probe.add(u)
+        probe_dev.add(d)
+    test = {u for (u,) in db.query(Purchase.user_id).filter(Purchase.is_test.is_(True))}
+    excluded = probe | test
+    bad_dev = probe_dev | {
+        d
+        for (d,) in db.query(UserBenefits.device_id).filter(
+            UserBenefits.user_id.in_(excluded)
+        )
+    }
+    seen = set()
+    for u, d in db.query(AppEvent.user_id, AppEvent.device_id).filter(
+        AppEvent.created_at >= since, AppEvent.name.notin_(OPS_EVENTS)
+    ):
+        if u:
+            seen.add(u)
+        elif d and d not in bad_dev:
+            seen.add("dev:" + d)
+    for (u,) in db.query(RecognitionEvent.user_id).filter(
+        RecognitionEvent.created_at >= since.replace(tzinfo=None),
+        RecognitionEvent.user_id.isnot(None),
+    ):
+        seen.add(u)
+    return {
+        "active": len(seen - excluded),
+        "probe": len(seen & probe),
+        "test": len(seen & test),
     }
 
 
@@ -164,6 +205,11 @@ def render(r: dict) -> None:
     u = r["users"]
     print(
         f"├─ 用户  总 {u['total']} · 通票生效 {u['pass_active']} · 已购未激活 {u['pass_pending']}"
+    )
+    ru = r["real_users"]
+    print(
+        f"├─ 真实活跃 {ru['active']}(已剔除 Google 审核/测试机 {ru['probe']}、"
+        f"测试账号 {ru['test']};下面的漏斗数字未剔除)"
     )
     f = r["funnel"]
     print("├─ 付费漏斗")
