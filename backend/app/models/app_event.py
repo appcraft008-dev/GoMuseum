@@ -57,6 +57,7 @@ OPS_EVENTS = (
     "ops_sample",  # ops_check 每 5 分钟的采样
     "ops_alert",  # ops_check 发出(或只记不发)的告警,也是限频的依据
     "probe_login",  # 从 Google 网段登录(Play 审核/预发布测试机)→ 报告剔出真实用户
+    "tester_mark",  # 自己人的账号/设备(scripts/mark_testers.py 或从 OPS_TESTER_IPS 登录)
 )
 
 
