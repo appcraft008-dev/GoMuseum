@@ -129,16 +129,14 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         ?.localizedName(widget.language); // `name` 是中文名,不能直接用
     final segment = switch (widget.section) {
       'guide' || 'artist_bio' => c?.artist?.name,
-      'qa' =>
-        c?.suggestedQuestions
-            .where((q) => q.sort == widget.qaSort)
-            .firstOrNull
-            ?.question,
-      _ =>
-        c?.tabs
-            .where((t) => t.sectionCode == widget.section)
-            .firstOrNull
-            ?.label,
+      'qa' => c?.suggestedQuestions
+          .where((q) => q.sort == widget.qaSort)
+          .firstOrNull
+          ?.question,
+      _ => c?.tabs
+          .where((t) => t.sectionCode == widget.section)
+          .firstOrNull
+          ?.label,
     };
     final image = c?.images.firstOrNull?.url;
     return MediaItem(
@@ -509,9 +507,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     final until = ent?.freeAudioUntil[widget.qid];
     if (until == null) return l10n.audioFreePreview;
     final left = (until.difference(DateTime.now()).inHours / 24).ceil().clamp(
-      1,
-      999,
-    );
+          1,
+          999,
+        );
     return l10n.audioFreePreviewDays('$left');
   }
 
@@ -521,9 +519,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   }
 
   Future<void> _loadStreaming() async {
-    final url = ref
-        .read(catalogDataSourceProvider)
-        .audioStreamUrl(
+    final url = ref.read(catalogDataSourceProvider).audioStreamUrl(
           slug: widget.slug,
           qid: widget.qid,
           language: widget.language,
@@ -563,9 +559,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     final deadline = DateTime.now().add(const Duration(seconds: 60));
     var attempt = 0;
     while (true) {
-      final res = await ref
-          .read(catalogDataSourceProvider)
-          .getGuideAudio(
+      final res = await ref.read(catalogDataSourceProvider).getGuideAudio(
             slug: widget.slug,
             qid: widget.qid,
             language: widget.language,
@@ -743,9 +737,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
 
   /// 3px 的线拇指点不中：上下各留 6px 透明热区。两个分支共用,时长到位时不跳高。
   static Widget _hit(Widget bar) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: SizedBox(height: 3, child: bar),
-  );
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: SizedBox(height: 3, child: bar),
+      );
 
   /// 可拖进度条。**只在总时长已知时可拖** —— 流式 chunked MP3 没有 Content-Length,
   /// 既算不出落点也无字节范围可 seek,那条分支保持不确定进度条(扫动)。
