@@ -11,6 +11,7 @@
     <h2 class="h-small">{{ t('tips_title') }}</h2>
     <ul class="tips"><li>{{ t('tip_headphones') }}</li><li>{{ t('tip_online') }}</li><li>{{ t('tip_must_see') }}</li></ul>
     {% if pass_note %}<p class="small">{{ pass_note }}</p>{% endif %}
+    {% set fh = faq_href(city) %}{% if fh %}<p class="faq-link"><a href="{{ fh }}">{{ t('faq_nav') }} →</a></p>{% endif %}
   </div>
 </section>
 

@@ -6,6 +6,7 @@
 """
 
 import hashlib
+import logging
 import math
 import re
 import time
@@ -36,6 +37,7 @@ from app.services.search.inprocess import search as run_search
 from app.services.share import _accept_codes, card_url, guide_languages
 from app.services.storage import get_object_storage
 from app.services.website import data as wd
+from app.services.website import faq as wfaq
 from app.services.website.copy import t as _t
 from app.services.website.tracking import (
     BEACON_MAX_BYTES,
@@ -48,6 +50,7 @@ from app.services.website.tracking import (
 from app.services.website.trials import trial_parts, trial_qids
 
 router = APIRouter(tags=["website"])
+logger = logging.getLogger(__name__)
 
 _ROOT = Path(__file__).resolve().parents[2]
 _STATIC = _ROOT / "static" / "web"
@@ -159,9 +162,15 @@ def render(
         lang_hint=hint,
         description=_summary(description, lang),
         jsonld=jsonld,
+        faq_href=lambda city: _faq_href(city, lang),
         **ctx,
     )
     return HTMLResponse(html)
+
+
+def _faq_href(city: str, lang: str) -> str | None:
+    f = wfaq.load_faq(city)
+    return f"/{lang}/{city}/faq/" if f and lang in wfaq.faq_languages(f) else None
 
 
 def _city_name(city: wd.City, lang: str) -> str:
@@ -277,6 +286,9 @@ def _sitemap_entries(db, lang: str) -> list[tuple[str, list[str]]]:
     for c in wd.public_cities(db):
         ids = [m.id for m in c.museums]
         pages.append((f"/{{}}/{c.slug}/", wd.page_languages(db, ids)))
+        f = wfaq.load_faq(c.slug)
+        if f:
+            pages.append((f"/{{}}/{c.slug}/faq/", wfaq.faq_languages(f)))
         for aq, langs in wd.artist_languages(db, ids).items():
             pages.append((f"/{{}}/{c.slug}/artists/{aq}/", langs))
         for m in c.museums:
@@ -308,7 +320,14 @@ def sitemap_lang(lang: str, db: Session = Depends(get_db)):
                 '<xhtml:link rel="alternate" hreflang="x-default" '
                 f"href={quoteattr(_abs(tpl.format('en')))}/>"
             )
-        rows.append(f"<url><loc>{_x(_abs(tpl.format(lang)))}</loc>{alts}</url>")
+        lastmod = ""
+        if tpl.endswith("/faq/"):
+            c = wd.find_city(db, tpl.split("/")[2])
+            lm = faq_lastmod(db, c) if c else None
+            lastmod = f"<lastmod>{lm}</lastmod>" if lm else ""
+        rows.append(
+            f"<url><loc>{_x(_abs(tpl.format(lang)))}</loc>{lastmod}{alts}</url>"
+        )
     body = (
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
         'xmlns:xhtml="http://www.w3.org/1999/xhtml">' + "".join(rows) + "</urlset>"
@@ -527,6 +546,137 @@ def city_artist(
     if not c:
         return _not_found()
     return _artist_page(request, db, lang, city, artist_qid, c.museums, page=page)
+
+
+_faq_warned: set = set()
+_PH = re.compile(r"\{([a-z0-9_]+)\}")
+
+
+def _faq_fill(text: str, names: dict) -> str:
+    return _PH.sub(lambda m: names.get(m.group(1), m.group(0)), text or "")
+
+
+def _faq_view(db, f, c, lang: str, today):
+    """(置顶题, 分组, JSON-LD 问答, dateModified);只出可见题、该语言有内容的已上线馆。"""
+    tx = f.text[lang]
+    shown = {vm["slug"] for vm in _museum_vms(db, c.museums, lang)}
+    museums = [m for m in c.museums if m.slug in shown]
+    names = {m.slug: museum_name(m, lang) for m in c.museums}
+    for m in db.query(Museum).all():
+        names.setdefault(m.slug, museum_name(m, lang))
+    entities, fresh = [], []
+
+    def item_vm(item):
+        e = tx["items"][item.id]
+        by_museum = {p.museum: p for p in item.parts}
+        parts = []
+        if item.parts[0].museum is None:
+            parts.append((None, item.parts[0], e["a"]))
+        else:
+            for m in museums:
+                p = by_museum.get(m.slug)
+                if p is None:
+                    if (item.id, m.slug) not in _faq_warned:
+                        _faq_warned.add((item.id, m.slug))
+                        logger.warning(
+                            "faq %s missing museum %s/%s", f.city, item.id, m.slug
+                        )
+                    continue
+                parts.append((m, p, e["a"][m.slug]))
+        out, ld_text = [], []
+        for m, p, a in parts:
+            text = _faq_fill(a, names)
+            stale = wfaq.is_stale(p, today)
+            link = None
+            if m is not None and item.link in ("must_see", "museum"):
+                link = f"/{lang}/{c.slug}/{m.slug}/"
+                if item.link == "must_see" and _must_see_cards(db, m, lang):
+                    link += "#must-see"
+            out.append(
+                {
+                    "anchor": f"{item.id}-{m.slug.replace('_', '-')}" if m else None,
+                    "museum": names[m.slug] if m else None,
+                    "paras": _paras(text),
+                    "checked": p.checked.isoformat(),
+                    "stale": stale,
+                    "sources": [(u, u.split("/")[2]) for u in p.sources],
+                    "link": link,
+                }
+            )
+            if not stale:
+                fresh.append(p.checked)
+                plain = " ".join(_paras(text))
+                ld_text.append(f"{names[m.slug]}: {plain}" if m else plain)
+        q = _faq_fill(e["q"], names)
+        if ld_text:
+            entities.append(
+                {
+                    "@type": "Question",
+                    "name": q,
+                    "acceptedAnswer": {"@type": "Answer", "text": "\n".join(ld_text)},
+                }
+            )
+        return {
+            "id": item.id,
+            "q": q,
+            "applies_to": e.get("applies_to"),
+            "parts": out,
+        }
+
+    pinned, groups = wfaq.arrange(f, today)
+    pinned_vm = [item_vm(i) for i in pinned]
+    groups_vm = [
+        {"id": g, "title": tx["groups"][g], "entries": [item_vm(i) for i in items]}
+        for g, items in groups
+    ]
+    modified = max(fresh).isoformat() if fresh else None
+    return pinned_vm, groups_vm, entities, modified
+
+
+def faq_lastmod(db, city) -> str | None:
+    f = wfaq.load_faq(city.slug)
+    if not f:
+        return None
+    _, _, _, modified = _faq_view(db, f, city, "en", wfaq.today())
+    return modified
+
+
+@router.get("/{lang}/{city}/faq/", response_class=HTMLResponse)
+def faq_page(lang: str, city: str, request: Request, db: Session = Depends(get_db)):
+    c = wd.find_city(db, city) if lang in wd.LANGS else None
+    f = wfaq.load_faq(city) if c else None
+    if not f or lang not in wfaq.faq_languages(f):
+        return _not_found()
+    tx = f.text[lang]
+    pinned, groups, entities, modified = _faq_view(db, f, c, lang, wfaq.today())
+    jsonld = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "inLanguage": lang,
+        "url": _abs(f"/{lang}/{city}/faq/"),
+        "mainEntity": entities,
+    }
+    if modified:
+        jsonld["dateModified"] = modified
+    return render(
+        request,
+        "faq.html",
+        db=db,
+        lang=lang,
+        page_type="faq",
+        alternates=wfaq.faq_languages(f),
+        path_for=lambda code: f"/{code}/{city}/faq/",
+        title=f"{tx['title']} · GoMuseum",
+        description=tx["intro"],
+        jsonld=jsonld,
+        city=city,
+        city_name=_city_name(c, lang),
+        heading=tx["title"],
+        intro=tx["intro"],
+        modified=modified,
+        pinned=pinned,
+        groups=groups,
+    )
 
 
 @router.get("/{lang}/{city}/{museum_slug}/", response_class=HTMLResponse)

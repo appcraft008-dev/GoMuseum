@@ -231,3 +231,11 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
   .work.wide .work-panel, .work.wide .sec-b p { max-width: none; }  /* 横幅图在上:正文与图同宽 */
   .work.wide .work-pic img { margin: 0 auto; width: auto; max-width: 100%; }
 }
+
+/* 问答页 */
+.faq-toc{display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-top:1rem}
+.faq-item{margin:1.6rem 0;max-width:68ch}
+.faq-item h4{margin:1rem 0 .3rem}
+.faq-meta{opacity:.75}
+.faq-stale{font-weight:600}
+.faq-link{margin-top:1rem}
