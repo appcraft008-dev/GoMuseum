@@ -65,6 +65,10 @@ REGISTRY = {
         "POST",
         "/api/v1/museums/{slug}/objects/{qid}/rated",
     ): "只写不读:记一条埋点,恒 204;只读 audio_engine 写进事件,不回显",
+    (
+        "POST",
+        "/api/v1/recognize/client-event",
+    ): "只写不读:App 报的埋点(museum 原样记下),恒 204,不查馆、不回显",
 }
 
 

@@ -18,6 +18,8 @@ from app.core.database import Base
 EVENTS = (
     # 识别漏斗
     "recognition_succeeded",
+    # V79:识别请求没拿到结果(props.reason=no_network/timeout/server/other),App 补报
+    "recognition_failed",
     "free_quota_exhausted",
     # 三类付费墙曝光(分开记才知道哪个墙有效)
     "paywall_viewed_from_audio",

@@ -130,7 +130,14 @@ def test_report_real_users_exclude_probe_and_test(Session):
     )
     db.commit()
     ru = build(db, 7)["real_users"]
-    assert ru == {"active": 3, "probe": 1, "test": 1, "tester": 0}, ru
+    assert ru == {
+        "active": 3,
+        "probe": 1,
+        "test": 1,
+        "tester": 0,
+        "devices": 3,
+        "review_pool": 0,
+    }, ru
 
 
 # ── 自己人的测试机(10-31):移动网络 IP 每次都变,靠账号/设备标记;家和办公室 IP 兜底 ──
@@ -184,7 +191,14 @@ def test_report_excludes_testers_across_devices_and_accounts(Session):
     )
     db.commit()
     ru = build(db, 7)["real_users"]
-    assert ru == {"active": 1, "probe": 0, "test": 0, "tester": 3}, ru
+    assert ru == {
+        "active": 1,
+        "probe": 0,
+        "test": 0,
+        "tester": 3,
+        "devices": 1,
+        "review_pool": 0,
+    }, ru
 
 
 def test_shared_build_id_device_does_not_drag_in_real_users(Session):
@@ -202,3 +216,38 @@ def test_shared_build_id_device_does_not_drag_in_real_users(Session):
     db.commit()
     ru = build(db, 7)["real_users"]
     assert ru["active"] == 1 and ru["tester"] == 1, ru
+
+
+# ── 按设备去重 + 审核账号池(10-31):一台审核机轮换十几个 Google 账号,按账号数会虚高 ──
+
+
+def _google_user(db, n):
+    u = User(email=f"pool{n}@example.com", username=f"p{n}", google_id=f"g{n}")
+    db.add(u)
+    db.flush()
+    return str(u.id)
+
+
+def test_report_devices_merge_accounts_and_drop_review_pool(Session):
+    db = Session()
+    pool = [_google_user(db, n) for n in range(3)]
+    db.add_all(
+        [UserBenefits(user_id=u, device_id="dev-pool") for u in pool[:1]]
+        + [
+            AppEvent(name="content_viewed", user_id=u, device_id="dev-pool")
+            for u in pool
+        ]
+        + [
+            AppEvent(name="guest_created", device_id="dev-pool"),
+            # 真实用户:游客号 + 后来登录的 Google 号 + 只有设备的那条,同一台手机
+            AppEvent(name="guest_created", device_id="dev-a"),
+            UserBenefits(user_id="guest-a", device_id="dev-a"),
+            AppEvent(name="content_viewed", user_id="guest-a"),
+            AppEvent(name="content_viewed", user_id="google-a", device_id="dev-a"),
+            # 另一个真实用户
+            AppEvent(name="content_viewed", user_id="real-b"),
+        ]
+    )
+    db.commit()
+    ru = build(db, 7)["real_users"]
+    assert ru["devices"] == 2 and ru["review_pool"] == 1, ru

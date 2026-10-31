@@ -757,3 +757,99 @@ def test_confirm_billing_exception_clears_capture(monkeypatch):
         assert _cap(s, "c-x") is None
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+# --- POST /recognize/client-event(V79:只有 App 看得到的两件事,恒 204) ---
+
+
+def _event_client():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from app.core.database import Base
+    from app.models.app_event import AppEvent
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine, tables=[AppEvent.__table__])
+    s = sessionmaker(bind=engine)()
+
+    def _override():
+        yield s
+
+    app.dependency_overrides[get_db] = _override
+    return TestClient(app), s
+
+
+def test_client_event_logs_quota_paywall_and_failure(monkeypatch):
+    from app.models.app_event import AppEvent
+
+    client, s = _event_client()
+    try:
+        h = _as_user(monkeypatch)
+        r1 = client.post(
+            "/api/v1/recognize/client-event",
+            json={"name": "paywall_viewed_from_quota", "museum": "louvre"},
+            headers=h,
+        )
+        r2 = client.post(
+            "/api/v1/recognize/client-event",
+            json={
+                "name": "recognition_failed",
+                "reason": "no_network",
+                "device_id": "dev-1",
+                "at": 1793450000,
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+    assert r1.status_code == r2.status_code == 204
+    rows = {e.name: e for e in s.query(AppEvent)}
+    q = rows["paywall_viewed_from_quota"]
+    assert q.user_id == "u-1" and q.museum_slug == "louvre" and not q.props
+    f = rows["recognition_failed"]
+    assert f.user_id is None and f.device_id == "dev-1"
+    assert f.props == {"reason": "no_network", "at": 1793450000}
+
+
+def test_client_event_rejects_names_outside_whitelist():
+    client, _ = _event_client()
+    try:
+        r = client.post(
+            "/api/v1/recognize/client-event", json={"name": "purchase_succeeded"}
+        )
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 422  # 购买等后端自己记的事件不许客户端伪造
+
+
+def test_confirm_after_label_match_does_not_charge_twice(monkeypatch):
+    """作品照认不出 → 拍说明牌直接命中(已扣 1 次、已解锁这件)→ App 进讲解页时用
+    作品照 phash 发确认(回传标注)。这件已解锁未过期 → 不再扣(同重拍不扣的规则)。"""
+    from app.core.config import settings
+    from app.models.user_benefits import UserBenefits
+    from app.services import entitlement_service as es
+    from app.services.benefits_service import BenefitsService
+
+    client, s = _confirm_client()
+    headers = _as_user(monkeypatch)
+    try:
+        _event(s, "ph-artwork")  # 作品照:候选/认不出,未扣
+        # 说明牌命中:recognize_billed 扣 1 次并解锁(这里直接造出那个结果)
+        BenefitsService(s).consume_recognition(user_id="u-1")
+        es.unlock_free_audio(s, "u-1", ["Q1"])
+        s.commit()
+        r = client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-artwork", "qid": "Q1"},
+            headers=headers,
+        )
+        assert r.status_code == 204
+        s.expire_all()
+        b = s.query(UserBenefits).filter_by(user_id="u-1").one()
+        assert b.recognition_quota == settings.FREE_RECOGNITION_QUOTA - 1
+        assert es.audio_access(s, "u-1", "Q1") == "allowed"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
