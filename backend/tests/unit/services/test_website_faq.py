@@ -198,6 +198,14 @@ def test_paris_all_ten_languages():
 
 
 _NUM = __import__("re").compile(r"\d+(?:[:.,]\d+)*")
+_MONTHS = "january february march april may june july august september october november december".split()
+_WORDS = {"one": 1, "first": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+_WORDS |= {"six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
+# 英文说 ground floor,日韩就是 1 楼
+_LOCAL_NUMBERS = {
+    ("ja", "bags", "petit_palais"): {"1"},
+    ("ko", "bags", "petit_palais"): {"1"},
+}
 
 
 def _nums(text: str) -> set[str]:
@@ -206,18 +214,69 @@ def _nums(text: str) -> set[str]:
     return set(_NUM.findall(unicodedata.normalize("NFKC", text)))
 
 
+def _explained_by_words(en: str) -> set[str]:
+    """英文用单词写、译文写成数字的:月份名(12月)和数词(eight → 8)。"""
+    words = __import__("re").findall(r"[a-z]+", en.lower())
+    out = {str(_MONTHS.index(w) + 1) for w in words if w in _MONTHS}
+    return out | {str(_WORDS[w]) for w in words if w in _WORDS}
+
+
+def _number_errors(got: str, want: str) -> tuple[set[str], set[str]]:
+    missing = _nums(want) - _nums(got)
+    return missing, _nums(got) - _nums(want) - _explained_by_words(want)
+
+
+def test_number_check_catches_missing_and_invented():
+    want = "Closed on 1 May, open until 18:00 for eight hours."
+    assert _number_errors("5月1日闭馆,开到 18:00,共 8 小时。", want) == (set(), set())
+    assert _number_errors("6月1日闭馆,开到 18:00,共 8 小时。", want) == (set(), {"6"})
+    assert _number_errors("5月1日闭馆,开到 19:00。", want)[0] == {"18:00"}
+    assert _number_errors("5月1日闭馆,开到 18:00,门票 €9。", want)[1] == {"9"}
+
+
 def test_numbers_match_english():
-    """译文必须保留英文里的每个数字(时间/价格/日期/尺寸);可以多(如月份写成数字),不能少。"""
+    """译文的数字必须和英文一一对得上:不能少(时间/价格/日期/尺寸),也不能多出错的。"""
     F.load_faq.cache_clear()
     faq = load_faq("paris")
     en = faq.text["en"]["items"]
     for lang, t in faq.text.items():
         for item_id, e in t["items"].items():
             a, ea = e["a"], en[item_id]["a"]
-            pairs = [(a[k], ea[k]) for k in ea] if isinstance(ea, dict) else [(a, ea)]
-            pairs.append(
-                (e.get("applies_to") or "", en[item_id].get("applies_to") or "")
+            pairs = (
+                [(k, a[k], ea[k]) for k in ea]
+                if isinstance(ea, dict)
+                else [(None, a, ea)]
             )
-            for got, want in pairs:
-                missing = _nums(want) - _nums(got)
-                assert not missing, (lang, item_id, missing)
+            pairs.append(
+                (None, e.get("applies_to") or "", en[item_id].get("applies_to") or "")
+            )
+            pairs.append((None, e["q"], en[item_id]["q"]))
+            for k, got, want in pairs:
+                missing, extra = _number_errors(got, want)
+                extra -= _LOCAL_NUMBERS.get((lang, item_id, k), set())
+                assert not missing and not extra, (lang, item_id, k, missing, extra)
+
+
+def test_name_forms_count_as_the_same_placeholder(tmp_path):
+    root = _copy(tmp_path)
+
+    def decline(d):
+        d["name_forms"] = {"alpha": {"gen": "Alphy"}}
+        d["items"]["booking"]["q"] = d["items"]["booking"]["q"].replace(
+            "{alpha}", "{alpha:gen}"
+        )
+
+    _edit(root, "text/fr.yaml", decline)
+    assert validate(_load(root)) == []
+
+
+def test_case_placeholder_without_form_is_an_error(tmp_path):
+    root = _copy(tmp_path)
+
+    def decline(d):
+        d["items"]["booking"]["q"] = d["items"]["booking"]["q"].replace(
+            "{alpha}", "{alpha:gen}"
+        )
+
+    _edit(root, "text/fr.yaml", decline)
+    assert any("{alpha:gen}" in e for e in validate(_load(root)))
