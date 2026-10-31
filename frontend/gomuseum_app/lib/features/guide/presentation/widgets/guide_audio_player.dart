@@ -107,7 +107,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   bool get _useStream =>
       widget.section != 'qa' && widget.section != 'artist_bio';
 
+  /// 另一个播放条接班。先报 switch:之后状态流来的 pause 因这次收听已结束而不再报,
+  /// 否则「切到别段」会被记成「暂停」(V78 真机 10-31)。
   void _pauseQuiet() {
+    _endListen(ListenEnd.switch_);
     if (_player.playing) _player.pause();
   }
 
@@ -119,29 +122,32 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         .read(objectContentProvider((slug: widget.slug, qid: widget.qid)))
         .valueOrNull;
     final museum = ref
-        .read(museumDetailProvider(
-            (slug: widget.slug, language: widget.language)))
+        .read(
+          museumDetailProvider((slug: widget.slug, language: widget.language)),
+        )
         .valueOrNull
         ?.localizedName(widget.language); // `name` 是中文名,不能直接用
     final segment = switch (widget.section) {
       'guide' || 'artist_bio' => c?.artist?.name,
-      'qa' => c?.suggestedQuestions
-          .where((q) => q.sort == widget.qaSort)
-          .firstOrNull
-          ?.question,
-      _ => c?.tabs
-          .where((t) => t.sectionCode == widget.section)
-          .firstOrNull
-          ?.label,
+      'qa' =>
+        c?.suggestedQuestions
+            .where((q) => q.sort == widget.qaSort)
+            .firstOrNull
+            ?.question,
+      _ =>
+        c?.tabs
+            .where((t) => t.sectionCode == widget.section)
+            .firstOrNull
+            ?.label,
     };
     final image = c?.images.firstOrNull?.url;
     return MediaItem(
       id: audioSourceId(widget),
       title: c?.title ?? 'GoMuseum',
-      artist: [segment, museum]
-          .whereType<String>()
-          .where((s) => s.isNotEmpty)
-          .join(' · '),
+      artist: [
+        segment,
+        museum,
+      ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
       artUri: image == null ? null : Uri.tryParse(sizedImageUrl(image, 600)),
     );
   }
@@ -164,7 +170,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     _dio = ref.read(dioProvider);
     _listen = ListenTracker((end, played, duration, session) {
       final w = _listenSrc ?? widget;
-      unawaited(reportAudioPlayed(_dio,
+      unawaited(
+        reportAudioPlayed(
+          _dio,
           slug: w.slug,
           qid: w.qid,
           language: w.language,
@@ -173,9 +181,11 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
           played: played,
           duration: duration,
           end: end,
-          session: session));
+          session: session,
+        ),
+      );
     });
-    // 锁屏/通知栏的暂停、另一个播放条接班(_pauseQuiet)都走这条流,不用逐处埋。
+    // 锁屏/通知栏的暂停走这条流,不用逐处埋;另一个播放条接班在 _pauseQuiet 先报 switch。
     // just_audio 播完时 playing 仍为 true、processingState=completed。
     _stateSub = _player.playerStateStream.listen((st) {
       if (st.processingState == ProcessingState.completed) {
@@ -234,8 +244,13 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
       // 按馆激活:只撕覆盖这家馆的那张(持两国未激活票时不能烧错)
       final offer = (await _museumOffer())?.pass;
       if (!mounted) return true;
-      if (await ensurePassActivated(context, ref, ent,
-          museum: widget.slug, offer: offer)) {
+      if (await ensurePassActivated(
+        context,
+        ref,
+        ent,
+        museum: widget.slug,
+        offer: offer,
+      )) {
         return false; // 已生效,继续播
       }
       if (mounted) setState(() => _ui = _Ui.idle);
@@ -261,8 +276,11 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
 
     if (_hintedQids.add(widget.qid)) {
-      showPaywallHint(context,
-          onLearnMore: _showPaywall, message: _lockedReason(ent));
+      showPaywallHint(
+        context,
+        onLearnMore: _showPaywall,
+        message: _lockedReason(ent),
+      );
     } else {
       _showPaywall();
     }
@@ -292,20 +310,28 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
       context: context,
       builder: (d) => AlertDialog(
         backgroundColor: gm.surface,
-        title: Text(l10n.unlockAudioTitle,
-            style: GmText.serif(size: 16, weight: FontWeight.w700)),
-        content: Text(l10n.unlockAudioBody(left - 1),
-            style: GmText.sans(size: 13, height: 1.6)),
+        title: Text(
+          l10n.unlockAudioTitle,
+          style: GmText.serif(size: 16, weight: FontWeight.w700),
+        ),
+        content: Text(
+          l10n.unlockAudioBody(left - 1),
+          style: GmText.sans(size: 13, height: 1.6),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(d, false),
-            child:
-                Text(l10n.cancel, style: GmText.sans(size: 13, color: gm.sub)),
+            child: Text(
+              l10n.cancel,
+              style: GmText.sans(size: 13, color: gm.sub),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(d, true),
-            child: Text(l10n.unlockAudioCta,
-                style: GmText.sans(size: 13, color: gm.accent)),
+            child: Text(
+              l10n.unlockAudioCta,
+              style: GmText.sans(size: 13, color: gm.accent),
+            ),
           ),
         ],
       ),
@@ -329,8 +355,11 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   Future<({PassOffer? pass})?> _museumOffer() async {
     try {
       final m = await ref.read(
-          museumDetailProvider((slug: widget.slug, language: widget.language))
-              .future);
+        museumDetailProvider((
+          slug: widget.slug,
+          language: widget.language,
+        )).future,
+      );
       return (pass: m.pass);
     } catch (_) {
       return null;
@@ -343,8 +372,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     if (museum == null) {
       // 不知道这家馆卖哪张票时**不弹付费墙**:弹了只能猜一张,而猜就会卖错城市
       ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context)!.loadFailedRetry)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.loadFailedRetry)),
+      );
       return;
     }
     await showPaywallSheet(
@@ -478,8 +508,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     final ent = ref.watch(museumEntitlementsProvider(widget.slug)).value;
     final until = ent?.freeAudioUntil[widget.qid];
     if (until == null) return l10n.audioFreePreview;
-    final left =
-        (until.difference(DateTime.now()).inHours / 24).ceil().clamp(1, 999);
+    final left = (until.difference(DateTime.now()).inHours / 24).ceil().clamp(
+      1,
+      999,
+    );
     return l10n.audioFreePreviewDays('$left');
   }
 
@@ -489,7 +521,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   }
 
   Future<void> _loadStreaming() async {
-    final url = ref.read(catalogDataSourceProvider).audioStreamUrl(
+    final url = ref
+        .read(catalogDataSourceProvider)
+        .audioStreamUrl(
           slug: widget.slug,
           qid: widget.qid,
           language: widget.language,
@@ -529,7 +563,9 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     final deadline = DateTime.now().add(const Duration(seconds: 60));
     var attempt = 0;
     while (true) {
-      final res = await ref.read(catalogDataSourceProvider).getGuideAudio(
+      final res = await ref
+          .read(catalogDataSourceProvider)
+          .getGuideAudio(
             slug: widget.slug,
             qid: widget.qid,
             language: widget.language,
@@ -618,8 +654,10 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(border: Border.all(color: gm.faint)),
-              child: Text(_freePreviewLabel(l10n),
-                  style: GmText.sans(size: 10, color: gm.sub)),
+              child: Text(
+                _freePreviewLabel(l10n),
+                style: GmText.sans(size: 10, color: gm.sub),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -628,11 +666,12 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
             Expanded(child: _progress(gm))
           else
             Expanded(
-              child: Text(_label(l10n),
-                  style:
-                      GmText.sans(size: 12, color: gm.sub, letterSpacing: 0.4),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
+              child: Text(
+                _label(l10n),
+                style: GmText.sans(size: 12, color: gm.sub, letterSpacing: 0.4),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           // 语速档位（加载后可见）。
           if (_ui == _Ui.loaded) ...[
@@ -646,9 +685,14 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
                   border: Border.all(color: gm.line),
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: Text('${_speeds[_speedIdx]}x',
-                    style: GmText.sans(
-                        size: 11, color: gm.accent, weight: FontWeight.w600)),
+                child: Text(
+                  '${_speeds[_speedIdx]}x',
+                  style: GmText.sans(
+                    size: 11,
+                    color: gm.accent,
+                    weight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],
@@ -673,18 +717,21 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
           children: [
             known
                 ? _seekBar(gm, pos, dur)
-                : _hit(LinearProgressIndicator(
-                    backgroundColor: gm.line,
-                    color: gm.accent,
-                    minHeight: 3,
-                  )),
+                : _hit(
+                    LinearProgressIndicator(
+                      backgroundColor: gm.line,
+                      color: gm.accent,
+                      minHeight: 3,
+                    ),
+                  ),
             Align(
               alignment: Alignment.centerRight,
               child: Text(
                 known
                     ? '-${_fmt(((dur - pos).inMilliseconds / rate).round().clamp(0, 1 << 31))}'
                     : _fmt(
-                        (pos.inMilliseconds / rate).round().clamp(0, 1 << 31)),
+                        (pos.inMilliseconds / rate).round().clamp(0, 1 << 31),
+                      ),
                 style: GmText.sans(size: 10.5, color: gm.sub),
               ),
             ),
@@ -696,30 +743,38 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
 
   /// 3px 的线拇指点不中：上下各留 6px 透明热区。两个分支共用,时长到位时不跳高。
   static Widget _hit(Widget bar) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: SizedBox(height: 3, child: bar),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: SizedBox(height: 3, child: bar),
+  );
 
   /// 可拖进度条。**只在总时长已知时可拖** —— 流式 chunked MP3 没有 Content-Length,
   /// 既算不出落点也无字节范围可 seek,那条分支保持不确定进度条(扫动)。
   Widget _seekBar(GmPalette gm, Duration pos, Duration dur) {
-    return LayoutBuilder(builder: (_, c) {
-      void seek(double dx) =>
-          _player.seek(dur * (dx / c.maxWidth).clamp(0.0, 1.0));
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (d) => seek(d.localPosition.dx),
-        onHorizontalDragUpdate: (d) => seek(d.localPosition.dx),
-        child: _hit(Stack(children: [
-          Container(color: gm.line),
-          FractionallySizedBox(
-            widthFactor:
-                (pos.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0),
-            child: Container(color: gm.accent),
+    return LayoutBuilder(
+      builder: (_, c) {
+        void seek(double dx) =>
+            _player.seek(dur * (dx / c.maxWidth).clamp(0.0, 1.0));
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (d) => seek(d.localPosition.dx),
+          onHorizontalDragUpdate: (d) => seek(d.localPosition.dx),
+          child: _hit(
+            Stack(
+              children: [
+                Container(color: gm.line),
+                FractionallySizedBox(
+                  widthFactor: (pos.inMilliseconds / dur.inMilliseconds).clamp(
+                    0.0,
+                    1.0,
+                  ),
+                  child: Container(color: gm.accent),
+                ),
+              ],
+            ),
           ),
-        ])),
-      );
-    });
+        );
+      },
+    );
   }
 
   static String _fmt(int ms) {
@@ -742,8 +797,12 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
         builder: (_, snap) {
           final playing = snap.data?.playing ?? false;
           final done = snap.data?.processingState == ProcessingState.completed;
-          return GmIcon(playing && !done ? GmIcons.pause : GmIcons.play,
-              size: 12, color: gm.accent, fill: true);
+          return GmIcon(
+            playing && !done ? GmIcons.pause : GmIcons.play,
+            size: 12,
+            color: gm.accent,
+            fill: true,
+          );
         },
       );
     }
