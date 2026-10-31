@@ -220,7 +220,7 @@ def test_paris_has_18_items(): assert len(load_faq("paris").items) == 18
 
 `museum-pass` 答案必须含一句:GoMuseum 的巴黎通票只解锁讲解,不含任何场馆门票。`audio-guides` 不写 App 价格。
 
-每题写作规则:第一句直接回答(含数字/日期);再 2~4 句;禁止套话开头;时间 24 小时制;馆名用占位符;不写没在来源页上看到的事实;来源只用官方站(同一官方域名的 PDF/新闻稿可以)。每题动笔前用 WebFetch 读来源页核对(10-29 的圣诞/凯旋门资料也重查),把支撑句的原文短摘录(≤25 词)写进 `evidence`;读不到或页面没写 → 删掉该题/该馆条目,不上空答案,并在 PR 描述里列出删了什么。`checked` 填实际核对日;长期规则 `review_by` = checked + 90 天。
+每题写作规则:每段答案能单独成立(写全馆名、城市、年份,不用「它/这里/今年」);问句用游客真实搜法;第一句直接回答(含数字/日期);再 2~4 句;禁止套话开头;时间 24 小时制;馆名用占位符;不写没在来源页上看到的事实;来源只用官方站(同一官方域名的 PDF/新闻稿可以)。每题动笔前用 WebFetch 读来源页核对(10-29 的圣诞/凯旋门资料也重查),把支撑句的原文短摘录(≤25 词)写进 `evidence`;读不到或页面没写 → 删掉该题/该馆条目,不上空答案,并在 PR 描述里列出删了什么。`checked` 填实际核对日;长期规则 `review_by` = checked + 90 天。
 
 - [ ] **Step 1:** 加上述 3 个测试 → FAIL(无 paris 内容)
 - [ ] **Step 2:** 逐题核对官网并写 structure.yaml + en.yaml(只建 en 文本时 validate 应通过——其它语言文件尚不存在)
@@ -242,4 +242,5 @@ def test_paris_has_18_items(): assert len(load_faq("paris").items) == 18
 - [ ] `cd backend && black --check app tests && isort --check app tests`(worktree 里钩子不跑,必须手动)
 - [ ] 全量 `pytest tests/integration/test_website_*.py tests/unit/services/test_website_*.py -q`
 - [ ] PR → staging,CI 绿后合并;在 staging-api.gomuseum.app 打开 10 语页面各看一眼(GET,不用 HEAD)
+- [ ] text/{lang}.yaml 的 `title`/`intro` 含城市名和主要题材关键词(如「Paris museums FAQ: closing days, tickets, Museum Pass」);在网站根目录加 IndexNow 密钥文件(`deployment/website/` 下,随 scp 上线);上线后提交 FAQ 网址前先问用户
 - [ ] backlog「网站问答页」行改为已合 staging、待用户合 main;记上线后用户要做的:合 main、注册 Bing Webmaster Tools 并提交 sitemap;每月 1 号复盘加「跑 `python -m app.services.website.faq --expiring 30` 并复核」
