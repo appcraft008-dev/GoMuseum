@@ -87,6 +87,8 @@ class Settings(BaseSettings):
     # 语音、识别兜底只告警。0 = 关闭;识别默认关闭,上 prod 7 天后按真实账单定线(R7)
     ALERT_TTS_DAILY_USD: float = 2
     ALERT_RECOG_DAILY_USD: float = 0
+    # 自己人测试机的固定出口 IP(家/办公室,逗号分隔):从这里登录记 tester_mark,运营报告剔除
+    OPS_TESTER_IPS: str = ""
 
     # Google Cloud TTS(懒生成音频,Chirp 3 HD)
     GOOGLE_TTS_API_KEY: str = ""

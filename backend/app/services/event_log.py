@@ -56,8 +56,14 @@ def is_google_probe_ip(ip) -> bool:
 
 
 def mark_probe_login(db, request, resp, device_id=None):
-    """登录来自 Google 网段 → 记 probe_login,运营报告据此从真实用户里剔除。"""
+    """登录来自 Google 网段 → probe_login;来自自己人的固定 IP → tester_mark。
+    运营报告据此从真实用户里剔除。"""
+    from app.core.config import settings
+
     ip = request.client.host if request.client else None
+    tester_ips = {x.strip() for x in settings.OPS_TESTER_IPS.split(",") if x.strip()}
     if is_google_probe_ip(ip):
         log_event(db, "probe_login", user_id=str(resp.user.id), device_id=device_id)
+    elif ip in tester_ips:
+        log_event(db, "tester_mark", user_id=str(resp.user.id), device_id=device_id)
     return resp
