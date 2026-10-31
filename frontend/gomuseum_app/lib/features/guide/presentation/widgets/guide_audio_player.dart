@@ -12,6 +12,7 @@ library;
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,8 @@ import 'package:gomuseum_app/core/services/media_session.dart';
 import 'package:gomuseum_app/features/content/data/models/guide_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/auth/presentation/auth_provider.dart';
+import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
+import 'package:gomuseum_app/features/guide/data/listen_tracker.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
@@ -143,8 +146,53 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     );
   }
 
+  // ── 完播率埋点(V78)──
+  // dio 在 initState 取好:dispose 时 ref 已不能用,而「退出」那一条恰恰在 dispose 里报。
+  late final Dio _dio;
+  late final ListenTracker _listen;
+  StreamSubscription<PlayerState>? _stateSub;
+
+  /// 按**开播时**的 widget 上报:切 tab 时 widget 已经换成新段,报的得是旧段。
+  GuideAudioPlayer? _listenSrc;
+
+  void _endListen(ListenEnd e) =>
+      _listen.end(e, _player.position, _player.duration);
+
+  @override
+  void initState() {
+    super.initState();
+    _dio = ref.read(dioProvider);
+    _listen = ListenTracker((end, played, duration, session) {
+      final w = _listenSrc ?? widget;
+      unawaited(reportAudioPlayed(_dio,
+          slug: w.slug,
+          qid: w.qid,
+          language: w.language,
+          section: w.section,
+          qaSort: w.qaSort,
+          played: played,
+          duration: duration,
+          end: end,
+          session: session));
+    });
+    // 锁屏/通知栏的暂停、另一个播放条接班(_pauseQuiet)都走这条流,不用逐处埋。
+    // just_audio 播完时 playing 仍为 true、processingState=completed。
+    _stateSub = _player.playerStateStream.listen((st) {
+      if (st.processingState == ProcessingState.completed) {
+        _endListen(ListenEnd.complete);
+      } else if (st.playing) {
+        _listenSrc = widget;
+        _listen.onPlaying();
+      } else {
+        _endListen(ListenEnd.pause);
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _endListen(ListenEnd.exit);
+    _stateSub?.cancel();
     _ActiveAudio.release(this);
     _player.dispose();
     super.dispose();
@@ -158,6 +206,8 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
   void didUpdateWidget(covariant GuideAudioPlayer old) {
     super.didUpdateWidget(old);
     if (audioSourceId(widget) == audioSourceId(old)) return;
+    _endListen(ListenEnd.switch_);
+    _listen.reset();
     _ActiveAudio.release(this);
     unawaited(_player.stop());
     _autoPlayed = false;

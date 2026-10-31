@@ -19,7 +19,14 @@ enum FeedbackScope { object, app }
 ///
 /// 绝不让他选「文本问题 vs 音频问题」——繁体念错那次文本是对的、TTS 念错了，
 /// 用户只会说"读得很怪"，让他选技术分类必然选错，而且多一步。
-const _objectKinds = ['content_wrong', 'audio_bad', 'audio_missing', 'other'];
+const _objectKinds = [
+  'content_wrong',
+  'info_wrong', // 标题/图片/作者不对(V78)
+  'too_shallow', // 讲得太浅(V78)
+  'audio_bad',
+  'audio_missing',
+  'other',
+];
 const _appKinds = ['app_crash', 'recognition_bad', 'feature_request', 'other'];
 
 /// 打开反馈面板。
@@ -93,6 +100,8 @@ class _FeedbackSheetContentState extends ConsumerState<FeedbackSheetContent> {
 
   String _kindLabel(AppLocalizations l10n, String kind) => switch (kind) {
         'content_wrong' => l10n.fbContentWrong,
+        'info_wrong' => l10n.fbInfoWrong,
+        'too_shallow' => l10n.fbTooShallow,
         'audio_bad' => l10n.fbAudioBad,
         'audio_missing' => l10n.fbAudioMissing,
         'app_crash' => l10n.fbAppCrash,

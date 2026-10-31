@@ -1270,6 +1270,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fbOther => 'Otro';
 
   @override
+  String get guideRateQuestion => '¿Te ha resultado útil esta explicación?';
+
+  @override
+  String get guideRateUp => 'Útil';
+
+  @override
+  String get guideRateDown => 'No útil';
+
+  @override
+  String get fbInfoWrong => 'Título/imagen/autor incorrecto';
+
+  @override
+  String get fbTooShallow => 'Demasiado superficial';
+
+  @override
   String get fbTextHint =>
       '¿Algo más? (opcional: no incluyas información personal)';
 

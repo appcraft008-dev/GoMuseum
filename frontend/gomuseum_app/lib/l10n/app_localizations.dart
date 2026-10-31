@@ -2261,6 +2261,36 @@ abstract class AppLocalizations {
   /// **'Something else'**
   String get fbOther;
 
+  /// No description provided for @guideRateQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Was this guide helpful?'**
+  String get guideRateQuestion;
+
+  /// No description provided for @guideRateUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Helpful'**
+  String get guideRateUp;
+
+  /// No description provided for @guideRateDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not helpful'**
+  String get guideRateDown;
+
+  /// No description provided for @fbInfoWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong title/image/artist'**
+  String get fbInfoWrong;
+
+  /// No description provided for @fbTooShallow.
+  ///
+  /// In en, this message translates to:
+  /// **'Too shallow'**
+  String get fbTooShallow;
+
   /// No description provided for @fbTextHint.
   ///
   /// In en, this message translates to:
