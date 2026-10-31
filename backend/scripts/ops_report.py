@@ -12,6 +12,7 @@
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -159,13 +160,20 @@ def _real_users(db, since) -> dict:
         probe.add(u)
         probe_dev.add(d)
     test = {u for (u,) in db.query(Purchase.user_id).filter(Purchase.is_test.is_(True))}
-    excluded = probe | test
-    bad_dev = probe_dev | {
-        d
-        for (d,) in db.query(UserBenefits.device_id).filter(
-            UserBenefits.user_id.in_(excluded)
-        )
-    }
+    tester, tester_dev = set(), set()
+    for u, d in db.query(AppEvent.user_id, AppEvent.device_id).filter(
+        AppEvent.name == "tester_mark"
+    ):
+        tester.add(u)
+        tester_dev.add(d)
+    # 账号↔设备互相牵连一跳:自己的账号登过的手机、自己的手机上开的游客号都算自己人
+    # (移动网络 IP 每次都变,只能靠这层)
+    tester |= _accounts_on(db, tester_dev)
+    tester_dev |= _devices_of(db, tester)
+    tester |= _accounts_on(db, tester_dev)
+    tester.discard(None)
+    excluded = probe | test | tester
+    bad_dev = probe_dev | tester_dev | _devices_of(db, excluded)
     seen = set()
     for u, d in db.query(AppEvent.user_id, AppEvent.device_id).filter(
         AppEvent.created_at >= since, AppEvent.name.notin_(OPS_EVENTS)
@@ -183,7 +191,27 @@ def _real_users(db, since) -> dict:
         "active": len(seen - excluded),
         "probe": len(seen & probe),
         "test": len(seen & test),
+        "tester": len(seen & tester),
     }
+
+
+# 老版本 App 把 Build.ID(系统构建号,如 TQ3A.230805.001)当 device_id,同 ROM 全相同,
+# 拿它牵连账号会把陌生人算成自己人(见 frontend benefits_provider.dart)
+_BUILD_ID = re.compile(r"^[A-Z0-9]{4}\.\d{6}\.\d{3}$")
+
+
+def _devices_of(db, users) -> set:
+    rows = db.query(UserBenefits.device_id).filter(UserBenefits.user_id.in_(users))
+    rows = rows.union(db.query(AppEvent.device_id).filter(AppEvent.user_id.in_(users)))
+    return {d for (d,) in rows if d and not _BUILD_ID.match(d)}
+
+
+def _accounts_on(db, devices) -> set:
+    rows = db.query(UserBenefits.user_id).filter(UserBenefits.device_id.in_(devices))
+    rows = rows.union(
+        db.query(AppEvent.user_id).filter(AppEvent.device_id.in_(devices))
+    )
+    return {u for (u,) in rows if u}
 
 
 def _orders(db, since) -> dict:
@@ -209,7 +237,7 @@ def render(r: dict) -> None:
     ru = r["real_users"]
     print(
         f"├─ 真实活跃 {ru['active']}(已剔除 Google 审核/测试机 {ru['probe']}、"
-        f"测试账号 {ru['test']};下面的漏斗数字未剔除)"
+        f"测试单账号 {ru['test']}、自己人 {ru['tester']};下面的漏斗数字未剔除)"
     )
     f = r["funnel"]
     print("├─ 付费漏斗")

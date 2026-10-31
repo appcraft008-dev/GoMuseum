@@ -130,4 +130,75 @@ def test_report_real_users_exclude_probe_and_test(Session):
     )
     db.commit()
     ru = build(db, 7)["real_users"]
-    assert ru == {"active": 3, "probe": 1, "test": 1}, ru
+    assert ru == {"active": 3, "probe": 1, "test": 1, "tester": 0}, ru
+
+
+# ── 自己人的测试机(10-31):移动网络 IP 每次都变,靠账号/设备标记;家和办公室 IP 兜底 ──
+
+
+def test_guest_from_tester_ip_marked(Session, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "OPS_TESTER_IPS", "84.123.20.145, 90.160.64.195")
+    uid = _guest("84.123.20.145", "dev-home")
+    _guest("185.5.129.26", "dev-real")
+    db = Session()
+    ev = db.query(AppEvent).filter(AppEvent.name == "tester_mark").one()
+    assert ev.user_id == str(uid) and ev.device_id == "dev-home"
+
+
+def test_mark_testers_script(Session):
+    from scripts.mark_testers import mark
+
+    db = Session()
+    db.add(User(email="me@example.com", username="me"))
+    db.commit()
+    uid = str(db.query(User).one().id)
+    assert mark(db, emails=["me@example.com"], devices=["dev-old"]) == 2
+    assert mark(db, emails=["me@example.com"], devices=["dev-old"]) == 0  # 重跑不重复写
+    rows = {(e.user_id, e.device_id) for e in db.query(AppEvent)}
+    assert rows == {(uid, None), (None, "dev-old")}
+    with pytest.raises(SystemExit):
+        mark(db, emails=["nobody@example.com"], devices=[])
+
+
+def test_report_excludes_testers_across_devices_and_accounts(Session):
+    db = Session()
+    db.add_all(
+        [
+            AppEvent(name="tester_mark", user_id="me"),
+            AppEvent(name="tester_mark", device_id="dev-wife"),
+            # 我的账号在新手机上(移动网络,没被 IP 标)→ 账号已标,这台设备上的游客也算自己人
+            AppEvent(name="content_viewed", user_id="me", device_id="dev-new"),
+            AppEvent(name="guest_created", device_id="dev-new"),
+            UserBenefits(user_id="guest-on-new", device_id="dev-new"),
+            AppEvent(name="content_viewed", user_id="guest-on-new"),
+            # 老婆旧手机:设备已标,上面登录的 Google 账号也算自己人
+            UserBenefits(user_id="wife", device_id="dev-wife"),
+            RecognitionEvent(
+                phash="p", outcome="match", engine="vector", user_id="wife"
+            ),
+            # 真实用户
+            AppEvent(name="content_viewed", user_id="real1"),
+        ]
+    )
+    db.commit()
+    ru = build(db, 7)["real_users"]
+    assert ru == {"active": 1, "probe": 0, "test": 0, "tester": 3}, ru
+
+
+def test_shared_build_id_device_does_not_drag_in_real_users(Session):
+    """老版本 App 把 Build.ID(同 ROM 全相同)当 device_id —— 不能拿它连坐陌生人。"""
+    db = Session()
+    db.add_all(
+        [
+            AppEvent(name="tester_mark", user_id="me"),
+            UserBenefits(user_id="me", device_id="AQ3A.250226.002"),
+            UserBenefits(user_id="stranger", device_id="AQ3A.250226.002"),
+            AppEvent(name="content_viewed", user_id="stranger"),
+            AppEvent(name="content_viewed", user_id="me"),
+        ]
+    )
+    db.commit()
+    ru = build(db, 7)["real_users"]
+    assert ru["active"] == 1 and ru["tester"] == 1, ru
