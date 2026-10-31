@@ -113,6 +113,12 @@ def test_home_single_city(client):
     assert f"/en/paris/orsay/{MS1}/" in r.text  # 必看卡片
 
 
+def test_footer_links_to_operating_company(client):
+    """页脚点明运营方并链到公司官网(Google Startups / Apple 开发者核实要求站点与公司对得上)。"""
+    r = client.get("/en/")
+    assert '<a href="https://app-craft-008.com/">APPCRAFT008 LTD</a>' in r.text
+
+
 def test_home_two_cities_groups(client, db):
     _publish(db, "amx")
     r = client.get("/en/")
