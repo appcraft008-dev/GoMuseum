@@ -6,6 +6,7 @@ run_recognition,共享身份解析/计费/错误映射,行为零变化。契约�
 """
 
 import logging
+import time
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
@@ -242,14 +243,24 @@ def recognize_reject(body: RejectRequest, db: Session = Depends(get_db)) -> Resp
     return Response(status_code=204)
 
 
+# 比这更晚才到的 client-event 算补发:其间可能换过账号,令牌不一定是当时的人。
+_CLIENT_EVENT_LATE_S = 60
+
+
 class ClientEventRequest(BaseModel):
-    """只有 App 看得到的两件事(V79,加法端点):
+    """只有 App 看得到的事(V79,加法端点):
     额度付费页真弹出来了(后端 402 时记的 free_quota_exhausted 只是「撞墙」,
-    弹没弹出来后端不知道);识别请求没拿到结果(没网时请求根本到不了这里,
+    弹没弹出来后端不知道);语音付费墙真弹出来了(额度用完时 App 本地就拦下,
+    不发请求,V80);识别请求没拿到结果(没网时请求根本到不了这里,
     App 先攒在本机,联网后补报,`at` 是真实发生时刻)。"""
 
-    name: Literal["paywall_viewed_from_quota", "recognition_failed"]
+    name: Literal[
+        "paywall_viewed_from_quota",
+        "paywall_viewed_from_audio",
+        "recognition_failed",
+    ]
     museum: str | None = Field(default=None, max_length=64)
+    qid: str | None = Field(default=None, max_length=32)
     reason: Literal["no_network", "timeout", "server", "other"] | None = None
     device_id: str | None = Field(default=None, max_length=64)
     at: float | None = None  # epoch 秒
@@ -261,16 +272,20 @@ def recognize_client_event(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> Response:
-    """fire-and-forget 恒 204;名字白名单只这两个,购买等后端自记的事件不许客户端伪造。"""
+    """fire-and-forget 恒 204;名字走白名单,购买等后端自记的事件不许客户端伪造。"""
     from app.services.event_log import log_event
 
     props = {
-        k: v for k, v in (("reason", body.reason), ("at", body.at)) if v is not None
+        k: v
+        for k, v in (("reason", body.reason), ("at", body.at), ("qid", body.qid))
+        if v is not None
     }
+    late = body.at is not None and time.time() - body.at > _CLIENT_EVENT_LATE_S
     log_event(
         db,
         body.name,
-        user_id=_user_id(db, credentials),
+        # 补发且有设备号:只记设备。运营报告按设备把它并回当时的账号
+        user_id=None if late and body.device_id else _user_id(db, credentials),
         device_id=body.device_id,
         museum_slug=body.museum,
         **props,

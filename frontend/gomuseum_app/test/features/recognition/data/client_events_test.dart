@@ -36,6 +36,13 @@ void main() {
     dio = Dio(BaseOptions(baseUrl: 'http://x'))..httpClientAdapter = a;
   });
 
+  test('语音付费墙带作品 qid', () async {
+    await reportClientEvent(dio, 'paywall_viewed_from_audio',
+        museum: 'louvre', qid: 'Q185255');
+    expect(a.sent.single['qid'], 'Q185255');
+    expect(a.sent.single['museum'], 'louvre');
+  });
+
   test('在线直接发,带名字/馆/原因/设备', () async {
     await reportClientEvent(dio, 'recognition_failed',
         reason: 'timeout', deviceId: 'd1');

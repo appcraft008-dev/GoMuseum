@@ -8,13 +8,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 const kMaxPendingClientEvents = 20;
 const _kPendingKey = 'pending_client_events';
 
-/// App 侧埋点(V79)→ `POST /api/v1/recognize/client-event`:额度付费页真弹出来了、
+/// App 侧埋点(V79)→ `POST /api/v1/recognize/client-event`:额度/语音付费墙真弹出来了、
 /// 识别没拿到结果。没网时请求到不了后端,先攒在本机,下次任何一次上报前补发,
 /// `at` 记真实发生时刻。吞掉一切异常:埋点绝不连累识别页。
 Future<void> reportClientEvent(
   Dio dio,
   String name, {
   String? museum,
+  String? qid,
   String? reason,
   String? deviceId,
 }) async {
@@ -22,6 +23,7 @@ Future<void> reportClientEvent(
     final e = {
       'name': name,
       if (museum != null) 'museum': museum,
+      if (qid != null) 'qid': qid,
       if (reason != null) 'reason': reason,
       if (deviceId != null) 'device_id': deviceId,
       'at': DateTime.now().millisecondsSinceEpoch / 1000,
