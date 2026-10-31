@@ -59,8 +59,12 @@ def test_402_after_match_clears_capture(db):
     with pytest.raises(QuotaExceededError):
         _recognize(db, "Q9", capture="camera")
     (row,) = _rows(db)
-    assert row.outcome == "match"
     assert row.capture is None, "没扣成费的命中不能留 camera(否则白盖章)"
+    # 用户没拿到结果:不能进足迹(10-27 必看打卡核查发现),行仍留着供统计撞墙
+    from app.api.v1.endpoints.history import _footprint_qid
+
+    assert row.outcome == "match_unpaid" and row.top_qid == "Q9"
+    assert _footprint_qid(row) is None
 
 
 def test_billing_exception_after_match_clears_capture(db, monkeypatch):
