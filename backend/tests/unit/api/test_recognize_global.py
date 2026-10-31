@@ -814,6 +814,61 @@ def test_client_event_logs_quota_paywall_and_failure(monkeypatch):
     assert f.props == {"reason": "no_network", "at": 1793450000}
 
 
+def test_client_event_replayed_later_is_not_billed_to_current_account(monkeypatch):
+    """断网攒的事件联网后才补发,其间可能换过账号:迟到的只记设备,不记当前令牌的人。"""
+    import time
+
+    from app.models.app_event import AppEvent
+
+    client, s = _event_client()
+    try:
+        h = _as_user(monkeypatch)
+        now = time.time()
+        for reason, device, at in (
+            ("no_network", "dev-late", now - 1500),
+            ("timeout", "dev-now", now),
+            ("server", None, now - 1500),
+        ):
+            body = {"name": "recognition_failed", "reason": reason, "at": at}
+            if device:
+                body["device_id"] = device
+            client.post("/api/v1/recognize/client-event", json=body, headers=h)
+    finally:
+        app.dependency_overrides.clear()
+    who = {e.props["reason"]: (e.user_id, e.device_id) for e in s.query(AppEvent)}
+    assert who["no_network"] == (None, "dev-late")
+    assert who["timeout"] == ("u-1", "dev-now")
+    assert who["server"] == ("u-1", None)  # 没设备号时令牌是唯一身份线索
+
+
+def test_client_event_logs_audio_paywall_with_qid(monkeypatch):
+    """额度用完时 App 本地直接弹语音付费墙,不发请求,后端自己记不到。"""
+    from app.models.app_event import AppEvent
+
+    client, s = _event_client()
+    try:
+        h = _as_user(monkeypatch)
+        r = client.post(
+            "/api/v1/recognize/client-event",
+            json={
+                "name": "paywall_viewed_from_audio",
+                "museum": "louvre",
+                "qid": "Q185255",
+            },
+            headers=h,
+        )
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 204
+    e = s.query(AppEvent).one()
+    assert (e.name, e.user_id, e.museum_slug) == (
+        "paywall_viewed_from_audio",
+        "u-1",
+        "louvre",
+    )
+    assert e.props == {"qid": "Q185255"}  # audio_queue 按 props.qid 排优先级
+
+
 def test_client_event_rejects_names_outside_whitelist():
     client, _ = _event_client()
     try:

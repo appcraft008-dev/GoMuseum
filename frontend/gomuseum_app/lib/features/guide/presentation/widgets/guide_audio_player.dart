@@ -25,7 +25,9 @@ import 'package:gomuseum_app/features/guide/data/content_viewed.dart';
 import 'package:gomuseum_app/features/guide/data/listen_tracker.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
 import 'package:gomuseum_app/features/payment/data/pass_offer.dart';
+import 'package:gomuseum_app/features/payment/presentation/providers/benefits_provider.dart';
 import 'package:gomuseum_app/features/payment/presentation/widgets/paywall_sheet.dart';
+import 'package:gomuseum_app/features/recognition/data/client_events.dart';
 import 'package:gomuseum_app/l10n/app_localizations.dart';
 import 'package:gomuseum_app/theme/gm_palette.dart';
 import 'package:gomuseum_app/theme/gm_theme_x.dart';
@@ -364,6 +366,16 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
     }
   }
 
+  /// 额度用完时这里本地就拦下、不发请求,后端的 402 埋点记不到(V80)。
+  Future<void> _reportPaywallShown() async {
+    String? deviceId;
+    try {
+      deviceId = await ref.read(deviceIdProvider.future);
+    } catch (_) {}
+    await reportClientEvent(_dio, 'paywall_viewed_from_audio',
+        museum: widget.slug, qid: widget.qid, deviceId: deviceId);
+  }
+
   Future<void> _showPaywall() async {
     final museum = await _museumOffer();
     if (!mounted) return;
@@ -375,6 +387,7 @@ class _GuideAudioPlayerState extends ConsumerState<GuideAudioPlayer> {
       );
       return;
     }
+    unawaited(_reportPaywallShown());
     await showPaywallSheet(
       context,
       reason: 'audio',
