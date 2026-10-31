@@ -400,12 +400,15 @@ def evaluate(sample: dict, m: dict) -> list[tuple[str, int, str, str]]:
 
     s = sample
     req_n = s.get("req_n") or 0
-    if req_n >= 20 and (s.get("req_p95") or 0) > 1.0:
+    # 10-31 定:请求少时 p95≈第二慢的那个,一次冷启动/慢接口就响(7 天 9 封,0 次真故障),
+    # 所以 1s 线要攒够 100 个请求;请求少时只抓 >5s 的明显故障
+    req_p95 = s.get("req_p95") or 0
+    if (req_n >= 100 and req_p95 > 1.0) or (req_n >= 20 and req_p95 > 5.0):
         health(
             "browse-p95",
             "浏览接口变慢",
             f"15 分钟 p95 {s['req_p95']:.2f}s(n={req_n})",
-            "p95 > 1.0s,至少 20 个请求",
+            "p95 > 1.0s 且至少 100 个请求,或 p95 > 5s 且至少 20 个请求",
             "先按路径看是哪个接口慢;整体都慢就加 web 进程",
         )
     n5 = s.get("req_5xx") or 0

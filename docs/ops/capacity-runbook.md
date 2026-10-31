@@ -21,7 +21,7 @@
 
 | key | 条件 | 处理办法 |
 |---|---|---|
-| `browse-p95` | 15 分钟内浏览/内容接口 ≥20 个请求且 p95 > 1.0s(不含音频、全量馆包) | 先按路径看是哪个接口慢;整体都慢就加 web 进程 |
+| `browse-p95` | 15 分钟内浏览/内容接口 ≥100 个请求且 p95 > 1.0s,或 ≥20 个请求且 p95 > 5s(不含音频、全量馆包;10-31 按 7 天只记不发数据收紧) | 先按路径看是哪个接口慢;整体都慢就加 web 进程 |
 | `browse-5xx` | ≥20 个请求、≥5 个 5xx、占比 >1%,且分布在 ≥3 个不同分钟 | `docker logs --since 20m gomuseum_prod_backend` 查异常 |
 | `recog-p95-{engine}` | vector 1.0s / vector_canvas 4.0s / vector_crops 4.2s 基线;最新 30 条 n≥20 且 p95 > 1.5×基线 | 看 CPU(`docker stats`,同机其他项目也算);持续超线就按阶段 5 拆出 recognizer |
 | `host-disk` / `host-mem` | > 80% | 清理备份目录、旧镜像,或者加资源 |
