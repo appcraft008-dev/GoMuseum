@@ -21,7 +21,16 @@ from app.core.database import Base
 # 藏品级:用户能**感知到的现象**,不是技术分层。
 # 绝不让用户选「文本问题 vs 音频问题」—— 他不懂这个分层,而且会选错:
 # 繁体念错那次文本是对的、TTS 念错了,用户只会说"读得很怪"。
-OBJECT_KINDS = ("content_wrong", "audio_bad", "audio_missing", "other")
+# V78(10-31)加 info_wrong(标题/图片/作者不对:撞号混行、修复者当作者、繁体标题)
+# 与 too_shallow(源材料少写得薄)。老 App 继续发老的 4 种,不受影响。
+OBJECT_KINDS = (
+    "content_wrong",
+    "info_wrong",
+    "too_shallow",
+    "audio_bad",
+    "audio_missing",
+    "other",
+)
 APP_KINDS = ("app_crash", "recognition_bad", "feature_request", "other")
 ALL_KINDS = tuple(sorted(set(OBJECT_KINDS) | set(APP_KINDS)))
 

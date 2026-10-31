@@ -251,6 +251,101 @@ def object_viewed(
     return Response(status_code=204)
 
 
+def _audio_engine(db: Session, qid: str, language: str, section: str, qa_sort=None):
+    """上报时刻这段音频是哪个引擎录的。音频以后会被替换,事后再 join 会张冠李戴。
+    查不到/出错 → None(埋点绝不报错)。artist_bio 不查(作者卡跨件共享,与作品无关)。"""
+    from app.models.content import ObjectContentSection, ObjectSuggestedQuestion
+    from app.models.museum_object import MuseumObject
+
+    try:
+        obj = db.query(MuseumObject.id).filter_by(qid=qid).first()
+        if obj is None or section == "artist_bio":
+            return None
+        if section == "qa":
+            row = (
+                db.query(ObjectSuggestedQuestion.audio_engine)
+                .filter_by(object_id=obj.id, language=language, sort=qa_sort)
+                .first()
+            )
+        else:
+            row = (
+                db.query(ObjectContentSection.audio_engine)
+                .filter_by(object_id=obj.id, language=language, section_code=section)
+                .first()
+            )
+        return row[0] if row else None
+    except Exception:
+        logger.exception("audio engine lookup failed")
+        return None
+
+
+class PlayedRequest(BaseModel):
+    language: str = Field(max_length=8)
+    section: str = Field(max_length=32)
+    qa_sort: int | None = None
+    # 播放位置(秒,按音频时间,不受倍速影响)。上限 10 小时,挡住垃圾值
+    played_s: float = Field(ge=0, le=36000)
+    duration_s: float | None = Field(default=None, ge=0, le=36000)  # 流式拿不到总长
+    end: Literal["pause", "complete", "switch", "exit"]
+    # 一次「加载→收听」一个 id:暂停再续播会报多条,分析时按 session 取最大 played_s
+    session: str | None = Field(default=None, max_length=36)
+
+
+@router.post("/{slug}/objects/{qid}/played", status_code=204)
+def object_played(
+    body: PlayedRequest,
+    slug: str = Path(max_length=64),
+    qid: str = Path(max_length=32),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> Response:
+    """完播率埋点 audio_played(V78,加法端点)。fire-and-forget 恒 204。"""
+    from app.services.event_log import log_event
+
+    user = _caller(db, credentials)
+    log_event(
+        db,
+        "audio_played",
+        user_id=str(user.id) if user else None,
+        museum_slug=slug,
+        qid=qid,
+        **body.model_dump(),
+        audio_engine=_audio_engine(db, qid, body.language, body.section, body.qa_sort),
+    )
+    return Response(status_code=204)
+
+
+class RatedRequest(BaseModel):
+    language: str = Field(max_length=8)
+    value: Literal["up", "down"]
+
+
+@router.post("/{slug}/objects/{qid}/rated", status_code=204)
+def object_rated(
+    body: RatedRequest,
+    slug: str = Path(max_length=64),
+    qid: str = Path(max_length=32),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> Response:
+    """讲解点赞/踩 content_rated(V78,加法端点)。fire-and-forget 恒 204。
+    改主意会再报一条,分析时按人×件取最后一条。引擎取主讲解段的(评价挂在主讲解末尾)。"""
+    from app.services.event_log import log_event
+
+    user = _caller(db, credentials)
+    log_event(
+        db,
+        "content_rated",
+        user_id=str(user.id) if user else None,
+        museum_slug=slug,
+        qid=qid,
+        language=body.language,
+        value=body.value,
+        audio_engine=_audio_engine(db, qid, body.language, "guide"),
+    )
+    return Response(status_code=204)
+
+
 @router.get("/{slug}/objects/{qid}/audio")
 def object_audio(
     slug: str,

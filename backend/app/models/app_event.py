@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.core.database import Base
 
-# 15 个核心事件(改这里前先问:少了它哪个问题答不了?)
+# 核心事件(改这里前先问:少了它哪个问题答不了?)
 EVENTS = (
     # 识别漏斗
     "recognition_succeeded",
@@ -43,6 +43,11 @@ EVENTS = (
     # 回答的问题:分享这条获客渠道有没有人进来 —— ≥100 真实活跃用户前别看(spec §八)。
     # 分享次数 ≈ card.jpg 的 nginx 访问量,不另设事件。
     "share_page_view",
+    # V78(10-31):讲解长度是否合适、两种音色真实用户有无差异、深度段有没有人听。
+    # 每次暂停/播完/切走/退出一条,同一次收听按 props.session 取最大 played_s
+    "audio_played",
+    # V78(10-31):讲解末尾 👍/👎;按懒生成/预生成、引擎、语种比满意率,单件攒不起数
+    "content_rated",
 )
 
 # 容量监控事件(spec 2026-10-21-elastic-scaling-design §7;阶段 0)。不是付费漏斗,
