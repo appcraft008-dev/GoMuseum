@@ -169,3 +169,24 @@ def test_skipped_museum_counts_as_covered_but_has_no_part(tmp_path):
     assert [p.museum for p in item.parts] == ["alpha"]
     assert item.skipped == ("beta_house",)
     assert validate(faq) == []
+
+
+def test_paris_content_valid():
+    F.load_faq.cache_clear()
+    faq = load_faq("paris")
+    assert faq and validate(faq) == []
+
+
+def test_per_museum_covers_catalog_city():
+    F.load_faq.cache_clear()
+    want = set(F.museums_for_city("paris"))
+    for item in load_faq("paris").items:
+        if item.parts and item.parts[0].museum is None:
+            continue
+        got = {p.museum for p in item.parts} | set(item.skipped)
+        assert want <= got, (item.id, want - got)
+
+
+def test_paris_has_18_items():
+    F.load_faq.cache_clear()
+    assert len(load_faq("paris").items) == 18

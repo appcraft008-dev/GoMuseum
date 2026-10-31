@@ -1,0 +1,90 @@
+title: "Paris museums FAQ: closing days, tickets, Museum Pass and holidays"
+intro: "Straight answers for visiting the Louvre, Musée d'Orsay, Musée de l'Orangerie and Petit Palais in Paris: closing days, booking, free entry, the Paris Museum Pass, audio guides and holiday opening. Every answer links to the official source and shows the date it was checked."
+groups:
+  plan: Planning your visit
+  tickets: Tickets, free entry and the Paris Museum Pass
+  museums: Inside the museums
+  holidays: Holidays, strikes and closures
+items:
+  closed-days:
+    q: Which day of the week is each Paris museum closed?
+    a:
+      louvre: "{louvre} in Paris is closed every Tuesday. It is also closed on 1 January, 1 May and 25 December; on other public holidays it opens unless the holiday falls on a Tuesday."
+      orsay: "{orsay} in Paris is closed every Monday. It is also closed on 1 May and 25 December."
+      orangerie: "{orangerie} in Paris is closed every Tuesday. It is also closed on 1 May, 25 December and the morning of 14 July."
+      petit_palais: "{petit_palais} in Paris is closed every Monday. It is also closed on 1 January, 1 May, 14 July, 11 November and 25 December."
+  louvre-booking:
+    q: Do I need to book a time slot for {louvre} in advance?
+    a: "Booking a time slot for {louvre} in Paris is recommended for every visitor, including people who get in free.\n\nIn very busy periods the museum can make booking compulsory for everyone, as it did from 17 October to 1 November 2026, so check its hours page before you go."
+  louvre-night:
+    q: Which evenings is {louvre} open late, and until what time?
+    a: "{louvre} in Paris stays open until 21:00 on Wednesdays and Fridays.\n\nOn the other open days (Monday, Thursday, Saturday and Sunday) it closes at 18:00. Last entry is one hour before closing, and the rooms start clearing 30 minutes before closing."
+  louvre-time:
+    q: How long does it take to see {louvre}, and what if I only have two or three hours?
+    a: "The official \"Louvre's Masterpieces\" trail of {louvre} in Paris takes about 90 minutes.\n\nIf you only have two or three hours, follow that trail first and spend the remaining time in one wing you care about."
+  louvre-orsay-one-day:
+    q: Can I visit {louvre} and {orsay} on the same day?
+    a: "Yes, {louvre} and {orsay} in Paris are both open on Wednesdays, Thursdays, Fridays, Saturdays and Sundays; {louvre} is closed on Tuesdays and {orsay} on Mondays.\n\nThursday works best: {orsay} stays open until 21:45 that day (last admission 21:00), so you can spend the day at {louvre}, which opens at 09:00, and see {orsay} in the evening. On Wednesdays and Fridays it is the other way round: {louvre} stays open until 21:00."
+  orangerie-water-lilies:
+    q: Where are Monet's Water Lilies in {orangerie}?
+    a: "Monet's Water Lilies (Nymphéas) at {orangerie} in Paris fill two oval rooms that follow one another, lit by natural light from a glass roof.\n\nThe eight large compositions were installed to Monet's own plan in 1927. The first room shows reflections of sky and plants in the water from morning to evening; the second has willow branches framing the water."
+  museum-pass:
+    q: What is the Paris Museum Pass, and does it cover the Louvre, Orsay and Orangerie?
+    a: "The Paris Museum Pass gives one entry to more than 50 museums and monuments in and around Paris, including {louvre}, {orsay}, {orangerie} and the Arc de Triomphe; {petit_palais} is not on the list, but its permanent collections are free anyway.\n\nIt costs €85 for 2 days, €105 for 4 days and €125 for 6 days. The days are counted in hours (48, 96 or 144) from your first visit, and temporary exhibitions are not included. People under 18, and EU residents under 26, get into most of these sites free, so they usually don't need a pass.\n\nGoMuseum's own Paris pass is something different: it only unlocks the audio guides in the GoMuseum app and includes no museum admission."
+  museum-pass-louvre-entry:
+    q: Can I walk into {louvre} with the Paris Museum Pass without booking?
+    a: "No guarantee: with the Paris Museum Pass, only a booked time slot guarantees entry to {louvre} in Paris.\n\nThe slot is free and is booked on the official Paris Museum Pass website. Without one you can try the queue, but at busy times entry can be very slow or impossible. {orsay} also asks Museum Pass holders to book a timed slot on the same website."
+  free-entry:
+    q: Who gets into Paris museums for free?
+    a:
+      louvre: "{louvre} in Paris is free for everyone under 18 and for residents of the European Economic Area under 26, with photo ID (residents also need proof of residence of more than 90 days)."
+      orsay: "{orsay} in Paris is free for everyone under 18 and for residents of the European Economic Area under 26."
+      orangerie: "{orangerie} in Paris is free for everyone under 18, and for 18 to 25-year-olds who are EU citizens or have lived in the EU for more than three months, with proof of identity."
+      petit_palais: "The permanent collections of {petit_palais} in Paris are free for everyone, with no booking. Temporary exhibitions are paid."
+  first-sunday:
+    q: Are Paris museums free on the first Sunday of the month?
+    a:
+      louvre: "No, {louvre} in Paris is not free on the first Sunday. It is free for everyone on the first Friday of the month after 18:00, except in July and August, and on 14 July."
+      orsay: "Yes, {orsay} in Paris is free for everyone on the first Sunday of every month, but you must book a time slot in advance."
+      orangerie: "Yes, {orangerie} in Paris is free for everyone on the first Sunday of every month; booking a time slot is required."
+      petit_palais: "The permanent collections of {petit_palais} in Paris are free every day they are open, so no special day is needed."
+  petit-palais-ticket:
+    q: Do I need a ticket for {petit_palais}?
+    a: "No, the permanent collections of {petit_palais} in Paris are free and need no booking.\n\nOnly temporary exhibitions are paid, and booking them is strongly recommended. The museum is open Tuesday to Sunday, 10:00 to 18:00, and on Friday and Saturday evenings until 20:00 for temporary exhibitions only."
+  must-see:
+    q: What should I not miss in each Paris museum?
+    a:
+      louvre: "{louvre} publishes an official trail, \"The Louvre's Masterpieces\", that takes about 90 minutes. Our must-see list for {louvre} follows that official trail."
+      orsay: "{orsay} covers art from 1848 to 1914, and runs a guided tour of its masterpieces that starts at the information desk. Our must-see list for {orsay} shows the works you can read about and listen to in GoMuseum."
+      orangerie: "At {orangerie}, the one thing not to miss is Monet's Water Lilies: eight large compositions in two oval rooms, installed to Monet's own plan."
+      petit_palais: "{petit_palais} offers a free visit app with a tour of 12 masterpieces and another of 30 essential works."
+  audio-guides:
+    q: What audio guide options are there in each Paris museum?
+    a:
+      louvre: "{louvre} in Paris rents an audio guide for €6 at counters under the Pyramid, or you can book it online with your ticket. It covers more than 150 masterpieces and is available in 9 languages."
+      orsay: "{orsay} in Paris rents an audio guide on site for €6 (€4 reduced) with over 300 commentaries, in 10 languages. Its downloadable phone guide only covers the main temporary exhibition."
+      orangerie: "{orangerie} in Paris rents an audio guide on site with more than 150 commentaries on the permanent collections and the Water Lilies, in 10 languages."
+      petit_palais: "{petit_palais} in Paris offers a free visit app with six tours, including 12 masterpieces and 30 essential works."
+  photos:
+    q: Can I take photos inside Paris museums?
+    a:
+      louvre: "Yes, at {louvre} in Paris you can take photos and videos in the permanent collections for personal use, but not with flash, lighting or selfie sticks."
+      orsay: "Yes, at {orsay} in Paris photos and videos for private use are allowed with the flash turned off. Some works, mainly in temporary exhibitions, are marked as no-photo, and tripods must go to the cloakroom."
+      petit_palais: "Yes, at {petit_palais} in Paris photos for personal use are allowed, as long as you respect the works and other visitors."
+  bags:
+    q: Can I bring a backpack or suitcase into Paris museums?
+    a:
+      louvre: "At {louvre} in Paris, nothing larger than 55 × 35 × 20 cm is allowed, and suitcases and large bags are refused. Free lockers take smaller items."
+      orangerie: "At {orangerie} in Paris, the lockers and coat check only take bulky items that cannot go into the galleries, and every bag goes through a security check."
+      petit_palais: "At {petit_palais} in Paris, suitcases and large bags are not allowed. Handbags and small backpacks up to A3 size are fine, and lockers on the ground floor are available while space lasts."
+  christmas-new-year:
+    q: Are Paris museums open at Christmas and New Year 2026?
+    applies_to: 24 December 2026 – 1 January 2027
+    a: "On Christmas Day (Friday 25 December 2026) {louvre}, {orsay}, {orangerie} and {petit_palais} in Paris are all closed.\n\nOn New Year's Day (Friday 1 January 2027) {louvre} and {petit_palais} are closed. {orsay} and {orangerie} do not list 1 January among their closing days, so they should follow their normal Friday hours; check their websites on the day.\n\nNone of the four museums lists special hours for 24 or 31 December."
+  arc-de-triomphe-holidays:
+    q: Is the Arc de Triomphe open at Christmas and New Year 2026, and is the lift working?
+    applies_to: 24 December 2026 – 1 January 2027
+    a: "The Arc de Triomphe in Paris closes early, at 16:00, on 24 and 31 December 2026. Its official site does not list 25 December or 1 January among its annual closures.\n\nThe lift is out of service, so the only way up is the stairs: 284 steps. The monument says it will announce in 2027 when the lift returns. Last admission is 45 minutes before closing."
+  strikes-closures:
+    q: How do I find out if a Paris museum is closed because of a strike?
+    a: "Strike and protest closures are announced on each museum's official website, usually on its hours or home page, and on the official Paris Museum Pass website.\n\nCheck on the morning of your visit: a closure can be partial (some rooms or entrances) or total."
