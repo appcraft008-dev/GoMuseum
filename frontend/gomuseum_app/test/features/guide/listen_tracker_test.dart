@@ -10,7 +10,8 @@ void main() {
   setUp(() {
     sent = [];
     t = ListenTracker(
-        (end, played, _, session) => sent.add((end, played, session)));
+      (end, played, _, session) => sent.add((end, played, session)),
+    );
   });
 
   test('没开播就结束 → 不报', () {
@@ -45,5 +46,13 @@ void main() {
     t.onPlaying();
     t.end(ListenEnd.pause, const Duration(seconds: 4), null);
     expect(sent[0].$3, isNot(sent[1].$3));
+  });
+
+  test('另一段接班:先报 switch,随后状态流来的 pause 不再重报', () {
+    // GuideAudioPlayer._pauseQuiet 依赖这条:先 end(switch_) 再 pause()
+    t.onPlaying();
+    t.end(ListenEnd.switch_, const Duration(seconds: 12), null);
+    t.end(ListenEnd.pause, const Duration(seconds: 12), null);
+    expect(sent.map((e) => e.$1), [ListenEnd.switch_]);
   });
 }

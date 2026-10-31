@@ -27,11 +27,14 @@
 | `POST /museums/{slug}/objects/{qid}/viewed` | 进讲解页打点(`content_viewed`;204,fire-and-forget) | `endpoints/museums.py` |
 | `POST /museums/{slug}/objects/{qid}/played` | 收听结束打点(`audio_played`;204,fire-and-forget) | `endpoints/museums.py` |
 | `POST /museums/{slug}/objects/{qid}/rated` | 讲解 👍/👎 打点(`content_rated`;204,fire-and-forget) | `endpoints/museums.py` |
+| `POST /recognize/client-event` | App 侧埋点:额度付费页弹出 `paywall_viewed_from_quota`、识别没拿到结果 `recognition_failed`(204,fire-and-forget) | `endpoints/recognize_global.py` |
 | `GET /museums/{slug}/must-see?language=` | 必看护照页(清单+展厅号+当前轮进度+勋章;令牌可选) | `endpoints/museums.py` + `must_see_checkin.py` |
 
 **`/viewed`(加法,2026-10-13 #941)**:App 进讲解页报一次。请求体 `{"from": recognition|search|collection|history|home|link}`(讲解页入口,取值外 → 422),Bearer 可选(带了就记到人)。**不挂在 `/content` 上**:生成中前端每 4s 轮询 `/content`,挂在那里会重复计数。恒 204,失败不影响页面。
 
 **`/played`、`/rated`(加法,2026-10-31,V78)**:`/played` 请求体 `{language, section, qa_sort?, played_s, duration_s?, end: pause|complete|switch|exit, session?}`,每次暂停/播完/切走/退出报一条,同一次收听按 `session` 取最大 `played_s`;`/rated` 请求体 `{language, value: up|down}`,改主意再报一条,按人×件取最后一条。两者 Bearer 可选、恒 204;取值外 → 422。**`audio_engine` 由后端在上报时刻查库写进事件**(音频会被替换,事后 join 会错);`/rated` 取主讲解段的引擎。反馈 `kind` 同期加 `info_wrong`、`too_shallow`(老 App 不发,不受影响)。
+
+**`/recognize/client-event`(加法,2026-10-31,V79)**:请求体 `{name: paywall_viewed_from_quota|recognition_failed, museum?, reason?: no_network|timeout|server|other, device_id?, at?}`;Bearer 可选、恒 204;`name` 白名单外 → 422(购买等后端自记事件不许客户端伪造)。没网时请求到不了后端,App 攒在本机、联网后补报,`at`=真实发生时刻(epoch 秒)。后端 402 时记的 `free_quota_exhausted` 是「撞墙」,`paywall_viewed_from_quota` 才是「付费页真弹出来」。命中后因额度不足 402 的识别,`recognition_events.outcome` 记 `match_unpaid`(#1179):不进足迹、不算展陈证据。
 
 **音频流式端点(加法,老 `/audio` 不动)**:`/audio/stream` 仅 guide/深度段(qa 连念/artist_bio v1 仍走 `/audio`)。⚠️ **同一个 200 有两种形状**——首播返 `audio/mpeg` chunked 字节流(单次 TTS tee:客户端边收边播 + detached 落库,断连也把整段落 R2,不重复付费);已落库返 JSON `{"audio_url"}` R2 直链。**前端必须按 Content-Type 分支**;409=同段他人正在生成(重试即缓存命中),404=该段文本未发布。流式响应无 Content-Length/不支持 Range。
 

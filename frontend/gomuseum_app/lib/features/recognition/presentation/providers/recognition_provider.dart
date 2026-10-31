@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:gomuseum_app/core/error/exceptions.dart';
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
+import 'package:gomuseum_app/features/recognition/data/client_events.dart';
 import 'package:gomuseum_app/features/recognition/data/models/recognize_response.dart';
 import 'package:gomuseum_app/features/recognition/presentation/providers/recognition_providers.dart';
 import 'package:gomuseum_app/features/payment/data/entitlements.dart';
@@ -166,12 +167,30 @@ class RecognitionNotifier extends _$RecognitionNotifier {
             phash: resp.phash, photoFeedback: resp.photoFeedback),
       };
       if (state is RecognitionMatched) _refreshFootprints();
+      unawaited(flushClientEvents(ref.read(dioProvider))); // 联网了:补发没网时攒的
     } on QuotaExceededException catch (e) {
       state = RecognitionQuotaExceeded(passId: e.passId, museum: e.museum);
-    } catch (_) {
+    } catch (e) {
       state = const RecognitionError('recognize_failed');
+      // 重发也用完了 = 用户真没拿到结果。没网时这条会先攒在本机(V79)
+      unawaited(reportClientEvent(ref.read(dioProvider), 'recognition_failed',
+          reason: recognitionFailureReason(e),
+          deviceId: await _deviceIdOrNull()));
     }
   }
+
+  Future<String?> _deviceIdOrNull() async {
+    try {
+      return await ref.read(deviceIdProvider.future);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 额度付费页真弹出来了(V79)。后端 402 时记的 free_quota_exhausted 只是撞墙。
+  void reportQuotaPaywallShown({String? museum}) => unawaited(reportClientEvent(
+      ref.read(dioProvider), 'paywall_viewed_from_quota',
+      museum: museum));
 
   /// 确认卡点选「这一件」→ 把「照片→qid」人工确认标注回传后端（喂 CLIP 校准），
   /// **并由后端在那一刻扣 1 次额度**（候选态的唯一扣费点，2026-09-20 改）。

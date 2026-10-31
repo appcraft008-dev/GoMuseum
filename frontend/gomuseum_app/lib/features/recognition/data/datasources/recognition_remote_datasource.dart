@@ -174,7 +174,7 @@ class RecognitionRemoteDataSourceImpl implements RecognitionRemoteDataSource {
       // 500 是服务端真错误,重发也没用,仍按失败处理。
       const gateway = {502, 503, 504};
       if (gateway.contains(e.response?.statusCode)) {
-        throw const NetworkException('Server temporarily unavailable');
+        throw const NetworkException(kGatewayUnavailable);
       }
       throw ServerException('Server error: ${e.message}');
     } catch (e) {
