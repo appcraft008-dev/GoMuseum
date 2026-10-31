@@ -51,6 +51,10 @@ class CacheException implements Exception {
   String toString() => 'CacheException: $message';
 }
 
+/// 网关 5xx(部署重启时 nginx 502 等)映射成 [NetworkException] 时的 message ——
+/// 埋点靠它把「服务端暂时不可用」和「真没网」分开。
+const kGatewayUnavailable = 'Server temporarily unavailable';
+
 /// 网络异常
 class NetworkException implements Exception {
   final String message;
