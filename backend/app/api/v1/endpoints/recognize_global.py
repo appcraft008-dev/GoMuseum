@@ -219,9 +219,14 @@ def _bill_confirm(db: Session, qid: str, user_id: str | None) -> bool:
     # 只看任意一张票的话,持最便宜的票就能在别的城市逐件白拿主讲解。
     if es.resolve_state(db, user_id, museum)[0] == es.ACTIVE:
         return True
+    benefits = BenefitsService(db)
+    # 这件已解锁未过期 → 不再扣(同 recognize_billed 的重拍不扣)。实际路径:作品照
+    # 认不出 → 说明牌直接命中(已扣、已解锁)→ App 进讲解页用作品照 phash 发确认
+    if qid in es.free_audio_qids(benefits.get_or_create_benefits(user_id=user_id)):
+        return True
     # 顺序同 /entitlements/audio/unlock:**先扣再解**。反过来写的话
     # 额度已空时权益已经发出去,白送的正是我们要卖的东西。
-    if not BenefitsService(db).consume_recognition(user_id=user_id):
+    if not benefits.consume_recognition(user_id=user_id):
         return False
     es.unlock_free_audio(db, user_id, [qid])
     return True

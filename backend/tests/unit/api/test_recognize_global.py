@@ -823,3 +823,33 @@ def test_client_event_rejects_names_outside_whitelist():
     finally:
         app.dependency_overrides.clear()
     assert r.status_code == 422  # 购买等后端自己记的事件不许客户端伪造
+
+
+def test_confirm_after_label_match_does_not_charge_twice(monkeypatch):
+    """作品照认不出 → 拍说明牌直接命中(已扣 1 次、已解锁这件)→ App 进讲解页时用
+    作品照 phash 发确认(回传标注)。这件已解锁未过期 → 不再扣(同重拍不扣的规则)。"""
+    from app.core.config import settings
+    from app.models.user_benefits import UserBenefits
+    from app.services import entitlement_service as es
+    from app.services.benefits_service import BenefitsService
+
+    client, s = _confirm_client()
+    headers = _as_user(monkeypatch)
+    try:
+        _event(s, "ph-artwork")  # 作品照:候选/认不出,未扣
+        # 说明牌命中:recognize_billed 扣 1 次并解锁(这里直接造出那个结果)
+        BenefitsService(s).consume_recognition(user_id="u-1")
+        es.unlock_free_audio(s, "u-1", ["Q1"])
+        s.commit()
+        r = client.post(
+            "/api/v1/recognize/confirm",
+            json={"phash": "ph-artwork", "qid": "Q1"},
+            headers=headers,
+        )
+        assert r.status_code == 204
+        s.expire_all()
+        b = s.query(UserBenefits).filter_by(user_id="u-1").one()
+        assert b.recognition_quota == settings.FREE_RECOGNITION_QUOTA - 1
+        assert es.audio_access(s, "u-1", "Q1") == "allowed"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
