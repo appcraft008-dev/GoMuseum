@@ -20,6 +20,7 @@ from app.models.object_embedding import ObjectEmbedding
 from app.models.purchase import Entitlement, Purchase
 from app.models.recognition_demand import RecognitionDemand
 from app.models.recognition_event import RecognitionEvent
+from app.models.user import User
 from app.models.user_benefits import UserBenefits
 from app.services.object_importer import upsert_museum, upsert_object
 from scripts.ops_report import build
@@ -39,6 +40,7 @@ def session():
             Purchase.__table__,
             Entitlement.__table__,
             UserBenefits.__table__,
+            User.__table__,
             RecognitionEvent.__table__,
             RecognitionDemand.__table__,
             LLMUsage.__table__,

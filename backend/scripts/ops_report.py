@@ -14,6 +14,7 @@ import argparse
 import json
 import re
 import sys
+import uuid
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
@@ -28,6 +29,7 @@ from app.models.museum_object import MuseumObject  # noqa: E402
 from app.models.purchase import Entitlement, Purchase  # noqa: E402
 from app.models.recognition_demand import RecognitionDemand  # noqa: E402
 from app.models.recognition_event import RecognitionEvent  # noqa: E402
+from app.models.user import User  # noqa: E402
 from app.models.user_benefits import UserBenefits  # noqa: E402
 
 
@@ -187,12 +189,64 @@ def _real_users(db, since) -> dict:
         RecognitionEvent.user_id.isnot(None),
     ):
         seen.add(u)
+    devices, review_pool = _device_clusters(db, seen - excluded)
     return {
         "active": len(seen - excluded),
         "probe": len(seen & probe),
         "test": len(seen & test),
         "tester": len(seen & tester),
+        "devices": devices,
+        "review_pool": review_pool,
     }
+
+
+# ponytail: 同设备 ≥3 个 Google 账号 = Google 审核账号池(10-31 实测两台各轮换 19/7 个,
+# 真实用户基本 1 个);误伤多账号的真实用户时再调
+_REVIEW_POOL_GOOGLE = 3
+
+
+def _device_clusters(db, idents) -> tuple:
+    """把账号/设备并成「一台手机」,返回 (真实设备数, 剔除的审核账号池设备数)。
+
+    10-31 试运行:与 `active`(按账号数)并列输出,对比几期再替换。
+    """
+    par = {}
+
+    def find(x):
+        while par.setdefault(x, x) != x:
+            par[x] = par[par[x]]
+            x = par[x]
+        return x
+
+    users = {i for i in idents if not i.startswith("dev:")}
+    rows = db.query(UserBenefits.user_id, UserBenefits.device_id).filter(
+        UserBenefits.user_id.in_(users)
+    )
+    rows = rows.union(
+        db.query(AppEvent.user_id, AppEvent.device_id).filter(
+            AppEvent.user_id.in_(users)
+        )
+    )
+    for u, d in rows:
+        if d and not _BUILD_ID.match(d):
+            par[find(u)] = find("dev:" + d)
+    ids = []
+    for u in users:
+        try:
+            ids.append(uuid.UUID(u))
+        except ValueError:
+            pass
+    google = {
+        str(i)
+        for (i,) in db.query(User.id).filter(
+            User.id.in_(ids), User.google_id.isnot(None)
+        )
+    }
+    per = Counter()
+    for i in idents:
+        per[find(i)] += i in google
+    pool = sum(1 for n in per.values() if n >= _REVIEW_POOL_GOOGLE)
+    return len(per) - pool, pool
 
 
 # 老版本 App 把 Build.ID(系统构建号,如 TQ3A.230805.001)当 device_id,同 ROM 全相同,
@@ -238,6 +292,10 @@ def render(r: dict) -> None:
     print(
         f"├─ 真实活跃 {ru['active']}(已剔除 Google 审核/测试机 {ru['probe']}、"
         f"测试单账号 {ru['test']}、自己人 {ru['tester']};下面的漏斗数字未剔除)"
+    )
+    print(
+        f"│  按设备去重 {ru['devices']} 台(另剔除审核账号池设备 {ru['review_pool']} 台;"
+        "试运行,对比几期再替换上一行)"
     )
     f = r["funnel"]
     print("├─ 付费漏斗")
