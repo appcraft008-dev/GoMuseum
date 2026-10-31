@@ -190,3 +190,34 @@ def test_per_museum_covers_catalog_city():
 def test_paris_has_18_items():
     F.load_faq.cache_clear()
     assert len(load_faq("paris").items) == 18
+
+
+def test_paris_all_ten_languages():
+    F.load_faq.cache_clear()
+    assert faq_languages(load_faq("paris")) == list(F.LANGS)
+
+
+_NUM = __import__("re").compile(r"\d+(?:[:.,]\d+)*")
+
+
+def _nums(text: str) -> set[str]:
+    import unicodedata
+
+    return set(_NUM.findall(unicodedata.normalize("NFKC", text)))
+
+
+def test_numbers_match_english():
+    """译文必须保留英文里的每个数字(时间/价格/日期/尺寸);可以多(如月份写成数字),不能少。"""
+    F.load_faq.cache_clear()
+    faq = load_faq("paris")
+    en = faq.text["en"]["items"]
+    for lang, t in faq.text.items():
+        for item_id, e in t["items"].items():
+            a, ea = e["a"], en[item_id]["a"]
+            pairs = [(a[k], ea[k]) for k in ea] if isinstance(ea, dict) else [(a, ea)]
+            pairs.append(
+                (e.get("applies_to") or "", en[item_id].get("applies_to") or "")
+            )
+            for got, want in pairs:
+                missing = _nums(want) - _nums(got)
+                assert not missing, (lang, item_id, missing)
