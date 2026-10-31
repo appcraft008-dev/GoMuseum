@@ -41,6 +41,7 @@
 | 完播率埋点:切到另一段播放记成 `pause` 而非 `switch` | V78 真机验(10-31):开始播放别的段时 `guide_audio_player.dart` 先 `_pauseQuiet()` 当前播放器,状态流把它记成 pause;`switch` 只在同一播放器换音源(`didUpdateWidget`)时出现。不影响完播率(complete 判据不变),只是「切走」与「暂停」分不开。修法:`_pauseQuiet` 前先 `_endListen(ListenEnd.switch_)`;随下个 App 包顺带 | V78 真机验 10-31 |
 | 付费墙曝光埋点缺两个 | `app_event.EVENTS` 定义了 `paywall_viewed_from_quota`、`paywall_viewed_from_ai`,但前后端无任何上报处(只有 `_from_audio` 在 `entitlements.py`/`museums.py` 记);10-31 prod 近 30 天三个事件 0 条(连自己 8 笔测试购买前也没有)。现在没人到付费墙不痛,但单馆票/定价判断要靠「看到付费页→放弃」这个数。修法:额度耗尽弹付费墙、问答付费墙打开时各记一条(先查能否后端记、免发版);随下个 App 包顺带 | 单馆票讨论查漏斗 10-31 |
 | 识别失败没有埋点,看不出断网有多常见 | 现在只有 `recognition_succeeded`,识别失败(尤其没网)不上报;没网时请求到不了服务器,后端日志也看不到,只能前端记。修法:识别失败时记一条事件,带原因(无网/超时/服务端错误);随下个 App 包(和完播率 switch 修复、付费墙两个事件一起) | 离线馆包讨论 10-31 |
+| 运营报表漏算多账号审核设备,真实用户数虚高 | 10-31 prod 只读去重:`ops_report._real_users` 口径近 30 天 67 个「真实身份」,按 user↔device(事件表+`UserBenefits.device_id`)并簇后只有 18 台设备;其中 2 台各挂 34/14 个账号(游客+十几个英文名 Google 邮箱轮换,两台共用部分账号)= Google 审核/预发布测试账号池,#1156 只剔打过标的,这类漏了;剔掉后像真实外部用户的只有 2–4 台。修法:`_real_users` 改按设备簇计数,同设备挂 ≥N 个 Google 账号(N 待定,真实用户基本 1 个)整簇按审核机剔除;先只统计不生效对比一遍再切 | 营销 session 对不上 Play 安装数 10-31 |
 | `/api/v1/museums` 与 `/history/recent` 偶发慢 | 10-31 查 nginx 近 8 天:`/museums` 220 次里 56 次 >1s(中位 1.9s,最大 2.4s),`/history/recent` 1656 次里 142 次 >1s(最大 4.1s),`/search` 574 次里 11 次。用户量小时不痛,先查是不是冷缓存 | 10-31 定 ops_check 阈值时发现 |
 | 两条告警线重定 | `ALERT_RECOG_DAILY_USD` 用 7 天真实记账重定,时间是阶段 0 上 prod 后第 7 天;`ALERT_TTS_DAILY_USD` 在阶段 2 前重标(R7) | elastic-stage0 |
 
