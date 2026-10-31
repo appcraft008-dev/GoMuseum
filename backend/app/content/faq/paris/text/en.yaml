@@ -15,7 +15,7 @@ items:
       petit_palais: "The {petit_palais} in Paris is closed every Monday. It is also closed on 1 January, 1 May, 14 July, 11 November and 25 December."
   louvre-booking:
     q: Do I need to book a time slot for the {louvre} in advance?
-    a: "Booking a time slot for the {louvre} in Paris is recommended for every visitor, including people who get in free.\n\nIn very busy periods the museum can make booking compulsory for everyone, as it did from 17 October to 1 November 2026, so check its hours page before you go."
+    a: "Booking a time slot for the {louvre} in Paris is recommended for every visitor, including people who get in free.\n\nIn very busy periods the museum can make booking compulsory for everyone, for example from 17 October to 1 November 2026, so check its hours page before you go."
   louvre-night:
     q: Which evenings is the {louvre} open late, and until what time?
     a: "The {louvre} in Paris stays open until 21:00 on Wednesdays and Fridays.\n\nOn the other open days (Monday, Thursday, Saturday and Sunday) it closes at 18:00. Last entry is one hour before closing, and the rooms start clearing 30 minutes before closing."
@@ -78,13 +78,13 @@ items:
       orangerie: "At the {orangerie} in Paris, the lockers and coat check only take bulky items that cannot go into the galleries, and every bag goes through a security check."
       petit_palais: "At the {petit_palais} in Paris, suitcases and large bags are not allowed. Handbags and small backpacks up to A3 size are fine, and lockers on the ground floor are available while space lasts."
   christmas-new-year:
-    q: Are Paris museums open at Christmas and New Year 2026?
+    q: Are Paris museums open on Christmas Day 2026 and New Year's Day 2027?
     applies_to: 24 December 2026 – 1 January 2027
-    a: "On Christmas Day (Friday 25 December 2026) the {louvre}, the {orsay}, the {orangerie} and the {petit_palais} in Paris are all closed.\n\nOn New Year's Day (Friday 1 January 2027) the {louvre} and the {petit_palais} are closed. The {orsay} and the {orangerie} do not list 1 January among their closing days, so they should follow their normal Friday hours; check their websites on the day.\n\nNone of the four museums lists special hours for 24 or 31 December."
+    a: "On Christmas Day (Friday 25 December 2026) the {louvre}, the {orsay}, the {orangerie} and the {petit_palais} in Paris are all closed.\n\nOn New Year's Day (Friday 1 January 2027) the {louvre} and the {petit_palais} are closed. The {orsay} and the {orangerie} do not list 1 January among their closing days, so they should follow their normal Friday hours; check their websites on the day."
   arc-de-triomphe-holidays:
-    q: Is the Arc de Triomphe open at Christmas and New Year 2026, and is the lift working?
+    q: Is the Arc de Triomphe open over Christmas 2026 and New Year 2027, and is the lift working?
     applies_to: 24 December 2026 – 1 January 2027
-    a: "The Arc de Triomphe in Paris closes early, at 16:00, on 24 and 31 December 2026. Its official site does not list 25 December or 1 January among its annual closures.\n\nThe lift is out of service, so the only way up is the stairs: 284 steps. The monument says it will announce in 2027 when the lift returns. Last admission is 45 minutes before closing."
+    a: "The Arc de Triomphe in Paris closes early, at 16:00, on 24 and 31 December 2026. Its official site does not list 25 December or 1 January among its annual closures.\n\nThe lift is out of service, so the only way up is the stairs: 284 steps. The lift is expected back in service in 2027; the date will be announced later. Last admission is 45 minutes before closing."
   strikes-closures:
     q: How do I find out if a Paris museum is closed because of a strike?
     a: "Strike and protest closures are announced on each museum's official website, usually on its hours or home page, and on the official Paris Museum Pass website.\n\nCheck on the morning of your visit: a closure can be partial (some rooms or entrances) or total."

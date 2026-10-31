@@ -78,13 +78,13 @@ items:
       orangerie: "{orangerie} w Paryżu: szafki i szatnia przyjmują tylko duże przedmioty, których nie można wnieść do sal, a każda torba przechodzi kontrolę bezpieczeństwa."
       petit_palais: "{petit_palais} w Paryżu: walizki i duże torby są zabronione. Torebki i małe plecaki do formatu A3 są w porządku, a na parterze są szafki, dopóki starczy miejsc."
   christmas-new-year:
-    q: Czy paryskie muzea są otwarte w Boże Narodzenie i Nowy Rok 2026?
+    q: Czy paryskie muzea są otwarte w Boże Narodzenie 2026 i Nowy Rok 2027?
     applies_to: 24 grudnia 2026 – 1 stycznia 2027
-    a: "W Boże Narodzenie (piątek, 25 grudnia 2026 r.) wszystkie te muzea w Paryżu są zamknięte: {louvre}, {orsay}, {orangerie} i {petit_palais}.\n\nW Nowy Rok (piątek, 1 stycznia 2027 r.) zamknięte są {louvre} i {petit_palais}. {orsay} i {orangerie} nie wymieniają 1 stycznia wśród dni zamknięcia, więc powinny działać w zwykłych piątkowych godzinach; sprawdź ich strony tego dnia.\n\nŻadne z czterech muzeów nie podaje specjalnych godzin na 24 ani 31 grudnia."
+    a: "W Boże Narodzenie (piątek, 25 grudnia 2026 r.) wszystkie te muzea w Paryżu są zamknięte: {louvre}, {orsay}, {orangerie} i {petit_palais}.\n\nW Nowy Rok (piątek, 1 stycznia 2027 r.) zamknięte są {louvre} i {petit_palais}. {orsay} i {orangerie} nie wymieniają 1 stycznia wśród dni zamknięcia, więc powinny działać w zwykłych piątkowych godzinach; sprawdź ich strony tego dnia."
   arc-de-triomphe-holidays:
-    q: Czy Łuk Triumfalny jest otwarty w Boże Narodzenie i Nowy Rok 2026 i czy działa winda?
+    q: Czy Łuk Triumfalny jest otwarty w Boże Narodzenie 2026 i Nowy Rok 2027 i czy działa winda?
     applies_to: 24 grudnia 2026 – 1 stycznia 2027
-    a: "Łuk Triumfalny w Paryżu zamyka się wcześniej, o 16:00, 24 i 31 grudnia 2026 r. Jego oficjalna strona nie wymienia 25 grudnia ani 1 stycznia wśród corocznych dni zamknięcia.\n\nWinda nie działa, na górę prowadzą tylko schody: 284 stopnie. Termin ponownego uruchomienia windy zostanie ogłoszony w 2027 r. Ostatnie wejście 45 minut przed zamknięciem."
+    a: "Łuk Triumfalny w Paryżu zamyka się wcześniej, o 16:00, 24 i 31 grudnia 2026 r. Jego oficjalna strona nie wymienia 25 grudnia ani 1 stycznia wśród corocznych dni zamknięcia.\n\nWinda nie działa, na górę prowadzą tylko schody: 284 stopnie. Winda ma wrócić do użytku w 2027 r., a dokładny termin zostanie ogłoszony później. Ostatnie wejście 45 minut przed zamknięciem."
   strikes-closures:
     q: Jak sprawdzić, czy paryskie muzeum jest zamknięte z powodu strajku?
     a: "Zamknięcia z powodu strajków lub manifestacji są ogłaszane na oficjalnej stronie każdego muzeum, zwykle na stronie z godzinami otwarcia lub stronie głównej, oraz na oficjalnej stronie Paris Museum Pass.\n\nSprawdź rano w dniu wizyty: zamknięcie może być częściowe (niektóre sale lub wejścia) albo całkowite."

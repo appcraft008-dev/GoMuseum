@@ -27,6 +27,7 @@ from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.entitlement_service import pass_for_museum, pass_title
 from app.services.museum_repo import (
+    _museum_names,
     _sized,
     get_object_content,
     museum_name,
@@ -562,8 +563,11 @@ def _faq_view(db, f, c, lang: str, today):
     shown = {vm["slug"] for vm in _museum_vms(db, c.museums, lang)}
     museums = [m for m in c.museums if m.slug in shown]
     names = {m.slug: museum_name(m, lang) for m in c.museums}
-    for m in db.query(Museum).all():
-        names.setdefault(m.slug, museum_name(m, lang))
+    for (
+        slug,
+        by_lang,
+    ) in _museum_names().items():  # DB 还没建行的馆也有名字,不漏出 {slug}
+        names.setdefault(slug, by_lang.get(lang) or by_lang.get("en") or slug)
     entities, fresh = [], []
 
     def item_vm(item):
@@ -578,9 +582,9 @@ def _faq_view(db, f, c, lang: str, today):
                 if p is None:
                     if (
                         m.slug not in item.skipped
-                        and (item.id, m.slug) not in _faq_warned
+                        and (f.city, item.id, m.slug) not in _faq_warned
                     ):
-                        _faq_warned.add((item.id, m.slug))
+                        _faq_warned.add((f.city, item.id, m.slug))
                         logger.warning(
                             "faq %s missing museum %s/%s", f.city, item.id, m.slug
                         )
@@ -658,15 +662,16 @@ def faq_page(lang: str, city: str, request: Request, db: Session = Depends(get_d
         return _not_found()
     tx = f.text[lang]
     pinned, groups, entities, modified = _faq_view(db, f, c, lang, wfaq.today())
-    jsonld = {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "inLanguage": lang,
-        "url": _abs(f"/{lang}/{city}/faq/"),
-        "mainEntity": entities,
-    }
-    if modified:
-        jsonld["dateModified"] = modified
+    jsonld = None  # 全部过期 → 不出空 FAQPage(结构化数据会报错)
+    if entities:
+        jsonld = {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "inLanguage": lang,
+            "url": _abs(f"/{lang}/{city}/faq/"),
+            "dateModified": modified,
+            "mainEntity": entities,
+        }
     return render(
         request,
         "faq.html",

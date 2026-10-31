@@ -78,13 +78,13 @@ items:
       orangerie: "Im {orangerie} in Paris nehmen Schließfächer und Garderobe nur sperrige Gegenstände an, die nicht in die Säle dürfen; jede Tasche wird bei der Sicherheitskontrolle geprüft."
       petit_palais: "Im {petit_palais} in Paris sind Koffer und große Taschen nicht erlaubt. Handtaschen und kleine Rucksäcke bis A3 sind in Ordnung; Schließfächer im Erdgeschoss gibt es, solange Platz ist."
   christmas-new-year:
-    q: Haben Pariser Museen an Weihnachten und Neujahr 2026 geöffnet?
+    q: Haben Pariser Museen an Weihnachten 2026 und Neujahr 2027 geöffnet?
     applies_to: 24. Dezember 2026 – 1. Januar 2027
-    a: "Am ersten Weihnachtstag (Freitag, 25. Dezember 2026) sind der {louvre}, das {orsay}, das {orangerie} und das {petit_palais} in Paris alle geschlossen.\n\nAm Neujahrstag (Freitag, 1. Januar 2027) sind der {louvre} und das {petit_palais} geschlossen. Das {orsay} und das {orangerie} führen den 1. Januar nicht unter ihren Schließtagen, sollten also die üblichen Freitagszeiten haben; prüfen Sie am Tag selbst ihre Website.\n\nKeines der vier Museen nennt besondere Öffnungszeiten für den 24. oder 31. Dezember."
+    a: "Am ersten Weihnachtstag (Freitag, 25. Dezember 2026) sind der {louvre}, das {orsay}, das {orangerie} und das {petit_palais} in Paris alle geschlossen.\n\nAm Neujahrstag (Freitag, 1. Januar 2027) sind der {louvre} und das {petit_palais} geschlossen. Das {orsay} und das {orangerie} führen den 1. Januar nicht unter ihren Schließtagen, sollten also die üblichen Freitagszeiten haben; prüfen Sie am Tag selbst ihre Website."
   arc-de-triomphe-holidays:
-    q: Hat der Arc de Triomphe an Weihnachten und Neujahr 2026 geöffnet, und funktioniert der Aufzug?
+    q: Hat der Arc de Triomphe an Weihnachten 2026 und Neujahr 2027 geöffnet, und funktioniert der Aufzug?
     applies_to: 24. Dezember 2026 – 1. Januar 2027
-    a: "Der Arc de Triomphe in Paris schließt am 24. und 31. Dezember 2026 früher, um 16:00. Seine offizielle Website führt den 25. Dezember und den 1. Januar nicht unter den jährlichen Schließtagen.\n\nDer Aufzug ist außer Betrieb, hinauf geht es nur über die Treppe: 284 Stufen. Wann er wieder läuft, will das Monument 2027 bekannt geben. Letzter Einlass ist 45 Minuten vor Schließung."
+    a: "Der Arc de Triomphe in Paris schließt am 24. und 31. Dezember 2026 früher, um 16:00. Seine offizielle Website führt den 25. Dezember und den 1. Januar nicht unter den jährlichen Schließtagen.\n\nDer Aufzug ist außer Betrieb, hinauf geht es nur über die Treppe: 284 Stufen. Er soll 2027 wieder in Betrieb gehen; das genaue Datum wird später bekannt gegeben. Letzter Einlass ist 45 Minuten vor Schließung."
   strikes-closures:
     q: Wie erfahre ich, ob ein Pariser Museum wegen Streik geschlossen ist?
     a: "Schließungen wegen Streiks oder Demonstrationen werden auf der offiziellen Website jedes Museums angekündigt, meist auf der Seite mit den Öffnungszeiten oder der Startseite, sowie auf der offiziellen Website des Paris Museum Pass.\n\nPrüfen Sie am Morgen Ihres Besuchs: Eine Schließung kann teilweise (einzelne Säle oder Eingänge) oder vollständig sein."

@@ -78,13 +78,13 @@ items:
       orangerie: "Au {orangerie} à Paris, les casiers et le vestiaire ne prennent que les objets encombrants qui ne peuvent pas entrer dans les salles, et chaque sac passe un contrôle de sécurité."
       petit_palais: "Au {petit_palais} à Paris, valises et grands sacs sont interdits. Les sacs à main et petits sacs à dos jusqu'au format A3 sont acceptés, et des casiers au rez-de-chaussée sont disponibles dans la limite des places."
   christmas-new-year:
-    q: Les musées de Paris sont-ils ouverts à Noël et au Nouvel An 2026 ?
+    q: Les musées de Paris sont-ils ouverts à Noël 2026 et au Nouvel An 2027 ?
     applies_to: 24 décembre 2026 – 1er janvier 2027
-    a: "Le jour de Noël (vendredi 25 décembre 2026), le {louvre}, le {orsay}, le {orangerie} et le {petit_palais} à Paris sont tous fermés.\n\nLe jour de l'An (vendredi 1er janvier 2027), le {louvre} et le {petit_palais} sont fermés. Le {orsay} et le {orangerie} ne mentionnent pas le 1er janvier parmi leurs jours de fermeture : ils devraient suivre leurs horaires habituels du vendredi ; vérifiez sur leur site le jour même.\n\nAucun des quatre musées n'indique d'horaires particuliers pour le 24 ou le 31 décembre."
+    a: "Le jour de Noël (vendredi 25 décembre 2026), le {louvre}, le {orsay}, le {orangerie} et le {petit_palais} à Paris sont tous fermés.\n\nLe jour de l'An (vendredi 1er janvier 2027), le {louvre} et le {petit_palais} sont fermés. Le {orsay} et le {orangerie} ne mentionnent pas le 1er janvier parmi leurs jours de fermeture : ils devraient suivre leurs horaires habituels du vendredi ; vérifiez sur leur site le jour même."
   arc-de-triomphe-holidays:
-    q: L'Arc de triomphe est-il ouvert à Noël et au Nouvel An 2026, et l'ascenseur fonctionne-t-il ?
+    q: L'Arc de triomphe est-il ouvert à Noël 2026 et au Nouvel An 2027, et l'ascenseur fonctionne-t-il ?
     applies_to: 24 décembre 2026 – 1er janvier 2027
-    a: "L'Arc de triomphe à Paris ferme plus tôt, à 16:00, les 24 et 31 décembre 2026. Son site officiel ne compte pas le 25 décembre ni le 1er janvier parmi ses fermetures annuelles.\n\nL'ascenseur est hors service : on monte uniquement par l'escalier, soit 284 marches. Le monument annoncera en 2027 la date de sa remise en service. Dernière entrée 45 minutes avant la fermeture."
+    a: "L'Arc de triomphe à Paris ferme plus tôt, à 16:00, les 24 et 31 décembre 2026. Son site officiel ne compte pas le 25 décembre ni le 1er janvier parmi ses fermetures annuelles.\n\nL'ascenseur est hors service : on monte uniquement par l'escalier, soit 284 marches. Sa remise en service est prévue en 2027, à une date annoncée ultérieurement. Dernière entrée 45 minutes avant la fermeture."
   strikes-closures:
     q: Comment savoir si un musée de Paris est fermé pour cause de grève ?
     a: "Les fermetures liées aux grèves ou aux manifestations sont annoncées sur le site officiel de chaque musée, en général sur la page horaires ou d'accueil, ainsi que sur le site officiel du Paris Museum Pass.\n\nVérifiez le matin de votre visite : une fermeture peut être partielle (certaines salles ou entrées) ou totale."

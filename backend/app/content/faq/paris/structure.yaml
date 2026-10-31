@@ -50,12 +50,12 @@ items:
     group: tickets
     checked: 2026-10-31
     review_by: 2027-01-29
-    sources: ["https://www.parismuseumpass.fr/en/e-billet", "https://www.musee-orsay.fr/en/visit"]
-    evidence: "Only reserving a time slot can guarantee access to the Louvre Museum with the PMP."
+    sources: ["https://www.parismuseumpass.fr/en/e-billet", "https://www.parismuseumpass.fr/en/reservation", "https://www.musee-orsay.fr/en/visit"]
+    evidence: "Only reserving a time slot can guarantee access to the Louvre Museum with the PMP. you can try to access the museum by waiting at the entrance in the queue, but access can sometimes be very long, or even impossible. (reservation page: free reservation)"
   - id: free-entry
     group: tickets
     per_museum:
-      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/hours-admission"], evidence: "Under 18s and EEA residents under 26: Free. Proof of ID required."}
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/hours-admission"], evidence: "Under 26 EEA residents: with a valid photographic and residency permit longer than 90 days. Under 18s: Proof of ID required."}
       orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/visit"], evidence: "Under 18s and EEA residents; under 26s Free rate"}
       orangerie: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orangerie.fr/en/articles/rates-257"], evidence: "under 18; aged 18 to 25, European Union citizens and long-term residents (more than 3 months)"}
       petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"], evidence: "L'accès aux collections permanentes est gratuit et sans réservation."}
@@ -119,7 +119,7 @@ items:
     pin_from: 2026-11-15
     pin_until: 2027-01-02
     sources: ["https://www.paris-arc-de-triomphe.fr/en/visit/practical-information", "https://www.paris-arc-de-triomphe.fr/en/visit"]
-    evidence: "Early closing at 4pm on 24 and 31 December 2026. access only via the stairs (284 steps)."
+    evidence: "Early closing at 4pm on 24 and 31 December 2026. Annual closures on 1st May, 8 May, 14 July, 11 November (morning). last admission 45 minutes before closing time. stairs (284 steps); return to service in 2027 will be announced at a later date."
   - id: strikes-closures
     group: holidays
     checked: 2026-10-31

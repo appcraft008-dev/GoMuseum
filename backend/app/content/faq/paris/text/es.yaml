@@ -15,7 +15,7 @@ items:
       petit_palais: "El {petit_palais} de París cierra todos los lunes. También cierra el 1 de enero, el 1 de mayo, el 14 de julio, el 11 de noviembre y el 25 de diciembre."
   louvre-booking:
     q: ¿Hay que reservar franja horaria para el {louvre} con antelación?
-    a: "Se recomienda a todos los visitantes reservar una franja horaria para el {louvre} de París, incluidos quienes entran gratis.\n\nEn épocas de mucha afluencia, el museo puede hacer obligatoria la reserva para todos, como hizo del 17 de octubre al 1 de noviembre de 2026; consulta su página de horarios antes de ir."
+    a: "Se recomienda a todos los visitantes reservar una franja horaria para el {louvre} de París, incluidos quienes entran gratis.\n\nEn épocas de mucha afluencia, el museo puede hacer obligatoria la reserva para todos, como del 17 de octubre al 1 de noviembre de 2026; consulta su página de horarios antes de ir."
   louvre-night:
     q: ¿Qué noches abre hasta tarde el {louvre} y hasta qué hora?
     a: "El {louvre} de París abre hasta las 21:00 los miércoles y viernes.\n\nLos demás días de apertura (lunes, jueves, sábado y domingo) cierra a las 18:00. El último acceso es una hora antes del cierre, y las salas empiezan a desalojarse 30 minutos antes."
@@ -78,13 +78,13 @@ items:
       orangerie: "En el {orangerie} de París, las taquillas y el guardarropa solo admiten objetos voluminosos que no pueden entrar en las salas, y todos los bolsos pasan un control de seguridad."
       petit_palais: "En el {petit_palais} de París no se permiten maletas ni bolsas grandes. Los bolsos y mochilas pequeñas de hasta tamaño A3 sí, y hay taquillas en la planta baja mientras queden libres."
   christmas-new-year:
-    q: ¿Abren los museos de París en Navidad y Año Nuevo de 2026?
+    q: ¿Abren los museos de París en Navidad de 2026 y Año Nuevo de 2027?
     applies_to: 24 de diciembre de 2026 – 1 de enero de 2027
-    a: "El día de Navidad (viernes 25 de diciembre de 2026) cierran el {louvre}, el {orsay}, el {orangerie} y el {petit_palais} de París.\n\nEl día de Año Nuevo (viernes 1 de enero de 2027) cierran el {louvre} y el {petit_palais}. El {orsay} y el {orangerie} no incluyen el 1 de enero entre sus días de cierre, así que deberían seguir su horario normal de viernes; compruébalo en su web ese mismo día.\n\nNinguno de los cuatro museos indica horarios especiales para el 24 o el 31 de diciembre."
+    a: "El día de Navidad (viernes 25 de diciembre de 2026) cierran el {louvre}, el {orsay}, el {orangerie} y el {petit_palais} de París.\n\nEl día de Año Nuevo (viernes 1 de enero de 2027) cierran el {louvre} y el {petit_palais}. El {orsay} y el {orangerie} no incluyen el 1 de enero entre sus días de cierre, así que deberían seguir su horario normal de viernes; compruébalo en su web ese mismo día."
   arc-de-triomphe-holidays:
-    q: ¿Abre el Arco del Triunfo en Navidad y Año Nuevo de 2026, y funciona el ascensor?
+    q: ¿Abre el Arco del Triunfo en Navidad de 2026 y Año Nuevo de 2027, y funciona el ascensor?
     applies_to: 24 de diciembre de 2026 – 1 de enero de 2027
-    a: "El Arco del Triunfo de París cierra antes, a las 16:00, el 24 y el 31 de diciembre de 2026. Su web oficial no incluye el 25 de diciembre ni el 1 de enero entre sus cierres anuales.\n\nEl ascensor está fuera de servicio, así que solo se sube por la escalera: 284 escalones. El monumento anunciará en 2027 cuándo vuelve a funcionar. El último acceso es 45 minutos antes del cierre."
+    a: "El Arco del Triunfo de París cierra antes, a las 16:00, el 24 y el 31 de diciembre de 2026. Su web oficial no incluye el 25 de diciembre ni el 1 de enero entre sus cierres anuales.\n\nEl ascensor está fuera de servicio, así que solo se sube por la escalera: 284 escalones. Está previsto que vuelva a funcionar en 2027, en una fecha que se anunciará más adelante. El último acceso es 45 minutos antes del cierre."
   strikes-closures:
     q: ¿Cómo sé si un museo de París cierra por huelga?
     a: "Los cierres por huelgas o manifestaciones se anuncian en la web oficial de cada museo, normalmente en la página de horarios o en la portada, y en la web oficial del Paris Museum Pass.\n\nComprueba la mañana de tu visita: el cierre puede ser parcial (algunas salas o entradas) o total."

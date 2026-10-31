@@ -223,3 +223,18 @@ def test_faq_page_view_logged(client, db):
     )
     evs = db.query(AppEvent).filter_by(name="web_page_view").all()
     assert [e.props["page_type"] for e in evs] == ["faq"]
+
+
+def test_no_jsonld_when_every_answer_is_stale(client, monkeypatch):
+    monkeypatch.setattr(faq, "today", lambda: date(2030, 1, 1))
+    t = client.get("/en/paris/faq/").text
+    assert '"FAQPage"' not in t and 'id="booking"' in t  # 题照常显示,只是不进 JSON-LD
+
+
+def test_placeholder_for_museum_without_db_row_uses_catalog_name(client, db):
+    db.query(Museum).filter_by(
+        slug="louvre"
+    ).delete()  # 只剩 orsay;问句里的 {louvre} 仍要换成名字
+    db.commit()
+    t = client.get("/en/paris/faq/").text
+    assert "{louvre}" not in t and "Louvre Museum" in t
