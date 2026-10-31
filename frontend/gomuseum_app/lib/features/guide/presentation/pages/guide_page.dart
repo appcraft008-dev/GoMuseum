@@ -27,7 +27,7 @@ import 'package:gomuseum_app/features/content/domain/usecases/generate_explanati
 import 'package:gomuseum_app/features/content/domain/usecases/generate_tts_audio.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/catalog_providers.dart';
 import 'package:gomuseum_app/features/content/presentation/providers/content_providers.dart';
-import 'package:gomuseum_app/features/feedback/presentation/widgets/feedback_sheet.dart';
+import 'package:gomuseum_app/features/guide/presentation/widgets/guide_rating.dart';
 import 'package:gomuseum_app/features/history/presentation/providers/history_providers.dart';
 import 'package:gomuseum_app/features/guide/presentation/logic/guide_layering.dart';
 import 'package:gomuseum_app/features/guide/presentation/widgets/guide_audio_player.dart';
@@ -363,12 +363,6 @@ class _GuidePageState extends ConsumerState<GuidePage>
                   fallbackImagePath: widget.args.imagePath,
                   fallbackImageUrl: widget.args.imageUrl,
                   onBack: () => _goBack(context),
-                  onFeedback: () => showFeedbackSheet(
-                    context,
-                    slug: slug,
-                    qid: content.qid,
-                    language: _language,
-                  ),
                   onShare: content.share == null
                       ? null
                       : () => shareObject(content.share!),
@@ -853,7 +847,6 @@ class _A5HeroSliverAppBar extends StatelessWidget {
   const _A5HeroSliverAppBar({
     required this.content,
     required this.onBack,
-    required this.onFeedback,
     this.onShare,
     this.fallbackImagePath,
     this.fallbackImageUrl,
@@ -866,10 +859,7 @@ class _A5HeroSliverAppBar extends StatelessWidget {
   final String? fallbackImageUrl;
   final VoidCallback onBack;
 
-  /// 「内容反馈」——错漏靠用户反馈兜底(CLAUDE.md「AI 内容质量原则」)。
-  final VoidCallback onFeedback;
-
-  /// 分享(在反馈键右边)。null = 这件不可分享(后端 share 为 null),不渲染这个键。
+  /// 分享。null = 这件不可分享(后端 share 为 null),不渲染这个键。
   final Future<void> Function()? onShare;
 
   /// hero 完全展开时的高度；顶栏标题的淡入时机由它推出来。
@@ -907,14 +897,8 @@ class _A5HeroSliverAppBar extends StatelessWidget {
         ),
         centerTitle: true,
         actions: [
-          Padding(
-            padding: EdgeInsets.only(right: onShare == null ? 8 : 6),
-            child: _HeroAction(
-              icon: GmIcons.edit,
-              onTap: onFeedback,
-              label: AppLocalizations.of(context)!.fbTitleObject,
-            ),
-          ),
+          // 内容反馈不在顶栏:V78 起挪到主讲解末尾的 👍/👎(GuideRating),
+          // 👎 拉起反馈面板 —— 刚进页面还没读没听,没东西可评(10-31 用户定)
           if (onShare != null)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -1343,11 +1327,12 @@ class _A5Body extends StatelessWidget {
               autoPlay: autoPlayAudio,
             ),
           const SizedBox(height: 14),
-          if (layer.hasHero)
+          if (layer.hasHero) ...[
             Text(layer.heroBody,
                 style: GmText.sans(size: 13.5, height: context.gmBodyHeight),
-                textAlign: context.gmBodyAlign)
-          else if (deepGenerating)
+                textAlign: context.gmBodyAlign),
+            GuideRating(slug: slug, qid: content.qid, language: language),
+          ] else if (deepGenerating)
             // 生成中：hero/标题/墙签已在上方呈现，讲解区显「正在撰写」占位。
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 28),

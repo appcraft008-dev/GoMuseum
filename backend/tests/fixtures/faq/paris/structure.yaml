@@ -1,0 +1,23 @@
+groups: [plan, holidays]
+items:
+  - id: closed-days
+    group: plan
+    link: must_see
+    per_museum:
+      orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/visit"], evidence: "Closed on Mondays"}
+      louvre: {checked: 2026-10-20, review_by: 2026-11-30, sources: ["https://www.louvre.fr/en/visit"], evidence: "Closed on Tuesdays"}
+  - id: booking
+    group: plan
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.louvre.fr/en/tickets"]
+    evidence: "Booking is required"
+  - id: christmas-new-year
+    group: holidays
+    kind: dated
+    checked: 2026-10-31
+    review_by: 2027-01-02
+    pin_from: 2026-11-15
+    pin_until: 2027-01-02
+    sources: ["https://www.louvre.fr/en/news"]
+    evidence: "Closed on 25 December"

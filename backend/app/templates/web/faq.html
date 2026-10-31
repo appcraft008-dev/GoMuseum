@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% macro faq_item(item) -%}
+<article class="faq-item">
+  <h3 class="h-small" id="{{ item.id }}">{{ item.q }}</h3>
+  {% if item.applies_to %}<p class="small faq-meta">{{ t('faq_applies', period=item.applies_to) }}</p>{% endif %}
+  {% for p in item.parts %}
+  <div class="faq-part">
+    {% if p.museum %}<h4 id="{{ p.anchor }}">{% if p.link %}<a href="{{ p.link }}">{{ p.museum }}</a>{% else %}{{ p.museum }}{% endif %}</h4>{% endif %}
+    {% if p.stale %}<p class="faq-stale">{{ t('faq_stale') }}</p>{% endif %}
+    {% for para in p.paras %}<p>{{ para }}</p>{% endfor %}
+    <p class="small faq-meta">{{ t('faq_checked', date=p.checked) }} · {{ t('faq_sources') }}:
+      {% for url, host in p.sources %}<a href="{{ url }}" rel="nofollow noopener" target="_blank">{{ host }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+  </div>
+  {% endfor %}
+</article>
+{%- endmacro %}
+{% block main %}
+<p class="crumb wrap"><a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a> › {{ heading }}</p>
+<section class="wrap pagehead">
+  <h1 class="h-serif">{{ heading }}</h1>
+  <p class="lead">{{ intro }}</p>
+  {% if modified %}<p class="small">{{ t('faq_checked', date=modified) }}</p>{% endif %}
+  <p class="small">{{ t('faq_disclaimer') }}</p>
+  <nav class="faq-toc">
+    {% if pinned %}<a href="#pinned">{{ t('faq_pinned') }}</a>{% endif %}
+    {% for g in groups %}<a href="#g-{{ g.id }}">{{ g.title }}</a>{% endfor %}
+  </nav>
+</section>
+{% if pinned %}
+<section class="band" id="pinned" data-section="pinned">
+  <div class="wrap faq">
+    <h2 class="h-serif">{{ t('faq_pinned') }}</h2>
+    {% for item in pinned %}{{ faq_item(item) }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+{% for g in groups %}
+<section class="band" id="g-{{ g.id }}" data-section="faq-{{ g.id }}">
+  <div class="wrap faq">
+    <h2 class="h-serif">{{ g.title }}</h2>
+    {% for item in g.entries %}{{ faq_item(item) }}{% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

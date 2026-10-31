@@ -1217,6 +1217,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fbOther => 'その他';
 
   @override
+  String get guideRateQuestion => 'この解説は役に立ちましたか？';
+
+  @override
+  String get guideRateUp => '役に立った';
+
+  @override
+  String get guideRateDown => '役に立たなかった';
+
+  @override
+  String get fbInfoWrong => '題名・画像・作者が違う';
+
+  @override
+  String get fbTooShallow => '内容が浅い';
+
+  @override
   String get fbTextHint => '他にありますか？（任意・個人情報は入力しないでください）';
 
   @override

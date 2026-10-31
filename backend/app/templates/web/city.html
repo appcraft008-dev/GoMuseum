@@ -5,6 +5,7 @@
   <h1 class="h-serif">{{ city_name }}</h1>
   <p class="lead">{{ hero_sub }}</p>
   {% if pass_note %}<p class="small">{{ pass_note }}</p>{% endif %}
+  {% set fh = faq_href(city) %}{% if fh %}<p class="faq-link"><a href="{{ fh }}">{{ t('faq_nav') }} →</a></p>{% endif %}
 </section>
 <section class="band" id="museums" data-section="museums">
   <div class="wrap"><div class="mgrid">{% for m in museums %}{{ museum_card(m, lang, t) }}{% endfor %}</div></div>

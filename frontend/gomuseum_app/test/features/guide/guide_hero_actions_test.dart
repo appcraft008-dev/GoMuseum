@@ -1,4 +1,4 @@
-// 顶栏动作键（返回 / 内容反馈）的可见性。
+// 顶栏动作键（返回 / 分享）的可见性。内容反馈 V78 起挪到主讲解末尾的 👍/👎。
 //
 // 起因：反馈键用的是整套色板里最弱的墨色（sub），而旁边的返回键用主墨色；
 // 更要命的是 hero 展开时顶栏直接压在作品照片上，渐变遮罩只铺底部 160px，
@@ -74,7 +74,7 @@ void main() {
     expect(_icon(GmIcons.share), findsNothing);
   });
 
-  testWidgets('share 非 null → 分享键在反馈键右边,同款底衬,读屏认得出', (t) async {
+  testWidgets('share 非 null → 有分享键,同款底衬,读屏认得出', (t) async {
     await _pumpGuide(t,
         share: const ShareInfo(
             url: 'https://x/a/orsay/Q1',
@@ -89,22 +89,29 @@ void main() {
     final d = box.decoration as BoxDecoration;
     expect(d.shape, BoxShape.circle);
     expect(d.color, GmPalette.light.surface);
-    expect(t.getCenter(_icon(GmIcons.share)).dx,
-        greaterThan(t.getCenter(_icon(GmIcons.edit)).dx));
     final l10n = lookupAppLocalizations(const Locale('zh'));
     expect(find.bySemanticsLabel(l10n.guideShare), findsOneWidget);
   });
 
-  testWidgets('反馈键用主墨色，不是那个最弱的次级色', (t) async {
-    await _pumpGuide(t);
-    final flag = t.widget<GmIcon>(_icon(GmIcons.edit));
-    expect(flag.color, GmPalette.light.ink,
-        reason: 'sub(#8A7A5F) 是次级文字色，压在作品照片上看不见');
+  testWidgets('顶栏键用主墨色，不是那个最弱的次级色', (t) async {
+    await _pumpGuide(t,
+        share: const ShareInfo(
+            url: 'https://x/a/orsay/Q1',
+            text: 't',
+            imageUrl: 'https://x/c.png'));
+    for (final name in [GmIcons.share, GmIcons.back]) {
+      expect(t.widget<GmIcon>(_icon(name)).color, GmPalette.light.ink,
+          reason: 'sub(#8A7A5F) 是次级文字色，压在作品照片上看不见');
+    }
   });
 
   testWidgets('两个键都自带底 —— 顶栏压在照片上时裸图标会糊掉', (t) async {
-    await _pumpGuide(t);
-    for (final name in [GmIcons.edit, GmIcons.back]) {
+    await _pumpGuide(t,
+        share: const ShareInfo(
+            url: 'https://x/a/orsay/Q1',
+            text: 't',
+            imageUrl: 'https://x/c.png'));
+    for (final name in [GmIcons.share, GmIcons.back]) {
       final box = t.widget<Container>(
         find.ancestor(of: _icon(name), matching: find.byType(Container)).first,
       );
@@ -114,19 +121,13 @@ void main() {
     }
   });
 
-  testWidgets('读屏认得出它是什么 —— 线性图标本身没有文字', (t) async {
+  testWidgets('顶栏不再有反馈键;评价在主讲解末尾', (t) async {
     await _pumpGuide(t);
+    expect(_icon(GmIcons.edit), findsNothing);
     final l10n = lookupAppLocalizations(const Locale('zh'));
-    // 复用反馈弹层自己的标题串（已有十语），不为一个 tooltip 再开一条 key
-    expect(find.bySemanticsLabel(l10n.fbTitleObject), findsOneWidget);
-  });
-
-  testWidgets('点反馈键能拉起反馈弹层', (t) async {
-    await _pumpGuide(t);
-    await t.tap(_icon(GmIcons.edit));
-    await t.pumpAndSettle();
-    final l10n = lookupAppLocalizations(const Locale('zh'));
-    expect(find.text(l10n.fbTitleObject), findsWidgets);
+    expect(find.text(l10n.guideRateQuestion), findsOneWidget);
+    expect(t.getTopLeft(find.text(l10n.guideRateQuestion)).dy,
+        greaterThan(t.getTopLeft(find.text('主线讲解正文。')).dy));
   });
 
   // ⚠️ 这条是补的：墙签漏接 formatYear，列表显示「140 BC」而点进来还是「-140」。

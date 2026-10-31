@@ -1,0 +1,16 @@
+title: Paris museums FAQ
+intro: Closing days, tickets and holidays at Paris museums.
+groups: {plan: Planning your visit, holidays: Holidays and closures}
+items:
+  closed-days:
+    q: Which day is each Paris museum closed?
+    a:
+      orsay: "{orsay} in Paris is closed on Mondays."
+      louvre: "{louvre} in Paris is closed on Tuesdays."
+  booking:
+    q: Do I need to book {louvre} in advance?
+    a: "Yes, book {louvre} ahead <b>&</b> arrive early.\n\nWalk-ins are refused at 18:00. </script><script>alert(1)</script>"
+  christmas-new-year:
+    q: Are Paris museums open at Christmas and New Year 2026?
+    applies_to: December 2026 – January 2027
+    a: "{louvre} is closed on 25 December 2026. XMAS-ANSWER"

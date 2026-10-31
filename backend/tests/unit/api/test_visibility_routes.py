@@ -57,6 +57,14 @@ REGISTRY = {
         "POST",
         "/api/v1/museums/{slug}/objects/{qid}/viewed",
     ): "只写不读:记一条埋点,恒 204 不回显任何馆/藏品内容",
+    (
+        "POST",
+        "/api/v1/museums/{slug}/objects/{qid}/played",
+    ): "只写不读:记一条埋点,恒 204;只读 audio_engine 写进事件,不回显",
+    (
+        "POST",
+        "/api/v1/museums/{slug}/objects/{qid}/rated",
+    ): "只写不读:记一条埋点,恒 204;只读 audio_engine 写进事件,不回显",
 }
 
 

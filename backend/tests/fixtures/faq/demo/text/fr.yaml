@@ -1,0 +1,16 @@
+title: FAQ des musées de Demo
+intro: Jours d'ouverture et billets à Demo.
+groups: {plan: Préparer sa visite, holidays: Fêtes}
+items:
+  closed-days:
+    q: Quel jour chaque musée de Demo est-il fermé ?
+    a:
+      alpha: "{alpha} à Demo est fermé le mardi."
+      beta_house: "{beta_house} à Demo est fermé le lundi."
+  booking:
+    q: Faut-il réserver {alpha} à l'avance ?
+    a: "Oui. {alpha} exige un billet horodaté réservé à l'avance.\n\nSans réservation, refus à 18:00."
+  christmas-new-year:
+    q: Les musées sont-ils ouverts à Noël et au Nouvel An 2026 ?
+    applies_to: décembre 2026 – janvier 2027
+    a: "{alpha} est fermé le 25 décembre 2026."

@@ -120,7 +120,8 @@ def test_language_sitemap_content(client):
 
 def test_thin_language_omits_listing_pages(client):
     locs = _locs(client.get("/sitemap-fr.xml").text)
-    assert locs == ["https://gomuseum.app/fr/"]  # fr 无作品:只有首页
+    # fr 无作品:列表页都不出;问答页不依赖作品内容,照常收录
+    assert locs == ["https://gomuseum.app/fr/", "https://gomuseum.app/fr/paris/faq/"]
 
 
 def test_alternates_only_existing_languages(client):

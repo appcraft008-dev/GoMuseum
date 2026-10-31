@@ -1210,6 +1210,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fbOther => '其他';
 
   @override
+  String get guideRateQuestion => '这段讲解对你有帮助吗？';
+
+  @override
+  String get guideRateUp => '有帮助';
+
+  @override
+  String get guideRateDown => '没帮助';
+
+  @override
+  String get fbInfoWrong => '标题/图片/作者不对';
+
+  @override
+  String get fbTooShallow => '讲得太浅';
+
+  @override
   String get fbTextHint => '还想补充什么？（选填，请勿填写个人信息）';
 
   @override
@@ -2487,6 +2502,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get fbOther => '其他';
+
+  @override
+  String get guideRateQuestion => '這段講解對你有幫助嗎？';
+
+  @override
+  String get guideRateUp => '有幫助';
+
+  @override
+  String get guideRateDown => '沒幫助';
+
+  @override
+  String get fbInfoWrong => '標題/圖片/作者不對';
+
+  @override
+  String get fbTooShallow => '講得太淺';
 
   @override
   String get fbTextHint => '還想補充什麼？（選填，請勿填寫個人資訊）';

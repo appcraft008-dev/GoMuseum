@@ -51,6 +51,10 @@ enum GmIcons {
   /// 馆藏目录视图切换:大图网格 / 列表。
   grid,
   list,
+
+  /// 讲解末尾「有帮助吗」👍/👎(V78);选中时 fill。
+  thumbUp,
+  thumbDown,
 }
 
 const Map<GmIcons, List<String>> _iconPaths = {
@@ -152,6 +156,15 @@ const Map<GmIcons, List<String>> _iconPaths = {
   // 旗杆到底 + 旗面；与本图标集一致的 24×24 viewBox、1.6pt 圆头描边。
   GmIcons.share: ['M4.5 19.5c.5-6.5 5-10.5 12-10.5', 'M12.5 4.5 17 9l-4.5 4.5'],
   GmIcons.edit: ['M15.2 4.8l4 4L9 19H5v-4L15.2 4.8Z', 'M13 7l4 4'],
+  // 同 Lucide thumbs-up/down(ISC),缩进 2px 边距与本图标集一致
+  GmIcons.thumbUp: [
+    'M7.5 10.5v10',
+    'M14.5 6.3 13.7 10h5a1.8 1.8 0 0 1 1.7 2.3l-2 7a1.8 1.8 0 0 1-1.7 1.2H5.3a1.8 1.8 0 0 1-1.8-1.8v-6.4a1.8 1.8 0 0 1 1.8-1.8h2.2a1.8 1.8 0 0 0 1.6-1L12 3.5a2.6 2.6 0 0 1 2.5 2.8Z',
+  ],
+  GmIcons.thumbDown: [
+    'M16.5 13.5v-10',
+    'M9.5 17.7l.8-3.7h-5a1.8 1.8 0 0 1-1.7-2.3l2-7A1.8 1.8 0 0 1 7.3 3.5h11.4a1.8 1.8 0 0 1 1.8 1.8v6.4a1.8 1.8 0 0 1-1.8 1.8h-2.2a1.8 1.8 0 0 0-1.6 1L12 20.5a2.6 2.6 0 0 1-2.5-2.8Z',
+  ],
 };
 
 /// 线性描边图标（对应设计稿 GMIcon）

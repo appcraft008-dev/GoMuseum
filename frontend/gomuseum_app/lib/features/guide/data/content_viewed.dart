@@ -11,7 +11,58 @@ Future<void> reportContentViewed(
   required GuideEntry entry,
 }) async {
   try {
-    await dio.post('/api/v1/museums/$slug/objects/$qid/viewed',
-        data: {'from': entry.name});
+    await dio.post(
+      '/api/v1/museums/$slug/objects/$qid/viewed',
+      data: {'from': entry.name},
+    );
+  } catch (_) {}
+}
+
+/// 收听结束为什么报(后端 `PlayedRequest.end`)。
+enum ListenEnd { pause, complete, switch_, exit }
+
+/// 完播率埋点 audio_played(V78)。同一次收听用同一个 [session]:暂停再续播会报多条,
+/// 分析时按 session 取最大 [played]。吞掉一切异常。
+Future<void> reportAudioPlayed(
+  Dio dio, {
+  required String slug,
+  required String qid,
+  required String language,
+  required String section,
+  int? qaSort,
+  required Duration played,
+  Duration? duration,
+  required ListenEnd end,
+  required String session,
+}) async {
+  try {
+    await dio.post(
+      '/api/v1/museums/$slug/objects/$qid/played',
+      data: {
+        'language': language,
+        'section': section,
+        'qa_sort': qaSort,
+        'played_s': played.inMilliseconds / 1000,
+        'duration_s': duration == null ? null : duration.inMilliseconds / 1000,
+        'end': end == ListenEnd.switch_ ? 'switch' : end.name,
+        'session': session,
+      },
+    );
+  } catch (_) {}
+}
+
+/// 讲解 👍/👎 埋点 content_rated(V78)。吞掉一切异常。
+Future<void> reportContentRated(
+  Dio dio, {
+  required String slug,
+  required String qid,
+  required String language,
+  required bool up,
+}) async {
+  try {
+    await dio.post(
+      '/api/v1/museums/$slug/objects/$qid/rated',
+      data: {'language': language, 'value': up ? 'up' : 'down'},
+    );
   } catch (_) {}
 }

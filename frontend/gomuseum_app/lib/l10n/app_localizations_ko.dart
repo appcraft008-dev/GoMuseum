@@ -1239,6 +1239,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get fbOther => '기⁠타';
 
   @override
+  String get guideRateQuestion => '이 해⁠설⁠이 도⁠움⁠이 되⁠었⁠나⁠요?';
+
+  @override
+  String get guideRateUp => '도⁠움⁠이 됨';
+
+  @override
+  String get guideRateDown => '도⁠움⁠이 안 됨';
+
+  @override
+  String get fbInfoWrong => '제⁠목·이⁠미⁠지·작⁠가 오⁠류';
+
+  @override
+  String get fbTooShallow => '내⁠용⁠이 얕⁠음';
+
+  @override
   String get fbTextHint =>
       '더 알⁠려⁠주⁠실 내⁠용⁠이 있⁠나⁠요? (선⁠택 · 개⁠인⁠정⁠보⁠는 입⁠력⁠하⁠지 마⁠세⁠요)';
 
