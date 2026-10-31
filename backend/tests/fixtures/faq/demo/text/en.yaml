@@ -1,0 +1,16 @@
+title: Demo museums FAQ
+intro: Opening days and tickets in Demo City.
+groups: {plan: Planning your visit, holidays: Holidays}
+items:
+  closed-days:
+    q: Which day is each museum in Demo City closed?
+    a:
+      alpha: "{alpha} in Demo City is closed on Tuesdays."
+      beta_house: "{beta_house} in Demo City is closed on Mondays."
+  booking:
+    q: Do I need to book {alpha} in advance?
+    a: "Yes. {alpha} requires a timed ticket booked in advance.\n\nWalk-ins are refused at 18:00."
+  christmas-new-year:
+    q: Are the museums open at Christmas and New Year 2026?
+    applies_to: December 2026 – January 2027
+    a: "{alpha} is closed on 25 December 2026."
