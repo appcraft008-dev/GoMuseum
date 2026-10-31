@@ -1,0 +1,90 @@
+title: "Muzea Paryża – pytania i odpowiedzi: dni zamknięcia, bilety, Paris Museum Pass i święta"
+intro: "Konkretne odpowiedzi dla zwiedzających Luwr, Musée d'Orsay, Musée de l'Orangerie i Petit Palais w Paryżu: dni zamknięcia, rezerwacja, bezpłatny wstęp, Paris Museum Pass, audioprzewodniki i otwarcie w święta. Każda odpowiedź ma link do oficjalnego źródła i datę sprawdzenia."
+groups:
+  plan: Planowanie wizyty
+  tickets: Bilety, bezpłatny wstęp i Paris Museum Pass
+  museums: W muzeach
+  holidays: Święta, strajki i zamknięcia
+items:
+  closed-days:
+    q: W który dzień tygodnia zamknięte jest każde z paryskich muzeów?
+    a:
+      louvre: "{louvre} w Paryżu: zamknięte w każdy wtorek, a także 1 stycznia, 1 maja i 25 grudnia. W inne święta jest otwarte, chyba że wypadają we wtorek."
+      orsay: "{orsay} w Paryżu: zamknięte w każdy poniedziałek, a także 1 maja i 25 grudnia."
+      orangerie: "{orangerie} w Paryżu: zamknięte w każdy wtorek, a także 1 maja, 25 grudnia i rano 14 lipca."
+      petit_palais: "{petit_palais} w Paryżu: zamknięte w każdy poniedziałek, a także 1 stycznia, 1 maja, 14 lipca, 11 listopada i 25 grudnia."
+  louvre-booking:
+    q: "Czy trzeba wcześniej rezerwować godzinę wejścia – {louvre}?"
+    a: "Rezerwacja godziny wejścia do muzeum {louvre} w Paryżu jest zalecana wszystkim zwiedzającym, także tym z bezpłatnym wstępem.\n\nW okresach dużego ruchu muzeum może wprowadzić obowiązkową rezerwację dla wszystkich, jak od 17 października do 1 listopada 2026 r. Przed wizytą sprawdź stronę z godzinami otwarcia."
+  louvre-night:
+    q: "W które wieczory {louvre} jest otwarty dłużej i do której?"
+    a: "{louvre} w Paryżu: otwarte do 21:00 w środy i piątki.\n\nW pozostałe dni otwarcia (poniedziałek, czwartek, sobota i niedziela) zamknięcie o 18:00. Ostatnie wejście godzinę przed zamknięciem, a sale zaczynają opróżniać 30 minut przed zamknięciem."
+  louvre-time:
+    q: "Ile czasu potrzeba na zwiedzanie – {louvre}? A jeśli mam tylko dwie, trzy godziny?"
+    a: "Oficjalna trasa „Arcydzieła Luwru” w muzeum {louvre} w Paryżu trwa około 90 minut.\n\nJeśli masz tylko dwie, trzy godziny, przejdź najpierw tę trasę, a resztę czasu poświęć jednemu skrzydłu, które cię interesuje."
+  louvre-orsay-one-day:
+    q: "Czy da się zwiedzić {louvre} i {orsay} jednego dnia?"
+    a: "Tak, {louvre} i {orsay} w Paryżu są otwarte w środy, czwartki, piątki, soboty i niedziele; {louvre} jest nieczynny we wtorki, a {orsay} w poniedziałki.\n\nNajlepszy jest czwartek: {orsay} jest wtedy otwarte do 21:45 (ostatnie wejście 21:00), więc dzień możesz spędzić w muzeum {louvre}, otwieranym o 09:00, a wieczorem zobaczyć {orsay}. W środy i piątki jest odwrotnie: wtedy {louvre} jest otwarty do 21:00."
+  orangerie-water-lilies:
+    q: "Gdzie wiszą Lilie wodne Moneta – {orangerie}?"
+    a: "Lilie wodne (Nymphéas) Moneta w muzeum {orangerie} w Paryżu wypełniają dwie następujące po sobie owalne sale, oświetlone naturalnym światłem przez szklany dach.\n\nOsiem wielkich kompozycji umieszczono tam w 1927 r. według planów samego Moneta. Pierwsza sala pokazuje odbicia nieba i roślin w wodzie od rana do wieczora, druga – gałęzie wierzb otaczające wodę."
+  museum-pass:
+    q: Czym jest Paris Museum Pass i czy obejmuje Luwr, Orsay i Orangerie?
+    a: "Paris Museum Pass daje jedno wejście do ponad 50 muzeów i zabytków w Paryżu i okolicach, w tym: {louvre}, {orsay}, {orangerie} i Łuk Triumfalny. {petit_palais} nie jest na liście, ale jego stałe zbiory i tak są bezpłatne.\n\nKosztuje 85 € za 2 dni, 105 € za 4 dni i 125 € za 6 dni. Dni liczy się w godzinach (48, 96 lub 144) od pierwszej wizyty; wystawy czasowe nie są wliczone. Osoby poniżej 18 lat oraz mieszkańcy UE poniżej 26 lat wchodzą do większości tych miejsc bezpłatnie, więc zwykle nie potrzebują karnetu.\n\nKarnet paryski GoMuseum to coś innego: odblokowuje tylko audioprzewodniki w aplikacji GoMuseum i nie zawiera żadnych biletów wstępu do muzeów."
+  museum-pass-louvre-entry:
+    q: "Czy z Paris Museum Pass wejdę bez rezerwacji – {louvre}?"
+    a: "Nie ma gwarancji: z Paris Museum Pass tylko zarezerwowana godzina wejścia gwarantuje wstęp do muzeum {louvre} w Paryżu.\n\nRezerwacja jest bezpłatna i robi się ją na oficjalnej stronie Paris Museum Pass. Bez niej można spróbować w kolejce, ale w okresach dużego ruchu wejście może trwać bardzo długo albo być niemożliwe. {orsay} również wymaga od posiadaczy karnetu rezerwacji godziny na tej samej stronie."
+  free-entry:
+    q: Kto ma bezpłatny wstęp do paryskich muzeów?
+    a:
+      louvre: "{louvre} w Paryżu: wstęp bezpłatny dla wszystkich poniżej 18 lat i dla mieszkańców Europejskiego Obszaru Gospodarczego poniżej 26 lat, z dokumentem ze zdjęciem (mieszkańcy muszą też wykazać pobyt dłuższy niż 90 dni)."
+      orsay: "{orsay} w Paryżu: wstęp bezpłatny dla wszystkich poniżej 18 lat i dla mieszkańców Europejskiego Obszaru Gospodarczego poniżej 26 lat."
+      orangerie: "{orangerie} w Paryżu: wstęp bezpłatny dla osób poniżej 18 lat oraz dla osób w wieku 18–25 lat, które są obywatelami UE lub mieszkają w UE dłużej niż trzy miesiące, z dokumentem tożsamości."
+      petit_palais: "{petit_palais} w Paryżu: stałe zbiory są bezpłatne dla wszystkich, bez rezerwacji. Wystawy czasowe są płatne."
+  first-sunday:
+    q: Czy paryskie muzea są bezpłatne w pierwszą niedzielę miesiąca?
+    a:
+      louvre: "{louvre} w Paryżu: nie, w pierwszą niedzielę wstęp nie jest bezpłatny. Bezpłatnie dla wszystkich jest w pierwszy piątek miesiąca po 18:00 (oprócz lipca i sierpnia) oraz 14 lipca."
+      orsay: "{orsay} w Paryżu: tak, w pierwszą niedzielę każdego miesiąca wstęp jest bezpłatny dla wszystkich, ale trzeba wcześniej zarezerwować godzinę wejścia."
+      orangerie: "{orangerie} w Paryżu: tak, w pierwszą niedzielę każdego miesiąca wstęp jest bezpłatny dla wszystkich; rezerwacja godziny wejścia jest obowiązkowa."
+      petit_palais: "{petit_palais} w Paryżu: stałe zbiory są bezpłatne w każdy dzień otwarcia, więc nie trzeba czekać na specjalny dzień."
+  petit-palais-ticket:
+    q: "Czy potrzebuję biletu – {petit_palais}?"
+    a: "Nie, stałe zbiory muzeum {petit_palais} w Paryżu są bezpłatne i bez rezerwacji.\n\nPłatne są tylko wystawy czasowe i zdecydowanie warto je rezerwować. Muzeum jest otwarte od wtorku do niedzieli w godzinach 10:00–18:00, a w piątki i soboty wieczorem do 20:00 tylko dla wystaw czasowych."
+  must-see:
+    q: Czego nie przegapić w każdym z paryskich muzeów?
+    a:
+      louvre: "{louvre} proponuje oficjalną trasę „Arcydzieła Luwru”, trwającą około 90 minut. Nasza lista „koniecznie zobacz” dla muzeum {louvre} opiera się na tej oficjalnej trasie."
+      orsay: "{orsay} obejmuje sztukę z lat 1848–1914 i prowadzi zwiedzanie z przewodnikiem po swoich arcydziełach, ze zbiórką przy punkcie informacyjnym. Nasza lista „koniecznie zobacz” dla muzeum {orsay} pokazuje dzieła, o których przeczytasz i posłuchasz w GoMuseum."
+      orangerie: "{orangerie}: najważniejsze są Lilie wodne Moneta – osiem wielkich kompozycji w dwóch owalnych salach, umieszczonych według planów Moneta."
+      petit_palais: "{petit_palais} oferuje bezpłatną aplikację do zwiedzania z trasą po 12 arcydziełach i drugą po 30 najważniejszych dziełach."
+  audio-guides:
+    q: Jakie audioprzewodniki są dostępne w paryskich muzeach?
+    a:
+      louvre: "{louvre} w Paryżu: audioprzewodnik do wypożyczenia za 6 € przy stanowiskach pod Piramidą lub do zarezerwowania online razem z biletem. Obejmuje ponad 150 arcydzieł i jest dostępny w 9 językach."
+      orsay: "{orsay} w Paryżu: audioprzewodnik do wypożyczenia na miejscu za 6 € (ulgowy 4 €), ponad 300 komentarzy w 10 językach. Wersja do pobrania na telefon obejmuje tylko główną wystawę czasową."
+      orangerie: "{orangerie} w Paryżu: audioprzewodnik do wypożyczenia na miejscu, ponad 150 komentarzy o stałych zbiorach i Liliach wodnych, w 10 językach."
+      petit_palais: "{petit_palais} w Paryżu: bezpłatna aplikacja do zwiedzania z sześcioma trasami, m.in. 12 arcydzieł i 30 najważniejszych dzieł."
+  photos:
+    q: Czy w paryskich muzeach można robić zdjęcia?
+    a:
+      louvre: "{louvre} w Paryżu: tak, w stałych zbiorach można robić zdjęcia i filmy do użytku prywatnego, ale bez lampy błyskowej, oświetlenia i kijka do selfie."
+      orsay: "{orsay} w Paryżu: tak, zdjęcia i filmy do użytku prywatnego są dozwolone przy wyłączonej lampie błyskowej. Niektóre dzieła, głównie na wystawach czasowych, są oznaczone zakazem fotografowania, a statywy trzeba zostawić w szatni."
+      petit_palais: "{petit_palais} w Paryżu: tak, zdjęcia do użytku prywatnego są dozwolone, z poszanowaniem dzieł i innych zwiedzających."
+  bags:
+    q: Czy do paryskich muzeów można wejść z plecakiem lub walizką?
+    a:
+      louvre: "{louvre} w Paryżu: nie wolno wnosić niczego większego niż 55 × 35 × 20 cm, a walizki i duże torby nie są wpuszczane. Mniejsze rzeczy można zostawić w bezpłatnych szafkach."
+      orangerie: "{orangerie} w Paryżu: szafki i szatnia przyjmują tylko duże przedmioty, których nie można wnieść do sal, a każda torba przechodzi kontrolę bezpieczeństwa."
+      petit_palais: "{petit_palais} w Paryżu: walizki i duże torby są zabronione. Torebki i małe plecaki do formatu A3 są w porządku, a na parterze są szafki, dopóki starczy miejsc."
+  christmas-new-year:
+    q: Czy paryskie muzea są otwarte w Boże Narodzenie 2026 i Nowy Rok 2027?
+    applies_to: 24 grudnia 2026 – 1 stycznia 2027
+    a: "W Boże Narodzenie (piątek, 25 grudnia 2026 r.) wszystkie te muzea w Paryżu są zamknięte: {louvre}, {orsay}, {orangerie} i {petit_palais}.\n\nW Nowy Rok (piątek, 1 stycznia 2027 r.) zamknięte są {louvre} i {petit_palais}. {orsay} i {orangerie} nie wymieniają 1 stycznia wśród dni zamknięcia, więc powinny działać w zwykłych piątkowych godzinach; sprawdź ich strony tego dnia."
+  arc-de-triomphe-holidays:
+    q: Czy Łuk Triumfalny jest otwarty w Boże Narodzenie 2026 i Nowy Rok 2027 i czy działa winda?
+    applies_to: 24 grudnia 2026 – 1 stycznia 2027
+    a: "Łuk Triumfalny w Paryżu zamyka się wcześniej, o 16:00, 24 i 31 grudnia 2026 r. Jego oficjalna strona nie wymienia 25 grudnia ani 1 stycznia wśród corocznych dni zamknięcia.\n\nWinda nie działa, na górę prowadzą tylko schody: 284 stopnie. Winda ma wrócić do użytku w 2027 r., a dokładny termin zostanie ogłoszony później. Ostatnie wejście 45 minut przed zamknięciem."
+  strikes-closures:
+    q: Jak sprawdzić, czy paryskie muzeum jest zamknięte z powodu strajku?
+    a: "Zamknięcia z powodu strajków lub manifestacji są ogłaszane na oficjalnej stronie każdego muzeum, zwykle na stronie z godzinami otwarcia lub stronie głównej, oraz na oficjalnej stronie Paris Museum Pass.\n\nSprawdź rano w dniu wizyty: zamknięcie może być częściowe (niektóre sale lub wejścia) albo całkowite."

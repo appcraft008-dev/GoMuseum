@@ -23,6 +23,7 @@
     {% for c in cities %}
     <h3 class="city-h"><a href="/{{ lang }}/{{ c.slug }}/">{{ c.name }}</a></h3>
     <div class="mgrid">{% for m in c.museums %}{{ museum_card(m, lang, t) }}{% endfor %}</div>
+    {% set fh = faq_href(c.slug) %}{% if fh %}<p class="faq-link"><a href="{{ fh }}">{{ t('faq_nav') }} →</a></p>{% endif %}
     {% endfor %}
   </div>
 </section>
@@ -54,6 +55,7 @@
   <div class="wrap">
     <h2 class="h-serif">{{ t('museums_title') }}</h2>
     <div class="mgrid">{% for m in cities[0].museums %}{{ museum_card(m, lang, t) }}{% endfor %}</div>
+    {% set fh = faq_href(cities[0].slug) %}{% if fh %}<p class="faq-link"><a href="{{ fh }}">{{ t('faq_nav') }} →</a></p>{% endif %}
   </div>
 </section>
 {% endif %}

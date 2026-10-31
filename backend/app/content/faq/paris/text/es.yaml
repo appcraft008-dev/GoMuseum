@@ -1,0 +1,90 @@
+title: "Museos de París, preguntas frecuentes: días de cierre, entradas, Paris Museum Pass y festivos"
+intro: "Respuestas directas para visitar el Louvre, el Museo de Orsay, el Museo de la Orangerie y el Petit Palais en París: días de cierre, reservas, entrada gratuita, Paris Museum Pass, audioguías y apertura en festivos. Cada respuesta enlaza a la fuente oficial e indica la fecha de comprobación."
+groups:
+  plan: Preparar la visita
+  tickets: Entradas, gratuidad y Paris Museum Pass
+  museums: Dentro de los museos
+  holidays: Festivos, huelgas y cierres
+items:
+  closed-days:
+    q: ¿Qué día de la semana cierra cada museo de París?
+    a:
+      louvre: "El {louvre} de París cierra todos los martes. También cierra el 1 de enero, el 1 de mayo y el 25 de diciembre; los demás festivos abre, salvo que caigan en martes."
+      orsay: "El {orsay} de París cierra todos los lunes. También cierra el 1 de mayo y el 25 de diciembre."
+      orangerie: "El {orangerie} de París cierra todos los martes. También cierra el 1 de mayo, el 25 de diciembre y la mañana del 14 de julio."
+      petit_palais: "El {petit_palais} de París cierra todos los lunes. También cierra el 1 de enero, el 1 de mayo, el 14 de julio, el 11 de noviembre y el 25 de diciembre."
+  louvre-booking:
+    q: ¿Hay que reservar franja horaria para el {louvre} con antelación?
+    a: "Se recomienda a todos los visitantes reservar una franja horaria para el {louvre} de París, incluidos quienes entran gratis.\n\nEn épocas de mucha afluencia, el museo puede hacer obligatoria la reserva para todos, como del 17 de octubre al 1 de noviembre de 2026; consulta su página de horarios antes de ir."
+  louvre-night:
+    q: ¿Qué noches abre hasta tarde el {louvre} y hasta qué hora?
+    a: "El {louvre} de París abre hasta las 21:00 los miércoles y viernes.\n\nLos demás días de apertura (lunes, jueves, sábado y domingo) cierra a las 18:00. El último acceso es una hora antes del cierre, y las salas empiezan a desalojarse 30 minutos antes."
+  louvre-time:
+    q: ¿Cuánto tiempo se necesita para ver el {louvre}, y si solo tengo dos o tres horas?
+    a: "El recorrido oficial «Las obras maestras del Louvre» del {louvre} de París dura unos 90 minutos.\n\nSi solo tienes dos o tres horas, haz primero ese recorrido y dedica el resto del tiempo a un ala que te interese."
+  louvre-orsay-one-day:
+    q: ¿Se pueden visitar el {louvre} y el {orsay} el mismo día?
+    a: "Sí, el {louvre} y el {orsay} de París abren los dos los miércoles, jueves, viernes, sábados y domingos; el {louvre} cierra los martes y el {orsay}, los lunes.\n\nEl jueves es el mejor día: el {orsay} abre hasta las 21:45 (último acceso a las 21:00), así que puedes pasar el día en el {louvre}, que abre a las 09:00, y ver el {orsay} por la tarde-noche. Los miércoles y viernes es al revés: el {louvre} abre hasta las 21:00."
+  orangerie-water-lilies:
+    q: ¿Dónde están los Nenúfares de Monet en el {orangerie}?
+    a: "Los Nenúfares (Nymphéas) de Monet en el {orangerie} de París ocupan dos salas ovaladas consecutivas, iluminadas con luz natural por un techo de cristal.\n\nLas ocho grandes composiciones se instalaron en 1927 según los planos del propio Monet. La primera sala muestra reflejos del cielo y la vegetación en el agua de la mañana a la noche; la segunda, ramas de sauce que enmarcan el agua."
+  museum-pass:
+    q: ¿Qué es el Paris Museum Pass y cubre el Louvre, Orsay y la Orangerie?
+    a: "El Paris Museum Pass da una entrada a más de 50 museos y monumentos de París y alrededores, entre ellos el {louvre}, el {orsay}, el {orangerie} y el Arco del Triunfo; el {petit_palais} no está en la lista, pero sus colecciones permanentes son gratuitas de todos modos.\n\nCuesta 85 € por 2 días, 105 € por 4 días y 125 € por 6 días. Los días se cuentan en horas (48, 96 o 144) desde la primera visita, y no incluye exposiciones temporales. Los menores de 18 años y los residentes en la UE menores de 26 entran gratis en la mayoría de estos lugares, así que normalmente no necesitan el pase.\n\nEl pase de París de GoMuseum es otra cosa: solo desbloquea las audioguías de la app GoMuseum y no incluye ninguna entrada a museos."
+  museum-pass-louvre-entry:
+    q: ¿Puedo entrar al {louvre} con el Paris Museum Pass sin reservar?
+    a: "No está garantizado: con el Paris Museum Pass, solo una franja horaria reservada garantiza la entrada al {louvre} de París.\n\nLa franja es gratuita y se reserva en la web oficial del Paris Museum Pass. Sin ella puedes probar en la cola, pero en épocas de mucha afluencia el acceso puede ser muy lento o imposible. El {orsay} también pide a quienes tienen el pase reservar franja en esa misma web."
+  free-entry:
+    q: ¿Quién entra gratis en los museos de París?
+    a:
+      louvre: "El {louvre} de París es gratuito para menores de 18 años y para residentes del Espacio Económico Europeo menores de 26, con documento de identidad con foto (los residentes también deben acreditar más de 90 días de residencia)."
+      orsay: "El {orsay} de París es gratuito para menores de 18 años y para residentes del Espacio Económico Europeo menores de 26."
+      orangerie: "El {orangerie} de París es gratuito para menores de 18 años y para personas de 18 a 25 años que sean ciudadanas de la UE o residan en ella desde hace más de tres meses, con documento de identidad."
+      petit_palais: "Las colecciones permanentes del {petit_palais} de París son gratuitas para todos y sin reserva. Las exposiciones temporales son de pago."
+  first-sunday:
+    q: ¿Los museos de París son gratis el primer domingo de mes?
+    a:
+      louvre: "No, el {louvre} de París no es gratuito el primer domingo. Es gratis para todos el primer viernes de cada mes a partir de las 18:00, salvo en julio y agosto, y el 14 de julio."
+      orsay: "Sí, el {orsay} de París es gratis para todos el primer domingo de cada mes, pero hay que reservar franja horaria con antelación."
+      orangerie: "Sí, el {orangerie} de París es gratis para todos el primer domingo de cada mes; es obligatorio reservar franja horaria."
+      petit_palais: "Las colecciones permanentes del {petit_palais} de París son gratuitas todos los días que abre, así que no hace falta esperar a un día concreto."
+  petit-palais-ticket:
+    q: ¿Necesito entrada para el {petit_palais}?
+    a: "No, las colecciones permanentes del {petit_palais} de París son gratuitas y no requieren reserva.\n\nSolo las exposiciones temporales son de pago, y se recomienda mucho reservarlas. El museo abre de martes a domingo de 10:00 a 18:00, y los viernes y sábados por la tarde hasta las 20:00 solo para exposiciones temporales."
+  must-see:
+    q: ¿Qué no hay que perderse en cada museo de París?
+    a:
+      louvre: "El {louvre} tiene un recorrido oficial, «Las obras maestras del Louvre», de unos 90 minutos. Nuestra lista de imprescindibles del {louvre} sigue ese recorrido oficial."
+      orsay: "El {orsay} abarca el arte de 1848 a 1914 y ofrece una visita guiada por sus obras maestras que sale del punto de información. Nuestra lista de imprescindibles del {orsay} muestra las obras que puedes leer y escuchar en GoMuseum."
+      orangerie: "En el {orangerie}, lo imprescindible son los Nenúfares de Monet: ocho grandes composiciones en dos salas ovaladas, instaladas según los planos de Monet."
+      petit_palais: "El {petit_palais} ofrece una app de visita gratuita con un recorrido por 12 obras maestras y otro por 30 obras imprescindibles."
+  audio-guides:
+    q: ¿Qué audioguías hay en cada museo de París?
+    a:
+      louvre: "El {louvre} de París alquila una audioguía por 6 € en los mostradores bajo la Pirámide; también se puede reservar en línea junto con la entrada. Cubre más de 150 obras maestras y está en 9 idiomas."
+      orsay: "El {orsay} de París alquila en el museo una audioguía por 6 € (4 € reducida) con más de 300 comentarios, en 10 idiomas. La versión descargable para el móvil solo cubre la gran exposición temporal."
+      orangerie: "El {orangerie} de París alquila en el museo una audioguía con más de 150 comentarios sobre las colecciones permanentes y los Nenúfares, en 10 idiomas."
+      petit_palais: "El {petit_palais} de París ofrece una app de visita gratuita con seis recorridos, entre ellos 12 obras maestras y 30 obras imprescindibles."
+  photos:
+    q: ¿Se pueden hacer fotos dentro de los museos de París?
+    a:
+      louvre: "Sí, en el {louvre} de París se pueden hacer fotos y vídeos en las colecciones permanentes para uso personal, pero sin flash, iluminación ni palo de selfi."
+      orsay: "Sí, en el {orsay} de París se permiten fotos y vídeos de uso privado con el flash apagado. Algunas obras, sobre todo en exposiciones temporales, están señaladas como prohibido fotografiar, y los trípodes van al guardarropa."
+      petit_palais: "Sí, en el {petit_palais} de París se permiten fotos de uso personal, respetando las obras y a los demás visitantes."
+  bags:
+    q: ¿Puedo entrar con mochila o maleta en los museos de París?
+    a:
+      louvre: "En el {louvre} de París no se admite nada mayor de 55 × 35 × 20 cm, y se rechazan maletas y bolsas grandes. Hay taquillas gratuitas para objetos más pequeños."
+      orangerie: "En el {orangerie} de París, las taquillas y el guardarropa solo admiten objetos voluminosos que no pueden entrar en las salas, y todos los bolsos pasan un control de seguridad."
+      petit_palais: "En el {petit_palais} de París no se permiten maletas ni bolsas grandes. Los bolsos y mochilas pequeñas de hasta tamaño A3 sí, y hay taquillas en la planta baja mientras queden libres."
+  christmas-new-year:
+    q: ¿Abren los museos de París en Navidad de 2026 y Año Nuevo de 2027?
+    applies_to: 24 de diciembre de 2026 – 1 de enero de 2027
+    a: "El día de Navidad (viernes 25 de diciembre de 2026) cierran el {louvre}, el {orsay}, el {orangerie} y el {petit_palais} de París.\n\nEl día de Año Nuevo (viernes 1 de enero de 2027) cierran el {louvre} y el {petit_palais}. El {orsay} y el {orangerie} no incluyen el 1 de enero entre sus días de cierre, así que deberían seguir su horario normal de viernes; compruébalo en su web ese mismo día."
+  arc-de-triomphe-holidays:
+    q: ¿Abre el Arco del Triunfo en Navidad de 2026 y Año Nuevo de 2027, y funciona el ascensor?
+    applies_to: 24 de diciembre de 2026 – 1 de enero de 2027
+    a: "El Arco del Triunfo de París cierra antes, a las 16:00, el 24 y el 31 de diciembre de 2026. Su web oficial no incluye el 25 de diciembre ni el 1 de enero entre sus cierres anuales.\n\nEl ascensor está fuera de servicio, así que solo se sube por la escalera: 284 escalones. Está previsto que vuelva a funcionar en 2027, en una fecha que se anunciará más adelante. El último acceso es 45 minutos antes del cierre."
+  strikes-closures:
+    q: ¿Cómo sé si un museo de París cierra por huelga?
+    a: "Los cierres por huelgas o manifestaciones se anuncian en la web oficial de cada museo, normalmente en la página de horarios o en la portada, y en la web oficial del Paris Museum Pass.\n\nComprueba la mañana de tu visita: el cierre puede ser parcial (algunas salas o entradas) o total."

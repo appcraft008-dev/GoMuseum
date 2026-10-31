@@ -1,0 +1,128 @@
+# 巴黎问答页骨架(spec docs/superpowers/specs/2026-10-31-website-faq-design.md)
+# 日期/来源/原文摘录只写在这里;文字在 text/<语言>.yaml。evidence 只用于复核,不上页面。
+# 长期规则 review_by = checked + 90 天;时令题(kind: dated)review_by = 适用期结束日。
+groups: [plan, tickets, museums, holidays]
+items:
+  - id: closed-days
+    group: plan
+    per_museum:
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/hours-admission"], evidence: "Closed on Tuesday. the Louvre is closed on 1 January, 1 May and 25 December."}
+      orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/visit"], evidence: "Closed every Monday, May 1, and December 25."}
+      orangerie: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orangerie.fr/en/visit-orangerie"], evidence: "Closed every Tuesday, May 1, the morning of July 14, and December 25."}
+      petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"], evidence: "Le musée est fermé les lundis et les 1er janvier, 1er mai, 14 juillet, 11 novembre et 25 décembre."}
+  - id: louvre-booking
+    group: plan
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.louvre.fr/en/visit/hours-admission"]
+    evidence: "Time-slot bookings are recommended, including for free-admission visitors."
+  - id: louvre-night
+    group: plan
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.louvre.fr/en/visit/hours-admission"]
+    evidence: "9:00 a.m. to 9:00 p.m. on Wednesday and Friday. Last entry 1 hour before closing."
+  - id: louvre-time
+    group: plan
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.louvre.fr/en/explore/visitor-trails/the-louvre-s-masterpieces"]
+    evidence: "The Louvre's Masterpieces trail: 1H30. Take 90 minutes to find out!"
+  - id: louvre-orsay-one-day
+    group: plan
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.louvre.fr/en/visit/hours-admission", "https://www.musee-orsay.fr/en/visit"]
+    evidence: "Louvre closed Tuesday, 9:00-18:00, Wed/Fri to 21:00. Orsay closed Monday, Thursday until 9:45 p.m., last admission 9 p.m."
+  - id: orangerie-water-lilies
+    group: plan
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.musee-orangerie.fr/en/node/255"]
+    evidence: "les huit compositions sont réparties en deux salles ovales qui se suivent; lumière naturelle depuis le toit vitré"
+  - id: museum-pass
+    group: tickets
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.parismuseumpass.fr/en/pass", "https://www.parismuseumpass.fr/en/liste-sites"]
+    evidence: "2 days 48 hours €85; 4 days €105; 6 days €125; does not include access to temporary exhibitions."
+  - id: museum-pass-louvre-entry
+    group: tickets
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.parismuseumpass.fr/en/e-billet", "https://www.parismuseumpass.fr/en/reservation", "https://www.musee-orsay.fr/en/visit"]
+    evidence: "Only reserving a time slot can guarantee access to the Louvre Museum with the PMP. you can try to access the museum by waiting at the entrance in the queue, but access can sometimes be very long, or even impossible. (reservation page: free reservation)"
+  - id: free-entry
+    group: tickets
+    per_museum:
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/hours-admission"], evidence: "Under 26 EEA residents: with a valid photographic and residency permit longer than 90 days. Under 18s: Proof of ID required."}
+      orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/visit"], evidence: "Under 18s and EEA residents; under 26s Free rate"}
+      orangerie: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orangerie.fr/en/articles/rates-257"], evidence: "under 18; aged 18 to 25, European Union citizens and long-term residents (more than 3 months)"}
+      petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"], evidence: "L'accès aux collections permanentes est gratuit et sans réservation."}
+  - id: first-sunday
+    group: tickets
+    per_museum:
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/hours-admission"], evidence: "On the first Friday of the month after 6 p.m. (except in July and August)"}
+      orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/Visit/rates"], evidence: "1st Sunday of the month: free for all : the reservation of a visit slot is mandatory"}
+      orangerie: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orangerie.fr/en/articles/rates-257"], evidence: "For all visitors on the first Sunday of each month (reservation required except for Carte Blanche members)"}
+      petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"], evidence: "L'accès aux collections permanentes est gratuit et sans réservation."}
+  - id: petit-palais-ticket
+    group: tickets
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"]
+    evidence: "L'accès aux collections permanentes est gratuit et sans réservation. Les expositions temporaires sont payantes"
+  - id: must-see
+    group: museums
+    link: must_see
+    per_museum:
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/explore/visitor-trails/the-louvre-s-masterpieces"], evidence: "The Louvre's Masterpieces: 1H30. Take 90 minutes to find out!"}
+      orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/program/whats-on/tours-and-workshops/masterpieces-musee-dorsay"], evidence: "Through a few masterpieces, an overview of the museum collections; period ranging from 1848 to 1914."}
+      orangerie: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orangerie.fr/en/node/255"], evidence: "les huit compositions sont réparties en deux salles ovales qui se suivent"}
+      petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/application-visite"], evidence: "Disponible gratuitement en téléchargement; parcours autour de 12 chefs-d'œuvre et de 30 œuvres incontournables"}
+  - id: audio-guides
+    group: museums
+    link: museum
+    per_museum:
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/visitor-amenities"], evidence: "Audio guides can be rented for €6. available in 9 languages; more than 150 masterpieces"}
+      orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/visit/audio%20guides"], evidence: "over 300 commentaries; French, German, English, Chinese, Korean, Spanish, Italian, Japanese, Portuguese and Russian. Full price: 6 euros"}
+      orangerie: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://billetterie.musee-orangerie.fr/audioguides-visite-css5-museeorangerie-pg51-ei1073877.html"], evidence: "plus de 150 commentaires d'œuvres; disponibles en français, anglais, allemand, espagnol, italien, portugais, russe, japonais, chinois et coréen"}
+      petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/application-visite"], evidence: "Disponible gratuitement en téléchargement; six propositions de visite"}
+  - id: photos
+    group: museums
+    per_museum:
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/museum-rules"], evidence: "You can take photos and videos in the permanent collections if they are for personal use. not allowed to use selfie sticks, flash or lighting."}
+      orsay: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orsay.fr/en/articles/visiting-conditions-309274"], evidence: "Photography and video recording for strictly private purposes are permitted (flash must be disabled)"}
+      orangerie: {skip: "官网参观须知页 2026-10-31 未写拍照规定"}
+      petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"], evidence: "Les photographies à usage personnel sont autorisées, dans le respect des œuvres et des autres visiteurs."}
+  - id: bags
+    group: museums
+    per_museum:
+      louvre: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.louvre.fr/en/visit/museum-rules"], evidence: "Any items exceeding 55 x 35 x 20 cm will not be allowed in the museum. lockers are available free of charge"}
+      orsay: {skip: "官网参观条件页 2026-10-31 只写了三脚架寄存,没写包的尺寸"}
+      orangerie: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.musee-orangerie.fr/en/articles/visitor-policies-309382"], evidence: "access to the lockers and coat checks will be restricted to bulky items that cannot be admitted into the hall"}
+      petit_palais: {checked: 2026-10-31, review_by: 2027-01-29, sources: ["https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"], evidence: "bagages, grands sacs, valises interdits; sacs à main et petits sacs à dos (format A3 maximum) autorisés"}
+  - id: christmas-new-year
+    group: holidays
+    kind: dated
+    checked: 2026-10-31
+    review_by: 2027-01-02
+    pin_from: 2026-11-15
+    pin_until: 2027-01-02
+    sources: ["https://www.louvre.fr/en/visit/hours-admission", "https://www.musee-orsay.fr/en/visit", "https://www.musee-orangerie.fr/en/visit-orangerie", "https://www.petitpalais.paris.fr/preparer-sa-visite/informations-pratiques"]
+    evidence: "Louvre closed 1 January and 25 December; Orsay and Orangerie closed December 25; Petit Palais fermé 1er janvier et 25 décembre."
+  - id: arc-de-triomphe-holidays
+    group: holidays
+    kind: dated
+    checked: 2026-10-31
+    review_by: 2027-01-02
+    pin_from: 2026-11-15
+    pin_until: 2027-01-02
+    sources: ["https://www.paris-arc-de-triomphe.fr/en/visit/practical-information", "https://www.paris-arc-de-triomphe.fr/en/visit"]
+    evidence: "Early closing at 4pm on 24 and 31 December 2026. Annual closures on 1st May, 8 May, 14 July, 11 November (morning). last admission 45 minutes before closing time. stairs (284 steps); return to service in 2027 will be announced at a later date."
+  - id: strikes-closures
+    group: holidays
+    checked: 2026-10-31
+    review_by: 2027-01-29
+    sources: ["https://www.parismuseumpass.fr/en", "https://www.louvre.fr/en/visit/hours-admission"]
+    evidence: "national strike notice, some sites may be partially or entirely closed; check the websites of the museums and monuments before your visit."
