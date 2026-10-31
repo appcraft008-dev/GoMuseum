@@ -757,3 +757,69 @@ def test_confirm_billing_exception_clears_capture(monkeypatch):
         assert _cap(s, "c-x") is None
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+# --- POST /recognize/client-event(V79:只有 App 看得到的两件事,恒 204) ---
+
+
+def _event_client():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from app.core.database import Base
+    from app.models.app_event import AppEvent
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine, tables=[AppEvent.__table__])
+    s = sessionmaker(bind=engine)()
+
+    def _override():
+        yield s
+
+    app.dependency_overrides[get_db] = _override
+    return TestClient(app), s
+
+
+def test_client_event_logs_quota_paywall_and_failure(monkeypatch):
+    from app.models.app_event import AppEvent
+
+    client, s = _event_client()
+    try:
+        h = _as_user(monkeypatch)
+        r1 = client.post(
+            "/api/v1/recognize/client-event",
+            json={"name": "paywall_viewed_from_quota", "museum": "louvre"},
+            headers=h,
+        )
+        r2 = client.post(
+            "/api/v1/recognize/client-event",
+            json={
+                "name": "recognition_failed",
+                "reason": "no_network",
+                "device_id": "dev-1",
+                "at": 1793450000,
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+    assert r1.status_code == r2.status_code == 204
+    rows = {e.name: e for e in s.query(AppEvent)}
+    q = rows["paywall_viewed_from_quota"]
+    assert q.user_id == "u-1" and q.museum_slug == "louvre" and not q.props
+    f = rows["recognition_failed"]
+    assert f.user_id is None and f.device_id == "dev-1"
+    assert f.props == {"reason": "no_network", "at": 1793450000}
+
+
+def test_client_event_rejects_names_outside_whitelist():
+    client, _ = _event_client()
+    try:
+        r = client.post(
+            "/api/v1/recognize/client-event", json={"name": "purchase_succeeded"}
+        )
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 422  # 购买等后端自己记的事件不许客户端伪造

@@ -235,3 +235,39 @@ def recognize_reject(body: RejectRequest, db: Session = Depends(get_db)) -> Resp
 
     reject_event(db, body.phash, body.qids)
     return Response(status_code=204)
+
+
+class ClientEventRequest(BaseModel):
+    """只有 App 看得到的两件事(V79,加法端点):
+    额度付费页真弹出来了(后端 402 时记的 free_quota_exhausted 只是「撞墙」,
+    弹没弹出来后端不知道);识别请求没拿到结果(没网时请求根本到不了这里,
+    App 先攒在本机,联网后补报,`at` 是真实发生时刻)。"""
+
+    name: Literal["paywall_viewed_from_quota", "recognition_failed"]
+    museum: str | None = Field(default=None, max_length=64)
+    reason: Literal["no_network", "timeout", "server", "other"] | None = None
+    device_id: str | None = Field(default=None, max_length=64)
+    at: float | None = None  # epoch 秒
+
+
+@router.post("/recognize/client-event", status_code=204)
+def recognize_client_event(
+    body: ClientEventRequest,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> Response:
+    """fire-and-forget 恒 204;名字白名单只这两个,购买等后端自记的事件不许客户端伪造。"""
+    from app.services.event_log import log_event
+
+    props = {
+        k: v for k, v in (("reason", body.reason), ("at", body.at)) if v is not None
+    }
+    log_event(
+        db,
+        body.name,
+        user_id=_user_id(db, credentials),
+        device_id=body.device_id,
+        museum_slug=body.museum,
+        **props,
+    )
+    return Response(status_code=204)
