@@ -173,9 +173,13 @@ def test_quiet_system_raises_nothing():
     assert _keys() == set()
 
 
-def test_browse_p95_needs_20_requests():
-    assert "browse-p95" in _keys(_sample(req_n=20, req_p95=1.2))
-    assert "browse-p95" not in _keys(_sample(req_n=19, req_p95=5.0))
+def test_browse_p95_needs_100_requests_or_5s():
+    """10-31 用 7 天只记不发的数据定:15 分钟 20–60 个请求时 p95≈第二慢的那个,
+    一次 history/recent 或 /museums 冷启动 1–3.6s 就响,7 天 9 封、没有一次是真故障。"""
+    assert "browse-p95" in _keys(_sample(req_n=100, req_p95=1.2))
+    assert "browse-p95" not in _keys(_sample(req_n=99, req_p95=3.6))
+    assert "browse-p95" in _keys(_sample(req_n=20, req_p95=5.1))
+    assert "browse-p95" not in _keys(_sample(req_n=19, req_p95=9.0))
 
 
 def test_browse_5xx_needs_5_errors_over_1pct_across_3_minutes():
