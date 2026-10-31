@@ -943,7 +943,8 @@ def recognize_billed(
             logger.exception("consume_recognition failed")
             charged = True
         if not charged:
-            # 持别处的票、免费额度又用完:不给结果,弹**这家馆**的票
+            # 持别处的票、免费额度又用完:不给结果,弹**这家馆**的票;没给结果就不进足迹
+            clear_capture(db, event_id=event_id, unpaid=True)
             raise QuotaExceededError(museum)
         _unlock_audio(db, user_id, out)
         return out
