@@ -570,13 +570,16 @@ def _faq_view(db, f, c, lang: str, today):
         e = tx["items"][item.id]
         by_museum = {p.museum: p for p in item.parts}
         parts = []
-        if item.parts[0].museum is None:
+        if item.parts and item.parts[0].museum is None:
             parts.append((None, item.parts[0], e["a"]))
         else:
             for m in museums:
                 p = by_museum.get(m.slug)
                 if p is None:
-                    if (item.id, m.slug) not in _faq_warned:
+                    if (
+                        m.slug not in item.skipped
+                        and (item.id, m.slug) not in _faq_warned
+                    ):
                         _faq_warned.add((item.id, m.slug))
                         logger.warning(
                             "faq %s missing museum %s/%s", f.city, item.id, m.slug
@@ -623,12 +626,18 @@ def _faq_view(db, f, c, lang: str, today):
             "parts": out,
         }
 
+    def vms(items):
+        return [
+            v for v in map(item_vm, items) if v["parts"]
+        ]  # 该语言一个馆都没得答 → 不出这题
+
     pinned, groups = wfaq.arrange(f, today)
-    pinned_vm = [item_vm(i) for i in pinned]
+    pinned_vm = vms(pinned)
     groups_vm = [
-        {"id": g, "title": tx["groups"][g], "entries": [item_vm(i) for i in items]}
+        {"id": g, "title": tx["groups"][g], "entries": vms(items)}
         for g, items in groups
     ]
+    groups_vm = [g for g in groups_vm if g["entries"]]
     modified = max(fresh).isoformat() if fresh else None
     return pinned_vm, groups_vm, entities, modified
 

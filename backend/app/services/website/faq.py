@@ -42,6 +42,7 @@ class Item:
     pin_from: date | None
     pin_until: date | None
     link: str | None  # "must_see" | "museum" | None
+    skipped: tuple[str, ...] = ()  # 官网没写、明确不答的馆(算已覆盖,不出页面)
 
 
 @dataclass(frozen=True)
@@ -76,8 +77,11 @@ def load_faq(city: str, root: Path | None = None) -> Faq | None:
     for d in st.get("items") or []:
         pm = d.get("per_museum")
         parts = (
-            tuple(_part(slug, v) for slug, v in pm.items()) if pm else (_part(None, d),)
+            tuple(_part(slug, v) for slug, v in pm.items() if "skip" not in v)
+            if pm
+            else (_part(None, d),)
         )
+        skipped = tuple(slug for slug, v in (pm or {}).items() if "skip" in v)
         items.append(
             Item(
                 id=d["id"],
@@ -87,6 +91,7 @@ def load_faq(city: str, root: Path | None = None) -> Faq | None:
                 pin_from=d.get("pin_from"),
                 pin_until=d.get("pin_until"),
                 link=d.get("link"),
+                skipped=skipped,
             )
         )
     text = {}
@@ -165,6 +170,7 @@ def validate(faq: Faq) -> list[str]:
     if "en" not in faq.text:
         return [f"{faq.city}: missing text/en.yaml"]
     slugs = {p.museum for i in faq.items for p in i.parts if p.museum}
+    slugs |= {m for i in faq.items for m in i.skipped}
     ids = [i.id for i in faq.items]
     if len(set(ids)) != len(ids):
         errs.append(f"duplicate item ids: {ids}")
@@ -216,7 +222,7 @@ def validate(faq: Faq) -> list[str]:
                 errs.append(f"{lang}: {i.id} applies_to required only for dated items")
             a = e.get("a")
             museums = {p.museum for p in i.parts if p.museum}
-            if museums:
+            if museums or i.skipped:
                 got = set(a) if isinstance(a, dict) else set()
                 for m in museums ^ got:
                     errs.append(f"{lang}: {i.id} answer museums differ at {m}")

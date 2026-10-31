@@ -149,3 +149,23 @@ def test_expiring_lists_within_days():
 def test_unknown_city_returns_none():
     F.load_faq.cache_clear()
     assert load_faq("nowhere", FIX) is None
+
+
+def test_skipped_museum_counts_as_covered_but_has_no_part(tmp_path):
+    root = _copy(tmp_path)
+
+    def skip(d):
+        d["items"][0]["per_museum"]["beta_house"] = {"skip": "official site silent"}
+
+    _edit(root, "structure.yaml", skip)
+    for lang in ("en", "fr"):
+        _edit(
+            root,
+            f"text/{lang}.yaml",
+            lambda d: d["items"]["closed-days"]["a"].pop("beta_house"),
+        )
+    faq = _load(root)
+    item = faq.items[0]
+    assert [p.museum for p in item.parts] == ["alpha"]
+    assert item.skipped == ("beta_house",)
+    assert validate(faq) == []
