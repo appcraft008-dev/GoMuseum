@@ -206,6 +206,7 @@ spec `docs/superpowers/specs/2026-10-27-must-see-checkin-design.md`。令牌可�
   `image-centrale` 首图 `span.droits` 以 `CC0` 开头)。**不用**:网站条款禁止商用的(卢浮宫/奥赛官网图须向 RMN-GP 付费申请 ——
   即使按欧盟 DSM 第 14 条"公有领域平面作品翻拍无新版权"可辩,我们卖通票=商用,合同条款先于可辩的著作权论证);
   只写机构名不写授权的(`Paris Musées / …` 无 CC0);© 摄影师/图库。抓馆方页面遵守 robots `Crawl-delay`;官方 API 需注册时先评估公开页能否替代。
+  **Commons 上写明来自官网的图(2026-11-01 用户定)**:Commons 标公有领域的老作品可用,我们自己不从官网下载;标 CC 授权(含 CC0、Licence Ouverte)而 Credit 指向官网、RMN、WikiArt、Pinterest 等的不用,这类授权声明不可靠;Credit 写 Own work、只顺带附官网链接的是本人实拍,不算。**下架**=`role` 改 `view_quarantine` + 删向量(该件没有其它可见图时自动隐藏,内容和音频不动);`upsert_object` 重跑不复活同一 `source_url`,Wikidata 换新图才收新图。
   ⚠️ 源文件可能为空或截断(物化器记 skipped),跑完查 `image_key is null` 的新行并删除,不留"有图行无图"的假状态。
   **巴黎市属馆配方**(Paris Musées:小皇宫等 14 馆):Wikidata **P6246**(Paris Musées 作品号)→ P973 作品页 → 读主图授权;
   小皇宫实测无图 1343 → 319(P4765+CC0 562 件 + 作品页 CC0 462 件;剩页面无图 193 / © 70 / 授权不明 30 / 403 8)。
