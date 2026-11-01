@@ -15,7 +15,7 @@
 </article>
 {%- endmacro %}
 {% block main %}
-<p class="crumb wrap"><a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a> › {{ heading }}</p>
+<p class="crumb wrap">{% if has_city_page %}<a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a>{% else %}{{ city_name }}{% endif %} › {{ heading }}</p>
 <section class="wrap pagehead">
   <h1 class="h-serif">{{ heading }}</h1>
   <p class="lead">{{ intro }}</p>

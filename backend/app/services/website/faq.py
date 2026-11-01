@@ -3,7 +3,8 @@
 内容在 app/content/faq/<城市>/:
 - structure.yaml:题目 id、分组、顺序、核对日、复核日、来源、原文摘录、置顶区间、按馆的馆——只写一次;
 - text/<语言>.yaml:只放文字,按 id 取。日期/来源不进文字文件,各语言因此不可能不一致。
-文字里馆名写占位符 {louvre},渲染时换成该语言馆名。`review_by`/`evidence` 只用于复核,不上页面。
+文字里馆名写占位符 {louvre},渲染时换成该语言馆名;要变格的语言在文字文件 name_forms 里
+配好,写 {louvre:gen}(目前只有波兰语的 Luwr)。`review_by`/`evidence` 只用于复核,不上页面。
 """
 
 import argparse
@@ -21,7 +22,7 @@ from app.services.website.data import LANGS, city_slug
 
 FAQ_ROOT = Path(__file__).resolve().parents[2] / "content" / "faq"
 _ID = re.compile(r"^[a-z0-9-]+$")
-_PH = re.compile(r"\{([a-z0-9_]+)\}")
+PH = re.compile(r"\{([a-z0-9_]+)(?::([a-z]+))?\}")
 
 
 @dataclass(frozen=True)
@@ -162,7 +163,16 @@ def _strings(entry) -> list[str]:
 
 def _placeholders(entry) -> Counter:
     """按出现次数计:译文少提一次馆名也算不一致。"""
-    return Counter(m for s in _strings(entry) for m in _PH.findall(str(s)))
+    return Counter(m for s in _strings(entry) for m, _ in PH.findall(str(s)))
+
+
+def _missing_forms(entry, forms: dict) -> set[str]:
+    return {
+        f"{{{m}:{case}}}"
+        for s in _strings(entry)
+        for m, case in PH.findall(str(s))
+        if case and case not in forms.get(m, {})
+    }
 
 
 def validate(faq: Faq) -> list[str]:
@@ -230,6 +240,8 @@ def validate(faq: Faq) -> list[str]:
                     errs.append(f"{lang}: {i.id} has an empty museum answer")
             elif not isinstance(a, str) or not a.strip():
                 errs.append(f"{lang}: {i.id} answer must be non-empty text")
+            for missing in sorted(_missing_forms(e, t.get("name_forms") or {})):
+                errs.append(f"{lang}: {i.id} {missing} has no name_forms entry")
             ph = _placeholders(e)
             for unknown in set(ph) - slugs - set(museums_for_city(faq.city)):
                 errs.append(f"{lang}: {i.id} unknown placeholder {{{unknown}}}")

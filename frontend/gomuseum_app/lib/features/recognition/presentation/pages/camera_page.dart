@@ -657,9 +657,9 @@ class _CameraPageState extends ConsumerState<CameraPage>
   /// = 那家馆没在售的票 → 只说暂未开售。都没有(全局识别前置闸)→ 权益页全列(已按足迹排序)。
   void _showQuotaExhaustedSheet(
       {String? passId, bool inMuseum = false, String? museum}) {
-    ref
+    unawaited(ref
         .read(recognitionNotifierProvider.notifier)
-        .reportQuotaPaywallShown(museum: museum);
+        .reportQuotaPaywallShown(museum: museum));
     final gm = context.gm;
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(

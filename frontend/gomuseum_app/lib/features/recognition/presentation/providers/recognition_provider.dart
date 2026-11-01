@@ -188,9 +188,11 @@ class RecognitionNotifier extends _$RecognitionNotifier {
   }
 
   /// 额度付费页真弹出来了(V79)。后端 402 时记的 free_quota_exhausted 只是撞墙。
-  void reportQuotaPaywallShown({String? museum}) => unawaited(reportClientEvent(
-      ref.read(dioProvider), 'paywall_viewed_from_quota',
-      museum: museum));
+  Future<void> reportQuotaPaywallShown({String? museum}) async {
+    final dio = ref.read(dioProvider);
+    await reportClientEvent(dio, 'paywall_viewed_from_quota',
+        museum: museum, deviceId: await _deviceIdOrNull());
+  }
 
   /// 确认卡点选「这一件」→ 把「照片→qid」人工确认标注回传后端（喂 CLIP 校准），
   /// **并由后端在那一刻扣 1 次额度**（候选态的唯一扣费点，2026-09-20 改）。

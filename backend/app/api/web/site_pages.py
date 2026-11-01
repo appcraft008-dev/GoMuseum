@@ -550,16 +550,20 @@ def city_artist(
 
 
 _faq_warned: set = set()
-_PH = re.compile(r"\{([a-z0-9_]+)\}")
 
 
-def _faq_fill(text: str, names: dict) -> str:
-    return _PH.sub(lambda m: names.get(m.group(1), m.group(0)), text or "")
+def _faq_fill(text: str, names: dict, forms: dict | None = None) -> str:
+    def sub(m):
+        form = (forms or {}).get(m.group(1), {}).get(m.group(2))
+        return form or names.get(m.group(1), m.group(0))
+
+    return wfaq.PH.sub(sub, text or "")
 
 
 def _faq_view(db, f, c, lang: str, today):
     """(置顶题, 分组, JSON-LD 问答, dateModified);只出可见题、该语言有内容的已上线馆。"""
     tx = f.text[lang]
+    forms = tx.get("name_forms") or {}
     shown = {vm["slug"] for vm in _museum_vms(db, c.museums, lang)}
     museums = [m for m in c.museums if m.slug in shown]
     names = {m.slug: museum_name(m, lang) for m in c.museums}
@@ -592,7 +596,7 @@ def _faq_view(db, f, c, lang: str, today):
                 parts.append((m, p, e["a"][m.slug]))
         out, ld_text = [], []
         for m, p, a in parts:
-            text = _faq_fill(a, names)
+            text = _faq_fill(a, names, forms)
             stale = wfaq.is_stale(p, today)
             link = None
             if m is not None and item.link in ("must_see", "museum"):
@@ -614,7 +618,7 @@ def _faq_view(db, f, c, lang: str, today):
                 fresh.append(p.checked)
                 plain = " ".join(_paras(text))
                 ld_text.append(f"{names[m.slug]}: {plain}" if m else plain)
-        q = _faq_fill(e["q"], names)
+        q = _faq_fill(e["q"], names, forms)
         if ld_text:
             entities.append(
                 {
@@ -661,6 +665,8 @@ def faq_page(lang: str, city: str, request: Request, db: Session = Depends(get_d
     if not f or lang not in wfaq.faq_languages(f):
         return _not_found()
     tx = f.text[lang]
+    # 这种语言巴黎一件内容都没有时城市页是 404,面包屑不给死链
+    has_city_page = bool(wd.guide_count(db, [m.id for m in c.museums], lang))
     pinned, groups, entities, modified = _faq_view(db, f, c, lang, wfaq.today())
     jsonld = None  # 全部过期 → 不出空 FAQPage(结构化数据会报错)
     if entities:
@@ -685,6 +691,7 @@ def faq_page(lang: str, city: str, request: Request, db: Session = Depends(get_d
         jsonld=jsonld,
         city=city,
         city_name=_city_name(c, lang),
+        has_city_page=has_city_page,
         heading=tx["title"],
         intro=tx["intro"],
         modified=modified,

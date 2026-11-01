@@ -56,6 +56,7 @@
 <footer class="foot">
   <div class="wrap foot-in">
     <p>{{ t('independent') }}</p>
+    <p>&copy; <a href="https://app-craft-008.com/">APPCRAFT008 LTD</a></p>
     <p><a href="/privacy.html?lang={{ lang }}">{{ t('privacy') }}</a> · <a href="/terms.html?lang={{ lang }}">{{ t('terms') }}</a></p>
     <p class="foot-langs">{% for code in langs %}<a href="{{ lang_href(code) }}">{{ lang_names[code] }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
   </div>
