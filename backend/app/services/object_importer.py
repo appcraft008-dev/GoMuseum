@@ -139,8 +139,13 @@ def upsert_object(db: Session, museum_id: uuid.UUID, art: dict) -> MuseumObject:
         img = db.query(ObjectImage).filter_by(
             object_id=obj.id, sort=i
         ).one_or_none() or ObjectImage(object_id=obj.id, sort=i)
+        url = src.replace("http://", "https://")
+        if img.role == "view_quarantine" and img.source_url == url:
+            continue  # 下架/隔离过的图,重跑 catalog 不许复活;换了新图才往下走
+        if img.role == "view_quarantine":
+            img.image_key = None  # 换了新图:旧副本不能跟着复活,留空等物化
         img.role = "primary" if i == 0 else "view"
-        img.source_url = src.replace("http://", "https://")
+        img.source_url = url
         db.add(img)
     db.flush()
     return obj
