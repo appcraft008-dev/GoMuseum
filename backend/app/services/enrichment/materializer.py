@@ -7,6 +7,7 @@ spec docs/superpowers/specs/2026-07-03-image-r2-selfhost-design.md。"""
 
 from __future__ import annotations
 
+import html
 import io
 import logging
 import re
@@ -44,7 +45,7 @@ def _default_fetch_bytes(url: str) -> bytes:
 
 
 def _strip_html(s: str) -> str:
-    return re.sub(r"<[^>]+>", "", s or "").strip()
+    return html.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()
 
 
 def _clip(s: str, limit: int) -> str | None:
@@ -56,7 +57,7 @@ def _clip(s: str, limit: int) -> str | None:
 
 # Credit 字段常写的是图片来源而不是人;这些情况认不准,不猜
 _NOT_A_PERSON = re.compile(
-    r"https?:|www\.|gallery|muse|\.jpe?g|\.png|image:|wikipedia|collection",
+    r"https?:|www\.|gallery|mus[eé]|œuvre|\.jpe?g|\.png|image:|wikipedia|collection",
     re.IGNORECASE,
 )
 _BOT = re.compile(r"\bbot\b|^(rotatebot|cropbot|fbot|sfbot)$", re.IGNORECASE)

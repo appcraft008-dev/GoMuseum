@@ -264,6 +264,7 @@ def test_photo_author_picks_who_took_the_photo():
     assert pa("", "http://www.cagnes-tourisme.com/x", "Someone") is None
     assert pa("", "fr:Image:Coysevox1.jpg, picture taken by fr:U", "Rotatebot") is None
     assert pa("", "", "Someone") is None
+    assert pa("", "Œuvre appartenant au Musée des Beaux-Arts de Lyon", "X") is None
 
 
 def _meta(license_, artist="Claude Monet", author="Janmad"):
