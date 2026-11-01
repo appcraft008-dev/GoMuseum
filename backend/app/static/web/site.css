@@ -188,6 +188,8 @@ h2.h-serif { font-size: clamp(21px, 3.2vw, 27px); }
 .ptime { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-size: 12px; min-width: 3.2em; text-align: right; }
 .pspeed { flex: 0 0 auto; min-width: 46px; height: 32px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .28); background: transparent; color: var(--on-dark); font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
 .pspeed:hover { border-color: #E8B48F; }
+.work-cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0; }
+.work-cta-row .small { margin: 0; }
 .lockbar { display: block; text-decoration: none; background: var(--dark); color: var(--on-dark); border-radius: 6px; padding: 12px 14px; font-size: 14.5px; }
 .share { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .chip-btn { font: inherit; font-size: 13px; text-decoration: none; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 6px 12px; min-height: 34px; cursor: pointer; }

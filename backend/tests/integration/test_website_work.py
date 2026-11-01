@@ -220,3 +220,85 @@ def test_legacy_link_never_lands_on_unsupported_language(client, db, monkeypatch
     assert r.status_code == 301 and r.headers["location"].startswith("/en/")
     r = client.get(f"/a/orsay/{MS1}", params={"lang": "en", "s": "a b&c"})
     assert r.headers["location"].endswith("?s=a%20b%26c")
+
+
+ANDROID = {"user-agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile"}
+IPHONE = {"user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"}
+
+
+def _top(html):
+    """作品页首屏(下载区之前、讲解段之前)。"""
+    return html.split('id="sections"')[0]
+
+
+@pytest.fixture()
+def no_audio(db):
+    """本件和作者都没音频:首屏没有「在 App 里听」条,才轮到下载按钮。"""
+    m = db.query(Museum).filter_by(slug="orsay").one()
+    _sec(db, _obj(db, m, "Q501", artist="Q999"), "guide", "en")
+    db.commit()
+    return "/en/paris/orsay/Q501/"
+
+
+def test_work_top_cta_goes_straight_to_play_on_android(client, monkeypatch, no_audio):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    html = client.get(no_audio, headers=ANDROID).text
+    m = re.search(r'<a class="btn work-cta" href="([^"]+)"', _top(html))
+    assert m and "play.google.com" in m.group(1)
+    assert "utm_content%3Dwork" in m.group(1)
+
+
+def test_work_top_cta_scrolls_to_download_on_desktop(client, monkeypatch, no_audio):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    html = client.get(no_audio).text
+    assert '<a class="btn work-cta" href="#download"' in _top(html)
+
+
+def test_work_top_cta_also_on_trial_work(client, monkeypatch):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    assert "work-cta" in _top(client.get(f"/en/paris/orsay/{MS1}/").text)
+
+
+def test_work_top_cta_hidden_on_iphone(client, monkeypatch, no_audio):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    assert "work-cta" not in _top(client.get(no_audio, headers=IPHONE).text)
+
+
+def test_audio_lockbar_goes_straight_to_play_without_second_cta(client, monkeypatch):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", True)
+    top = _top(client.get("/en/paris/orsay/Q500/", headers=ANDROID).text)
+    m = re.search(r'<a class="lockbar" href="([^"]+)"', top)
+    assert m and "play.google.com" in m.group(1)
+    assert "work-cta" not in top
+
+
+def test_work_cta_without_play_link_falls_back_to_download(
+    client, monkeypatch, no_audio
+):
+    monkeypatch.setattr(settings, "SHARE_PLAY_LIVE", False)
+    top = _top(client.get(no_audio, headers=ANDROID).text)
+    assert '<a class="btn work-cta" href="#download"' in top
+
+
+def test_work_title_says_explained_but_h1_stays_plain(client):
+    html = client.get(f"/en/paris/orsay/{MS2}/").text
+    title = re.search(r"<title>(.*?)</title>", html).group(1)
+    assert title.startswith(f"Title{MS2} explained")
+    assert title.endswith("· GoMuseum")
+    assert re.search(rf"<h1[^>]*>Title{MS2}</h1>", html)
+
+
+def test_work_description_leads_with_artist_and_museum(client):
+    html = client.get(f"/en/paris/orsay/{MS2}/").text
+    d = re.search(r'<meta name="description" content="([^"]*)"', html).group(1)
+    assert d.startswith("Claude Monet")
+    assert "Orsay" in d and f"guide-body {MS2}" in d
+
+
+def test_work_title_copy_exists_for_every_site_language():
+    from app.services.website.copy import COPY, t
+    from app.services.website.data import LANGS
+
+    for lang in LANGS:
+        assert "work_title" in COPY[lang], lang
+        assert "X" in t(lang, "work_title", title="X")

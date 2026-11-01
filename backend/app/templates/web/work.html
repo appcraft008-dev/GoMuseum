@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import grid %}
 {% block main %}
+{% set cta = play if device == 'android' and play else '#download' %}
 <p class="crumb wrap"><a href="/{{ lang }}/{{ city }}/">{{ city_name }}</a> › <a href="/{{ lang }}/{{ city }}/{{ museum_slug }}/">{{ museum_name }}</a></p>
 <article class="work wrap" data-now="{{ now_tpl }}">
   <div class="work-pic">
@@ -22,7 +23,10 @@
       <p class="small">🎧 {{ t('trial_note', n=trial_n) }}</p>
       <audio id="audio" preload="none"></audio>
       {% elif has_audio %}
-      <a class="lockbar" href="#download" data-track="download_work">🎧 {{ t('has_audio_in_app') }}</a>
+      <a class="lockbar" href="{{ cta }}" data-track="download_work" data-cta="download_work">🎧 {{ t('has_audio_in_app') }}</a>
+      {% endif %}
+      {% if (is_trial or not has_audio) and device not in ('iphone', 'ipad') %}
+      <p class="work-cta-row"><a class="btn work-cta" href="{{ cta }}" data-track="download_work_top" data-cta="download_work_top">{{ t('cta_download') }}</a> <span class="small">{{ t('free_note', n=free_n) }}</span></p>
       {% endif %}
       <div class="share" data-url="{{ share_url }}" data-title="{{ work_title }}">
         <button type="button" class="chip-btn" data-share="native" hidden>{{ t('share') }}</button>
