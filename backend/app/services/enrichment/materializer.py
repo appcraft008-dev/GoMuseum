@@ -57,7 +57,9 @@ def _clip(s: str, limit: int) -> str | None:
 
 # Credit 字段常写的是图片来源而不是人;这些情况认不准,不猜
 _NOT_A_PERSON = re.compile(
-    r"https?:|www\.|gallery|mus[eé]|œuvre|\.jpe?g|\.png|image:|wikipedia|collection",
+    r"https?:|www\.|gallery|mus[eé]|œuvre|joconde|copyleft|unknown|self-photographed"
+    r"|^img_|akg-images|world imaging|\n|, \d{1,2} \w+ \d{4}, \d{2}:\d{2}|;\s*c/o|^\["
+    r"|\.jpe?g|\.png|image:|wikipedia|collection",
     re.IGNORECASE,
 )
 _BOT = re.compile(r"\bbot\b|^(rotatebot|cropbot|fbot|sfbot)$", re.IGNORECASE)

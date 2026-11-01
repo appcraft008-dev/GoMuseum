@@ -264,6 +264,21 @@ def test_photo_author_picks_who_took_the_photo():
     assert pa("", "http://www.cagnes-tourisme.com/x", "Someone") is None
     assert pa("", "fr:Image:Coysevox1.jpg, picture taken by fr:U", "Rotatebot") is None
     assert pa("", "", "Someone") is None
+    for not_a_name in (
+        "Joconde database:  entry  000PE011151",
+        "Base Joconde",
+        "Copyleft",
+        "Unknown",
+        "Self-photographed",
+        "IMG_20141107_142114",
+        "akg-images / Erich Lessing",
+        "Maurice Denis, Francisco Anzola, 23 July 2013, 10:55",
+        "Borghese Gladiator; c/o: Ryan Bauman",
+        "[ B ] Jan de Beer - Christ Carrying the Cross (ca 1510)",
+        "Cabanel, La naissance de Vénus, 1863\n\nAuthor: leo.jeje",
+    ):
+        assert pa("", not_a_name, "Someone") is None, not_a_name
+    assert pa("", "Mbzt, 2012", "Mbzt") == "Mbzt, 2012"  # 人名 + 年份照旧
     assert pa("", "Œuvre appartenant au Musée des Beaux-Arts de Lyon", "X") is None
 
 
