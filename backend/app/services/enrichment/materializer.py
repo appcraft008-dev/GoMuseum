@@ -7,6 +7,7 @@ spec docs/superpowers/specs/2026-07-03-image-r2-selfhost-design.md。"""
 
 from __future__ import annotations
 
+import html
 import io
 import logging
 import re
@@ -44,7 +45,7 @@ def _default_fetch_bytes(url: str) -> bytes:
 
 
 def _strip_html(s: str) -> str:
-    return re.sub(r"<[^>]+>", "", s or "").strip()
+    return html.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()
 
 
 def _clip(s: str, limit: int) -> str | None:
@@ -54,8 +55,48 @@ def _clip(s: str, limit: int) -> str | None:
     return s[:limit]
 
 
+# Credit 字段常写的是图片来源而不是人;这些情况认不准,不猜
+_NOT_A_PERSON = re.compile(
+    r"https?:|www\.|gallery|mus[eé]|œuvre|\.jpe?g|\.png|image:|wikipedia|collection",
+    re.IGNORECASE,
+)
+_BOT = re.compile(r"\bbot\b|^(rotatebot|cropbot|fbot|sfbot)$", re.IGNORECASE)
+
+
+def photo_author(attribution: str, credit: str, uploader: str | None) -> str | None:
+    """这张照片该署谁(CC BY 要署的人)。`Artist` 常是画家,所以另外找;认不准 → None。"""
+    if attribution:
+        return attribution
+    if "own work" in credit.lower():
+        return uploader if uploader and not _BOT.search(uploader) else None
+    if credit and len(credit) <= 80 and not _NOT_A_PERSON.search(credit):
+        return credit
+    return None
+
+
+def is_cc_by(license_: str | None) -> bool:
+    return (license_ or "").upper().startswith("CC BY")
+
+
+def extmeta_fields(info: dict) -> dict:
+    """imageinfo 一项 → {license, credit, photo_author}。截断到列宽。"""
+    meta = info.get("extmetadata") or {}
+    text = lambda k: _strip_html((meta.get(k) or {}).get("value", ""))
+    # 截断到列宽:部分 Commons 署名是多段落说明(英法双语+联系方式),
+    # 超 varchar(255) 会 StringDataRightTruncation 崩掉整轮物化
+    # (2026-07-25 卢浮宫实测:1369/10159 处崩)。署名截断不影响合规归属。
+    return {
+        "license": _clip(text("LicenseShortName"), 128),
+        "credit": _clip(text("Artist"), 255),
+        "photo_author": _clip(
+            photo_author(text("Attribution"), text("Credit"), info.get("user")) or "",
+            255,
+        ),
+    }
+
+
 def _default_fetch_meta(source_url: str) -> dict:
-    """Commons imageinfo extmetadata → {license, credit}。失败返回 {}(署名可后补)。"""
+    """Commons imageinfo → {license, credit, photo_author}。失败返回 {}(署名可后补)。"""
     import requests
 
     filename = unquote(source_url.rsplit("/", 1)[-1])
@@ -66,7 +107,7 @@ def _default_fetch_meta(source_url: str) -> dict:
                 "action": "query",
                 "titles": f"File:{filename}",
                 "prop": "imageinfo",
-                "iiprop": "extmetadata",
+                "iiprop": "extmetadata|user",
                 "format": "json",
             },
             headers={"User-Agent": _UA},
@@ -74,16 +115,7 @@ def _default_fetch_meta(source_url: str) -> dict:
         )
         r.raise_for_status()
         pages = r.json()["query"]["pages"]
-        meta = next(iter(pages.values()))["imageinfo"][0]["extmetadata"]
-        # 截断到列宽:部分 Commons 署名是多段落说明(英法双语+联系方式),
-        # 超 varchar(255) 会 StringDataRightTruncation 崩掉整轮物化
-        # (2026-07-25 卢浮宫实测:1369/10159 处崩)。署名截断不影响合规归属。
-        return {
-            "license": _clip(
-                _strip_html(meta.get("LicenseShortName", {}).get("value", "")), 128
-            ),
-            "credit": _clip(_strip_html(meta.get("Artist", {}).get("value", "")), 255),
-        }
+        return extmeta_fields(next(iter(pages.values()))["imageinfo"][0])
     except Exception:
         return {}
 
@@ -145,6 +177,14 @@ def materialize_row(
         meta = fetch_meta(row.source_url) or {}
         row.license = meta.get("license") or row.license
         row.credit = meta.get("credit") or row.credit
+        if meta.get("photo_author") and is_cc_by(row.license) and row.credit:
+            # Artist 填的是画家时,展示层会隐藏它,CC BY 要署的摄影师就没了
+            from app.services.matching.people import is_artist_credit
+            from app.services.museum_repo import artist_aliases_of
+
+            obj = db.get(MuseumObject, row.object_id)
+            if is_artist_credit(row.credit, artist_aliases_of(db, obj)):
+                row.credit = meta["photo_author"]
     try:  # 入库即嵌入(R2 已有文件时从 storage 取 large;失败不阻断物化)
         from app.services.recognition.embeddings import embed_image_row
 

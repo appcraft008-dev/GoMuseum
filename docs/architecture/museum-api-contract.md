@@ -197,7 +197,7 @@ spec `docs/superpowers/specs/2026-10-27-must-see-checkin-design.md`。令牌可�
 `image`(端点2)/`thumbnail`(端点3)→ **thumb 档**(480px);`images[].url`(端点4)→ **large 档**(1600px,兼识别参照)。`ObjectImage.image_key` 存**基础键**(`images/{qid}/{sort}`),端点拼 `_thumb.jpg`/`_large.jpg` 出 R2 直链;无 key 回退 `source_url`(Wikimedia)。字段名不变,前端零改。
 
 - **多角度图**:catalog 收 P18 全部值 → 多行 ObjectImage(首张 `role=primary`,其余 `view`;雕塑识别参照)。Commons 分类(P373)深挖留给识别机制 brainstorm。
-- **物化**:`onboard.py <slug> images --target <env> [--limit N]`——下载(合规UA限速)→Pillow两档(JPEG q82,不放大)→R2→Commons 署名(license/credit,CC-BY 摄影必署)。逐行幂等,失败留空重跑重试;SVG/超60MB 跳过。不存原图(source_url 可重下)。
+- **物化**:`onboard.py <slug> images --target <env> [--limit N]`——下载(合规UA限速)→Pillow两档(JPEG q82,不放大)→R2→Commons 署名(license/credit,CC-BY 摄影必署:`Artist` 是作品作者时改署 Attribution → Credit → Own work 的上传者,认不准不猜)。逐行幂等,失败留空重跑重试;SVG/超60MB 跳过。不存原图(source_url 可重下)。
 - **懒补漏**:content 端点发现该件缺图 → 后台补单件(自愈运维疏漏/新进目录;不占内容锁)。
 - **⚠️ 成本分界(通用原则)**:**图=目录门面必须预物化**(列表一屏几十张缩略图多数永不被点开;识别参照库必须先于识别存在;成本≈0)——与**内容=必须懒生成**($/件)相反。新馆照此:catalog→names→images 全量预跑,generate 分层。
 - **图源授权判据(2026-10-05 S7 补图定,通用规则)**:**只用"这一张图"有明确授权证据的图**,证据按来源:
