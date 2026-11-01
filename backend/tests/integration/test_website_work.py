@@ -304,7 +304,7 @@ def test_work_title_copy_exists_for_every_site_language():
         assert "X" in t(lang, "work_title", title="X")
 
 
-def test_work_description_skips_raw_date(client, monkeypatch):
+def test_work_shows_bce_in_byline_but_not_description(client, monkeypatch):
     from app.api.web import site_pages
 
     real = site_pages.get_object_content
@@ -316,5 +316,7 @@ def test_work_description_skips_raw_date(client, monkeypatch):
 
     monkeypatch.setattr(site_pages, "get_object_content", with_date)
     html = client.get(f"/en/paris/orsay/{MS2}/").text
+    byline = re.search(r'<p class="byline">(.*?)</p>', html).group(1)
+    assert "140 BC" in byline and "-140" not in byline
     d = re.search(r'<meta name="description" content="([^"]*)"', html).group(1)
     assert "-140" not in d

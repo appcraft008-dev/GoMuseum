@@ -32,6 +32,7 @@ from app.services.share import (
 )
 from app.services.share_card import render_card
 from app.services.storage import get_object_storage
+from app.services.website.copy import format_year
 from app.services.website.data import LANGS
 
 router = APIRouter(tags=["share-web"])
@@ -203,7 +204,16 @@ def share_page(
                 "OGIMAGE": images[0]["url"] if images else card_url(slug, qid, chosen),
                 "CANONICAL": f"{base}/a/{slug}/{qid}?lang={chosen}",
                 "BYLINE": " · ".join(
-                    x for x in (artist.get("name"), facts.get("date")) if x
+                    x
+                    for x in (
+                        artist.get("name"),
+                        (
+                            format_year(facts["date"], chosen)
+                            if facts.get("date")
+                            else None
+                        ),
+                    )
+                    if x
                 ),
             },
             {
@@ -255,6 +265,7 @@ def share_card(
         return _not_found()
     artist = (data.get("artist") or {}).get("name")
     date = (data.get("facts") or {}).get("date")
+    date = format_year(date, chosen) if date else None
     museum = db.query(Museum).filter_by(slug=slug).one()
     # 署名取内容接口处理过的那份(画家本人不算署名,见 museum_repo._photo_credit),
     # 不读 img.credit 原值 —— 否则分享图上会多出一行画家名

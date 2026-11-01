@@ -39,6 +39,7 @@ from app.services.share import _accept_codes, card_url, guide_languages
 from app.services.storage import get_object_storage
 from app.services.website import data as wd
 from app.services.website import faq as wfaq
+from app.services.website.copy import format_year
 from app.services.website.copy import t as _t
 from app.services.website.tracking import (
     BEACON_MAX_BYTES,
@@ -892,8 +893,9 @@ def work_page(
     images = data.get("images") or []
     others = [c for c in _must_see_cards(db, m, lang) if c.qid != qid][:6]
     first = sections[0]["body"][0] if sections and sections[0]["body"] else ""
+    date = (data.get("facts") or {}).get("date")
     byline = " · ".join(
-        x for x in (artist, (data.get("facts") or {}).get("date"), mname) if x
+        x for x in (artist, format_year(date, lang) if date else None, mname) if x
     )
     # 年代是原始值(公元前存成 -140),网页摘要里不好看,只放作者和馆名
     lead = " · ".join(x for x in (artist, mname) if x)

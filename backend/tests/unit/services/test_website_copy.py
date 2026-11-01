@@ -2,6 +2,8 @@
 
 import string
 
+import pytest
+
 from app.services.enrichment.catalog import MuseumCatalog
 from app.services.enrichment.factory import CATALOG_PATH
 from app.services.website.copy import COPY, t
@@ -52,3 +54,30 @@ def test_t_falls_back_and_formats():
     assert t("ko", "nope-missing") == "nope-missing"
     assert "3" in t("de", "see_all_must_see", n=3)
     assert t("xx", "nav_museums") == COPY["en"]["nav_museums"]
+
+
+@pytest.mark.parametrize(
+    "raw,lang,want",
+    [
+        ("-140", "en", "140 BC"),
+        ("-140", "zh", "公元前140年"),
+        ("-140", "ja", "紀元前140年"),
+        ("-140", "fr", "140 av. J.-C."),
+        (" -140 ", "en", "140 BC"),
+        ("1853 vers", "en", "c. 1853"),
+        ("1853 vers,1860 tirage", "en", "c. 1853"),
+        ("1896 entre,1911 et", "en", "1896–1911"),
+        ("1896 entre,1911 et,1931 tirage", "en", "1896–1911"),
+        ("1855-1856", "en", "1855–1856"),
+        ("1870 avant", "en", "before 1870"),
+        ("1870 après", "de", "nach 1870"),
+        ("1503", "en", "1503"),
+        # 语义模糊的原样留着,和 App 的 formatYear 一致
+        ("1867 vers,1868 ou", "en", "1867 vers,1868 ou"),
+        ("1870 (?),1871 (?)", "en", "1870 (?),1871 (?)"),
+    ],
+)
+def test_format_year_same_rules_as_app(raw, lang, want):
+    from app.services.website.copy import format_year
+
+    assert format_year(raw, lang) == want

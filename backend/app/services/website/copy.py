@@ -6,6 +6,8 @@
 - 「作品」不写成「画」(雕塑、文物都算);不暗示官方/合作;不写离线可用。
 """
 
+import re
+
 COPY: dict[str, dict[str, str]] = {
     "en": {
         "hero_title": "In the museum, point at any work you see — snap it and hear its story.",
@@ -17,6 +19,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "How it works",
         "cta_download": "Get the app",
         "work_title": "{title} explained",
+        "year_bce": "{year} BC",
+        "year_before": "before {year}",
+        "year_after": "after {year}",
         "play_badge_pre": "Get it on",
         "play_soon": "Coming soon to Google Play",
         "open_in_browser": "To download from Google Play, tap ··· in the top right and open this page in your browser",
@@ -93,6 +98,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "Comment ça marche",
         "cta_download": "Télécharger l'app",
         "work_title": "{title} : analyse",
+        "year_bce": "{year} av. J.-C.",
+        "year_before": "avant {year}",
+        "year_after": "après {year}",
         "play_badge_pre": "Disponible sur",
         "play_soon": "Bientôt sur Google Play",
         "open_in_browser": "Pour télécharger sur Google Play, touchez ··· en haut à droite et ouvrez cette page dans votre navigateur",
@@ -169,6 +177,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "怎么用",
         "cta_download": "下载 App",
         "work_title": "{title} 讲解",
+        "year_bce": "公元前{year}年",
+        "year_before": "{year}年前",
+        "year_after": "{year}年后",
         "play_badge_pre": "下载应用，请到",
         "play_soon": "即将上线 Google Play",
         "open_in_browser": "要从 Google Play 下载，请点右上角 ··· 选择在浏览器中打开",
@@ -245,6 +256,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "怎麼用",
         "cta_download": "下載 App",
         "work_title": "{title} 講解",
+        "year_bce": "西元前{year}年",
+        "year_before": "{year}年前",
+        "year_after": "{year}年後",
         "play_badge_pre": "下載應用程式，請到",
         "play_soon": "即將上架 Google Play",
         "open_in_browser": "要從 Google Play 下載，請點右上角 ··· 選擇在瀏覽器中開啟",
@@ -321,6 +335,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "So geht's",
         "cta_download": "App laden",
         "work_title": "{title}: Erklärung",
+        "year_bce": "{year} v. Chr.",
+        "year_before": "vor {year}",
+        "year_after": "nach {year}",
         "play_badge_pre": "Jetzt bei",
         "play_soon": "Bald bei Google Play",
         "open_in_browser": "Zum Download über Google Play tippe oben rechts auf ··· und öffne diese Seite im Browser",
@@ -397,6 +414,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "Cómo funciona",
         "cta_download": "Descargar la app",
         "work_title": "{title}: explicación",
+        "year_bce": "{year} a. C.",
+        "year_before": "antes de {year}",
+        "year_after": "después de {year}",
         "play_badge_pre": "Disponible en",
         "play_soon": "Próximamente en Google Play",
         "open_in_browser": "Para descargar en Google Play, toca ··· arriba a la derecha y abre esta página en tu navegador",
@@ -473,6 +493,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "Come funziona",
         "cta_download": "Scarica l'app",
         "work_title": "{title}: spiegazione",
+        "year_bce": "{year} a.C.",
+        "year_before": "prima del {year}",
+        "year_after": "dopo il {year}",
         "play_badge_pre": "Disponibile su",
         "play_soon": "Presto su Google Play",
         "open_in_browser": "Per scaricare da Google Play, tocca ··· in alto a destra e apri questa pagina nel browser",
@@ -549,6 +572,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "Jak to działa",
         "cta_download": "Pobierz aplikację",
         "work_title": "{title}: omówienie",
+        "year_bce": "{year} p.n.e.",
+        "year_before": "przed {year}",
+        "year_after": "po {year}",
         "play_badge_pre": "Pobierz z",
         "play_soon": "Wkrótce w Google Play",
         "open_in_browser": "Aby pobrać z Google Play, dotknij ··· w prawym górnym rogu i otwórz tę stronę w przeglądarce",
@@ -625,6 +651,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "使い方",
         "cta_download": "アプリを入手",
         "work_title": "{title} 解説",
+        "year_bce": "紀元前{year}年",
+        "year_before": "{year}年以前",
+        "year_after": "{year}年以降",
         "play_badge_pre": "ダウンロードは",
         "play_soon": "Google Play で近日公開",
         "open_in_browser": "Google Play からダウンロードするには、右上の ··· からブラウザで開いてください",
@@ -701,6 +730,9 @@ COPY: dict[str, dict[str, str]] = {
         "nav_how": "이용 방법",
         "cta_download": "앱 받기",
         "work_title": "{title} 해설",
+        "year_bce": "기원전 {year}년",
+        "year_before": "{year}년 이전",
+        "year_after": "{year}년 이후",
         "play_badge_pre": "다운로드:",
         "play_soon": "Google Play 출시 예정",
         "open_in_browser": "Google Play에서 다운로드하려면 오른쪽 위 ···를 눌러 브라우저에서 열어 주세요",
@@ -774,3 +806,25 @@ def t(lang: str, key: str, **kw) -> str:
     """缺语言/缺键回退英文;英文也没有就原样返回键名(页面上一眼能看出漏了)。"""
     s = COPY.get(lang, {}).get(key) or COPY["en"].get(key) or key
     return s.format(**kw) if kw else s
+
+
+# 年代是各目录源原样透传的,规则与 App 的 year_format.dart 一致:只改能确定语义的形态,其余原样
+_YEAR_RULES = (
+    (r"-(\d+)", "year_bce"),
+    (r"(\d+) vers(?:,\d+ tirage)?", "c. {0}"),
+    (r"(\d+) entre,(\d+) et(?:,\d+ tirage)?", "{0}–{1}"),
+    (r"(\d+)-(\d+)", "{0}–{1}"),
+    (r"(\d+) avant", "year_before"),
+    (r"(\d+) après", "year_after"),
+)
+
+
+def format_year(raw: str, lang: str) -> str:
+    text = raw.strip()
+    for pattern, out in _YEAR_RULES:
+        m = re.fullmatch(pattern, text)
+        if m:
+            if out.startswith("year_"):
+                return t(lang, out, year=m[1])
+            return out.format(*m.groups())
+    return text
