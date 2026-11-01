@@ -892,6 +892,9 @@ def work_page(
     images = data.get("images") or []
     others = [c for c in _must_see_cards(db, m, lang) if c.qid != qid][:6]
     first = sections[0]["body"][0] if sections and sections[0]["body"] else ""
+    byline = " · ".join(
+        x for x in (artist, (data.get("facts") or {}).get("date"), mname) if x
+    )
     return render(
         request,
         "work.html",
@@ -900,8 +903,11 @@ def work_page(
         page_type="work",
         alternates=langs,
         path_for=lambda code: f"/{code}/{city}/{museum_slug}/{qid}/",
-        title=f"{title}{' — ' + artist if artist else ''} · {mname} · GoMuseum",
-        description=first or title,
+        title=(
+            f"{_t(lang, 'work_title', title=title)}"
+            f"{' — ' + artist if artist else ''} · {mname} · GoMuseum"
+        ),
+        description=f"{byline} — {first}" if first else byline,
         og_image=images[0]["url"] if images else card_url(museum_slug, qid, lang),
         museum_slug=museum_slug,
         qid=qid,
@@ -909,9 +915,7 @@ def work_page(
         city_name=_city_name(wd.find_city(db, city), lang),
         museum_name=mname,
         work_title=title,
-        byline=" · ".join(
-            x for x in (artist, (data.get("facts") or {}).get("date"), mname) if x
-        ),
+        byline=byline,
         image=images[0]["url"] if images else None,
         credits=[i["credit"] for i in images if i.get("credit")],
         sections=sections,

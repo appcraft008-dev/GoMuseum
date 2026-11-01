@@ -15,7 +15,7 @@
   document.addEventListener("click", function (e) {
     var a = e.target.closest && e.target.closest('a[href*="play.google.com"], [data-track]');
     if (!a) return;
-    if (a.href && a.href.indexOf("play.google.com") >= 0) window.gmTrack("web_download_click", { channel: "play" });
+    if (a.href && a.href.indexOf("play.google.com") >= 0) window.gmTrack("web_download_click", { channel: a.dataset.cta || "play" });
     else if (a.dataset.track) window.gmTrack("web_download_click", { channel: a.dataset.track });
   });
 
