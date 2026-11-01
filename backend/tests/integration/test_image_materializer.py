@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.artist import Artist
 from app.models.museum import Museum
 from app.models.museum_object import MuseumObject, ObjectImage
 from app.services.enrichment.materializer import (
@@ -47,7 +48,12 @@ def session():
     )
     Base.metadata.create_all(
         bind=engine,
-        tables=[Museum.__table__, MuseumObject.__table__, ObjectImage.__table__],
+        tables=[
+            Artist.__table__,
+            Museum.__table__,
+            MuseumObject.__table__,
+            ObjectImage.__table__,
+        ],
     )
     s = sessionmaker(bind=engine)()
     m = upsert_museum(s, {"slug": "orsay", "name_en": "Orsay"})
@@ -240,3 +246,146 @@ def test_fetch_meta_clips_overlong_credit(monkeypatch):
     assert len(out["credit"]) == 255  # 截到列宽
     assert len(out["license"]) == 128
     assert out["credit"].startswith("Marie-Lan Nguyen")  # 保留有效署名前缀
+
+
+def test_photo_author_picks_who_took_the_photo():
+    from app.services.enrichment.materializer import photo_author as pa
+
+    assert pa("Photograph by Rama", "Own work", "Rama") == "Photograph by Rama"
+    assert pa("", "Miniwark (2006)", "Miniwark") == "Miniwark (2006)"
+    assert pa("", "Marie-Lan Nguyen (2010)", "Jastrow") == "Marie-Lan Nguyen (2010)"
+    assert pa("", "Own work, Siren-Com, 11 November 2009", "Siren-Com") == "Siren-Com"
+    assert pa("", "Own work", "Janmad") == "Janmad"
+    # 认不准就不猜,留给人看
+    assert pa("", "Own work", "Rotatebot") is None
+    assert pa("", "Own work", "File Upload Bot (Magnus Manske)") is None
+    assert pa("", "Own work", "Talbot") == "Talbot"  # 名字里带 bot 的真人
+    assert pa("", "Web Gallery of Art: Image Info about artwork", "Diomede") is None
+    assert pa("", "http://www.cagnes-tourisme.com/x", "Someone") is None
+    assert pa("", "fr:Image:Coysevox1.jpg, picture taken by fr:U", "Rotatebot") is None
+    assert pa("", "", "Someone") is None
+
+
+def _meta(license_, artist="Claude Monet", author="Janmad"):
+    return lambda u: {"license": license_, "credit": artist, "photo_author": author}
+
+
+def test_cc_image_credits_photographer_when_artist_field_is_the_painter(session):
+    m = session.query(Museum).first()
+    o = upsert_object(session, m.id, {"qid": "Q77", "artist_en": "Claude Monet"})
+    session.add(ObjectImage(object_id=o.id, source_url="http://x/a.jpg", sort=0))
+    session.flush()
+    materialize_object_images(
+        session,
+        o,
+        fetch_bytes=lambda u: _jpeg_bytes(),
+        storage=_Storage(),
+        fetch_meta=_meta("CC BY-SA 4.0"),
+    )
+    assert session.query(ObjectImage).filter_by(object_id=o.id).one().credit == "Janmad"
+
+
+def test_public_domain_and_real_photographer_credit_unchanged(session):
+    m = session.query(Museum).first()
+    a = upsert_object(session, m.id, {"qid": "Q78", "artist_en": "Claude Monet"})
+    b = upsert_object(session, m.id, {"qid": "Q79", "artist_en": "Claude Monet"})
+    for o in (a, b):
+        session.add(ObjectImage(object_id=o.id, source_url="http://x/a.jpg", sort=0))
+    session.flush()
+    kw = dict(fetch_bytes=lambda u: _jpeg_bytes(), storage=_Storage())
+    materialize_object_images(session, a, fetch_meta=_meta("Public domain"), **kw)
+    materialize_object_images(
+        session, b, fetch_meta=_meta("CC BY 3.0", artist="Mbzt"), **kw
+    )
+    row = lambda o: session.query(ObjectImage).filter_by(object_id=o.id).one()
+    assert row(a).credit == "Claude Monet"  # 公有领域不要求署摄影师
+    assert row(b).credit == "Mbzt"  # Artist 本来就是摄影师
+
+
+def test_fetch_meta_returns_photo_author(monkeypatch):
+    import requests
+
+    from app.services.enrichment import materializer as mz
+
+    class _R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "query": {
+                    "pages": {
+                        "1": {
+                            "imageinfo": [
+                                {
+                                    "user": "Janmad",
+                                    "extmetadata": {
+                                        "Artist": {"value": "Claude Monet"},
+                                        "Credit": {"value": "<i>Own work</i>"},
+                                        "LicenseShortName": {"value": "CC BY 3.0"},
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+
+    monkeypatch.setattr(requests, "get", lambda *a, **k: _R())
+    assert mz._default_fetch_meta("http://c/x.jpg")["photo_author"] == "Janmad"
+
+
+def test_backfill_plan_changes_only_painter_credits_on_cc_images(session):
+    from scripts.backfill_photo_credit import plan
+
+    m = session.query(Museum).first()
+    base = "https://commons.wikimedia.org/wiki/Special:FilePath/"
+    for qid, name, lic, credit in (
+        ("Q81", "A.jpg", "CC BY 3.0", "Claude Monet"),  # 要改
+        ("Q82", "B.jpg", "CC BY 3.0", "Mbzt"),  # 已是摄影师
+        ("Q83", "C.jpg", "Public domain", "Claude Monet"),  # 不要求署名
+        ("Q84", "D.jpg", "CC BY 3.0", "Claude Monet"),  # 认不准
+    ):
+        o = upsert_object(session, m.id, {"qid": qid, "artist_en": "Claude Monet"})
+        session.add(
+            ObjectImage(
+                object_id=o.id,
+                source_url=base + name,
+                sort=0,
+                license=lic,
+                credit=credit,
+            )
+        )
+    session.flush()
+
+    class _R:
+        def __init__(self, titles):
+            self.titles = titles
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "query": {
+                    "pages": [
+                        {
+                            "title": t,
+                            "imageinfo": [
+                                {
+                                    "user": "Rotatebot" if "D.jpg" in t else "Janmad",
+                                    "extmetadata": {"Credit": {"value": "Own work"}},
+                                }
+                            ],
+                        }
+                        for t in self.titles
+                    ]
+                }
+            }
+
+    change, unsure = plan(
+        session, get=lambda url, params, **k: _R(params["titles"].split("|"))
+    )
+    assert [(r.source_url[-5:], new) for r, new in change] == [("A.jpg", "Janmad")]
+    assert [r.source_url[-5:] for r in unsure] == ["D.jpg"]
+    assert all(r.credit == "Claude Monet" for r, _ in change)  # 计划不落库
