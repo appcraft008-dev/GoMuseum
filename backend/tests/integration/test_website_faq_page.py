@@ -7,6 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -238,3 +239,30 @@ def test_placeholder_for_museum_without_db_row_uses_catalog_name(client, db):
     db.commit()
     t = client.get("/en/paris/faq/").text
     assert "{louvre}" not in t and "Louvre Museum" in t
+
+
+def test_crumb_links_city_only_when_city_page_exists(client, db):
+    assert '<a href="/fr/paris/">' in client.get("/fr/paris/faq/").text
+    db.query(ObjectContentSection).filter_by(language="fr").delete()
+    db.commit()
+    assert client.get("/fr/paris/").status_code == 404  # 这种语言巴黎一件内容都没有
+    r = client.get("/fr/paris/faq/")
+    assert r.status_code == 200
+    assert '<a href="/fr/paris/">' not in r.text  # 面包屑只写城市名,不给死链
+
+
+def test_faq_fill_uses_declined_name_forms():
+    names, forms = {"louvre": "Luwr", "orsay": "Orsay"}, {"louvre": {"gen": "Luwru"}}
+    text = "{louvre}, do {louvre:gen}, {orsay}, {orsay:gen}"
+    assert (
+        site_pages._faq_fill(text, names, forms) == "Luwr, do Luwru, Orsay, Orsay"
+    )  # 没配变格的回落原名,不漏占位符
+
+
+def test_real_polish_text_declines_louvre():
+    faq.load_faq.cache_clear()
+    pl = faq.load_faq("paris", faq.FAQ_ROOT).text["pl"]
+    assert pl["name_forms"]["louvre"]["gen"] == "Luwru"
+    raw = yaml.safe_dump(pl["items"], allow_unicode=True)
+    assert "muzeum {louvre}" not in raw and "– {louvre}" not in raw
+    assert "{louvre:gen}" in raw and "{louvre:loc}" in raw

@@ -27,10 +27,10 @@ items:
     a: "Oui, le {louvre} et le {orsay} à Paris sont tous deux ouverts le mercredi, le jeudi, le vendredi, le samedi et le dimanche ; le {louvre} ferme le mardi et le {orsay} le lundi.\n\nLe jeudi est idéal : le {orsay} reste ouvert jusqu'à 21:45 (dernière entrée 21:00), vous pouvez donc passer la journée au {louvre}, qui ouvre à 09:00, et voir le {orsay} en soirée. Le mercredi et le vendredi, c'est l'inverse : le {louvre} reste ouvert jusqu'à 21:00."
   orangerie-water-lilies:
     q: Où se trouvent les Nymphéas de Monet au {orangerie} ?
-    a: "Les Nymphéas de Monet au {orangerie} à Paris occupent deux salles ovales qui se suivent, éclairées par la lumière naturelle d'un toit vitré.\n\nLes huit grandes compositions y ont été installées en 1927 selon les plans de Monet lui-même. La première salle montre les reflets du ciel et de la végétation dans l'eau, du matin au soir ; la seconde, des branches de saules qui encadrent l'eau."
+    a: "Les Nymphéas de Monet au {orangerie} à Paris occupent deux salles ovales qui se suivent, éclairées par la lumière naturelle d'un toit vitré.\n\nLes huit grandes compositions y ont été installées en 1927 selon les plans de Monet lui-même. La première salle montre les reflets du ciel dans l'eau, du matin au soir ; la seconde, des branches de saules qui encadrent l'eau."
   museum-pass:
     q: Qu'est-ce que le Paris Museum Pass, et couvre-t-il le Louvre, Orsay et l'Orangerie ?
-    a: "Le Paris Museum Pass donne un accès à plus de 50 musées et monuments à Paris et en Île-de-France, dont le {louvre}, le {orsay}, le {orangerie} et l'Arc de triomphe ; le {petit_palais} n'y figure pas, mais ses collections permanentes sont de toute façon gratuites.\n\nIl coûte 85 € pour 2 jours, 105 € pour 4 jours et 125 € pour 6 jours. La durée se compte en heures (48, 96 ou 144) à partir de la première visite, et les expositions temporaires ne sont pas incluses. Les moins de 18 ans et les résidents de l'UE de moins de 26 ans entrent gratuitement dans la plupart de ces lieux : ils n'ont généralement pas besoin du pass.\n\nLe pass Paris de GoMuseum est autre chose : il débloque seulement les audioguides de l'app GoMuseum et ne comprend aucune entrée dans les musées."
+    a: "Le Paris Museum Pass donne accès à plus de 50 musées et monuments, dont le {louvre}, le {orsay}, le {orangerie} et l'Arc de triomphe ; le {petit_palais} n'y figure pas, mais ses collections permanentes sont de toute façon gratuites.\n\nIl coûte 85 € pour 2 jours, 105 € pour 4 jours et 125 € pour 6 jours. La durée se compte en heures (48, 96 ou 144) à partir de la première visite, et les expositions temporaires ne sont pas incluses. Les moins de 18 ans et les résidents de l'UE de moins de 26 ans entrent gratuitement dans la plupart de ces lieux : ils n'ont généralement pas besoin du pass.\n\nLe pass Paris de GoMuseum est autre chose : il débloque seulement les audioguides de l'app GoMuseum et ne comprend aucune entrée dans les musées."
   museum-pass-louvre-entry:
     q: Peut-on entrer au {louvre} avec le Paris Museum Pass sans réserver ?
     a: "Sans garantie : avec le Paris Museum Pass, seul un créneau réservé garantit l'accès au {louvre} à Paris.\n\nLe créneau est gratuit et se réserve sur le site officiel du Paris Museum Pass. Sans créneau, vous pouvez tenter la file d'attente, mais en période d'affluence l'accès peut être très long, voire impossible. Le {orsay} demande aussi aux détenteurs du pass de réserver un créneau sur le même site."
@@ -39,7 +39,7 @@ items:
     a:
       louvre: "Le {louvre} à Paris est gratuit pour les moins de 18 ans et pour les résidents de l'Espace économique européen de moins de 26 ans, sur présentation d'une pièce d'identité avec photo (les résidents doivent aussi justifier d'un séjour de plus de 90 jours)."
       orsay: "Le {orsay} à Paris est gratuit pour les moins de 18 ans et pour les résidents de l'Espace économique européen de moins de 26 ans."
-      orangerie: "Le {orangerie} à Paris est gratuit pour les moins de 18 ans, et pour les 18-25 ans citoyens de l'UE ou résidant dans l'UE depuis plus de trois mois, sur justificatif d'identité."
+      orangerie: "Le {orangerie} à Paris est gratuit pour les moins de 18 ans, et pour les 18-25 ans citoyens de l'UE ou résidant dans l'UE depuis plus de trois mois."
       petit_palais: "Les collections permanentes du {petit_palais} à Paris sont gratuites pour tous, sans réservation. Les expositions temporaires sont payantes."
   first-sunday:
     q: Les musées de Paris sont-ils gratuits le premier dimanche du mois ?
@@ -69,7 +69,7 @@ items:
     q: Peut-on prendre des photos dans les musées de Paris ?
     a:
       louvre: "Oui, au {louvre} à Paris, photos et vidéos sont permises dans les collections permanentes pour un usage personnel, mais sans flash, sans éclairage et sans perche à selfie."
-      orsay: "Oui, au {orsay} à Paris, photos et vidéos à usage privé sont autorisées, flash désactivé. Certaines œuvres, surtout dans les expositions temporaires, sont signalées comme interdites de photo, et les trépieds vont au vestiaire."
+      orsay: "Oui, au {orsay} à Paris, photos et vidéos à usage privé sont autorisées, flash désactivé. Dans les expositions temporaires, la photo peut être interdite pour certaines œuvres, et les trépieds vont au vestiaire."
       petit_palais: "Oui, au {petit_palais} à Paris, les photos à usage personnel sont autorisées, dans le respect des œuvres et des autres visiteurs."
   bags:
     q: Peut-on entrer avec un sac à dos ou une valise dans les musées de Paris ?
@@ -87,4 +87,4 @@ items:
     a: "L'Arc de triomphe à Paris ferme plus tôt, à 16:00, les 24 et 31 décembre 2026. Son site officiel ne compte pas le 25 décembre ni le 1er janvier parmi ses fermetures annuelles.\n\nL'ascenseur est hors service : on monte uniquement par l'escalier, soit 284 marches. Sa remise en service est prévue en 2027, à une date annoncée ultérieurement. Dernière entrée 45 minutes avant la fermeture."
   strikes-closures:
     q: Comment savoir si un musée de Paris est fermé pour cause de grève ?
-    a: "Les fermetures liées aux grèves ou aux manifestations sont annoncées sur le site officiel de chaque musée, en général sur la page horaires ou d'accueil, ainsi que sur le site officiel du Paris Museum Pass.\n\nVérifiez le matin de votre visite : une fermeture peut être partielle (certaines salles ou entrées) ou totale."
+    a: "Les fermetures liées aux grèves ou aux manifestations sont annoncées sur le site officiel de chaque musée ainsi que sur le site officiel du Paris Museum Pass.\n\nVérifiez le matin de votre visite : une fermeture peut être partielle (certaines salles ou entrées) ou totale."

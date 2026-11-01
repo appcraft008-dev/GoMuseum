@@ -27,10 +27,10 @@ items:
     a: "Sì, il {louvre} e il {orsay} di Parigi sono entrambi aperti il mercoledì, il giovedì, il venerdì, il sabato e la domenica; il {louvre} chiude il martedì e il {orsay} il lunedì.\n\nIl giovedì è il giorno migliore: il {orsay} resta aperto fino alle 21:45 (ultimo ingresso alle 21:00), quindi puoi passare la giornata al {louvre}, che apre alle 09:00, e vedere il {orsay} la sera. Il mercoledì e il venerdì è il contrario: il {louvre} resta aperto fino alle 21:00."
   orangerie-water-lilies:
     q: Dove si trovano le Ninfee di Monet al {orangerie}?
-    a: "Le Ninfee (Nymphéas) di Monet al {orangerie} di Parigi occupano due sale ovali una dopo l'altra, illuminate dalla luce naturale di un tetto in vetro.\n\nLe otto grandi composizioni furono installate nel 1927 secondo i progetti dello stesso Monet. La prima sala mostra i riflessi del cielo e della vegetazione nell'acqua dal mattino alla sera; la seconda, rami di salice che incorniciano l'acqua."
+    a: "Le Ninfee (Nymphéas) di Monet al {orangerie} di Parigi occupano due sale ovali una dopo l'altra, illuminate dalla luce naturale di un tetto in vetro.\n\nLe otto grandi composizioni furono installate nel 1927 secondo i progetti dello stesso Monet. La prima sala mostra i riflessi del cielo nell'acqua dal mattino alla sera; la seconda, rami di salice che incorniciano l'acqua."
   museum-pass:
     q: Che cos'è il Paris Museum Pass, e vale per Louvre, Orsay e Orangerie?
-    a: "Il Paris Museum Pass dà un ingresso a oltre 50 musei e monumenti di Parigi e dintorni, tra cui il {louvre}, il {orsay}, il {orangerie} e l'Arco di Trionfo; il {petit_palais} non è nell'elenco, ma le sue collezioni permanenti sono comunque gratuite.\n\nCosta 85 € per 2 giorni, 105 € per 4 giorni e 125 € per 6 giorni. I giorni si contano in ore (48, 96 o 144) dalla prima visita, e le mostre temporanee non sono incluse. I minori di 18 anni e i residenti nell'UE sotto i 26 entrano gratis nella maggior parte di questi luoghi, quindi di solito non serve loro il pass.\n\nIl pass Parigi di GoMuseum è un'altra cosa: sblocca solo le audioguide nell'app GoMuseum e non include alcun ingresso ai musei."
+    a: "Il Paris Museum Pass dà accesso a oltre 50 musei e monumenti, tra cui il {louvre}, il {orsay}, il {orangerie} e l'Arco di Trionfo; il {petit_palais} non è nell'elenco, ma le sue collezioni permanenti sono comunque gratuite.\n\nCosta 85 € per 2 giorni, 105 € per 4 giorni e 125 € per 6 giorni. I giorni si contano in ore (48, 96 o 144) dalla prima visita, e le mostre temporanee non sono incluse. I minori di 18 anni e i residenti nell'UE sotto i 26 entrano gratis nella maggior parte di questi luoghi, quindi di solito non serve loro il pass.\n\nIl pass Parigi di GoMuseum è un'altra cosa: sblocca solo le audioguide nell'app GoMuseum e non include alcun ingresso ai musei."
   museum-pass-louvre-entry:
     q: Posso entrare al {louvre} con il Paris Museum Pass senza prenotare?
     a: "Non è garantito: con il Paris Museum Pass solo una fascia oraria prenotata garantisce l'ingresso al {louvre} di Parigi.\n\nLa fascia è gratuita e si prenota sul sito ufficiale del Paris Museum Pass. Senza puoi provare con la coda, ma nei periodi di grande affluenza l'accesso può essere molto lungo o impossibile. Anche il {orsay} chiede ai titolari del pass di prenotare una fascia sullo stesso sito."
@@ -39,7 +39,7 @@ items:
     a:
       louvre: "Il {louvre} di Parigi è gratuito per tutti i minori di 18 anni e per i residenti dello Spazio economico europeo sotto i 26, con documento d'identità con foto (i residenti devono anche dimostrare una residenza superiore a 90 giorni)."
       orsay: "Il {orsay} di Parigi è gratuito per tutti i minori di 18 anni e per i residenti dello Spazio economico europeo sotto i 26."
-      orangerie: "Il {orangerie} di Parigi è gratuito per i minori di 18 anni e per chi ha tra 18 e 25 anni ed è cittadino dell'UE o vi risiede da più di tre mesi, con documento d'identità."
+      orangerie: "Il {orangerie} di Parigi è gratuito per i minori di 18 anni e per chi ha tra 18 e 25 anni ed è cittadino dell'UE o vi risiede da più di tre mesi."
       petit_palais: "Le collezioni permanenti del {petit_palais} di Parigi sono gratuite per tutti, senza prenotazione. Le mostre temporanee sono a pagamento."
   first-sunday:
     q: I musei di Parigi sono gratuiti la prima domenica del mese?
@@ -69,7 +69,7 @@ items:
     q: Si possono fare foto nei musei di Parigi?
     a:
       louvre: "Sì, al {louvre} di Parigi si possono fare foto e video nelle collezioni permanenti per uso personale, ma senza flash, illuminazione o bastone per selfie."
-      orsay: "Sì, al {orsay} di Parigi foto e video per uso privato sono consentiti con il flash spento. Alcune opere, soprattutto nelle mostre temporanee, sono segnalate come non fotografabili, e i treppiedi vanno al guardaroba."
+      orsay: "Sì, al {orsay} di Parigi foto e video per uso privato sono consentiti con il flash spento. Nelle mostre temporanee alcune opere possono non essere fotografabili, e i treppiedi vanno al guardaroba."
       petit_palais: "Sì, al {petit_palais} di Parigi le foto per uso personale sono consentite, nel rispetto delle opere e degli altri visitatori."
   bags:
     q: Posso entrare con zaino o valigia nei musei di Parigi?
@@ -87,4 +87,4 @@ items:
     a: "L'Arco di Trionfo di Parigi chiude prima, alle 16:00, il 24 e il 31 dicembre 2026. Il suo sito ufficiale non indica il 25 dicembre né il 1° gennaio tra le chiusure annuali.\n\nL'ascensore è fuori servizio, quindi si sale solo a piedi: 284 gradini. Il ritorno in funzione è previsto nel 2027, in una data che sarà annunciata più avanti. L'ultimo ingresso è 45 minuti prima della chiusura."
   strikes-closures:
     q: Come faccio a sapere se un museo di Parigi è chiuso per sciopero?
-    a: "Le chiusure per scioperi o manifestazioni sono annunciate sul sito ufficiale di ciascun museo, di solito nella pagina degli orari o nella home page, e sul sito ufficiale del Paris Museum Pass.\n\nControlla la mattina della visita: la chiusura può essere parziale (alcune sale o ingressi) o totale."
+    a: "Le chiusure per scioperi o manifestazioni sono annunciate sul sito ufficiale di ciascun museo e sul sito ufficiale del Paris Museum Pass.\n\nControlla la mattina della visita: la chiusura può essere parziale (alcune sale o ingressi) o totale."
