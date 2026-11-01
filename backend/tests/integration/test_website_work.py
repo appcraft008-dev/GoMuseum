@@ -302,3 +302,19 @@ def test_work_title_copy_exists_for_every_site_language():
     for lang in LANGS:
         assert "work_title" in COPY[lang], lang
         assert "X" in t(lang, "work_title", title="X")
+
+
+def test_work_description_skips_raw_date(client, monkeypatch):
+    from app.api.web import site_pages
+
+    real = site_pages.get_object_content
+
+    def with_date(*a, **k):
+        data = real(*a, **k)
+        data["facts"] = {"date": "-140"}
+        return data
+
+    monkeypatch.setattr(site_pages, "get_object_content", with_date)
+    html = client.get(f"/en/paris/orsay/{MS2}/").text
+    d = re.search(r'<meta name="description" content="([^"]*)"', html).group(1)
+    assert "-140" not in d
