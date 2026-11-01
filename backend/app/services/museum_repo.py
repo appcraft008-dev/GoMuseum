@@ -175,6 +175,24 @@ def _pick(lang: str, zh, en, fr, fallback=""):
     return en or zh or fallback
 
 
+def artist_aliases_of(db, obj) -> set:
+    """这件作品作者的各语言写法(判断署名是不是作者本人用)。"""
+    from app.models.artist import Artist
+
+    aqid = (obj.attributes or {}).get("artist_qid")
+    art = db.query(Artist).filter_by(qid=aqid).first() if aqid else None
+    return _aliases(obj, art)
+
+
+def _aliases(obj, art) -> set:
+    return {
+        *((art.name_i18n or {}).values() if art else ()),
+        *((art.name_zh, art.name_en) if art else ()),
+        obj.artist_zh,
+        obj.artist_en,
+    }
+
+
 def _photo_credit(credit: str | None, artist_aliases) -> str | None:
     """图片署名——但"作者本人"不算署名。
 
@@ -1191,12 +1209,7 @@ def get_object_content(db: Session, slug: str, qid: str, language: str) -> dict 
         },
         (art.name_en if art else None) or obj.artist_en or obj.artist_zh,
     )
-    artist_aliases = {
-        *((art.name_i18n or {}).values() if art else ()),
-        *((art.name_zh, art.name_en) if art else ()),
-        obj.artist_zh,
-        obj.artist_en,
-    }
+    artist_aliases = _aliases(obj, art)
     images = [
         {
             "url": (
