@@ -895,6 +895,8 @@ def work_page(
     byline = " · ".join(
         x for x in (artist, (data.get("facts") or {}).get("date"), mname) if x
     )
+    # 年代是原始值(公元前存成 -140),网页摘要里不好看,只放作者和馆名
+    lead = " · ".join(x for x in (artist, mname) if x)
     return render(
         request,
         "work.html",
@@ -907,7 +909,7 @@ def work_page(
             f"{_t(lang, 'work_title', title=title)}"
             f"{' — ' + artist if artist else ''} · {mname} · GoMuseum"
         ),
-        description=f"{byline} — {first}" if first else byline,
+        description=f"{lead} — {first}" if first else lead,
         og_image=images[0]["url"] if images else card_url(museum_slug, qid, lang),
         museum_slug=museum_slug,
         qid=qid,
